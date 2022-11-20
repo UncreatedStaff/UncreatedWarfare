@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -390,7 +391,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public readonly UnturnedLabel[] Team2PlayerDamage;
     public readonly UnturnedUIElement[] Team2PlayerVCs;
 
-    public ConventionalLeaderboardUI() : base(12007, Gamemodes.Gamemode.Config.UI.CTFLeaderboardGUID, true, false)
+    public ConventionalLeaderboardUI() : base(12007, Gamemodes.Gamemode.Config.UIConventionalLeaderboard, true, false)
     {
         Team1PlayerNames = new UnturnedLabel[]
         {
@@ -670,7 +671,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        string color = TeamManager.GetTeamHexColor(winner);
+        FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
         string lang = set.Language;
         int len = 47;
         if (t1Stats is not null)
@@ -678,7 +679,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
         if (t2Stats is not null)
             len += Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1) * 7;
         string[] values = new string[len];
-        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
+        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralLeaderboardTime);
 
         values[0] = T.WinnerTitle.Translate(lang, TeamManager.GetFactionSafe(winner)!);
         values[1] = shutdownReason is null ?
@@ -686,19 +687,19 @@ public class ConventionalLeaderboardUI : UnturnedUI
             T.NextGameShutdown.Translate(lang, shutdownReason);
 
         values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("mm\\:ss", Data.Locale);
-        values[3] = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[0], 1);
+        values[3] = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[0], 1);
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
         values[5] = T.CTFWarStats0.Translate(lang);
-        values[6] = T.CTFWarStats1.Translate(lang);
-        values[7] = T.CTFWarStats2.Translate(lang);
+        values[6] = T.CTFWarStats1.Translate(lang, t1);
+        values[7] = T.CTFWarStats2.Translate(lang, t2);
         values[8] = T.CTFWarStats3.Translate(lang);
-        values[9] = T.CTFWarStats4.Translate(lang);
-        values[10] = T.CTFWarStats5.Translate(lang);
-        values[11] = T.CTFWarStats6.Translate(lang);
-        values[12] = T.CTFWarStats7.Translate(lang);
-        values[13] = T.CTFWarStats8.Translate(lang);
-        values[14] = T.CTFWarStats9.Translate(lang);
+        values[9] = T.CTFWarStats4.Translate(lang, t1);
+        values[10] = T.CTFWarStats5.Translate(lang, t2);
+        values[11] = T.CTFWarStats6.Translate(lang, t1);
+        values[12] = T.CTFWarStats7.Translate(lang, t2);
+        values[13] = T.CTFWarStats8.Translate(lang, t1);
+        values[14] = T.CTFWarStats9.Translate(lang, t2);
         values[15] = T.CTFWarStats10.Translate(lang);
         values[16] = T.CTFWarStats11.Translate(lang);
 
@@ -738,7 +739,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
                 T.LongestShot.Translate(lang, info.Distance,
                     Assets.find<ItemAsset>(info.Gun),
-                    UCPlayer.FromID(info.Player) as IPlayer ?? F.GetPlayerOriginalNames(info.Player));
+                    info.Name);
         }
         else
         {
@@ -753,8 +754,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 Stats stats = t1Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -770,8 +774,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 Stats stats = t2Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -792,7 +799,6 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 _ => null
             };
             ITransportConnection c = pl.Connection;
-            FPlayerName names = F.GetPlayerOriginalNames(pl);
 
             SendToPlayer(c);
 
@@ -986,7 +992,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        string color = TeamManager.GetTeamHexColor(winner);
+        FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
         string lang = set.Language;
         int len = 47;
         if (t1Stats is not null)
@@ -994,7 +1000,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
         if (t2Stats is not null)
             len += Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1) * 7;
         string[] values = new string[len];
-        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
+        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralLeaderboardTime);
 
         values[0] = T.WinnerTitle.Translate(lang, TeamManager.GetFactionSafe(winner)!);
         values[1] = shutdownReason is null ?
@@ -1002,19 +1008,19 @@ public class ConventionalLeaderboardUI : UnturnedUI
             T.NextGameShutdown.Translate(lang, shutdownReason);
 
         values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("mm\\:ss", Data.Locale);
-        values[3] = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[0], 1);
+        values[3] = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[0], 1);
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
         values[5] = T.InsurgencyWarStats0.Translate(lang);
-        values[6] = T.InsurgencyWarStats1.Translate(lang);
-        values[7] = T.InsurgencyWarStats2.Translate(lang);
+        values[6] = T.InsurgencyWarStats1.Translate(lang, t1);
+        values[7] = T.InsurgencyWarStats2.Translate(lang, t2);
         values[8] = T.InsurgencyWarStats3.Translate(lang);
-        values[9] = T.InsurgencyWarStats4.Translate(lang);
-        values[10] = T.InsurgencyWarStats5.Translate(lang);
-        values[11] = T.InsurgencyWarStats6.Translate(lang);
-        values[12] = T.InsurgencyWarStats7.Translate(lang);
-        values[13] = T.InsurgencyWarStats8.Translate(lang);
-        values[14] = T.InsurgencyWarStats9.Translate(lang);
+        values[9] = T.InsurgencyWarStats4.Translate(lang, t1);
+        values[10] = T.InsurgencyWarStats5.Translate(lang, t2);
+        values[11] = T.InsurgencyWarStats6.Translate(lang, t1);
+        values[12] = T.InsurgencyWarStats7.Translate(lang, t2);
+        values[13] = T.InsurgencyWarStats8.Translate(lang, t1);
+        values[14] = T.InsurgencyWarStats9.Translate(lang, t2);
         values[15] = T.InsurgencyWarStats10.Translate(lang);
         values[16] = T.InsurgencyWarStats11.Translate(lang);
 
@@ -1051,10 +1057,14 @@ public class ConventionalLeaderboardUI : UnturnedUI
             values[37] = tracker.fobsDestroyedT1.ToString(Data.Locale);
             values[38] = tracker.fobsDestroyedT2.ToString(Data.Locale);
             values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(Data.Locale);
+            ulong pl = info.Player;
+            InsurgencyPlayerStats? s;
             values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
                 T.LongestShot.Translate(lang, info.Distance,
                     Assets.find<ItemAsset>(info.Gun),
-                    UCPlayer.FromID(info.Player) as IPlayer ?? F.GetPlayerOriginalNames(info.Player));
+                    UCPlayer.FromID(info.Player) as IPlayer ?? ((s = (info.Team == 1ul ? t1Stats : t2Stats)?.Find(x => x.Steam64 == pl)) == null ? new PlayerNames(pl) : (s.Player == null
+                        ? s.cachedNames.HasValue ? s.cachedNames.Value : new PlayerNames(pl)
+                        : s.Player.Name)));
         }
         else
         {
@@ -1069,8 +1079,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 InsurgencyPlayerStats stats = t1Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -1086,8 +1099,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 InsurgencyPlayerStats stats = t2Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -1108,7 +1124,6 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 _ => null
             };
             ITransportConnection c = pl.Connection;
-            FPlayerName names = F.GetPlayerOriginalNames(pl);
 
             SendToPlayer(c);
 
@@ -1306,7 +1321,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        string color = TeamManager.GetTeamHexColor(winner);
+        FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
         string lang = set.Language;
         int len = 47;
         if (t1Stats is not null)
@@ -1314,7 +1329,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
         if (t2Stats is not null)
             len += Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1) * 7;
         string[] values = new string[len];
-        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
+        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralLeaderboardTime);
 
         values[0] = T.WinnerTitle.Translate(lang, TeamManager.GetFactionSafe(winner)!);
         values[1] = shutdownReason is null ?
@@ -1322,19 +1337,19 @@ public class ConventionalLeaderboardUI : UnturnedUI
             T.NextGameShutdown.Translate(lang, shutdownReason);
 
         values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss", Data.Locale);
-        values[3] = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[0], 1);
+        values[3] = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[0], 1);
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
         values[5] = T.ConquestWarStats0.Translate(lang);
-        values[6] = T.ConquestWarStats1.Translate(lang);
-        values[7] = T.ConquestWarStats2.Translate(lang);
+        values[6] = T.ConquestWarStats1.Translate(lang, t1);
+        values[7] = T.ConquestWarStats2.Translate(lang, t2);
         values[8] = T.ConquestWarStats3.Translate(lang);
-        values[9] = T.ConquestWarStats4.Translate(lang);
-        values[10] = T.ConquestWarStats5.Translate(lang);
-        values[11] = T.ConquestWarStats6.Translate(lang);
-        values[12] = T.ConquestWarStats7.Translate(lang);
-        values[13] = T.ConquestWarStats8.Translate(lang);
-        values[14] = T.ConquestWarStats9.Translate(lang);
+        values[9] = T.ConquestWarStats4.Translate(lang, t1);
+        values[10] = T.ConquestWarStats5.Translate(lang, t2);
+        values[11] = T.ConquestWarStats6.Translate(lang, t1);
+        values[12] = T.ConquestWarStats7.Translate(lang, t2);
+        values[13] = T.ConquestWarStats8.Translate(lang, t1);
+        values[14] = T.ConquestWarStats9.Translate(lang, t2);
         values[15] = T.ConquestWarStats10.Translate(lang);
         values[16] = T.ConquestWarStats11.Translate(lang);
 
@@ -1372,10 +1387,14 @@ public class ConventionalLeaderboardUI : UnturnedUI
             values[37] = tracker.fobsDestroyedT1.ToString(Data.Locale);
             values[38] = tracker.fobsDestroyedT2.ToString(Data.Locale);
             values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(Data.Locale);
+            ulong pl = info.Player;
+            ConquestStats? s;
             values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
                 T.LongestShot.Translate(lang, info.Distance,
                     Assets.find<ItemAsset>(info.Gun),
-                    UCPlayer.FromID(info.Player) as IPlayer ?? F.GetPlayerOriginalNames(info.Player));
+                    UCPlayer.FromID(info.Player) as IPlayer ?? ((s = (info.Team == 1ul ? t1Stats : t2Stats)?.Find(x => x.Steam64 == pl)) == null ? new PlayerNames(pl) : (s.Player == null
+                        ? s.cachedNames.HasValue ? s.cachedNames.Value : new PlayerNames(pl)
+                        : s.Player.Name)));
         }
         else
         {
@@ -1390,8 +1409,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 ConquestStats stats = t1Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -1407,8 +1429,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 ConquestStats stats = t2Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -1430,7 +1455,6 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 _ => null
             };
             ITransportConnection c = pl.Connection;
-            FPlayerName names = F.GetPlayerOriginalNames(pl);
 
             SendToPlayer(c);
 
@@ -1620,11 +1644,16 @@ public class ConventionalLeaderboardUI : UnturnedUI
             }
         }
     }
+    public void SendHardpointLeaderboard(LanguageSet set, in LongestShot info, List<HardpointPlayerStats>? t1Stats, List<HardpointPlayerStats>? t2Stats, HardpointTracker tracker, string? shutdownReason, ulong winner)
+    {
+        throw new NotImplementedException(); // todo
+    }
+
     public void UpdateTime(LanguageSet set, int secondsLeft)
     {
-        int time = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
+        int time = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralLeaderboardTime);
         string l1 = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss");
-        string l2 = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[CTFUI.FromMax(Mathf.RoundToInt(time - secondsLeft), time)], 1);
+        string l2 = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[CTFUI.FromMax(Mathf.RoundToInt(time - secondsLeft), time)], 1);
         while (set.MoveNext())
         {
             NextGameSeconds.SetText(set.Next.Connection, l1);

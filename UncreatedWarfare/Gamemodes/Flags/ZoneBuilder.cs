@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -38,8 +33,8 @@ public class ZoneBuilder
     public AdjacentFlagData[]? Adjacencies;
     internal ZoneModel.Data ZoneData;
     /// <summary>Sets the zone type to <see cref="CircleZone"/> and sets the radius to <see langword="value"/>.</summary>
-    public float Radius 
-    { 
+    public float Radius
+    {
         set
         {
             this.WithRadius(value);
@@ -47,7 +42,7 @@ public class ZoneBuilder
     }
     /// <summary>Sets the zone type to <see cref="RectZone"/> and sets the size of the rectangle to <see langword="value"/>: (<see cref="Vector2.x"/>, <see cref="Vector2.y"/>).</summary>
     public Vector2 RectSize
-    { 
+    {
         set
         {
             this.WithRectSize(value.x, value.y);
@@ -55,7 +50,7 @@ public class ZoneBuilder
     }
     /// <summary>Sets the zone type to <see cref="RectZone"/> and sets the size of the rectangle to value: (<see langword="value"/>.x, <see langword="value"/>.z).</summary>
     public (float x, float z) RectSize2
-    { 
+    {
         set
         {
             this.WithRectSize(value.x, value.z);

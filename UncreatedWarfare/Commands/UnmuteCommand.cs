@@ -1,8 +1,6 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -23,17 +21,28 @@ public class UnmuteCommand : Command
         if (ctx.TryGet(0, out ulong playerId, out UCPlayer? onlinePlayer))
         {
             if (onlinePlayer is not null)
-			{
-				if (onlinePlayer.MuteType == EMuteType.NONE || onlinePlayer.TimeUnmuted < DateTime.Now)
+            {
+                if (onlinePlayer.MuteType == EMuteType.NONE || onlinePlayer.TimeUnmuted < DateTime.Now)
                 {
                     ctx.Reply(T.UnmuteNotMuted, onlinePlayer);
                     return;
                 }
-			}
+            }
 
-            OffenseManager.UnmutePlayer(playerId, ctx.CallerID);
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await OffenseManager.UnmutePlayerAsync(playerId, ctx.CallerID, DateTimeOffset.UtcNow);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error unmuting " + playerId + ".");
+                    L.LogError(ex);
+                }
+            });
             ctx.Defer();
         }
         else ctx.Reply(T.PlayerNotFound);
-	}
+    }
 }

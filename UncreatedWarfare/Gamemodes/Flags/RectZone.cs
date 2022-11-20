@@ -46,7 +46,7 @@ public class RectZone : Zone
     public static void CalculateParticleSpawnPoints(out Vector2[] points, out Vector2[] corners, Vector2 size, Vector2 center, float spacing = SPACING, Line[]? lines = null)
     {
         List<Vector2> rtnSpawnPoints = new List<Vector2>(64);
-        if (lines != null) 
+        if (lines != null)
             corners = Array.Empty<Vector2>();
         else
             corners = new Vector2[4]

@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Components;
@@ -48,7 +47,7 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<InsurgencyPlayerStats> stats = this.stats.Values.ToList();
+        List<InsurgencyPlayerStats> stats = this.stats.ToList();
 
         stats.RemoveAll(p =>
         {
@@ -106,8 +105,8 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
                     if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
                         (d.Cache.Structure.model.transform.position - pos)
                         .sqrMagnitude <=
-                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange *
-                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
+                        Gamemode.ConfigObj.Data.InsurgencyCacheDiscoverRange *
+                        Gamemode.ConfigObj.Data.InsurgencyCacheDiscoverRange)
                     {
                         if (e.Killer.Player.TryGetPlayerData(out UCPlayerData comp) &&
                             comp.stats is InsurgencyPlayerStats ps) ps._killsDefense++;
@@ -123,8 +122,8 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
                     if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
                         (d.Cache.Structure.model.transform.position - pos)
                         .sqrMagnitude <=
-                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange *
-                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
+                        Gamemode.ConfigObj.Data.InsurgencyCacheDiscoverRange *
+                        Gamemode.ConfigObj.Data.InsurgencyCacheDiscoverRange)
                     {
                         if (e.Killer.Player.TryGetPlayerData(out UCPlayerData comp) &&
                             comp.stats is InsurgencyPlayerStats ps) ps._killsAttack++;

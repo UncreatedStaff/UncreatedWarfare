@@ -1,13 +1,9 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
+using Uncreated.Json;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -68,7 +64,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
     }
     public class Tracker : BaseQuestTracker, INotifyVehicleDestroyed
     {
-        private readonly int VehicleCount = 0;
+        private readonly int VehicleCount;
         internal readonly DynamicEnumValue<EVehicleType>.Choice VehicleType;
         private readonly DynamicAssetValue<VehicleAsset>.Choice VehicleIDs;
         private readonly string translationCache1;
@@ -237,9 +233,10 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
                 if (!(VehicleType.ValueType != EDynamicValueType.ANY && VehicleType.Behavior != EChoiceBehavior.ALLOW_ALL) && lastInstID != vehicle.Vehicle.instanceID)
                 {
                     lastInstID = vehicle.Vehicle.instanceID;
-                    if (VehicleBay.VehicleExists(vehicle.Vehicle.asset.GUID, out VehicleData data))
+                    VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSync(vehicle.Vehicle.asset.GUID);
+                    if (data != null)
                         lastType = data.Type;
-                    else 
+                    else
                         lastType = EVehicleType.NONE;
                 }
                 if (VehicleType.IsMatch(lastType))
@@ -346,7 +343,7 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
             writer.WriteProperty("distance_travelled", _travelled);
         }
 
-        private uint lastInstID = 0;
+        private uint lastInstID;
         private EVehicleType lastType;
         public void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, Components.VehicleComponent vehicle)
         {
@@ -355,7 +352,8 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
                 if (!(VehicleType.ValueType != EDynamicValueType.ANY && VehicleType.Behavior != EChoiceBehavior.ALLOW_ALL) && lastInstID != vehicle.Vehicle.instanceID)
                 {
                     lastInstID = vehicle.Vehicle.instanceID;
-                    if (VehicleBay.VehicleExists(vehicle.Vehicle.asset.GUID, out VehicleData data))
+                    VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSync(vehicle.Vehicle.asset.GUID);
+                    if (data != null)
                         lastType = data.Type;
                     else
                         lastType = EVehicleType.NONE;

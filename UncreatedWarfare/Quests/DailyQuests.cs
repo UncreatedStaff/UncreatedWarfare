@@ -4,16 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.Quests;
+using Uncreated.Json;
 using Uncreated.Networking;
 using Uncreated.Players;
-using Uncreated.Warfare.Quests.Types;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -26,27 +24,33 @@ public static class DailyQuests
     private static DailyQuestSave[] _quests = new DailyQuestSave[DailyQuest.DAILY_QUEST_LENGTH];
     private static DailyQuest[] _sendQuests = new DailyQuest[DailyQuest.DAILY_QUEST_LENGTH];
     private static DateTime _nextRefresh;
-    private static int index = 0;
-    private volatile static bool sentCurrent = false;
-    private static bool sendHrNotif = false;
-    private static bool hasRead = false;
+    private static int index;
+    private static volatile bool _sentCurrent = false;
+    private static bool _sendHrNotif = false;
+    private static bool _hasRead = false;
     public static TimeSpan TimeLeftForQuests => DateTime.Now - _nextRefresh;
     public static void OnConnectedToServer()
     {
-        if (hasRead && !needsCreate && !sentCurrent)
+        if (_hasRead && !_needsCreate && !_sentCurrent)
             ReplicateQuestChoices();
     }
+
+    private static readonly AssetOrigin QuestModOrigin = new AssetOrigin
+    {
+        name = "Daily Quests",
+        workshopFileId = DAILY_QUESTS_WORKSHOP_ID
+    };
     public static void EarlyLoad()
     {
         MethodInfo? m = typeof(Provider).GetMethod("onDedicatedUGCInstalled", BindingFlags.NonPublic | BindingFlags.Static);
         if (m is not null)
-            Patches.Patcher.Patch(m,
+            Harmony.Patches.Patcher.Patch(m,
                 prefix: new HarmonyMethod(typeof(DailyQuests).GetMethod(nameof(OnRegisteredWorkshopID),
                     BindingFlags.Static | BindingFlags.NonPublic)));
         else L.LogWarning("Unable to patch Provider.onDedicatedUGCInstalled to register the quest mod!");
         m = typeof(PlayerQuests).GetMethod(nameof(PlayerQuests.ReceiveAbandonQuest), BindingFlags.Instance | BindingFlags.Public);
         if (m is not null)
-            Patches.Patcher.Patch(m,
+            Harmony.Patches.Patcher.Patch(m,
                 postfix: new HarmonyMethod(typeof(DailyQuests).GetMethod(nameof(OnAbandonedQuest),
                     BindingFlags.Static | BindingFlags.NonPublic)));
         else L.LogWarning("Unable to patch PlayerQuests.ReceiveAbandonQuest to prevent abandoning daily missions!");
@@ -54,12 +58,12 @@ public static class DailyQuests
     public static void Load()
     {
         ReadQuests();
-        hasRead = true;
+        _hasRead = true;
 
-        if (needsCreate)
+        if (_needsCreate)
         {
             CreateNewModContent();
-            needsCreate = false;
+            _needsCreate = false;
         }
         else
             ReplicateQuestChoices();
@@ -80,7 +84,7 @@ public static class DailyQuests
     }
     private static void PrintQuests()
     {
-        if (sentCurrent)
+        if (_sentCurrent)
         {
             L.LogDebug("Daily Quests (current: " + index + "):");
             using IDisposable indent = L.IndentLog(1);
@@ -132,7 +136,7 @@ public static class DailyQuests
                     _nextRefresh = _quests[index + 1].StartDate;
                 } while (_nextRefresh <= now);
             }
-            sendHrNotif = false;
+            _sendHrNotif = false;
             CreateNewDailyQuests();
 
             if (index != 0)
@@ -159,9 +163,9 @@ public static class DailyQuests
                 RegisterDailyTrackers(PlayerManager.OnlinePlayers[i]);
             }
         }
-        else if (!sendHrNotif && (_nextRefresh - now).TotalHours <= 1d)
+        else if (!_sendHrNotif && (_nextRefresh - now).TotalHours <= 1d)
         {
-            sendHrNotif = true;
+            _sendHrNotif = true;
             Chat.Broadcast(T.DailyQuestsOneHourRemaining);
         }
     }
@@ -169,8 +173,7 @@ public static class DailyQuests
     {
         if (QuestManager.Quests.Count <= DailyQuest.DAILY_QUEST_CONDITION_LENGTH)
         {
-            L.LogError("Not enough quest types defined to create " + DailyQuest.DAILY_QUEST_CONDITION_LENGTH + " daily quests.");
-            return;
+            throw new Exception("Not enough quest types defined to create " + DailyQuest.DAILY_QUEST_CONDITION_LENGTH + " daily quests.");
         }
         DateTime now = DateTime.Today;
         for (int day = 0; day < DailyQuest.DAILY_QUEST_LENGTH; ++day)
@@ -186,8 +189,7 @@ public static class DailyQuests
     {
         if (QuestManager.Quests.Count <= DailyQuest.DAILY_QUEST_CONDITION_LENGTH)
         {
-            L.LogError("Not enough quest types defined to create " + DailyQuest.DAILY_QUEST_CONDITION_LENGTH + " daily quests.");
-            return;
+            throw new Exception("Not enough quest types defined to create " + DailyQuest.DAILY_QUEST_CONDITION_LENGTH + " daily quests.");
         }
         int half = DailyQuest.DAILY_QUEST_LENGTH / 2;
         DailyQuest[] quests = _sendQuests;
@@ -250,10 +252,16 @@ public static class DailyQuests
             BaseQuestTracker? tempTracker = data.GetTracker(null, in state);
             if (tempTracker != null)
             {
-                pset.isValid = true;
+                int val = preset.State.FlagValue.InsistValue();
+                if (val < short.MinValue || val > short.MaxValue)
+                {
+                    L.LogError("Invalid flag value from " + tempTracker.GetType().FullDescription() + ": " + val + ".");
+                    val = 1;
+                }
+                pset.IsValid = true;
                 pset.PresetObj = preset;
                 pset.Type = data.QuestType;
-                cond.FlagValue = checked((short)preset.State.FlagValue.InsistValue());
+                cond.FlagValue = checked((short)val);
                 cond.Translation = tempTracker.GetDisplayString(true);
                 cond.Key = preset.Key;
             }
@@ -345,6 +353,7 @@ public static class DailyQuests
             L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.GetDisplayString() + "\"", ConsoleColor.Cyan);
         ToastMessage.QueueMessage(tracker.Player!, new ToastMessage("Daily Quest Completed!", tracker.GetDisplayString(), "good job man idk does this need filled?", EToastMessageSeverity.PROGRESS));
         // todo UI or something, xp reward?
+        tracker.TryGiveRewards();
         tracker.Player?.SendString("Daily Quest Completed!");
     }
 
@@ -399,228 +408,221 @@ public static class DailyQuests
     }
     public static void SaveQuests()
     {
-        using (FileStream stream = new FileStream(Path.Combine(QuestManager.QUEST_FOLDER, "daily_quests.json"), FileMode.Create, FileAccess.Write, FileShare.Read))
+        using FileStream stream = new FileStream(Path.Combine(QuestManager.QUEST_FOLDER, "daily_quests.json"), FileMode.Create, FileAccess.Write, FileShare.Read);
+        Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+        writer.WriteStartObject();
+        writer.WritePropertyName("index");
+        writer.WriteNumberValue(index);
+        writer.WritePropertyName("sent_quests");
+        writer.WriteBooleanValue(_sentCurrent);
+        writer.WritePropertyName("quest_schedule");
+        writer.WriteStartArray();
+        for (int i = 0; i < _quests.Length; ++i)
         {
-            Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+            ref DailyQuestSave quest = ref _quests[i];
             writer.WriteStartObject();
-            writer.WritePropertyName("index");
-            writer.WriteNumberValue(index);
-            writer.WritePropertyName("sent_quests");
-            writer.WriteBooleanValue(sentCurrent);
-            writer.WritePropertyName("quest_schedule");
+            writer.WritePropertyName("start_time");
+            writer.WriteStringValue(quest.StartDate.ToUniversalTime().ToString("s"));
+            writer.WritePropertyName("asset_guid");
+            writer.WriteStringValue(quest.Guid);
+            writer.WritePropertyName("asset_id");
+            writer.WriteNumberValue(quest.Id);
+            writer.WritePropertyName("presets");
             writer.WriteStartArray();
-            for (int i = 0; i < _quests.Length; ++i)
+            for (int j = 0; j < quest.Presets.Length; ++j)
             {
-                ref DailyQuestSave quest = ref _quests[i];
+                ref DailyQuestSave.Preset preset = ref quest.Presets[j];
                 writer.WriteStartObject();
-                writer.WritePropertyName("start_time");
-                writer.WriteStringValue(quest.StartDate.ToUniversalTime().ToString("s"));
-                writer.WritePropertyName("asset_guid");
-                writer.WriteStringValue(quest.Guid);
-                writer.WritePropertyName("asset_id");
-                writer.WriteNumberValue(quest.Id);
-                writer.WritePropertyName("presets");
-                writer.WriteStartArray();
-                for (int j = 0; j < quest.Presets.Length; ++j)
+                writer.WriteString("quest_type", preset.Type.ToString());
+                writer.WriteString("key", preset.PresetObj.Key);
+                writer.WriteNumber("team", preset.PresetObj.Team);
+                writer.WriteNumber("flag", preset.PresetObj.Flag);
+                writer.WritePropertyName("state");
+                writer.WriteStartObject();
+                preset.PresetObj.State.WriteQuestState(writer);
+                writer.WriteEndObject();
+                if (preset.PresetObj.RewardOverrides is not null && preset.PresetObj.RewardOverrides.Length > 0)
                 {
-                    ref DailyQuestSave.Preset preset = ref quest.Presets[j];
-                    writer.WriteStartObject();
-                    writer.WriteString("quest_type", preset.Type.ToString());
-                    writer.WriteString("key", preset.PresetObj.Key);
-                    writer.WriteNumber("team", preset.PresetObj.Team);
-                    writer.WriteNumber("flag", preset.PresetObj.Flag);
-                    writer.WritePropertyName("state");
-                    writer.WriteStartObject();
-                    preset.PresetObj.State.WriteQuestState(writer);
-                    writer.WriteEndObject();
-                    if (preset.PresetObj.RewardOverrides is not null && preset.PresetObj.RewardOverrides.Length > 0)
+                    writer.WritePropertyName("rewards");
+                    writer.WriteStartArray();
+                    for (int k = 0; k < preset.PresetObj.RewardOverrides.Length; ++k)
                     {
-                        writer.WritePropertyName("rewards");
-                        writer.WriteStartArray();
-                        for (int k = 0; k < preset.PresetObj.RewardOverrides.Length; ++k)
-                        {
-                            writer.WriteStartObject();
-                            preset.PresetObj.RewardOverrides[k].WriteJson(writer);
-                            writer.WriteEndObject();
-                        }
-                        writer.WriteEndArray();
+                        writer.WriteStartObject();
+                        preset.PresetObj.RewardOverrides[k].WriteJson(writer);
+                        writer.WriteEndObject();
                     }
-                    writer.WriteEndObject();
+                    writer.WriteEndArray();
                 }
-                writer.WriteEndArray();
                 writer.WriteEndObject();
             }
             writer.WriteEndArray();
             writer.WriteEndObject();
-            writer.Flush();
-            writer.Dispose();
         }
+        writer.WriteEndArray();
+        writer.WriteEndObject();
+        writer.Flush();
+        writer.Dispose();
     }
-    private static bool needsCreate = false;
+    private static bool _needsCreate;
     public static void ReadQuests()
     {
         string p = Path.Combine(QuestManager.QUEST_FOLDER, "daily_quests.json");
         if (!File.Exists(p))
         {
-            needsCreate = true;
+            _needsCreate = true;
             return;
         }
-        using (FileStream stream = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read))
+
+        using FileStream stream = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (stream.Length > int.MaxValue)
         {
-            if (stream.Length > int.MaxValue)
+            L.LogError(p + " is too long to be read.");
+            return;
+        }
+        byte[] buffer = new byte[stream.Length];
+        stream.Read(buffer, 0, buffer.Length);
+        Utf8JsonReader reader = new Utf8JsonReader(buffer, JsonEx.readerOptions);
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.EndObject) break;
+            if (reader.TokenType == JsonTokenType.PropertyName)
             {
-                L.LogError(p + " is too long to be read.");
-                return;
-            }
-            byte[] buffer = new byte[stream.Length];
-            stream.Read(buffer, 0, buffer.Length);
-            Utf8JsonReader reader = new Utf8JsonReader(buffer, JsonEx.readerOptions);
-            while (reader.Read())
-            {
-                if (reader.TokenType == JsonTokenType.EndObject) break;
-                if (reader.TokenType == JsonTokenType.PropertyName)
+                string? property = reader.GetString();
+                if (reader.Read() && property != null)
                 {
-                    string? property = reader.GetString();
-                    if (reader.Read() && property != null)
+                    switch (property)
                     {
-                        switch (property)
-                        {
-                            case "index":
-                                if (reader.TokenType == JsonTokenType.Number)
+                        case "index":
+                            if (reader.TokenType == JsonTokenType.Number)
+                            {
+                                reader.TryGetInt32(out index);
+                            }
+                            break;
+                        case "sent_quests":
+                            _sentCurrent = reader.TokenType == JsonTokenType.True;
+                            break;
+                        case "quest_schedule":
+                            if (reader.TokenType == JsonTokenType.StartArray)
+                            {
+                                _quests = new DailyQuestSave[DailyQuest.DAILY_QUEST_LENGTH];
+                                _sendQuests = new DailyQuest[DailyQuest.DAILY_QUEST_LENGTH];
+                                int i = -1;
+                                while (reader.Read())
                                 {
-                                    reader.TryGetInt32(out index);
-                                }
-                                break;
-                            case "sent_quests":
-                                sentCurrent = reader.TokenType == JsonTokenType.True;
-                                break;
-                            case "quest_schedule":
-                                if (reader.TokenType == JsonTokenType.StartArray)
-                                {
-                                    _quests = new DailyQuestSave[DailyQuest.DAILY_QUEST_LENGTH];
-                                    _sendQuests = new DailyQuest[DailyQuest.DAILY_QUEST_LENGTH];
-                                    int i = -1;
-                                    while (reader.Read())
+                                    if (reader.TokenType == JsonTokenType.EndArray) break;
+                                    if (reader.TokenType == JsonTokenType.StartObject) ++i;
+                                    else if (i < DailyQuest.DAILY_QUEST_LENGTH)
                                     {
-                                        if (reader.TokenType == JsonTokenType.EndArray) break;
-                                        if (reader.TokenType == JsonTokenType.StartObject) ++i;
-                                        else if (i < DailyQuest.DAILY_QUEST_LENGTH)
+                                        if (reader.TokenType == JsonTokenType.PropertyName)
                                         {
-                                            if (reader.TokenType == JsonTokenType.PropertyName)
+                                            string? prop = reader.GetString();
+                                            if (reader.Read() && prop != null)
                                             {
-                                                string? prop = reader.GetString();
-                                                if (reader.Read() && prop != null)
+                                                ref DailyQuestSave save = ref _quests[i];
+                                                ref DailyQuest send = ref _sendQuests[i];
+                                                switch (prop)
                                                 {
-                                                    ref DailyQuestSave save = ref _quests[i];
-                                                    ref DailyQuest send = ref _sendQuests[i];
-                                                    switch (prop)
-                                                    {
-                                                        case "start_time":
-                                                            if (reader.TokenType == JsonTokenType.String)
+                                                    case "start_time":
+                                                        if (reader.TokenType == JsonTokenType.String)
+                                                        {
+                                                            string? v = reader.GetString();
+                                                            if (v != null)
+                                                                DateTime.TryParseExact(v, "s", Data.Locale, DateTimeStyles.AssumeUniversal, out save.StartDate);
+                                                        }
+                                                        break;
+                                                    case "asset_guid":
+                                                        if (reader.TokenType == JsonTokenType.String)
+                                                        {
+                                                            if (reader.TryGetGuid(out save.Guid))
+                                                                send.Guid = save.Guid;
+                                                        }
+                                                        break;
+                                                    case "asset_id":
+                                                        if (reader.TokenType == JsonTokenType.Number && reader.TryGetUInt16(out save.Id))
+                                                            send.Id = save.Id;
+                                                        break;
+                                                    case "presets":
+                                                        save.Presets = new DailyQuestSave.Preset[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
+                                                        send.conditions = new DailyQuest.Condition[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
+                                                        int j = -1;
+                                                        int xp = 0;
+                                                        int cred = 0;
+                                                        if (reader.TokenType == JsonTokenType.StartArray)
+                                                        {
+                                                            while (reader.Read())
                                                             {
-                                                                string? v = reader.GetString();
-                                                                if (v != null) 
-                                                                    DateTime.TryParseExact(v, "s", Data.Locale, DateTimeStyles.AssumeUniversal, out save.StartDate);
-                                                            }
-                                                            break;
-                                                        case "asset_guid":
-                                                            if (reader.TokenType == JsonTokenType.String)
-                                                            {
-                                                                if (reader.TryGetGuid(out save.Guid))
-                                                                    send.Guid = save.Guid;
-                                                            }
-                                                            break;
-                                                        case "asset_id":
-                                                            if (reader.TokenType == JsonTokenType.Number && reader.TryGetUInt16(out save.Id))
-                                                                send.Id = save.Id;
-                                                            break;
-                                                        case "presets":
-                                                            save.Presets = new DailyQuestSave.Preset[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
-                                                            send.conditions = new DailyQuest.Condition[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
-                                                            int j = -1;
-                                                            int xp = 0;
-                                                            int cred = 0;
-                                                            if (reader.TokenType == JsonTokenType.StartArray)
-                                                            {
-                                                                while (reader.Read())
+                                                                if (reader.TokenType == JsonTokenType.EndArray) break;
+                                                                if (reader.TokenType == JsonTokenType.StartObject) ++j;
+                                                                else if (j < DailyQuest.DAILY_QUEST_CONDITION_LENGTH)
                                                                 {
-                                                                    if (reader.TokenType == JsonTokenType.EndArray) break;
-                                                                    if (reader.TokenType == JsonTokenType.StartObject) ++j;
-                                                                    else if (j < DailyQuest.DAILY_QUEST_CONDITION_LENGTH)
+                                                                    if (reader.TokenType == JsonTokenType.PropertyName)
                                                                     {
-                                                                        if (reader.TokenType == JsonTokenType.PropertyName)
+                                                                        string? prop2 = reader.GetString();
+                                                                        if (reader.Read() && prop2 != null)
                                                                         {
-                                                                            string? prop2 = reader.GetString();
-                                                                            if (reader.Read() && prop2 != null)
+                                                                            switch (prop2)
                                                                             {
-                                                                                switch (prop2)
-                                                                                {
-                                                                                    case "quest_type":
-                                                                                        string? v = reader.GetString();
-                                                                                        ref DailyQuestSave.Preset preset = ref save.Presets[j];
-                                                                                        ref DailyQuest.Condition cond = ref send.conditions[j];
-                                                                                        if (v != null && Enum.TryParse(v, true, out EQuestType type))
+                                                                                case "quest_type":
+                                                                                    string? v = reader.GetString();
+                                                                                    ref DailyQuestSave.Preset preset = ref save.Presets[j];
+                                                                                    ref DailyQuest.Condition cond = ref send.conditions[j];
+                                                                                    if (v != null && Enum.TryParse(v, true, out EQuestType type))
+                                                                                    {
+                                                                                        preset.Type = type;
+                                                                                        BaseQuestData? data = QuestManager.Quests.Find(x => x.QuestType == type);
+                                                                                        if (data != null)
                                                                                         {
-                                                                                            preset.Type = type;
-                                                                                            L.Log("Reading a " + type.ToString() + " preset");
-                                                                                            BaseQuestData? data = QuestManager.Quests.Find(x => x.QuestType == type);
-                                                                                            if (data != null)
+                                                                                            preset.PresetObj = data.ReadPreset(ref reader);
+                                                                                            preset.IsValid = true;
+                                                                                            if (!_sentCurrent)
                                                                                             {
-                                                                                                preset.PresetObj = data.ReadPreset(ref reader);
-                                                                                                preset.isValid = true;
-                                                                                                if (!sentCurrent)
+                                                                                                BaseQuestTracker? tempTracker = data.GetTracker(null, preset.PresetObj);
+                                                                                                if (tempTracker != null)
                                                                                                 {
-                                                                                                    BaseQuestTracker? tempTracker = data.GetTracker(null, preset.PresetObj);
-                                                                                                    if (tempTracker != null)
+                                                                                                    cond.FlagValue = checked((short)preset.PresetObj.State.FlagValue.InsistValue());
+                                                                                                    cond.Translation = tempTracker.GetDisplayString(true);
+                                                                                                    cond.Key = preset.PresetObj.Key;
+                                                                                                    cond.FlagId = preset.PresetObj.Flag;
+                                                                                                    for (int r = 0; r < tempTracker.Rewards.Length; ++r)
                                                                                                     {
-                                                                                                        L.Log("Made a temp tracker");
-                                                                                                        cond.FlagValue = checked((short)preset.PresetObj.State.FlagValue.InsistValue());
-                                                                                                        cond.Translation = tempTracker.GetDisplayString(true);
-                                                                                                        cond.Key = preset.PresetObj.Key;
-                                                                                                        cond.FlagId = preset.PresetObj.Flag;
-                                                                                                        for (int r = 0; r < tempTracker.Rewards.Length; ++r)
-                                                                                                        {
-                                                                                                            if (tempTracker.Rewards[r] is XPReward xpr)
-                                                                                                                xp += xpr.XP;
-                                                                                                            else if (tempTracker.Rewards[r] is CreditsReward cr)
-                                                                                                                cred += cr.Credits;
-                                                                                                        }
-                                                                                                    }
-                                                                                                    else
-                                                                                                    {
-                                                                                                        L.LogWarning("Unable to create tracker for " + preset.PresetObj.State.FlagValue + " (" + type.ToString() + ")");
+                                                                                                        if (tempTracker.Rewards[r] is XPReward xpr)
+                                                                                                            xp += xpr.XP;
+                                                                                                        else if (tempTracker.Rewards[r] is CreditsReward cr)
+                                                                                                            cred += cr.Credits;
                                                                                                     }
                                                                                                 }
                                                                                                 else
-                                                                                                    L.Log("Already sent");
-                                                                                            }
-                                                                                            else
-                                                                                            {
-                                                                                                L.LogWarning("Unable to find quest data for type " + type);
+                                                                                                {
+                                                                                                    L.LogWarning("Unable to create tracker for " + preset.PresetObj.State.FlagValue + " (" + type.ToString() + ")");
+                                                                                                }
                                                                                             }
                                                                                         }
                                                                                         else
                                                                                         {
-                                                                                            L.Log("Unknown quest type: " + v);
+                                                                                            L.LogWarning("Unable to find quest data for type " + type);
                                                                                         }
-                                                                                        break;
-                                                                                }
+                                                                                    }
+                                                                                    else
+                                                                                    {
+                                                                                        L.LogWarning("Unknown quest type: " + v);
+                                                                                    }
+                                                                                    break;
                                                                             }
                                                                         }
                                                                     }
                                                                 }
                                                             }
-                                                            send.XPReward = xp;
-                                                            send.CreditsReward = cred;
-                                                            break;
-                                                    }
+                                                        }
+                                                        send.XPReward = xp;
+                                                        send.CreditsReward = cred;
+                                                        break;
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                break;
-                        }
+                            }
+                            break;
                     }
                 }
             }
@@ -729,7 +731,7 @@ public static class DailyQuests
             }
         }
         return;
-        deleteFile:
+    deleteFile:
         File.Delete(path);
     }
     public static void LoadAssets()
@@ -742,7 +744,7 @@ public static class DailyQuests
         }
         else
         {
-            Assets.load(p, false, EAssetOrigin.WORKSHOP, true, DAILY_QUESTS_WORKSHOP_ID);
+            Assets.load(p, QuestModOrigin, true);
             L.Log("Assets loaded", ConsoleColor.Magenta);
             PrintQuests();
         }
@@ -766,7 +768,7 @@ public static class DailyQuests
                 folder.WriteToDisk(p);
                 await UCWarfare.ToUpdate();
                 LoadAssets();
-                sentCurrent = true;
+                _sentCurrent = true;
                 PrintQuests();
                 SaveQuests();
             }
@@ -801,7 +803,7 @@ public struct DailyQuestSave
 
     public struct Preset
     {
-        public bool isValid;
+        public bool IsValid;
         public EQuestType Type;
         public IQuestPreset PresetObj;
     }

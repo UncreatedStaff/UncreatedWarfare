@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -30,7 +28,7 @@ public sealed class ConquestStatTracker : TeamStatTracker<ConquestStats>, ILonge
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<ConquestStats> stats = this.stats.Values.ToList();
+        List<ConquestStats> stats = this.stats.ToList();
 
         stats.RemoveAll(p =>
         {

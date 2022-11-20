@@ -1,12 +1,13 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Reflection;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -64,6 +65,7 @@ public class KitCommand : Command
                             await UCWarfare.ToUpdate();
                             KitManager.UpdateSigns(kit);
                             ctx.Reply(T.KitCreated, kit);
+                            KitManager.InvokeKitCreated(kit);
                         }
                         else
                         {
@@ -111,6 +113,7 @@ public class KitCommand : Command
                             await UCWarfare.ToUpdate();
                             RequestSigns.RemoveRequestSigns(kitName);
                             ctx.Reply(T.KitDeleted, kit);
+                            KitManager.InvokeKitDeleted(kit);
                         }
                         else
                         {
@@ -129,7 +132,7 @@ public class KitCommand : Command
         else if (ctx.MatchParameter(0, "give", "g"))
         {
             ctx.AssertHelpCheck(1, "/kit <give|g> <id> - Equips you with the kit with the id provided.");
-            
+
             ctx.AssertRanByPlayer();
 
             if (ctx.TryGet(1, out string kitName))
@@ -181,6 +184,7 @@ public class KitCommand : Command
                                 ctx.Reply(T.KitPropertySet, property, kit, newValue);
                                 ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
                                 KitManager.UpdateSigns(_kit);
+                                KitManager.InvokeKitUpdated(_kit);
                             }).ConfigureAwait(false);
                             ctx.Defer();
                         }
@@ -204,6 +208,7 @@ public class KitCommand : Command
                                 ctx.Reply(T.KitPropertySet, "sign text", kit, language + " : " + newValue);
                                 ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
                                 KitManager.UpdateSigns(_kit);
+                                KitManager.InvokeKitUpdated(_kit);
                             }).ConfigureAwait(false);
                             ctx.Defer();
                         }
@@ -223,6 +228,7 @@ public class KitCommand : Command
                         }
                         bool wasLoadout = kit.IsLoadout;
                         bool wasPremium = kit.IsPremium;
+                        EClass oldclass = kit.Class;
                         ESetFieldResult result = KitEx.SetProperty(kit, property, newValue, out FieldInfo? field);
                         if (field != null)
                             property = field.Name;
@@ -243,12 +249,18 @@ public class KitCommand : Command
                                 ctx.Reply(T.KitNotFound, kitName);
                                 return;
                             case ESetFieldResult.SUCCESS:
+                                if (kit.IsLoadout && kit.Class != oldclass)
+                                {
+                                    if (kit.TeamLimit == KitManager.GetDefaultTeamLimit(oldclass))
+                                        kit.TeamLimit = KitManager.GetDefaultTeamLimit(kit.Class);
+                                }
                                 Task.Run(async () =>
                                 {
                                     KitManager.UpdateSigns(await KitManager.AddKit(kit));
                                     await UCWarfare.ToUpdate();
                                     ctx.Reply(T.KitPropertySet, property, kit, newValue);
                                     ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
+                                    KitManager.InvokeKitUpdated(kit);
                                 }).ConfigureAwait(false);
                                 ctx.Defer();
                                 return;
@@ -279,7 +291,7 @@ public class KitCommand : Command
                     Task.Run(async () =>
                     {
                         bool hasAccess;
-                        FPlayerName names;
+                        PlayerNames names;
                         if (onlinePlayer is not null)
                         {
                             names = onlinePlayer.Name;
@@ -309,6 +321,8 @@ public class KitCommand : Command
                             onlinePlayer.SendChat(T.KitAccessGivenDm, kit);
                             KitManager.UpdateSigns(kit, onlinePlayer);
                         }
+
+                        KitManager.InvokeKitAccessUpdated(kit, playerId);
                     });
                     ctx.Defer();
                 }
@@ -334,7 +348,7 @@ public class KitCommand : Command
                     Task.Run(async () =>
                     {
                         bool hasAccess;
-                        FPlayerName names;
+                        PlayerNames names;
                         if (onlinePlayer is not null)
                         {
                             names = onlinePlayer.Name;
@@ -364,6 +378,8 @@ public class KitCommand : Command
                             onlinePlayer.SendChat(T.KitAccessRevokedDm, kit);
                             KitManager.UpdateSigns(kit, onlinePlayer);
                         }
+
+                        KitManager.InvokeKitAccessUpdated(kit, playerId);
                     });
                     ctx.Defer();
                 }
@@ -410,6 +426,7 @@ public class KitCommand : Command
                             await UCWarfare.ToUpdate();
                             KitManager.UpdateSigns(newKit);
                             ctx.Reply(T.KitCopied, existing, newKit);
+                            KitManager.InvokeKitCreated(newKit);
                         });
                         ctx.Defer();
                     }
@@ -438,14 +455,14 @@ public class KitCommand : Command
                 }
                 Task.Run(async () =>
                 {
-                    FPlayerName names = onlinePlayer is not null ? onlinePlayer.Name : await Data.DatabaseManager.GetUsernamesAsync(playerId);
+                    PlayerNames names = onlinePlayer is not null ? onlinePlayer.Name : await Data.DatabaseManager.GetUsernamesAsync(playerId);
                     char let = await KitManager.GetLoadoutCharacter(playerId);
                     string loadoutName = playerId.ToString() + "_" + let;
                     if (!ctx.TryGetRange(4, out string signText) || string.IsNullOrEmpty(signText))
                         signText = loadoutName;
-                    await UCWarfare.ToUpdate();
-                    if (!KitManager.KitExists(loadoutName, out _))
+                    if (let <= 'z' && !KitManager.KitExists(loadoutName, out _))
                     {
+                        await UCWarfare.ToUpdate();
                         Kit loadout = new Kit(loadoutName, KitManager.ItemsFromInventory(ctx.Caller!), KitManager.ClothesFromInventory(ctx.Caller!));
 
                         loadout.IsLoadout = true;
@@ -458,10 +475,9 @@ public class KitCommand : Command
                         else
                             loadout.Branch = EBranch.INFANTRY;
 
-                        if (@class == EClass.HAT)
-                            loadout.TeamLimit = 0.1F;
+                        loadout.TeamLimit = KitManager.GetDefaultTeamLimit(@class);
 
-                        KitManager.UpdateText(loadout, signText);
+                        KitManager.UpdateText(loadout, signText, L.DEFAULT, false);
 
                         loadout = await KitManager.AddKit(loadout);
                         await KitManager.GiveAccess(loadout, playerId, EKitAccessType.PURCHASE);
@@ -469,13 +485,15 @@ public class KitCommand : Command
                         await UCWarfare.ToUpdate();
                         KitManager.UpdateSigns(loadout);
                         ctx.Reply(T.LoadoutCreated, @class, onlinePlayer as IPlayer ?? names, playerId, loadout);
+                        KitManager.InvokeKitCreated(loadout);
                     }
                     else
                     {
+                        await UCWarfare.ToUpdate();
                         ctx.Reply(T.KitNameTaken, loadoutName);
                     }
                 }).ConfigureAwait(false);
-                ctx.Defer();    
+                ctx.Defer();
             }
             else
                 ctx.SendCorrectUsage("/kit <createloadout|cloadout|cl> <player> <team (1 = " + TeamManager.Team1Code + ", 2 = " + TeamManager.Team2Code + "> <class> <sign text>");

@@ -1,33 +1,40 @@
-﻿using SDG.Unturned;
-using Steamworks;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using SDG.Unturned;
 using Uncreated.Framework;
 
 namespace Uncreated.Warfare.Commands.CommandSystem;
 public sealed class VanillaCommand : IExecutableCommand, IComparable<VanillaCommand>, IComparable<SDG.Unturned.Command>
 {
     private readonly SDG.Unturned.Command _cmd;
-    private readonly EAdminType allowedUsers;
+    private readonly EAdminType _allowedUsers;
     string IExecutableCommand.CommandName => _cmd.command;
-    EAdminType IExecutableCommand.AllowedPermissions => allowedUsers;
+    EAdminType IExecutableCommand.AllowedPermissions => _allowedUsers;
     int IExecutableCommand.Priority => 0;
     IReadOnlyList<string>? IExecutableCommand.Aliases => null;
     public VanillaCommand(SDG.Unturned.Command cmd)
     {
         _cmd = cmd;
-        allowedUsers = CommandHandler.GetVanillaPermissions(cmd);
+        _allowedUsers = CommandHandler.GetVanillaPermissions(cmd);
     }
 
     bool IExecutableCommand.CheckPermission(CommandInteraction ctx)
     {
         if (ctx.IsConsole || ctx.Caller!.Player.channel.owner.isAdmin) return true;
 
-        return ctx.Caller.PermissionCheck(allowedUsers, PermissionComparison.AtLeast);
+        return ctx.Caller.PermissionCheck(_allowedUsers, PermissionComparison.AtLeast);
     }
-    void IExecutableCommand.Execute(CommandInteraction interaction)
+    Task IExecutableCommand.Execute(CommandInteraction interaction, CancellationToken token)
     {
+#if DEBUG
+        ThreadUtil.assertIsGameThread();
+#endif
+        if (token.IsCancellationRequested)
+            return Task.FromCanceled(token);
         _cmd.check(interaction.CallerCSteamID, _cmd.command, string.Join("/", interaction.Parameters));
+        return Task.CompletedTask;
     }
     CommandInteraction IExecutableCommand.SetupCommand(UCPlayer? caller, string[] args, string message, bool keepSlash)
     {

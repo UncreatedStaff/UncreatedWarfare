@@ -1,22 +1,21 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Vehicles;
@@ -33,7 +32,7 @@ public static class QuestManager
     public static readonly string QUEST_LOCATION = Path.Combine(QUEST_FOLDER, "quest_data.json");
     static QuestManager()
     {
-        EventDispatcher.OnPlayerDied += OnPlayerDied;
+        EventDispatcher.PlayerDied += OnPlayerDied;
     }
     public static void Init()
     {
@@ -224,7 +223,12 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        DailyQuests.Tick();
+        // no clue why this is running after unload...
+        if (!UCWarfare.IsLoaded)
+            return;
+
+        if (!UCWarfare.Config.DisableDailyQuests)
+            DailyQuests.Tick();
         for (int i = 0; i < RegisteredTrackers.Count; i++)
         {
             BaseQuestTracker tracker = RegisteredTrackers[i];
@@ -255,21 +259,30 @@ public static class QuestManager
         }
         ActionLogger.Add(EActionLogType.COMPLETE_QUEST, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
-            DailyQuests.OnDailyQuestCompleted(tracker);
+        {
+            if (!UCWarfare.Config.DisableDailyQuests)
+                DailyQuests.OnDailyQuestCompleted(tracker);
+            DeregisterTracker(tracker);
+        }
         else
         {
-            if (tracker.PresetKey != default)
+            QuestCompleted args = new QuestCompleted(tracker);
+            Task.Run(async () =>
             {
-                if (tracker.Player!._completedQuests == null) GetCompletedQuests(tracker.Player);
-                tracker.Player._completedQuests!.Add(tracker.PresetKey);
-                if (!RankManager.OnQuestCompleted(tracker.Player, tracker.PresetKey))
-                    if (!KitManager.OnQuestCompleted(tracker.Player, tracker.PresetKey))
-                        VehicleBay.OnQuestCompleted(tracker.Player, tracker.PresetKey);
-            }
+                await UCWarfare.ToUpdate();
+                if (tracker.PresetKey != default)
+                {
+                    if (tracker.Player!.CompletedQuests == null)
+                        GetCompletedQuests(tracker.Player);
+                    tracker.Player.CompletedQuests!.Add(tracker.PresetKey);
+                    await Data.Gamemode.HandleQuestCompleted(args);
+                }
 
-            tracker.TryGiveRewards();
+                if (args.GiveRewards)
+                    tracker.TryGiveRewards();
+                await Data.Gamemode.OnQuestCompleted(args);
+            });
         }
-        DeregisterTracker(tracker);
     }
     public static void OnQuestUpdated(BaseQuestTracker tracker, bool skipFlagUpdate = false)
     {
@@ -282,7 +295,10 @@ public static class QuestManager
         }
         ActionLogger.Add(EActionLogType.MAKE_QUEST_PROGRESS, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
-            DailyQuests.OnDailyQuestUpdated(tracker);
+        {
+            if (!UCWarfare.Config.DisableDailyQuests)
+                DailyQuests.OnDailyQuestUpdated(tracker);
+        }
         else
         {
             if (tracker.Preset != null)
@@ -300,8 +316,8 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (player._completedQuests == null) GetCompletedQuests(player);
-        return player._completedQuests!.Contains(key);
+        if (player.CompletedQuests == null) GetCompletedQuests(player);
+        return player.CompletedQuests!.Contains(key);
     }
     private static void OnPlayerDied(PlayerDied e)
     {
@@ -331,7 +347,7 @@ public static class QuestManager
         {
             types = e.Types;
         }
-        
+
         foreach (Type type in types.Where<Type>(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {
             QuestDataAttribute? attribute = type.GetCustomAttributes().OfType<QuestDataAttribute>().FirstOrDefault();
@@ -590,11 +606,11 @@ public static class QuestManager
         if (!Directory.Exists(folder))
         {
             Directory.CreateDirectory(folder);
-            player._completedQuests = new List<Guid>(0);
+            player.CompletedQuests = new List<Guid>(0);
             return;
         }
         string[] files = Directory.GetFiles(folder, "*.json", SearchOption.TopDirectoryOnly);
-        player._completedQuests = new List<Guid>(16);
+        player.CompletedQuests = new List<Guid>(16);
         for (int fi = 0; fi < files.Length; fi++)
         {
             FileInfo file = new FileInfo(files[fi]);
@@ -621,8 +637,8 @@ public static class QuestManager
                                     ReadProgress(tr, preset.Team);
                                     if (tr.IsCompleted)
                                     {
-                                        if (!player._completedQuests.Contains(guid))
-                                            player._completedQuests.Add(guid);
+                                        if (!player.CompletedQuests.Contains(guid))
+                                            player.CompletedQuests.Add(guid);
                                     }
                                 }
                             }
@@ -630,7 +646,7 @@ public static class QuestManager
                     }
                 }
             }
-            nextFile: ;
+        nextFile:;
         }
     }
     #endregion

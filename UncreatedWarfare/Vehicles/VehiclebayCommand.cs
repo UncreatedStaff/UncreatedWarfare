@@ -2,19 +2,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine.Assertions;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Commands;
-public class VehicleBayCommand : Command
+public class VehicleBayCommand : AsyncCommand
 {
     private const string SYNTAX = "/vehiclebay";
     private const string HELP = "Sets up the vehicle bay.";
@@ -24,7 +25,7 @@ public class VehicleBayCommand : Command
         AddAlias("vb");
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -32,8 +33,7 @@ public class VehicleBayCommand : Command
         ctx.AssertGamemode<IVehicles>();
 
         ctx.AssertRanByPlayer();
-
-        if (!VehicleSpawner.Loaded || !VehicleBay.Loaded)
+        if (!VehicleSpawner.Loaded || !Data.Singletons.TryGetSingleton(out VehicleBay bay))
         {
             ctx.SendGamemodeError();
             return;
@@ -47,156 +47,170 @@ public class VehicleBayCommand : Command
 
             ctx.AssertHelpCheck(1, "/vehiclebay delay <add|remove> <all|time|flag|percent|staging|none> [value] [!][gamemode] - Modify request delays of vehicle.");
 
-            VehicleData? data = GetVehicleTarget(ctx);
-            if (data is not null)
+            SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, token).ThenToUpdate(token);
+            if (data?.Item is not null)
             {
-                bool adding;
-                if (ctx.MatchParameter(1, "add", "a", "new"))
-                    adding = true;
-                else if (ctx.MatchParameter(1, "remove", "r", "rem"))
-                    adding = false;
-                else
+                await data.Enter(token).ThenToUpdate(token);
+                try
                 {
-                    ctx.SendCorrectUsage("/vehiclebay delay <add|remove> <all|time|flag|percent|staging|none> [value] [!][gamemode]");
-                    return;
-                }
-                if (ctx.MatchParameter(2, "all", "clear"))
-                {
-                    if (adding)
+                    bool adding;
+                    if (ctx.MatchParameter(1, "add", "a", "new"))
+                        adding = true;
+                    else if (ctx.MatchParameter(1, "remove", "r", "rem"))
+                        adding = false;
+                    else
                     {
-                        ctx.SendCorrectUsage("/vehiclebay delay add <time|flag|percent|staging|none> [value] [!][gamemode]");
+                        ctx.SendCorrectUsage("/vehiclebay delay <add|remove> <all|time|flag|percent|staging|none> [value] [!][gamemode]");
                         return;
                     }
-                    int rem = data.Delays.Length;
-                    if (rem > 0)
+                    if (ctx.MatchParameter(2, "all", "clear"))
                     {
-                        data.Delays = new Delay[0];
-                        VehicleSpawner.UpdateSigns(data.VehicleID);
-                        VehicleBay.SaveSingleton();
-                    }
-                    ctx.Reply(T.VehicleBayRemovedDelay, rem);
-                    return;
-                }
-                EDelayType type;
-                if (ctx.MatchParameter(2, "time"))
-                    type = EDelayType.TIME;
-                else if (ctx.MatchParameter(2, "flag", "objective", "objectives"))
-                    type = EDelayType.FLAG;
-                else if (ctx.MatchParameter(2, "flagpercent", "percent"))
-                    type = EDelayType.FLAG_PERCENT;
-                else if (ctx.MatchParameter(2, "staging", "prep"))
-                    type = EDelayType.OUT_OF_STAGING;
-                else if (ctx.MatchParameter(2, "none"))
-                    type = EDelayType.NONE;
-                else
-                {
-                    if (adding)
-                        ctx.SendCorrectUsage("/vehiclebay delay add <time|flag|percent|staging|none> [value] [!][gamemode]");
-                    else
-                        ctx.SendCorrectUsage("/vehiclebay delay remove <all|time|flag|percent|staging|none> [value] [!][gamemode]");
-                    return;
-                }
-                if (type == EDelayType.NONE && ctx.ArgumentCount < 4)
-                {
-                    if (adding)
-                        ctx.SendCorrectUsage("/vehiclebay delay add none [!]<gamemode>");
-                    else
-                        ctx.SendCorrectUsage("/vehiclebay delay remove none [!]<gamemode>");
-                    return;
-                }
-                string? gamemode = null;
-                if (type == EDelayType.OUT_OF_STAGING || type == EDelayType.NONE)
-                {
-                    if (ctx.HasArg(3))
-                        gamemode = ctx.Get(3)!;
-                }
-                else if (ctx.ArgumentCount < 4)
-                {
-                    ctx.SendCorrectUsage("/vehiclebay delay " + ctx.Get(1)!.ToLower() + " " + ctx.Get(1)!.ToLower() + " <value> [gamemode]");
-                    return;
-                }
-                else if (ctx.ArgumentCount > 4)
-                    gamemode = ctx.Get(4)!;
-
-                if (string.IsNullOrEmpty(gamemode) && type == EDelayType.NONE)
-                {
-                    gamemode = "<";
-                    foreach (KeyValuePair<string, Type> gm in Gamemode.GAMEMODES)
-                    {
-                        if (gamemode.Length != 1) gamemode += "|";
-                        gamemode += gm.Key;
-                    }
-                    gamemode += ">";
-                    if (adding)
-                        ctx.SendCorrectUsage("/vehiclebay delay add none [!]" + gamemode);
-                    else
-                        ctx.SendCorrectUsage("/vehiclebay delay remove none [!]" + gamemode);
-                    return;
-                }
-                if (!string.IsNullOrEmpty(gamemode))
-                {
-                    string? gm = null;
-                    foreach (KeyValuePair<string, Type> gm2 in Gamemode.GAMEMODES)
-                    {
-                        if (gm2.Key.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
+                        if (adding)
                         {
-                            gm = gm2.Key;
-                            break;
+                            ctx.SendCorrectUsage("/vehiclebay delay add <time|flag|percent|staging|none> [value] [!][gamemode]");
+                            return;
                         }
+                        int rem = data.Item.Delays.Length;
+                        if (rem > 0)
+                        {
+                            data.Item.Delays = Array.Empty<Delay>();
+                            await data.SaveItem(token).ThenToUpdate(token);
+                            VehicleSpawner.UpdateSigns(data.Item.VehicleID);
+                        }
+                        ctx.Reply(T.VehicleBayRemovedDelay, rem);
+                        return;
                     }
-                    if (string.IsNullOrEmpty(gm))
+                    EDelayType type;
+                    if (ctx.MatchParameter(2, "time"))
+                        type = EDelayType.TIME;
+                    else if (ctx.MatchParameter(2, "flag", "objective", "objectives"))
+                        type = EDelayType.FLAG;
+                    else if (ctx.MatchParameter(2, "flagpercent", "percent"))
+                        type = EDelayType.FLAG_PERCENT;
+                    else if (ctx.MatchParameter(2, "staging", "prep"))
+                        type = EDelayType.OUT_OF_STAGING;
+                    else if (ctx.MatchParameter(2, "none"))
+                        type = EDelayType.NONE;
+                    else
+                    {
+                        if (adding)
+                            ctx.SendCorrectUsage("/vehiclebay delay add <time|flag|percent|staging|none> [value] [!][gamemode]");
+                        else
+                            ctx.SendCorrectUsage("/vehiclebay delay remove <all|time|flag|percent|staging|none> [value] [!][gamemode]");
+                        return;
+                    }
+                    if (type == EDelayType.NONE && ctx.ArgumentCount < 4)
+                    {
+                        if (adding)
+                            ctx.SendCorrectUsage("/vehiclebay delay add none [!]<gamemode>");
+                        else
+                            ctx.SendCorrectUsage("/vehiclebay delay remove none [!]<gamemode>");
+                        return;
+                    }
+                    string? gamemode = null;
+                    if (type == EDelayType.OUT_OF_STAGING || type == EDelayType.NONE)
+                    {
+                        if (ctx.HasArg(3))
+                            gamemode = ctx.Get(3)!;
+                    }
+                    else if (ctx.ArgumentCount < 4)
+                    {
+                        ctx.SendCorrectUsage("/vehiclebay delay " + ctx.Get(1)!.ToLower() + " " + ctx.Get(1)!.ToLower() + " <value> [gamemode]");
+                        return;
+                    }
+                    else if (ctx.ArgumentCount > 4)
+                        gamemode = ctx.Get(4)!;
+
+                    if (string.IsNullOrEmpty(gamemode) && type == EDelayType.NONE)
                     {
                         gamemode = "<";
-                        foreach (KeyValuePair<string, Type> gm2 in Gamemode.GAMEMODES)
+                        foreach (KeyValuePair<string, Type> gm in Gamemode.Gamemodes)
                         {
                             if (gamemode.Length != 1) gamemode += "|";
-                            gamemode += gm2.Key;
+                            gamemode += gm.Key;
                         }
                         gamemode += ">";
                         if (adding)
-                            ctx.SendCorrectUsage("/vehiclebay delay add <type> [value] [!]" + gamemode);
+                            ctx.SendCorrectUsage("/vehiclebay delay add none [!]" + gamemode);
                         else
-                            ctx.SendCorrectUsage("/vehiclebay delay remove <type> [value] [!]" + gamemode);
+                            ctx.SendCorrectUsage("/vehiclebay delay remove none [!]" + gamemode);
                         return;
                     }
-                    else gamemode = gm;
-                }
-
-                float val = 0;
-                if (type != EDelayType.OUT_OF_STAGING && type != EDelayType.NONE && !ctx.TryGet(3, out val))
-                {
-                    ctx.SendCorrectUsage("/vehiclebay delay " + (adding ? "add" : "remove") + " " + ctx.Get(2)! + " <value (float)>" + (string.IsNullOrEmpty(gamemode) ? string.Empty : " [!]" + gamemode));
-                    return;
-                }
-
-                if (adding)
-                {
-                    ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "ADDED DELAY " + type.ToString() + " VALUE: " + val.ToString()
-                        + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
-                    data.AddDelay(type, val, gamemode);
-                    VehicleBay.SaveSingleton();
-                    if (VehicleSigns.Loaded)
-                        VehicleSpawner.UpdateSigns(data.VehicleID);
-                    foreach (VehicleSpawn spawn in data.EnumerateSpawns)
+                    if (!string.IsNullOrEmpty(gamemode))
                     {
-                        VehicleBayComponent? svc = spawn.Component;
-                        if (svc != null) svc.UpdateTimeDelay();
+                        string? gm = null;
+                        foreach (KeyValuePair<string, Type> gm2 in Gamemode.Gamemodes)
+                        {
+                            if (gm2.Key.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
+                            {
+                                gm = gm2.Key;
+                                break;
+                            }
+                        }
+                        if (string.IsNullOrEmpty(gm))
+                        {
+                            gamemode = "<";
+                            foreach (KeyValuePair<string, Type> gm2 in Gamemode.Gamemodes)
+                            {
+                                if (gamemode.Length != 1) gamemode += "|";
+                                gamemode += gm2.Key;
+                            }
+                            gamemode += ">";
+                            if (adding)
+                                ctx.SendCorrectUsage("/vehiclebay delay add <type> [value] [!]" + gamemode);
+                            else
+                                ctx.SendCorrectUsage("/vehiclebay delay remove <type> [value] [!]" + gamemode);
+                            return;
+                        }
+                        else gamemode = gm;
                     }
-                    ctx.Reply(T.VehicleBayAddedDelay, type, val, string.IsNullOrEmpty(gamemode) ? "any" : gamemode!);
-                }
-                else
-                {
-                    int rem = 0;
-                    while (data.RemoveDelay(type, val, gamemode)) rem++;
-                    if (rem > 0)
+
+                    float val = 0;
+                    if (type != EDelayType.OUT_OF_STAGING && type != EDelayType.NONE && !ctx.TryGet(3, out val))
                     {
-                        if (VehicleSigns.Loaded)
-                            VehicleSpawner.UpdateSigns(data.VehicleID);
-                        VehicleBay.SaveSingleton();
-                        ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "REMOVED " + rem.ToString(Data.Locale) + " DELAY(S) " + type.ToString() + " VALUE: " + val.ToString()
+                        ctx.SendCorrectUsage("/vehiclebay delay " + (adding ? "add" : "remove") + " " + ctx.Get(2)! + " <value (float)>" + (string.IsNullOrEmpty(gamemode) ? string.Empty : " [!]" + gamemode));
+                        return;
+                    }
+
+                    if (adding)
+                    {
+                        ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "ADDED DELAY " + type.ToString() + " VALUE: " + val.ToString()
                             + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
+                        Delay.AddDelay(ref data.Item.Delays, type, val, gamemode);
+                        if (VehicleSigns.Loaded)
+                            VehicleSpawner.UpdateSigns(data.Item.VehicleID);
+                        foreach (VehicleSpawn spawn in data.Item.EnumerateSpawns)
+                        {
+                            VehicleBayComponent? svc = spawn.Component;
+                            if (svc != null) svc.UpdateTimeDelay();
+                        }
+                        await data.SaveItem(token).ThenToUpdate(token);
+                        ctx.Reply(T.VehicleBayAddedDelay, type, val, string.IsNullOrEmpty(gamemode) ? "any" : gamemode!);
                     }
-                    ctx.Reply(T.VehicleBayRemovedDelay, rem);
+                    else
+                    {
+                        int rem = 0;
+                        while (Delay.RemoveDelay(ref data.Item.Delays, type, val, gamemode))
+                            ++rem;
+                        if (rem > 0)
+                        {
+                            if (VehicleSigns.Loaded)
+                                VehicleSpawner.UpdateSigns(data.Item.VehicleID);
+                            foreach (VehicleSpawn spawn in data.Item.EnumerateSpawns)
+                            {
+                                VehicleBayComponent? svc = spawn.Component;
+                                if (svc != null) svc.UpdateTimeDelay();
+                            }
+                            await data.SaveItem(token).ThenToUpdate(token);
+                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "REMOVED " + rem.ToString(Data.Locale) + " DELAY(S) " + type + " VALUE: " + val.ToString(Data.AdminLocale)
+                                + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
+                        }
+                        ctx.Reply(T.VehicleBayRemovedDelay, rem);
+                    }
+                }
+                finally
+                {
+                    data.Release();
                 }
             }
             else
@@ -210,14 +224,19 @@ public class VehicleBayCommand : Command
 
             if (ctx.TryGetTarget(out InteractableVehicle vehicle))
             {
-                if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out _))
+                SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, token).ThenToUpdate(token);
+                if (data?.Item == null)
                 {
                     ctx.LogAction(EActionLogType.CREATE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
-                    VehicleBay.AddRequestableVehicle(vehicle);
+                    await bay.AddRequestableVehicle(vehicle, token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
                     ctx.Reply(T.VehicleBayAdded, vehicle.asset);
                 }
                 else
+                {
+                    await UCWarfare.ToUpdate(token);
                     ctx.Reply(T.VehicleBayAlreadyAdded, vehicle.asset);
+                }
             }
             else
                 ctx.Reply(T.VehicleBayNoTarget);
@@ -230,10 +249,9 @@ public class VehicleBayCommand : Command
 
             if (ctx.TryGetTarget(out InteractableVehicle vehicle))
             {
-                if (VehicleBay.VehicleExists(vehicle.asset.GUID, out _))
+                if (await bay.RemoveRequestableVehicle(vehicle.asset.GUID, token).ThenToUpdate(token))
                 {
                     ctx.LogAction(EActionLogType.DELETE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
-                    VehicleBay.RemoveRequestableVehicle(vehicle.asset.GUID);
                     ctx.Reply(T.VehicleBayRemoved, vehicle.asset);
                 }
                 else
@@ -250,12 +268,21 @@ public class VehicleBayCommand : Command
 
             if (ctx.TryGetTarget(out InteractableVehicle vehicle))
             {
-                if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
+                SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, token).ThenToUpdate(token);
+                if (data?.Item != null)
                 {
                     ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - SAVED METADATA");
-                    data.SaveMetaData(vehicle);
-                    VehicleBay.SaveSingleton();
-                    ctx.Reply(T.VehicleBaySavedMeta, vehicle.asset);
+                    await data.Enter(token).ThenToUpdate(token);
+                    try
+                    {
+                        data.Item.SaveMetaData(vehicle);
+                        await data.SaveItem(token).ThenToUpdate(token);
+                        ctx.Reply(T.VehicleBaySavedMeta, vehicle.asset);
+                    }
+                    finally
+                    {
+                        data.Release();
+                    }
                 }
                 else
                     ctx.Reply(T.VehicleBayNotAdded);
@@ -269,75 +296,83 @@ public class VehicleBayCommand : Command
 
             ctx.AssertHelpCheck(1, "/vehiclebay <set|s> <items|property> [value] - Sets the trunk items to your current inventory or any other property to the given value.");
 
-            if (ctx.MatchParameter(1, "items", "item", "inventory"))
+            SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, token).ConfigureAwait(false);
+            if (data?.Item is not null)
             {
-                VehicleData? data = GetVehicleTarget(ctx);
-                if (data is not null)
+                if (ctx.MatchParameter(1, "items", "item", "inventory"))
                 {
-                    List<Guid> items = new List<Guid>();
-
-                    for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
+                    await data.Enter(token).ThenToUpdate(token);
+                    try
                     {
-                        if (page == PlayerInventory.AREA)
-                            continue;
+                        List<Guid> items = new List<Guid>();
 
-                        byte pageCount = ctx.Caller!.Player.inventory.getItemCount(page);
-
-                        for (byte index = 0; index < pageCount; index++)
+                        for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
                         {
-                            if (Assets.find(EAssetType.ITEM, ctx.Caller!.Player.inventory.getItem(page, index).item.id) is ItemAsset a)
-                                items.Add(a.GUID);
+                            if (page == PlayerInventory.AREA)
+                                continue;
+
+                            byte pageCount = ctx.Caller!.Player.inventory.getItemCount(page);
+
+                            for (byte index = 0; index < pageCount; index++)
+                            {
+                                if (Assets.find(EAssetType.ITEM,
+                                        ctx.Caller!.Player.inventory.getItem(page, index).item.id) is ItemAsset a)
+                                    items.Add(a.GUID);
+                            }
                         }
+
+                        VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
+                        ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY,
+                            $"{asset?.vehicleName ?? "null"} / {(asset == null ? "0" : asset.id.ToString(Data.Locale))} / {data.Item.VehicleID:N} - SET ITEMS");
+                        data.Item.Items = items.ToArray();
+                        await data.SaveItem(token).ThenToUpdate(token);
+                        if (items.Count == 0)
+                            ctx.Reply(T.VehicleBayClearedItems, asset!);
+                        else
+                            ctx.Reply(T.VehicleBaySetItems, asset!, items.Count);
                     }
-
-                    VehicleAsset? asset = Assets.find<VehicleAsset>(data.VehicleID);
-                    ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} / {(asset == null ? "0" : asset.id.ToString(Data.Locale))} / {data.VehicleID:N} - SET ITEMS");
-                    VehicleBay.SetItems(data.VehicleID, items.ToArray());
-
-                    if (items.Count == 0)
-                        ctx.Reply(T.VehicleBayClearedItems, asset!);
-                    else
-                        ctx.Reply(T.VehicleBaySetItems, asset!, items.Count);
+                    finally
+                    {
+                        data.Release();
+                    }
                 }
-                else
-                    ctx.Reply(T.VehicleBayNoTarget);
-            }
-            else if (ctx.TryGet(2, out string value) && ctx.TryGet(1, out string property))
-            {
-                VehicleData? data = GetVehicleTarget(ctx);
-                if (data is not null)
+                else if (ctx.TryGet(2, out string value) && ctx.TryGet(1, out string property))
                 {
-                    ESetFieldResult result = VehicleBay.SetProperty(data, ref property, value);
+                    (SetPropertyResult result, MemberInfo? info) = await bay.SetProperty(data.Item, property, value, token).ThenToUpdate(token);
                     switch (result)
                     {
-                        case ESetFieldResult.SUCCESS:
-                            VehicleAsset? asset = Assets.find<VehicleAsset>(data.VehicleID);
-                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.VehicleID:N} - SET " + property.ToUpper() + " >> " + value.ToUpper());
+                        case SetPropertyResult.Success:
+                            VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
+                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY,
+                                $"{asset?.vehicleName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.Item.VehicleID:N} - SET " +
+                                (info?.Name ?? property).ToUpper() + " >> " + value.ToUpper());
                             ctx.Reply(T.VehicleBaySetProperty!, property, asset, value);
-                            VehicleSpawner.UpdateSigns(data.VehicleID);
-                            VehicleBay.SaveSingleton();
+                            VehicleSpawner.UpdateSigns(data.Item.VehicleID);
                             break;
                         default:
-                        case ESetFieldResult.OBJECT_NOT_FOUND:
+                        case SetPropertyResult.ObjectNotFound:
                             ctx.Reply(T.VehicleBayNotAdded);
                             break;
-                        case ESetFieldResult.FIELD_NOT_FOUND:
+                        case SetPropertyResult.PropertyNotFound:
                             ctx.Reply(T.VehicleBayInvalidProperty, property);
                             break;
-                        case ESetFieldResult.FIELD_NOT_SERIALIZABLE:
-                        case ESetFieldResult.INVALID_INPUT:
+                        case SetPropertyResult.ParseFailure:
+                        case SetPropertyResult.TypeNotSettable:
                             ctx.Reply(T.VehicleBayInvalidSetValue, value, property);
                             break;
-                        case ESetFieldResult.FIELD_PROTECTED:
-                            ctx.Reply(T.VehicleBayNotJsonSettable, property);
+                        case SetPropertyResult.PropertyProtected:
+                            ctx.Reply(T.VehicleBayNotCommandSettable, property);
                             break;
                     }
                 }
                 else
-                    ctx.Reply(T.VehicleBayNoTarget);
+                    ctx.SendCorrectUsage("/vehiclebay set <items|property> [value]");
             }
             else
-                ctx.SendCorrectUsage("/vehiclebay set <items|property> [value]");
+            {
+                await UCWarfare.ToUpdate();
+                ctx.Reply(T.VehicleBayNoTarget);
+            }
         }
         else if (ctx.MatchParameter(0, "crewseats", "seats", "crew"))
         {
@@ -347,16 +382,17 @@ public class VehicleBayCommand : Command
 
             if (ctx.MatchParameter(1, "add", "a", "create"))
             {
-                VehicleData? data = GetVehicleTarget(ctx);
-                if (data is not null)
+                SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, token).ConfigureAwait(false);
+                if (data?.Item is not null)
                 {
                     if (ctx.TryGet(2, out byte seat))
                     {
-                        VehicleAsset? asset = Assets.find<VehicleAsset>(data.VehicleID);
-                        if (!data.CrewSeats.Contains(seat))
+                        VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
+                        if (!data.Item.CrewSeats.Contains(seat))
                         {
-                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} / {(asset == null ? "null" : asset.id.ToString(Data.Locale))} / {data.VehicleID:N} - ADDED CREW SEAT {seat}.");
-                            VehicleBay.AddCrewmanSeat(data.VehicleID, seat);
+                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} /" +
+                                $" {(asset == null ? "null" : asset.id.ToString(Data.Locale))} / {data.Item.VehicleID:N} - ADDED CREW SEAT {seat}.");
+                            await bay.AddCrewSeat(data, seat, token).ThenToUpdate(token);
                             ctx.Reply(T.VehicleBaySeatAdded, seat, asset!);
                         }
                         else
@@ -370,16 +406,17 @@ public class VehicleBayCommand : Command
             }
             else if (ctx.MatchParameter(1, "remove", "r", "delete"))
             {
-                VehicleData? data = GetVehicleTarget(ctx);
-                if (data is not null)
+                SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, token).ConfigureAwait(false);
+                if (data?.Item is not null)
                 {
                     if (ctx.TryGet(2, out byte seat))
                     {
-                        VehicleAsset? asset = Assets.find<VehicleAsset>(data.VehicleID);
-                        if (data.CrewSeats.Contains(seat))
+                        VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
+                        if (data.Item.CrewSeats.Contains(seat))
                         {
-                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} / {(asset == null ? "null" : asset.id.ToString(Data.Locale))} / {data.VehicleID:N} - REMOVED CREW SEAT {seat}.");
-                            VehicleBay.RemoveCrewmanSeat(data.VehicleID, seat);
+                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} /" +
+                                $" {(asset == null ? "null" : asset.id.ToString(Data.Locale))} / {data.Item.VehicleID:N} - REMOVED CREW SEAT {seat}.");
+                            await bay.RemoveCrewSeat(data, seat, token).ThenToUpdate(token);
                             ctx.Reply(T.VehicleBaySeatRemoved, seat, asset!);
                         }
                         else
@@ -421,7 +458,7 @@ public class VehicleBayCommand : Command
             {
                 if (ctx.TryGetTarget(out BarricadeDrop barricade))
                 {
-                    if (Gamemode.Config.Barricades.VehicleBayGUID.MatchGuid(barricade.asset.GUID))
+                    if (Gamemode.Config.StructureVehicleBay.MatchGuid(barricade.asset.GUID))
                     {
                         if (!VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
                         {
@@ -440,7 +477,7 @@ public class VehicleBayCommand : Command
                 }
                 else if (ctx.TryGetTarget(out StructureDrop structure))
                 {
-                    if (Gamemode.Config.Barricades.VehicleBayGUID.MatchGuid(structure.asset.GUID))
+                    if (Gamemode.Config.StructureVehicleBay.MatchGuid(structure.asset.GUID))
                     {
                         if (!VehicleSpawner.IsRegistered(structure.instanceID, out _, EStructType.STRUCTURE))
                         {
@@ -472,14 +509,14 @@ public class VehicleBayCommand : Command
             VehicleSpawn? spawn = GetBayTarget(ctx);
             if (spawn is not null)
             {
-                VehicleSpawner.DeleteSpawn(spawn.SpawnPadInstanceID, spawn.type);
-                VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleID);
+                VehicleSpawner.DeleteSpawn(spawn.InstanceId, spawn.StructureType);
+                VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleGuid);
                 if (asset is not null)
-                    ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
-                                                               $"UNREGISTERED SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
+                    ctx.LogAction(EActionLogType.DEREGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                                                               $"DEREGISTERED SPAWN ID: {spawn.InstanceId}");
                 else
-                    ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{spawn.VehicleID:N} - " +
-                        $"UNREGISTERED SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
+                    ctx.LogAction(EActionLogType.DEREGISTERED_SPAWN, $"{spawn.VehicleGuid:N} - " +
+                        $"DEREGISTERED SPAWN ID: {spawn.InstanceId}");
                 ctx.Reply(T.VehicleBaySpawnDeregistered, asset!);
             }
             else if (ctx.TryGetTarget(out BarricadeDrop _) || ctx.TryGetTarget(out StructureDrop _))
@@ -504,14 +541,14 @@ public class VehicleBayCommand : Command
                 }
                 else
                 {
-                    asset = Assets.find(spawn.VehicleID) as VehicleAsset;
+                    asset = Assets.find(spawn.VehicleGuid) as VehicleAsset;
                 }
                 if (asset != null)
                     ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
-                                                               $"FORCED VEHICLE TO SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
+                                                               $"FORCED VEHICLE TO SPAWN ID: {spawn.InstanceId}");
                 else
-                    ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{spawn.VehicleID:N} - FORCED VEHICLE TO SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
-                spawn.SpawnVehicle();
+                    ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{spawn.VehicleGuid:N} - FORCED VEHICLE TO SPAWN ID: {spawn.InstanceId}");
+                await spawn.SpawnVehicle(token).ThenToUpdate(token);
                 ctx.Reply(T.VehicleBayForceSuccess, asset!);
             }
             else
@@ -538,20 +575,20 @@ public class VehicleBayCommand : Command
                         if (c2 != null)
                         {
                             ctx.LogAction(EActionLogType.LINKED_VEHICLE_BAY_SIGN, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID}- " +
-                                $"LINKED TO SPAWN AT {c2.transform.position:N2} ID: {c.currentlylinking.SpawnPadInstanceID}");
+                                $"LINKED TO SPAWN AT {c2.transform.position:N2} ID: {c.currentlylinking.InstanceId}");
                         }
                         else
                         {
                             ctx.LogAction(EActionLogType.LINKED_VEHICLE_BAY_SIGN, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID}- " +
-                                $"LINKED TO SPAWN ID: {c.currentlylinking.SpawnPadInstanceID}");
+                                $"LINKED TO SPAWN ID: {c.currentlylinking.InstanceId}");
                         }
                         VehicleSigns.LinkSign(sign, c.currentlylinking);
                         ctx.Reply(T.VehicleBayLinkFinished,
                             (c2 == null
                                 ? null
-                                : (c2.Spawn is null 
-                                    ? null 
-                                    : Assets.find<VehicleAsset>(c2.Spawn.VehicleID)))!);
+                                : (c2.Spawn is null
+                                    ? null
+                                    : Assets.find<VehicleAsset>(c2.Spawn.VehicleGuid)))!);
                         c.currentlylinking = null;
                     }
                     else
@@ -590,7 +627,7 @@ public class VehicleBayCommand : Command
             if (sign is not null && sign.SignDrop is not null && sign.SignDrop.interactable is InteractableSign sign2)
             {
                 VehicleSigns.UnlinkSign(sign2);
-                ctx.Reply(T.VehicleBayUnlinked, (sign.bay is null ? null : Assets.find<VehicleAsset>(sign.bay.VehicleID))!);
+                ctx.Reply(T.VehicleBayUnlinked, (sign.VehicleBay is null ? null : Assets.find<VehicleAsset>(sign.VehicleBay.VehicleGuid))!);
             }
             else
                 ctx.Reply(T.VehicleBayNoTarget);
@@ -602,8 +639,8 @@ public class VehicleBayCommand : Command
             VehicleSpawn? spawn = GetBayTarget(ctx);
             if (spawn is not null)
             {
-                VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleID);
-                ctx.Reply(T.VehicleBayCheck, spawn.SpawnPadInstanceID, asset!, asset == null ? (ushort)0 : asset.id);
+                VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleGuid);
+                ctx.Reply(T.VehicleBayCheck, spawn.InstanceId, asset!, asset == null ? (ushort)0 : asset.id);
             }
             else
                 ctx.Reply(T.VehicleBaySpawnNotRegistered);
@@ -612,13 +649,15 @@ public class VehicleBayCommand : Command
     }
 
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
-    private VehicleData? GetVehicleTarget(CommandInteraction ctx)
+    private async Task<SqlItem<VehicleData>?> GetVehicleTarget(CommandInteraction ctx, VehicleBay bay, CancellationToken token = default)
     {
-        if (ctx.TryGetTarget(out InteractableVehicle vehicle) && VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
+        if (ctx.TryGetTarget(out InteractableVehicle vehicle))
         {
-            return data;
+            SqlItem<VehicleData>? item = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
+            if (item?.Item != null)
+                return item;
         }
-        StructureDrop drop2;
+
         VehicleSpawn spawn;
         if (ctx.TryGetTarget(out BarricadeDrop drop))
         {
@@ -628,23 +667,27 @@ public class VehicleBayCommand : Command
                 {
                     if (VehicleSigns.SignExists(sign, out VehicleSign sign2))
                     {
-                        if (sign2.bay is not null && VehicleBay.VehicleExists(sign2.bay.VehicleID, out data))
+                        if (sign2.VehicleBay is not null)
                         {
-                            return data;
+                            SqlItem<VehicleData>? item = await bay.GetDataProxy(sign2.VehicleBay.VehicleGuid, token).ConfigureAwait(false);
+                            if (item?.Item != null)
+                                return item;
                         }
                     }
                 }
             }
-            if ((VehicleSpawner.SpawnExists(drop.instanceID, EStructType.BARRICADE, out spawn) && 
-                VehicleBay.VehicleExists(spawn.VehicleID, out data)) || 
-                (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) && 
-                VehicleBay.VehicleExists(spawn.VehicleID, out data)))
-                return data;
-            else return null;
+            if (VehicleSpawner.SpawnExists(drop.instanceID, EStructType.BARRICADE, out spawn))
+            {
+                SqlItem<VehicleData>? item = await bay.GetDataProxy(spawn.VehicleGuid, token).ConfigureAwait(false);
+                if (item?.Item != null)
+                    return item;
+            }
         }
-        if (ctx.TryGetTarget(out drop2))
+        if (ctx.TryGetTarget(out StructureDrop drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn))
         {
-            return VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) && VehicleBay.VehicleExists(spawn.VehicleID, out data) ? data : null;
+            SqlItem<VehicleData>? item = await bay.GetDataProxy(spawn.VehicleGuid, token).ConfigureAwait(false);
+            if (item?.Item != null)
+                return item;
         }
         return null;
     }
@@ -664,8 +707,8 @@ public class VehicleBayCommand : Command
                 {
                     if (VehicleSigns.SignExists(sign, out VehicleSign sign2))
                     {
-                        if (sign2.bay is not null)
-                            return sign2.bay;
+                        if (sign2.VehicleBay is not null)
+                            return sign2.VehicleBay;
                     }
                 }
             }

@@ -23,6 +23,11 @@ public interface ISquads : ITeams
 {
     Squads.SquadManager SquadManager { get; }
 }
+public interface ITraits : IGamemode
+{
+    Traits.TraitManager TraitManager { get; }
+}
+
 public interface ITeams : IGamemode, IJoinedTeamListener
 {
     bool UseTeamSelector { get; }
@@ -52,6 +57,12 @@ public interface IFlagTeamObjectiveGamemode : IFlagRotation
     int ObjectiveT1Index { get; }
     int ObjectiveT2Index { get; }
 }
+public interface IFlagObjectiveGamemode : IFlagRotation
+{
+    Flag? Objective { get; }
+    int ObjectiveIndex { get; }
+}
+
 public interface IFOBs : IGamemode
 {
     FOBs.FOBManager FOBManager { get; }

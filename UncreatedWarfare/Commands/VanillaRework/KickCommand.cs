@@ -1,6 +1,5 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -27,7 +26,7 @@ public class KickCommand : Command
         if (!ctx.TryGet(1, out string reason))
             throw ctx.Reply(T.NoReasonProvided);
 
-        FPlayerName names = F.GetPlayerOriginalNames(target);
+        PlayerNames names = target.Name;
         Provider.kick(target.Player.channel.owner.playerID.steamID, reason!);
 
         OffenseManager.LogKickPlayer(targetId, ctx.CallerID, reason!, DateTime.Now);
@@ -40,7 +39,7 @@ public class KickCommand : Command
         }
         else
         {
-            FPlayerName callerNames = ctx.Caller is null ? FPlayerName.Console : F.GetPlayerOriginalNames(ctx.Caller);
+            PlayerNames callerNames = ctx.Caller is null ? PlayerNames.Console : ctx.Caller.Name;
             L.Log($"{names.PlayerName} ({targetId.ToString(Data.Locale)}) was kicked by {callerNames.PlayerName} ({ctx.CallerID.ToString(Data.Locale)}) because: {reason}.", ConsoleColor.Cyan);
             Chat.Broadcast(LanguageSet.AllBut(ctx.CallerID), T.KickSuccessBroadcast, names, callerNames);
             ctx.Reply(T.KickSuccessFeedback, names);

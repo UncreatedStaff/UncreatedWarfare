@@ -1,0 +1,21 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Quests;
+
+namespace Uncreated.Warfare.Events.Players;
+
+public class QuestCompleted : BreakablePlayerEvent
+{
+    private readonly BaseQuestTracker _tracker;
+    public BaseQuestTracker Tracker => _tracker;
+    public Guid PresetKey => _tracker.PresetKey;
+    public bool GiveRewards { get; set; } = true;
+
+    public QuestCompleted(BaseQuestTracker tracker) : base(tracker.Player ?? throw new ArgumentException("Tracker must belong to a player."), true)
+    {
+        _tracker = tracker;
+    }
+}

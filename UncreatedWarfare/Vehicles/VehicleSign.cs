@@ -3,16 +3,18 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
-using Structure = Uncreated.Warfare.Structures.Structure;
 
 namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(VehicleSpawner))]
 [SingletonDependency(typeof(VehicleBay))]
 [SingletonDependency(typeof(StructureSaver))]
+[SingletonDependency(typeof(Level))]
 public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
 {
     public VehicleSigns() : base("vehiclesigns", Path.Combine(Data.Paths.VehicleStorage, "signs.json")) { }
@@ -56,9 +58,9 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
         for (int i = 0; i < Count; i++)
         {
             VehicleSign vs = this[i];
-            if (vs is not null && vs.instance_id == instanceID)
+            if (vs is not null && vs.InstanceId == instanceID)
             {
-                StructureSaver.RemoveStructure(vs.save);
+                Data.Singletons.GetSingleton<StructureSaver>()?.BeginRemoveItem(vs.StructureSave);
                 Remove(vs);
                 Save();
                 break;
@@ -68,7 +70,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
     public static IEnumerable<VehicleSign> GetLinkedSigns(VehicleSpawn spawn)
     {
         Singleton.AssertLoaded<VehicleSigns, VehicleSign>();
-        return Singleton.GetObjectsWhere(x => x.bay != null && x.bay.SpawnPadInstanceID == spawn.SpawnPadInstanceID && x.bay.type == spawn.type);
+        return Singleton.GetObjectsWhere(x => x.VehicleBay != null && x.VehicleBay.InstanceId == spawn.InstanceId && x.VehicleBay.StructureType == spawn.StructureType);
     }
 
     protected override string LoadDefaults() => "[]";
@@ -88,11 +90,11 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
         {
             for (int i = 0; i < Singleton.Count; i++)
             {
-                if (Singleton[i] != null && Singleton[i].instance_id == drop.instanceID)
+                if (Singleton[i] != null && Singleton[i].InstanceId == drop.instanceID)
                 {
                     RequestSigns.SetSignTextSneaky(sign, string.Empty);
                     VehicleSign vs = Singleton[i];
-                    StructureSaver.RemoveStructure(vs.save);
+                    Data.Singletons.GetSingleton<StructureSaver>()?.RemoveItem(vs.StructureSave);
                     Singleton.Remove(Singleton[i]);
                     if (VehicleSpawner.Loaded)
                     {
@@ -102,8 +104,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
                             {
                                 spawn.LinkedSign = null;
                                 spawn.UpdateSign();
-                                if (Regions.tryGetCoordinate(sign.transform.position, out byte x, out byte y))
-                                    F.InvokeSignUpdateForAll(sign, x, y, sign.text);
+                                Signs.BroadcastSignUpdate(drop);
                             }
                         }
                     }
@@ -122,7 +123,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
         {
             foreach (VehicleSpawn spawn in VehicleSpawner.Spawners)
             {
-                if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data) && (data.HasDelayType(EDelayType.FLAG) || data.HasDelayType(EDelayType.FLAG_PERCENT)))
+                if (spawn.Data?.Item != null && (spawn.Data.Item.HasDelayType(EDelayType.FLAG) || spawn.Data.Item.HasDelayType(EDelayType.FLAG_PERCENT)))
                 {
                     spawn.UpdateSign();
                 }
@@ -138,7 +139,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
         BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
         if (drop != null)
         {
-            return Singleton.ObjectExists(x => x != default && x.instance_id == drop.instanceID, out vbsign) && vbsign.bay != null;
+            return Singleton.ObjectExists(x => x != default && x.InstanceId == drop.instanceID, out vbsign) && vbsign.VehicleBay != null;
         }
         vbsign = default!;
         return false;
@@ -147,205 +148,184 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
     {
         Singleton.AssertLoaded<VehicleSigns, VehicleSign>();
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
+        IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
-        if (drop != null)
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        if (drop != null && saver != null)
         {
-            if (!StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out Structure structure))
-                StructureSaver.AddStructure(drop, drop.GetServersideData(), out structure);
+            Task.Run(async () =>
+            {
+                try
+                {
+                    (SqlItem<SavedStructure> item, _) = await saver.AddBarricade(drop);
+                    await UCWarfare.ToUpdate();
+                    VehicleSign n = Singleton.AddObjectToSave(new VehicleSign(drop, sign, item.Item!, spawn));
+                    spawn.LinkedSign = n;
 
-            VehicleSign n = Singleton.AddObjectToSave(new VehicleSign(drop, sign, structure, spawn));
-            spawn.LinkedSign = n;
-           
-            RequestSigns.SetSignTextSneaky(sign, n.placeholder_text);
-            n.save.state = Convert.ToBase64String(drop.GetServersideData().barricade.state);
-            n.save.ResetMetadata();
-            StructureSaver.SaveSingleton();
-            spawn.UpdateSign();
+                    n.StructureSave.Metadata = RequestSigns.SetSignTextSneaky(sign, n.SignText);
+                    spawn.UpdateSign();
+                }
+                catch (Exception ex)
+                {
+                    L.LogError(ex);
+                }
+#if DEBUG
+                profiler.Dispose();
+#endif
+            });
             return true;
         }
+#if DEBUG
+        profiler.Dispose();
+#endif
         return false;
     }
+
+#pragma warning disable IDE0031
+    internal static void TimeSync()
+    {
+        if (VehicleSpawner.Loaded)
+        {
+            for (int i = 0; i < VehicleSpawner.Singleton.Count; ++i)
+            {
+                VehicleSpawn spawn = VehicleSpawner.Singleton[i];
+                if (spawn.Component != null)
+                    spawn.Component.TimeSync();
+            }
+        }
+    }
+#pragma warning restore IDE0031
 }
 [JsonSerializable(typeof(VehicleSign))]
 public class VehicleSign
 {
     [JsonIgnore]
-    public Structure save;
+    private SavedStructure _structureSave;
     [JsonIgnore]
-    public VehicleSpawn bay;
+    private VehicleSpawn _vehicleBay;
+
     [JsonIgnore]
-    public BarricadeDrop? SignDrop;
+    public SavedStructure StructureSave => _structureSave;
+
     [JsonIgnore]
-    public InteractableSign? SignInteractable;
-    public uint instance_id;
-    public uint bay_instance_id;
-    public EStructType bay_type;
-    public SerializableTransform sign_transform;
-    public SerializableTransform bay_transform;
-    public string placeholder_text;
-    public override string ToString() => $"Instance id: {instance_id}, bay: {bay_instance_id}, text: {placeholder_text}";
-    [JsonConstructor]
-    public VehicleSign(uint instance_id, uint bay_instance_id, SerializableTransform sign_transform, SerializableTransform bay_transform, string placeholder_text, EStructType bay_type)
-    {
-        this.instance_id = instance_id;
-        this.sign_transform = sign_transform;
-        this.bay_transform = bay_transform;
-        this.bay_instance_id = bay_instance_id;
-        this.placeholder_text = placeholder_text;
-        this.bay_type = bay_type;
-    }
+    public VehicleSpawn VehicleBay => _vehicleBay;
+
+    [JsonIgnore]
+    public BarricadeDrop? SignDrop { get; private set; }
+
+    [JsonIgnore]
+    public InteractableSign? SignInteractable { get; private set; }
+
+    [JsonPropertyName("sign_instance_id")]
+    public uint InstanceId { get; set; }
+
+    [JsonPropertyName("bay_instance_id")]
+    public uint BayInstanceId { get; set; }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonPropertyName("bay_type")]
+    public EStructType BayStructureType { get; set; }
+
+    [JsonPropertyName("sign_text")]
+    public string SignText { get; set; }
+
+    public override string ToString() => $"Instance id: {InstanceId}, bay: {BayInstanceId}, text: {SignText}";
     public VehicleSign()
     {
-        this.instance_id = 0;
-        this.bay_instance_id = 0;
-        this.placeholder_text = string.Empty;
-        this.bay_type = EStructType.BARRICADE;
-        this.sign_transform = SerializableTransform.Zero;
-        this.bay_transform = SerializableTransform.Zero;
+        this.SignText = string.Empty;
+        this.BayStructureType = EStructType.UNKNOWN;
     }
     public void InitVars()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!StructureSaver.StructureExists(this.instance_id, EStructType.BARRICADE, out save))
+        BarricadeDrop? drop = UCBarricadeManager.FindBarricade(InstanceId);
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        if (saver != null)
         {
-            BarricadeDrop? drop = UCBarricadeManager.GetBarriadeBySerializedTransform(sign_transform);
-            if (drop == null)
+            if (!saver.TryGetSave(this.InstanceId, EStructType.BARRICADE, out _structureSave))
             {
-                L.LogWarning("Failed to link sign to the correct instance id.");
-            }
-            else if (!StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out save))
-            {
-                if (StructureSaver.AddStructure(drop, drop.GetServersideData(), out Structure structure))
+                if (drop == null)
                 {
-                    save = structure;
-                    structure.SpawnCheck();
-                    this.instance_id = structure.instance_id;
-                    SignDrop = drop;
-                    SignInteractable = drop.interactable as InteractableSign;
-                    if (SignInteractable != null)
-                        RequestSigns.SetSignTextSneaky(SignInteractable, this.placeholder_text);
+                    L.LogWarning("Failed to link sign to the correct instance id.");
                 }
-                else
+                else if (!saver.TryGetSave(drop, out _structureSave))
                 {
-                    L.LogWarning("Failed to add sign to structure saver.");
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            if (!saver.IsLoading)
+                                return;
+                            (SqlItem<SavedStructure> item, _) = await saver.AddBarricade(drop, F.DebugTimeout).ConfigureAwait(false);
+                            if (item.Item == null)
+                                L.LogWarning("Failed to add sign to structure saver.");
+                            else
+                            {
+                                await UCWarfare.ToUpdate();
+                                this._structureSave = item.Item;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            L.LogError("Error adding vehicle sign save.");
+                            L.LogError(ex);
+                        }
+                    });
+
                 }
-            }
-            else
-            {
-                this.instance_id = drop.instanceID;
-                SignDrop = drop;
-                SignInteractable = drop.interactable as InteractableSign;
-                if (SignInteractable != null)
-                    RequestSigns.SetSignTextSneaky(SignInteractable, this.placeholder_text);
             }
         }
-        else
-        {
-            SignDrop = UCBarricadeManager.GetBarricadeFromInstID(save.instance_id);
-            if (SignDrop != null)
-                SignInteractable = SignDrop.interactable as InteractableSign;
-        }
+        SignDrop = drop;
+        SignInteractable = drop?.interactable as InteractableSign;
+
         if (SignDrop == null)
+            L.LogWarning("Unable to get drop of sign " + InstanceId);
+        else if (SignInteractable == null)
+            L.LogWarning("Unable to get interactable of sign " + InstanceId);
+
+        if (!VehicleSpawner.IsRegistered(this.BayInstanceId, out _vehicleBay, this.BayStructureType))
         {
-            L.LogWarning("Unable to get drop of sign " + instance_id);
-        }
-        if (SignInteractable == null)
-        {
-            L.LogWarning("Unable to get interactable of sign " + instance_id);
-        }
-        if (!VehicleSpawner.IsRegistered(this.bay_instance_id, out bay, this.bay_type))
-        {
-            if (this.bay_type == EStructType.BARRICADE)
-            {
-                BarricadeDrop? drop = UCBarricadeManager.GetBarriadeBySerializedTransform(bay_transform);
-                if (drop == null)
-                {
-                    L.LogWarning("Failed to link sign to the correct vehicle bay instance id.");
-                }
-                else if (!StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out save))
-                {
-                    L.LogWarning("Failed to find vehicle bay in structure saver.");
-                }
-                else if (VehicleSpawner.IsRegistered(drop.instanceID, out bay, this.bay_type))
-                {
-                    this.instance_id = drop.instanceID;
-                    this.sign_transform = new SerializableTransform(drop.model.transform);
-                    bay.LinkedSign = this;
-                    L.LogDebug("Linked sign " + instance_id + " to bay " + instance_id);
-                    bay.UpdateSign();
-                }
-                else
-                {
-                    L.LogWarning("Failed to find new vehicle bay in vehicle spawner.");
-                }
-            }
-            else
-            {
-                StructureDrop? drop = UCBarricadeManager.GetStructureBySerializedTransform(bay_transform);
-                if (drop == null)
-                {
-                    L.LogWarning("Failed to link sign to the correct vehicle bay instance id.");
-                }
-                else if (!StructureSaver.StructureExists(drop.instanceID, EStructType.STRUCTURE, out save))
-                {
-                    L.LogWarning("Failed to find vehicle bay in structure saver.");
-                }
-                else if (VehicleSpawner.IsRegistered(drop.instanceID, out bay, this.bay_type))
-                {
-                    this.instance_id = drop.instanceID;
-                    this.sign_transform = new SerializableTransform(drop.model.transform);
-                    bay.LinkedSign = this;
-                    L.LogDebug("Linked sign " + instance_id + " to bay " + instance_id);
-                    bay.UpdateSign();
-                }
-                else
-                {
-                    L.LogWarning("Failed to find new vehicle bay in vehicle spawner.");
-                }
-            }
+            L.LogWarning("Sign not linked: " + this.InstanceId);
         }
         else
         {
-            bay.LinkedSign = this;
-            L.LogDebug("Sign " + instance_id + " was already linked to bay " + instance_id);
-            bay.UpdateSign();
+            VehicleBay.LinkedSign = this;
+            VehicleBay.UpdateSign();
         }
     }
-    public VehicleSign(BarricadeDrop drop, InteractableSign sign, Structure save, VehicleSpawn bay)
+    public VehicleSign(BarricadeDrop drop, InteractableSign sign, SavedStructure save, VehicleSpawn bay)
     {
-        if (save == null || bay == null) throw new ArgumentNullException("save or bay", "Can not create a vehicle sign unless save and bay are defined.");
-        this.save = save;
-        this.bay = bay;
-        this.instance_id = save.instance_id;
-        this.bay_instance_id = bay.SpawnPadInstanceID;
-        this.bay_type = bay.type;
-        Asset? asset = Assets.find(bay.VehicleID);
-        this.placeholder_text = $"sign_vbs_" + (asset == null ? bay.VehicleID.ToString("N") : asset.id.ToString(Data.Locale));
-        this.sign_transform = save.transform;
+        if (save == null || bay == null) throw new ArgumentNullException("save/bay", "Can not create a vehicle sign unless save and bay are defined.");
+        _structureSave = save;
+        _vehicleBay = bay;
+        this.InstanceId = save.InstanceID;
+        this.BayInstanceId = bay.InstanceId;
+        this.BayStructureType = bay.StructureType;
+        Asset? asset = Assets.find(bay.VehicleGuid);
+        this.SignText = $"sign_vbs_" + (asset == null ? bay.VehicleGuid.ToString("N") : asset.id.ToString(Data.Locale));
         this.SignInteractable = sign;
         this.SignDrop = drop;
-        if (StructureSaver.StructureExists(bay.SpawnPadInstanceID, bay.type, out Structure s))
-            this.bay_transform = s.transform;
-        else if (bay.type == EStructType.BARRICADE)
+        bay.LinkedSign = this;
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        if (saver != null)
         {
-            BarricadeData? paddata = UCBarricadeManager.GetBarricadeFromInstID(bay.SpawnPadInstanceID, out BarricadeDrop? paddrop);
-            if (paddata != null)
+            if (!saver.TryGetSave(bay.InstanceId, bay.StructureType, out SavedStructure _))
             {
-                if (drop != default) this.bay_transform = new SerializableTransform(paddrop!.model);
-                StructureSaver.AddStructure(paddrop!, paddata, out _);
-            }
-        }
-        else if (bay.type == EStructType.STRUCTURE)
-        {
-            StructureData? paddata = UCBarricadeManager.GetStructureFromInstID(bay.SpawnPadInstanceID, out StructureDrop? paddrop);
-            if (paddata != null)
-            {
-                if (drop != default) this.bay_transform = new SerializableTransform(paddrop!.model);
-                StructureSaver.AddStructure(paddrop!, paddata, out _);
+                if (bay.StructureType == EStructType.BARRICADE)
+                {
+                    BarricadeDrop? paddrop = UCBarricadeManager.FindBarricade(bay.InstanceId);
+                    if (paddrop != null)
+                        saver.BeginAddBarricade(paddrop);
+                }
+                else if (bay.StructureType == EStructType.STRUCTURE)
+                {
+                    StructureDrop? paddrop = UCBarricadeManager.FindStructure(bay.InstanceId);
+                    if (paddrop != null)
+                        saver.BeginAddStructure(paddrop);
+                }
             }
         }
     }

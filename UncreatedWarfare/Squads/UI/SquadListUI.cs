@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Framework.UI;
+﻿using Uncreated.Framework.UI;
 using Uncreated.Warfare.Gamemodes;
 
 namespace Uncreated.Warfare.Squads.UI;
@@ -42,7 +37,7 @@ public class SquadListUI : UnturnedUI
     public readonly UnturnedLabel[] SquadNames;
     public readonly UnturnedLabel[] SquadMemberCounts;
 
-    public SquadListUI() : base(12001, Gamemode.Config.UI.SquadListGUID, true, false)
+    public SquadListUI() : base(12001, Gamemode.Config.UISquadList, true, false)
     {
         Squads = new UnturnedUIElement[]
         {

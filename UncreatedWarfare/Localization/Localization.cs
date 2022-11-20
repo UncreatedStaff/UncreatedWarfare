@@ -7,15 +7,15 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Xml;
-using System.Xml.Linq;
 using Uncreated.Framework;
-using Uncreated.Players;
+using Uncreated.Json;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -31,7 +31,7 @@ public static class Localization
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string Colorize(string hex, string inner, TranslationFlags flags)
     {
-        return (flags & TranslationFlags.NoColor) == TranslationFlags.NoColor ? inner : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
+        return (flags & TranslationFlags.SkipColorize) == TranslationFlags.SkipColorize ? inner : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
             ? (UNITY_RICH_TEXT_COLOR_BASE_START + hex + RICH_TEXT_COLOR_END + inner + RICH_TEXT_COLOR_CLOSE)
             : (TMPRO_RICH_TEXT_COLOR_BASE + hex + RICH_TEXT_COLOR_END + inner + RICH_TEXT_COLOR_CLOSE));
     }
@@ -141,31 +141,31 @@ public static class Localization
         {
             val = F.DivideRemainder(seconds, 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player)}")}";
         }
         if (seconds < 86400) // < 1 day 
         {
             val = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}")}";
         }
         if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out overflow);
             return $"{val} {(val == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural)    .Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(player)}")}";
         }
         if (seconds < 31536000) // < 1 year
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out overflow);
             return $"{val} {(val == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural)      .Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(player)}")}";
         }
         // > 1 year
 
         val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out overflow);
         return $"{val} {(val == 1 ? T.TimeYearSingle : T.TimeYearPlural).Translate(player)}" +
-               $"{(overflow == 0 ? string.Empty :           $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural)  .Translate(player)}")}";
+               $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(player)}")}";
     }
     public static string GetTimeFromSeconds(this int seconds, IPlayer player)
     {
@@ -181,31 +181,31 @@ public static class Localization
         {
             val = F.DivideRemainder(seconds, 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player)}")}";
         }
         if (seconds < 86400) // < 1 day 
         {
             val = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}")}";
         }
         if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out overflow);
             return $"{val} {(val == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural)    .Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(player)}")}";
         }
         if (seconds < 31536000) // < 1 year
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out overflow);
             return $"{val} {(val == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural)      .Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(player)}")}";
         }
         // > 1 year
 
         val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out overflow);
         return $"{val} {(val == 1 ? T.TimeYearSingle : T.TimeYearPlural).Translate(player)}" +
-               $"{(overflow == 0 ? string.Empty :           $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural)  .Translate(player)}")}";
+               $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(player)}")}";
     }
     public static string GetTimeFromSeconds(this int seconds, string language)
     {
@@ -221,34 +221,34 @@ public static class Localization
         {
             val = F.DivideRemainder(seconds, 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(language)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(language)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(language)}")}";
         }
         if (seconds < 86400) // < 1 day 
         {
             val = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(language)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(language)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(language)}")}";
         }
         if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out overflow);
             return $"{val} {(val == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(language)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural)    .Translate(language)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(language)}")}";
         }
         if (seconds < 31536000) // < 1 year
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out overflow);
             return $"{val} {(val == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(language)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural)      .Translate(language)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(language)}")}";
         }
         // > 1 year
 
         val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out overflow);
         return $"{val} {(val == 1 ? T.TimeYearSingle : T.TimeYearPlural).Translate(language)}" +
-               $"{(overflow == 0 ? string.Empty :           $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural)  .Translate(language)}")}";
+               $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(language)}")}";
     }
-    public static string GetTimeFromMinutes(this int minutes, ulong player)    => GetTimeFromSeconds(minutes * 60, player);
-    public static string GetTimeFromMinutes(this int minutes, IPlayer player)  => GetTimeFromSeconds(minutes * 60, player);
+    public static string GetTimeFromMinutes(this int minutes, ulong player) => GetTimeFromSeconds(minutes * 60, player);
+    public static string GetTimeFromMinutes(this int minutes, IPlayer player) => GetTimeFromSeconds(minutes * 60, player);
     public static string GetTimeFromMinutes(this int minutes, string language) => GetTimeFromSeconds(minutes * 60, language);
     public static string TranslateSign(string key, string language, UCPlayer ucplayer, bool important = false)
     {
@@ -306,7 +306,7 @@ public static class Localization
                                 if (kit.SignTexts.Count > 0)
                                     name = kit.SignTexts.First().Value;
                                 else
-                                    name = kit.DisplayName ?? kit.Name;
+                                    name = kit.Name;
                         for (int i = 0; i < name.Length; i++)
                         {
                             char @char = name[i];
@@ -372,20 +372,18 @@ public static class Localization
     }
     public static string TranslateKitSign(string language, Kit kit, UCPlayer ucplayer)
     {
-        ulong playerteam = 0;
-        ref Ranks.RankData playerrank = ref Ranks.RankManager.GetRank(ucplayer, out bool success);
-
         bool keepline = false;
+        ulong team = ucplayer.GetTeam();
         string name;
         if (!ucplayer.OnDuty() && kit.SignTexts != null)
         {
-            if (!kit.SignTexts.TryGetValue(language, out name))
-                if (!kit.SignTexts.TryGetValue(L.DEFAULT, out name))
-                    if (kit.SignTexts.Count > 0)
-                        name = kit.SignTexts.First().Value;
-                    else
-                        name = kit.DisplayName ?? kit.Name;
-
+            if (!kit.SignTexts.TryGetValue(language, out name) && !kit.SignTexts.TryGetValue(L.DEFAULT, out name))
+            {
+                if (kit.SignTexts.Count > 0)
+                    name = kit.SignTexts.First().Value;
+                else
+                    name = kit.Name;
+            }
 
             for (int i = 0; i < name.Length; i++)
             {
@@ -401,21 +399,32 @@ public static class Localization
         {
             name = kit.Name;
         }
-        name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
+        name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex(kit.SquadLevel == ESquadLevel.COMMANDER ? "kit_public_commander_header" : "kit_public_header"), true) + "</b>";
         string weapons = kit.Weapons ?? string.Empty;
         if (weapons.Length > 0)
             weapons = "<b>" + weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true) + "</b>";
         string cost = string.Empty;
         string playercount;
+        if (kit.SquadLevel == ESquadLevel.COMMANDER && SquadManager.Loaded)
+        {
+            UCPlayer? c = SquadManager.Singleton.Commanders.GetCommander(team);
+            if (c != null)
+            {
+                if (c.Steam64 != ucplayer.Steam64)
+                    cost = T.KitCommanderTaken.Translate(language, c);
+                else
+                    cost = T.KitCommanderTakenByViewer.Translate(language);
+                goto n;
+            }
+        }
         if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
         {
-            if (ucplayer != null)
-                if (KitManager.HasAccessFast(kit, ucplayer))
-                    cost = T.KitPremiumOwned.Translate(language);
-                else if (kit.PremiumCost == -1)
-                    cost = T.KitExclusive.Translate(language);
-                else
-                    cost = T.KitPremiumCost.Translate(language, kit.PremiumCost);
+            if (KitManager.HasAccessFast(kit, ucplayer))
+                cost = T.KitPremiumOwned.Translate(language);
+            else if (kit.PremiumCost == -1)
+                cost = T.KitExclusive.Translate(language);
+            else
+                cost = T.KitPremiumCost.Translate(language, kit.PremiumCost);
         }
         else if (kit.UnlockRequirements != null && kit.UnlockRequirements.Length != 0)
         {
@@ -427,6 +436,15 @@ public static class Localization
                 break;
             }
         }
+        else if (kit.CreditCost > 0)
+        {
+            if (KitManager.HasAccessFast(kit, ucplayer))
+                cost = T.KitPremiumOwned.Translate(language);
+            else
+                cost = T.KitCreditCost.Translate(language, kit.CreditCost);
+        }
+        else cost = T.KitFree.Translate(language);
+    n:
         if (cost == string.Empty && kit.CreditCost > 0)
         {
             if (ucplayer != null)
@@ -443,7 +461,7 @@ public static class Localization
         {
             playercount = T.KitUnlimited.Translate(language);
         }
-        else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : playerteam, true))
+        else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : team, true))
         {
             playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_unavailable"), true);
         }
@@ -453,7 +471,7 @@ public static class Localization
         }
         if (weapons.Length == 0)
         {
-            return 
+            return
                 name + "\n\n" +
                 cost + "\n" +
                 playercount;
@@ -479,15 +497,15 @@ public static class Localization
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         VehicleBayComponent comp;
-        if (spawn.type == Structures.EStructType.STRUCTURE)
+        if (spawn.StructureType == Structures.EStructType.STRUCTURE)
             if (spawn.StructureDrop != null)
                 comp = spawn.StructureDrop.model.gameObject.GetComponent<VehicleBayComponent>();
             else
-                return spawn.VehicleID.ToString("N");
+                return spawn.VehicleGuid.ToString("N");
         else if (spawn.BarricadeDrop != null)
             comp = spawn.BarricadeDrop.model.gameObject.GetComponent<VehicleBayComponent>();
-        else return spawn.VehicleID.ToString("N");
-        if (comp == null) return spawn.VehicleID.ToString("N");
+        else return spawn.VehicleGuid.ToString("N");
+        if (comp == null) return spawn.VehicleGuid.ToString("N");
 
         string unlock = string.Empty;
         if (data.UnlockLevel > 0)
@@ -501,7 +519,7 @@ public static class Localization
         }
 
         string finalformat =
-            $"{(spawn.VehicleID == F15 ? "F15-E" : (Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N")))}\n" +
+            $"{(spawn.VehicleGuid == F15 ? "F15-E" : (Assets.find(spawn.VehicleGuid) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleGuid.ToString("N")))}\n" +
             $"<#{UCWarfare.GetColorHex("vbs_branch")}>{TranslateEnum(data.Branch, language)}</color>\n" +
             (data.TicketCost > 0 ? T.VBSTickets.Translate(language, data.TicketCost, null, team) : " ") + "\n" +
             unlock +
@@ -529,111 +547,9 @@ public static class Localization
         {
             if (data.IsDelayed(out Delay delay))
             {
-                if (delay.type == EDelayType.OUT_OF_STAGING)
-                {
-                    return finalformat + T.VBSDelayStaging.Translate(language);
-                }
-                else if (delay.type == EDelayType.TIME)
-                {
-                    float timeLeft = delay.value - Data.Gamemode.SecondsSinceStart;
-                    return finalformat + T.VBSDelayTime.Translate(language, Mathf.FloorToInt(timeLeft / 60f), Mathf.FloorToInt(timeLeft % 60), null, team);
-                }
-                else if (delay.type == EDelayType.FLAG || delay.type == EDelayType.FLAG_PERCENT)
-                {
-                    if (Data.Is(out Invasion invasion))
-                    {
-                        int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(invasion.Rotation.Count * (delay.value / 100f));
-                        int ct2;
-                        if (team == 1)
-                        {
-                            if (invasion.AttackingTeam == 1)
-                                ct2 = ct - invasion.ObjectiveT1Index;
-                            else
-                                ct2 = ct - (invasion.Rotation.Count - invasion.ObjectiveT2Index - 1);
-                        }
-                        else if (team == 2)
-                        {
-                            if (invasion.AttackingTeam == 2)
-                                ct2 = ct - (invasion.Rotation.Count - invasion.ObjectiveT2Index - 1);
-                            else
-                                ct2 = ct - invasion.ObjectiveT1Index;
-                        }
-                        else ct2 = ct;
-                        int ind = ct - ct2;
-                        if (invasion.AttackingTeam == 2) ind = invasion.Rotation.Count - ind - 1;
-                        if (ct2 == 1 && invasion.Rotation.Count > 0 && ind < invasion.Rotation.Count)
-                        {
-                            if (team == invasion.DefendingTeam)
-                                return finalformat + T.VBSDelayLoseFlag.Translate(language, invasion.Rotation[ind], null, team);
-                            else
-                                return finalformat + T.VBSDelayCaptureFlag.Translate(language, invasion.Rotation[ind], null, team);
-                        }
-                        else if (team == invasion.DefendingTeam)
-                            return finalformat + T.VBSDelayLoseFlagMultiple.Translate(language, ct2, null, team);
-                        else
-                            return finalformat + T.VBSDelayCaptureFlagMultiple.Translate(language, ct2, null, team);
-                    }
-                    else if (Data.Is(out IFlagTeamObjectiveGamemode flags))
-                    {
-                        int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.value / 100f));
-                        int ct2;
-                        if (team == 1)
-                            ct2 = ct - flags.ObjectiveT1Index;
-                        else if (team == 2)
-                            ct2 = ct - (flags.Rotation.Count - flags.ObjectiveT2Index - 1);
-                        else ct2 = ct;
-                        int ind = ct - ct2;
-                        if (team == 2) ind = flags.Rotation.Count - ind - 1;
-                        if (ct2 == 1 && flags.Rotation.Count > 0 && ind < flags.Rotation.Count)
-                            return finalformat + T.VBSDelayCaptureFlag.Translate(language, flags.Rotation[ind], null, team);
-                        else
-                            return finalformat + T.VBSDelayCaptureFlagMultiple.Translate(language, ct2, null, team);
-                    }
-                    else if (Data.Is(out IFlagRotation rot))
-                    {
-                        int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.value / 100f));
-                        int ct2 = 0;
-                        for (int i = 0; i < rot.Rotation.Count; ++i)
-                        {
-                            if (team == 0 ? rot.Rotation[i].HasBeenCapturedT1 | rot.Rotation[i].HasBeenCapturedT2 : (team == 1 ? rot.Rotation[i].HasBeenCapturedT1 : (team == 2 ? rot.Rotation[i].HasBeenCapturedT2 : false)))
-                                ++ct2;
-                        }
-                        int ind = ct - ct2;
-                        if (ct2 == 1 && flags.Rotation.Count > 0 && ind < flags.Rotation.Count)
-                            return finalformat + T.VBSDelayCaptureFlag.Translate(language, flags.Rotation[ind]);
-                        else
-                            return finalformat + T.VBSDelayCaptureFlagMultiple.Translate(language, ct2);
-                    }
-                    else if (Data.Is(out Insurgency ins))
-                    {
-                        int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(ins.Caches.Count * (delay.value / 100f));
-                        int ct2;
-                        ct2 = ct - ins.CachesDestroyed;
-                        int ind = ct - ct2;
-                        if (ct2 == 1 && ins.Caches.Count > 0 && ind < ins.Caches.Count)
-                        {
-                            if (team == ins.AttackingTeam)
-                            {
-                                if (ins.Caches[ind].IsDiscovered)
-                                    return finalformat + T.VBSDelayAttackCache.Translate(language, ins.Caches[ind].Cache, null, team);
-                                else
-                                    return finalformat + T.VBSDelayAttackCacheUnknown.Translate(language);
-                            }
-                            else
-                                if (ins.Caches[ind].IsActive)
-                                    return finalformat + T.VBSDelayDefendCache.Translate(language, ins.Caches[ind].Cache, null, team);
-                                else
-                                    return finalformat + T.VBSDelayDefendCacheUnknown.Translate(language);
-                        }
-                        else
-                        {
-                            if (team == ins.AttackingTeam)
-                                return finalformat + T.VBSDelayAttackCacheMultiple.Translate(language, ct2, null, team);
-                            else
-                                return finalformat + T.VBSDelayDefendCacheMultiple.Translate(language, ct2, null, team);
-                        }
-                    }
-                }
+                string? del = GetDelaySignText(in delay, language, team);
+                if (del != null)
+                    return finalformat + del;
             }
             return finalformat + T.VBSStateReady.Translate(language);
         }
@@ -832,7 +748,7 @@ public static class Localization
                         goto added;
                 }
                 otherlangs.Add(new KeyValuePair<Type, List<string>>(enumType.Key, new List<string>(1) { t.Language }));
-                added:;
+            added:;
             }
         }
     }
@@ -916,7 +832,312 @@ public static class Localization
         }
     }
     internal static string GetLang(ulong player) => Data.Languages.TryGetValue(player, out string lang) ? lang : L.DEFAULT;
+    public static string? GetDelaySignText(in Delay delay, string language, ulong team)
+    {
+        if (delay.Type == EDelayType.OUT_OF_STAGING)
+        {
+            return T.VBSDelayStaging.Translate(language);
+        }
+        else if (delay.Type == EDelayType.TIME)
+        {
+            float timeLeft = delay.Value - Data.Gamemode.SecondsSinceStart;
+            return T.VBSDelayTime.Translate(language, Mathf.FloorToInt(timeLeft / 60f), Mathf.FloorToInt(timeLeft % 60), null, team);
+        }
+        else if (delay.Type == EDelayType.FLAG || delay.Type == EDelayType.FLAG_PERCENT)
+        {
+            if (Data.Is(out Invasion invasion))
+            {
+                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(invasion.Rotation.Count * (delay.Value / 100f));
+                int ct2;
+                if (team == 1)
+                {
+                    if (invasion.AttackingTeam == 1)
+                        ct2 = ct - invasion.ObjectiveT1Index;
+                    else
+                        ct2 = ct - (invasion.Rotation.Count - invasion.ObjectiveT2Index - 1);
+                }
+                else if (team == 2)
+                {
+                    if (invasion.AttackingTeam == 2)
+                        ct2 = ct - (invasion.Rotation.Count - invasion.ObjectiveT2Index - 1);
+                    else
+                        ct2 = ct - invasion.ObjectiveT1Index;
+                }
+                else ct2 = ct;
+                int ind = ct - ct2;
+                if (invasion.AttackingTeam == 2) ind = invasion.Rotation.Count - ind - 1;
+                if (ct2 == 1 && invasion.Rotation.Count > 0 && ind < invasion.Rotation.Count)
+                {
+                    if (team == invasion.DefendingTeam)
+                        return T.VBSDelayLoseFlag.Translate(language, invasion.Rotation[ind], null, team);
+                    else
+                        return T.VBSDelayCaptureFlag.Translate(language, invasion.Rotation[ind], null, team);
+                }
+                else if (team == invasion.DefendingTeam)
+                    return T.VBSDelayLoseFlagMultiple.Translate(language, ct2, null, team);
+                else
+                    return T.VBSDelayCaptureFlagMultiple.Translate(language, ct2, null, team);
+            }
+            else if (Data.Is(out IFlagTeamObjectiveGamemode flags))
+            {
+                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
+                int ct2;
+                if (team == 1)
+                    ct2 = ct - flags.ObjectiveT1Index;
+                else if (team == 2)
+                    ct2 = ct - (flags.Rotation.Count - flags.ObjectiveT2Index - 1);
+                else ct2 = ct;
+                int ind = ct - ct2;
+                if (team == 2) ind = flags.Rotation.Count - ind - 1;
+                if (ct2 == 1 && flags.Rotation.Count > 0 && ind < flags.Rotation.Count)
+                    return T.VBSDelayCaptureFlag.Translate(language, flags.Rotation[ind], null, team);
+                else
+                    return T.VBSDelayCaptureFlagMultiple.Translate(language, ct2, null, team);
+            }
+            else if (Data.Is(out IFlagRotation rot))
+            {
+                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
+                int ct2 = 0;
+                for (int i = 0; i < rot.Rotation.Count; ++i)
+                {
+                    if (team == 0 ? rot.Rotation[i].HasBeenCapturedT1 | rot.Rotation[i].HasBeenCapturedT2 : (team == 1 ? rot.Rotation[i].HasBeenCapturedT1 : (team == 2 ? rot.Rotation[i].HasBeenCapturedT2 : false)))
+                        ++ct2;
+                }
+                int ind = ct - ct2;
+                if (ct2 == 1 && flags.Rotation.Count > 0 && ind < flags.Rotation.Count)
+                    return T.VBSDelayCaptureFlag.Translate(language, flags.Rotation[ind]);
+                else
+                    return T.VBSDelayCaptureFlagMultiple.Translate(language, ct2);
+            }
+            else if (Data.Is(out Insurgency ins))
+            {
+                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(ins.Caches.Count * (delay.Value / 100f));
+                int ct2;
+                ct2 = ct - ins.CachesDestroyed;
+                int ind = ct - ct2;
+                if (ct2 == 1 && ins.Caches.Count > 0 && ind < ins.Caches.Count)
+                {
+                    if (team == ins.AttackingTeam)
+                    {
+                        if (ins.Caches[ind].IsDiscovered)
+                            return T.VBSDelayAttackCache.Translate(language, ins.Caches[ind].Cache, null, team);
+                        else
+                            return T.VBSDelayAttackCacheUnknown.Translate(language);
+                    }
+                    else
+                        if (ins.Caches[ind].IsActive)
+                        return T.VBSDelayDefendCache.Translate(language, ins.Caches[ind].Cache, null, team);
+                    else
+                        return T.VBSDelayDefendCacheUnknown.Translate(language);
+                }
+                else
+                {
+                    if (team == ins.AttackingTeam)
+                        return T.VBSDelayAttackCacheMultiple.Translate(language, ct2, null, team);
+                    else
+                        return T.VBSDelayDefendCacheMultiple.Translate(language, ct2, null, team);
+                }
+            }
+        }
+        return null;
+    }
+    public static void SendDelayRequestText(in Delay delay, UCPlayer player, ulong team, EDelayMode mode)
+    {
+        DelayResponses res = mode switch
+        {
+            EDelayMode.TRAITS => TraitDelayResponses,
+            _ => VehicleDelayResponses,
+        };
+        if (delay.Type == EDelayType.OUT_OF_STAGING &&
+            (delay.Gamemode is null ||
+             (Data.Is(out Insurgency ins1) && delay.Gamemode == "Insurgency" && team == ins1.AttackingTeam) ||
+             (Data.Is(out Invasion inv2) && delay.Gamemode == "Invasion" && team == inv2.AttackingTeam))
+           )
+        {
+            player.SendChat(res.StagingDelay);
+            return;
+        }
+        else if (delay.Type == EDelayType.TIME)
+        {
+            float timeLeft = delay.Value - Data.Gamemode.SecondsSinceStart;
+            player.SendChat(res.TimeDelay, Mathf.RoundToInt(timeLeft).GetTimeFromSeconds(player.Steam64));
+        }
+        else if (delay.Type == EDelayType.FLAG || delay.Type == EDelayType.FLAG_PERCENT)
+        {
+            if (Data.Is(out Invasion invasion))
+            {
+                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(invasion.Rotation.Count * (delay.Value / 100f));
+                int ct2;
+                if (team == 1)
+                {
+                    if (invasion.AttackingTeam == 1)
+                        ct2 = ct - invasion.ObjectiveT1Index;
+                    else
+                        ct2 = ct - (invasion.Rotation.Count - invasion.ObjectiveT2Index - 1);
+                }
+                else if (team == 2)
+                {
+                    if (invasion.AttackingTeam == 2)
+                        ct2 = ct - (invasion.Rotation.Count - invasion.ObjectiveT2Index - 1);
+                    else
+                        ct2 = ct - invasion.ObjectiveT1Index;
+                }
+                else ct2 = ct;
+                int ind = ct - ct2;
+                if (invasion.AttackingTeam == 2) ind = invasion.Rotation.Count - ind - 1;
+                if (ct2 == 1 && invasion.Rotation.Count > 0 && ind < invasion.Rotation.Count)
+                {
+                    if (team == invasion.AttackingTeam)
+                        player.SendChat(res.FlagDelay1, invasion.Rotation[ind]);
+                    else if (team == invasion.DefendingTeam)
+                        player.SendChat(res.LoseFlagDelay1, invasion.Rotation[ind]);
+                    else
+                        player.SendChat(res.FlagDelayMultiple, ct2);
+                }
+                else if (team == invasion.DefendingTeam)
+                    player.SendChat(res.LoseFlagDelayMultiple, ct2);
+                else
+                    player.SendChat(res.FlagDelayMultiple, ct2);
+            }
+            else if (Data.Is(out IFlagTeamObjectiveGamemode flags))
+            {
+                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
+                int ct2;
+                if (team == 1)
+                    ct2 = ct - flags.ObjectiveT1Index;
+                else if (team == 2)
+                    ct2 = ct - (flags.Rotation.Count - flags.ObjectiveT2Index - 1);
+                else ct2 = ct;
+                int ind = ct - ct2;
+                if (team == 2) ind = flags.Rotation.Count - ind - 1;
+                if (ct2 == 1 && flags.Rotation.Count > 0 && ind < flags.Rotation.Count)
+                {
+                    if (team == 1 || team == 2)
+                        player.SendChat(res.FlagDelay1, flags.Rotation[ind]);
+                    else
+                        player.SendChat(res.FlagDelayMultiple, ct2);
+                }
+                else
+                {
+                    player.SendChat(res.FlagDelayMultiple, ct2);
+                }
+            }
+            else if (Data.Is(out IFlagRotation rot))
+            {
+                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
+                int ct2 = 0;
+                for (int i = 0; i < rot.Rotation.Count; ++i)
+                {
+                    if (team == 0 ? rot.Rotation[i].HasBeenCapturedT1 | rot.Rotation[i].HasBeenCapturedT2 : (team == 1 ? rot.Rotation[i].HasBeenCapturedT1 : (team == 2 ? rot.Rotation[i].HasBeenCapturedT2 : false)))
+                        ++ct2;
+                }
+                int ind = ct - ct2;
+                if (ct2 == 1 && flags.Rotation.Count > 0 && ind < flags.Rotation.Count)
+                {
+                    if (team == 1 || team == 2)
+                        player.SendChat(res.FlagDelay1, flags.Rotation[ind]);
+                    else
+                        player.SendChat(res.FlagDelayMultiple, ct2);
+                }
+                else
+                    player.SendChat(res.FlagDelayMultiple, ct2);
+            }
+            else if (Data.Is(out Insurgency ins))
+            {
+                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(ins.Caches.Count * (delay.Value / 100f));
+                int ct2;
+                ct2 = ct - ins.CachesDestroyed;
+                int ind = ct - ct2;
+                if (ct2 == 1 && ins.Caches.Count > 0 && ind < ins.Caches.Count)
+                {
+                    if (team == ins.AttackingTeam)
+                    {
+                        if (ins.Caches[ind].IsDiscovered)
+                            player.SendChat(res.CacheDelayAtk1, ins.Caches[ind].Cache);
+                        else
+                            player.SendChat(res.CacheDelayAtkUndiscovered1);
+                    }
+                    else if (team == ins.DefendingTeam)
+                        if (ins.Caches[ind].IsActive)
+                            player.SendChat(res.CacheDelayDef1, ins.Caches[ind].Cache);
+                        else
+                            player.SendChat(res.CacheDelayDefUndiscovered1);
+                    else
+                        player.SendChat(res.CacheDelayMultipleAtk, ct2);
+                }
+                else
+                {
+                    if (team == ins.AttackingTeam)
+                        player.SendChat(res.CacheDelayMultipleAtk, ct2);
+                    else
+                        player.SendChat(res.CacheDelayMultipleDef, ct2);
+                }
+            }
+        }
+        else
+        {
+            player.SendChat(res.UnknownDelay, delay.ToString());
+        }
+    }
+    public enum EDelayMode
+    {
+        VEHICLE_BAYS,
+        TRAITS
+    }
 
+    private static readonly DelayResponses VehicleDelayResponses = new DelayResponses(EDelayMode.VEHICLE_BAYS);
+    private static readonly DelayResponses TraitDelayResponses = new DelayResponses(EDelayMode.TRAITS);
+    private class DelayResponses
+    {
+        public readonly Translation<string> UnknownDelay;
+        public readonly Translation<int> CacheDelayMultipleDef;
+        public readonly Translation<int> CacheDelayMultipleAtk;
+        public readonly Translation CacheDelayDefUndiscovered1;
+        public readonly Translation CacheDelayAtkUndiscovered1;
+        public readonly Translation<Components.Cache> CacheDelayDef1;
+        public readonly Translation<Components.Cache> CacheDelayAtk1;
+        public readonly Translation<int> FlagDelayMultiple;
+        public readonly Translation<int> LoseFlagDelayMultiple;
+        public readonly Translation<Gamemodes.Flags.Flag> FlagDelay1;
+        public readonly Translation<Gamemodes.Flags.Flag> LoseFlagDelay1;
+        public readonly Translation<string> TimeDelay;
+        public readonly Translation StagingDelay;
+        public DelayResponses(EDelayMode mode)
+        {
+            if (mode == EDelayMode.TRAITS)
+            {
+                UnknownDelay = T.RequestTraitUnknownDelay;
+                CacheDelayMultipleDef = T.RequestTraitCacheDelayMultipleDef;
+                CacheDelayMultipleAtk = T.RequestTraitCacheDelayMultipleAtk;
+                CacheDelayDefUndiscovered1 = T.RequestTraitCacheDelayDefUndiscovered1;
+                CacheDelayAtkUndiscovered1 = T.RequestTraitCacheDelayAtkUndiscovered1;
+                CacheDelayDef1 = T.RequestTraitCacheDelayDef1;
+                CacheDelayAtk1 = T.RequestTraitCacheDelayAtk1;
+                FlagDelayMultiple = T.RequestTraitFlagDelayMultiple;
+                LoseFlagDelayMultiple = T.RequestTraitLoseFlagDelayMultiple;
+                FlagDelay1 = T.RequestTraitFlagDelay1;
+                LoseFlagDelay1 = T.RequestTraitLoseFlagDelay1;
+                TimeDelay = T.RequestTraitTimeDelay;
+                StagingDelay = T.RequestTraitStagingDelay;
+            }
+            else
+            {
+                UnknownDelay = T.RequestVehicleUnknownDelay;
+                CacheDelayMultipleDef = T.RequestVehicleCacheDelayMultipleDef;
+                CacheDelayMultipleAtk = T.RequestVehicleCacheDelayMultipleAtk;
+                CacheDelayDefUndiscovered1 = T.RequestVehicleCacheDelayDefUndiscovered1;
+                CacheDelayAtkUndiscovered1 = T.RequestVehicleCacheDelayAtkUndiscovered1;
+                CacheDelayDef1 = T.RequestVehicleCacheDelayDef1;
+                CacheDelayAtk1 = T.RequestVehicleCacheDelayAtk1;
+                FlagDelayMultiple = T.RequestVehicleFlagDelayMultiple;
+                LoseFlagDelayMultiple = T.RequestVehicleLoseFlagDelayMultiple;
+                FlagDelay1 = T.RequestVehicleFlagDelay1;
+                LoseFlagDelay1 = T.RequestVehicleLoseFlagDelay1;
+                TimeDelay = T.RequestVehicleTimeDelay;
+                StagingDelay = T.RequestVehicleStagingDelay;
+            }
+        }
+    }
     [Obsolete]
     private class LanguageSetEnumerator : IEnumerable<LanguageSet>
     {
@@ -1051,6 +1272,70 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 }
                 if (!found)
                     languages.Add(new LanguageSet(lang, pl));
+            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
+            languages.Clear();
+            return rtn;
+        }
+    }
+    public static IEnumerable<LanguageSet> InRegions(byte x, byte y, ushort plant, byte regionDistance)
+    {
+        if (plant != ushort.MaxValue)
+            return All();
+        lock (languages)
+        {
+            if (languages.Count > 0)
+                languages.Clear();
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+            {
+                UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                if (!Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, regionDistance)) continue;
+                if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                    lang = L.DEFAULT;
+                bool found = false;
+                for (int i2 = 0; i2 < languages.Count; i2++)
+                {
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    {
+                        languages[i2].Add(pl);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    languages.Add(new LanguageSet(lang, pl));
+            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
+            languages.Clear();
+            return rtn;
+        }
+    }
+    public static IEnumerable<LanguageSet> InRegionsByTeam(byte x, byte y, byte regionDistance)
+    {
+        lock (languages)
+        {
+            if (languages.Count > 0)
+                languages.Clear();
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+            {
+                UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                if (!Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, regionDistance)) continue;
+                if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                    lang = L.DEFAULT;
+                ulong team = pl.GetTeam();
+                bool found = false;
+                for (int i2 = 0; i2 < languages.Count; i2++)
+                {
+                    LanguageSet l = languages[i2];
+                    if (l.Team == team && l.Language.Equals(lang, StringComparison.Ordinal))
+                    {
+                        l.Add(pl);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    languages.Add(new LanguageSet(lang, pl) { Team = team });
             }
             LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();

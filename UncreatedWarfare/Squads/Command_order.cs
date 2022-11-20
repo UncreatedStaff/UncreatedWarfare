@@ -34,7 +34,7 @@ public class OrderCommand : Command
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
         ctx.AssertGamemode<ISquads>();
-        
+
         if (!ctx.HasArgs(1))
             throw ctx.Reply(T.OrderUsageAll);
 
@@ -139,9 +139,9 @@ public class OrderCommand : Command
                             case EOrder.BUILDFOB:
                                 ctx.AssertGamemode<IFOBs>();
 
-                                if (FOB.GetNearestFOB(marker, EFOBRadius.FOB_PLACEMENT, team) != null)
+                                if (FOB.GetNearestFOB(marker, EfobRadius.FOB_PLACEMENT, team) != null)
                                     throw ctx.Reply(T.OrderBuildFOBExists);
-                                else if (FOB.GetFOBs(team).Count >= FOBManager.Config.FobLimit)
+                                else if (FOB.GetFoBs(team).Count >= FOBManager.Config.FobLimit)
                                     throw ctx.Reply(T.OrderBuildFOBTooMany);
                                 else
                                 {
@@ -190,7 +190,7 @@ public class OrderCommand : Command
                                 break;
                             case EOrder.MOVE:
                                 Vector3 avgMemberPoint = Vector3.zero;
-                                foreach (var member in squad.Members)
+                                foreach (UCPlayer member in squad.Members)
                                     avgMemberPoint += member.Position;
 
                                 avgMemberPoint /= squad.Members.Count;

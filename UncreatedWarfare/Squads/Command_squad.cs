@@ -1,7 +1,5 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Linq;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -59,7 +57,7 @@ public class SquadCommand : Command
 
             if (ctx.Caller.Squad is not null)
                 throw ctx.Reply(T.SquadAlreadyInSquad);
-            
+
             if (!SquadManager.FindSquad(name, team, out Squad squad))
                 throw ctx.Reply(T.SquadNotFound, name);
 
@@ -85,6 +83,7 @@ public class SquadCommand : Command
                 throw ctx.Reply(T.PlayerNotFound);
 
             SquadManager.PromoteToLeader(ctx.Caller.Squad, member);
+            ctx.Defer();
         }
         else if (ctx.MatchParameter(0, "kick"))
         {
@@ -102,6 +101,7 @@ public class SquadCommand : Command
                 throw ctx.Reply(T.PlayerNotFound);
 
             SquadManager.KickPlayerFromSquad(member, ctx.Caller.Squad);
+            ctx.Defer();
         }
         else if (ctx.MatchParameter(0, "leave"))
         {
@@ -111,6 +111,7 @@ public class SquadCommand : Command
                 throw ctx.Reply(T.SquadNotInSquad);
 
             SquadManager.LeaveSquad(ctx.Caller, ctx.Caller.Squad);
+            ctx.Defer();
         }
         else if (ctx.MatchParameter(0, "disband"))
         {
@@ -120,6 +121,7 @@ public class SquadCommand : Command
                 throw ctx.Reply(T.SquadNotSquadLeader);
 
             SquadManager.DisbandSquad(ctx.Caller.Squad);
+            ctx.Defer();
         }
         else if (ctx.MatchParameter(0, "lock"))
         {

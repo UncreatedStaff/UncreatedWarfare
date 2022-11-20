@@ -42,8 +42,7 @@ public class VehicleDestroyed : EventState
         _ownerId = vehicle.lockedOwner.m_SteamID;
         _lockedOwner = UCPlayer.FromID(_ownerId);
         _component = vehicle.GetComponent<VehicleComponent>();
-        if (VehicleBay.Loaded)
-            VehicleBay.VehicleExists(vehicle.asset.GUID, out _vehicleData);
+        _vehicleData = VehicleBay.GetSingletonQuick()?.GetDataSync(vehicle.asset.GUID);
         if (_component != null)
         {
             if (_component.LastInstigator != 0)

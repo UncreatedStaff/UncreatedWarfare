@@ -6,6 +6,8 @@ using System.Reflection;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -26,9 +28,16 @@ public static class PlayerManager
     {
         OnlinePlayers = new List<UCPlayer>(50);
         _dict = new Dictionary<ulong, UCPlayer>(50);
-        EventDispatcher.OnGroupChanged += OnGroupChagned;
+        EventDispatcher.GroupChanged += OnGroupChagned;
     }
-    public static UCPlayer? FromID(ulong steam64) => _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
+    public static UCPlayer? FromID(ulong steam64)
+    {
+        lock (_dict)
+        {
+            return _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
+        }
+    }
+
     public static bool HasSave(ulong playerID, out PlayerSave save) => PlayerSave.TryReadSaveFile(playerID, out save!);
     public static PlayerSave? GetSave(ulong playerID) => PlayerSave.TryReadSaveFile(playerID, out PlayerSave? save) ? save : null;
     public static void ApplyToOnline()
@@ -57,23 +66,20 @@ public static class PlayerManager
     public static PlayerListEntry[] GetPlayerList()
     {
         PlayerListEntry[] rtn = new PlayerListEntry[OnlinePlayers.Count];
-        for (int i = 0; i < OnlinePlayers!.Count; i++)
+        for (int i = 0; i < OnlinePlayers.Count; i++)
         {
-            if (OnlinePlayers == null) continue;
             rtn[i] = new PlayerListEntry
             {
                 Duty = OnlinePlayers[i].OnDuty(),
                 Steam64 = OnlinePlayers[i].Steam64,
-                Name = F.GetPlayerOriginalNames(OnlinePlayers[i]).CharacterName,
+                Name = OnlinePlayers[i].Name.CharacterName,
                 Team = OnlinePlayers[i].Player.GetTeamByte()
             };
         }
         return rtn;
     }
-    public static void InvokePlayerConnected(Player player) => OnPlayerConnected(player);
-    public static void InvokePlayerDisconnected(UCPlayer player) => OnPlayerDisconnected(player);
     public static void AddSave(PlayerSave save) => PlayerSave.WriteToSaveFile(save);
-    private static void OnPlayerConnected(Player player)
+    internal static UCPlayer InvokePlayerConnected(Player player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -91,29 +97,40 @@ public static class PlayerManager
             player.channel.owner.playerID.nickName,
             save.IsOtherDonator
         );
+        Data.OriginalPlayerNames.Remove(ucplayer.Steam64);
 
 
         OnlinePlayers.Add(ucplayer);
-        _dict.Add(ucplayer.Steam64, ucplayer);
+        lock (_dict)
+        {
+            _dict.Add(ucplayer.Steam64, ucplayer);
+        }
 
         SquadManager.OnPlayerJoined(ucplayer, save.SquadName);
         FOBManager.SendFOBList(ucplayer);
+        return ucplayer;
     }
     private static void OnGroupChagned(GroupChanged e)
     {
         ApplyTo(e.Player);
-        NetCalls.SendTeamChanged.NetInvoke(e.Steam64, F.GetTeamByte(e.NewGroup));
+        NetCalls.SendTeamChanged.NetInvoke(e.Steam64, e.NewGroup.GetTeamByte());
+        if (e.Player.Player.TryGetComponent(out SpottedComponent spot))
+            spot.OwnerTeam = e.NewTeam;
     }
-    private static void OnPlayerDisconnected(UCPlayer player)
+    internal static void InvokePlayerDisconnected(UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         player.IsOnline = false;
+        player.Events.Dispose();
 
         OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == player.Steam64);
-        _dict.Remove(player.Steam64);
-        SquadManager.OnPlayerDisconnected(player);
+        lock (_dict)
+        {
+            _dict.Remove(player.Steam64);
+        }
+        player.Player = null!;
     }
     public static IEnumerable<UCPlayer> GetNearbyPlayers(float range, Vector3 point)
     {
@@ -180,7 +197,7 @@ public static class PlayerManager
         FieldInfo? field = GetField(ref property, out ESetFieldResult reason);
         if (field is not null && reason == ESetFieldResult.SUCCESS)
         {
-            if (F.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
+            if (Util.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
             {
                 try
                 {
@@ -251,7 +268,7 @@ public static class PlayerManager
             reason = ESetFieldResult.FIELD_NOT_FOUND;
             return false;
         }
-        Attribute atr = Attribute.GetCustomAttribute(field, typeof(JsonSettable));
+        Attribute atr = Attribute.GetCustomAttribute(field, typeof(CommandSettable));
         if (atr is not null)
         {
             reason = ESetFieldResult.SUCCESS;

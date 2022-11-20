@@ -2,7 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
@@ -12,77 +15,90 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
-public class AmmoCommand : Command
+public class AmmoCommand : AsyncCommand
 {
     public AmmoCommand() : base("ammo", EAdminType.MEMBER) { }
-    public override void Execute(CommandInteraction ctx)
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ctx.AssertRanByPlayer();
 
+        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+        if (bay == null || !bay.IsLoaded)
+            throw ctx.SendGamemodeError();
+
         if (ctx.TryGetTarget(out InteractableVehicle vehicle))
         {
             ctx.AssertGamemode<IVehicles>();
 
-            if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
+            SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
+            if (data?.Item == null)
                 throw ctx.Reply(T.AmmoVehicleCantRearm);
-
-            if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && vehicleData.Items.Length == 0 && (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT))
-                throw ctx.Reply(T.AmmoAutoSupply);
-
-            bool isInMain = F.IsInMain(vehicle.transform.position);
-            if (vehicleData.Type != EVehicleType.EMPLACEMENT && !isInMain)
+            await data.Enter(token).ConfigureAwait(false);
+            try
             {
-                BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID.Value.Guid,
-                10,
-                vehicle.transform.position,
-                ctx.Caller!.GetTeam(),
-                false).FirstOrDefault();
+                await UCWarfare.ToUpdate();
+                VehicleData vehicleData = data.Item;
+                if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && vehicleData.Items.Length == 0 && (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT))
+                    throw ctx.Reply(T.AmmoAutoSupply);
 
-                if (repairStation == null)
-                    throw ctx.Reply(T.AmmoNotNearRepairStation);
+                bool isInMain = F.IsInMain(vehicle.transform.position);
+                if (!VehicleData.IsEmplacement(vehicleData.Type) && !isInMain)
+                {
+                    BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.BarricadeRepairStation.Value.Guid,
+                    10,
+                    vehicle.transform.position,
+                    ctx.Caller.GetTeam(),
+                    false).FirstOrDefault();
+
+                    if (repairStation == null)
+                        throw ctx.Reply(T.AmmoNotNearRepairStation);
+                }
+
+                FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, EfobRadius.FULL, vehicle.lockedGroup.m_SteamID);
+
+                if (fob == null && !isInMain)
+                    throw ctx.Reply(T.AmmoNotNearFOB);
+
+                if (!isInMain && fob!.Ammo < vehicleData.RearmCost)
+                    throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, vehicleData.RearmCost);
+
+                if (vehicleData.Items.Length == 0)
+                    throw ctx.Reply(T.AmmoVehicleFullAlready);
+                if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
+                    F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
+
+                foreach (Guid item in vehicleData.Items)
+                    if (Assets.find(item) is ItemAsset a)
+                        ItemManager.dropItem(new Item(a.id, true), ctx.Caller.Position, true, true, true);
+
+                if (!isInMain)
+                {
+                    fob!.ReduceAmmo(vehicleData.RearmCost);
+                    ctx.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.Ammo);
+                    ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR VEHICLE");
+                }
+                else
+                {
+                    ctx.Reply(T.AmmoResuppliedVehicleMain, vehicleData, vehicleData.RearmCost);
+                    ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR VEHICLE IN MAIN");
+                }
             }
-
-            FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
-
-            if (fob == null && !isInMain)
-                throw ctx.Reply(T.AmmoNotNearFOB);
-
-            if (!isInMain && fob!.Ammo < vehicleData.RearmCost)
-                throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, vehicleData.RearmCost);
-
-            if (vehicleData.Items.Length == 0)
-                throw ctx.Reply(T.AmmoVehicleFullAlready);
-
-            EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
-
-            foreach (Guid item in vehicleData.Items)
-                if (Assets.find(item) is ItemAsset a)
-                    ItemManager.dropItem(new Item(a.id, true), ctx.Caller.Position, true, true, true);
-
-            if (!isInMain)
+            finally
             {
-                fob!.ReduceAmmo(vehicleData.RearmCost);
-                ctx.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.Ammo);
-                ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR VEHICLE");
-            }
-            else
-            {
-                ctx.Reply(T.AmmoResuppliedVehicleMain, vehicleData, vehicleData.RearmCost);
-                ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR VEHICLE IN MAIN");
+                data.Release();
             }
         }
         else if (ctx.TryGetTarget(out BarricadeDrop barricade))
         {
             ctx.AssertGamemode<IKitRequests>();
 
-            if (!ctx.Caller.IsTeam1() && !ctx.Caller.IsTeam2())
+            if (!ctx.Caller.IsOnTeam)
                 throw ctx.Reply(T.NotOnCaptureTeam);
 
             if (!KitManager.HasKit(ctx.Caller.Steam64, out Kit kit))
@@ -95,8 +111,8 @@ public class AmmoCommand : Command
                 _ => 1
             };
 
-            if (barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID.Value.Guid || 
-                (Data.Is<Insurgency>() && barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Guid))
+            if (Gamemode.Config.BarricadeAmmoCrate.MatchGuid(barricade.asset.GUID) ||
+                (Data.Is<Insurgency>() && Gamemode.Config.BarricadeInsurgencyCache.MatchGuid(barricade.asset.GUID)))
             {
                 if (TeamManager.Team1Faction.Ammo is null || !TeamManager.Team1Faction.Ammo.Exists || TeamManager.Team2Faction.Ammo is null || !TeamManager.Team2Faction.Ammo.Exists)
                 {
@@ -106,7 +122,7 @@ public class AmmoCommand : Command
 
                 bool isInMain = false;
 
-                if (!ctx.Caller.IsOnFOB(out var fob))
+                if (!ctx.Caller.IsOnFOB(out FOB? fob))
                 {
                     if (F.IsInMain(barricade.model.transform.position))
                         isInMain = true;
@@ -122,7 +138,8 @@ public class AmmoCommand : Command
                 WipeDroppedItems(ctx.CallerID);
                 KitManager.ResupplyKit(ctx.Caller, kit);
 
-                EffectManager.sendEffect(30, EffectManager.SMALL, ctx.Caller.Position);
+                if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
+                    F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);
 
                 if (isInMain)
                 {
@@ -134,13 +151,12 @@ public class AmmoCommand : Command
                 }
                 else
                 {
-                    fob.ReduceAmmo(1);
+                    fob.ReduceAmmo(ammoCost);
                     ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BOX");
                     ctx.Reply(T.AmmoResuppliedKit, ammoCost, fob.Ammo);
                 }
-
             }
-            else if (Gamemode.Config.Barricades.AmmoBagGUID.Value.Guid == barricade.asset.GUID)
+            else if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(barricade.asset.GUID))
             {
                 if (barricade.model.TryGetComponent(out AmmoBagComponent ammobag))
                 {
@@ -149,7 +165,9 @@ public class AmmoCommand : Command
 
                     ammobag.ResupplyPlayer(ctx.Caller, kit, ammoCost);
 
-                    EffectManager.sendEffect(30, EffectManager.SMALL, ctx.Caller.Position);
+                    if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
+                        F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);
+
                     ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BAG");
 
                     WipeDroppedItems(ctx.CallerID);
@@ -185,7 +203,7 @@ public class AmmoCommand : Command
                             ItemData it = ItemManager.regions[x, y].items[index];
                             if (it.item.id == build1 || it.item.id == build2 || it.item.id == ammo1 || it.item.id == ammo2) continue;
 
-                            Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i]);
+                            Data.SendDestroyItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i], false);
                             ItemManager.regions[x, y].items.RemoveAt(index);
                         }
                     }

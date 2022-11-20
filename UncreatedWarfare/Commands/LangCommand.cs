@@ -102,7 +102,7 @@ public class LangCommand : Command
                             }
                         }
 
-                        brk:
+                    brk:
                         break;
                     }
                 }

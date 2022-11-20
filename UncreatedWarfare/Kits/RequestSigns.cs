@@ -1,11 +1,10 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Singletons;
@@ -19,16 +18,20 @@ public class RequestSigns : ListSingleton<RequestSign>
 {
     public static RequestSigns Singleton;
     public static bool Loaded => Singleton.IsLoaded<RequestSigns, RequestSign>();
-    public RequestSigns() : base("kitsigns", Path.Combine(Data.Paths.StructureStorage, "request_signs.json"), RequestSign.WriteRequestSign, RequestSign.ReadRequestSign) { }
+    public RequestSigns() : base("kitsigns", Path.Combine(Data.Paths.StructureStorage, "request_signs.json")) { }
     protected override string LoadDefaults() => EMPTY_LIST;
     public override void Load()
     {
         Singleton = this;
-        EventDispatcher.OnGroupChanged += OnGroupChanged;
+        EventDispatcher.GroupChanged += OnGroupChanged;
+        EventDispatcher.PlayerJoined += OnPlayerJoined;
+        EventDispatcher.PlayerLeaving += OnPlayerLeaving;
     }
     public override void Unload()
     {
-        EventDispatcher.OnGroupChanged -= OnGroupChanged;
+        EventDispatcher.PlayerLeaving -= OnPlayerLeaving;
+        EventDispatcher.PlayerJoined -= OnPlayerJoined;
+        EventDispatcher.GroupChanged -= OnGroupChanged;
         Singleton = null!;
     }
     public static void DropAllSigns()
@@ -40,8 +43,8 @@ public class RequestSigns : ListSingleton<RequestSign>
         foreach (RequestSign sign in Singleton)
         {
             sign.SpawnCheck(false);
-            if (!sign.exists)
-                L.LogError("Failed to spawn sign " + sign.kit_name);
+            if (!sign.Exists)
+                L.LogError("Failed to spawn sign " + sign.KitName);
         }
         Singleton.Save();
     }
@@ -58,7 +61,7 @@ public class RequestSigns : ListSingleton<RequestSign>
 #endif
         signadded = default!;
         BarricadeDrop? drop = UCBarricadeManager.GetSignFromInteractable(sign);
-        if (drop != null && !Singleton.ObjectExists(x => x.instance_id == drop.instanceID, out signadded))
+        if (drop != null && !Singleton.ObjectExists(x => x.InstanceId == drop.instanceID, out signadded))
         {
             signadded = new RequestSign(sign);
             Singleton.AddObjectToSave(signadded);
@@ -72,7 +75,7 @@ public class RequestSigns : ListSingleton<RequestSign>
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Singleton.RemoveWhere(x => x.instance_id == sign.instance_id);
+        Singleton.RemoveWhere(x => x.InstanceId == sign.InstanceId);
         //await sign.InvokeUpdate();
     }
     public static void RemoveRequestSigns(string kitname)
@@ -81,16 +84,13 @@ public class RequestSigns : ListSingleton<RequestSign>
         for (int i = Singleton.Count - 1; i >= 0; ++i)
         {
             Singleton.RemoveAt(i);
-            if (Singleton[i].barricadetransform != default)
+            if (Singleton[i].BarricadeTransform != default)
             {
-                BarricadeDrop bd = BarricadeManager.FindBarricadeByRootTransform(Singleton[i].barricadetransform);
-                if (bd.interactable is InteractableSign s &&
-                    Regions.tryGetCoordinate(bd.model.position, out byte x, out byte y))
-                    F.InvokeSignUpdateForAll(s, x, y, s.text);
+                BarricadeDrop bd = BarricadeManager.FindBarricadeByRootTransform(Singleton[i].BarricadeTransform);
+                Signs.BroadcastSignUpdate(bd);
             }
-
         }
-        Singleton.RemoveWhere(x => x.kit_name == kitname);
+        Singleton.RemoveWhere(x => x.KitName.Equals(kitname, StringComparison.OrdinalIgnoreCase));
     }
     public static bool SignExists(InteractableSign sign, out RequestSign found)
     {
@@ -111,7 +111,7 @@ public class RequestSigns : ListSingleton<RequestSign>
         }
         for (int i = 0; i < Singleton.Count; i++)
         {
-            if (drop != null && drop.instanceID == Singleton[i].instance_id)
+            if (drop != null && drop.instanceID == Singleton[i].InstanceId)
             {
                 found = Singleton[i];
                 return true;
@@ -122,19 +122,44 @@ public class RequestSigns : ListSingleton<RequestSign>
     }
     private void OnGroupChanged(GroupChanged e)
     {
-        UpdateAllSigns(e.Player);
+        OnTeamPlayerCountChanged(e.Player);
     }
+    private void OnPlayerLeaving(PlayerEvent e) => OnTeamPlayerCountChanged();
+    private void OnPlayerJoined(PlayerJoined e) => OnTeamPlayerCountChanged();
     public static bool SignExists(uint instance_id, out RequestSign found)
     {
         Singleton.AssertLoaded<RequestSigns, RequestSign>();
-        return Singleton.ObjectExists(s => s != default && s.instance_id == instance_id, out found);
+        return Singleton.ObjectExists(s => s != default && s.InstanceId == instance_id, out found);
     }
     public static bool SignExists(string kitName, out RequestSign sign)
     {
         Singleton.AssertLoaded<RequestSigns, RequestSign>();
-        return Singleton.ObjectExists(x => x.kit_name == kitName, out sign);
+        return Singleton.ObjectExists(x => x.KitName.Equals(kitName, StringComparison.OrdinalIgnoreCase), out sign);
     }
-    public static void UpdateAllSigns(SteamPlayer? player = null)
+    internal static void OnTeamPlayerCountChanged(UCPlayer? allPlayer = null)
+    {
+        if (allPlayer is null)
+        {
+            for (int i = 0; i < Singleton.Count; i++)
+            {
+                RequestSign kn = Singleton[i];
+                if (kn.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.Ordinal) || (KitManager.KitExists(kn.KitName, out Kit kit) && kit.TeamLimit < 1f))
+                    kn.InvokeUpdate();
+            }
+        }
+        else
+        {
+            for (int i = 0; i < Singleton.Count; i++)
+            {
+                RequestSign kn = Singleton[i];
+                if (kn.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.Ordinal) || (KitManager.KitExists(kn.KitName, out Kit kit) && kit.TeamLimit < 1f))
+                    kn.InvokeUpdate();
+                else
+                    kn.InvokeUpdate(allPlayer);
+            }
+        }
+    }
+    public static void UpdateAllSigns(UCPlayer? player = null)
     {
         Singleton.AssertLoaded<RequestSigns, RequestSign>();
 #if DEBUG
@@ -155,7 +180,7 @@ public class RequestSigns : ListSingleton<RequestSign>
             }
         }
     }
-    public static void SetSignTextSneaky(InteractableSign sign, string text)
+    public static byte[] SetSignTextSneaky(InteractableSign sign, string text)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -173,111 +198,98 @@ public class RequestSigns : ListSingleton<RequestSign>
         numArray1[16] = (byte)bytes.Length;
         if (bytes.Length != 0)
             Buffer.BlockCopy(bytes, 0, numArray1, 17, bytes.Length);
-        barricadeByRootFast.GetServersideData().barricade.state = numArray1;
+        BarricadeManager.updateState(barricadeByRootFast.model, numArray1, numArray1.Length);
         sign.updateState(barricadeByRootFast.asset, numArray1);
+        return numArray1;
     }
 }
-public class RequestSign : IJsonReadWrite
+public class RequestSign
 {
     [JsonIgnore]
-    public Kit? Kit
-    {
-        get
-        {
-            if (KitManager.KitExists(kit_name, out Kit k))
-                return k;
-            else return default;
-        }
-    }
+    public string SignText => "sign_" + KitName;
+
     [JsonIgnore]
-    public string SignText
-    {
-        get => "sign_" + kit_name;
-        set
-        {
-            if (value == default) kit_name = TeamManager.DefaultKit;
-            else if (value.Length > 5 && value.StartsWith("sign_"))
-                kit_name = value.Substring(5);
-            else kit_name = value;
-        }
-    }
-    [JsonSettable]
-    public string kit_name;
-    public SerializableTransform transform;
-    [JsonSettable]
-    public Guid sign_id;
-    [JsonSettable]
-    public ulong owner;
-    [JsonSettable]
-    public ulong group;
+    public Transform? BarricadeTransform { get; private set; }
+
+    [JsonPropertyName("kit_name")]
+    public string KitName { get; set; }
+
+    [JsonPropertyName("position")]
+    public Vector3 Position { get; set; }
+
+    [JsonPropertyName("rotation")]
+    public Vector3 Rotation { get; set; }
+
+    [JsonPropertyName("guid")]
+    public Guid Guid { get; set; }
+
+    [JsonPropertyName("owner")]
+    public ulong OwnerId { get; set; }
+
+    [JsonPropertyName("group")]
+    public ulong GroupId { get; set; }
+
+    [JsonPropertyName("instance_id")]
+    public uint InstanceId { get; set; }
+
     [JsonIgnore]
-    public Transform? barricadetransform;
-    public uint instance_id;
-    [JsonIgnore]
-    public bool exists;
-    [JsonConstructor]
-    public RequestSign(string kit_name, SerializableTransform transform, Guid sign_id, ulong owner, ulong group, uint instance_id)
-    {
-        this.kit_name = kit_name;
-        this.transform = transform;
-        this.sign_id = sign_id;
-        this.owner = owner;
-        this.group = group;
-        this.instance_id = instance_id;
-        this.exists = false;
-    }
+    public bool Exists { get; private set; }
     public RequestSign(InteractableSign sign)
     {
         if (sign == default) throw new ArgumentNullException(nameof(sign));
         BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
         if (drop != null)
         {
-            this.sign_id = drop.GetServersideData().barricade.asset.GUID;
-            this.instance_id = drop.instanceID;
-            this.transform = new SerializableTransform(sign.transform);
-            this.barricadetransform = sign.transform;
-            this.SignText = sign.text;
-            this.group = sign.group.m_SteamID;
-            this.owner = sign.owner.m_SteamID;
+            this.Guid = drop.GetServersideData().barricade.asset.GUID;
+            this.InstanceId = drop.instanceID;
+            this.Position = sign.transform.position;
+            this.Rotation = sign.transform.rotation.eulerAngles;
+            this.BarricadeTransform = sign.transform;
+            if (string.IsNullOrEmpty(sign.text)) KitName = TeamManager.DefaultKit;
+            else if (sign.text.Length > 5 && sign.text.StartsWith("sign_", StringComparison.OrdinalIgnoreCase))
+                KitName = sign.text.Substring(5);
+            else KitName = sign.text;
+            this.GroupId = sign.group.m_SteamID;
+            this.OwnerId = sign.owner.m_SteamID;
         }
         else throw new ArgumentNullException(nameof(sign));
     }
     public RequestSign()
     {
-        this.kit_name = "default";
-        this.transform = SerializableTransform.Zero;
-        this.sign_id = Guid.Empty;
-        this.owner = 0;
-        this.group = 0;
-        this.instance_id = 0;
-        this.barricadetransform = default;
-        this.exists = false;
+        this.KitName = TeamManager.DefaultKit;
+        this.Guid = Guid.Empty;
+        this.OwnerId = 0;
+        this.GroupId = 0;
+        this.InstanceId = 0;
+        this.BarricadeTransform = default;
+        this.Exists = false;
     }
-    public void InvokeUpdate(SteamPlayer player)
+    public void InvokeUpdate(UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (barricadetransform != null)
+        if (BarricadeTransform != null)
         {
-            BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
-            if (drop != null && drop.model.TryGetComponent(out InteractableSign sign))
+            BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(BarricadeTransform);
+            if (drop != null)
             {
-                F.InvokeSignUpdateFor(player, sign, SignText);
+                Signs.SendSignUpdate(drop, player);
             }
             else L.LogError("Failed to find barricade from saved transform!");
         }
         else
         {
-            SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
-            if (data != null && drop != null)
+            BarricadeDrop? drop = UCBarricadeManager.FindBarricade(InstanceId, Position);
+            if (drop != null)
             {
-                BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
-                if (drop2 != null && drop2.model.TryGetComponent(out InteractableSign sign))
-                    F.InvokeSignUpdateFor(player, sign, true, SignText);
-                else L.LogError("Failed to find barricade after respawning again!");
+                BarricadeTransform = drop.model;
+                Signs.SendSignUpdate(drop, player);
             }
-            else L.LogError("Failed to find barricade after respawn!");
+            else
+            {
+                L.LogError("Failed to find barricade after respawn!");
+            }
         }
     }
     public void InvokeUpdate()
@@ -285,26 +297,27 @@ public class RequestSign : IJsonReadWrite
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (barricadetransform != null)
+        if (BarricadeTransform != null)
         {
-            BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
-            if (drop != null && drop.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
+            BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(BarricadeTransform);
+            if (drop != null)
             {
-                F.InvokeSignUpdateForAll(sign, x, y, SignText);
+                Signs.BroadcastSignUpdate(drop);
             }
             else L.LogError("Failed to find barricade from saved transform!");
         }
         else
         {
-            SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
-            if (data != null && drop != null)
+            BarricadeDrop? drop = UCBarricadeManager.FindBarricade(InstanceId, Position);
+            if (drop != null)
             {
-                BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
-                if (drop2 != null && drop2.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
-                    F.InvokeSignUpdateForAll(sign, x, y, SignText);
-                else L.LogError("Failed to find barricade after respawning again!");
+                BarricadeTransform = drop.model;
+                Signs.BroadcastSignUpdate(drop);
             }
-            else L.LogError("Failed to find barricade after respawn!");
+            else
+            {
+                L.LogError("Failed to find barricade after respawn!");
+            }
         }
     }
     /// <summary>Spawns the sign if it is not already placed.</summary>
@@ -313,116 +326,58 @@ public class RequestSign : IJsonReadWrite
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
-        if (drop == null || data == null)
+        BarricadeDrop? drop = UCBarricadeManager.FindBarricade(InstanceId, Position);
+        bool needsSave = false;
+        if (drop == null)
         {
-            if (Assets.find(sign_id) is not ItemBarricadeAsset asset)
+            if (Assets.find(Guid) is not ItemBarricadeAsset asset)
             {
-                L.LogError("Failed to find barricade with " + sign_id.ToString("N"));
+                L.LogError("Failed to find barricade with " + Guid.ToString("N"));
                 return;
             }
-            this.barricadetransform = BarricadeManager.dropNonPlantedBarricade(
-                new Barricade(asset),
-                transform.position.Vector3, transform.Rotation, owner, group
-                );
-            if (barricadetransform == null)
+
+            drop = UCBarricadeManager.GetBarricadeFromPosition(Position);
+            if (drop == null || drop.asset.GUID != Guid)
             {
-                exists = false;
-                L.LogWarning("Failed to spawn request sign for " + kit_name);
-                return;
-            }
-            drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
-            if (drop != null)
-            {
-                L.Log("Replaced lost request sign for " + kit_name, ConsoleColor.Gray);
-                instance_id = drop.instanceID;
-                exists = true;
-                InvokeUpdate();
-                if (save) RequestSigns.SaveSingleton();
-            }
-            else
-            {
-                exists = false;
-                L.LogWarning("Failed to find newly spawned request sign for " + kit_name);
-            }
-        }
-        else
-        {
-            exists = true;
-            this.barricadetransform = drop.model.transform;
-            this.transform = new SerializableTransform(barricadetransform);
-            if (save) RequestSigns.SaveSingleton();
-            InvokeUpdate();
-        }
-        if (exists && barricadetransform != null && barricadetransform.TryGetComponent(out InteractableSign sign))
-        {
-            if (sign.text != SignText)
-            {
-                RequestSigns.SetSignTextSneaky(sign, SignText);
-                sign.updateText(SignText);
-            }
-        }
-    }
-    public static void WriteRequestSign(RequestSign obj, Utf8JsonWriter writer) => obj.WriteJson(writer);
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        writer.WriteProperty(nameof(kit_name), kit_name);
-        writer.WriteProperty(nameof(transform), transform);
-        writer.WriteProperty(nameof(sign_id), sign_id);
-        writer.WriteProperty(nameof(owner), owner);
-        writer.WriteProperty(nameof(group), group);
-        writer.WriteProperty(nameof(instance_id), instance_id);
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string val = reader.GetString()!;
-                if (reader.Read())
+                BarricadeTransform = BarricadeManager.dropNonPlantedBarricade(
+                    new Barricade(asset),
+                    Position, Quaternion.Euler(Rotation), OwnerId, GroupId);
+                if (BarricadeTransform != null)
+                    drop = BarricadeManager.FindBarricadeByRootTransform(BarricadeTransform);
+                if (drop == null)
                 {
-                    switch (val)
-                    {
-                        case nameof(kit_name):
-                            kit_name = reader.GetString()!;
-                            break;
-                        case nameof(transform):
-                            if (reader.TokenType == JsonTokenType.StartObject)
-                                transform.ReadJson(ref reader);
-                            break;
-                        case nameof(sign_id):
-                            sign_id = reader.GetGuid();
-                            break;
-                        case nameof(owner):
-                            owner = reader.GetUInt64();
-                            break;
-                        case nameof(group):
-                            group = reader.GetUInt64();
-                            break;
-                        case nameof(instance_id):
-                            instance_id = reader.GetUInt32();
-                            break;
-                    }
+                    Exists = false;
+                    L.LogWarning("Failed to spawn request sign for " + KitName);
+                    return;
                 }
             }
-            else if (reader.TokenType == JsonTokenType.EndObject)
-                break;
+            InstanceId = drop.instanceID;
+            Exists = true;
+            needsSave = true;
         }
+        Exists = true;
+        BarricadeTransform = drop.model;
+        Position = BarricadeTransform.position;
+        Rotation = BarricadeTransform.rotation.eulerAngles;
+        if (drop.interactable is InteractableSign sign)
+        {
+            string text = "sign_" + KitName;
+            sign.updateText(text);
+            if (text.Length > 128) text = text.Substring(0, 128);
+            byte[] unicode = System.Text.Encoding.UTF8.GetBytes(text);
+            byte[] state = new byte[sizeof(ulong) * 2 + 1 + unicode.Length];
+            state[sizeof(ulong) * 2] = (byte)unicode.Length;
+            Buffer.BlockCopy(unicode, 0, state, sizeof(ulong) * 2 + 1, unicode.Length);
+            Buffer.BlockCopy(BitConverter.GetBytes(OwnerId), 0, state, 0, sizeof(ulong));
+            Buffer.BlockCopy(BitConverter.GetBytes(GroupId), 0, state, sizeof(ulong), sizeof(ulong));
+            BarricadeManager.updateReplicatedState(drop.model, state, state.Length);
+            BarricadeManager.changeOwnerAndGroup(drop.model, OwnerId, GroupId);
+        }
+        if (save && needsSave)
+            RequestSigns.SaveSingleton();
+        InvokeUpdate();
     }
 
     public override string ToString() =>
-        $"Request sign: " + kit_name + ", Instance ID: " + instance_id + ", Placed by: " + owner + " guid: " + sign_id.ToString("N");
-    public static RequestSign ReadRequestSign(ref Utf8JsonReader reader)
-    {
-        RequestSign rs = new RequestSign();
-        rs.ReadJson(ref reader);
-        return rs;
-    }
+        $"Request sign: " + KitName + ", Instance ID: " + InstanceId + ", Placed by: " + OwnerId + ", Guid: " + Guid.ToString("N");
 }

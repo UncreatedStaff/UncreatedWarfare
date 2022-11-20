@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
-using UnityEngine.PlayerLoop;
-using System.Reflection;
-using SDG.Unturned;
-using HarmonyLib;
+﻿using HarmonyLib;
 using SDG.NetTransport;
+using SDG.Unturned;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
 internal class DebugComponent : MonoBehaviour
@@ -32,7 +28,7 @@ internal class DebugComponent : MonoBehaviour
         Reset();
         try
         {
-            Patches.Patcher.Patch(typeof(SteamPlayer).GetMethod(nameof(SteamPlayer.lag), BindingFlags.Instance | BindingFlags.Public),
+            Harmony.Patches.Patcher.Patch(typeof(SteamPlayer).GetMethod(nameof(SteamPlayer.lag), BindingFlags.Instance | BindingFlags.Public),
                 postfix: new HarmonyMethod(typeof(DebugComponent).GetMethod(nameof(LagPostfix), BindingFlags.Static | BindingFlags.NonPublic)));
         }
         catch (Exception ex)
@@ -42,7 +38,7 @@ internal class DebugComponent : MonoBehaviour
         }
         try
         {
-            Patches.Patcher.Patch(typeof(Provider).Assembly.GetType("SDG.Unturned.NetMessages", true, false).GetMethod("ReceiveMessageFromClient", BindingFlags.Static | BindingFlags.Public),
+            Harmony.Patches.Patcher.Patch(typeof(Provider).Assembly.GetType("SDG.Unturned.NetMessages", true, false).GetMethod("ReceiveMessageFromClient", BindingFlags.Static | BindingFlags.Public),
                 postfix: new HarmonyMethod(typeof(DebugComponent).GetMethod("ReceiveClientMessagePostfix", BindingFlags.Static | BindingFlags.NonPublic)));
         }
         catch (Exception ex)
@@ -54,7 +50,8 @@ internal class DebugComponent : MonoBehaviour
     public void Reset()
     {
         Lagging.RemoveAll(x => !x.IsOnline);
-        Dump();
+        if (updates > 0)
+            Dump();
         updates = 0;
         _startRt = Time.realtimeSinceStartup;
         _lastFixed = _startRt;
@@ -70,15 +67,18 @@ internal class DebugComponent : MonoBehaviour
     {
         avgFrameRate = (avgFrameRate * updates + Time.deltaTime) / ++updates;
         _lastDt = Time.deltaTime;
+#if !DEBUG
         if (_lastDt > _maxUpdateSpeed && Level.isLoaded)
             L.LogWarning("Update took " + _lastDt.ToString("F6", Data.Locale) + " seconds, higher than the max: " + _maxUpdateSpeed.ToString("F3", Data.Locale) + "!!", ConsoleColor.Yellow);
-        
+#endif
     }
     private void FixedUpdate()
     {
         float t = Time.realtimeSinceStartup;
+#if !DEBUG
         if (t - _lastFixed > _maxFixedUpdateSpeed && Level.isLoaded)
             L.LogWarning("FixedUpdate took " + (t - _lastFixed).ToString("F6", Data.Locale) + " seconds, higher than the max: " + _maxFixedUpdateSpeed.ToString("F3", Data.Locale) + "!!", ConsoleColor.Yellow);
+#endif
         _lastFixed = t;
     }
     private void LateUpdate()
@@ -211,7 +211,7 @@ internal class DebugComponent : MonoBehaviour
     }
     private static void ReceiveClientMessagePostfix(ITransportConnection transportConnection, byte[] packet, int offset, int size)
     {
-        if (UCWarfare.I.Debugger != null)
+        if (UCWarfare.I != null && UCWarfare.I.Debugger != null)
         {
             UCWarfare.I.Debugger.OnMessageReceived(transportConnection, packet, offset, size);
         }

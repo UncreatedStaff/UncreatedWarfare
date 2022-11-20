@@ -17,19 +17,19 @@ namespace Uncreated.Warfare.FOBs
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            SDG.Unturned.BarricadeData data = drop.GetServersideData();
+            BarricadeData data = drop.GetServersideData();
 
-            if (Gamemode.Config.Barricades.RepairStationGUID.MatchGuid(data.barricade.asset.GUID))
+            if (Gamemode.Config.BarricadeRepairStation.MatchGuid(data.barricade.asset.GUID))
             {
                 RegisterNewRepairStation(data, drop);
             }
         }
-        public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
+        public static void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (Gamemode.Config.Barricades.RepairStationGUID.MatchGuid(data.barricade.asset.GUID))
+            if (Gamemode.Config.BarricadeRepairStation.MatchGuid(data.barricade.asset.GUID))
             {
                 TryDeleteRepairStation(instanceID);
             }
@@ -41,9 +41,9 @@ namespace Uncreated.Warfare.FOBs
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             stations.Clear();
-            foreach (var barricade in UCBarricadeManager.AllBarricades)
+            foreach (BarricadeDrop barricade in UCBarricadeManager.AllBarricades)
             {
-                if (Gamemode.Config.Barricades.RepairStationGUID.MatchGuid(barricade.asset.GUID) && !barricade.model.TryGetComponent(out RepairStationComponent _))
+                if (Gamemode.Config.BarricadeRepairStation.MatchGuid(barricade.asset.GUID) && !barricade.model.TryGetComponent(out RepairStationComponent _))
                 {
                     RepairStation station = new RepairStation(barricade.GetServersideData(), barricade);
                     stations.Add(station);
@@ -67,7 +67,7 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
         }
-        public static void RegisterNewRepairStation(SDG.Unturned.BarricadeData data, BarricadeDrop drop)
+        public static void RegisterNewRepairStation(BarricadeData data, BarricadeDrop drop)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -122,7 +122,8 @@ namespace Uncreated.Warfare.FOBs
             }
 
             VehicleManager.sendVehicleHealth(vehicle, newHealth);
-            EffectManager.sendEffect(27, EffectManager.SMALL, vehicle.transform.position);
+            if (Gamemode.Config.EffectRepair.ValidReference(out EffectAsset effect))
+                F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
             vehicle.updateVehicle();
         }
 
@@ -138,7 +139,8 @@ namespace Uncreated.Warfare.FOBs
 
             vehicle.askFillFuel(amount);
 
-            EffectManager.sendEffect(38316, EffectManager.SMALL, vehicle.transform.position);
+            if (Gamemode.Config.EffectRefuel.ValidReference(out EffectAsset effect))
+                F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
             vehicle.updateVehicle();
         }
     }
@@ -151,9 +153,9 @@ namespace Uncreated.Warfare.FOBs
         public void Initialize(RepairStation repairStation)
         {
             parent = repairStation;
-            StartCoroutine(RepaitStationLoop());
+            StartCoroutine(RepairStationLoop());
         }
-        private IEnumerator<WaitForSeconds> RepaitStationLoop()
+        private IEnumerator<WaitForSeconds> RepairStationLoop()
         {
             while (parent.IsActive)
             {
@@ -204,7 +206,7 @@ namespace Uncreated.Warfare.FOBs
                         }
                         else if (parent.structure.group == nearby[i].lockedGroup.m_SteamID)
                         {
-                            var fob = FOB.GetNearestFOB(parent.structure.point, EFOBRadius.FULL_WITH_BUNKER_CHECK, parent.structure.group);
+                            FOB? fob = FOB.GetNearestFOB(parent.structure.point, EfobRadius.FULL_WITH_BUNKER_CHECK, parent.structure.group);
                             if (F.IsInMain(parent.structure.point) || (fob != null && fob.Build > 0))
                             {
                                 parent.VehiclesRepairing.Add(nearby[i].instanceID, 9);

@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Components;
-using UnityEngine;
-using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Point;
-using SDG.Unturned;
-using Uncreated.Warfare.Gamemodes;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using Uncreated.Players;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Point;
+using UnityEngine;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Squads;
 
@@ -62,11 +59,11 @@ public static class Orders
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        foreach (KeyValuePair<ulong, int> pair in buildable.PlayerHits)
+        foreach (KeyValuePair<ulong, float> pair in buildable.PlayerHits)
         {
             UCPlayer? player = UCPlayer.FromID(pair.Key);
             if (player != null &&
-                (float)pair.Value / buildable.Buildable.RequiredHits >= 0.1F &&
+                pair.Value / buildable.Buildable.RequiredHits >= 0.1f &&
                 HasOrder(player.Squad, out Order order) &&
                 order.Type == EOrder.BUILDFOB &&
                 (fob.Position - order.Marker).sqrMagnitude <= Math.Pow(80, 2)
@@ -141,12 +138,12 @@ public class Order : MonoBehaviour, ITranslationArgument
                 float distanceToMarker = (avgMemberPoint - Marker).magnitude;
 
                 L.Log("distance to marker: " + distanceToMarker);
-                
-                if (distanceToMarker < 100) { RewardXP = 0; RewardTW = 0;  }
-                if (distanceToMarker >= 100 && distanceToMarker < 200) { RewardXP = 15; RewardTW = 15;  }
-                if (distanceToMarker >= 200 && distanceToMarker < 400) { RewardXP = 50; RewardTW = 50;  }
-                if (distanceToMarker >= 600 && distanceToMarker < 1000) { RewardXP = 70; RewardTW = 70;  }
-                if (distanceToMarker >= 1000) { RewardXP = 90; RewardTW = 90;  }
+
+                if (distanceToMarker < 100) { RewardXP = 0; RewardTW = 0; }
+                if (distanceToMarker >= 100 && distanceToMarker < 200) { RewardXP = 15; RewardTW = 15; }
+                if (distanceToMarker >= 200 && distanceToMarker < 400) { RewardXP = 50; RewardTW = 50; }
+                if (distanceToMarker >= 600 && distanceToMarker < 1000) { RewardXP = 70; RewardTW = 70; }
+                if (distanceToMarker >= 1000) { RewardXP = 90; RewardTW = 90; }
 
                 break;
         }

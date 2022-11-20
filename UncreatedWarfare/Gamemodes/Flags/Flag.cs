@@ -2,8 +2,10 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using Uncreated.Framework;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -27,12 +29,12 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
     private float _z;
     private string _color;
     private ulong _owner = 0;
-    public List<Player> PlayersOnFlagTeam1;
+    public List<UCPlayer> PlayersOnFlagTeam1;
     public int Team1TotalPlayers;
     public EvaluatePointsDelegate? EvaluatePointsOverride = null;
     public IsContestedDelegate? IsContestedOverride = null;
     public int Team1TotalCappers;
-    public List<Player> PlayersOnFlagTeam2;
+    public List<UCPlayer> PlayersOnFlagTeam2;
     public int Team2TotalPlayers;
     public int Team2TotalCappers;
     private float _points;
@@ -49,12 +51,8 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
     public event PointsChangedDelegate OnPointsChanged;
     public delegate void OwnerChangedDelegate(ulong lastOwner, ulong newOwner, Flag flag);
     public event OwnerChangedDelegate OnOwnerChanged;
-    public event DiscoveryDelegate OnDiscovered;
-    public event DiscoveryDelegate OnHidden;
-    public event EventHandler OnDisposed;
-    public event EventHandler OnReset;
 
-    public List<Player> PlayersOnFlag { get; private set; }
+    public List<UCPlayer> PlayersOnFlag { get; private set; }
     public Zone ZoneData { get; protected set; }
     public IFlagRotation Manager { get; protected set; }
     public int ObjectivePlayerCount
@@ -147,13 +145,11 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
         {
             if (value == true && _discovered1 == false)
             {
-                OnDiscovered?.Invoke(1);
                 _discovered1 = true;
                 return;
             }
             if (value == false && _discovered1 == true)
             {
-                OnHidden?.Invoke(1);
                 _discovered1 = false;
                 return;
             }
@@ -166,13 +162,11 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
         {
             if (value == true && _discovered2 == false)
             {
-                OnDiscovered?.Invoke(2);
                 _discovered2 = true;
                 return;
             }
             if (value == false && _discovered2 == true)
             {
-                OnHidden?.Invoke(2);
                 _discovered2 = false;
                 return;
             }
@@ -193,13 +187,10 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
         IsContestedOverride = null;
         Hide(1);
         Hide(2);
-        if (OnReset != null)
-            OnReset.Invoke(this, EventArgs.Empty);
         RecalcCappers();
     }
     public void Dispose()
     {
-        OnDisposed?.Invoke(this, EventArgs.Empty);
         GC.SuppressFinalize(this);
     }
     public void SetOwner(ulong value, bool invokeEvent = true)
@@ -231,26 +222,26 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
         PlayersOnFlag.Clear();
         PlayersOnFlagTeam1.Clear();
         PlayersOnFlagTeam2.Clear();
-        for (int i = 0; i < Provider.clients.Count; i++)
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            SteamPlayer p = Provider.clients[i];
-            if (p.player.life.isDead) continue;
-            if (PlayerInRange(p.player.transform.position))
+            UCPlayer p = PlayerManager.OnlinePlayers[i];
+            if (p.Player.life.isDead) continue;
+            if (PlayerInRange(p.Player.transform.position))
             {
-                PlayersOnFlag.Add(p.player);
+                PlayersOnFlag.Add(p);
                 ulong team = p.GetTeam();
                 if (team == 1)
                 {
-                    PlayersOnFlagTeam1.Add(p.player);
+                    PlayersOnFlagTeam1.Add(p);
                     Team1TotalPlayers++;
-                    if (Manager.AllowPassengersToCapture || p.player.movement.getVehicle() == null)
+                    if (Manager.AllowPassengersToCapture || p.Player.movement.getVehicle() == null)
                         Team1TotalCappers++;
                 }
                 else if (team == 2)
                 {
-                    PlayersOnFlagTeam2.Add(p.player);
+                    PlayersOnFlagTeam2.Add(p);
                     Team2TotalPlayers++;
-                    if (Manager.AllowPassengersToCapture || p.player.movement.getVehicle() == null)
+                    if (Manager.AllowPassengersToCapture || p.Player.movement.getVehicle() == null)
                         Team2TotalCappers++;
                 }
             }
@@ -263,27 +254,28 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Player[] OldPlayers = PlayersOnFlag.ToArray();
+        UCPlayer[] _prevPlayers = PlayersOnFlag.ToArray();
         RecalcCappers();
         newPlayers = new List<Player>(2);
         departedPlayers = new List<Player>(2);
         for (int i = 0; i < PlayersOnFlag.Count; i++)
         {
-            Player player = PlayersOnFlag[i];
-            for (int j = 0; j < OldPlayers.Length; j++)
-                if (player.channel.owner.playerID.steamID.m_SteamID == OldPlayers[j].channel.owner.playerID.steamID.m_SteamID)
+            UCPlayer player = PlayersOnFlag[i];
+            for (int j = 0; j < _prevPlayers.Length; j++)
+                if (player.Steam64 == _prevPlayers[j].Steam64)
                     goto done;
             newPlayers.Add(player);
-            done: ;
+        done:;
         }
-        for (int i = 0; i < OldPlayers.Length; i++)
+        for (int i = 0; i < _prevPlayers.Length; i++)
         {
-            Player player = OldPlayers[i];
+            UCPlayer player = _prevPlayers[i];
             for (int j = 0; j < PlayersOnFlag.Count; j++)
-                if (player.channel.owner.playerID.steamID.m_SteamID == PlayersOnFlag[j].channel.owner.playerID.steamID.m_SteamID)
+                if (player.Steam64 == PlayersOnFlag[j].Steam64)
                     goto done;
-            departedPlayers.Add(player);
-            done: ;
+            if (player.IsOnline)
+                departedPlayers.Add(player);
+        done:;
         }
     }
     public void SetPoints(float value, bool skipEvent = false, bool skipDeltaPoints = false)
@@ -316,9 +308,9 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             this._shortName = zone.ShortName!;
         this._color = UCWarfare.GetColorHex("default");
         this._owner = 0;
-        PlayersOnFlag = new List<Player>(48);
-        PlayersOnFlagTeam1 = new List<Player>(24);
-        PlayersOnFlagTeam2 = new List<Player>(24);
+        PlayersOnFlag = new List<UCPlayer>(48);
+        PlayersOnFlagTeam1 = new List<UCPlayer>(24);
+        PlayersOnFlagTeam2 = new List<UCPlayer>(24);
         this.ZoneData = zone;
         this.Adjacencies = zone.Data.Adjacencies;
     }
@@ -450,7 +442,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             }
             else if (Team1TotalCappers == Team2TotalCappers)
             {
-                winner = 0;
+                winner = Intimidation.CheckSquadsForContestBoost(this);
             }
             else if (Team1TotalCappers == 0 && Team2TotalCappers > 0)
             {
@@ -462,27 +454,28 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             }
             else if (Team1TotalCappers > Team2TotalCappers)
             {
-                if (Team1TotalCappers - Gamemode.Config.TeamCTF.RequiredPlayerDifferenceToCapture >= Team2TotalCappers)
+                if (Team1TotalCappers - Gamemode.Config.AASRequiredCapturingPlayerDifference >= Team2TotalCappers)
                 {
                     winner = 1;
                 }
                 else
                 {
-                    winner = 0;
+                    winner = Intimidation.CheckSquadsForContestBoost(this);
                 }
             }
             else
             {
-                if (Team2TotalCappers - Gamemode.Config.TeamCTF.RequiredPlayerDifferenceToCapture >= Team1TotalCappers)
+                if (Team2TotalCappers - Gamemode.Config.AASRequiredCapturingPlayerDifference >= Team1TotalCappers)
                 {
                     winner = 2;
                 }
                 else
                 {
-                    winner = 0;
+                    winner = Intimidation.CheckSquadsForContestBoost(this);
                 }
             }
-            return winner == 0;
+
+            return winner == 0ul;
         }
         else
         {
@@ -512,7 +505,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
                     {
                         if (winner == 1 || winner == 2)
                         {
-                            Cap(winner, GetCaptureAmount(Gamemode.Config.TeamCTF.CaptureScale, winner));
+                            Cap(winner, GetCaptureAmount(Gamemode.Config.AASCaptureScale, winner));
                         }
                     }
                 }
@@ -606,7 +599,8 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             return team == 0 || Discovered(team)
                 ? Name
                 : Localization.Translate(T.UndiscoveredFlagNoColor, target);
-    end:
+        end:
         return Name;
     }
+    public override string ToString() => Name;
 }

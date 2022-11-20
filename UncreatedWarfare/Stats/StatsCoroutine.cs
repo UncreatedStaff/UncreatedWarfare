@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using UnityEngine;
@@ -64,7 +63,7 @@ namespace Uncreated.Warfare.Stats
                             {
                                 if (afk.time == n)
                                 {
-                                    FPlayerName names = F.GetPlayerOriginalNames(ucplayer);
+                                    PlayerNames names = ucplayer.Name;
                                     L.Log($"{names.PlayerName} ({ucplayer.Steam64}) was auto-kicked for being AFK.", ConsoleColor.Cyan);
                                     Provider.kick(ucplayer.CSteamID, "Auto-kick for being AFK.");
                                     previousPositions.Remove(ucplayer.Steam64);

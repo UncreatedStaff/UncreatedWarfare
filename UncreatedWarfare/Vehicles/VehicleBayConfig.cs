@@ -1,9 +1,5 @@
 ﻿using SDG.Unturned;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Vehicles;
 public class VehicleBayConfig : Config<VehicleBayData>
@@ -12,7 +8,7 @@ public class VehicleBayConfig : Config<VehicleBayData>
 }
 
 
-public class VehicleBayData : ConfigData
+public class VehicleBayData : JSONConfigData
 {
     public JsonAssetReference<EffectAsset> MissileWarningID;
     public JsonAssetReference<EffectAsset> MissileWarningDriverID;
@@ -25,10 +21,10 @@ public class VehicleBayData : ConfigData
 
     public override void SetDefaults()
     {
-        MissileWarningID       = (JsonAssetReference<EffectAsset>)26033;
+        MissileWarningID = (JsonAssetReference<EffectAsset>)26033;
         MissileWarningDriverID = (JsonAssetReference<EffectAsset>)26034;
         CountermeasureEffectID = (JsonAssetReference<EffectAsset>)26035;
-        CountermeasureGUID     = "16dbd4e5928e498783675529ca53fc61";
+        CountermeasureGUID = "16dbd4e5928e498783675529ca53fc61";
         TOWMissileWeapons = new JsonAssetReference<ItemGunAsset>[]
         {
             "f8978efc872e415bb41086fdee10d7ad", // TOW

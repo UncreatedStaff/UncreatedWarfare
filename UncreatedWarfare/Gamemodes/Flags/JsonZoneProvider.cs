@@ -3,12 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Json;
+using Uncreated.Warfare.Configuration;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -50,11 +47,11 @@ public class JsonZoneProvider
                         {
                             if (reader.TokenType == JsonTokenType.StartObject)
                             {
-                                ZoneModel zone = new ZoneModel();
+                                ZoneModel zone;
                                 // handles any parse exceptions in order to keep one zone from breaking the rest.
                                 try
                                 {
-                                    ReadJsonZone(ref reader, ref zone);
+                                    ReadJsonZone(ref reader, out zone);
                                 }
                                 catch (Exception ex)
                                 {
@@ -62,6 +59,7 @@ public class JsonZoneProvider
                                         exceptions = new List<Exception>(1) { ex };
                                     else
                                         exceptions.Add(ex);
+                                    continue;
                                 }
                                 if (zone.IsValid)
                                     zones.Add(zone);
@@ -114,7 +112,7 @@ public class JsonZoneProvider
                 if (_zones[j].Id == i) goto c;
             }
             return i;
-            c: ;
+        c:;
         }
     }
     public void Save()
@@ -152,8 +150,9 @@ public class JsonZoneProvider
         }
     }
 
-    internal static void ReadJsonZone(ref Utf8JsonReader reader, ref ZoneModel mdl)
+    internal static void ReadJsonZone(ref Utf8JsonReader reader, out ZoneModel mdl)
     {
+        mdl = new ZoneModel();
         while (reader.Read())
         {
             if (reader.TokenType == JsonTokenType.EndObject) break;

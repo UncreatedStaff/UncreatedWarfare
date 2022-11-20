@@ -1,18 +1,16 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System.Threading;
 using System.Threading.Tasks;
+using SDG.Unturned;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Commands;
-public class AbandonCommand : Command
+public class AbandonCommand : AsyncCommand
 {
     private const string SYNTAX = "/abandon | /av";
     private const string HELP = "If you no longer want to use your vehicle, you can return it to the vehicle pool.";
@@ -22,40 +20,52 @@ public class AbandonCommand : Command
         AddAlias("av");
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertRanByPlayer();
 
         ctx.AssertGamemode<IVehicles>();
 
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
-
-        if (!VehicleBay.Loaded || !VehicleSpawner.Loaded)
+        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+        if (bay == null || !bay.IsLoaded || !VehicleSpawner.Loaded)
             throw ctx.SendGamemodeError();
 
         if (!TeamManager.IsInMain(ctx.Caller))
             throw ctx.Reply(T.AbandonNotInMain);
-
-        if (ctx.TryGetTarget(out InteractableVehicle vehicle) && VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
+        if (ctx.TryGetTarget(out InteractableVehicle vehicle))
         {
-            if (vehicleData.DisallowAbandons)
-                throw ctx.Reply(T.AbandonNotAllowed);
+            SqlItem<VehicleData>? vehicleData = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
+            if (vehicleData?.Item == null)
+                throw ctx.Reply(T.AbandonNoTarget);
+            await vehicleData.Enter(token).ConfigureAwait(false);
+            try
+            {
+                await UCWarfare.ToUpdate();
+                
+                if (vehicleData.Item.DisallowAbandons)
+                    throw ctx.Reply(T.AbandonNotAllowed);
 
-            if (vehicle.lockedOwner.m_SteamID != ctx.Caller.Steam64)
-                throw ctx.Reply(T.AbandonNotOwned, vehicle);
+                if (vehicle.lockedOwner.m_SteamID != ctx.Caller.Steam64)
+                    throw ctx.Reply(T.AbandonNotOwned, vehicle);
 
-            if ((float)vehicle.health / vehicle.asset.health < 0.9f)
-                throw ctx.Reply(T.AbandonDamaged, vehicle);
+                if ((float)vehicle.health / vehicle.asset.health < 0.9f)
+                    throw ctx.Reply(T.AbandonDamaged, vehicle);
 
-            if ((float)vehicle.fuel / vehicle.asset.fuel < 0.9f)
-                throw ctx.Reply(T.AbandonNeedsFuel, vehicle);
+                if ((float)vehicle.fuel / vehicle.asset.fuel < 0.9f)
+                    throw ctx.Reply(T.AbandonNeedsFuel, vehicle);
 
-            if (!VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
-                throw ctx.Reply(T.AbandonNoSpace, vehicle);
+                if (!VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
+                    throw ctx.Reply(T.AbandonNoSpace, vehicle);
 
-            VehicleBay.AbandonVehicle(vehicle, vehicleData, spawn, true);
+                bay.AbandonVehicle(vehicle, vehicleData.Item, spawn, true);
 
-            ctx.Reply(T.AbandonSuccess, vehicle);
+                ctx.Reply(T.AbandonSuccess, vehicle);
+            }
+            finally
+            {
+                vehicleData.Release();
+            }
         }
         else throw ctx.Reply(T.AbandonNoTarget);
     }

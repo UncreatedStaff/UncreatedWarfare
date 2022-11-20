@@ -34,7 +34,7 @@ public class PermissionCommand : Command
             {
                 Task.Run(async () =>
                 {
-                    FPlayerName name = await F.GetPlayerOriginalNamesAsync(steam64);
+                    PlayerNames name = await F.GetPlayerOriginalNamesAsync(steam64);
                     await UCWarfare.ToUpdate();
                     EAdminType t = PermissionSaver.Instance.GetPlayerPermissionLevel(steam64);
                     if (t == type)
@@ -54,7 +54,7 @@ public class PermissionCommand : Command
         {
             Task.Run(async () =>
             {
-                FPlayerName name = await F.GetPlayerOriginalNamesAsync(steam64);
+                PlayerNames name = await F.GetPlayerOriginalNamesAsync(steam64);
                 await UCWarfare.ToUpdate();
                 EAdminType t = PermissionSaver.Instance.GetPlayerPermissionLevel(steam64);
                 if (t == EAdminType.MEMBER)
@@ -81,7 +81,7 @@ public class PermissionCommand : Command
         if (ctx.MatchParameter(2, "admin", "admin-od"))
             type = EAdminType.ADMIN_OFF_DUTY;
         else if (ctx.MatchParameter(2, "intern", "trial", "intern-od"))
-            type = EAdminType.ADMIN_OFF_DUTY;
+            type = EAdminType.TRIAL_ADMIN_OFF_DUTY;
         else if (ctx.MatchParameter(2, "helper", "help", "assistant"))
             type = EAdminType.HELPER;
         else if (ctx.MatchParameter(2, "member", "0", "none"))

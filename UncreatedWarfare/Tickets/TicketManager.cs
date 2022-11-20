@@ -1,28 +1,16 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags.Invasion;
-using Uncreated.Warfare.Gamemodes.Insurgency;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Point;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets;
 
-public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListener
+public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartListener, IGameTickListener
 {
     public static TicketManager Singleton;
     public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
@@ -73,9 +61,9 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         _t1Tickets = 0;
         _t2Tickets = 0;
         Provider.Load();
-        EventDispatcher.OnPlayerDied += OnPlayerDeath;
-        EventDispatcher.OnGroupChanged += OnGroupChanged;
-        EventDispatcher.OnUIRefreshRequested += ReloadUI;
+        EventDispatcher.PlayerDied += OnPlayerDeath;
+        EventDispatcher.GroupChanged += OnGroupChanged;
+        EventDispatcher.UIRefreshRequested += ReloadUI;
     }
     public override void Unload()
     {
@@ -85,9 +73,16 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         Provider = null!;
         Team1Tickets = 0;
         Team2Tickets = 0;
-        EventDispatcher.OnUIRefreshRequested -= ReloadUI;
-        EventDispatcher.OnGroupChanged -= OnGroupChanged;
-        EventDispatcher.OnPlayerDied -= OnPlayerDeath;
+        EventDispatcher.UIRefreshRequested -= ReloadUI;
+        EventDispatcher.GroupChanged -= OnGroupChanged;
+        EventDispatcher.PlayerDied -= OnPlayerDeath;
+    }
+    void IGameTickListener.Tick()
+    {
+        if (Data.Gamemode.State == EState.ACTIVE && Provider != null)
+        {
+            Provider.Tick();
+        }
     }
     private void ReloadUI(PlayerEvent e)
     {
@@ -108,14 +103,16 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             Provider.UpdateUI(player);
         }
     }
-    public void UpdateUI(UCPlayer player) => Provider.UpdateUI(player);
+    public void UpdateUI(UCPlayer player) => Provider?.UpdateUI(player);
     public void UpdateUI(ulong team)
     {
+        if (Provider == null) return;
         if (SDG.Unturned.Provider.clients.Count < 1) return;
         Provider.UpdateUI(team);
     }
     public void UpdateUI()
     {
+        if (Provider == null) return;
         if (SDG.Unturned.Provider.clients.Count < 1) return;
         Provider.UpdateUI(1ul);
         Provider.UpdateUI(2ul);
@@ -137,10 +134,10 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         else
             ClearUI(e.Player);
     }
-    void IPlayerInitListener.OnPlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    void IPlayerPreInitListener.OnPrePlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
-        if (Provider is IPlayerInitListener il)
-            il.OnPlayerInit(player, wasAlreadyOnline);
+        if (Provider is IPlayerPreInitListener il)
+            il.OnPrePlayerInit(player, wasAlreadyOnline);
         SendUI(player);
     }
     void IGameStartListener.OnGameStarting(bool isOnLoad)
@@ -150,8 +147,34 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
     }
     public void ClearUI(UCPlayer player) => TicketUI.ClearFromPlayer(player.Connection);
     public void ClearUI(ITransportConnection connection) => TicketUI.ClearFromPlayer(connection);
+    public void SendWinUI(ulong winner)
+    {
+        Gamemode.WinToastUI.SendToAllPlayers();
+        string img1 = TeamManager.Team1Faction.FlagImageURL;
+        string img2 = TeamManager.Team2Faction.FlagImageURL;
+        foreach (LanguageSet set in LanguageSet.All())
+        {
+            string t1tickets = T.WinUIValueTickets.Translate(set.Language, this.Team1Tickets);
+            if (this.Team1Tickets <= 0)
+                t1tickets = t1tickets.Colorize("969696");
+            string t2tickets = T.WinUIValueTickets.Translate(set.Language, this.Team2Tickets);
+            if (this.Team2Tickets <= 0)
+                t2tickets = t2tickets.Colorize("969696");
+            string header = T.WinUIHeaderWinner.Translate(set.Language, TeamManager.GetFactionSafe(winner)!);
+            while (set.MoveNext())
+            {
+                if (!set.Next.IsOnline || set.Next.HasUIHidden) continue;
+                ITransportConnection c = set.Next.Connection;
+                Gamemode.WinToastUI.Team1Flag.SetImage(c, img1);
+                Gamemode.WinToastUI.Team2Flag.SetImage(c, img2);
+                Gamemode.WinToastUI.Team1Tickets.SetText(c, t1tickets);
+                Gamemode.WinToastUI.Team2Tickets.SetText(c, t2tickets);
+                Gamemode.WinToastUI.Header.SetText(c, header);
+            }
+        }
+    }
 }
-public class TicketData : ConfigData
+public class TicketData : JSONConfigData
 {
     public int TicketHandicapDifference;
     public int FOBCost;

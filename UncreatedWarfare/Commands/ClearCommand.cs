@@ -1,7 +1,7 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
+using SDG.Unturned;
+using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Vehicles;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -39,7 +39,7 @@ public class ClearCommand : Command
                 throw ctx.Reply(T.ClearNoPlayerConsole);
             else
             {
-                Kits.UCInventoryManager.ClearInventory(ctx.Caller!);
+                Kits.UCInventoryManager.ClearInventory(ctx.Caller);
                 ctx.LogAction(EActionLogType.CLEAR_INVENTORY, "CLEARED PERSONAL INVENTORY");
                 ctx.Reply(T.ClearInventorySelf);
             }
@@ -70,7 +70,7 @@ public class ClearCommand : Command
         if (VehicleSpawner.Loaded)
         {
             VehicleBay.DeleteAllVehiclesFromWorld();
-        } 
+        }
         else
         {
             VehicleManager.askVehicleDestroyAll();
@@ -80,7 +80,7 @@ public class ClearCommand : Command
     {
         WipeVehicles();
         if (VehicleSpawner.Loaded)
-            VehicleSpawner.RespawnAllVehicles();
+            Task.Run(() => Util.TryWrap(VehicleSpawner.RespawnAllVehicles()));
     }
     public static void ClearItems()
     {

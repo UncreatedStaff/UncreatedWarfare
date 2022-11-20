@@ -70,9 +70,9 @@ public class ShutdownCommand : Command
         }
         else if (ctx.TryGet(0, out string time) && ctx.TryGetRange(1, out string reason))
         {
-            int secs = F.ParseTime(time);
+            int secs = Util.ParseTime(time);
             if (secs == 0)
-                throw ctx.Reply(T.InvalidTime);
+                throw ctx.Reply(T.InvalidTime, time);
             ShutdownIn(secs, reason, ctx.CallerID);
             ctx.Defer();
         }

@@ -1,11 +1,9 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
-using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion;
@@ -75,7 +73,7 @@ public static class InvasionUI
                 else if (winner == TeamManager.Other(team))
                 {
                     return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
-                } 
+                }
                 else
                 {
                     return new CaptureUIParameters(team, EFlagStatus.NOT_OBJECTIVE, flag);
@@ -222,16 +220,16 @@ public static class InvasionUI
                         string objective = string.Empty;
                         if (flag.Owner == attack)
                         {
-                            objective = $"<color=#{UCWarfare.GetColorHex("locked_icon_color")}>{Gamemode.Config.UI.LockIcon}</color>";
+                            objective = $"<color=#{UCWarfare.GetColorHex("locked_icon_color")}>{Gamemode.Config.UIIconLocked}</color>";
                         }
                         else
                         {
                             if (flag.IsObj(attack))
                             {
                                 if (team == attack)
-                                    objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                                    objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UIIconAttack}</color>";
                                 else
-                                    objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                                    objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UIIconDefend}</color>";
                             }
                         }
                         CTFUI.ListUI.Names[i].SetText(c, flag.Discovered(team) ?
@@ -257,15 +255,15 @@ public static class InvasionUI
                         string objective = string.Empty;
                         if (flag.IsObj(attack))
                         {
-                            objective = $"<color=#{TeamManager.GetTeamHexColor(attack)}>{Gamemode.Config.UI.AttackIcon}</color> <color=#{TeamManager.GetTeamHexColor(defense)}>{Gamemode.Config.UI.DefendIcon}</color>";
+                            objective = $"<color=#{TeamManager.GetTeamHexColor(attack)}>{Gamemode.Config.UIIconAttack}</color> <color=#{TeamManager.GetTeamHexColor(defense)}>{Gamemode.Config.UIIconDefend}</color>";
                         }
                         if (flag.Owner == attack)
-                            objective = $"<color=#{TeamManager.GetTeamHexColor(defense)}>{Gamemode.Config.UI.LockIcon}</color>";
+                            objective = $"<color=#{TeamManager.GetTeamHexColor(defense)}>{Gamemode.Config.UIIconLocked}</color>";
                         if (flag.T2Obj)
                         {
-                            objective = $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>";
+                            objective = $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UIIconAttack}</color>";
                             if (flag.Owner == 1)
-                                objective += $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.DefendIcon}</color>";
+                                objective += $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconDefend}</color>";
                         }
                         CTFUI.ListUI.Names[i].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
                             $"{(flag.Discovered(1) ? string.Empty : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
@@ -301,16 +299,16 @@ public static class InvasionUI
                 {
                     if (flag.Owner == attack)
                     {
-                        objective = $"<color=#{UCWarfare.GetColorHex("locked_icon_color")}>{Gamemode.Config.UI.LockIcon}</color>";
+                        objective = $"<color=#{UCWarfare.GetColorHex("locked_icon_color")}>{Gamemode.Config.UIIconLocked}</color>";
                     }
                     else
                     {
                         if (flag.IsObj(attack))
                         {
                             if (team == attack)
-                                objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                                objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UIIconAttack}</color>";
                             else
-                                objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                                objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UIIconDefend}</color>";
                         }
                     }
                     if (ownerChanged)
@@ -321,15 +319,15 @@ public static class InvasionUI
                 {
                     if (flag.IsObj(attack))
                     {
-                        objective = $"<color=#{TeamManager.GetTeamHexColor(attack)}>{Gamemode.Config.UI.AttackIcon}</color> <color=#{TeamManager.GetTeamHexColor(defense)}>{Gamemode.Config.UI.DefendIcon}</color>";
+                        objective = $"<color=#{TeamManager.GetTeamHexColor(attack)}>{Gamemode.Config.UIIconAttack}</color> <color=#{TeamManager.GetTeamHexColor(defense)}>{Gamemode.Config.UIIconDefend}</color>";
                     }
                     if (flag.Owner == attack)
-                        objective = $"<color=#{TeamManager.GetTeamHexColor(defense)}>{Gamemode.Config.UI.LockIcon}</color>";
+                        objective = $"<color=#{UCWarfare.GetColorHex("locked_icon_color")}>{Gamemode.Config.UIIconLocked}</color>";
                     if (flag.T2Obj)
                     {
-                        objective = $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>";
+                        objective = $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UIIconAttack}</color>";
                         if (flag.Owner == 1)
-                            objective += $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.DefendIcon}</color>";
+                            objective += $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconDefend}</color>";
                     }
                     if (ownerChanged)
                         CTFUI.ListUI.Names[i3].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +

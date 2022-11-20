@@ -1,6 +1,4 @@
-﻿using SDG.Unturned;
-using System;
-using System.Threading.Tasks;
+﻿using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
@@ -34,13 +32,13 @@ public class DeployCommand : Command
 
         ctx.AssertArgs(1, SYNTAX + " - " + HELP);
 
-        if (ctx.MatchParameter(0, "cancel") && F.TryGetPlayerData(ctx.Caller.Player, out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
+        if (ctx.MatchParameter(0, "cancel") && ctx.Caller.Player.TryGetPlayerData(out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
         {
             comp.CancelTeleport();
             throw ctx.Reply(T.DeployCancelled);
         }
 
-        if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(ctx.CallerID))
+        if (Data.Is(out IRevives r) && r.ReviveManager.IsInjured(ctx.CallerID))
             throw ctx.Reply(T.DeployInjured);
 
         string destination = ctx.GetRange(0)!;
@@ -62,7 +60,7 @@ public class DeployCommand : Command
             if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.COMBAT, out Cooldown combatlog))
                 throw ctx.Reply(T.DeployInCombat, combatlog);
 
-            if (!Gamemode.Config.Barricades.InsurgencyCacheGUID.ValidReference(out Guid guid) || !(ctx.Caller.IsOnFOB(out _) || UCBarricadeManager.CountNearbyBarricades(guid, 10, ctx.Caller.Position, team) != 0))
+            if (!Gamemode.Config.BarricadeInsurgencyCache.ValidReference(out Guid guid) || !(ctx.Caller.IsOnFOB(out _) || UCBarricadeManager.CountNearbyBarricades(guid, 10, ctx.Caller.Position, team) != 0))
                 throw ctx.Reply(Data.Is<Insurgency>() ? T.DeployNotNearFOBInsurgency : T.DeployNotNearFOB);
         }
 

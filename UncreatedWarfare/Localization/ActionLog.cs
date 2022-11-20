@@ -1,11 +1,10 @@
-﻿using System;
+﻿using JetBrains.Annotations;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
+using Uncreated.Encoding;
 using Uncreated.Networking;
 using UnityEngine;
 
@@ -17,6 +16,8 @@ public class ActionLogger : MonoBehaviour
     private static ActionLogger Instance;
     private static DateTime CurrentLogSt;
     private static string CurrentFileName;
+
+    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
     private void Awake()
     {
         SetTimeToNow();
@@ -26,7 +27,7 @@ public class ActionLogger : MonoBehaviour
     }
     private static void SetTimeToNow()
     {
-        CurrentLogSt = DateTime.Now;
+        CurrentLogSt = DateTime.UtcNow;
         CurrentFileName = CurrentLogSt.ToString(DATE_HEADER_FORMAT, Data.Locale) + ".txt";
     }
 
@@ -34,11 +35,11 @@ public class ActionLogger : MonoBehaviour
         Add(type, data, player.Steam64);
     public static void Add(EActionLogType type, string? data = null, ulong player = 0)
     {
-        Instance.items.Enqueue(new ActionLogItem(player, type, data, DateTime.Now));
+        Instance.items.Enqueue(new ActionLogItem(player, type, data, DateTime.UtcNow));
     }
     public static void AddPriority(EActionLogType type, string? data = null, ulong player = 0)
     {
-        Instance.items.Enqueue(new ActionLogItem(player, type, data, DateTime.Now));
+        Instance.items.Enqueue(new ActionLogItem(player, type, data, DateTime.UtcNow));
         Instance.Update();
     }
     private void Update()
@@ -51,7 +52,7 @@ public class ActionLogger : MonoBehaviour
                 lock (Instance)
                 {
                     string outputFile = Path.Combine(Data.Paths.ActionLog, CurrentFileName);
-                    if ((DateTime.Now - CurrentLogSt).TotalHours > 1d)
+                    if ((DateTime.UtcNow - CurrentLogSt).TotalHours > 1d)
                     {
                         if (UCWarfare.CanUseNetCall && File.Exists(outputFile))
                         {
@@ -64,7 +65,14 @@ public class ActionLogger : MonoBehaviour
                                         int len = (int)str.Length;
                                         byte[] bytes = new byte[len];
                                         str.Read(bytes, 0, len);
-                                        NetCalls.SendLog.NetInvoke(bytes, CurrentLogSt);
+                                        if (UCWarfare.Config.SendActionLogs && UCWarfare.CanUseNetCall)
+                                        {
+                                            NetCalls.SendLogs.NetInvoke(writer =>
+                                            {
+                                                writer.Write((DateTimeOffset)CurrentLogSt);
+                                                writer.WriteLong(bytes);
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -84,13 +92,14 @@ public class ActionLogger : MonoBehaviour
                         while (items.Count > 0)
                         {
                             ActionLogItem item = items.Dequeue();
-                            WriteItem(ref item, stream);
+                            WriteItem(in item, stream);
                         }
                     }
                 }
             }
         }
     }
+    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
     private void OnDestroy()
     {
         if (Instance != null)
@@ -99,6 +108,7 @@ public class ActionLogger : MonoBehaviour
             Instance = null!;
         }
     }
+    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
     private void OnApplicationQuit()
     {
         if (Instance != null)
@@ -107,7 +117,7 @@ public class ActionLogger : MonoBehaviour
             Instance = null!;
         }
     }
-    private void WriteItem(ref ActionLogItem item, FileStream stream)
+    private void WriteItem(in ActionLogItem item, FileStream stream)
     {
         byte[] data = System.Text.Encoding.UTF8.GetBytes(item.ToString() + "\n");
         stream.Write(data, 0, data.Length);
@@ -122,8 +132,10 @@ public class ActionLogger : MonoBehaviour
             else return v;
         }
     }
-    private void SendCurrentLog(ref MessageContext ctx)
+    private void SendCurrentLog(in MessageContext ctx)
     {
+        if (!UCWarfare.Config.SendActionLogs)
+            return;
         lock (Instance)
         {
             string outputFile = Path.Combine(Data.Paths.ActionLog, CurrentFileName);
@@ -134,13 +146,22 @@ public class ActionLogger : MonoBehaviour
                     int len = (int)Math.Min(str.Length, int.MaxValue);
                     byte[] bytes = new byte[len];
                     str.Read(bytes, 0, len);
-                    ctx.Reply(NetCalls.SendCurrentLog, bytes, CurrentLogSt);
+                    ctx.Reply(NetCalls.SendLogs, writer =>
+                    {
+                        writer.Write((DateTimeOffset)CurrentLogSt);
+                        writer.WriteLong(bytes);
+                    });
                 }
             }
         }
     }
     internal static void OnConnected()
     {
+#if aDEBUG
+        return;
+#endif
+        if (!UCWarfare.Config.SendActionLogs)
+            return;
         if (Instance != null)
         {
             F.CheckDir(Data.Paths.ActionLog, out bool success);
@@ -148,28 +169,45 @@ public class ActionLogger : MonoBehaviour
             {
                 lock (Instance)
                 {
+                    List<string> files = new List<string>();
                     foreach (string file in Directory.EnumerateFiles(Data.Paths.ActionLog, "*.txt"))
                     {
-                        try
+                        string name = Path.GetFileName(file);
+                        if (name.Equals(CurrentFileName, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        name = Path.GetFileNameWithoutExtension(name);
+                        if (DateTimeOffset.TryParseExact(name, DATE_HEADER_FORMAT, Data.Locale, DateTimeStyles.AssumeLocal, out DateTimeOffset offs) && offs != CurrentLogSt)
                         {
-                            string name = Path.GetFileNameWithoutExtension(file);
-                            if (name.Equals(CurrentFileName, StringComparison.Ordinal)) continue;
-                            if (DateTime.TryParseExact(name, DATE_HEADER_FORMAT, Data.Locale, DateTimeStyles.AssumeLocal, out DateTime dt))
+                            files.Add(file);
+                        }
+                    }
+
+                    if (files.Count > 0)
+                    {
+                        NetCalls.SendLogs.NetInvoke(writer =>
+                        {
+                            writer.Write(files.Count);
+                            for (int i = 0; i < files.Count; i++)
                             {
-                                using (FileStream str = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                L.Log("Sending old log: \"" + files[i] + "\".", ConsoleColor.Magenta);
+                                if (DateTimeOffset.TryParseExact(Path.GetFileNameWithoutExtension(files[i]), DATE_HEADER_FORMAT, Data.Locale, DateTimeStyles.AssumeLocal, out DateTimeOffset dto))
                                 {
-                                    int len = (int)Math.Min(str.Length, int.MaxValue);
-                                    byte[] bytes = new byte[len];
-                                    str.Read(bytes, 0, len);
-                                    NetCalls.SendLog.NetInvoke(bytes, dt);
+                                    using (FileStream str = new FileStream(files[i], FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    {
+                                        writer.Write(dto);
+                                        int len = (int)Math.Min(str.Length, int.MaxValue);
+                                        byte[] bytes = new byte[len];
+                                        str.Read(bytes, 0, len);
+                                        writer.WriteLong(bytes);
+                                    }
+                                }
+                                else
+                                {
+                                    writer.Write(DateTimeOffset.MinValue);
+                                    writer.WriteLong(Array.Empty<byte>());
                                 }
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            L.LogError("Error sending ActionLog: ");
-                            L.LogError(ex);
-                        }
+                        });
                     }
                 }
             }
@@ -178,39 +216,46 @@ public class ActionLogger : MonoBehaviour
 
     public static class NetCalls
     {
-        public static readonly NetCallRaw<byte[], DateTime> SendLog = new NetCallRaw<byte[], DateTime>(1127, R => R.ReadLongBytes() ?? Array.Empty<byte>(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
-        public static readonly NetCall<DateTime> AckLog = new NetCall<DateTime>(ReceiveAckLog);
+        public static readonly NetCallCustom SendLogs = new NetCallCustom(1127, 32768);
+        public static readonly NetCall<DateTimeOffset[]> AckLogs = new NetCall<DateTimeOffset[]>(ReceiveAckLogs);
         public static readonly NetCall RequestCurrentLog = new NetCall(ReceiveCurrentLogRequest);
-        public static readonly NetCallRaw<byte[], DateTime> SendCurrentLog = new NetCallRaw<byte[], DateTime>(1130, R => R.ReadLongBytes() ?? Array.Empty<byte>(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
 
         [NetCall(ENetCall.FROM_SERVER, 1128)]
-        internal static void ReceiveAckLog(MessageContext context, DateTime fileReceived)
+        internal static void ReceiveAckLogs(MessageContext context, DateTimeOffset[] files)
         {
-            string path = Path.Combine(Data.Paths.ActionLog, fileReceived.ToString(DATE_HEADER_FORMAT, Data.Locale) + ".txt");
-            if (Instance == null)
+            for (int i = 0; i < files.Length; ++i)
             {
-                if (File.Exists(path))
-                    File.Delete(path);
-            }
-            else
-            {
-                lock (Instance)
+                string path = Path.Combine(Data.Paths.ActionLog, files[i].UtcDateTime.ToString(DATE_HEADER_FORMAT, Data.Locale) + ".txt");
+                L.LogDebug("Action Log \"" + path + "\" acknowledged.");
+                if (Instance == null)
                 {
                     if (File.Exists(path))
                         File.Delete(path);
+                }
+                else
+                {
+                    lock (Instance)
+                    {
+                        if (File.Exists(path))
+                            File.Delete(path);
+                    }
                 }
             }
         }
         [NetCall(ENetCall.FROM_SERVER, 1129)]
         internal static void ReceiveCurrentLogRequest(MessageContext context)
         {
-            if (Instance != null)
+            if (UCWarfare.Config.SendActionLogs && Instance != null)
             {
-                Instance.SendCurrentLog(ref context);
+                Instance.SendCurrentLog(in context);
             }
             else
             {
-                context.Reply(SendCurrentLog, Array.Empty<byte>(), default);
+                context.Reply(SendLogs, writer =>
+                {
+                    writer.Write(DateTimeOffset.MinValue);
+                    writer.WriteLong(Array.Empty<byte>());
+                });
             }
         }
     }
@@ -314,5 +359,12 @@ public enum EActionLogType : byte
     CHAT_FILTER_VIOLATION,
     KICKED_BY_BATTLEYE,
     TEAMKILL,
-    KILL
+    KILL,
+    REQUEST_TRAIT,
+    SET_SAVED_STRUCTURE_PROPERTY,
+    SET_TRAIT_PROPERTY,
+    GIVE_TRAIT,
+    REVOKE_TRAIT,
+    CLEAR_TRAITS,
+    MAIN_CAMP_ATTEMPT
 }

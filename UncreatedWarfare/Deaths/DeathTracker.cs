@@ -1,11 +1,8 @@
 ﻿using SDG.Unturned;
 using Steamworks;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
@@ -57,7 +54,7 @@ public class DeathTracker : BaseReloadSingleton
         }
         if (ReviveManager.Loaded
             && Data.Is(out IRevives revives)
-            && revives.ReviveManager.DownedPlayers.ContainsKey(dead.Steam64)
+            && revives.ReviveManager.IsInjured(dead.Steam64)
             && _injuredPlayers.TryGetValue(dead.Steam64, out InjuredDeathCache cache))
         {
             Localization.BroadcastDeath(cache.EventArgs, cache.MessageArgs);
@@ -102,7 +99,7 @@ public class DeathTracker : BaseReloadSingleton
     }
     private static void FillArgs(UCPlayer dead, EDeathCause cause, ELimb limb, CSteamID instigator, ref DeathMessageArgs args, PlayerDied e)
     {
-        args.DeadPlayerName = F.GetPlayerOriginalNames(dead).CharacterName;
+        args.DeadPlayerName = dead.Name.CharacterName;
         ulong deadTeam = dead.GetTeam();
         args.DeadPlayerTeam = deadTeam;
         e.DeadTeam = deadTeam;
@@ -223,8 +220,7 @@ public class DeathTracker : BaseReloadSingleton
                 }
                 else if (killer == null || triggerer.Steam64 != killer.Steam64)
                 {
-                    FPlayerName names = F.GetPlayerOriginalNames(triggerer);
-                    args.Player3Name = names.CharacterName;
+                    args.Player3Name = triggerer.Name.CharacterName;
                     args.Player3Team = triggerer.GetTeam();
                     args.Flags |= EDeathFlags.PLAYER3;
                     // if all 3 parties are on the same team count it as a teamkill on the triggerer, as it's likely intentional
@@ -252,7 +248,7 @@ public class DeathTracker : BaseReloadSingleton
         {
             if (killer.Steam64 != dead.Steam64)
             {
-                args.KillerName = F.GetPlayerOriginalNames(killer).CharacterName;
+                args.KillerName = killer.Name.CharacterName;
                 args.KillerTeam = killer.GetTeam();
                 e.KillerTeam = args.KillerTeam;
                 args.Flags |= EDeathFlags.KILLER;
@@ -273,7 +269,7 @@ public class DeathTracker : BaseReloadSingleton
             case EDeathCause.GUN:
             case EDeathCause.MELEE:
             case EDeathCause.SPLASH:
-                if (killer is not null && killer.Player.equipment.asset is not null)
+                if (killer is not null && killer.Player!.equipment.asset is not null)
                 {
                     args.ItemName = killer.Player.equipment.asset.itemName;
                     args.ItemGuid = killer.Player.equipment.asset.GUID;
@@ -292,11 +288,12 @@ public class DeathTracker : BaseReloadSingleton
                                     args.Item2Guid = veh.asset.GUID;
                                     args.Item2Name = veh.asset.vehicleName;
                                     args.Flags |= EDeathFlags.ITEM2;
-                                    if (veh.passengers.Length > 0 && veh.passengers[0].player is not null && veh.passengers[0].player.player != null)
+                                    SteamPlayer sp;
+                                    if (veh.passengers.Length > 0 && (sp = veh.passengers[0].player) is not null && sp.player != null)
                                     {
-                                        args.Player3Name = F.GetPlayerOriginalNames(veh.passengers[0].player).CharacterName;
-                                        args.Player3Team = veh.passengers[0].player.GetTeam();
-                                        e.DriverAssist = UCPlayer.FromSteamPlayer(veh.passengers[0].player);
+                                        e.DriverAssist = UCPlayer.FromSteamPlayer(sp);
+                                        args.Player3Name = e.DriverAssist?.Name.CharacterName ?? sp.playerID.characterName;
+                                        args.Player3Team = sp.GetTeam();
                                         args.Flags |= EDeathFlags.PLAYER3;
                                     }
                                     break;
@@ -345,7 +342,7 @@ public class DeathTracker : BaseReloadSingleton
                     args.ItemGuid = killerData.ExplodingVehicle.Vehicle.asset.GUID;
                     if (killerData.ExplodingVehicle.LastItem != default)
                     {
-                        if (Assets.find(killerData.ExplodingVehicle.LastItem) is Asset a)
+                        if (Assets.find(killerData.ExplodingVehicle.LastItem) is { } a)
                         {
                             args.Item2Name = a.FriendlyName;
                             args.Item2Guid = a.GUID;
@@ -356,7 +353,7 @@ public class DeathTracker : BaseReloadSingleton
                     if (killer is not null)
                     {
                         // removes distance if the driver is blamed
-                        InteractableVehicle? veh = killer.Player.movement.getVehicle();
+                        InteractableVehicle? veh = killer.Player!.movement.getVehicle();
                         if (veh != null)
                         {
                             if (veh.passengers.Length > 0 && veh.passengers[0].player is not null && veh.passengers[0].player.player != null)
@@ -401,7 +398,7 @@ public class DeathTracker : BaseReloadSingleton
             case EDeathCause.MISSILE:
                 if (killer is not null)
                 {
-                    if (killer.Player.TryGetPlayerData(out UCPlayerData data) && data.LastRocketShot != default && Assets.find(data.LastRocketShot) is ItemAsset asset)
+                    if (killer.Player!.TryGetPlayerData(out UCPlayerData data) && data.LastRocketShot != default && Assets.find(data.LastRocketShot) is ItemAsset asset)
                     {
                         args.ItemName = asset.itemName;
                         args.ItemGuid = asset.GUID;
@@ -409,7 +406,7 @@ public class DeathTracker : BaseReloadSingleton
                         args.Flags |= EDeathFlags.ITEM;
                         e.TurretVehicleOwner = data.LastRocketShotVehicle;
                     }
-                    else if (killer.Player.equipment.asset is not null)
+                    else if (killer.Player!.equipment.asset is not null)
                     {
                         args.ItemName = killer.Player.equipment.asset.itemName;
                         args.ItemGuid = killer.Player.equipment.asset.GUID;
@@ -465,7 +462,7 @@ public class DeathTracker : BaseReloadSingleton
                 {
                     List<BarricadeDrop> drops = UCBarricadeManager.GetBarricadesWhere(x =>
                         x.GetServersideData().owner == instigator.m_SteamID &&
-                        x.interactable is InteractableSentry sentry &&
+                        x.interactable is InteractableSentry &&
                         SentryTargetPlayerField.GetValue(x.interactable) is Player target &&
                         target != null && target.channel.owner.playerID.steamID.m_SteamID ==
                         dead.Steam64

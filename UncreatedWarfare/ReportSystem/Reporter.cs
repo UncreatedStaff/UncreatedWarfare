@@ -15,11 +15,11 @@ public class Reporter : MonoBehaviour
 {
     void Start()
     {
-        EventDispatcher.OnPlayerDied += OnPlayerDied;
+        EventDispatcher.PlayerDied += OnPlayerDied;
     }
     void OnDestroy()
     {
-        EventDispatcher.OnPlayerDied -= OnPlayerDied;
+        EventDispatcher.PlayerDied -= OnPlayerDied;
     }
     public Report? CreateReport(ulong reporter, ulong violator, string message)
     {
@@ -128,7 +128,7 @@ public class Reporter : MonoBehaviour
                     times.Add(time);
                 }
             }
-            timeAdj:
+        timeAdj:
             foreach (KeyValuePair<Guid, List<float>> kvp in data.soloTime)
             {
                 List<float> times = kvp.Value;
@@ -327,7 +327,7 @@ public class Reporter : MonoBehaviour
                 return;
             }
         }
-        data.Add(new PlayerData(player.playerID.steamID.m_SteamID) 
+        data.Add(new PlayerData(player.playerID.steamID.m_SteamID)
         {
             isOnline = true,
             characterName = player.playerID.characterName,
@@ -496,7 +496,7 @@ public class Reporter : MonoBehaviour
         public List<Teamkill> teamkills = new List<Teamkill>();
         public List<VehicleTeamkill> vehicleTeamkills = new List<VehicleTeamkill>();
         //public List<byte[]> voiceHistory = new List<byte[]>(0);
-        
+
         public void InsertChat(string message)
         {
 #if DEBUG

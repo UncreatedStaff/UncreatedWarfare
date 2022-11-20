@@ -4,12 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
-using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.VanillaRework;
@@ -30,6 +27,7 @@ public static class L
     {
         if (_init) return;
         _init = true;
+        F.CheckDir(Data.Paths.Logs, out _, true);
         if (File.Exists(Data.Paths.CurrentLog))
         {
             string n = Path.Combine(Data.Paths.Logs, File.GetCreationTime(Data.Paths.CurrentLog).ToString(ActionLogger.DATE_HEADER_FORMAT) + ".txt");
@@ -38,7 +36,7 @@ public static class L
             File.Move(Data.Paths.CurrentLog, n);
         }
         _log = new FileStream(Data.Paths.CurrentLog, FileMode.Create, FileAccess.Write, FileShare.Read);
-        Patches.Patcher.Patch(typeof(Logs).GetMethod(nameof(Logs.printLine)),
+        Harmony.Patches.Patcher.Patch(typeof(Logs).GetMethod(nameof(Logs.printLine)),
             prefix: new HarmonyMethod(typeof(L).GetMethod(nameof(PrintLinePatch),
                 BindingFlags.Static | BindingFlags.NonPublic)));
     }
@@ -49,11 +47,6 @@ public static class L
             if (Data.OutputToConsoleMethod is not null)
                 AddLog(message);
             CommandHandler.OnLog(message);
-            if (message.StartsWith("Detected newer game version: ", StringComparison.Ordinal))
-            {
-                ShutdownCommand.ShutdownAfterGame("Unturned update v" + message.Substring(29), false);
-                throw new Exception("Why Nelson (auto-update stopper)");
-            }
         }
     }
 
@@ -111,12 +104,14 @@ public static class L
     [Conditional("DEBUG")]
     public static void LogDebug(string info, ConsoleColor color = ConsoleColor.DarkGray)
     {
-        if (UCWarfare.Config.Debug)
+        if (!UCWarfare.IsLoaded)
+            LogAsLibrary("[DEBUG] " + info, color);
+        else if (UCWarfare.Config.Debug)
             Log(info, color);
     }
-    internal static void NetLogInfo(string message) => Log(message);
-    internal static void NetLogWarning(string message) => LogWarning(message, method: "UncreatedNetworking");
-    internal static void NetLogError(string message) => LogError(message, method: "UncreatedNetworking");
+    internal static void NetLogInfo(string message, ConsoleColor color) => LogDebug(message, color);
+    internal static void NetLogWarning(string message, ConsoleColor color) => LogWarning(message, color, method: "UncreatedNetworking");
+    internal static void NetLogError(string message, ConsoleColor color) => LogError(message, color, method: "UncreatedNetworking");
     internal static void NetLogException(Exception ex) => LogError(ex, method: "UncreatedNetworking", filepath: "unknown");
     public static void Log(string info, ConsoleColor color = ConsoleColor.Gray)
     {
@@ -402,4 +397,13 @@ public static class L
             isRequestingLog = state;
         }*/
     }
+}
+
+public enum LogSeverity : byte
+{
+    Debug,
+    Info,
+    Warning,
+    Error,
+    Exception
 }

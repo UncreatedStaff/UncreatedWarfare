@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Commands.Permissions;
 public class PermissionSaver : JSONSaver<PermissionSave>
@@ -49,7 +46,7 @@ public class PermissionSaver : JSONSaver<PermissionSave>
         if (PlayerManager.FromID(player) is UCPlayer pl)
             pl.ResetPermissionLevel();
         bool set = false;
-        for (int i = 0; i < this.Count; ++i)
+        for (int i = this.Count - 1; i >= 0; --i)
         {
             PermissionSave save = this[i];
             for (int j = save.Members.Length - 1; j >= 0; --j)
@@ -67,7 +64,7 @@ public class PermissionSaver : JSONSaver<PermissionSave>
                 AddPlayer(player, i);
                 set = true;
             }
-            c:;
+        c:;
         }
         if (!set && level > EAdminType.MEMBER)
         {
@@ -102,7 +99,11 @@ public class PermissionSaver : JSONSaver<PermissionSave>
         if (psave.Members.Length == 0) return false;
         ulong[] old = psave.Members;
         psave.Members = new ulong[old.Length - 1];
-        if (old.Length == 1) return true;
+        if (old.Length == 1)
+        {
+            this.Remove(psave);
+            return true;
+        }
         if (index != 0)
             Buffer.BlockCopy(old, 0, psave.Members, 0, sizeof(ulong) * index);
         Buffer.BlockCopy(old, (index + 1) * sizeof(ulong), psave.Members, index * sizeof(ulong), sizeof(ulong) * (old.Length - index - 1));

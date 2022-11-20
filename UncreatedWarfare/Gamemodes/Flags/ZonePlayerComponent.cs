@@ -5,8 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Networking;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -24,27 +24,27 @@ internal class ZonePlayerComponent : MonoBehaviour
     private List<Vector2>? _currentPoints;
     private float _lastZonePreviewRefresh = 0f;
     private static readonly List<ZonePlayerComponent> _builders = new List<ZonePlayerComponent>(2);
-    internal static EffectAsset? _airdrop = null ;
-    internal static EffectAsset  _center  = null!;
-    internal static EffectAsset  _corner  = null!;
-    internal static EffectAsset  _side    = null!;
+    internal static EffectAsset? _airdrop = null;
+    internal static EffectAsset _center = null!;
+    internal static EffectAsset _corner = null!;
+    internal static EffectAsset _side = null!;
     private int _closestPoint = -1;
     private int _lastPtCheck = -4;
     private readonly List<Transaction> UndoBuffer = new List<Transaction>(16);
     private readonly List<Transaction> RedoBuffer = new List<Transaction>(4);
     internal static void UIInit()
     {
-        _edit           =  Assets.find<EffectAsset>(new Guid("503fed1019db4c7e9c365bf6e108b43f"));
-        _center         =  Assets.find<EffectAsset>(new Guid("1815d4fc66e84e82a70a598534d8c319"));
-        _corner         =  Assets.find<EffectAsset>(new Guid("e8637c08f4d54ad68650c1250b0c57a1"));
-        _side           =  Assets.find<EffectAsset>(new Guid("00de10ee40894e1081e43d1b863d7037"));
+        _edit = Assets.find<EffectAsset>(new Guid("503fed1019db4c7e9c365bf6e108b43f"));
+        _center = Assets.find<EffectAsset>(new Guid("1815d4fc66e84e82a70a598534d8c319"));
+        _corner = Assets.find<EffectAsset>(new Guid("e8637c08f4d54ad68650c1250b0c57a1"));
+        _side = Assets.find<EffectAsset>(new Guid("00de10ee40894e1081e43d1b863d7037"));
         _airdrop = null;
         if (_center == null || _corner == null || _side == null)
         {
-            _airdrop    = Assets.find<EffectAsset>(new Guid("2c17fbd0f0ce49aeb3bc4637b68809a2"))!;
-            _center     = Assets.find<EffectAsset>(new Guid("0bbb4d81380148a88aef453b3c5158bd"))!;
-            _corner     = Assets.find<EffectAsset>(new Guid("563658fc7a334dbc8c0b9e322aac96b9"))!;
-            _side       = Assets.find<EffectAsset>(new Guid("d9820fabf8174ed5807dc44593800406"))!;
+            _airdrop = Assets.find<EffectAsset>(new Guid("2c17fbd0f0ce49aeb3bc4637b68809a2"))!;
+            _center = Assets.find<EffectAsset>(new Guid("0bbb4d81380148a88aef453b3c5158bd"))!;
+            _corner = Assets.find<EffectAsset>(new Guid("563658fc7a334dbc8c0b9e322aac96b9"))!;
+            _side = Assets.find<EffectAsset>(new Guid("d9820fabf8174ed5807dc44593800406"))!;
         }
     }
     internal void Init(UCPlayer player)
@@ -185,7 +185,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         ctx.Reply(T.ZoneDeleteZoneConfirm, zone);
         Task.Run(async () =>
         {
-            if (await CommandWaitTask.WaitForCommand(player, "confirm", 10000))
+            if (await CommandWaiter.WaitAsync(player, "confirm", 10000))
             {
                 await UCWarfare.ToUpdate();
 
@@ -263,7 +263,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
             if (Data.ZoneProvider.Zones[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
                 throw ctx.Reply(T.ZoneCreateNameTaken, Data.ZoneProvider.Zones[i].Name);
-        
+
         for (int i = _builders.Count - 1; i >= 0; --i)
         {
             ZoneBuilder? zb = _builders[i]._currentBuilder;
@@ -835,7 +835,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     if (!ctx.TryGet(1, out float srcX) || !ctx.TryGet(2, out float srcZ) || !ctx.TryGet(3, out float dstX) || !ctx.TryGet(4, out float dstZ))
                         throw ctx.Reply(T.ZoneEditSetPointInvalid);
 
-                        Vector2 v = new Vector2(srcX, srcZ);
+                    Vector2 v = new Vector2(srcX, srcZ);
                     if (_currentPoints == null || _currentPoints.Count == 0)
                         throw ctx.Reply(T.ZoneEditPointNotNearby, v);
 
@@ -1445,7 +1445,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         if (_currentBuilder != null)
         {
             ThreadUtil.assertIsGameThread();
-            EffectManager.sendUIEffectText(EDIT_KEY, player.Player.channel.owner.transportConnection, true, 
+            EffectManager.sendUIEffectText(EDIT_KEY, player.Player.channel.owner.transportConnection, true,
                 _currentBuilder.ZoneType switch
                 {
                     EZoneType.CIRCLE => "Circle_YLimit",

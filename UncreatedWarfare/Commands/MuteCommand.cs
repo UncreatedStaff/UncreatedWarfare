@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -26,22 +25,33 @@ public class MuteCommand : Command
             : (ctx.MatchParameter(0, "text")
                 ? EMuteType.TEXT_CHAT
                 : (ctx.MatchParameter(0, "both")
-                    ? EMuteType.BOTH 
+                    ? EMuteType.BOTH
                     : throw ctx.SendCorrectUsage(SYNTAX)));
 
-        int duration = F.ParseTime(ctx.Get(2)!);
+        int duration = Util.ParseTime(ctx.Get(2)!);
 
         if (duration < -1 || duration == 0)
             throw ctx.Reply(T.InvalidTime);
 
         if (!ctx.TryGet(1, out ulong targetId, out _))
             throw ctx.Reply(T.PlayerNotFound);
-
-        OffenseManager.MutePlayer(targetId, ctx.CallerID, type, duration, ctx.GetRange(3)!);
+        Task.Run(async () =>
+        {
+            try
+            {
+                await OffenseManager.MutePlayerAsync(targetId, ctx.CallerID, type, duration, ctx.GetRange(3)!, DateTimeOffset.UtcNow);
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error muting " + targetId + ".");
+                L.LogError(ex);
+            }
+        });
         ctx.Defer();
     }
 }
 [Translatable("Mute Severity")]
+[Flags]
 public enum EMuteType : byte
 {
     NONE = 0,

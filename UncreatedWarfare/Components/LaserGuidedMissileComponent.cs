@@ -1,68 +1,66 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Components;
 
 internal class LaserGuidedMissileComponent : MonoBehaviour
 {
-    private Player firer;
-    private GameObject projectile;
+    private Player _firer;
+    private GameObject _projectile;
 
-    private Rigidbody rigidbody;
-    private List<BoxCollider> colliders;
+    private Rigidbody _rigidbody;
+    private List<BoxCollider> _colliders;
 
-    private float guiderDistance;
-    private float aquisitionRange;
-    private float projectileSpeed;
-    private float maxTurnDegrees;
-    private float armingDistance;
-    private float fullGuidanceDelay;
-    private float turnMultiplier;
-    private Transform aim;
+    private float _guiderDistance;
+    private float _aquisitionRange;
+    private float _projectileSpeed;
+    private float _maxTurnDegrees;
+    private float _armingDistance;
+    private float _fullGuidanceDelay;
+    private float _turnMultiplier;
+    private Transform _aim;
 
-    private DateTime start;
+    public float InitializationTime { get; private set; }
 
-    private SpottedComponent? laserTarget;
+    private SpottedComponent? _laserTarget;
 
-    public bool LockedOn { get => laserTarget != null; }
+    public bool LockedOn { get => _laserTarget != null; }
 
-    bool armed;
+    bool _armed;
 
-    private bool isActive;
+    private bool _isActive;
 
     public void Initialize(GameObject projectile, Player firer, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float fullGuidanceDelay)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        this.projectile = projectile;
-        this.firer = firer;
-        this.maxTurnDegrees = responsiveness;
-        this.projectileSpeed = projectileSpeed;
-        this.aquisitionRange = aquisitionRange;
-        this.armingDistance = armingDistance;
-        this.fullGuidanceDelay = fullGuidanceDelay;
-        this.guiderDistance = 30;
-        this.turnMultiplier = 0;
+        this._projectile = projectile;
+        this._firer = firer;
+        this._maxTurnDegrees = responsiveness;
+        this._projectileSpeed = projectileSpeed;
+        this._aquisitionRange = aquisitionRange;
+        this._armingDistance = armingDistance;
+        this._fullGuidanceDelay = fullGuidanceDelay;
+        this._guiderDistance = 30;
+        this._turnMultiplier = 0;
 
-        count = 0;
+        _count = 0;
 
-        armed = false;
+        _armed = false;
 
-        start = DateTime.Now;
+        InitializationTime = Time.realtimeSinceStartup;
 
-        isActive = false;
+        _isActive = false;
 
-        laserTarget = null;
+        _laserTarget = null;
 
-        if (projectile.TryGetComponent(out rigidbody))
+        if (projectile.TryGetComponent(out _rigidbody))
         {
             InteractableVehicle? vehicle = firer.movement.getVehicle();
             if (vehicle != null)
@@ -71,16 +69,16 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
                 {
                     if (turret.player != null && turret.player.player == firer)
                     {
-                        aim = turret.turretAim;
-                        isActive = true;
+                        _aim = turret.turretAim;
+                        _isActive = true;
 
                         projectile.transform.position = vehicle.transform.TransformPoint(new Vector3(-4, 0, -4));
                         projectile.transform.forward = Quaternion.AngleAxis(20, vehicle.transform.right) * vehicle.transform.forward;
 
-                        rigidbody.velocity = projectile.transform.forward * projectileSpeed;
+                        _rigidbody.velocity = projectile.transform.forward * projectileSpeed;
 
-                        colliders = projectile.GetComponents<BoxCollider>().ToList();
-                        colliders.ForEach(c => c.enabled = false);
+                        _colliders = projectile.GetComponents<BoxCollider>().ToList();
+                        _colliders.ForEach(c => c.enabled = false);
 
                         return;
                     }
@@ -89,12 +87,12 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
             }
             else
             {
-                aim = firer.look.aim.transform;
-                isActive = true;
-                projectile.transform.forward = aim.forward;
-                rigidbody.velocity = projectile.transform.forward * projectileSpeed;
-                colliders = projectile.GetComponents<BoxCollider>().ToList();
-                colliders.ForEach(c => c.enabled = false);
+                _aim = firer.look.aim.transform;
+                _isActive = true;
+                projectile.transform.forward = _aim.forward;
+                _rigidbody.velocity = projectile.transform.forward * projectileSpeed;
+                _colliders = projectile.GetComponents<BoxCollider>().ToList();
+                _colliders.ForEach(c => c.enabled = false);
                 L.LogDebug("LASER GUIDED MISSILE ERROR: player was not in a vehicle");
             }
         }
@@ -102,14 +100,13 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
             L.LogDebug("LASER GUIDED MISSILE ERROR: could not find rigidbody");
     }
 
-    private bool TryAcquireTarget(Transform lookOrigin, float range)
+    private bool TryAcquireTarget()
     {
-        if (laserTarget != null)
+        if (_laserTarget != null)
         {
-            if (laserTarget.IsActive)
+            if (_laserTarget.IsActive)
                 return true;
-            else
-                laserTarget = null;
+            _laserTarget = null;
         }
 
 #if DEBUG
@@ -117,69 +114,84 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 #endif
         float minAngle = 45;
 
-        foreach (var spotted in SpottedComponent.ActiveMarkers)
+        foreach (SpottedComponent spotted in SpottedComponent.ActiveMarkers)
         {
-            if (spotted.CurrentSpotter!.GetTeam() == firer.quests.groupID.m_SteamID && !(spotted.Type == SpottedComponent.ESpotted.AIRCRAFT || spotted.Type == SpottedComponent.ESpotted.INFANTRY))
+            if (spotted.SpottingTeam == _firer.quests.groupID.m_SteamID && spotted.IsLaserTarget)
             {
-                if ((spotted.transform.position - projectile.transform.position).sqrMagnitude < Math.Pow(aquisitionRange, 2))
+                if ((spotted.transform.position - _projectile.transform.position).sqrMagnitude < Math.Pow(_aquisitionRange, 2))
                 {
-                    float angleBetween = Vector3.Angle(spotted.transform.position - projectile.transform.position, projectile.transform.forward);
+                    float angleBetween = Vector3.Angle(spotted.transform.position - _projectile.transform.position, _projectile.transform.forward);
                     if (angleBetween < minAngle)
                     {
                         minAngle = angleBetween;
-                        laserTarget = spotted;
+                        _laserTarget = spotted;
                     }
                 }
             }
         }
 
-        return laserTarget != null;
+        return _laserTarget != null;
     }
 
-    private int count;
-
+    private int _count;
+    private float _lastSent;
+    [UsedImplicitly]
     private void FixedUpdate()
     {
-        if (isActive)
+        if (_isActive)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                guiderDistance += Time.fixedDeltaTime * projectileSpeed;
+            _guiderDistance += Time.fixedDeltaTime * _projectileSpeed;
 
-            turnMultiplier = Mathf.Clamp(turnMultiplier + Time.fixedDeltaTime / fullGuidanceDelay, 0, 1);
+            _turnMultiplier = Mathf.Clamp(_turnMultiplier + Time.fixedDeltaTime / _fullGuidanceDelay, 0, 1);
 
-                if (guiderDistance > 30 + armingDistance && !armed)
-                {
-                    colliders.ForEach(c => c.enabled = true);
-                    armed = true;
-                }
-
-            ushort id = 26044;
-            if (count % 10 == 0 && armed)
-                id = 26045;
-
-            Vector3 target = aim.TransformPoint(new Vector3(0, 0, guiderDistance));
-
-            if (TryAcquireTarget(aim, aquisitionRange))
+            if (_guiderDistance > 30 + _armingDistance && !_armed)
             {
-                target = laserTarget!.transform.position;
+                _colliders.ForEach(c => c.enabled = true);
+                _armed = true;
             }
 
-            Vector3 idealDirection = target - projectile.transform.position;
+            Vector3 target = _aim.TransformPoint(new Vector3(0, 0, _guiderDistance));
 
-            float maxAngle = Mathf.Deg2Rad * maxTurnDegrees * turnMultiplier;
+            if (TryAcquireTarget())
+            {
+                target = _laserTarget!.transform.position;
+            }
+
+            Vector3 idealDirection = target - _projectile.transform.position;
+
+            float maxAngle = Mathf.Deg2Rad * _maxTurnDegrees * _turnMultiplier;
 
             Vector3 targetDirection = Vector3.RotateTowards(transform.forward, idealDirection, maxAngle, maxAngle);
 
-            projectile.transform.forward = targetDirection;
-            rigidbody.velocity = projectile.transform.forward * projectileSpeed;
+            _projectile.transform.forward = targetDirection;
+            _rigidbody.velocity = _projectile.transform.forward * _projectileSpeed;
 
-            EffectManager.sendEffect(id, 1200, projectile.transform.position, projectile.transform.forward);
+            if (Time.time - _lastSent > 0.05f)
+            {
+                JsonAssetReference<EffectAsset> id = Gamemode.Config.EffectLaserGuidedNoSound;
+                if (_count % 10 == 0 && _armed || !id.ValidReference(out ushort _))
+                {
+                    id = Gamemode.Config.EffectLaserGuidedSound;
+                    if (!id.ValidReference(out ushort _))
+                        id = Gamemode.Config.EffectLaserGuidedNoSound;
+                }
+                if (id.ValidReference(out EffectAsset effect))
+                {
+                    EffectManager.triggerEffect(new TriggerEffectParameters(effect)
+                    {
+                        relevantDistance = 1200f,
+                        position = _projectile.transform.position,
+                        direction = _projectile.transform.forward,
+                        reliable = false
+                    });
+                }
+                _lastSent = Time.time;
+            }
 
-            count++;
-            if (count >= 20)
-                count = 0;
+            ++_count;
         }
     }
 }

@@ -2,286 +2,567 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Json;
+using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags.Invasion;
-using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(Whitelister))]
-public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDeclareWinListener
+public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsync, IDeclareWinListenerAsync, IPlayerPostInitListenerAsync, IQuestCompletedHandler
 {
+    public const ushort MAX_BATTERY_CHARGE = 10000;
     private static VehicleBayConfig _config;
-    private static VehicleBay Singleton;
-    public static bool Loaded => Singleton.IsLoaded<VehicleBay, VehicleData>();
-    public static VehicleBayData Config => _config.Data;
+    private bool _hasWhitelisted;
+    private static VehicleBay? _vb;
 
-    public VehicleBay() : base("vehiclebay", Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json"), VehicleData.Write, VehicleData.Read)
+    public static VehicleBay? GetSingletonQuick()
+    {
+        if (_vb == null || !_vb.IsLoaded)
+            return _vb = Data.Singletons.GetSingleton<VehicleBay>();
+        return _vb;
+    }
+    public static VehicleBayData Config => _config == null ? throw new SingletonUnloadedException(typeof(VehicleBay)) : _config.Data;
+    public VehicleBay() : base("vehiclebay", SCHEMAS)
     {
     }
-    private bool hasWhitelisted = false;
-    public override void Load()
+    public override Task PreLoad()
     {
-        _config = new VehicleBayConfig();
-        EventDispatcher.OnEnterVehicleRequested += OnVehicleEnterRequested;
-        EventDispatcher.OnVehicleSwapSeatRequested += OnVehicleSwapSeatRequested;
-        EventDispatcher.OnExitVehicleRequested += OnVehicleExitRequested;
-        EventDispatcher.OnExitVehicle += OnVehicleExit;
-        EventDispatcher.OnVehicleSpawned += OnVehicleSpawned;
-        if (Whitelister.Loaded) // whitelist all vehicle bay items
-            WhitelistItems();
-        Singleton = this;
+        if (_config == null)
+            _config = new VehicleBayConfig();
+        else _config.Reload();
+        return Task.CompletedTask;
     }
-    public void OnLevelReady()
+    public override async Task PostLoad()
     {
-        if (!hasWhitelisted && Whitelister.Loaded)
-            WhitelistItems();
+        EventDispatcher.EnterVehicleRequested += OnVehicleEnterRequested;
+        EventDispatcher.VehicleSwapSeatRequested += OnVehicleSwapSeatRequested;
+        EventDispatcher.ExitVehicleRequested += OnVehicleExitRequested;
+        EventDispatcher.ExitVehicle += OnVehicleExit;
+        EventDispatcher.VehicleSpawned += OnVehicleSpawned;
+        await WaitAsync();
+        try
+        {
+            if (Whitelister.Loaded && !_hasWhitelisted) // whitelist all vehicle bay items
+            {
+                if (!UCWarfare.IsMainThread)
+                    await UCWarfare.ToUpdate();
+                WhitelistItems();
+            }
+        }
+        finally
+        {
+            Release();
+        }
     }
-    public override void Unload()
+    public override Task PostUnload()
     {
-        Singleton = null!;
-        EventDispatcher.OnVehicleSpawned -= OnVehicleSpawned;
-        EventDispatcher.OnExitVehicle -= OnVehicleExit;
-        EventDispatcher.OnExitVehicleRequested -= OnVehicleExitRequested;
-        EventDispatcher.OnVehicleSwapSeatRequested -= OnVehicleSwapSeatRequested;
-        EventDispatcher.OnEnterVehicleRequested -= OnVehicleEnterRequested;
-        _config = null!;
+        EventDispatcher.VehicleSpawned -= OnVehicleSpawned;
+        EventDispatcher.ExitVehicle -= OnVehicleExit;
+        EventDispatcher.ExitVehicleRequested -= OnVehicleExitRequested;
+        EventDispatcher.VehicleSwapSeatRequested -= OnVehicleSwapSeatRequested;
+        EventDispatcher.EnterVehicleRequested -= OnVehicleEnterRequested;
+        _hasWhitelisted = false;
+        _vb = null;
+        return Task.CompletedTask;
     }
-    public void OnWinnerDeclared(ulong winner)
+    public override bool AwaitLoad => true;
+    public override MySqlDatabase Sql => Data.AdminSql;
+    private void StartDualLock()
     {
-        VehicleBay.AbandonAllVehicles();
+        Monitor.Enter(this);
+        Monitor.Enter(Items);
     }
-    private void OnVehicleSpawned(VehicleSpawned e)
+    private void EndDualLock()
     {
-        e.Vehicle.gameObject.AddComponent<VehicleComponent>().Initialize(e.Vehicle);
+        Monitor.Exit(this);
+        Monitor.Exit(Items);
     }
     private void WhitelistItems()
     {
-        for (int i = 0; i < Count; i++)
+        lock (Items)
         {
-            VehicleData data = this[i];
-            if (data.Items is not null)
+            for (int i = 0; i < Count; i++)
             {
-                for (int j = 0; j < data.Items.Length; j++)
+                SqlItem<VehicleData> data = Items[i];
+                if (data.Item?.Items != null && data.Item.Items.Length > 0)
                 {
-                    if (!Whitelister.IsWhitelisted(data.Items[j], out _))
-                        Whitelister.AddItem(data.Items[j]);
-                }
-            }
-        }
-        hasWhitelisted = true;
-    }
-    private void OnVehicleExit(ExitVehicle e)
-    {
-        if (e.OldPassengerIndex == 0 && e.Vehicle.transform.TryGetComponent(out VehicleComponent comp))
-            comp.LastDriverTime = Time.realtimeSinceStartup;
-        if (KitManager.KitExists(e.Player.KitName, out Kit kit))
-        {
-            if (kit.Class == EClass.LAT || kit.Class == EClass.HAT)
-            {
-                e.Player.Player.equipment.dequip();
-            }
-        }
-    }
-    public static void OnPlayerJoinedQuestHandling(UCPlayer player)
-    {
-        if (!Singleton.IsLoaded<VehicleBay, VehicleData>()) return;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        for (int i = 0; i < Singleton.Count; i++)
-        {
-            if (Singleton[i].UnlockRequirements is not null)
-            {
-                VehicleData data = Singleton[i];
-                for (int j = 0; j < data.UnlockRequirements.Length; j++)
-                {
-                    if (data.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets != null && req.UnlockPresets.Length > 0 && !req.CanAccess(player))
+                    VehicleData d = data.Item;
+                    for (int j = 0; j < d.Items.Length; j++)
                     {
-                        if (Assets.find(req.QuestID) is QuestAsset quest)
-                        {
-                            player.Player.quests.sendAddQuest(quest.id);
-                        }
-                        else
-                        {
-                            L.LogWarning("Unknown quest id " + req.QuestID + " in vehicle requirement for " + data.VehicleID.ToString("N"));
-                        }
-                        for (int r = 0; r < req.UnlockPresets.Length; r++)
-                        {
-                            BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
-                            if (tracker == null)
-                            {
-                                L.LogWarning("Failed to create tracker for vehicle " + data.VehicleID.ToString("N") + ", player " + player.Name.PlayerName);
-                            }
-                        }
+                        if (!Whitelister.IsWhitelisted(d.Items[j], out _))
+                            Whitelister.AddItem(d.Items[j]);
                     }
                 }
             }
         }
+        _hasWhitelisted = true;
     }
-    protected override string LoadDefaults() => EMPTY_LIST;
-    public static void AddRequestableVehicle(InteractableVehicle vehicle)
+    async Task ILevelStartListenerAsync.OnLevelReady()
     {
-        Singleton.AssertLoaded<VehicleBay, VehicleData>();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        VehicleData data = new VehicleData(vehicle.asset.GUID);
-        data.SaveMetaData(vehicle);
-        Singleton.AddObjectToSave(data);
-    }
-    public new static ESetFieldResult SetProperty(VehicleData data, ref string property, string value)
-    {
-        Singleton.AssertLoaded<VehicleBay, VehicleData>();
-        return (Singleton as JSONSaver<VehicleData>).SetProperty(data, ref property, value);
-    }
-    public static ESetFieldResult SetProperty(Guid vehicleGuid, ref string property, string value)
-    {
-        Singleton.AssertLoaded<VehicleBay, VehicleData>();
-        return Singleton.SetProperty(x => x.VehicleID == vehicleGuid, ref property, value);
-    }
-    public static void RemoveRequestableVehicle(Guid vehicleID)
-    {
-        Singleton.AssertLoaded<VehicleBay, VehicleData>();
-        Singleton.RemoveWhere(vd => vd.VehicleID == vehicleID);
-    }
-    public static void SaveSingleton()
-    {
-        Singleton.AssertLoaded<VehicleBay, VehicleData>();
-        Singleton.Save();
-    }
-
-    public static bool VehicleExists(Guid vehicleID, out VehicleData vehicleData)
-    {
-        Singleton.AssertLoaded<VehicleBay, VehicleData>();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        for (int i = 0; i < Singleton.Count; i++)
-        {
-            if (Singleton[i].VehicleID == vehicleID)
-            {
-                vehicleData = Singleton[i];
-                return true;
-            }
-        }
-        vehicleData = null!;
-        return false;
-    }
-    public static void SetItems(Guid vehicleID, Guid[] newItems)
-    {
-        Singleton.AssertLoaded<VehicleBay, VehicleData>();
-        Singleton.UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.Items = newItems);
-    }
-
-    public static void AddCrewmanSeat(Guid vehicleID, byte newSeatIndex)
-    {
-        Singleton.AssertLoaded<VehicleBay, VehicleData>();
-        Singleton.UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Add(newSeatIndex));
-    }
-
-    public static void RemoveCrewmanSeat(Guid vehicleID, byte seatIndex)
-    {
-        Singleton.AssertLoaded<VehicleBay, VehicleData>();
-        Singleton.UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Remove(seatIndex));
-    }
-
-    /// <exception cref="InvalidOperationException">Thrown if the level is not loaded.</exception>
-    public static InteractableVehicle? SpawnLockedVehicle(Guid vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
+        await WaitAsync();
         try
         {
-            instanceID = 0;
-            if (VehicleExists(vehicleID, out VehicleData vehicleData))
+            if (Whitelister.Loaded && !_hasWhitelisted) // whitelist all vehicle bay items
             {
-                if (Assets.find(vehicleID) is not VehicleAsset asset)
-                {
-                    L.LogError("SpawnLockedVehicle: Unable to find vehicle asset of " + vehicleID.ToString());
-                    return null;
-                }
-                InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(asset.id, position, rotation);
-                if (vehicle == null) return null;
-                instanceID = vehicle.instanceID;
-
-                if (vehicleData.Metadata != null)
-                {
-                    if (vehicleData.Metadata.TrunkItems != null)
-                    {
-                        foreach (KitItem k in vehicleData.Metadata.TrunkItems)
-                        {
-                            if (Assets.find(k.id) is ItemAsset iasset)
-                            {
-                                Item item = new Item(iasset.id, k.amount, 100, F.CloneBytes(k.metadata));
-                                if (!vehicle.trunkItems.tryAddItem(item))
-                                        ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
-                            }
-                        }
-                    }
-
-                    if (vehicleData.Metadata.Barricades != null)
-                    {
-                        foreach (VBarricade vb in vehicleData.Metadata.Barricades)
-                        {
-                            if (Assets.find(vb.BarricadeID) is not ItemBarricadeAsset basset)
-                            {
-                                L.LogError("SpawnLockedVehicle: Unable to find barricade asset of " + vb.BarricadeID.ToString());
-                                continue;
-                            }
-                            Barricade barricade = new Barricade(basset, asset.health, Convert.FromBase64String(vb.State));
-                            Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
-                            BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
-                        }
-                    }
-                }
-
-                if (vehicle.asset.canBeLocked)
-                {
-                    vehicle.tellLocked(CSteamID.Nil, CSteamID.Nil, true);
-
-                    VehicleManager.ServerSetVehicleLock(vehicle, CSteamID.Nil, CSteamID.Nil, true);
-
-                    vehicle.updateVehicle();
-                    vehicle.updatePhysics();
-                }
-                return vehicle;
-            }
-            else
-            {
-                L.Log($"VEHICLE SPAWN ERROR: {(Assets.find(vehicleID) is VehicleAsset va ? va.vehicleName : vehicleID.ToString("N"))} has not been registered in the VehicleBay.");
-                return null;
+                if (!UCWarfare.IsMainThread)
+                    await UCWarfare.ToUpdate();
+                WhitelistItems();
             }
         }
-        catch (Exception ex)
+        finally
         {
-            L.LogError("Error spawning vehicle: ");
-            L.LogError(ex);
-            instanceID = 0;
-            return null;
+            Release();
         }
     }
-    // TODO
-    internal static bool OnQuestCompleted(UCPlayer player, Guid presetKey) => false;
-    public static void AbandonAllVehicles()
+    async Task IDeclareWinListenerAsync.OnWinnerDeclared(ulong winner)
     {
+        ThreadUtil.assertIsGameThread();
+        await WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (!UCWarfare.IsMainThread)
+                await UCWarfare.ToUpdate();
+            AbandonAllVehicles();
+        }
+        finally
+        {
+            Release();
+        }
+    }
+    async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player)
+    {
+        await SendQuests(player).ConfigureAwait(false);
+    }
+    private async Task SendQuests(UCPlayer player, CancellationToken token = default)
+    {
+        ThreadUtil.assertIsGameThread();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        await WaitAsync(token).ConfigureAwait(false);
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate(token);
+        try
+        {
+            for (int i = 0; i < Items.Count; i++)
+            {
+                SqlItem<VehicleData> item = Items[i];
+                if (item.Item?.UnlockRequirements != null && item.Item.UnlockRequirements.Length > 0)
+                {
+                    VehicleData data = item.Item;
+                    for (int j = 0; j < data.UnlockRequirements.Length; j++)
+                    {
+                        if (data.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets is { Length: > 0 } && !req.CanAccess(player))
+                        {
+                            if (Assets.find(req.QuestID) is QuestAsset quest)
+                            {
+                                player.Player.quests.sendAddQuest(quest.id);
+                            }
+                            else
+                            {
+                                L.LogWarning("Unknown quest id " + req.QuestID + " in vehicle requirement for " + data.VehicleID.ToString("N"));
+                            }
+                            for (int r = 0; r < req.UnlockPresets.Length; r++)
+                            {
+                                BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
+                                if (tracker == null)
+                                    L.LogWarning("Failed to create tracker for vehicle " + data.VehicleID.ToString("N") + ", player " + player.Name.PlayerName);
+                                else
+                                    L.LogDebug("Created tracker for vehicle unlock quest: " + tracker.QuestData.QuestType + ".");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        finally
+        {
+            Release();
+        }
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task AddRequestableVehicle(InteractableVehicle vehicle, CancellationToken token = default)
+    {
+        this.AssertLoadedIntl();
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        VehicleData data = new VehicleData(vehicle.asset.GUID)
+        {
+            PrimaryKey = PrimaryKey.NotAssigned
+        };
+        data.SaveMetaData(vehicle);
+        ThreadUtil.assertIsGameThread();
+        StartDualLock();
+        await AddOrUpdate(data, token).ConfigureAwait(false);
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task<bool> RemoveRequestableVehicle(Guid vehicle, CancellationToken token = default)
+    {
+        this.AssertLoadedIntl();
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        SqlItem<VehicleData>? data = await this.GetDataProxy(vehicle, token).ConfigureAwait(false);
+        if (data is not null)
+        {
+            await data.Delete(token).ConfigureAwait(false);
+            return true;
+        }
+
+        return false;
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task<VehicleData?> GetData(Guid guid, CancellationToken token = default)
+    {
+        await WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            for (int i = 0; i < List.Count; ++i)
+            {
+                SqlItem<VehicleData> item = List[i];
+                if (item.Item != null && item.Item.VehicleID == guid)
+                    return item.Item;
+            }
+        }
+        finally
+        {
+            Release();
+        }
+
+        return null;
+    }
+    public VehicleData? GetDataSync(Guid guid)
+    {
+        lock (Items)
+        {
+            int map = MapScheduler.Current;
+            for (int i = 0; i < Items.Count; i++)
+            {
+                SqlItem<VehicleData> item = Items[i];
+                if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
+                    return item.Item;
+            }
+            for (int i = 0; i < Items.Count; i++)
+            {
+                SqlItem<VehicleData> item = Items[i];
+                if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
+                    return item.Item;
+            }
+        }
+
+        return null;
+    }
+    public SqlItem<VehicleData>? GetDataProxySync(Guid guid)
+    {
+        lock (Items)
+        {
+            int map = MapScheduler.Current;
+            for (int i = 0; i < Items.Count; i++)
+            {
+                SqlItem<VehicleData> item = Items[i];
+                if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
+                    return item;
+            }
+            for (int i = 0; i < Items.Count; i++)
+            {
+                SqlItem<VehicleData> item = Items[i];
+                if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
+                    return item;
+            }
+        }
+
+        return null;
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task<SqlItem<VehicleData>?> GetDataProxy(Guid guid, CancellationToken token = default)
+    {
+        await WaitAsync(token).ConfigureAwait(false);
+        int map = MapScheduler.Current;
+        try
+        {
+            lock (Items)
+            {
+                for (int i = 0; i < List.Count; ++i)
+                {
+                    SqlItem<VehicleData> item = List[i];
+                    if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
+                        return item;
+                }
+                for (int i = 0; i < List.Count; ++i)
+                {
+                    SqlItem<VehicleData> item = List[i];
+                    if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
+                        return item;
+                }
+            }
+        }
+        finally
+        {
+            Release();
+        }
+
+        return null;
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task<(SetPropertyResult, MemberInfo?)> SetProperty(VehicleData data, string property, string value, CancellationToken token = default)
+    {
+        AssertLoadedIntl();
+        await WaitAsync(token).ConfigureAwait(false);
+        StartDualLock();
+        try
+        {
+            SqlItem<VehicleData>? item = FindProxyNoLock(data);
+            if (item is null || item.Item == null)
+            {
+                if (data.PrimaryKey.IsValid)
+                    item = await DownloadNoLock(data.PrimaryKey, token).ConfigureAwait(false);
+                if (item is null || item.Item == null)
+                    return (SetPropertyResult.ObjectNotFound, null);
+            }
+
+            if (!UCWarfare.IsMainThread)
+                await UCWarfare.ToUpdate();
+            return await SetPropertyNoLock(item, property, value, true, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            EndDualLock();
+            Release();
+        }
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task<InteractableVehicle?> SpawnLockedVehicle(Guid vehicleID, Vector3 position, Quaternion rotation, ulong owner = 0ul, ulong groupOwner = 0ul, CancellationToken token = default)
+    {
+        await UCWarfare.ToLevelLoad();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        SqlItem<VehicleData>? proxy = await GetDataProxy(vehicleID, token).ConfigureAwait(false);
+        if (proxy?.Item == null)
+        {
+            L.LogError("Unable to spawn vehicle, not saved to vehicle bay.");
+            return null;
+        }
+
+        await proxy.Enter(token).ConfigureAwait(false);
+        try
+        {
+            if (!UCWarfare.IsMainThread)
+                await UCWarfare.ToUpdate();
+
+            if (Assets.find(vehicleID) is not VehicleAsset asset)
+            {
+                L.LogError("Unable to find vehicle asset of " + vehicleID.ToString("N") + ".");
+                return null;
+            }
+            ThreadUtil.assertIsGameThread();
+            InteractableVehicle vehicle;
+            try
+            {
+                vehicle = VehicleManager.SpawnVehicleV3(asset, 0, 0, 0f, position, rotation, false, false, false, false, asset.fuel,
+                    asset.health, MAX_BATTERY_CHARGE, new CSteamID(owner), new CSteamID(groupOwner), true, null, byte.MaxValue);
+                if (vehicle == null)
+                {
+                    L.LogError("Unknown internal error encountered spawning " + asset.vehicleName + ".");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Internal error encountered spawning " + asset.vehicleName + ".");
+                L.LogError(ex);
+                return null;
+            }
+
+            VehicleData data = proxy.Item;
+            if (data.Metadata != null)
+            {
+                if (data.Metadata.TrunkItems is { Count: > 0 })
+                {
+                    foreach (KitItem k in data.Metadata.TrunkItems)
+                    {
+                        if (Assets.find(k.Id) is ItemAsset iasset)
+                        {
+                            Item item = new Item(iasset.id, k.Amount, 100, Util.CloneBytes(k.Metadata));
+                            if (vehicle.trunkItems.checkSpaceEmpty(k.X, k.Y, iasset.size_x, iasset.size_y, k.Rotation))
+                                vehicle.trunkItems.addItem(k.X, k.Y, k.Rotation, item);
+                            else if (!vehicle.trunkItems.tryAddItem(item))
+                                ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
+                        }
+                    }
+                }
+                if (data.Metadata.Barricades is { Count: > 0 })
+                {
+                    foreach (VBarricade vb in data.Metadata.Barricades)
+                    {
+                        if (Assets.find(vb.BarricadeID) is not ItemBarricadeAsset basset)
+                        {
+                            L.LogError("Unable to find barricade asset of " + vb.BarricadeID.ToString("N") + ".");
+                            continue;
+                        }
+                        byte[] state = Util.CloneBytes(vb.Metadata);
+                        F.EnsureCorrectGroupAndOwner(ref state, basset, 0ul, TeamManager.AdminID);
+                        Barricade barricade = new Barricade(basset, asset.health, state);
+                        Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
+                        Transform t = BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, owner, groupOwner);
+                        if (basset is ItemStorageAsset && BarricadeManager.FindBarricadeByRootTransform(t)?.interactable is InteractableStorage s)
+                            s.despawnWhenDestroyed = true;
+                    }
+                }
+            }
+
+            return vehicle;
+        }
+        finally
+        {
+            Release();
+        }
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task<bool> AddCrewSeat(Guid guid, byte seat, CancellationToken token = default, bool save = true)
+    {
+        SqlItem<VehicleData>? proxy = await GetDataProxy(guid, token).ConfigureAwait(false);
+        if (proxy is null)
+            return false;
+        return await AddCrewSeat(proxy, seat, token, save).ConfigureAwait(false);
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task<bool> AddCrewSeat(SqlItem<VehicleData> proxy, byte seat, CancellationToken token = default, bool save = true)
+    {
+        await proxy.Enter(token).ConfigureAwait(false);
+        try
+        {
+            if (proxy.Item == null)
+                return false;
+            if (!UCWarfare.IsMainThread)
+                await UCWarfare.ToUpdate();
+            if (proxy.Item.CrewSeats == null)
+            {
+                proxy.Item.CrewSeats = new byte[] { seat };
+                return true;
+            }
+            for (int i = 0; i < proxy.Item.CrewSeats.Length; ++i)
+                if (proxy.Item.CrewSeats[i] == seat)
+                    return false;
+            Util.AddToArray(ref proxy.Item.CrewSeats!, seat);
+            if (save)
+                await proxy.SaveItem(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            proxy.Release();
+        }
+        return true;
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task<bool> RemoveCrewSeat(Guid guid, byte seat, CancellationToken token = default, bool save = true)
+    {
+        SqlItem<VehicleData>? proxy = await GetDataProxy(guid, token).ConfigureAwait(false);
+        if (proxy is null)
+            return false;
+        return await RemoveCrewSeat(proxy, seat, token, save).ConfigureAwait(false);
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task<bool> RemoveCrewSeat(SqlItem<VehicleData> proxy, byte seat, CancellationToken token = default, bool save = true)
+    {
+        await proxy.Enter(token).ConfigureAwait(false);
+        try
+        {
+            if (proxy.Item == null)
+                return false;
+            if (!UCWarfare.IsMainThread)
+                await UCWarfare.ToUpdate();
+            if (proxy.Item.CrewSeats == null || proxy.Item.CrewSeats.Length == 0)
+                return false;
+            int index = -1;
+            for (int i = 0; i < proxy.Item.CrewSeats.Length; ++i)
+            {
+                if (proxy.Item.CrewSeats[i] == seat)
+                {
+                    index = i;
+                    break;
+                }
+            }
+            if (index == -1)
+                return false;
+            Util.RemoveFromArray(ref proxy.Item.CrewSeats!, index);
+            if (save)
+                await proxy.SaveItem(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            proxy.Release();
+        }
+        return true;
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task<bool> SetItems(Guid guid, Guid[] items, CancellationToken token = default, bool save = true, bool clone = false)
+    {
+        SqlItem<VehicleData>? proxy = await GetDataProxy(guid, token).ConfigureAwait(false);
+        if (proxy is null)
+            return false;
+        return await SetItems(proxy, items, token, save, clone).ConfigureAwait(false);
+    }
+    /// <remarks>Thread Safe</remarks>
+    public async Task<bool> SetItems(SqlItem<VehicleData> proxy, Guid[] items, CancellationToken token = default, bool save = true, bool clone = false)
+    {
+        await proxy.Enter(token).ConfigureAwait(false);
+        try
+        {
+            if (proxy.Item == null)
+                return false;
+            if (!UCWarfare.IsMainThread)
+                await UCWarfare.ToUpdate();
+            if (clone)
+            {
+                Guid[] old = items;
+                items = new Guid[old.Length];
+                Array.Copy(old, items, old.Length);
+            }
+            proxy.Item.Items = items;
+            if (save)
+                await proxy.SaveItem(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            proxy.Release();
+        }
+        return true;
+    }
+    
+    // todo move all below to VehicleSpawner
+    public void AbandonAllVehicles()
+    {
+        ThreadUtil.assertIsGameThread();
         for (int i = 0; i < VehicleSpawner.Singleton.Count; ++i)
         {
             VehicleSpawn v = VehicleSpawner.Singleton[i];
@@ -296,9 +577,10 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
             }
         }
     }
-    public static void AbandonVehicle(InteractableVehicle vehicle, VehicleData? data, VehicleSpawn? spawn, bool respawn = true)
+    public void AbandonVehicle(InteractableVehicle vehicle, VehicleData? data, VehicleSpawn? spawn, bool respawn = true)
     {
-        if (data is null && !VehicleExists(vehicle.asset.GUID, out data))
+        ThreadUtil.assertIsGameThread();
+        if ((data ??= GetDataSync(vehicle.asset.GUID)) is null)
             return;
         if (spawn is null && !VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out spawn))
             return;
@@ -307,58 +589,16 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
         if (pl != null)
         {
             int creditReward = 0;
-            if (data.CreditCost > 0 && spawn.Component != null && spawn.Component.RequestTime != 0)
+            if (data!.CreditCost > 0 && spawn.Component != null && spawn.Component.RequestTime != 0)
                 creditReward = data.CreditCost - Mathf.Min(data.CreditCost, Mathf.FloorToInt(data.AbandonValueLossSpeed * (Time.realtimeSinceStartup - spawn.Component.RequestTime)));
 
             Points.AwardCredits(pl, creditReward, T.AbandonCompensationToast.Translate(pl), false, false);
         }
 
-        VehicleBay.DeleteVehicle(vehicle);
+        DeleteVehicle(vehicle);
 
         if (respawn)
-            spawn.SpawnVehicle();
-    }
-    public static void ResupplyVehicleBarricades(InteractableVehicle vehicle, VehicleData vehicleData)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        VehicleBarricadeRegion? vehicleRegion = vehicle.FindRegionFromVehicleWithIndex(out ushort plant);
-        if (vehicleRegion != null)
-        {
-            if (plant < ushort.MaxValue)
-            {
-                for (int i = vehicleRegion.drops.Count - 1; i >= 0; i--)
-                {
-                    if (i >= 0)
-                    {
-                        if (vehicleRegion.drops[i].interactable is InteractableStorage store)
-                            store.despawnWhenDestroyed = true;
-
-                        BarricadeManager.destroyBarricade(vehicleRegion.drops[i], 0, 0, plant);
-                    }
-                }
-            }
-            if (vehicleData.Metadata != null && vehicleData.Metadata.Barricades != null)
-            {
-                foreach (VBarricade vb in vehicleData.Metadata.Barricades)
-                {
-                    Barricade barricade;
-                    if (Assets.find(vb.BarricadeID) is ItemBarricadeAsset asset)
-                    {
-                        barricade = new Barricade(asset, asset.health, Convert.FromBase64String(vb.State));
-                    }
-                    else
-                    {
-                        L.LogError("ResupplyVehicleBarricades: Unable to find barricade asset of " + vb.BarricadeID.ToString());
-                        continue;
-                    }
-                    Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
-                    BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
-                }
-                EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
-            }
-        }
+            Task.Run(() => spawn.SpawnVehicle());
     }
     public static void DeleteVehicle(InteractableVehicle vehicle)
     {
@@ -469,7 +709,23 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
         }
         return count;
     }
-    private void OnVehicleExitRequested(ExitVehicleRequested e)
+    private static void OnVehicleSpawned(VehicleSpawned e)
+    {
+        e.Vehicle.gameObject.AddComponent<VehicleComponent>().Initialize(e.Vehicle);
+    }
+    private static void OnVehicleExit(ExitVehicle e)
+    {
+        if (e.OldPassengerIndex == 0 && e.Vehicle.transform.TryGetComponent(out VehicleComponent comp))
+            comp.LastDriverTime = Time.realtimeSinceStartup;
+        if (KitManager.KitExists(e.Player.KitName, out Kit kit))
+        {
+            if (kit.Class is EClass.LAT or EClass.HAT)
+            {
+                e.Player.Player.equipment.dequip();
+            }
+        }
+    }
+    private static void OnVehicleExitRequested(ExitVehicleRequested e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -480,6 +736,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
             {
                 e.Player.SendChat(T.VehicleTooHigh);
                 e.Break();
+                return;
             }
         }
     }
@@ -501,7 +758,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
             e.Break();
             return;
         }
-        if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(e.Player.Steam64))
+        if (Data.Is(out IRevives r) && r.ReviveManager.IsInjured(e.Player.Steam64))
         {
             e.Break();
             return;
@@ -519,9 +776,9 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!VehicleExists(e.Vehicle.asset.GUID, out VehicleData vehicleData))
+        if (!e.Vehicle.TryGetComponent(out VehicleComponent c))
             return;
-        if (vehicleData.Type == EVehicleType.EMPLACEMENT && e.FinalSeat == 0)
+        if (c.IsEmplacement && e.FinalSeat == 0)
         {
             e.Break();
         }
@@ -535,20 +792,22 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
             }
 
             UCPlayer? owner = UCPlayer.FromCSteamID(e.Vehicle.lockedOwner);
-
-            if (vehicleData.CrewSeats.Contains(e.FinalSeat) && vehicleData.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
+            VehicleData? data = c.Data?.Item;
+            if (data != null &&
+                data.CrewSeats.ArrayContains(e.FinalSeat) &&
+                data.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
             {
-                if (e.Player.KitClass == vehicleData.RequiredClass || e.Player.OnDuty())
+                if (e.Player.KitClass == data.RequiredClass || e.Player.OnDuty())
                 {
                     if (e.FinalSeat == 0) // if a crewman is trying to enter the driver's seat
                     {
                         bool canEnterDriverSeat = owner == null ||
                             e.Player == owner ||
                             e.Player.OnDuty() ||
-                            IsOwnerInVehicle(e.Vehicle, owner) || 
-                            (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) || 
+                            IsOwnerInVehicle(e.Vehicle, owner) ||
+                            (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) ||
                             (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
-                            (vehicleData.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(e.Vehicle.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
+                            (data.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(e.Vehicle.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
 
                         if (!canEnterDriverSeat)
                         {
@@ -563,7 +822,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                     {
                         if (!(F.IsInMain(e.Vehicle.transform.position) || e.Player.OnDuty())) // if player is trying to switch to a gunner's seat outside of main
                         {
-                            if (e.Vehicle.passengers[0].player is null) // if they have no driver
+                            if (e.Vehicle.passengers.Length == 0 || e.Vehicle.passengers[0].player is null) // if they have no driver
                             {
                                 e.Player.SendChat(T.VehicleDriverNeeded);
                                 e.Break();
@@ -578,7 +837,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                 }
                 else
                 {
-                    e.Player.SendChat(T.VehicleMissingKit, vehicleData.RequiredClass);
+                    e.Player.SendChat(T.VehicleMissingKit, data.RequiredClass);
                     e.Break();
                 }
             }
@@ -601,902 +860,833 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
             }
         }
     }
-}
-public enum EDelayType
-{
-    NONE            = 0,
-    TIME            = 1,
-    /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
-    FLAG            = 2,
-    /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
-    FLAG_PERCENT = 3,
-    OUT_OF_STAGING  = 4
-}
-public struct Delay : IJsonReadWrite
-{
-    public static readonly Delay Nil = new Delay(EDelayType.NONE, float.NaN, null);
-    [JsonIgnore]
-    public bool IsNil => value == float.NaN;
-    public EDelayType type;
-    public string? gamemode;
-    public float value;
-    public Delay(EDelayType type, float value, string? gamemode = null)
+    // TODO
+    void IQuestCompletedHandler.OnQuestCompleted(QuestCompleted e) { }
+    #region Sql
+    private const string TABLE_MAIN = "vehicle_data";
+    private const string TABLE_UNLOCK_REQUIREMENTS = "vehicle_data_unlock_requirements";
+    private const string TABLE_DELAYS = "vehicle_data_delays";
+    private const string TABLE_ITEMS = "vehicle_data_request_items";
+    private const string TABLE_CREW_SEATS = "vehicle_data_crew_seats";
+    private const string TABLE_BARRICADES = "vehicle_data_barricades";
+    private const string TABLE_BARRICADE_ITEMS = "vehicle_data_barricade_items";
+    private const string TABLE_BARRICADE_DISPLAY_DATA = "vehicle_data_barricade_display_data";
+    private const string TABLE_TRUNK_ITEMS = "vehicle_data_trunk_items";
+    private const string COLUMN_PK = "pk";
+    private const string COLUMN_EXT_PK = "VehicleData";
+    private const string COLUMN_MAP = "Map";
+    private const string COLUMN_FACTION = "Faction";
+    private const string COLUMN_VEHICLE_GUID = "VehicleId";
+    private const string COLUMN_RESPAWN_TIME = "RespawnTime";
+    private const string COLUMN_TICKET_COST = "TicketCost";
+    private const string COLUMN_CREDIT_COST = "CreditCost";
+    private const string COLUMN_REARM_COST = "RearmCost";
+    private const string COLUMN_COOLDOWN = "Cooldown";
+    private const string COLUMN_VEHICLE_TYPE = "VehicleType";
+    private const string COLUMN_BRANCH = "Branch";
+    private const string COLUMN_REQUIRED_CLASS = "RequiredClass";
+    private const string COLUMN_REQUIRES_SQUADLEADER = "RequiresSquadleader";
+    private const string COLUMN_ABANDON_BLACKLISTED = "AbandonBlacklisted";
+    private const string COLUMN_ABANDON_VALUE_LOSS_SPEED = "AbandonValueLossSpeed";
+    private const string COLUMN_ITEM_GUID = "Item";
+    private const string COLUMN_CREW_SEATS_SEAT = "Index";
+    private static readonly Schema[] SCHEMAS;
+    static VehicleBay()
     {
-        this.type = type;
-        this.value = value;
-        this.gamemode = gamemode;
+        SCHEMAS = new Schema[9];
+        SCHEMAS[0] = new Schema(TABLE_MAIN, new Schema.Column[]
+        {
+            new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true
+            },
+            new Schema.Column(COLUMN_MAP, SqlTypes.MAP_ID)
+            {
+                Nullable = true
+            },
+            new Schema.Column(COLUMN_FACTION, SqlTypes.INCREMENT_KEY)
+            {
+                Nullable = true,
+                ForeignKey = true,
+                ForeignKeyColumn = FactionInfo.COLUMN_PK,
+                ForeignKeyTable = FactionInfo.TABLE_MAIN
+            },
+            new Schema.Column(COLUMN_VEHICLE_GUID, SqlTypes.GUID_STRING),
+            new Schema.Column(COLUMN_RESPAWN_TIME, SqlTypes.FLOAT)
+            {
+                Default = "600"
+            },
+            new Schema.Column(COLUMN_TICKET_COST, SqlTypes.INT)
+            {
+                Default = "0"
+            },
+            new Schema.Column(COLUMN_CREDIT_COST, SqlTypes.INT)
+            {
+                Default = "0"
+            },
+            new Schema.Column(COLUMN_REARM_COST, SqlTypes.INT)
+            {
+                Default = "3"
+            },
+            new Schema.Column(COLUMN_COOLDOWN, SqlTypes.FLOAT)
+            {
+                Default = "0"
+            },
+            new Schema.Column(COLUMN_VEHICLE_TYPE, "varchar(" + VehicleData.VEHICLE_TYPE_MAX_CHAR_LIMIT + ")")
+            {
+                Default = nameof(EVehicleType.NONE)
+            },
+            new Schema.Column(COLUMN_BRANCH, "varchar(" + KitEx.BRANCH_MAX_CHAR_LIMIT + ")")
+            {
+                Default = nameof(EBranch.DEFAULT)
+            },
+            new Schema.Column(COLUMN_REQUIRED_CLASS, "varchar(" + KitEx.CLASS_MAX_CHAR_LIMIT + ")")
+            {
+                Default = nameof(EClass.NONE)
+            },
+            new Schema.Column(COLUMN_REQUIRES_SQUADLEADER, SqlTypes.BOOLEAN),
+            new Schema.Column(COLUMN_ABANDON_BLACKLISTED, SqlTypes.BOOLEAN),
+            new Schema.Column(COLUMN_ABANDON_VALUE_LOSS_SPEED, SqlTypes.FLOAT)
+            {
+                Default = "0.125"
+            },
+        }, true, typeof(VehicleData));
+        SCHEMAS[1] = BaseUnlockRequirement.GetDefaultSchema(TABLE_UNLOCK_REQUIREMENTS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK);
+        SCHEMAS[2] = Delay.GetDefaultSchema(TABLE_DELAYS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK);
+        SCHEMAS[3] = new Schema(TABLE_ITEMS, new Schema.Column[]
+        {
+            new Schema.Column(COLUMN_EXT_PK, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = COLUMN_PK,
+                ForeignKeyTable = TABLE_MAIN
+            },
+            new Schema.Column(COLUMN_ITEM_GUID, SqlTypes.GUID_STRING)
+        }, false, typeof(Guid));
+        SCHEMAS[4] = F.GetListSchema<byte>(TABLE_CREW_SEATS, COLUMN_EXT_PK, COLUMN_CREW_SEATS_SEAT, TABLE_MAIN, COLUMN_PK);
+        SCHEMAS[5] = KitItem.GetDefaultSchema(TABLE_TRUNK_ITEMS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, includePage: false);
+        Schema[] vbarrs = VBarricade.GetDefaultSchemas(TABLE_BARRICADES, TABLE_BARRICADE_ITEMS, TABLE_BARRICADE_DISPLAY_DATA, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, includeHealth: true);
+        Array.Copy(vbarrs, 0, SCHEMAS, 6, vbarrs.Length);
     }
 
-    public override string ToString() =>
-        $"{type} Delay, {(string.IsNullOrEmpty(gamemode) ? "any" : gamemode)} " +
-        $"gamemode{(type == EDelayType.NONE || type == EDelayType.OUT_OF_STAGING ? string.Empty : $" Value: {value}")}";
-    public void WriteJson(Utf8JsonWriter writer)
+    [Obsolete]
+    protected override async Task AddOrUpdateItem(VehicleData? item, PrimaryKey pk, CancellationToken token = default)
     {
-        writer.WriteNumber(nameof(type), (int)type);
-        writer.WriteString(nameof(gamemode), gamemode);
-        writer.WriteNumber(nameof(value), value);
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        while (reader.TokenType == JsonTokenType.PropertyName || (reader.Read() && reader.TokenType == JsonTokenType.PropertyName))
+        if (item == null)
         {
-            string? prop = reader.GetString();
-            if (reader.Read() && prop != null)
+            if (!pk.IsValid)
+                throw new ArgumentException("If item is null, pk must have a value to delete the item.", nameof(pk));
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_MAIN}` WHERE `{COLUMN_PK}`=@0;", new object[] { pk.Key }, token).ConfigureAwait(false);
+            return;
+        }
+        bool hasPk = pk.IsValid;
+        int pk2 = PrimaryKey.NotAssigned;
+        object[] objs = new object[hasPk ? 15 : 14];
+        objs[0] = item.Map < 0 ? DBNull.Value : item.Map;
+        objs[1] = item.Faction.IsValid ? item.Faction.Key : DBNull.Value;
+        objs[2] = item.VehicleID.ToByteArray();
+        objs[3] = item.RespawnTime;
+        objs[4] = item.TicketCost;
+        objs[5] = item.CreditCost;
+        objs[6] = item.RearmCost;
+        objs[7] = item.Cooldown;
+        objs[8] = item.Branch.ToString();
+        objs[9] = item.RequiredClass.ToString();
+        objs[10] = item.Type.ToString();
+        objs[11] = item.RequiresSL;
+        objs[12] = item.DisallowAbandons;
+        objs[13] = item.AbandonValueLossSpeed;
+        if (hasPk)
+            objs[13] = pk.Key;
+        await Sql.QueryAsync($"INSERT INTO `{TABLE_MAIN}` (`{COLUMN_MAP}`,`{COLUMN_FACTION}`,`{COLUMN_VEHICLE_GUID}`,`{COLUMN_RESPAWN_TIME}`," +
+                             $"`{COLUMN_TICKET_COST}`,`{COLUMN_CREDIT_COST}`,`{COLUMN_REARM_COST}`,`{COLUMN_COOLDOWN}`," +
+                             $"`{COLUMN_BRANCH}`,`{COLUMN_REQUIRED_CLASS}`,`{COLUMN_VEHICLE_TYPE}`,`{COLUMN_REQUIRES_SQUADLEADER}`," +
+                             $"`{COLUMN_ABANDON_BLACKLISTED}`,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}`" +
+                             (hasPk ? $",`{COLUMN_PK}`" : string.Empty) +
+                             ") VALUES (@0,@1,@2,@3,@4,@5,@6,@7,@8,@9,@10,@11,@12,@13" +
+                             (hasPk ? ",@14" : string.Empty) +
+                             ") ON DUPLICATE KEY UPDATE " +
+                             $"`{COLUMN_MAP}`=@0,`{COLUMN_FACTION}`=@1,`{COLUMN_RESPAWN_TIME}`=@3,`{COLUMN_TICKET_COST}`=@4," +
+                             $"`{COLUMN_CREDIT_COST}`=@5,`{COLUMN_REARM_COST}`=@6,`{COLUMN_COOLDOWN}`=@7,`{COLUMN_BRANCH}`=@8,`{COLUMN_REQUIRED_CLASS}`=@9," +
+                             $"`{COLUMN_VEHICLE_TYPE}`=@10,`{COLUMN_REQUIRES_SQUADLEADER}`=@11,`{COLUMN_ABANDON_BLACKLISTED}`=@12,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}`=@13," +
+                             $"`{COLUMN_PK}`=LAST_INSERT_ID(`{COLUMN_PK}`);" +
+                             "SET @pk := (SELECT LAST_INSERT_ID() as `pk`);" +
+                             $"DELETE FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             $"DELETE FROM `{TABLE_DELAYS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             $"DELETE FROM `{TABLE_ITEMS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             $"DELETE FROM `{TABLE_CREW_SEATS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             $"DELETE FROM `{TABLE_BARRICADES}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             $"DELETE FROM `{TABLE_TRUNK_ITEMS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             "SELECT @pk;",
+            objs, reader =>
             {
-                switch (prop)
+                pk2 = reader.GetInt32(0);
+            }, token).ConfigureAwait(false);
+        pk = pk2;
+        if (!pk.IsValid)
+            throw new Exception("Unable to get a valid primary key for " + item + ".");
+        item.PrimaryKey = pk;
+        StringBuilder builder = new StringBuilder(128);
+        if (item.Delays is { Length: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_DELAYS}` (`{Delay.COLUMN_TYPE}`,`{Delay.COLUMN_VALUE}`,`{Delay.COLUMN_GAMEMODE}`) VALUES ");
+            objs = new object[item.Delays.Length * 3];
+            for (int i = 0; i < item.Delays.Length; ++i)
+            {
+                Delay delay = item.Delays[i];
+                int index = i * 3;
+                objs[index] = delay.Type.ToString();
+                objs[index + 1] = delay.Type switch
                 {
-                    case nameof(type):
-                        if (reader.TryGetInt32(out int i))
-                            type = (EDelayType)i;
-                        break;
-                    case nameof(gamemode):
-                        if (reader.TokenType == JsonTokenType.Null) gamemode = null;
-                        else gamemode = reader.GetString();
-                        break;
-                    case nameof(value):
-                        reader.TryGetSingle(out value);
-                        break;
-                }
-            }
-        }
-    }
-}
-public class VehicleData : IJsonReadWrite, ITranslationArgument
-{
-    [JsonSettable]
-    public string Name;
-    [JsonSettable]
-    public Guid VehicleID;
-    [JsonSettable]
-    public ulong Team;
-    [JsonSettable]
-    public ushort RespawnTime;
-    [JsonSettable]
-    public ushort TicketCost;
-    [JsonSettable]
-    public ushort CreditCost;
-    [JsonSettable]
-    public ushort Cooldown;
-    [JsonSettable]
-    public EBranch Branch;
-    [JsonSettable]
-    public EClass RequiredClass;
-    [JsonSettable]
-    public byte RearmCost;
-    [JsonSettable]
-    public EVehicleType Type;
-    [JsonSettable]
-    public bool RequiresSL;
-    [JsonSettable]
-    public ushort UnlockLevel;
-    [JsonSettable]
-    public bool DisallowAbandons;
-    [JsonSettable]
-    public float AbandonValueLossSpeed = 0.125f;
-    public BaseUnlockRequirement[] UnlockRequirements;
-    public Guid[] Items;
-    public Delay[] Delays;
-    public List<byte> CrewSeats;
-    public MetaSave? Metadata;
-    public VehicleData(Guid vehicleID)
-    {
-        VehicleID = vehicleID;
-        Team = 0;
-        RespawnTime = 600;
-        TicketCost = 0;
-        CreditCost = 0;
-        Cooldown = 0;
-        if (Assets.find(vehicleID) is VehicleAsset va)
-        {
-            Name = va.name;
-            if (va.engine == EEngine.PLANE || va.engine == EEngine.HELICOPTER || va.engine == EEngine.BLIMP)
-                Branch = EBranch.AIRFORCE;
-            else if (va.engine == EEngine.BOAT)
-                Branch = (EBranch)5; // navy
-            else
-                Branch = EBranch.DEFAULT;
-        }
-        else Branch = EBranch.DEFAULT;
-        RequiredClass = EClass.NONE;
-        UnlockRequirements = new BaseUnlockRequirement[0];
-        RearmCost = 3;
-        Type = EVehicleType.NONE;
-        RequiresSL = false;
-        UnlockLevel = 0;
-        Items = new Guid[0];
-        CrewSeats = new List<byte>();
-        Metadata = null;
-        Delays = new Delay[0];
-    }
-    public VehicleData()
-    {
-        Name = "";
-        VehicleID = Guid.Empty;
-        Team = 0;
-        UnlockRequirements = new BaseUnlockRequirement[0];
-        RespawnTime = 600;
-        TicketCost = 0;
-        CreditCost = 0;
-        Cooldown = 0;
-        Branch = EBranch.DEFAULT;
-        RequiredClass = EClass.NONE;
-        RearmCost = 3;
-        Type = EVehicleType.NONE;
-        RequiresSL = false;
-        UnlockLevel = 0;
-        Items = new Guid[0];
-        CrewSeats = new List<byte>();
-        Metadata = null;
-        Delays = new Delay[0];
-    }
-    public void AddDelay(EDelayType type, float value, string? gamemode = null)
-    {
-        int index = -1;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-        {
-            Delay del = new Delay(type, value, gamemode);
-            Delay[] old = Delays;
-            Delays = new Delay[old.Length + 1];
-            if (old.Length > 0)
-            {
-                Array.Copy(old, 0, Delays, 0, old.Length);
-                Delays[Delays.Length - 1] = del;
-            }
-            else
-            {
-                Delays[0] = del;
-            }
-        }
-    }
-    public bool RemoveDelay(EDelayType type, float value, string? gamemode = null)
-    {
-        if (Delays.Length == 0) return false;
-        int index = -1;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) return false;
-        Delay[] old = Delays;
-        Delays = new Delay[old.Length - 1];
-        if (old.Length == 1) return true;
-        if (index != 0)
-            Array.Copy(old, 0, Delays, 0, index);
-        Array.Copy(old, index + 1, Delays, index, old.Length - index - 1);
-        return true;
-    }
-    public bool HasDelayType(EDelayType type)
-    {
-        string gm = Data.Gamemode.Name;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (!string.IsNullOrEmpty(del.gamemode) && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
-            if (del.type == type) return true;
-        }
-        return false;
-    }
-    public bool IsDelayedType(EDelayType type)
-    {
-        string gm = Data.Gamemode.Name;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (!string.IsNullOrEmpty(del.gamemode))
-            {
-                string gamemode = del.gamemode!;
-                bool blacklist = false;
-                if (gamemode[0] == '!')
+                    EDelayType.OUT_OF_STAGING or EDelayType.NONE => DBNull.Value,
+                    _ => delay.Value
+                };
+                objs[index + 2] = (object?)delay.Gamemode ?? DBNull.Value;
+                if (i != 0)
+                    builder.Append(',');
+                builder.Append('(');
+                for (int j = index; j < index + 3; ++j)
                 {
-                    blacklist = true;
-                    gamemode = gamemode.Substring(1);
+                    if (j != index)
+                        builder.Append(',');
+                    builder.Append('@').Append(index);
                 }
+                builder.Append(')');
+            }
+            builder.Append(';');
+            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            builder.Clear();
+        }
 
-                if (gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (blacklist) continue;
-                }
-                else if (!blacklist) continue;
-            }
-            if (del.type == type)
-            {
-                switch (type)
-                {
-                    case EDelayType.NONE:
-                        return false;
-                    case EDelayType.TIME:
-                        if (TimeDelayed(ref del))
-                            return true;
-                        break;
-                    case EDelayType.FLAG:
-                        if (FlagDelayed(ref del))
-                            return true;
-                        break;
-                    case EDelayType.FLAG_PERCENT:
-                        if (FlagPercentDelayed(ref del))
-                            return true;
-                        break;
-                    case EDelayType.OUT_OF_STAGING:
-                        if (StagingDelayed(ref del))
-                            return true;
-                        break;
-                }
-            }
-        }
-        return false;
-    }
-    // TODO: gamemode blacklist not working
-    public bool IsDelayed(out Delay delay)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        delay = Delay.Nil;
-        string? gm = Data.Gamemode?.Name;
-        if (Delays == null || Delays.Length == 0) return false;
-        bool anyVal = false;
-        bool isNoneYet = false;
-        for (int i = Delays.Length - 1; i >= 0; i--)
+        if (item.Items is { Length: > 0 })
         {
-            ref Delay del = ref Delays[i];
-            bool universal = string.IsNullOrEmpty(del.gamemode);
-            if (!universal)
+            builder.Append($"INSERT INTO `{TABLE_ITEMS}` (`{COLUMN_EXT_PK}`,`{COLUMN_ITEM_GUID}`) VALUES ");
+            objs = new object[item.Items.Length * 2];
+            for (int i = 0; i < item.Items.Length; ++i)
             {
-                string gamemode = del.gamemode!; // !TeamCTF
-                bool blacklist = false;
-                if (gamemode[0] == '!') // true
+                int index = i * 2;
+                objs[index] = pk2;
+                objs[index + 1] = item.Items[i];
+                if (i != 0)
+                    builder.Append(',');
+                builder.Append('(');
+                for (int j = index; j < index + 2; ++j)
                 {
-                    blacklist = true;
-                    gamemode = gamemode.Substring(1); // TeamCTF
+                    if (j != index)
+                        builder.Append(',');
+                    builder.Append('@').Append(index);
                 }
-
-                if (gm is not null && gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase)) // false
-                {
-                    if (blacklist) continue;
-                }
-                else if (!blacklist) continue; // false
-                universal = true;
+                builder.Append(')');
             }
-            if (universal && anyVal) continue;
-            switch (del.type)
+            builder.Append(';');
+            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            builder.Clear();
+        }
+
+        if (item.CrewSeats is { Length: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_CREW_SEATS}` (`{COLUMN_EXT_PK}`,`{COLUMN_CREW_SEATS_SEAT}`) VALUES ");
+            objs = new object[item.CrewSeats.Length * 2];
+            for (int i = 0; i < item.CrewSeats.Length; ++i)
             {
-                case EDelayType.NONE:
-                    if (!universal)
+                int index = i * 2;
+                objs[index] = pk2;
+                objs[index + 1] = item.CrewSeats[i];
+                if (i != 0)
+                    builder.Append(',');
+                builder.Append('(');
+                for (int j = index; j < index + 2; ++j)
+                {
+                    if (j != index)
+                        builder.Append(',');
+                    builder.Append('@').Append(index);
+                }
+                builder.Append(')');
+            }
+            builder.Append(';');
+            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            builder.Clear();
+        }
+
+        if (item.UnlockRequirements is { Length: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_UNLOCK_REQUIREMENTS}` (`{COLUMN_EXT_PK}`,`{BaseUnlockRequirement.COLUMN_JSON}`) VALUES ");
+            objs = new object[item.UnlockRequirements.Length * 2];
+            using MemoryStream str = new MemoryStream(48);
+            for (int i = 0; i < item.UnlockRequirements.Length; ++i)
+            {
+                BaseUnlockRequirement req = item.UnlockRequirements[i];
+                if (i != 0)
+                    str.Seek(0L, SeekOrigin.Begin);
+                Utf8JsonWriter writer = new Utf8JsonWriter(str, JsonEx.condensedWriterOptions);
+                BaseUnlockRequirement.Write(writer, req);
+                writer.Dispose();
+                string json = System.Text.Encoding.UTF8.GetString(str.GetBuffer(), 0, checked((int)str.Position));
+                int index = i * 2;
+                objs[index] = pk2;
+                objs[index + 1] = json;
+                if (i != 0)
+                    builder.Append(',');
+                builder.Append('(');
+                for (int j = index; j < index + 2; ++j)
+                {
+                    if (j != index)
+                        builder.Append(',');
+                    builder.Append('@').Append(index);
+                }
+                builder.Append(')');
+            }
+            builder.Append(';');
+            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            builder.Clear();
+        }
+    }
+    [Obsolete]
+    protected override async Task<VehicleData[]> DownloadAllItems(CancellationToken token = default)
+    {
+        List<VehicleData> list = new List<VehicleData>(32);
+        await Sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_MAP}`,`{COLUMN_FACTION}`,`{COLUMN_VEHICLE_GUID}`,`{COLUMN_RESPAWN_TIME}`," +
+                             $"`{COLUMN_TICKET_COST}`,`{COLUMN_CREDIT_COST}`,`{COLUMN_REARM_COST}`,`{COLUMN_COOLDOWN}`," +
+                             $"`{COLUMN_BRANCH}`,`{COLUMN_REQUIRED_CLASS}`,`{COLUMN_VEHICLE_TYPE}`,`{COLUMN_REQUIRES_SQUADLEADER}`," +
+                             $"`{COLUMN_ABANDON_BLACKLISTED}`,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}` FROM `{TABLE_MAIN}` " +
+                             $"WHERE (`{COLUMN_FACTION}` IS NULL OR `{COLUMN_FACTION}`=@0 OR `{COLUMN_FACTION}`=@1) AND " +
+                             $"(`{COLUMN_MAP}` IS NULL OR `{COLUMN_MAP}`=@2);",
+            new object[]
+            {
+                TeamManager.Team1Faction.PrimaryKey.Key, TeamManager.Team2Faction.PrimaryKey.Key, MapScheduler.Current
+            },
+            reader =>
+            {
+                Guid? guid = reader.ReadGuidString(3);
+                if (!guid.HasValue)
+                    throw new FormatException("Invalid GUID: " + reader.GetString(3));
+
+                VehicleData data = new VehicleData
+                {
+                    PrimaryKey = reader.GetInt32(0),
+                    VehicleID = guid.Value,
+                    Map = reader.GetInt32(1),
+                    Faction = reader.GetInt32(2),
+                    RespawnTime = reader.GetFloat(4),
+                    TicketCost = reader.GetInt32(5),
+                    CreditCost = reader.GetInt32(6),
+                    RearmCost = reader.GetInt32(7),
+                    Cooldown = reader.GetFloat(8),
+                    Branch = reader.ReadStringEnum(9, EBranch.DEFAULT),
+                    RequiredClass = reader.ReadStringEnum(10, EClass.NONE),
+                    Type = reader.ReadStringEnum(11, EVehicleType.NONE),
+                    RequiresSL = reader.GetBoolean(12),
+                    DisallowAbandons = reader.GetBoolean(13),
+                    AbandonValueLossSpeed = reader.GetFloat(14)
+                };
+                data.Name = Assets.find(data.VehicleID)?.FriendlyName ?? data.VehicleID.ToString("N");
+                list.Add(data);
+            }, token).ConfigureAwait(false);
+        if (list.Count == 0)
+            return list.ToArray();
+        StringBuilder sb = new StringBuilder("IN (", 6 + list.Count * 4);
+        object[] pkeyObjs = new object[list.Count];
+        for (int i = 0; i < list.Count; ++i)
+        {
+            if (i != 0)
+                sb.Append(',');
+            pkeyObjs[i] = list[i].PrimaryKey.Key;
+            sb.Append('@').Append(i.ToString(CultureInfo.InvariantCulture));
+        }
+
+        sb.Append(");");
+        string pkeys = sb.ToString();
+        await Sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{Delay.COLUMN_TYPE}`,`{Delay.COLUMN_VALUE}`,`{Delay.COLUMN_GAMEMODE}` " +
+                             $"FROM `{TABLE_DELAYS}` WHERE `{COLUMN_EXT_PK}` " + pkeys, pkeyObjs, reader =>
+                             {
+                                 int pk = reader.GetInt32(0);
+                                 for (int i = 0; i < list.Count; ++i)
+                                 {
+                                     if (list[i].PrimaryKey.Key == pk)
+                                     {
+                                         EDelayType type = reader.ReadStringEnum(1, EDelayType.NONE);
+                                         if (type == EDelayType.NONE)
+                                             break;
+                                         Util.AddToArray(ref list[i].Delays!, new Delay(type, reader.IsDBNull(2) ? 0f : reader.GetFloat(2), reader.IsDBNull(3) ? null : reader.GetString(3)));
+                                         break;
+                                     }
+                                 }
+                             }, token).ConfigureAwait(false);
+        await Sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{BaseUnlockRequirement.COLUMN_JSON}` " +
+                             $"FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}` " + pkeys, pkeyObjs, reader =>
+                             {
+                                 int pk = reader.GetInt32(0);
+                                 for (int i = 0; i < list.Count; ++i)
+                                 {
+                                     if (list[i].PrimaryKey.Key == pk)
+                                     {
+                                         byte[] bytes = System.Text.Encoding.UTF8.GetBytes(reader.GetString(1));
+                                         Utf8JsonReader reader2 = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                                         BaseUnlockRequirement? req = BaseUnlockRequirement.Read(ref reader2);
+                                         if (req != null) return;
+                                         Util.AddToArray(ref list[i].UnlockRequirements!, req);
+                                         break;
+                                     }
+                                 }
+                             }, token).ConfigureAwait(false);
+        await Sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{COLUMN_ITEM_GUID}` " +
+                             $"FROM `{TABLE_ITEMS}` WHERE `{COLUMN_EXT_PK}` " + pkeys, pkeyObjs, reader =>
+                             {
+                                 int pk = reader.GetInt32(0);
+                                 for (int i = 0; i < list.Count; ++i)
+                                 {
+                                     if (list[i].PrimaryKey.Key == pk)
+                                     {
+                                         Guid? guid = reader.ReadGuidString(1);
+                                         if (!guid.HasValue)
+                                             throw new FormatException("Invalid GUID: " + reader.GetString(1));
+                                         Util.AddToArray(ref list[i].Items!, guid.Value);
+                                         break;
+                                     }
+                                 }
+                             }, token).ConfigureAwait(false);
+        await Sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{COLUMN_CREW_SEATS_SEAT}` " +
+                             $"FROM `{TABLE_CREW_SEATS}` WHERE `{COLUMN_EXT_PK}` " + pkeys, pkeyObjs, reader =>
+                             {
+                                 int pk = reader.GetInt32(0);
+                                 for (int i = 0; i < list.Count; ++i)
+                                 {
+                                     if (list[i].PrimaryKey.Key == pk)
+                                     {
+                                         byte seat = reader.GetByte(1);
+                                         Util.AddToArray(ref list[i].CrewSeats!, seat);
+                                         break;
+                                     }
+                                 }
+                             }, token).ConfigureAwait(false);
+        await Sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{KitItem.COLUMN_GUID}`,`{KitItem.COLUMN_X}`," +
+                             $"`{KitItem.COLUMN_Y}`,`{KitItem.COLUMN_ROTATION}`,`{KitItem.COLUMN_AMOUNT}`,`{KitItem.COLUMN_METADATA}` " +
+                             $"FROM `{TABLE_TRUNK_ITEMS}` WHERE `{COLUMN_EXT_PK}` " + pkeys, pkeyObjs, reader =>
+                             {
+                                 int pk = reader.GetInt32(0);
+                                 for (int i = 0; i < list.Count; ++i)
+                                 {
+                                     if (list[i].PrimaryKey.Key == pk)
+                                     {
+                                         VehicleData data = list[i];
+                                         data.Metadata ??= new MetaSave();
+                                         data.Metadata.TrunkItems ??= new List<KitItem>(8);
+                                         KitItem item = new KitItem(reader.ReadGuid(1), reader.GetByte(2), reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(6), reader.GetByte(5), PlayerInventory.STORAGE);
+                                         data.Metadata.TrunkItems.Add(item);
+                                         break;
+                                     }
+                                 }
+                             }, token).ConfigureAwait(false);
+        List<object> objs2 = new List<object>(list.Count * 2);
+        sb.Clear();
+        sb.Append("IN (");
+        bool f = false;
+        await Sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{VBarricade.COLUMN_PK}`,`{VBarricade.COLUMN_GUID}`,`{VBarricade.COLUMN_HEALTH}`," +
+                             $"`{VBarricade.COLUMN_POS_X}`,`{VBarricade.COLUMN_POS_Y}`,`{VBarricade.COLUMN_POS_Z}`," +
+                             $"`{VBarricade.COLUMN_ROT_X}`,`{VBarricade.COLUMN_ROT_Y}`,`{VBarricade.COLUMN_ROT_Z}`," +
+                             $"`{VBarricade.COLUMN_METADATA}` " +
+                             $"FROM `{TABLE_BARRICADES}` WHERE `{COLUMN_EXT_PK}` " + pkeys, pkeyObjs, reader =>
+                             {
+                                 int pk = reader.GetInt32(0);
+                                 int bpk = reader.GetInt32(1);
+                                 for (int i = 0; i < list.Count; ++i)
+                                 {
+                                     if (list[i].PrimaryKey.Key == pk)
+                                     {
+                                         VehicleData data = list[i];
+                                         data.Metadata ??= new MetaSave();
+                                         data.Metadata.Barricades ??= new List<VBarricade>(4);
+                                         VBarricade barricade = new VBarricade(reader.ReadGuid(2), reader.GetUInt16(3),
+                                             reader.GetFloat(4), reader.GetFloat(5), reader.GetFloat(6),
+                                             reader.GetFloat(7), reader.GetFloat(8), reader.GetFloat(9),
+                                             reader.ReadByteArray(10))
+                                         {
+                                             PrimaryKey = bpk,
+                                             LinkedKey = pk
+                                         };
+                                         data.Metadata.Barricades.Add(barricade);
+                                         if (f)
+                                             sb.Append(',');
+                                         else f = true;
+                                         sb.Append('@').Append(objs2.Count.ToString(Data.AdminLocale));
+                                         objs2.Add(bpk);
+                                         break;
+                                     }
+                                 }
+                             }, token).ConfigureAwait(false);
+        sb.Append(");");
+        pkeys = sb.ToString();
+        sb = null!;
+        pkeyObjs = objs2.ToArray();
+        List<ItemJarData> items = new List<ItemJarData>(32);
+        List<ItemDisplayData> display = new List<ItemDisplayData>(16);
+        await Sql.QueryAsync(
+            $"SELECT `{VBarricade.COLUMN_ITEM_PK}`,`{VBarricade.COLUMN_ITEM_BARRICADE_PK}`,`{VBarricade.COLUMN_ITEM_GUID}`," +
+            $"`{VBarricade.COLUMN_ITEM_POS_X}`,`{VBarricade.COLUMN_ITEM_POS_Y}`,`{VBarricade.COLUMN_ITEM_ROT}`,`{VBarricade.COLUMN_ITEM_AMOUNT}`," +
+            $"`{VBarricade.COLUMN_ITEM_QUALITY}`,`{VBarricade.COLUMN_ITEM_METADATA}` " +
+            $"FROM `{TABLE_BARRICADE_ITEMS}` WHERE `{VBarricade.COLUMN_ITEM_BARRICADE_PK}` IN " +
+            pkeys, pkeyObjs,
+            reader =>
+            {
+                items.Add(new ItemJarData(reader.GetInt32(0), reader.GetInt32(1), reader.ReadGuid(2), reader.GetByte(3),
+                    reader.GetByte(4), reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
+                    reader.ReadByteArray(8)));
+            }, token);
+        await Sql.QueryAsync(
+            $"SELECT `{VBarricade.COLUMN_PK}`,`{VBarricade.COLUMN_DISPLAY_SKIN}`,`{VBarricade.COLUMN_DISPLAY_MYTHIC}`," +
+            $"`{VBarricade.COLUMN_DISPLAY_ROT}`,`{VBarricade.COLUMN_DISPLAY_TAGS}`,`{VBarricade.COLUMN_DISPLAY_DYNAMIC_PROPS}` " +
+            $"FROM `{TABLE_BARRICADE_DISPLAY_DATA}` WHERE `{VBarricade.COLUMN_PK}` IN " +
+            pkeys, pkeyObjs,
+            reader =>
+            {
+                display.Add(new ItemDisplayData(reader.GetInt32(0), reader.GetUInt16(1), reader.GetUInt16(2), reader.GetByte(3),
+                    reader.IsDBNull(4) ? null : reader.GetString(4),
+                    reader.IsDBNull(5) ? null : reader.GetString(5)));
+            }, token);
+
+        List<ItemJarData> current = new List<ItemJarData>(32);
+        for (int i = 0; i < list.Count; ++i)
+        {
+            if (list[i].Metadata?.Barricades == null)
+                continue;
+            List<VBarricade> barricades = list[i].Metadata!.Barricades!;
+            for (int k = 0; k < barricades.Count; ++k)
+            {
+                VBarricade b = barricades[k];
+                int pk = b.PrimaryKey.Key;
+                f = true;
+                for (int j = 0; j < items.Count; ++j)
+                {
+                    if (items[j].Structure.Key == pk)
                     {
-                        delay = del;
-                        isNoneYet = true;
-                    }
-                    break;
-                case EDelayType.TIME:
-                    if ((!universal || !isNoneYet) && TimeDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.FLAG:
-                    if ((!universal || !isNoneYet) && FlagDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.FLAG_PERCENT:
-                    if ((!universal || !isNoneYet) && FlagPercentDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.OUT_OF_STAGING:
-                    if ((!universal || !isNoneYet) && StagingDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-            }
-        }
-        return anyVal;
-    }
-    private bool TimeDelayed(ref Delay delay) => Data.Gamemode != null && delay.value > Data.Gamemode.SecondsSinceStart;
-    private bool FlagDelayed(ref Delay delay) => FlagDelayed(ref delay, false);
-    private bool FlagPercentDelayed(ref Delay delay) => FlagDelayed(ref delay, true);
-    private bool FlagDelayed(ref Delay delay, bool percent)
-    {
-        if (Data.Is(out Invasion inv))
-        {
-            int ct = percent ? Mathf.RoundToInt(inv.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            if (Team == 1)
-            {
-                if (inv.AttackingTeam == 1)
-                    return inv.ObjectiveT1Index < ct;
-                else
-                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
-            }
-            else if (Team == 2)
-            {
-                if (inv.AttackingTeam == 2)
-                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
-                else
-                    return inv.ObjectiveT1Index < ct;
-            }
-            return false;
-        }
-        else if (Data.Is(out IFlagTeamObjectiveGamemode fr))
-        {
-            int ct = percent ? Mathf.RoundToInt(fr.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            int i2 = GetHighestObjectiveIndex(Team, fr);
-            return (Team == 1 && i2 < ct) ||
-                   (Team == 2 && fr.Rotation.Count - i2 - 1 < ct);
-        }
-        else if (Data.Is(out Insurgency ins))
-        {
-            int ct = percent ? Mathf.RoundToInt(ins.Caches.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            return ins.Caches != null && ins.CachesDestroyed < ct;
-        }
-        return false;
-    }
-    private bool StagingDelayed(ref Delay delay) => Data.Is(out IStagingPhase sp) && sp.State == EState.STAGING;
-    private int GetHighestObjectiveIndex(ulong team, IFlagTeamObjectiveGamemode gm)
-    {
-        if (team == 1)
-        {
-            for (int i = 0; i < gm.Rotation.Count; i++)
-            {
-                if (!gm.Rotation[i].HasBeenCapturedT1)
-                    return i;
-            }
-            return 0;
-        }
-        else if (team == 2)
-        {
-            for (int i = gm.Rotation.Count - 1; i >= 0; i--)
-            {
-                if (!gm.Rotation[i].HasBeenCapturedT2)
-                    return i;
-            }
-            return gm.Rotation.Count - 1;
-        }
-        return -1;
-    }
-    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleID == VehicleID);
-    public List<VehicleSpawn> GetSpawners() => EnumerateSpawns.ToList();
-    public void SaveMetaData(InteractableVehicle vehicle)
-    {
-        List<VBarricade>? barricades = null;
-        List<KitItem>? trunk = null;
-
-        if (vehicle.trunkItems.items.Count > 0)
-        {
-            trunk = new List<KitItem>();
-
-            foreach (ItemJar jar in vehicle.trunkItems.items)
-            {
-                if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
-                {
-                    trunk.Add(new KitItem(
-                        asset.GUID,
-                        jar.x,
-                        jar.y,
-                        jar.rot,
-                        jar.item.metadata,
-                        jar.item.amount,
-                        0
-                    ));
-                }
-            }
-        }
-
-        VehicleBarricadeRegion vehicleRegion = BarricadeManager.findRegionFromVehicle(vehicle);
-        if (vehicleRegion != null)
-        {
-            barricades = new List<VBarricade>();
-            for (int i = 0; i < vehicleRegion.drops.Count; i++)
-            {
-                SDG.Unturned.BarricadeData bdata = vehicleRegion.drops[i].GetServersideData();
-                barricades.Add(new VBarricade(bdata.barricade.asset.GUID, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y,
-                    bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
-            }
-        }
-
-        if (barricades is not null || trunk is not null)
-            Metadata = new MetaSave(barricades, trunk);
-    }
-    public static void Write(VehicleData data, Utf8JsonWriter writer) => data.WriteJson(writer);
-    public static VehicleData Read(ref Utf8JsonReader reader)
-    {
-        VehicleData data = new VehicleData();
-        data.ReadJson(ref reader);
-        return data;
-    }
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WriteString(nameof(Name), Name);
-        writer.WriteString(nameof(VehicleID), VehicleID);
-        writer.WriteNumber(nameof(Team), Team);
-        writer.WriteNumber(nameof(RespawnTime), RespawnTime);
-        writer.WriteNumber(nameof(TicketCost), TicketCost);
-        writer.WriteNumber(nameof(Cooldown), Cooldown);
-        writer.WriteNumber(nameof(Branch), (int)Branch);
-        writer.WriteNumber(nameof(RequiredClass), (int)RequiredClass);
-        writer.WriteNumber(nameof(RearmCost), RearmCost);
-        writer.WriteNumber(nameof(Type), (int)Type);
-        writer.WriteBoolean(nameof(RequiresSL), RequiresSL);
-        writer.WriteNumber(nameof(CreditCost), CreditCost);
-        writer.WriteNumber(nameof(UnlockLevel), UnlockLevel);
-
-        writer.WritePropertyName(nameof(UnlockRequirements));
-        writer.WriteStartArray();
-        for (int i = 0; i < UnlockRequirements.Length; i++)
-        {
-            writer.WriteStartObject();
-            BaseUnlockRequirement.Write(writer, UnlockRequirements[i]);
-            writer.WriteEndObject();
-        }
-        writer.WriteEndArray();
-
-        writer.WritePropertyName(nameof(Items));
-        writer.WriteStartArray();
-        for (int i = 0; i < Items.Length; i++)
-            writer.WriteStringValue(Items[i]);
-        writer.WriteEndArray();
-
-        writer.WritePropertyName(nameof(Delays));
-        writer.WriteStartArray();
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            writer.WriteStartObject();
-            ref Delay del = ref Delays[i];
-            del.WriteJson(writer);
-            writer.WriteEndObject();
-        }
-        writer.WriteEndArray();
-
-        writer.WritePropertyName(nameof(CrewSeats));
-        writer.WriteStartArray();
-        for (int i = 0; i < CrewSeats.Count; i++)
-            writer.WriteNumberValue(CrewSeats[i]);
-        writer.WriteEndArray();
-
-        writer.WritePropertyName(nameof(Metadata));
-        if (Metadata == null) writer.WriteNullValue();
-        else
-        {
-            writer.WriteStartObject();
-            Metadata.WriteJson(writer);
-            writer.WriteEndObject();
-        }
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.EndObject) return;
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string? prop = reader.GetString();
-                if (reader.Read() && prop != null)
-                {
-                    switch (prop)
-                    {
-                        case nameof(Name):
-                            Name = reader.GetString()!;
-                            break;
-                        case nameof(VehicleID):
-                            VehicleID = reader.GetGuid();
-                            break;
-                        case nameof(Team):
-                            Team = reader.GetUInt64();
-                            break;
-                        case nameof(RespawnTime):
-                            RespawnTime = reader.GetUInt16();
-                            break;
-                        case nameof(TicketCost):
-                            TicketCost = reader.GetUInt16();
-                            break;
-                        case nameof(CreditCost):
-                            CreditCost = reader.GetUInt16();
-                            break;
-                        case nameof(Cooldown):
-                            Cooldown = reader.GetUInt16();
-                            break;
-                        case nameof(Branch):
-                            Branch = (EBranch)reader.GetByte();
-                            break;
-                        case nameof(RequiredClass):
-                            RequiredClass = (EClass)reader.GetByte();
-                            break;
-                        case nameof(RearmCost):
-                            RearmCost = reader.GetByte();
-                            break;
-                        case nameof(Type):
-                            Type = (EVehicleType)reader.GetByte();
-                            break;
-                        case nameof(RequiresSL):
-                            RequiresSL = reader.TokenType == JsonTokenType.True;
-                            break;
-                        case nameof(UnlockLevel):
-                            UnlockLevel = reader.GetUInt16();
-                            break;
-                        case nameof(UnlockRequirements):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                List<BaseUnlockRequirement> reqs = new List<BaseUnlockRequirement>(2);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-                                {
-                                    BaseUnlockRequirement? bur = BaseUnlockRequirement.Read(ref reader);
-                                    while (reader.TokenType != JsonTokenType.EndObject) if (!reader.Read()) break;
-                                    if (bur != null) reqs.Add(bur);
-                                }
-                                UnlockRequirements = reqs.ToArray();
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            break;
-                        case nameof(Items):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                List<Guid> items = new List<Guid>(16);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.String)
-                                {
-                                    if (reader.TryGetGuid(out Guid guid))
-                                        items.Add(guid);
-                                }
-                                Items = items.ToArray();
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            break;
-                        case nameof(Delays):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                List<Delay> delays = new List<Delay>(1);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-                                {
-                                    Delay delay = new Delay();
-                                    delay.ReadJson(ref reader);
-                                    while (reader.TokenType != JsonTokenType.EndObject) if (!reader.Read()) break;
-                                    delays.Add(delay);
-                                }
-                                Delays = delays.ToArray();
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            break;
-                        case nameof(CrewSeats):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                CrewSeats = new List<byte>(0);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.Number)
-                                    CrewSeats.Add(reader.GetByte());
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            break;
-                        case nameof(Metadata):
-                            if (reader.TokenType == JsonTokenType.Null)
-                                Metadata = null;
-                            else if (reader.TokenType == JsonTokenType.StartObject)
-                            {
-                                Metadata = new MetaSave(null, null);
-                                Metadata.ReadJson(ref reader);
-                            }
-                            break;
+                        if (f)
+                        {
+                            current.Clear();
+                            f = false;
+                        }
+                        current.Add(items[j]);
+                        items.RemoveAtFast(j);
+                        --j;
                     }
                 }
-            }
-        }
-    }
-    public string GetCostLine(UCPlayer ucplayer)
-    {
-        if (UnlockRequirements == null || UnlockRequirements.Length == 0)
-            return string.Empty;
-        else
-        {
-            for (int i = 0; i < UnlockRequirements.Length; i++)
-            {
-                BaseUnlockRequirement req = UnlockRequirements[i];
-                if (req.CanAccess(ucplayer))
+
+                ItemDisplayData data = display.Find(x => x.Key.Key == pk);
+                if (f && data.Key.Key != pk)
                     continue;
-                return req.GetSignText(ucplayer);
+                if (f)
+                    current.Clear();
+                else if (current.Count > byte.MaxValue)
+                    current.RemoveRange(byte.MaxValue - 1, current.Count - byte.MaxValue - 1);
+                int ct = 17;
+                for (int j = 0; j < current.Count; ++j)
+                    ct += 8 + current[j].Metadata.Length;
+                if (data.Key.Key == pk)
+                {
+                    ct += 7;
+                    if (!string.IsNullOrEmpty(data.Tags))
+                        ct += data.Tags!.Length;
+                    if (!string.IsNullOrEmpty(data.DynamicProps))
+                        ct += data.DynamicProps!.Length;
+                }
+                byte[] state = new byte[ct];
+                int index = 16;
+                state[++index] = (byte)current.Count;
+                for (int j = 0; j < current.Count; ++j)
+                {
+                    ItemJarData jar = current[j];
+                    state[++index] = jar.X;
+                    state[++index] = jar.Y;
+                    state[++index] = jar.Rotation;
+                    if (Assets.find(jar.Item) is ItemAsset item)
+                        Buffer.BlockCopy(BitConverter.GetBytes(item.id), 0, state, index + 1, sizeof(ushort));
+                    else L.LogWarning("Unable to find item: " + jar.Item.ToString("N"));
+                    index += sizeof(ushort);
+                    state[++index] = jar.Amount;
+                    state[++index] = jar.Quality;
+                    if (jar.Metadata is { Length: > 0 })
+                    {
+                        state[++index] = (byte)Math.Min(jar.Metadata.Length, byte.MaxValue);
+                        Buffer.BlockCopy(jar.Metadata, 0, state, index + 1, state[index]);
+                        index += state[index];
+                    }
+                    else ++index;
+                }
+                if (data.Key.Key == pk)
+                {
+                    Buffer.BlockCopy(BitConverter.GetBytes(data.Skin), 0, state, index + 1, sizeof(ushort));
+                    Buffer.BlockCopy(BitConverter.GetBytes(data.Mythic), 0, state, index + 3, sizeof(ushort));
+                    index += sizeof(ushort) * 2;
+                    if (!string.IsNullOrEmpty(data.Tags))
+                    {
+                        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data.Tags!);
+                        state[++index] = checked((byte)bytes.Length);
+                        Buffer.BlockCopy(bytes, 0, state, index + 1, bytes.Length);
+                        index += bytes.Length;
+                    }
+                    else ++index;
+                    if (!string.IsNullOrEmpty(data.DynamicProps))
+                    {
+                        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data.DynamicProps!);
+                        state[++index] = checked((byte)bytes.Length);
+                        Buffer.BlockCopy(bytes, 0, state, index + 1, bytes.Length);
+                        index += bytes.Length;
+                    }
+                    else ++index;
+
+                    state[index + 1] = data.Rotation;
+                }
+
+                b.Metadata = state;
             }
         }
-        return string.Empty;
-    }
-    [FormatDisplay("Colored Vehicle Name")]
-    public const string COLORED_NAME = "cn";
-    [FormatDisplay("Vehicle Name")]
-    public const string NAME = "n";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
-    {
-        string name = Assets.find(VehicleID) is VehicleAsset va ? va.vehicleName : VehicleID.ToString("N");
-        if (format is not null && format.Equals(COLORED_NAME, StringComparison.Ordinal))
-            return Localization.Colorize(TeamManager.GetTeamHexColor(Team), name, flags);
-        return name;
-    }
-}
 
-public class MetaSave : IJsonReadWrite
-{
-    public List<VBarricade>? Barricades;
-    public List<KitItem>? TrunkItems;
-    public MetaSave(List<VBarricade>? barricades, List<KitItem>? trunkItems)
-    {
-        Barricades = barricades;
-        TrunkItems = trunkItems;
+        return list.ToArray();
     }
-    public void ReadJson(ref Utf8JsonReader reader)
+    [Obsolete]
+    protected override async Task<VehicleData?> DownloadItem(PrimaryKey pk, CancellationToken token = default)
     {
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.EndObject) return;
-            if (reader.TokenType == JsonTokenType.PropertyName)
+        VehicleData? obj = null;
+        if (!pk.IsValid)
+            throw new ArgumentException("Primary key is not valid.", nameof(pk));
+        int pk2 = pk;
+        await Sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_MAP}`,`{COLUMN_FACTION}`,`{COLUMN_VEHICLE_GUID}`,`{COLUMN_RESPAWN_TIME}`," +
+                             $"`{COLUMN_TICKET_COST}`,`{COLUMN_CREDIT_COST}`,`{COLUMN_REARM_COST}`,`{COLUMN_COOLDOWN}`," +
+                             $"`{COLUMN_BRANCH}`,`{COLUMN_REQUIRED_CLASS}`,`{COLUMN_VEHICLE_TYPE}`,`{COLUMN_REQUIRES_SQUADLEADER}`," +
+                             $"`{COLUMN_ABANDON_BLACKLISTED}`,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}` FROM `{TABLE_MAIN}` " +
+                             $"WHERE `{COLUMN_PK}`=@0 LIMIT 1;",
+            new object[] { pk2 },
+            reader =>
             {
-                string prop = reader.GetString()!;
-                if (reader.Read())
+                Guid? guid = reader.ReadGuidString(3);
+                if (!guid.HasValue)
+                    throw new FormatException("Invalid GUID: " + reader.GetString(3));
+
+                obj = new VehicleData
                 {
-                    switch (prop)
+                    PrimaryKey = reader.GetInt32(0),
+                    VehicleID = guid.Value,
+                    Map = reader.GetInt32(1),
+                    Faction = reader.GetInt32(2),
+                    RespawnTime = reader.GetFloat(4),
+                    TicketCost = reader.GetInt32(5),
+                    CreditCost = reader.GetInt32(6),
+                    RearmCost = reader.GetInt32(7),
+                    Cooldown = reader.GetFloat(8),
+                    Branch = reader.ReadStringEnum(9, EBranch.DEFAULT),
+                    RequiredClass = reader.ReadStringEnum(10, EClass.NONE),
+                    Type = reader.ReadStringEnum(11, EVehicleType.NONE),
+                    RequiresSL = reader.GetBoolean(12),
+                    DisallowAbandons = reader.GetBoolean(13),
+                    AbandonValueLossSpeed = reader.GetFloat(14)
+                };
+                return true;
+            }, token).ConfigureAwait(false);
+        if (obj == null)
+            return null;
+        if (!obj.PrimaryKey.IsValid)
+            return obj;
+        object[] pkeyObj = { obj.PrimaryKey.Key };
+        await Sql.QueryAsync($"SELECT `{Delay.COLUMN_TYPE}`,`{Delay.COLUMN_VALUE}`,`{Delay.COLUMN_GAMEMODE}` " +
+                             $"FROM `{TABLE_DELAYS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
+                             {
+                                 EDelayType type = reader.ReadStringEnum(0, EDelayType.NONE);
+                                 if (type == EDelayType.NONE)
+                                     return;
+                                 Util.AddToArray(ref obj.Delays!, new Delay(type, reader.IsDBNull(1) ? 0f : reader.GetFloat(1), reader.IsDBNull(2) ? null : reader.GetString(2)));
+                             }, token).ConfigureAwait(false);
+        await Sql.QueryAsync($"SELECT `{BaseUnlockRequirement.COLUMN_JSON}` " +
+                             $"FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
+                             {
+                                 byte[] bytes = System.Text.Encoding.UTF8.GetBytes(reader.GetString(0));
+                                 Utf8JsonReader reader2 = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                                 BaseUnlockRequirement? req = BaseUnlockRequirement.Read(ref reader2);
+                                 if (req != null) return;
+                                 Util.AddToArray(ref obj.UnlockRequirements!, req);
+                             }, token).ConfigureAwait(false);
+        await Sql.QueryAsync($"SELECT `{COLUMN_ITEM_GUID}` " +
+                             $"FROM `{TABLE_ITEMS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
+                             {
+                                 Guid? guid = reader.ReadGuidString(0);
+                                 if (!guid.HasValue)
+                                     throw new FormatException("Invalid GUID: " + reader.GetString(0));
+                                 Util.AddToArray(ref obj.Items!, guid.Value);
+                             }, token).ConfigureAwait(false);
+        await Sql.QueryAsync($"SELECT `{COLUMN_CREW_SEATS_SEAT}` " +
+                             $"FROM `{TABLE_CREW_SEATS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
+                             {
+                                 byte seat = reader.GetByte(0);
+                                 Util.AddToArray(ref obj.CrewSeats!, seat);
+                             }, token).ConfigureAwait(false);
+        await Sql.QueryAsync($"SELECT `{KitItem.COLUMN_GUID}`,`{KitItem.COLUMN_X}`," +
+                             $"`{KitItem.COLUMN_Y}`,`{KitItem.COLUMN_ROTATION}`,`{KitItem.COLUMN_AMOUNT}`,`{KitItem.COLUMN_METADATA}` " +
+                             $"FROM `{TABLE_TRUNK_ITEMS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
+                             {
+                                 obj.Metadata ??= new MetaSave();
+                                 obj.Metadata.TrunkItems ??= new List<KitItem>(8);
+                                 KitItem item = new KitItem(reader.ReadGuid(1), reader.GetByte(2), reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(6), reader.GetByte(5), PlayerInventory.STORAGE);
+                                 obj.Metadata.TrunkItems.Add(item);
+                             }, token).ConfigureAwait(false);
+        List<object> objs2 = new List<object>(4);
+        StringBuilder? sb = null;
+        bool f = false;
+        await Sql.QueryAsync($"SELECT `{VBarricade.COLUMN_PK}`,`{VBarricade.COLUMN_GUID}`,`{VBarricade.COLUMN_HEALTH}`," +
+                             $"`{VBarricade.COLUMN_POS_X}`,`{VBarricade.COLUMN_POS_Y}`,`{VBarricade.COLUMN_POS_Z}`," +
+                             $"`{VBarricade.COLUMN_ROT_X}`,`{VBarricade.COLUMN_ROT_Y}`,`{VBarricade.COLUMN_ROT_Z}`," +
+                             $"`{VBarricade.COLUMN_METADATA}` " +
+                             $"FROM `{TABLE_BARRICADES}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
+                             {
+                                 int bpk = reader.GetInt32(0);
+                                 obj.Metadata ??= new MetaSave();
+                                 obj.Metadata.Barricades ??= new List<VBarricade>(4);
+                                 VBarricade barricade = new VBarricade(reader.ReadGuid(1), reader.GetUInt16(2),
+                                     reader.GetFloat(3), reader.GetFloat(4), reader.GetFloat(5),
+                                     reader.GetFloat(6), reader.GetFloat(7), reader.GetFloat(8),
+                                     reader.ReadByteArray(9))
+                                 {
+                                     PrimaryKey = bpk,
+                                     LinkedKey = pk
+                                 };
+                                 obj.Metadata.Barricades.Add(barricade);
+                                 sb ??= new StringBuilder("IN (", 20);
+                                 if (f)
+                                     sb.Append(',');
+                                 else f = true;
+                                 sb.Append('@').Append(objs2.Count.ToString(Data.AdminLocale));
+                                 objs2.Add(bpk);
+                             }, token).ConfigureAwait(false);
+        if (f)
+            sb!.Append(");");
+        else goto skipBarricades;
+        string pkeys = sb.ToString();
+        sb = null!;
+        pkeyObj = objs2.ToArray();
+        List<ItemJarData>? items = null;
+        List<ItemDisplayData>? display = null;
+        await Sql.QueryAsync(
+            $"SELECT `{VBarricade.COLUMN_ITEM_PK}`,`{VBarricade.COLUMN_ITEM_BARRICADE_PK}`,`{VBarricade.COLUMN_ITEM_GUID}`," +
+            $"`{VBarricade.COLUMN_ITEM_POS_X}`,`{VBarricade.COLUMN_ITEM_POS_Y}`,`{VBarricade.COLUMN_ITEM_ROT}`,`{VBarricade.COLUMN_ITEM_AMOUNT}`," +
+            $"`{VBarricade.COLUMN_ITEM_QUALITY}`,`{VBarricade.COLUMN_ITEM_METADATA}` " +
+            $"FROM `{TABLE_BARRICADE_ITEMS}` WHERE `{VBarricade.COLUMN_ITEM_BARRICADE_PK}` IN " +
+            pkeys, pkeyObj,
+            reader =>
+            {
+                (items ??= new List<ItemJarData>(16)).Add(new ItemJarData(reader.GetInt32(0), reader.GetInt32(1), reader.ReadGuid(2), reader.GetByte(3),
+                    reader.GetByte(4), reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
+                    reader.ReadByteArray(8)));
+            }, token);
+        await Sql.QueryAsync(
+            $"SELECT `{VBarricade.COLUMN_PK}`,`{VBarricade.COLUMN_DISPLAY_SKIN}`,`{VBarricade.COLUMN_DISPLAY_MYTHIC}`," +
+            $"`{VBarricade.COLUMN_DISPLAY_ROT}`,`{VBarricade.COLUMN_DISPLAY_TAGS}`,`{VBarricade.COLUMN_DISPLAY_DYNAMIC_PROPS}` " +
+            $"FROM `{TABLE_BARRICADE_DISPLAY_DATA}` WHERE `{VBarricade.COLUMN_PK}` IN " +
+            pkeys, pkeyObj,
+            reader =>
+            {
+                (display ??= new List<ItemDisplayData>(obj.Metadata!.Barricades!.Count)).Add(new ItemDisplayData(reader.GetInt32(0), reader.GetUInt16(1), reader.GetUInt16(2), reader.GetByte(3),
+                    reader.IsDBNull(4) ? null : reader.GetString(4),
+                    reader.IsDBNull(5) ? null : reader.GetString(5)));
+            }, token);
+
+        List<VBarricade> barricades = obj.Metadata!.Barricades!;
+        List<ItemJarData>? current = null;
+        for (int k = 0; k < barricades.Count; ++k)
+        {
+            VBarricade b = barricades[k];
+            int pk3 = b.PrimaryKey.Key;
+            f = true;
+            if (items != null)
+            {
+                for (int j = 0; j < items.Count; ++j)
+                {
+                    if (items[j].Structure.Key == pk3)
                     {
-                        case nameof(TrunkItems):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                TrunkItems = new List<KitItem>(0);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-                                {
-                                    KitItem item = new KitItem();
-                                    item.ReadJson(ref reader);
-                                    while (reader.TokenType != JsonTokenType.EndObject) if (!reader.Read()) break;
-                                    TrunkItems.Add(item);
-                                }
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            else if (reader.TokenType == JsonTokenType.Null)
-                                TrunkItems = null;
-                            break;
-                        case nameof(Barricades):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                Barricades = new List<VBarricade>(0);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-                                {
-                                    VBarricade barricade = new VBarricade();
-                                    barricade.ReadJson(ref reader);
-                                    while (reader.TokenType != JsonTokenType.EndObject) if (!reader.Read()) break;
-                                    Barricades.Add(barricade);
-                                }
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            else if (reader.TokenType == JsonTokenType.Null)
-                                Barricades = null;
-                            break;
+                        if (f)
+                        {
+                            current ??= new List<ItemJarData>(32);
+                            current.Clear();
+                            f = false;
+                        }
+                        current!.Add(items[j]);
+                        items.RemoveAtFast(j);
+                        --j;
                     }
                 }
             }
-        }
-    }
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WritePropertyName(nameof(TrunkItems));
-        if (TrunkItems != null)
-        {
-            writer.WriteStartArray();
-            for (int i = 0; i < TrunkItems.Count; i++)
-            {
-                writer.WriteStartObject();
-                TrunkItems[i].WriteJson(writer);
-                writer.WriteEndObject();
-            }
-            writer.WriteEndArray();
-        }
-        else
-            writer.WriteNullValue();
 
-        writer.WritePropertyName(nameof(Barricades));
-        if (Barricades != null)
-        {
-            writer.WriteStartArray();
-            for (int i = 0; i < Barricades.Count; i++)
+            ItemDisplayData data = display == null ? default : display.Find(x => x.Key.Key == pk);
+            if (f && data.Key.Key != pk)
+                continue;
+            if (f)
             {
-                writer.WriteStartObject();
-                Barricades[i].WriteJson(writer);
-                writer.WriteEndObject();
+                if (current != null)
+                    current.Clear();
+                else current = new List<ItemJarData>(8);
             }
-            writer.WriteEndArray();
-        }
-        else
-            writer.WriteNullValue();
-    }
-}
-
-public class VBarricade : IJsonReadWrite
-{
-    public Guid BarricadeID;
-    public ushort Health;
-    public ulong OwnerID;
-    public ulong GroupID;
-    public float PosX;
-    public float PosY;
-    public float PosZ;
-    public float AngleX;
-    public float AngleY;
-    public float AngleZ;
-    public string State;
-    internal VBarricade() { }
-    public VBarricade(Guid barricadeID, ushort health, ulong ownerID, ulong groupID, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, string state)
-    {
-        BarricadeID = barricadeID;
-        Health = health;
-        OwnerID = ownerID;
-        GroupID = groupID;
-        PosX = posX;
-        PosY = posY;
-        PosZ = posZ;
-        AngleX = angleX;
-        AngleY = angleY;
-        AngleZ = angleZ;
-        State = state;
-    }
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WriteString(nameof(BarricadeID), BarricadeID);
-        writer.WriteNumber(nameof(Health), Health);
-        writer.WriteNumber(nameof(OwnerID), OwnerID);
-        writer.WriteNumber(nameof(GroupID), GroupID);
-        writer.WriteNumber(nameof(PosX), PosX);
-        writer.WriteNumber(nameof(PosY), PosY);
-        writer.WriteNumber(nameof(PosZ), PosZ);
-        writer.WriteNumber(nameof(AngleX), AngleX);
-        writer.WriteNumber(nameof(AngleY), AngleY);
-        writer.WriteNumber(nameof(AngleZ), AngleZ);
-        writer.WriteString(nameof(State), State);
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        while (reader.TokenType == JsonTokenType.PropertyName || (reader.Read() && reader.TokenType == JsonTokenType.PropertyName))
-        {
-            string? prop = reader.GetString();
-            if (reader.Read() && prop != null)
+            else if (current!.Count > byte.MaxValue)
+                current.RemoveRange(byte.MaxValue - 1, current.Count - byte.MaxValue - 1);
+            int ct = 17;
+            for (int j = 0; j < current.Count; ++j)
+                ct += 8 + current[j].Metadata.Length;
+            if (data.Key.Key == pk)
             {
-                switch (prop)
+                ct += 7;
+                if (!string.IsNullOrEmpty(data.Tags))
+                    ct += data.Tags!.Length;
+                if (!string.IsNullOrEmpty(data.DynamicProps))
+                    ct += data.DynamicProps!.Length;
+            }
+            byte[] state = new byte[ct];
+            int index = 16;
+            state[++index] = (byte)current.Count;
+            for (int j = 0; j < current.Count; ++j)
+            {
+                ItemJarData jar = current[j];
+                state[++index] = jar.X;
+                state[++index] = jar.Y;
+                state[++index] = jar.Rotation;
+                if (Assets.find(jar.Item) is ItemAsset item)
+                    Buffer.BlockCopy(BitConverter.GetBytes(item.id), 0, state, index + 1, sizeof(ushort));
+                else L.LogWarning("Unable to find item: " + jar.Item.ToString("N"));
+                index += sizeof(ushort);
+                state[++index] = jar.Amount;
+                state[++index] = jar.Quality;
+                if (jar.Metadata is { Length: > 0 })
                 {
-                    case nameof(BarricadeID):
-                        reader.TryGetGuid(out BarricadeID);
-                        break;
-                    case nameof(Health):
-                        reader.TryGetUInt16(out Health);
-                        break;
-                    case nameof(OwnerID):
-                        reader.TryGetUInt64(out OwnerID);
-                        break;
-                    case nameof(GroupID):
-                        reader.TryGetUInt64(out GroupID);
-                        break;
-                    case nameof(PosX):
-                        reader.TryGetSingle(out PosX);
-                        break;
-                    case nameof(PosY):
-                        reader.TryGetSingle(out PosY);
-                        break;
-                    case nameof(PosZ):
-                        reader.TryGetSingle(out PosZ);
-                        break;
-                    case nameof(AngleX):
-                        reader.TryGetSingle(out AngleX);
-                        break;
-                    case nameof(AngleY):
-                        reader.TryGetSingle(out AngleY);
-                        break;
-                    case nameof(AngleZ):
-                        reader.TryGetSingle(out AngleZ);
-                        break;
-                    case nameof(State):
-                        State = reader.GetString() ?? string.Empty;
-                        break;
+                    state[++index] = (byte)Math.Min(jar.Metadata.Length, byte.MaxValue);
+                    Buffer.BlockCopy(jar.Metadata, 0, state, index + 1, state[index]);
+                    index += state[index];
                 }
+                else ++index;
             }
-        }
-    }
-}
+            if (data.Key.Key == pk)
+            {
+                Buffer.BlockCopy(BitConverter.GetBytes(data.Skin), 0, state, index + 1, sizeof(ushort));
+                Buffer.BlockCopy(BitConverter.GetBytes(data.Mythic), 0, state, index + 3, sizeof(ushort));
+                index += sizeof(ushort) * 2;
+                if (!string.IsNullOrEmpty(data.Tags))
+                {
+                    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data.Tags!);
+                    state[++index] = checked((byte)bytes.Length);
+                    Buffer.BlockCopy(bytes, 0, state, index + 1, bytes.Length);
+                    index += bytes.Length;
+                }
+                else ++index;
+                if (!string.IsNullOrEmpty(data.DynamicProps))
+                {
+                    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data.DynamicProps!);
+                    state[++index] = checked((byte)bytes.Length);
+                    Buffer.BlockCopy(bytes, 0, state, index + 1, bytes.Length);
+                    index += bytes.Length;
+                }
+                else ++index;
 
-[Translatable("Vehicle Type")]
-public enum EVehicleType
-{
-    [Translatable("Unknown")]
-    NONE,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Хамви")]
-    [Translatable(LanguageAliasSet.SPANISH, "Humvee")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Humvee")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Humvee")]
-    [Translatable(LanguageAliasSet.POLISH, "Humvee")]
-    HUMVEE,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Транспорт")]
-    [Translatable(LanguageAliasSet.SPANISH, "Transporte")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Transport")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Transporte")]
-    [Translatable(LanguageAliasSet.POLISH, "Humvee")]
-    [Translatable("Transport Truck")]
-    TRANSPORT,
-    SCOUT_CAR,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Логистический")]
-    [Translatable(LanguageAliasSet.SPANISH, "Logistico")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Camion")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Logística")]
-    [Translatable(LanguageAliasSet.POLISH, "Transport Logistyczny")]
-    [Translatable("Logistics Truck")]
-    LOGISTICS,
-    [Translatable(LanguageAliasSet.RUSSIAN, "БТР")]
-    [Translatable(LanguageAliasSet.SPANISH, "APC")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "TAB")]
-    [Translatable(LanguageAliasSet.POLISH, "APC")]
-    [Translatable("APC")]
-    APC,
-    [Translatable(LanguageAliasSet.RUSSIAN, "БМП")]
-    [Translatable(LanguageAliasSet.SPANISH, "IFV")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "MLI")]
-    [Translatable(LanguageAliasSet.POLISH, "BWP")]
-    [Translatable("IFV")]
-    IFV,
-    [Translatable(LanguageAliasSet.RUSSIAN, "ТАНК")]
-    [Translatable(LanguageAliasSet.SPANISH, "Tanque")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Tanc")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Tanque")]
-    [Translatable(LanguageAliasSet.POLISH, "Czołg")]
-    [Translatable("Tank")]
-    MBT,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
-    [Translatable(LanguageAliasSet.SPANISH, "Helicoptero")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
-    [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
-    [Translatable("Transport Heli")]
-    HELI_TRANSPORT,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
-    [Translatable(LanguageAliasSet.SPANISH, "Helicoptero")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
-    [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
-    [Translatable("Attack Heli")]
-    HELI_ATTACK,
-    JET,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Размещение")]
-    [Translatable(LanguageAliasSet.SPANISH, "Emplazamiento")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Amplasament")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Emplacamento")]
-    [Translatable(LanguageAliasSet.POLISH, "Fortyfikacja")]
-    EMPLACEMENT,
+                state[index + 1] = data.Rotation;
+            }
+
+            b.Metadata = state;
+        }
+        skipBarricades:
+        return obj;
+    }
+    #endregion
 }

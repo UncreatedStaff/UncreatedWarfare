@@ -1,17 +1,19 @@
 ﻿using SDG.NetTransport;
-using SDG.Provider;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
+using Uncreated.Json;
 using Uncreated.Players;
+using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -25,14 +27,15 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
 
 namespace Uncreated.Warfare.Gamemodes.Insurgency;
 
-public class Insurgency : 
-    TeamGamemode,
+public class Insurgency :
+    TicketGamemode<InsurgencyTicketProvider>,
     ITeams,
     IFOBs,
     IVehicles,
@@ -40,11 +43,11 @@ public class Insurgency :
     IRevives,
     ISquads,
     IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>,
-    IStructureSaving,
     ITickets,
     IStagingPhase,
     IAttackDefense,
-    IGameStats
+    IGameStats,
+    ITraits
 {
     protected VehicleSpawner _vehicleSpawner;
     protected VehicleBay _vehicleBay;
@@ -57,7 +60,8 @@ public class Insurgency :
     protected StructureSaver _structureSaver;
     protected InsurgencyTracker _gameStats;
     protected InsurgencyLeaderboard _endScreen;
-    private TicketManager _ticketManager;
+    protected TraitManager _traitManager;
+    protected ActionManager _actionManager;
     protected ulong _attackTeam;
     protected ulong _defendTeam;
     public int IntelligencePoints;
@@ -83,6 +87,8 @@ public class Insurgency :
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
+    public TraitManager TraitManager => _traitManager;
+    public ActionManager ActionManager => _actionManager;
     public ulong AttackingTeam => _attackTeam;
     public ulong DefendingTeam => _defendTeam;
     public int CachesLeft { get; private set; }
@@ -91,36 +97,35 @@ public class Insurgency :
     public List<CacheData> DiscoveredCaches => Caches.Where(c => c.IsActive && !c.IsDestroyed && c.IsDestroyed).ToList();
     public int ActiveCachesCount => Caches.Count(c => c.IsActive && !c.IsDestroyed);
     public bool IsScreenUp => _isScreenUp;
-    public InsurgencyTracker WarstatsTracker => _gameStats;
+    InsurgencyTracker IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     Leaderboard<InsurgencyPlayerStats, InsurgencyTracker> IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.Leaderboard => _endScreen;
     object IGameStats.GameStats => _gameStats;
-    public TicketManager TicketManager { get => _ticketManager; }
     public Insurgency() : base("Insurgency", 0.25F) { }
-    protected override void PreInit()
+    protected override Task PreInit()
     {
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _reviveManager);
-        AddSingletonRequirement(ref _ticketManager);
-        _ticketManager.Provider = new InsurgencyTicketProvider();
         AddSingletonRequirement(ref _vehicleBay);
         AddSingletonRequirement(ref _FOBManager);
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _vehicleSigns);
         AddSingletonRequirement(ref _requestSigns);
-        base.PreInit();
+        AddSingletonRequirement(ref _traitManager);
+        if (UCWarfare.Config.EnableActionMenu)
+            AddSingletonRequirement(ref _actionManager);
+        return base.PreInit();
     }
-    protected override void PostInit()
+    protected override Task PostInit()
     {
-        Commands.ReloadCommand.ReloadKits();
         string file = Path.Combine(Data.Paths.MapStorage, "insurgency_caches.json");
         if (File.Exists(file))
         {
             try
             {
-                using (FileStream str = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    CacheSpawns = JsonSerializer.Deserialize<List<SerializableTransform>>(str, JsonEx.serializerSettings)!;
+                using FileStream str = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+                CacheSpawns = JsonSerializer.Deserialize<List<SerializableTransform>>(str, JsonEx.serializerSettings)!;
             }
             catch (Exception ex)
             {
@@ -176,8 +181,8 @@ public class Insurgency :
             {
                 try
                 {
-                    using (FileStream str = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.Read))
-                        JsonSerializer.Serialize(str, CacheSpawns, JsonEx.serializerSettings);
+                    using FileStream str = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.Read);
+                    JsonSerializer.Serialize(str, CacheSpawns, JsonEx.serializerSettings);
                 }
                 catch (Exception ex)
                 {
@@ -186,21 +191,10 @@ public class Insurgency :
                 }
             }
         }
+
+        return base.PostInit();
     }
-    protected override void OnReady()
-    {
-        _gameStats = UCWarfare.I.gameObject.AddComponent<InsurgencyTracker>();
-        RepairManager.LoadRepairStations();
-        RallyManager.WipeAllRallies();
-        VehicleSigns.InitAllSigns();
-        base.OnReady();
-    }
-    protected override void PostDispose()
-    {
-        Destroy(_gameStats);
-        base.PostDispose();
-    }
-    protected override void PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad)
     {
         _gameStats.Reset();
 
@@ -214,14 +208,13 @@ public class Insurgency :
         Caches = new List<CacheData>();
         SeenCaches = new List<Vector3>();
 
-        CachesLeft = UnityEngine.Random.Range(Config.Insurgency.MinStartingCaches, Config.Insurgency.MaxStartingCaches + 1);
+        CachesLeft = UnityEngine.Random.Range(Config.InsurgencyMinStartingCaches, Config.InsurgencyMaxStartingCaches + 1);
         for (int i = 0; i < CachesLeft; i++)
             Caches.Add(new CacheData());
-        base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad);
     }
-    protected override void PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad)
     {
-        base.PostGameStarting(isOnLoad);
         RallyManager.WipeAllRallies();
 
         SpawnNewCache();
@@ -229,21 +222,20 @@ public class Insurgency :
             SpawnBlockerOnT1();
         else
             SpawnBlockerOnT2();
-        StartStagingPhase(Config.Insurgency.StagingTime);
+        StartStagingPhase(Config.InsurgencyStagingTime);
+        return base.PostGameStarting(isOnLoad);
     }
-    public override void DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SendWinUI(winner);
-        base.DeclareWin(winner);
-
         StartCoroutine(EndGameCoroutine(winner));
+        return base.DeclareWin(winner);
     }
     private IEnumerator<WaitForSeconds> TryDiscoverFirstCache()
     {
-        yield return new WaitForSeconds(Config.Insurgency.FirstCacheSpawnTime);
+        yield return new WaitForSeconds(Config.InsurgencyFirstCacheSpawnTime);
 
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -256,7 +248,7 @@ public class Insurgency :
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
-        yield return new WaitForSeconds(Config.GeneralConfig.LeaderboardDelay);
+        yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -281,15 +273,16 @@ public class Insurgency :
             Destroy(_endScreen);
         }
         _isScreenUp = false;
-        EndGame();
+        Task.Run(EndGame);
     }
     protected override void EventLoopAction()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        CheckPlayersAMC();
-        TeamManager.EvaluateBases();
+        if (EveryXSeconds(Config.AASFlagTickSeconds))
+            CheckMainCampZones();
+        base.EventLoopAction();
     }
     public override void OnPlayerDeath(PlayerDied e)
     {
@@ -298,23 +291,19 @@ public class Insurgency :
             AddIntelligencePoints(1);
             if (e.Killer!.Player.TryGetPlayerData(out UCPlayerData c) && c.stats is InsurgencyPlayerStats s)
                 s._intelligencePointsCollected++;
-            WarstatsTracker.intelligenceGathered++;
+            ((IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>)this).WarstatsTracker.intelligenceGathered++;
         }
         base.OnPlayerDeath(e);
     }
-    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    public override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        base.PlayerInit(player, wasAlreadyOnline);
-        if (KitManager.KitExists(player.KitName, out Kit kit))
+        if (!KitManager.KitExists(player.KitName, out Kit kit) || kit.IsLimited(out _, out _, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out _, out _, player.GetTeam())))
         {
-            if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
-            {
-                if (!KitManager.TryGiveRiflemanKit(player))
-                    KitManager.TryGiveUnarmedKit(player);
-            }
+            if (!KitManager.TryGiveRiflemanKit(player))
+                KitManager.TryGiveUnarmedKit(player);
         }
         if (!AllowCosmetics)
             player.SetCosmeticStates(false);
@@ -322,9 +311,9 @@ public class Insurgency :
         if (UCWarfare.Config.ModifySkillLevels)
             Skillset.SetDefaultSkills(player);
 
-        ulong team = player.GetTeam();
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
+        return base.PlayerInit(player, wasAlreadyOnline);
     }
     public override void OnJoinTeam(UCPlayer player, ulong newTeam)
     {
@@ -334,8 +323,8 @@ public class Insurgency :
     private void OnPlayerJoinedTeam(UCPlayer player)
     {
         ulong team = player.GetTeam();
-        FPlayerName names = F.GetPlayerOriginalNames(player);
-        if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)
+        PlayerNames names = player.Name;
+        if (string.IsNullOrEmpty(player.KitName) && team is > 0 and < 3)
         {
             if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
                 KitManager.GiveKit(player, unarmed);
@@ -383,7 +372,7 @@ public class Insurgency :
             if (!first.IsDiscovered)
             {
                 IntelligencePoints += points;
-                if (IntelligencePoints >= Config.Insurgency.IntelPointsToDiscovery)
+                if (IntelligencePoints >= Config.InsurgencyIntelPointsToDiscovery)
                 {
                     IntelligencePoints = 0;
                     OnCacheDiscovered(first.Cache);
@@ -394,7 +383,7 @@ public class Insurgency :
             if (first.IsDiscovered && CachesLeft != 1)
             {
                 IntelligencePoints += points;
-                if (IntelligencePoints >= Config.Insurgency.IntelPointsToSpawn)
+                if (IntelligencePoints >= Config.InsurgencyIntelPointsToSpawn)
                 {
                     IntelligencePoints = 0;
                     SpawnNewCache(true);
@@ -409,7 +398,7 @@ public class Insurgency :
         if (!last.IsDiscovered)
         {
             IntelligencePoints += points;
-            if (IntelligencePoints >= Config.Insurgency.IntelPointsToDiscovery)
+            if (IntelligencePoints >= Config.InsurgencyIntelPointsToDiscovery)
             {
                 IntelligencePoints = 0;
                 OnCacheDiscovered(last.Cache);
@@ -453,22 +442,28 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        IEnumerable<SerializableTransform> viableSpawns = CacheSpawns.Where(c1 => !SeenCaches.Contains(c1.Position) && SeenCaches.All(c => (c1.Position - c).sqrMagnitude > Math.Pow(300, 2)));
+        SerializableTransform[] viableSpawns = CacheSpawns
+            .Where(c1 =>
+                !SeenCaches.Contains(c1.Position) &&
+                SeenCaches
+                    .All(c => (c1.Position - c).sqrMagnitude > Math.Pow(300, 2)
+                    )
+                )
+            .ToArray();
 
-        if (viableSpawns.Count() == 0)
+        if (viableSpawns.Length == 0)
         {
             L.LogWarning("NO VIABLE CACHE SPAWNS");
             return;
         }
-        SerializableTransform transform = viableSpawns.ElementAt(UnityEngine.Random.Range(0, viableSpawns.Count()));
+        SerializableTransform transform = viableSpawns[UnityEngine.Random.Range(0, viableSpawns.Length)];
 
-        JsonAssetReference<ItemBarricadeAsset> r = Config.Barricades.InsurgencyCacheGUID.Value;
-        if (!r.Exists)
+        if (!Config.BarricadeInsurgencyCache.ValidReference(out ItemBarricadeAsset asset))
         {
             L.LogWarning("Invalid barricade GUID for Insurgency Cache!");
             return;
         }
-        Barricade barricade = new Barricade(r.Asset);
+        Barricade barricade = new Barricade(asset);
         Quaternion rotation = transform.Rotation;
         rotation.eulerAngles = new Vector3(transform.Rotation.eulerAngles.x, transform.Rotation.eulerAngles.y, transform.Rotation.eulerAngles.z);
         Transform barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, rotation, 0, DefendingTeam);
@@ -491,9 +486,12 @@ public class Insurgency :
 
         if (message)
         {
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                if (player.GetTeam() == DefendingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.CacheSpawnedDefense, player), EToastMessageSeverity.BIG));
+            foreach (LanguageSet set in LanguageSet.OnTeam(DefendingTeam))
+            {
+                ToastMessage msg = new ToastMessage(T.CacheSpawnedDefense.Translate(set.Language), EToastMessageSeverity.BIG);
+                while (set.MoveNext())
+                    ToastMessage.QueueMessage(set.Next, msg);
+            }
         }
 
         InsurgencyUI.ReplicateCacheUpdate(d);
@@ -501,40 +499,43 @@ public class Insurgency :
 
         SpawnCacheItems(cache);
     }
-    void SpawnCacheItems(Cache cache)
+    private void SpawnCacheItems(Cache cache)
     {
-        //try
-        //{
-        //    Guid ammoID;
-        //    Guid buildID;
-        //    if (DefendingTeam == 1)
-        //    {
-        //        ammoID = Config.Items.T1Ammo;
-        //        buildID = Config.Items.T1Build;
-        //    }
-        //    else if (DefendingTeam == 2)
-        //    {
-        //        ammoID = Config.Items.T2Ammo;
-        //        buildID = Config.Items.T2Build;
-        //    }
-        //    else return;
-        //    if (!(Assets.find(ammoID) is ItemAsset ammo) || !(Assets.find(buildID) is ItemAsset build))
-        //        return;
-        //    Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
+        _ = cache;
+#if false
+        try
+        {
+            Guid ammoID;
+            Guid buildID;
+            if (DefendingTeam == 1)
+            {
+                ammoID = Config.Items.T1Ammo;
+                buildID = Config.Items.T1Build;
+            }
+            else if (DefendingTeam == 2)
+            {
+                ammoID = Config.Items.T2Ammo;
+                buildID = Config.Items.T2Build;
+            }
+            else return;
+            if (!(Assets.find(ammoID) is ItemAsset ammo) || !(Assets.find(buildID) is ItemAsset build))
+                return;
+            Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
 
-        //    for (int i = 0; i < 15; i++)
-        //        ItemManager.dropItem(new Item(build.id, true), point, false, true, false);
+            for (int i = 0; i < 15; i++)
+                ItemManager.dropItem(new Item(build.id, true), point, false, true, false);
 
-        //    foreach (KeyValuePair<ushort, int> entry in Config.Insurgency.CacheItems)
-        //    {
-        //        for (int i = 0; i < entry.Value; i++)
-        //            ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
-        //    }
-        //}
-        //catch(Exception ex)
-        //{
-        //    L.LogError(ex.ToString());
-        //}
+            foreach (KeyValuePair<ushort, int> entry in Config.Insurgency.CacheItems)
+            {
+                for (int i = 0; i < entry.Value; i++)
+                    ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
+            }
+        }
+        catch(Exception ex)
+        {
+            L.LogError(ex.ToString());
+        }
+#endif
     }
     private IEnumerator<WaitForSeconds> WaitToSpawnNewCache()
     {
@@ -574,21 +575,21 @@ public class Insurgency :
                 StartCoroutine(WaitToSpawnNewCache());
             }
         }
-        
+
         if (destroyer != null)
         {
             if (destroyer.GetTeam() == AttackingTeam)
             {
-                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheDestroyed, T.XPToastCacheDestroyed.Translate(destroyer));
+                Points.AwardXP(destroyer.Player, Config.InsurgencyXPCacheDestroyed, T.XPToastCacheDestroyed.Translate(destroyer));
                 StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
                 StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
                 if (_gameStats != null)
                 {
-                    foreach (KeyValuePair<ulong, InsurgencyPlayerStats> stats in _gameStats.stats)
+                    for (int i = 0; i < _gameStats.stats.Count; ++i)
                     {
-                        if (stats.Key == destroyer.Steam64)
+                        if (_gameStats.stats[i].Steam64 == destroyer.Steam64)
                         {
-                            stats.Value._cachesDestroyed++;
+                            _gameStats.stats[i]._cachesDestroyed++;
                             break;
                         }
                     }
@@ -596,7 +597,7 @@ public class Insurgency :
             }
             else
             {
-                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheTeamkilled, T.XPToastFriendlyCacheDestroyed.Translate(destroyer));
+                Points.AwardXP(destroyer.Player, Config.InsurgencyXPCacheTeamkilled, T.XPToastFriendlyCacheDestroyed.Translate(destroyer));
             }
         }
         for (int i = 0; i < Caches.Count; i++)
@@ -641,8 +642,8 @@ public class Insurgency :
         string file = Path.Combine(Data.Paths.MapStorage, "insurgency_caches.json");
         try
         {
-            using (FileStream str = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.Read))
-                JsonSerializer.Serialize(str, CacheSpawns, JsonEx.serializerSettings);
+            using FileStream str = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.Read);
+            JsonSerializer.Serialize(str, CacheSpawns, JsonEx.serializerSettings);
         }
         catch (Exception ex)
         {
@@ -650,7 +651,7 @@ public class Insurgency :
             L.LogError(ex);
         }
     }
-    protected void SendWinUI(ulong winner)
+    protected override void SendWinUI(ulong winner)
     {
         WinToastUI.SendToAllPlayers();
         string img1 = TeamManager.Team1Faction.FlagImageURL;
@@ -693,10 +694,10 @@ public class Insurgency :
 
     public class CacheData : IObjective, IDeployable, IFOB
     {
-        public int Number { get => Cache != null ? Cache.Number : 0;  }
-        public bool IsActive { get => Cache != null;  }
-        public bool IsDestroyed { get => Cache != null && Cache.Structure.GetServersideData().barricade.isDead; }
-        public bool IsDiscovered { get => Cache != null && Cache.IsDiscovered; }
+        public int Number => Cache != null ? Cache.Number : 0;
+        public bool IsActive => Cache != null;
+        public bool IsDestroyed => Cache != null && Cache.Structure.GetServersideData().barricade.isDead;
+        public bool IsDiscovered => Cache != null && Cache.IsDiscovered;
         public Cache Cache { get; private set; }
         public string Name => ((IObjective)Cache).Name;
         public Vector3 Position => ((IObjective)Cache).Position;
@@ -716,11 +717,10 @@ public class Insurgency :
         public bool CheckDeployableTick(UCPlayer player, bool chat) => ((IDeployable)Cache).CheckDeployableTick(player, chat);
         public void OnDeploy(UCPlayer player, bool chat) => ((IDeployable)Cache).OnDeploy(player, chat);
     }
-    #region DEFAULT CACHE SPAWNS
+#region DEFAULT CACHE SPAWNS
     private static readonly KeyValuePair<string, SerializableTransform[]>[] DefaultCacheSpawns =
-        new KeyValuePair<string, SerializableTransform[]>[]
         {
-            new KeyValuePair<string, SerializableTransform[]>(MapScheduler.Nuijamaa, new SerializableTransform[91]
+            new KeyValuePair<string, SerializableTransform[]>(MapScheduler.Nuijamaa, new SerializableTransform[]
             {
                 new SerializableTransform(211.300583f, 37.7143173f, 61.399395f, 0f, 179.149933f, 0f),
                 new SerializableTransform(-11.5022888f, 70.63667f, -261.72052f, 0f, 88.94999f, 0f),
@@ -814,7 +814,7 @@ public class Insurgency :
                 new SerializableTransform(265.075653f, 42.2353f, 389.17807f, 0f, 177.650055f, 0f),
                 new SerializableTransform(269.669922f, 42.2353f, 380.341553f, 0f, 268.8501f, 0f)
             }),
-            new KeyValuePair<string, SerializableTransform[]>(MapScheduler.GulfOfAqaba, new SerializableTransform[62]
+            new KeyValuePair<string, SerializableTransform[]>(MapScheduler.GulfOfAqaba, new SerializableTransform[]
             {
                 new SerializableTransform(-712.8696f, 36.70459f, -210.1968f, 270f, 2f, 0f),
                 new SerializableTransform(-694.0713f, 36.70459f, -210.6987f, 270f, 92f, 0f),
@@ -880,7 +880,7 @@ public class Insurgency :
                 new SerializableTransform(810.2891f, 70.18408f, 277.5303f, 270f, 92f, 0f)
             })
         };
-    #endregion
+#endregion
 }
 
 public sealed class InsurgencyTicketProvider : BaseTicketProvider
@@ -889,6 +889,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     {
         int b = GetTeamBleed(team);
         bleed = b == 0 ? string.Empty : b.ToString(Data.Locale);
+        // todo translations
         if (Data.Is(out Insurgency ins))
         {
             if (ins.DefendingTeam == team)
@@ -900,10 +901,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
             else if (ins.AttackingTeam == team)
             {
                 tickets = string.Empty;
-                if (ins.DiscoveredCaches.Count == 0)
-                    message = "FIND THE WEAPONS CACHES\n(kill enemies for intel)";
-                else
-                    message = "DESTROY THE WEAPONS CACHES";
+                message = ins.DiscoveredCaches.Count == 0 ? "FIND THE WEAPONS CACHES\n(kill enemies for intel)" : "DESTROY THE WEAPONS CACHES";
                 return;
             }
         }
@@ -916,16 +914,16 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     public override void OnGameStarting(bool isOnLoaded)
     {
         if (!Data.Is(out Insurgency ins)) return;
-        int attack = Gamemode.Config.Insurgency.AttackStartingTickets;
-        int defence = ins.CachesLeft;
+        int attack = Gamemode.Config.InsurgencyAttackStartingTickets;
 
-        if (ins.AttackingTeam == 1)
+        switch (ins.AttackingTeam)
         {
-            Manager.Team1Tickets = attack;
-        }
-        else if (ins.AttackingTeam == 2)
-        {
-            Manager.Team2Tickets = attack;
+            case 1:
+                Manager.Team1Tickets = attack;
+                break;
+            case 2:
+                Manager.Team2Tickets = attack;
+                break;
         }
     }
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
@@ -933,7 +931,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
         if (Data.Is(out Insurgency ins) && ins.DefendingTeam == team)
             throw new InvalidOperationException("Tried to change tickets of defending team during Insurgency.");
         if (oldValue > 0 && newValue <= 0)
-            Data.Gamemode.DeclareWin(TeamManager.Other(team));
+            _ = Data.Gamemode.DeclareWin(TeamManager.Other(team));
     }
     public override void Tick()
     {

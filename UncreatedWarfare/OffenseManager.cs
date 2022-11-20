@@ -3,12 +3,16 @@ using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
@@ -16,19 +20,29 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
-using UnityEngine;
+using Color = UnityEngine.Color;
 using SteamGameServerNetworkingUtils = SDG.Unturned.SteamGameServerNetworkingUtils;
 
 namespace Uncreated.Warfare;
 
 public static class OffenseManager
 {
+    private static readonly List<Ban> PendingBans = new List<Ban>(8);
+    private static readonly List<Unban> PendingUnbans = new List<Unban>(8);
+    private static readonly List<Kick> PendingKicks = new List<Kick>(8);
+    private static readonly List<Warn> PendingWarnings = new List<Warn>(8);
+    private static readonly List<Mute> PendingMutes = new List<Mute>(8);
+    private static readonly List<BattlEyeKick> PendingBattlEyeKicks = new List<BattlEyeKick>(8);
+    private static readonly List<Teamkill> PendingTeamkills = new List<Teamkill>(8);
+    private static readonly List<VehicleTeamkill> PendingVehicleTeamkills = new List<VehicleTeamkill>(8);
+    private static readonly List<Unmute> PendingUnmutes = new List<Unmute>(9);
+    private static volatile int _version = 0;
     // calls the type initializer
     internal static void Init()
     {
-        EventDispatcher.OnPlayerDied += OnPlayerDied;
-        EventDispatcher.OnPlayerJoined += OnPlayerJoined;
-        EventDispatcher.OnPlayerPending += OnPlayerPending;
+        EventDispatcher.PlayerDied += OnPlayerDied;
+        EventDispatcher.PlayerJoined += OnPlayerJoined;
+        EventDispatcher.PlayerPending += OnPlayerPending;
         Load<Ban>(0);
         Load<Unban>(1);
         Load<Kick>(2);
@@ -41,12 +55,12 @@ public static class OffenseManager
     }
     internal static void Deinit()
     {
-        EventDispatcher.OnPlayerPending -= OnPlayerPending;
-        EventDispatcher.OnPlayerJoined -= OnPlayerJoined;
-        EventDispatcher.OnPlayerDied -= OnPlayerDied;
-        for (int i = 0; i < _pendings.Length; ++i)
+        EventDispatcher.PlayerPending -= OnPlayerPending;
+        EventDispatcher.PlayerJoined -= OnPlayerJoined;
+        EventDispatcher.PlayerDied -= OnPlayerDied;
+        for (int i = 0; i < Pendings.Length; ++i)
         {
-            IList l = _pendings[i];
+            IList l = Pendings[i];
             lock (l)
                 l.Clear();
         }
@@ -54,9 +68,9 @@ public static class OffenseManager
     private static void OnPlayerPending(PlayerPending e)
     {
         List<uint> packs = new List<uint>(4);
-        Data.DatabaseManager.Query("SELECT `Packed` FROM `ip_addresses` WHERE `Steam64` = @0;", new object[] { e.Steam64 }, R =>
+        Data.DatabaseManager.Query("SELECT `Packed` FROM `ip_addresses` WHERE `Steam64` = @0;", new object[] { e.Steam64 }, reader =>
         {
-            packs.Add(R.GetUInt32(0));
+            packs.Add(reader.GetUInt32(0));
         });
         for (int i = 0; i < SteamBlacklist.list.Count; ++i)
         {
@@ -129,7 +143,7 @@ public static class OffenseManager
                         o2[i] = update[i];
                         continue;
                     }
-                    else if (bytes[i] is not null && bytes[i].Length == 20 && i < 8)
+                    if (bytes[i] is not null && bytes[i].Length == 20 && i < 8)
                     {
                         if (c != 0)
                             sbq.Append(',');
@@ -176,13 +190,12 @@ public static class OffenseManager
         List<byte[]> bytes = new List<byte[]>(8);
         await Data.DatabaseManager.QueryAsync("SELECT `Id`, `Index`, `HWID` FROM `hwids` WHERE `Steam64` = @0 ORDER BY `Index` ASC, `LastLogin` DESC;",
             new object[] { s64 },
-            R =>
+            reader =>
             {
-                int id = R.GetInt32(0);
                 byte[] buffer = new byte[20];
-                R.GetBytes(2, 0, buffer, 0, 20);
+                reader.GetBytes(2, 0, buffer, 0, 20);
                 bytes.Add(buffer);
-            });
+            }).ConfigureAwait(false);
         return bytes;
     }
     public static async Task ApplyMuteSettings(UCPlayer joining)
@@ -199,19 +212,19 @@ public static class OffenseManager
             "SELECT `Reason`, `Duration`, `Timestamp`, `Type` FROM `muted` WHERE `Steam64` = @0 AND `Deactivated` = 0 AND " +
             "(`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) * -1 < `Duration`) ORDER BY (TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) * -1) - `Duration` LIMIT 1;",
             new object[1] { joining.Steam64 },
-            R =>
+            reader =>
             {
-                int dir = R.GetInt32(1);
-                DateTime ts = R.GetDateTime(2);
+                int dir = reader.GetInt32(1);
+                DateTime ts = reader.GetDateTime(2);
                 if (dir == -1 || dir > duration)
                 {
                     duration = dir;
                     timestamp = ts;
-                    reason = R.GetString(0);
+                    reason = reader.GetString(0);
                 }
                 else if (reason is null)
-                    reason = R.GetString(0);
-                type |= (EMuteType)R.GetByte(3);
+                    reason = reader.GetString(0);
+                type |= (EMuteType)reader.GetByte(3);
             }
         );
         if (type == EMuteType.NONE) return;
@@ -221,7 +234,6 @@ public static class OffenseManager
         joining.MuteReason = reason;
         joining.MuteType = type;
     }
-
     public static bool IsValidSteam64ID(ulong id)
     {
         return id / 100000000000000ul == 765;
@@ -230,16 +242,6 @@ public static class OffenseManager
     {
         return id.m_SteamID / 100000000000000ul == 765;
     }
-
-    private static readonly List<Ban> _pendingBans = new List<Ban>(8);
-    private static readonly List<Unban> _pendingUnbans = new List<Unban>(8);
-    private static readonly List<Kick> _pendingKicks = new List<Kick>(8);
-    private static readonly List<Warn> _pendingWarnings = new List<Warn>(8);
-    private static readonly List<Mute> _pendingMutes = new List<Mute>(8);
-    private static readonly List<BattlEyeKick> _pendingBattlEyeKicks = new List<BattlEyeKick>(8);
-    private static readonly List<Teamkill> _pendingTeamkills = new List<Teamkill>(8);
-    private static readonly List<VehicleTeamkill> _pendingVehicleTeamkills = new List<VehicleTeamkill>(8);
-    private static readonly List<Unmute> _pendingUnmutes = new List<Unmute>(9);
     private static string GetSavePath(int index) => Path.Combine(Data.Paths.PendingOffenses, index switch
     {
         0 => "bans",
@@ -254,21 +256,21 @@ public static class OffenseManager
         _ => throw new ArgumentOutOfRangeException("#" + index.ToString(Data.Locale) + " doesn't match a pending type.")
     } + ".json");
 
-    private static readonly IList[] _pendings = new IList[]
+    private static readonly IList[] Pendings = new IList[]
     {
-        _pendingBans,
-        _pendingUnbans,
-        _pendingKicks,
-        _pendingWarnings,
-        _pendingMutes,
-        _pendingBattlEyeKicks,
-        _pendingTeamkills,
-        _pendingVehicleTeamkills,
-        _pendingUnmutes
+        PendingBans,
+        PendingUnbans,
+        PendingKicks,
+        PendingWarnings,
+        PendingMutes,
+        PendingBattlEyeKicks,
+        PendingTeamkills,
+        PendingVehicleTeamkills,
+        PendingUnmutes
     };
-    private static void Save<T>(int index)
+    private static void Save<T>(int index) where T : ITimestampOffense
     {
-        if (_pendings[index] is List<T> col)
+        if (Pendings[index] is List<T> col)
         {
             F.CheckDir(Data.Paths.PendingOffenses, out bool success);
             if (success)
@@ -276,17 +278,15 @@ public static class OffenseManager
                 lock (col)
                 {
                     string path = GetSavePath(index);
-                    using (FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
-                    {
-                        JsonSerializer.Serialize(str, col, JsonEx.serializerSettings);
-                    }
+                    using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+                    JsonSerializer.Serialize(str, col, JsonEx.condensedSerializerSettings);
                 }
             }
         }
     }
-    private static void Load<T>(int index)
+    private static void Load<T>(int index) where T : ITimestampOffense
     {
-        if (_pendings[index] is List<T> col)
+        if (Pendings[index] is List<T> col)
         {
             lock (col)
             {
@@ -297,7 +297,7 @@ public static class OffenseManager
                     T[]? t;
                     using (FileStream str = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
-                        t = JsonSerializer.Deserialize<T[]>(str, JsonEx.serializerSettings);
+                        t = JsonSerializer.Deserialize<T[]>(str, JsonEx.condensedSerializerSettings);
                     }
                     if (t is null) return;
                     col.AddRange(t);
@@ -305,490 +305,512 @@ public static class OffenseManager
             }
         }
     }
+
+    private static void RemoveFromSave<T>(T obj, int index) where T : ITimestampOffense
+    {
+        if (Pendings[index] is List<T> col)
+        {
+            lock (col)
+            {
+                col.Remove(obj);
+            }
+        }
+    }
+    private static ITimestampOffense[] GetOffenses()
+    {
+        lock (PendingBans)
+        lock (PendingUnbans)
+        lock (PendingKicks)
+        lock (PendingWarnings)
+        lock (PendingMutes)
+        lock (PendingBattlEyeKicks)
+        lock (PendingTeamkills)
+        lock (PendingVehicleTeamkills)
+        lock (PendingUnmutes)
+        {
+            return PendingBans
+                .Cast<ITimestampOffense>()
+                .Concat(PendingUnbans
+                    .Cast<ITimestampOffense>())
+                .Concat(PendingKicks
+                    .Cast<ITimestampOffense>())
+                .Concat(PendingWarnings
+                    .Cast<ITimestampOffense>())
+                .Concat(PendingMutes
+                    .Cast<ITimestampOffense>())
+                .Concat(PendingBattlEyeKicks
+                    .Cast<ITimestampOffense>())
+                .Concat(PendingTeamkills
+                    .Cast<ITimestampOffense>())
+                .Concat(PendingVehicleTeamkills
+                    .Cast<ITimestampOffense>())
+                .Concat(PendingUnmutes
+                    .Cast<ITimestampOffense>())
+                .OrderBy(x => x.Timestamp)
+                .ToArray();
+        }
+    }
     internal static async Task OnConnected()
     {
-        int ttl = _pendingBans.Count + _pendingUnbans.Count + _pendingKicks.Count + _pendingWarnings.Count +
-                  _pendingMutes.Count + _pendingBattlEyeKicks.Count + _pendingTeamkills.Count +
-                  _pendingVehicleTeamkills.Count + _pendingUnmutes.Count;
-        if (ttl == 0)
+        int v = Interlocked.Increment(ref _version);
+        try
         {
-            L.Log("No queued past offenses.", ConsoleColor.Magenta);
-            return;
-        }
+            ITimestampOffense[] stamps = GetOffenses();
 
-        L.Log("Sending past offenses, " + ttl.ToString(Data.Locale) + " queued.", ConsoleColor.Magenta);
-        int ct = Math.Max(1, ttl / 10);
-        int num = 0;
-        bool c = false;
-        for (int i = _pendingBans.Count - 1; i >= 0; --i)
-        {
-            Ban ban = _pendingBans[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerBanned.Request(NetCalls.AckPlayerBanned, Data.NetClient!, ban.Violator, ban.Admin, ban.Reason, ban.Duration, ban.Timestamp, 10000)).Responded)
-                _pendingBans.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send ban #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
-        }
+            if (stamps.Length == 0)
+            {
+                L.Log("No queued past offenses.", ConsoleColor.Magenta);
+                return;
+            }
 
-        if (c)
-        {
-            Save<Ban>(0);
-            c = false;
+            L.Log("Sending past offenses, " + stamps.Length.ToString(Data.Locale) + " queued.", ConsoleColor.Magenta);
+            int ct = Math.Max(1, stamps.Length / 10);
+            try
+            {
+                for (int i = 0; i < stamps.Length; ++i)
+                {
+                    if (_version != v)
+                    {
+                        L.LogWarning("Cancelling active send job.");
+                        return;
+                    }
+                    await UCWarfare.ToUpdate();
+                    bool brk = false;
+                    switch (stamps[i])
+                    {
+                        case Ban ban:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerBanned.RequestAck(
+                                    UCWarfare.I.NetClient!, ban.Violator, ban.Admin, ban.Reason, ban.Duration, ban.Timestamp,
+                                    10000)).Responded)
+                            {
+                                RemoveFromSave(ban, 0);
+                                Save<Ban>(0);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send ban #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Unban unban:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerUnbanned.RequestAck(
+                                    UCWarfare.I.NetClient!, unban.Violator, unban.Admin, unban.Timestamp, 10000)).Responded)
+                            {
+                                RemoveFromSave(unban, 1);
+                                Save<Unban>(1);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send unban #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Kick kick:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerKicked.RequestAck(
+                                    UCWarfare.I.NetClient!, kick.Violator, kick.Admin, kick.Reason, kick.Timestamp, 10000))
+                                .Responded)
+                            {
+                                RemoveFromSave(kick, 2);
+                                Save<Kick>(2);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send kick #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Warn warn:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerWarned.RequestAck(
+                                    UCWarfare.I.NetClient!, warn.Violator, warn.Admin, warn.Reason, warn.Timestamp, 10000))
+                                .Responded)
+                            {
+                                RemoveFromSave(warn, 3);
+                                Save<Warn>(3);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send warn #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Mute mute:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerMuted.RequestAck(
+                                    UCWarfare.I.NetClient!, mute.Violator, mute.Admin, mute.MuteType, mute.Duration, mute.Reason,
+                                    mute.Timestamp, 10000)).Responded)
+                            {
+                                RemoveFromSave(mute, 4);
+                                Save<Mute>(4);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send mute #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case BattlEyeKick bekick:
+                            if (UCWarfare.CanUseNetCall &&
+                                (await NetCalls.SendPlayerBattleyeKicked.RequestAck(
+                                    UCWarfare.I.NetClient!, bekick.Violator, bekick.Reason, bekick.Timestamp,
+                                    10000)).Responded)
+                            {
+                                RemoveFromSave(bekick, 5);
+                                Save<BattlEyeKick>(5);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send battleye kick #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Teamkill teamkill:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendTeamkill.RequestAck(
+                                    UCWarfare.I.NetClient!, teamkill.Violator, teamkill.Dead, teamkill.DeathCause,
+                                    teamkill.ItemName, teamkill.Timestamp, 10000)).Responded)
+                            {
+                                RemoveFromSave(teamkill, 6);
+                                Save<BattlEyeKick>(6);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send teamkill #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case VehicleTeamkill vehicleTeamkill:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendVehicleTeamkilled.RequestAck(
+                                    UCWarfare.I.NetClient!, vehicleTeamkill.Violator,
+                                    vehicleTeamkill.VehicleID, vehicleTeamkill.VehicleName, vehicleTeamkill.Timestamp, 10000))
+                                .Responded)
+                            {
+                                RemoveFromSave(vehicleTeamkill, 7);
+                                Save<VehicleTeamkill>(7);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send vehicle teamkill #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Unmute unmute:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendUnmuteRequest.RequestAck(
+                                    UCWarfare.I.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
+                            {
+                                RemoveFromSave(unmute, 8);
+                                Save<Unmute>(8);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send unmute #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                    }
+                    if (brk)
+                        break;
+                    if (i % ct == 0)
+                        L.Log("  Sending past offenses: " + i.ToString(Data.Locale) + "/" +
+                              stamps.Length.ToString(Data.Locale), ConsoleColor.Magenta);
+                }
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error sending past offenses.");
+                L.LogError(ex);
+            }
         }
-
-        for (int i = _pendingUnbans.Count - 1; i >= 0; --i)
+        catch (Exception ex)
         {
-            Unban unban = _pendingUnbans[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerUnbanned.Request(NetCalls.AckPlayerUnbanned, Data.NetClient!, unban.Violator, unban.Admin, unban.Timestamp, 10000)).Responded)
-                _pendingUnbans.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send unban #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
-        }
-
-        if (c)
-        {
-            Save<Unban>(1);
-            c = false;
-        }
-
-        for (int i = _pendingKicks.Count - 1; i >= 0; --i)
-        {
-            Kick kick = _pendingKicks[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerKicked.Request(NetCalls.AckPlayerKicked, Data.NetClient!, kick.Violator, kick.Admin, kick.Reason, kick.Timestamp, 10000)).Responded)
-                _pendingKicks.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send kick #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
-        }
-
-        if (c)
-        {
-            Save<Kick>(2);
-            c = false;
-        }
-
-        for (int i = _pendingWarnings.Count - 1; i >= 0; --i)
-        {
-            Warn warn = _pendingWarnings[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerWarned.Request(NetCalls.AckPlayerWarned, Data.NetClient!, warn.Violator, warn.Admin, warn.Reason, warn.Timestamp, 10000)).Responded)
-                _pendingWarnings.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send warn #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
-        }
-
-        if (c)
-        {
-            Save<Warn>(3);
-            c = false;
-        }
-
-        for (int i = _pendingMutes.Count - 1; i >= 0; --i)
-        {
-            Mute mute = _pendingMutes[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerMuted.Request(NetCalls.AckPlayerMuted, Data.NetClient!, mute.Violator, mute.Admin, mute.MuteType, mute.Duration, mute.Reason, mute.Timestamp, 10000)).Responded)
-                _pendingMutes.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send mute #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
-        }
-
-        if (c)
-        {
-            Save<Mute>(4);
-            c = false;
-        }
-
-        for (int i = _pendingBattlEyeKicks.Count - 1; i >= 0; --i)
-        {
-            BattlEyeKick battlEyeKick = _pendingBattlEyeKicks[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerBattleyeKicked.Request(NetCalls.AckPlayerBattleyeKicked, Data.NetClient!, battlEyeKick.Violator, battlEyeKick.Reason, battlEyeKick.Timestamp, 10000)).Responded)
-                _pendingBattlEyeKicks.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send battleye kick #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
-        }
-
-        if (c)
-        {
-            Save<BattlEyeKick>(5);
-            c = false;
-        }
-
-        for (int i = _pendingTeamkills.Count - 1; i >= 0; --i)
-        {
-            Teamkill teamkill = _pendingTeamkills[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendTeamkill.Request(NetCalls.AckTeamkill, Data.NetClient!, teamkill.Violator, teamkill.Dead, teamkill.DeathCause, teamkill.ItemName, teamkill.Timestamp, 10000)).Responded)
-                _pendingTeamkills.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send teamkill #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
-        }
-
-        for (int i = _pendingUnmutes.Count - 1; i >= 0; --i)
-        {
-            Unmute unmute = _pendingUnmutes[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendUnmuteRequest.Request(NetCalls.AckPlayerUnmuted, Data.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
-                _pendingUnmutes.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send unmute #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
-        }
-
-        if (c)
-        {
-            Save<Unmute>(8);
-            c = false;
-        }
-
-        if (c)
-        {
-            Save<Teamkill>(6);
-            c = false;
-        }
-
-        for (int i = _pendingVehicleTeamkills.Count - 1; i >= 0; --i)
-        {
-            VehicleTeamkill vehicleTeamkill = _pendingVehicleTeamkills[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendVehicleTeamkilled.Request(NetCalls.AckVehicleTeamkill, Data.NetClient!, vehicleTeamkill.Violator, vehicleTeamkill.VehicleID, vehicleTeamkill.VehicleName, vehicleTeamkill.Timestamp, 10000)).Responded)
-                _pendingVehicleTeamkills.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send vehicle teamkill #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
-        }
-
-        if (c)
-        {
-            Save<VehicleTeamkill>(7);
-            c = false;
+            L.LogError("Error sending offenses.");
+            L.LogError(ex);
         }
     }
-    public static void LogBanPlayer(ulong violator, ulong caller, string reason, int duration, DateTime timestamp)
+    public static void LogBanPlayer(ulong violator, ulong caller, string reason, int duration, DateTimeOffset timestamp)
     {
         Task.Run(async () =>
         {
-            await Data.DatabaseManager.AddBan(violator, caller, duration, reason!);
+            await Data.DatabaseManager.AddBan(violator, caller, duration, reason).ConfigureAwait(false);
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
                 await UCWarfare.ToUpdate();
-                RequestResponse response = await NetCalls.SendPlayerBanned.Request(NetCalls.AckPlayerBanned, Data.NetClient!, violator, caller, reason, duration, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerBanned.RequestAck(UCWarfare.I.NetClient!, violator, caller, reason, duration, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
-            lock (_pendingBans)
-                _pendingBans.Add(new Ban(violator, caller, reason, duration, timestamp));
+            lock (PendingBans)
+                PendingBans.Add(new Ban(violator, caller, reason, duration, timestamp));
             Save<Ban>(0);
         });
     }
-    public static void LogUnbanPlayer(ulong violator, ulong caller, DateTime timestamp)
+    public static void LogUnbanPlayer(ulong violator, ulong caller, DateTimeOffset timestamp)
     {
         Task.Run(async () =>
         {
-            await Data.DatabaseManager.AddUnban(violator, caller);
-            await UCWarfare.ToUpdate();
+            await Data.DatabaseManager.AddUnban(violator, caller).ThenToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                await UCWarfare.ToUpdate();
-                RequestResponse response = await NetCalls.SendPlayerUnbanned.Request(NetCalls.AckPlayerUnbanned, Data.NetClient!, violator, caller, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerUnbanned.RequestAck(UCWarfare.I.NetClient!, violator, caller, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
 
-            lock (_pendingUnbans)
-                _pendingUnbans.Add(new Unban(violator, caller, timestamp));
+            lock (PendingUnbans)
+                PendingUnbans.Add(new Unban(violator, caller, timestamp));
             Save<Unban>(1);
         });
     }
-    public static void LogKickPlayer(ulong violator, ulong caller, string reason, DateTime timestamp)
+    public static void LogKickPlayer(ulong violator, ulong caller, string reason, DateTimeOffset timestamp)
     {
         Task.Run(async () =>
         {
-            await Data.DatabaseManager.AddKick(violator, caller, reason);
+            await Data.DatabaseManager.AddKick(violator, caller, reason).ConfigureAwait(false);
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                await UCWarfare.ToUpdate();
-                RequestResponse response = await NetCalls.SendPlayerKicked.Request(NetCalls.AckPlayerKicked, Data.NetClient!, violator, caller, reason, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerKicked.RequestAck(UCWarfare.I.NetClient!, violator, caller, reason, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
 
-            lock (_pendingKicks)
-                _pendingKicks.Add(new Kick(violator, caller, reason, timestamp));
+            lock (PendingKicks)
+                PendingKicks.Add(new Kick(violator, caller, reason, timestamp));
             Save<Kick>(2);
         });
     }
-    public static void LogWarnPlayer(ulong violator, ulong caller, string reason, DateTime timestamp)
+    public static void LogWarnPlayer(ulong violator, ulong caller, string reason, DateTimeOffset timestamp)
     {
         Task.Run(async () =>
         {
-            await Data.DatabaseManager.AddWarning(violator, caller, reason);
+            await Data.DatabaseManager.AddWarning(violator, caller, reason).ConfigureAwait(false);
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendPlayerWarned.Request(NetCalls.AckPlayerWarned, Data.NetClient!, violator, caller, reason, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerWarned.RequestAck(UCWarfare.I.NetClient!, violator, caller, reason, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
 
-            lock (_pendingWarnings)
-                _pendingWarnings.Add(new Warn(violator, caller, reason, timestamp));
+            lock (PendingWarnings)
+                PendingWarnings.Add(new Warn(violator, caller, reason, timestamp));
             Save<Warn>(3);
         });
     }
-    public static void LogMutePlayer(ulong violator, ulong caller, EMuteType type, int duration, string reason, DateTime timestamp)
+    public static void LogMutePlayer(ulong violator, ulong caller, EMuteType type, int duration, string reason, DateTimeOffset timestamp)
     {
         Task.Run(async () =>
         {
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendPlayerMuted.Request(NetCalls.AckPlayerMuted, Data.NetClient!, violator, caller, type, duration, reason, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerMuted.RequestAck(UCWarfare.I.NetClient!, violator, caller, type, duration, reason, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
 
-            lock (_pendingMutes)
-                _pendingMutes.Add(new Mute(violator, caller, type, duration, reason, timestamp));
+            lock (PendingMutes)
+                PendingMutes.Add(new Mute(violator, caller, type, duration, reason, timestamp));
             Save<Mute>(4);
         });
     }
-    public static void LogBattlEyeKicksPlayer(ulong violator, string reason, DateTime timestamp)
+    public static void LogBattlEyeKicksPlayer(ulong violator, string reason, DateTimeOffset timestamp)
     {
         Task.Run(async () =>
         {
-            await Data.DatabaseManager.AddBattleyeKick(violator, reason);
+            await Data.DatabaseManager.AddBattleyeKick(violator, reason).ConfigureAwait(false);
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendPlayerBattleyeKicked.Request(NetCalls.AckPlayerBattleyeKicked, Data.NetClient!, violator, reason, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerBattleyeKicked.RequestAck(UCWarfare.I.NetClient!, violator, reason, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
 
-            lock (_pendingBattlEyeKicks)
-                _pendingBattlEyeKicks.Add(new BattlEyeKick(violator, reason, timestamp));
+            lock (PendingBattlEyeKicks)
+                PendingBattlEyeKicks.Add(new BattlEyeKick(violator, reason, timestamp));
             Save<BattlEyeKick>(5);
         });
     }
-    public static void LogTeamkill(ulong violator, ulong teamkilled, string deathCause, string itemName, ushort itemId, float distance, DateTime timestamp)
+    public static void LogTeamkill(ulong violator, ulong teamkilled, string deathCause, string itemName, ushort itemId, float distance, DateTimeOffset timestamp)
     {
         Task.Run(async () =>
         {
-            await Data.DatabaseManager.AddTeamkill(violator, teamkilled, deathCause, itemName, itemId, distance);
+            await Data.DatabaseManager.AddTeamkill(violator, teamkilled, deathCause, itemName, itemId, distance).ConfigureAwait(false);
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendTeamkill.Request(NetCalls.AckTeamkill, Data.NetClient!, violator, teamkilled, deathCause, itemName, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendTeamkill.RequestAck(UCWarfare.I.NetClient!, violator, teamkilled, deathCause, itemName, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
 
-            lock (_pendingTeamkills)
-                _pendingTeamkills.Add(new Teamkill(violator, teamkilled, deathCause, itemName, timestamp));
+            lock (PendingTeamkills)
+                PendingTeamkills.Add(new Teamkill(violator, teamkilled, deathCause, itemName, timestamp));
             Save<Teamkill>(6);
         });
     }
-    public static void LogVehicleTeamkill(ulong violator, ushort vehicleId, string vehicleName, DateTime timestamp)
+    public static void LogVehicleTeamkill(ulong violator, ushort vehicleId, string vehicleName, DateTimeOffset timestamp)
     {
         Task.Run(async () =>
         {
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendVehicleTeamkilled.Request(NetCalls.AckVehicleTeamkill, Data.NetClient!, violator, vehicleId, vehicleName, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendVehicleTeamkilled.RequestAck(UCWarfare.I.NetClient!, violator, vehicleId, vehicleName, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
 
-            lock (_pendingVehicleTeamkills)
-                _pendingVehicleTeamkills.Add(new VehicleTeamkill(violator, vehicleId, vehicleName, timestamp));
+            lock (PendingVehicleTeamkills)
+                PendingVehicleTeamkills.Add(new VehicleTeamkill(violator, vehicleId, vehicleName, timestamp));
             Save<VehicleTeamkill>(7);
         });
     }
-    public static void LogUnmutePlayer(ulong violator, ulong callerId, DateTime now)
+    public static void LogUnmutePlayer(ulong violator, ulong callerId, DateTimeOffset timestamp)
     {
         Task.Run(async () =>
         {
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendPlayerUnmuted.Request(NetCalls.AckPlayerUnmuted, Data.NetClient!, violator, callerId, now, 10000);
+                RequestResponse response = await NetCalls.SendPlayerUnmuted.RequestAck(UCWarfare.I.NetClient!, violator, callerId, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
 
-            lock (_pendingUnmutes)
-                _pendingUnmutes.Add(new Unmute(violator, callerId, now));
+            lock (PendingUnmutes)
+                PendingUnmutes.Add(new Unmute(violator, callerId, timestamp));
             Save<Unmute>(8);
         });
     }
-    public static void BanPlayer(ulong targetId, ulong callerId, string reason, int duration)
+    /// <returns>0 for a successful ban.</returns>
+    internal static async Task<int> BanPlayerAsync(ulong targetId, ulong callerId, string reason, int duration, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer? target = UCPlayer.FromID(targetId);
         UCPlayer? caller = UCPlayer.FromID(callerId);
-        FPlayerName name;
-        FPlayerName callerName;
+        PlayerNames name;
+        PlayerNames callerName;
         uint ipv4;
-        Task.Run(async () =>
+        List<byte[]> hwids = target is not null ? target.SteamPlayer.playerID.GetHwids().ToList() : (await GetAllHWIDs(targetId).ConfigureAwait(false));
+        if (target is not null) // player is online
         {
-            List<byte[]> hwids = await GetAllHWIDs(targetId);
+            CSteamID id = target.Player.channel.owner.playerID.steamID;
             await UCWarfare.ToUpdate();
-            if (target is not null) // player is online
-            {
-                CSteamID id = target.Player.channel.owner.playerID.steamID;
-                ipv4 = SteamGameServerNetworkingUtils.getIPv4AddressOrZero(id);
-                name = F.GetPlayerOriginalNames(target);
-                Provider.requestBanPlayer(Provider.server, id, ipv4, hwids, reason, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration));
-            }
-            else
-            {
-                ipv4 = Data.DatabaseManager.GetPackedIP(targetId);
-                name = F.GetPlayerOriginalNames(targetId);
-                F.OfflineBan(targetId, ipv4, caller is null ? CSteamID.Nil : caller.Player.channel.owner.playerID.steamID,
-                    reason!, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration), hwids.ToArray());
-            }
-            if (callerId != 0)
-                callerName = F.GetPlayerOriginalNames(callerId);
-            else
-                callerName = FPlayerName.Console;
-            ActionLogger.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
-                (duration == -1 ? "PERMANENT" : (duration.ToString(Data.Locale) + " SECONDS")), callerId);
-
-            LogBanPlayer(targetId, callerId, reason, duration, DateTime.Now);
-
-            if (duration == -1)
-            {
-                if (callerId == 0)
-                {
-                    L.Log($"{name.PlayerName} ({targetId}) was permanently banned by an operator because {reason!}.", ConsoleColor.Cyan);
-                    Chat.Broadcast(T.BanPermanentSuccessBroadcastOperator, target as IPlayer ?? name);
-                }
-                else
-                {
-                    L.Log($"{name.PlayerName} ({targetId}) was permanenly banned by {callerName.PlayerName} ({callerId}) because {reason!}.", ConsoleColor.Cyan);
-                    Chat.Broadcast(LanguageSet.AllBut(callerId), T.BanPermanentSuccessBroadcast, target as IPlayer ?? name, caller as IPlayer ?? callerName);
-                    caller?.SendChat(T.BanPermanentSuccessFeedback, target as IPlayer ?? name);
-                }
-            }
-            else
-            {
-                string time = Localization.GetTimeFromSeconds(duration, L.DEFAULT);
-                if (callerId == 0)
-                {
-                    L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by an operator because {reason!}.", ConsoleColor.Cyan);
-                    bool f = false;
-                    foreach (LanguageSet set in LanguageSet.All())
-                    {
-                        if (f || !set.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
-                        {
-                            time = Localization.GetTimeFromSeconds(duration, set.Language);
-                            f = true;
-                        }
-                        Chat.Broadcast(set, T.BanSuccessBroadcastOperator, target as IPlayer ?? name, time);
-                    }
-                }
-                else
-                {
-                    L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by {callerName.PlayerName} ({callerId}) because {reason!}.", ConsoleColor.Cyan);
-                    bool f = false;
-                    foreach (LanguageSet set in LanguageSet.AllBut(callerId))
-                    {
-                        if (f || !set.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
-                        {
-                            time = Localization.GetTimeFromSeconds(duration, set.Language);
-                            f = true;
-                        }
-                        Chat.Broadcast(set, T.BanSuccessBroadcast, target as IPlayer ?? name, caller as IPlayer ?? callerName, time);
-                    }
-                    if (f)
-                        time = Localization.GetTimeFromSeconds(duration, callerId);
-                    else if (Data.Languages.TryGetValue(callerId, out string lang) && !lang.Equals(L.DEFAULT, StringComparison.Ordinal))
-                        time = Localization.GetTimeFromSeconds(duration, lang);
-                    caller?.SendChat(T.BanSuccessFeedback, target as IPlayer ?? name, time);
-                }
-            }
-        });
-    }
-    public static void KickPlayer(ulong target, ulong caller, string reason)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        UCPlayer? targetPlayer = UCPlayer.FromID(target);
-        if (targetPlayer is null)
-            return;
-        FPlayerName names = F.GetPlayerOriginalNames(target);
-        Provider.kick(targetPlayer.Player.channel.owner.playerID.steamID, reason);
-
-        LogKickPlayer(target, caller, reason, DateTime.Now);
-
-        ActionLogger.Add(EActionLogType.KICK_PLAYER, $"KICKED {target.ToString(Data.Locale)} FOR \"{reason}\"", caller);
-        if (caller == 0)
-        {
-            L.Log($"{names.PlayerName} ({target}) was kicked by an operator because {reason}.", ConsoleColor.Cyan);
-            Chat.Broadcast(T.KickSuccessBroadcastOperator, targetPlayer as IPlayer ?? names);
+            ipv4 = SteamGameServerNetworkingUtils.getIPv4AddressOrZero(id);
+            name = target.Name;
+            Provider.requestBanPlayer(Provider.server, id, ipv4, hwids, reason, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration));
         }
         else
         {
-            FPlayerName callerNames = F.GetPlayerOriginalNames(caller);
-            L.Log($"{names.PlayerName} ({target}) was kicked by {callerNames.PlayerName} ({caller}) because {reason}.", ConsoleColor.Cyan);
-            UCPlayer? callerPlayer = UCPlayer.FromID(caller);
-            Chat.Broadcast(LanguageSet.AllBut(caller), T.KickSuccessBroadcast, targetPlayer as IPlayer ?? names, callerPlayer as IPlayer ?? callerNames);
-            callerPlayer?.SendChat(T.KickSuccessFeedback, targetPlayer as IPlayer ?? names);
+            ipv4 = await Data.DatabaseManager.TryGetPackedIPAsync(targetId, token).ConfigureAwait(false);
+            name = await F.GetPlayerOriginalNamesAsync(targetId, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate();
+            F.OfflineBan(targetId, ipv4, caller is null ? CSteamID.Nil : caller.Player.channel.owner.playerID.steamID,
+                reason, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration), hwids.ToArray());
         }
+        if (callerId != 0)
+            callerName = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
+        else
+            callerName = PlayerNames.Console;
+        ActionLogger.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
+            (duration == -1 ? "PERMANENT" : (duration.ToString(Data.Locale) + " SECONDS")), callerId);
+
+        LogBanPlayer(targetId, callerId, reason, duration, timestamp);
+
+        if (duration == -1)
+        {
+            if (callerId == 0)
+            {
+                L.Log($"{name.PlayerName} ({targetId}) was permanently banned by an operator because {reason}.", ConsoleColor.Cyan);
+                Chat.Broadcast(T.BanPermanentSuccessBroadcastOperator, target as IPlayer ?? name);
+            }
+            else
+            {
+                L.Log($"{name.PlayerName} ({targetId}) was permanenly banned by {callerName.PlayerName} ({callerId}) because {reason}.", ConsoleColor.Cyan);
+                Chat.Broadcast(LanguageSet.AllBut(callerId), T.BanPermanentSuccessBroadcast, target as IPlayer ?? name, caller as IPlayer ?? callerName);
+                caller?.SendChat(T.BanPermanentSuccessFeedback, target as IPlayer ?? name);
+            }
+        }
+        else
+        {
+            string time = duration.GetTimeFromSeconds(L.DEFAULT);
+            if (callerId == 0)
+            {
+                L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by an operator because {reason}.", ConsoleColor.Cyan);
+                bool f = false;
+                foreach (LanguageSet set in LanguageSet.All())
+                {
+                    if (f || !set.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
+                    {
+                        time = duration.GetTimeFromSeconds(set.Language);
+                        f = true;
+                    }
+                    Chat.Broadcast(set, T.BanSuccessBroadcastOperator, target as IPlayer ?? name, time);
+                }
+            }
+            else
+            {
+                L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by {callerName.PlayerName} ({callerId}) because {reason}.", ConsoleColor.Cyan);
+                bool f = false;
+                foreach (LanguageSet set in LanguageSet.AllBut(callerId))
+                {
+                    if (f || !set.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
+                    {
+                        time = duration.GetTimeFromSeconds(set.Language);
+                        f = true;
+                    }
+                    Chat.Broadcast(set, T.BanSuccessBroadcast, target as IPlayer ?? name, caller as IPlayer ?? callerName, time);
+                }
+                if (f)
+                    time = duration.GetTimeFromSeconds(callerId);
+                else if (Data.Languages.TryGetValue(callerId, out string lang) && !lang.Equals(L.DEFAULT, StringComparison.Ordinal))
+                    time = duration.GetTimeFromSeconds(lang);
+                caller?.SendChat(T.BanSuccessFeedback, target as IPlayer ?? name, time);
+            }
+        }
+        return MessageContext.CODE_SUCCESS;
     }
-    public static void UnbanPlayer(ulong targetId, ulong callerId)
+    /// <returns>0 for a successful kick, 2 when the target is offline.</returns>
+    internal static async Task<int> KickPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp, CancellationToken token = default)
+    {
+        UCPlayer? target = UCPlayer.FromID(targetId);
+        if (target is null)
+            return 2;
+        PlayerNames names = target.Name;
+        Provider.kick(target.Player.channel.owner.playerID.steamID, reason);
+
+        LogKickPlayer(targetId, callerId, reason, DateTime.Now);
+
+        ActionLogger.Add(EActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.Locale)} FOR \"{reason}\"", callerId);
+        if (callerId == 0)
+        {
+            L.Log($"{names.PlayerName} ({targetId}) was kicked by an operator because {reason}.", ConsoleColor.Cyan);
+            Chat.Broadcast(T.KickSuccessBroadcastOperator, target as IPlayer);
+        }
+        else
+        {
+            UCPlayer? callerPlayer = UCPlayer.FromID(callerId);
+            PlayerNames callerNames = callerPlayer is not null ? callerPlayer.Name : (await F.GetPlayerOriginalNamesAsync(callerId, token).ThenToUpdate(token));
+            L.Log($"{names.PlayerName} ({targetId}) was kicked by {callerNames.PlayerName} ({callerId}) because {reason}.", ConsoleColor.Cyan);
+            Chat.Broadcast(LanguageSet.AllBut(callerId), T.KickSuccessBroadcast, target, callerPlayer as IPlayer ?? callerNames);
+            callerPlayer?.SendChat(T.KickSuccessFeedback, target);
+        }
+
+        return MessageContext.CODE_SUCCESS;
+    }
+    /// <returns>0 for a successful unban, 2 when the target isn't banned.</returns>
+    internal static async Task<int> UnbanPlayer(ulong targetId, ulong callerId, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        FPlayerName targetNames = F.GetPlayerOriginalNames(targetId);
+        PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(targetId, token).ThenToUpdate(token);
         if (!Provider.requestUnbanPlayer(callerId == 0 ? CSteamID.Nil : new CSteamID(callerId), new CSteamID(targetId)))
         {
             L.Log(callerId + " not banned.", ConsoleColor.Cyan);
-            return;
+            return 2;
         }
 
         LogUnbanPlayer(targetId, callerId, DateTime.Now);
@@ -802,23 +824,26 @@ public static class OffenseManager
         }
         else
         {
-            FPlayerName callerNames = F.GetPlayerOriginalNames(callerId);
             UCPlayer? caller = UCPlayer.FromID(callerId);
+            PlayerNames callerNames = caller is not null ? caller.Name : (await F.GetPlayerOriginalNamesAsync(callerId, token).ThenToUpdate(token));
             L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {callerNames.PlayerName} ({callerId}).", ConsoleColor.Cyan);
             caller?.SendChat(T.UnbanSuccessFeedback, targetNames);
             Chat.Broadcast(LanguageSet.AllBut(callerId), T.UnbanSuccessBroadcast, targetNames, caller as IPlayer ?? callerNames);
         }
+
+        return MessageContext.CODE_SUCCESS;
     }
-    public static void WarnPlayer(ulong targetId, ulong callerId, string reason)
+    /// <returns>0 for a successful warn, 2 when the target isn't banned.</returns>
+    internal static async Task<int> WarnPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer? target = UCPlayer.FromID(targetId);
         if (target is null)
-            return;
+            return 2;
         UCPlayer? caller = UCPlayer.FromID(callerId);
-        FPlayerName targetNames = F.GetPlayerOriginalNames(target);
+        PlayerNames targetNames = target.Name;
 
         LogWarnPlayer(targetId, callerId, reason, DateTime.Now);
 
@@ -830,14 +855,14 @@ public static class OffenseManager
             Chat.Broadcast(LanguageSet.AllBut(targetId), T.WarnSuccessBroadcastOperator, target);
 
             string lang = Localization.GetLang(target.Steam64);
-            ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDMOperator.Translate(T.WarnSuccessDMOperator.Translate(lang), 
+            ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDMOperator.Translate(T.WarnSuccessDMOperator.Translate(lang),
                 lang, reason, target, target.GetTeam(), T.WarnSuccessDMOperator.Flags | TranslationFlags.UnityUI), EToastMessageSeverity.WARNING));
 
-            target.SendChat(T.WarnSuccessDMOperator, reason!);
+            target.SendChat(T.WarnSuccessDMOperator, reason);
         }
         else
         {
-            FPlayerName callerNames = F.GetPlayerOriginalNames(callerId);
+            PlayerNames callerNames = caller is null ? (await F.GetPlayerOriginalNamesAsync(callerId, token).ThenToUpdate(token)) : caller.Name;
             L.Log($"{targetNames.PlayerName} ({targetId}) was warned by {callerNames.PlayerName} ({caller}) because {reason}.", ConsoleColor.Cyan);
             IPlayer caller2 = caller as IPlayer ?? callerNames;
             Chat.Broadcast(LanguageSet.AllBut(callerId, targetId), T.WarnSuccessBroadcast, target, caller2);
@@ -847,146 +872,151 @@ public static class OffenseManager
             ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDM.Translate(T.WarnSuccessDM.Translate(lang),
                 lang, caller2, reason, target, target.GetTeam(), T.WarnSuccessDM.Flags | TranslationFlags.UnityUI), EToastMessageSeverity.WARNING));
 
-            target.SendChat(T.WarnSuccessDM, caller2, reason!);
+            target.SendChat(T.WarnSuccessDM, caller2, reason);
         }
+
+        return MessageContext.CODE_SUCCESS;
     }
-    public static void MutePlayer(ulong target, ulong admin, EMuteType type, int duration, string reason)
+    /// <returns>0 for a successful mute.</returns>
+    internal static async Task<int> MutePlayerAsync(ulong target, ulong admin, EMuteType type, int duration, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer? muted = UCPlayer.FromID(target);
-        UCPlayer? muter = UCPlayer.FromID(admin);
-        Task.Run(async () => {
-            DateTime now = DateTime.Now;
-            await Data.DatabaseManager.NonQueryAsync(
-                "INSERT INTO `muted` (`Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`) VALUES (@0, @1, @2, @3, @4, @5);",
-                new object[] { target, admin, reason, duration, now, (byte)type });
-            FPlayerName names = await F.GetPlayerOriginalNamesAsync(target);
-            FPlayerName names2 = await F.GetPlayerOriginalNamesAsync(admin);
-            await UCWarfare.ToUpdate();
-            DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : now + TimeSpan.FromSeconds(duration);
-            if (muted is not null && muted.TimeUnmuted < unmutedTime)
+        DateTime now = DateTime.Now;
+        await Data.DatabaseManager.NonQueryAsync(
+            "INSERT INTO `muted` (`Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`) VALUES (@0, @1, @2, @3, @4, @5);",
+            new object[] { target, admin, reason, duration, now, (byte)type }, token).ConfigureAwait(false);
+        PlayerNames names = await F.GetPlayerOriginalNamesAsync(target, token).ConfigureAwait(false);
+        PlayerNames names2 = await F.GetPlayerOriginalNamesAsync(admin, token).ConfigureAwait(false);
+        await UCWarfare.ToUpdate();
+        DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : now + TimeSpan.FromSeconds(duration);
+        if (muted is not null && muted.TimeUnmuted < unmutedTime)
+        {
+            muted.TimeUnmuted = unmutedTime;
+            muted.MuteReason = reason;
+            muted.MuteType = type;
+        }
+
+        LogMutePlayer(target, admin, type, duration, reason, DateTime.Now);
+
+        string dur = duration == -1 ? "PERMANENT" : duration.GetTimeFromSeconds(0);
+        ActionLogger.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur, admin);
+
+        if (admin == 0)
+        {
+            if (duration == -1)
             {
-                muted.TimeUnmuted = unmutedTime;
-                muted.MuteReason = reason;
-                muted.MuteType = type;
+                foreach (LanguageSet set in LanguageSet.AllBut(target))
+                    Chat.Broadcast(set, T.MutePermanentSuccessBroadcastOperator, names, names, type);
+
+                L.Log($"{names.PlayerName} ({target}) was permanently {type} muted for {reason} by an operator.", ConsoleColor.Cyan);
             }
+            else
+            {
+                foreach (LanguageSet set in LanguageSet.AllBut(target))
+                    Chat.Broadcast(set, T.MuteSuccessBroadcastOperator, names, names, dur, type);
 
-            LogMutePlayer(target, admin, type, duration, reason, DateTime.Now);
+                L.Log($"{names.PlayerName} ({target}) was {type} muted for {reason} by an operator. Duration: {dur}.", ConsoleColor.Cyan);
+            }
+        }
+        else
+        {
+            if (duration == -1)
+            {
+                foreach (LanguageSet set in LanguageSet.AllBut(target, admin))
+                    Chat.Broadcast(set, T.MutePermanentSuccessBroadcast, names, names, type, names2);
 
-            string dur = duration == -1 ? "PERMANENT" : duration.GetTimeFromSeconds(0);
-            ActionLogger.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur, admin);
+                L.Log($"{names.PlayerName} ({target}) was permanently {type} muted for {reason} by {names2.PlayerName} ({admin}).", ConsoleColor.Cyan);
+            }
+            else
+            {
+                foreach (LanguageSet set in LanguageSet.AllBut(target, admin))
+                    Chat.Broadcast(set, T.MuteSuccessBroadcast, names, names, dur, type, names2);
 
+                L.Log($"{names.PlayerName} ({target}) was {type} muted for {reason} by {names2.PlayerName} ({admin}). Duration: {dur}.", ConsoleColor.Cyan);
+            }
+        }
+        if (muted != null)
+        {
             if (admin == 0)
             {
                 if (duration == -1)
-                {
-                    foreach (LanguageSet set in LanguageSet.AllBut(target))
-                        Chat.Broadcast(set, T.MutePermanentSuccessBroadcastOperator, names, names, type);
-
-                    L.Log($"{names.PlayerName} ({target}) was permanently {type} muted for {reason} by an operator.", ConsoleColor.Cyan);
-                }
+                    muted.SendChat(T.MuteSuccessDMPermanentOperator, reason, type);
                 else
-                {
-                    foreach (LanguageSet set in LanguageSet.AllBut(target))
-                        Chat.Broadcast(set, T.MuteSuccessBroadcastOperator, names, names, dur, type);
-
-                    L.Log($"{names.PlayerName} ({target}) was {type} muted for {reason} by an operator. Duration: {dur}.", ConsoleColor.Cyan);
-                }
+                    muted.SendChat(T.MuteSuccessDMOperator, reason, dur, type);
             }
             else
             {
                 if (duration == -1)
-                {
-                    foreach (LanguageSet set in LanguageSet.AllBut(target, admin))
-                        Chat.Broadcast(set, T.MutePermanentSuccessBroadcast, names, names, type, names2);
-
-                    L.Log($"{names.PlayerName} ({target}) was permanently {type} muted for {reason} by {names2.PlayerName} ({admin}).", ConsoleColor.Cyan);
-                }
+                    muted.SendChat(T.MuteSuccessDMPermanent, names2, reason, type);
                 else
-                {
-                    foreach (LanguageSet set in LanguageSet.AllBut(target, admin))
-                        Chat.Broadcast(set, T.MuteSuccessBroadcast, names, names, dur, type, names2);
+                    muted.SendChat(T.MuteSuccessDM, names2, reason, dur, type);
+            }
+        }
 
-                    L.Log($"{names.PlayerName} ({target}) was {type} muted for {reason} by {names2.PlayerName} ({admin}). Duration: {dur}.", ConsoleColor.Cyan);
-                }
-            }
-            if (muted != null)
-            {
-                if (admin == 0)
-                {
-                    if (duration == -1)
-                        muted.SendChat(T.MuteSuccessDMPermanentOperator, reason, type);
-                    else
-                        muted.SendChat(T.MuteSuccessDMOperator, reason, dur, type);
-                }
-                else
-                {
-                    if (duration == -1)
-                        muted.SendChat(T.MuteSuccessDMPermanent, names2, reason, type);
-                    else
-                        muted.SendChat(T.MuteSuccessDM, names2, reason, dur, type);
-                }
-            }
-        }).ConfigureAwait(false);
+        return MessageContext.CODE_SUCCESS;
     }
-    public static void UnmutePlayer(ulong targetId, ulong callerId)
+    /// <returns>0 for a successful unmute, 2 when the target isn't muted.</returns>
+    internal static async Task<int> UnmutePlayerAsync(ulong targetId, ulong callerId, DateTimeOffset timestamp)
     {
         UCPlayer? caller = UCPlayer.FromID(callerId);
         UCPlayer? onlinePlayer = UCPlayer.FromID(targetId);
-        Task.Run(async () =>
+        PlayerNames names = await Data.DatabaseManager.GetUsernamesAsync(targetId).ConfigureAwait(false);
+        if (names.WasFound)
         {
-            FPlayerName names = await Data.DatabaseManager.GetUsernamesAsync(targetId);
-            if (names.WasFound)
-            {
-                int rows = await Data.DatabaseManager.NonQueryAsync("UPDATE `muted` SET `Deactivated` = 1 WHERE `Steam64` = @0 AND " +
-                                                                    "`Deactivated` = 0 AND (`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60 < `Duration`)", new object[] { targetId });
+            int rows = await Data.DatabaseManager.NonQueryAsync(
+                    "UPDATE `muted` SET `Deactivated` = 1 WHERE `Steam64` = @0 AND " + 
+                    "`Deactivated` = 0 AND (`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60 < `Duration`)", new object[] { targetId })
+                .ConfigureAwait(false);
 
-                await UCWarfare.ToUpdate();
-                if (rows == 0)
-                {
-                    if (caller is not null)
-                        caller.SendChat(T.UnmuteNotMuted, names);
-                    else if (callerId == 0)
-                        L.Log(F.RemoveRichText(T.UnmuteNotMuted.Translate(L.DEFAULT, names, out Color color)), F.GetClosestConsoleColor(color));
-                }
-                else
-                {
-                    onlinePlayer ??= UCPlayer.FromID(targetId);
-                    if (onlinePlayer is not null)
-                    {
-                        onlinePlayer.MuteReason = null;
-                        onlinePlayer.MuteType = EMuteType.NONE;
-                        onlinePlayer.TimeUnmuted = DateTime.MinValue;
-                    }
-                    LogUnmutePlayer(targetId, callerId, DateTime.Now);
-                    FPlayerName n2 = await F.GetPlayerOriginalNamesAsync(callerId);
-                    await UCWarfare.ToUpdate();
-                    if (callerId == 0)
-                    {
-                        Chat.Broadcast(LanguageSet.AllBut(targetId), T.UnmuteSuccessBroadcastOperator, names);
-                        onlinePlayer?.SendChat(T.UnmuteSuccessDMOperator);
-                    }
-                    else
-                    {
-                        Chat.Broadcast(LanguageSet.AllBut(targetId, callerId), T.UnmuteSuccessBroadcast, names, n2);
-                        onlinePlayer?.SendChat(T.UnmuteSuccessDM, n2);
-                        caller?.SendChat(T.UnmuteSuccessFeedback, names);
-                    }
-                    ActionLogger.Add(EActionLogType.UNMUTE_PLAYER, targetId.ToString() + " unmuted.", callerId);
-                    L.Log($"{names.PlayerName} ({targetId}) was unmuted by {(callerId == 0 ? "an operator" : (n2.PlayerName + "(" + callerId + ")"))}.");
-                }
+            await UCWarfare.ToUpdate();
+            if (rows == 0)
+            {
+                if (caller is not null)
+                    caller.SendChat(T.UnmuteNotMuted, names);
+                else if (callerId == 0)
+                    L.Log(Util.RemoveRichText(T.UnmuteNotMuted.Translate(L.DEFAULT, names, out Color color)), Util.GetClosestConsoleColor(color));
+                return 2;
             }
             else
             {
+                onlinePlayer ??= UCPlayer.FromID(targetId);
+                if (onlinePlayer is not null)
+                {
+                    onlinePlayer.MuteReason = null;
+                    onlinePlayer.MuteType = EMuteType.NONE;
+                    onlinePlayer.TimeUnmuted = DateTime.MinValue;
+                }
+                LogUnmutePlayer(targetId, callerId, DateTime.Now);
+                PlayerNames n2 = await F.GetPlayerOriginalNamesAsync(callerId).ConfigureAwait(false);
                 await UCWarfare.ToUpdate();
-                if (caller is not null)
-                    caller.SendChat(T.PlayerNotFound);
-                else if (callerId == 0)
-                    L.Log(F.RemoveRichText(T.PlayerNotFound.Translate(L.DEFAULT, out Color color)), F.GetClosestConsoleColor(color));
+                if (callerId == 0)
+                {
+                    Chat.Broadcast(LanguageSet.AllBut(targetId), T.UnmuteSuccessBroadcastOperator, names);
+                    onlinePlayer?.SendChat(T.UnmuteSuccessDMOperator);
+                }
+                else
+                {
+                    Chat.Broadcast(LanguageSet.AllBut(targetId, callerId), T.UnmuteSuccessBroadcast, names, n2);
+                    onlinePlayer?.SendChat(T.UnmuteSuccessDM, n2);
+                    caller?.SendChat(T.UnmuteSuccessFeedback, names);
+                }
+                ActionLogger.Add(EActionLogType.UNMUTE_PLAYER, targetId.ToString() + " unmuted.", callerId);
+                L.Log($"{names.PlayerName} ({targetId}) was unmuted by {(callerId == 0 ? "an operator" : (n2.PlayerName + "(" + callerId + ")"))}.");
+                return MessageContext.CODE_SUCCESS;
             }
-        });
+        }
+        else
+        {
+            await UCWarfare.ToUpdate();
+            if (caller is not null)
+                caller.SendChat(T.PlayerNotFound);
+            else if (callerId == 0)
+                L.Log(Util.RemoveRichText(T.PlayerNotFound.Translate(L.DEFAULT, out Color color)), Util.GetClosestConsoleColor(color));
+            return 2;
+        }
     }
     private static void OnPlayerDied(PlayerDied e)
     {
@@ -997,15 +1027,20 @@ public static class OffenseManager
             LogTeamkill(e.Killer.Steam64, e.Player.Steam64, e.Cause.ToString(), itemName, a == null ? (ushort)0 : a.id, e.KillDistance, DateTime.Now);
         }
     }
-    private struct Ban
+    private interface ITimestampOffense
     {
-        public ulong Violator;
-        public ulong Admin;
-        public string Reason;
-        public int Duration;
-        public DateTime Timestamp;
+        public DateTimeOffset Timestamp { get; set; }
+    }
+
+    private struct Ban : ITimestampOffense, IEquatable<Ban>
+    {
+        public readonly ulong Violator;
+        public readonly ulong Admin;
+        public readonly string Reason;
+        public readonly int Duration;
+        public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
-        public Ban(ulong violator, ulong admin, string reason, int duration, DateTime timestamp)
+        public Ban(ulong violator, ulong admin, string reason, int duration, DateTimeOffset timestamp)
         {
             Violator = violator;
             Admin = admin;
@@ -1013,60 +1048,76 @@ public static class OffenseManager
             Duration = duration;
             Timestamp = timestamp;
         }
+        public bool Equals(Ban offense)
+        {
+            return Violator == offense.Violator && Admin == offense.Admin && Duration == offense.Duration && Timestamp == offense.Timestamp;
+        }
     }
-    private struct Unban
+    private struct Unban : ITimestampOffense, IEquatable<Unban>
     {
-        public ulong Violator;
-        public ulong Admin;
-        public DateTime Timestamp;
+        public readonly ulong Violator;
+        public readonly ulong Admin;
+        public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
-        public Unban(ulong violator, ulong admin, DateTime timestamp)
+        public Unban(ulong violator, ulong admin, DateTimeOffset timestamp)
         {
             Violator = violator;
             Admin = admin;
             Timestamp = timestamp;
         }
-    }
-    private struct Kick
-    {
-        public ulong Violator;
-        public ulong Admin;
-        public string Reason;
-        public DateTime Timestamp;
-        [JsonConstructor]
-        public Kick(ulong violator, ulong admin, string reason, DateTime timestamp)
+        public bool Equals(Unban offense)
         {
-            Violator = violator;
-            Admin = admin;
-            Reason = reason;
-            Timestamp = timestamp;
+            return Violator == offense.Violator && Admin == offense.Admin && Timestamp == offense.Timestamp;
         }
     }
-    private struct Warn
+    private struct Kick : ITimestampOffense, IEquatable<Kick>
     {
-        public ulong Violator;
-        public ulong Admin;
-        public string Reason;
-        public DateTime Timestamp;
+        public readonly ulong Violator;
+        public readonly ulong Admin;
+        public readonly string Reason;
+        public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
-        public Warn(ulong violator, ulong admin, string reason, DateTime timestamp)
+        public Kick(ulong violator, ulong admin, string reason, DateTimeOffset timestamp)
         {
             Violator = violator;
             Admin = admin;
             Reason = reason;
             Timestamp = timestamp;
         }
+        public bool Equals(Kick offense)
+        {
+            return Violator == offense.Violator && Admin == offense.Admin && Timestamp == offense.Timestamp;
+        }
     }
-    private struct Mute
+    private struct Warn : ITimestampOffense, IEquatable<Warn>
     {
-        public ulong Violator;
-        public ulong Admin;
-        public EMuteType MuteType;
-        public int Duration;
-        public string Reason;
-        public DateTime Timestamp;
+        public readonly ulong Violator;
+        public readonly ulong Admin;
+        public readonly string Reason;
+        public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
-        public Mute(ulong violator, ulong admin, EMuteType muteType, int duration, string reason, DateTime timestamp)
+        public Warn(ulong violator, ulong admin, string reason, DateTimeOffset timestamp)
+        {
+            Violator = violator;
+            Admin = admin;
+            Reason = reason;
+            Timestamp = timestamp;
+        }
+        public bool Equals(Warn offense)
+        {
+            return Violator == offense.Violator && Admin == offense.Admin && Timestamp == offense.Timestamp;
+        }
+    }
+    private struct Mute : ITimestampOffense, IEquatable<Mute>
+    {
+        public readonly ulong Violator;
+        public readonly ulong Admin;
+        public readonly EMuteType MuteType;
+        public readonly int Duration;
+        public readonly string Reason;
+        public DateTimeOffset Timestamp { get; set; }
+        [JsonConstructor]
+        public Mute(ulong violator, ulong admin, EMuteType muteType, int duration, string reason, DateTimeOffset timestamp)
         {
             Violator = violator;
             Admin = admin;
@@ -1075,29 +1126,37 @@ public static class OffenseManager
             Reason = reason;
             Timestamp = timestamp;
         }
+        public bool Equals(Mute offense)
+        {
+            return Violator == offense.Violator && Admin == offense.Admin && MuteType == offense.MuteType && Duration == offense.Duration && Timestamp == offense.Timestamp;
+        }
     }
-    private struct BattlEyeKick
+    private struct BattlEyeKick : ITimestampOffense, IEquatable<BattlEyeKick>
     {
-        public ulong Violator;
-        public string Reason;
-        public DateTime Timestamp;
+        public readonly ulong Violator;
+        public readonly string Reason;
+        public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
-        public BattlEyeKick(ulong violator, string reason, DateTime timestamp)
+        public BattlEyeKick(ulong violator, string reason, DateTimeOffset timestamp)
         {
             Violator = violator;
             Reason = reason;
             Timestamp = timestamp;
         }
+        public bool Equals(BattlEyeKick offense)
+        {
+            return Violator == offense.Violator && Timestamp == offense.Timestamp;
+        }
     }
-    private struct Teamkill
+    private struct Teamkill : ITimestampOffense, IEquatable<Teamkill>
     {
-        public ulong Violator;
-        public ulong Dead;
-        public string DeathCause;
-        public string ItemName;
-        public DateTime Timestamp;
+        public readonly ulong Violator;
+        public readonly ulong Dead;
+        public readonly string DeathCause;
+        public readonly string ItemName;
+        public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
-        public Teamkill(ulong violator, ulong dead, string deathCause, string itemName, DateTime timestamp)
+        public Teamkill(ulong violator, ulong dead, string deathCause, string itemName, DateTimeOffset timestamp)
         {
             Violator = violator;
             Dead = dead;
@@ -1105,43 +1164,55 @@ public static class OffenseManager
             ItemName = itemName;
             Timestamp = timestamp;
         }
+        public bool Equals(Teamkill offense)
+        {
+            return Violator == offense.Violator && Dead == offense.Dead && Timestamp == offense.Timestamp;
+        }
     }
-    private struct VehicleTeamkill
+    private struct VehicleTeamkill : ITimestampOffense, IEquatable<VehicleTeamkill>
     {
-        public ulong Violator;
-        public ushort VehicleID;
-        public string VehicleName;
-        public DateTime Timestamp;
+        public readonly ulong Violator;
+        public readonly ushort VehicleID;
+        public readonly string VehicleName;
+        public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
-        public VehicleTeamkill(ulong violator, ushort vehicleId, string vehicleName, DateTime timestamp)
+        public VehicleTeamkill(ulong violator, ushort vehicleId, string vehicleName, DateTimeOffset timestamp)
         {
             Violator = violator;
             VehicleID = vehicleId;
             VehicleName = vehicleName;
             Timestamp = timestamp;
         }
+        public bool Equals(VehicleTeamkill offense)
+        {
+            return Violator == offense.Violator && VehicleID == offense.VehicleID && Timestamp == offense.Timestamp;
+        }
     }
-    private struct Unmute
+    private struct Unmute : ITimestampOffense, IEquatable<Unmute>
     {
-        public ulong Violator;
-        public ulong Admin;
-        public DateTime Timestamp;
+        public readonly ulong Violator;
+        public readonly ulong Admin;
+        public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
-        public Unmute(ulong violator, ulong admin, DateTime timestamp)
+        public Unmute(ulong violator, ulong admin, DateTimeOffset timestamp)
         {
             Violator = violator;
             Admin = admin;
             Timestamp = timestamp;
         }
+        public bool Equals(Unmute offense)
+        {
+            return Violator == offense.Violator && Admin == offense.Admin && Timestamp == offense.Timestamp;
+        }
     }
     public static class NetCalls
     {
-        public static readonly NetCall<ulong, ulong, string, int, DateTime> SendBanRequest = new NetCall<ulong, ulong, string, int, DateTime>(ReceiveBanRequest);
-        public static readonly NetCall<ulong, ulong, DateTime> SendUnbanRequest = new NetCall<ulong, ulong, DateTime>(ReceiveUnbanRequest);
-        public static readonly NetCall<ulong, ulong, string, DateTime> SendKickRequest = new NetCall<ulong, ulong, string, DateTime>(ReceieveKickRequest);
-        public static readonly NetCall<ulong, ulong, string, DateTime> SendWarnRequest = new NetCall<ulong, ulong, string, DateTime>(ReceiveWarnRequest);
-        public static readonly NetCall<ulong, ulong, EMuteType, int, string, DateTime> SendMuteRequest = new NetCall<ulong, ulong, EMuteType, int, string, DateTime>(ReceieveMuteRequest);
-        public static readonly NetCall<ulong, ulong, DateTime> SendUnmuteRequest = new NetCall<ulong, ulong, DateTime>(ReceieveUnmuteRequest);
+        public static readonly NetCall<ulong, ulong, string, int, DateTimeOffset> SendBanRequest = new NetCall<ulong, ulong, string, int, DateTimeOffset>(ReceiveBanRequest);
+        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendUnbanRequest = new NetCall<ulong, ulong, DateTimeOffset>(ReceiveUnbanRequest);
+        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendKickRequest = new NetCall<ulong, ulong, string, DateTimeOffset>(ReceieveKickRequest);
+        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendWarnRequest = new NetCall<ulong, ulong, string, DateTimeOffset>(ReceiveWarnRequest);
+        public static readonly NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset> SendMuteRequest = new NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset>(ReceieveMuteRequest);
+        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendUnmuteRequest = new NetCall<ulong, ulong, DateTimeOffset>(ReceieveUnmuteRequest);
         public static readonly NetCall<ulong> GrantAdminRequest = new NetCall<ulong>(ReceiveGrantAdmin);
         public static readonly NetCall<ulong> RevokeAdminRequest = new NetCall<ulong>(ReceiveRevokeAdmin);
         public static readonly NetCall<ulong> GrantInternRequest = new NetCall<ulong>(ReceiveGrantIntern);
@@ -1149,66 +1220,56 @@ public static class OffenseManager
         public static readonly NetCall<ulong> GrantHelperRequest = new NetCall<ulong>(ReceiveGrantHelper);
         public static readonly NetCall<ulong> RevokeHelperRequest = new NetCall<ulong>(ReceiveRevokeHelper);
 
-        public static readonly NetCall<ulong, ulong, string, int, DateTime> SendPlayerBanned = new NetCall<ulong, ulong, string, int, DateTime>(1001);
-        public static readonly NetCall<ulong, ulong, DateTime> SendPlayerUnbanned = new NetCall<ulong, ulong, DateTime>(1002);
-        public static readonly NetCall<ulong, ulong, string, DateTime> SendPlayerKicked = new NetCall<ulong, ulong, string, DateTime>(1003);
-        public static readonly NetCall<ulong, ulong, string, DateTime> SendPlayerWarned = new NetCall<ulong, ulong, string, DateTime>(1004);
-        public static readonly NetCall<ulong, string, DateTime> SendPlayerBattleyeKicked = new NetCall<ulong, string, DateTime>(1005);
-        public static readonly NetCall<ulong, ulong, string, string, DateTime> SendTeamkill = new NetCall<ulong, ulong, string, string, DateTime>(1006);
-        public static readonly NetCall<ulong, ulong, EMuteType, int, string, DateTime> SendPlayerMuted = new NetCall<ulong, ulong, EMuteType, int, string, DateTime>(1027);
-        public static readonly NetCall<ulong, ushort, string, DateTime> SendVehicleTeamkilled = new NetCall<ulong, ushort, string, DateTime>(1112);
-        public static readonly NetCall<ulong, ulong, DateTime> SendPlayerUnmuted = new NetCall<ulong, ulong, DateTime>(1020);
-
-        public static readonly NetCall AckPlayerBanned = new NetCall(1138);
-        public static readonly NetCall AckPlayerUnbanned = new NetCall(1139);
-        public static readonly NetCall AckPlayerKicked = new NetCall(1140);
-        public static readonly NetCall AckPlayerWarned = new NetCall(1141);
-        public static readonly NetCall AckPlayerBattleyeKicked = new NetCall(1142);
-        public static readonly NetCall AckTeamkill = new NetCall(1143);
-        public static readonly NetCall AckPlayerMuted = new NetCall(1144);
-        public static readonly NetCall AckVehicleTeamkill = new NetCall(1145);
-        public static readonly NetCall AckPlayerUnmuted = new NetCall(1146);
+        public static readonly NetCall<ulong, ulong, string, int, DateTimeOffset> SendPlayerBanned = new NetCall<ulong, ulong, string, int, DateTimeOffset>(1001);
+        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendPlayerUnbanned = new NetCall<ulong, ulong, DateTimeOffset>(1002);
+        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendPlayerKicked = new NetCall<ulong, ulong, string, DateTimeOffset>(1003);
+        public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendPlayerWarned = new NetCall<ulong, ulong, string, DateTimeOffset>(1004);
+        public static readonly NetCall<ulong, string, DateTimeOffset> SendPlayerBattleyeKicked = new NetCall<ulong, string, DateTimeOffset>(1005);
+        public static readonly NetCall<ulong, ulong, string, string, DateTimeOffset> SendTeamkill = new NetCall<ulong, ulong, string, string, DateTimeOffset>(1006);
+        public static readonly NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset> SendPlayerMuted = new NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset>(1027);
+        public static readonly NetCall<ulong, ushort, string, DateTimeOffset> SendVehicleTeamkilled = new NetCall<ulong, ushort, string, DateTimeOffset>(1112);
+        public static readonly NetCall<ulong, ulong, DateTimeOffset> SendPlayerUnmuted = new NetCall<ulong, ulong, DateTimeOffset>(1020);
 
         [NetCall(ENetCall.FROM_SERVER, 1007)]
-        internal static async Task ReceiveBanRequest(MessageContext context, ulong target, ulong admin, string reason, int duration, DateTime timestamp)
+        internal static async Task ReceiveBanRequest(MessageContext context, ulong target, ulong admin, string reason, int duration, DateTimeOffset timestamp)
         {
             await UCWarfare.ToUpdate();
-            BanPlayer(target, admin, reason, duration);
+            context.Acknowledge(await BanPlayerAsync(target, admin, reason, duration, timestamp));
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1009)]
-        internal static async Task ReceiveUnbanRequest(MessageContext context, ulong target, ulong admin, DateTime timestamp)
+        internal static async Task ReceiveUnbanRequest(MessageContext context, ulong target, ulong admin, DateTimeOffset timestamp)
         {
             await UCWarfare.ToUpdate();
-            UnbanPlayer(target, admin);
+            context.Acknowledge(await UnbanPlayer(target, admin, timestamp));
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1010)]
-        internal static async Task ReceieveKickRequest(MessageContext context, ulong target, ulong admin, string reason, DateTime timestamp)
+        internal static async Task ReceieveKickRequest(MessageContext context, ulong target, ulong admin, string reason, DateTimeOffset timestamp)
         {
             await UCWarfare.ToUpdate();
-            KickPlayer(target, admin, reason);
+            context.Acknowledge(await KickPlayer(target, admin, reason, timestamp));
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1028)]
-        internal static async Task ReceieveMuteRequest(MessageContext context, ulong target, ulong admin, EMuteType type, int duration, string reason, DateTime timestamp)
+        internal static async Task ReceieveMuteRequest(MessageContext context, ulong target, ulong admin, EMuteType type, int duration, string reason, DateTimeOffset timestamp)
         {
             await UCWarfare.ToUpdate();
-            MutePlayer(target, admin, type, duration, reason);
+            context.Acknowledge(await MutePlayerAsync(target, admin, type, duration, reason, timestamp));
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1021)]
-        internal static async Task ReceieveUnmuteRequest(MessageContext context, ulong target, ulong admin, DateTime timestamp)
+        internal static async Task ReceieveUnmuteRequest(MessageContext context, ulong target, ulong admin, DateTimeOffset timestamp)
         {
             await UCWarfare.ToUpdate();
-            UnmutePlayer(target, admin);
+            context.Acknowledge(await UnmutePlayerAsync(target, admin, timestamp));
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1011)]
-        internal static async Task ReceiveWarnRequest(MessageContext context, ulong target, ulong admin, string reason, DateTime timestamp)
+        internal static async Task ReceiveWarnRequest(MessageContext context, ulong target, ulong admin, string reason, DateTimeOffset timestamp)
         {
             await UCWarfare.ToUpdate();
-            WarnPlayer(target, admin, reason);
+            context.Acknowledge(await WarnPlayer(target, admin, reason, timestamp));
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1103)]

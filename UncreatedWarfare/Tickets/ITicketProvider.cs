@@ -1,9 +1,4 @@
 ﻿using SDG.NetTransport;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Singletons;
@@ -27,11 +22,11 @@ public abstract class BaseTicketProvider : ITicketProvider, IPlayerDeathListener
     public abstract int GetTeamBleed(ulong team);
     public virtual void Load()
     {
-        EventDispatcher.OnVehicleDestroyed += OnVehicleDestroyed;
+        EventDispatcher.VehicleDestroyed += OnVehicleDestroyed;
     }
     public virtual void Unload()
     {
-        EventDispatcher.OnVehicleDestroyed -= OnVehicleDestroyed;
+        EventDispatcher.VehicleDestroyed -= OnVehicleDestroyed;
     }
     public abstract void OnGameStarting(bool isOnLoaded);
     public abstract void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI);

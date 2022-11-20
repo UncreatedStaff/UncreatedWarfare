@@ -12,7 +12,7 @@ public partial class Conquest
 {
     private void IntlLoadRotation()
     {
-        int amt = Config.Conquest.PointCount;
+        int amt = Config.ConquestPointCount;
 
         if (_rotation is null)
             _rotation = new List<Flag>(amt);
@@ -22,7 +22,7 @@ public partial class Conquest
         if (amt < 3 || amt % 2 == 0)
             throw new InvalidOperationException(
                 "Must have an odd number more than 2 flags for Conquest. Change the \"" +
-                nameof(CONQUEST_CONFIG.PointCount) + "\" value in Gamemode Config.");
+                nameof(GamemodeConfigData.ConquestPointCount) + "\" value in Gamemode Config.");
 
         AdjacentFlagData[] adj1 = TeamManager.Team1Main.Data.Adjacencies;
         Flag? flag;
@@ -38,7 +38,6 @@ public partial class Conquest
             throw new InvalidOperationException("No valid adjacencies on team 1.");
         --amt;
         _rotation.Add(flag);
-        L.LogDebug("Adding " + flag.Name + " (t1)");
         AdjacentFlagData[] adj2 = TeamManager.Team2Main.Data.Adjacencies;
         ct = 0;
         do
@@ -71,7 +70,6 @@ public partial class Conquest
                 --amt;
                 l2Flag = l2[Random.Range(0, l2.Length)];
                 _rotation.Add(l2Flag);
-                L.LogDebug("Adding " + l2Flag.Name + " (t1l2)");
             }
             l2 = _allFlags.OrderBy(x => Vector2.Distance(x.Position2D, TeamManager.Team2Main.Center)).Where(x =>
             {
@@ -110,14 +108,10 @@ public partial class Conquest
                     goto br;
 
             continue;
-        br: fl = null; 
+        br: fl = null;
             break;
         }
 
-        for (int i = 0; i < f.Length; ++i)
-            L.LogDebug("#" + i + " " + (f[i]?.Name ?? "null"));
-
-        L.LogDebug(amt.ToString() + " (" + f.Length + ")");
         for (; amt >= 0; --amt)
         {
             Flag? f2;
@@ -131,17 +125,14 @@ public partial class Conquest
             } while (f2 is null && ++ct < f.Length);
             if (f2 is not null)
             {
-                L.LogDebug("Adding " + f2.Name + " (mid)");
                 _rotation.Add(f2);
             }
         }
 
         if (l2Flag is not null)
         {
-            L.LogDebug("Adding " + l2Flag.Name + " (t2l2)");
             _rotation.Add(l2Flag);
         }
-        L.LogDebug("Adding " + flag.Name + " (t2)");
         _rotation.Add(flag);
 
         if (_rotation.Count % 2 == 0)

@@ -1,29 +1,19 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Teams;
 
-public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
+public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
 {
     public static TeamSelector Instance;
     public static readonly JoinUI JoinUI = new JoinUI();
@@ -37,11 +27,11 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
         JoinUI.Team1Button.OnClicked += OnTeam1Clicked;
         JoinUI.Team2Button.OnClicked += OnTeam2Clicked;
         JoinUI.ConfirmButton.OnClicked += OnConfirmClicked;
-        EventDispatcher.OnPlayerLeaving += OnPlayerDisconnect;
+        EventDispatcher.PlayerLeaving += OnPlayerDisconnect;
     }
     public override void Unload()
     {
-        EventDispatcher.OnPlayerLeaving -= OnPlayerDisconnect;
+        EventDispatcher.PlayerLeaving -= OnPlayerDisconnect;
         JoinUI.ConfirmButton.OnClicked -= OnConfirmClicked;
         JoinUI.Team2Button.OnClicked -= OnTeam2Clicked;
         JoinUI.Team1Button.OnClicked -= OnTeam1Clicked;
@@ -60,7 +50,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             UpdateList();
         }
     }
-    public void OnAsyncInitComplete(UCPlayer player)
+    public void OnPostPlayerInit(UCPlayer player)
     {
         bool t1Donor = false, t2Donor = false;
         if (player.IsOtherDonator)
@@ -71,18 +61,11 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
         else if (player.AccessibleKits is not null)
             CheckAccess(player.AccessibleKits, ref t1Donor, ref t2Donor);
         if (player.TeamSelectorData is null)
-        {
             player.TeamSelectorData = new TeamSelectorData(false, t1Donor, t2Donor);
-        }
         else
         {
-            if (player.TeamSelectorData.IsTeam1Donator != t1Donor || player.TeamSelectorData.IsTeam2Donator != t2Donor)
-            {
-                player.TeamSelectorData.IsTeam1Donator = t1Donor;
-                player.TeamSelectorData.IsTeam2Donator = t2Donor;
-                if (player.TeamSelectorData.IsSelecting)
-                    OnDonorsChanged(player);
-            }
+            player.TeamSelectorData.IsTeam1Donator = t1Donor;
+            player.TeamSelectorData.IsTeam2Donator = t2Donor;
         }
 
         JoinSelectionMenu(player);
@@ -90,41 +73,38 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
     private void OnTeam1Clicked(UnturnedButton button, Player player)
     {
         UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
-        if (ucplayer is null || ucplayer.TeamSelectorData is null || !ucplayer.TeamSelectorData.IsSelecting) return;
-
-        ITransportConnection c = ucplayer.Connection;
-
-        if (CheckTeam(1, ucplayer.TeamSelectorData.SelectedTeam))
-        {
-            if (ucplayer.TeamSelectorData.SelectedTeam == 2)
-            {
-                JoinUI.Team2Highlight.SetVisibility(c, false);
-                JoinUI.Team2Select.SetText(c, (ucplayer.TeamSelectorData!.IsTeam2Donator ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin).Translate(ucplayer));
-            }
-            ucplayer.TeamSelectorData.SelectedTeam = 1;
-            UpdateList();
-            JoinUI.Team1Highlight.SetVisibility(c, true);
-            JoinUI.Team1Select.SetText(c, (ucplayer.TeamSelectorData!.IsTeam1Donator ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin).Translate(ucplayer));
-        }
+        OnTeamClicked(ucplayer, 1);
     }
     private void OnTeam2Clicked(UnturnedButton button, Player player)
     {
         UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
-        if (ucplayer is null || ucplayer.TeamSelectorData is null || !ucplayer.TeamSelectorData.IsSelecting) return;
+        OnTeamClicked(ucplayer, 2);
+    }
+    private void OnTeamClicked(UCPlayer? player, ulong team)
+    {
+        if (player is null || player.TeamSelectorData is null || !player.TeamSelectorData.IsSelecting) return;
 
-        ITransportConnection c = ucplayer.Connection;
+        ITransportConnection c = player.Connection;
 
-        if (CheckTeam(2, ucplayer.TeamSelectorData.SelectedTeam))
+        if (CheckTeam(team, player.TeamSelectorData.SelectedTeam) ||
+            (team == 1 ? player.TeamSelectorData.IsTeam1Donator : player.TeamSelectorData.IsTeam2Donator) ||
+            player.IsOtherDonator)
         {
-            if (ucplayer.TeamSelectorData.SelectedTeam == 1)
+            if (player.TeamSelectorData.SelectedTeam != 0 && player.TeamSelectorData.SelectedTeam != team)
             {
-                JoinUI.Team1Highlight.SetVisibility(c, false);
-                JoinUI.Team1Select.SetText(c, (ucplayer.TeamSelectorData!.IsTeam1Donator ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin).Translate(ucplayer));
+                (team == 2 ? JoinUI.Team1Highlight : JoinUI.Team2Highlight).SetVisibility(c, false);
+                bool otherTeamHasRoom = CheckTeam(team == 1 ? 2ul : 1ul, team);
+                bool donor = team == 2 ? player.TeamSelectorData!.IsTeam1Donator : player.TeamSelectorData!.IsTeam2Donator;
+                if (donor || (donor = player.IsOtherDonator)) otherTeamHasRoom = true;
+                (team == 2 ? JoinUI.Team1Select : JoinUI.Team2Select)
+                    .SetText(c, (otherTeamHasRoom ? (donor ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin) : T.TeamsUIFull)
+                        .Translate(player));
             }
-            ucplayer.TeamSelectorData.SelectedTeam = 2;
+            player.TeamSelectorData.SelectedTeam = team;
             UpdateList();
-            JoinUI.Team2Highlight.SetVisibility(c, true);
-            JoinUI.Team2Select.SetText(c, (ucplayer.TeamSelectorData.IsTeam2Donator ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin).Translate(ucplayer));
+            (team == 1 ? JoinUI.Team1Highlight : JoinUI.Team2Highlight).SetVisibility(c, true);
+            (team == 1 ? JoinUI.Team1Select : JoinUI.Team2Select).SetText(c, ((team == 1 ?
+                player.TeamSelectorData!.IsTeam1Donator : player.TeamSelectorData!.IsTeam2Donator) ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin).Translate(player));
         }
     }
     private void OnConfirmClicked(UnturnedButton button, Player player)
@@ -134,7 +114,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             ucplayer.TeamSelectorData.SelectedTeam is not 1 and not 2 ||
             ucplayer.TeamSelectorData.JoiningCoroutine != null)
             return;
-        
+
         ucplayer.TeamSelectorData.JoiningCoroutine = StartCoroutine(JoinCoroutine(ucplayer, ucplayer.TeamSelectorData.SelectedTeam));
     }
     private IEnumerator JoinCoroutine(UCPlayer player, ulong targetTeam)
@@ -163,13 +143,14 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
                 t1Donor = true;
                 t2Donor = true;
             }
-            else
-            if (player.HasDownloadedKits && player.AccessibleKits is not null)
+            else if (player.HasDownloadedKits && player.AccessibleKits is not null)
                 CheckAccess(player.AccessibleKits, ref t1Donor, ref t2Donor);
             player.TeamSelectorData = new TeamSelectorData(true, t1Donor, t2Donor);
         }
         else
         {
+            if (player.TeamSelectorData.IsSelecting)
+                return;
             player.TeamSelectorData.IsSelecting = true;
             player.TeamSelectorData.SelectedTeam = 0;
         }
@@ -215,11 +196,11 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
         if (player.TeamSelectorData is not null)
             player.TeamSelectorData.IsSelecting = false;
 
-        JoinUI.ClearFromPlayer(player.Connection);
-
-        GroupInfo groupInfo = GroupManager.getGroupInfo(new CSteamID(TeamManager.GetGroupID(team)));
+        GroupInfo? groupInfo = GroupManager.getGroupInfo(new CSteamID(TeamManager.GetGroupID(team)));
         if (groupInfo is not null && player.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
         {
+            JoinUI.ClearFromPlayer(player.Connection);
+
             GroupManager.save();
 
             EventDispatcher.InvokeOnGroupChanged(player, 0, groupInfo.groupID.m_SteamID);
@@ -233,8 +214,8 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
 
             player.Player.teleportToLocationUnsafe(
-                team is 1 ? TeamManager.Team1Main.Center3D : TeamManager.Team2Main.Center3D, 
-                team is 1 ? TeamManager.Team1SpawnAngle    : TeamManager.Team2SpawnAngle);
+                team is 1 ? TeamManager.Team1Main.Center3D : TeamManager.Team2Main.Center3D,
+                team is 1 ? TeamManager.Team1SpawnAngle : TeamManager.Team2SpawnAngle);
 
             UpdateList();
 
@@ -252,7 +233,6 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
         else
         {
             L.LogError("Failed to assign group " + team.ToString(Data.Locale) + " to " + player.CharacterName + ".", method: "TEAM SELECTOR");
-            SendSelectionMenu(player);
         }
     }
 
@@ -294,15 +274,14 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
     private void SetButtonState(UCPlayer player, ulong team, bool hasSpace)
     {
         ITransportConnection c = player.Connection;
-        if (team is 1)
+        if (team == 1)
         {
             if (player.TeamSelectorData!.IsTeam1Donator)
                 hasSpace = true;
             JoinUI.Team1Button.SetVisibility(c, hasSpace);
-            JoinUI.Team1Select.SetText(c,
-                (hasSpace ? (player.TeamSelectorData!.IsTeam1Donator ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin) : T.TeamsUIFull).Translate(player));
+            JoinUI.Team1Select.SetText(c, (hasSpace ? (player.TeamSelectorData!.IsTeam1Donator ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin) : T.TeamsUIFull).Translate(player));
         }
-        else if (team is 2)
+        else if (team == 2)
         {
             if (player.TeamSelectorData!.IsTeam2Donator)
                 hasSpace = true;
@@ -333,7 +312,10 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
 
         for (int j = 0; j < PlayerManager.OnlinePlayers.Count; ++j)
         {
-            ITransportConnection c = PlayerManager.OnlinePlayers[j].Connection;
+            UCPlayer pl = PlayerManager.OnlinePlayers[j];
+            if (pl.TeamSelectorData is null || !pl.TeamSelectorData.IsSelecting)
+                continue;
+            ITransportConnection c = pl.Connection;
             for (int i = t1ct; i < _t1Amt; ++i)
                 JoinUI.Team1Players[i].SetText(c, string.Empty);
             for (int i = t2ct; i < _t2Amt; ++i)
@@ -350,7 +332,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
              b2 = CheckTeam(2, 0, t1ct, t2ct),
              b3 = CheckTeam(1, 2, t1ct, t2ct),
              b4 = CheckTeam(2, 1, t1ct, t2ct);
-        
+
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
@@ -380,7 +362,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
     public void OnKitsUpdated(UCPlayer player)
     {
         if (player.TeamSelectorData is not null && player.TeamSelectorData.IsSelecting)
-            OnAsyncInitComplete(player);
+            OnPostPlayerInit(player);
     }
     private void OnDonorsChanged(UCPlayer player)
     {
@@ -399,12 +381,11 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             SetButtonState(player, 2, CheckTeam(2, 0, t1ct, t2ct));
         }
     }
-    private static void CheckAccess(List<Kit> kits, ref bool t1Donor, ref bool t2Donor)
+    private static void CheckAccess(List<string> kits, ref bool t1Donor, ref bool t2Donor)
     {
         for (int i = 0; i < kits.Count; ++i)
         {
-            Kit kit = kits[i];
-            if (kit.IsPremium || kit.IsLoadout)
+            if (KitManager.KitExists(kits[i], out Kit kit) && (kit.IsPremium || kit.IsLoadout))
             {
                 if (kit.Team == 0)
                 {
@@ -412,12 +393,12 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
                     t2Donor = true;
                     break;
                 }
-                if (kit.Team == 1)
+                else if (kit.Team == 1)
                 {
                     t1Donor = true;
                     if (t2Donor) break;
                 }
-                if (kit.Team == 2)
+                else if (kit.Team == 2)
                 {
                     t2Donor = true;
                     if (t1Donor) break;
@@ -469,18 +450,11 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             --t2;
         }
         int maxDiff = Mathf.Max(2, Mathf.CeilToInt(Provider.clients.Count * 0.10f));
-        if (t1 == t2)
-            return true;
-        if (team == 1 && t1 <= t2)
-            return true;
-        if (team == 2 && t2 <= t1)
-            return true;
-        
 
-        if (team == 1 && t2 - maxDiff <= t1)
-            return true;
-        if (team == 2 && t1 - maxDiff <= t2)
-            return true;
+        if (team == 2)
+            return t2 - maxDiff <= t1;
+        if (team == 1)
+            return t1 - maxDiff <= t2;
 
         return false;
     }

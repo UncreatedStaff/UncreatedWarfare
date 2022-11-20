@@ -2,11 +2,12 @@
 using System;
 using System.Linq;
 using System.Text.Json;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using Uncreated.Json;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -54,7 +55,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
             writer.WriteProperty("kills", KillThreshold);
         }
     }
-    
+
     // one tracker is created per player working on the quest. Add the notify interfaces defined in QuestsMisc.cs and add cases for them in QuestManager under the events region
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
@@ -170,8 +171,8 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && 
-                e.KillDistance >= Range && 
+            if (e.Killer!.Steam64 == _player.Steam64 &&
+                e.KillDistance >= Range &&
                 e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
@@ -761,7 +762,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= Range 
+            if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= Range
                 && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH &&
                 KitManager.HasKit(e.Killer, out Kit kit) && Class.IsMatch(kit.Class) && e.Cause != EDeathCause.SHRED)
             {
@@ -1312,7 +1313,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
                 }
             }
             return;
-            add:
+        add:
             _kills++;
             if (_kills >= KillThreshold)
                 TellCompleted();
@@ -1430,7 +1431,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
                 }
             }
             return;
-            add:
+        add:
             _kills++;
             if (_kills >= KillThreshold)
                 TellCompleted();

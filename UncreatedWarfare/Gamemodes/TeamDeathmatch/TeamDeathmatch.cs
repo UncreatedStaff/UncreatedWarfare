@@ -1,21 +1,35 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch;
 
-public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISquads, IRevives, ITeamScore
+public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISquads, IRevives, ITeamScore, ITraits
 {
+    protected TraitManager _traitManager;
+    protected ActionManager _actionManager;
+    protected VehicleSpawner _vehicleSpawner;
+    protected VehicleBay _vehicleBay;
+    protected VehicleSigns _vehicleSigns;
+    protected FOBManager _FOBManager;
+    protected RequestSigns _requestSigns;
+    protected KitManager _kitManager;
+    protected ReviveManager _reviveManager;
+    protected SquadManager _squadManager;
+    protected StructureSaver _structureSaver;
     public TeamDeathmatch() : base(nameof(TeamDeathmatch), 0f)
     {
 
@@ -28,31 +42,23 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public override bool EnableAMC => true;
     public override bool ShowXPUI => true;
     public override bool ShowOFPUI => true;
-    protected VehicleSpawner _vehicleSpawner;
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;
-    protected VehicleBay _vehicleBay;
     public VehicleBay VehicleBay => _vehicleBay;
-    protected VehicleSigns _vehicleSigns;
     public VehicleSigns VehicleSigns => _vehicleSigns;
-    protected FOBManager _FOBManager;
     public FOBManager FOBManager => _FOBManager;
-    protected RequestSigns _requestSigns;
     public RequestSigns RequestSigns => _requestSigns;
-    protected KitManager _kitManager;
     public KitManager KitManager => _kitManager;
-    protected ReviveManager _reviveManager;
     public ReviveManager ReviveManager => _reviveManager;
-    protected SquadManager _squadManager;
     public SquadManager SquadManager => _squadManager;
-    protected StructureSaver _structureSaver;
     public StructureSaver StructureSaver => _structureSaver;
+    public TraitManager TraitManager => _traitManager;
+    public ActionManager ActionManager => _actionManager;
     public int Team1Score => _t1score;
     public int Team2Score => _t2score;
     protected int _t1score = 0;
     protected int _t2score = 0;
-    protected override void PreInit()
+    protected override Task PreInit()
     {
-        base.PreInit();
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _vehicleSpawner);
@@ -62,65 +68,47 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _reviveManager);
         AddSingletonRequirement(ref _FOBManager);
-    }
-    protected override void PostInit()
-    {
-        Commands.ReloadCommand.ReloadKits();
-    }
-    protected override void OnReady()
-    {
-        base.OnReady();
-        RepairManager.LoadRepairStations();
-        RallyManager.WipeAllRallies();
-        VehicleSigns.InitAllSigns();
+        AddSingletonRequirement(ref _traitManager);
+        if (UCWarfare.Config.EnableActionMenu)
+            AddSingletonRequirement(ref _actionManager);
+        return base.PreInit();
     }
     public override void Subscribe()
     {
         base.Subscribe();
-        EventDispatcher.OnPlayerDied += OnDeath;
-    }
-    protected override void PostDispose()
-    {
-        base.PostDispose();
+        EventDispatcher.PlayerDied += OnDeath;
     }
     public override void Unsubscribe()
     {
-        EventDispatcher.OnPlayerDied -= OnDeath;
+        EventDispatcher.PlayerDied -= OnDeath;
         base.Unsubscribe();
     }
-    public override void DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner)
     {
-        if (this._state == EState.FINISHED) return;
-        this._state = EState.FINISHED;
-
-        QuestManager.OnGameOver(winner);
-        ActionLogger.Add(EActionLogType.TEAM_WON, Teams.TeamManager.TranslateName(winner, 0));
-        StartCoroutine(EndGameCoroutine(winner));
+        ThreadUtil.assertIsGameThread();
+        StartCoroutine(EndGameCoroutine());
+        return base.DeclareWin(winner);
     }
-    private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
+    private IEnumerator<WaitForSeconds> EndGameCoroutine()
     {
-        yield return new WaitForSeconds(Config.GeneralConfig.LeaderboardDelay);
+        yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
-        EndGame();
+        Task.Run(EndGame);
     }
     private void OnScoreUpdated()
     {
         // todo update ui?
     }
-    protected override void PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad)
     {
         _t1score = 0;
         _t2score = 0;
-        base.PreGameStarting(isOnLoad);
-    }
-    protected override void EventLoopAction()
-    {
-
+        return base.PreGameStarting(isOnLoad);
     }
     private void OnDeath(PlayerDied e)
     {

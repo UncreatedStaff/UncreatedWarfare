@@ -1,5 +1,4 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
 using System;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 

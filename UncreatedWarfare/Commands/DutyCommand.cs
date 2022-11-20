@@ -1,7 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
 using Uncreated.Framework;
-using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Kits;
@@ -24,7 +23,7 @@ public class DutyCommand : Command
         ctx.AssertRanByPlayer();
 
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
-        
+
         EAdminType level = ctx.Caller.PermissionLevel;
 
         switch (level)
@@ -53,7 +52,7 @@ public class DutyCommand : Command
         player.Player.look.sendWorkzoneAllowed(true);
         player.SendChat(T.DutyOnFeedback);
         Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOnBroadcast, player);
-        RequestSigns.UpdateAllSigns(player.Player.channel.owner);
+        RequestSigns.UpdateAllSigns(player);
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         ActionLogger.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
     }
@@ -69,7 +68,7 @@ public class DutyCommand : Command
             player.Player.look.sendFreecamAllowed(false);
             player.Player.look.sendWorkzoneAllowed(false);
             player.SendChat(T.DutyOffFeedback);
-            RequestSigns.UpdateAllSigns(player.Player.channel.owner);
+            RequestSigns.UpdateAllSigns(player);
         }
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
         ActionLogger.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
@@ -80,7 +79,7 @@ public class DutyCommand : Command
         PermissionSaver.Instance.SetPlayerPermissionLevel(player.Steam64, EAdminType.TRIAL_ADMIN_ON_DUTY);
         player.SendChat(T.DutyOnFeedback);
         Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOnBroadcast, player);
-        RequestSigns.UpdateAllSigns(player.Player.channel.owner);
+        RequestSigns.UpdateAllSigns(player);
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         ActionLogger.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
     }
@@ -94,7 +93,7 @@ public class DutyCommand : Command
         if (player.Player != null)
         {
             player.SendChat(T.DutyOffFeedback);
-            RequestSigns.UpdateAllSigns(player.Player.channel.owner);
+            RequestSigns.UpdateAllSigns(player);
         }
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
         ActionLogger.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);

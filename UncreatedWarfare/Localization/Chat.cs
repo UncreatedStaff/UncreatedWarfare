@@ -1,12 +1,9 @@
-﻿using SDG.Framework.Translations;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
-using Uncreated.Players;
+using Uncreated.Framework;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -16,15 +13,7 @@ public static class Chat
     const int MAX_CHAT_MESSAGE_SIZE = 2047;
     internal static void SendSingleMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, SteamPlayer recipient)
     {
-        try
-        {
-            ThreadUtil.assertIsGameThread();
-        }
-        catch
-        {
-            L.LogWarning("Tried to send a chat message on non-game thread.");
-            return;
-        }
+        ThreadUtil.assertIsGameThread();
         if (Data.SendChatIndividual == null)
         {
             ChatManager.serverSendMessage(text, color, null, recipient, mode, iconURL, richText);

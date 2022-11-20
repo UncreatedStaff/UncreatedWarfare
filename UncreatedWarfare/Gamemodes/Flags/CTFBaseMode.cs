@@ -3,6 +3,8 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -15,7 +17,7 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
@@ -26,7 +28,7 @@ public delegate void ObjectiveChangedDelegate(Flag OldFlagObj, Flag NewFlagObj, 
 public delegate void FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
 public delegate void FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
 public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvider> :
-    TicketGamemode<TTicketProvider>,
+    TicketFlagGamemode<TTicketProvider>,
     IFlagTeamObjectiveGamemode,
     IVehicles,
     IFOBs,
@@ -34,9 +36,9 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     IRevives,
     ISquads,
     IImplementsLeaderboard<Stats, StatTracker>,
-    IStructureSaving,
     IStagingPhase,
-    IGameStats
+    IGameStats,
+    ITraits
     where Leaderboard : BaseCTFLeaderboard<Stats, StatTracker>
     where Stats : BaseCTFStats
     where StatTracker : BaseCTFTracker<Stats>
@@ -54,6 +56,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     protected ReviveManager _reviveManager;
     protected SquadManager _squadManager;
     protected StructureSaver _structureSaver;
+    protected TraitManager _traitManager;
+    protected ActionManager _actionManager;
     protected Leaderboard? _endScreen;
     private StatTracker _gameStats;
     protected Transform? _blockerBarricadeT1 = null;
@@ -79,15 +83,17 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
+    public TraitManager TraitManager => _traitManager;
+    public ActionManager ActionManager => _actionManager;
     Leaderboard<Stats, StatTracker>? IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
     public bool IsScreenUp => _isScreenUp;
-    public StatTracker WarstatsTracker => _gameStats;
-    object IGameStats.GameStats => _gameStats;
-    public CTFBaseMode(string name, float timing) : base(name, timing)
+    StatTracker IImplementsLeaderboard<Stats, StatTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
+    object IGameStats.GameStats => ((IImplementsLeaderboard<Stats, StatTracker>)this).WarstatsTracker;
+    protected CTFBaseMode(string name, float timing) : base(name, timing)
     {
 
     }
-    protected override void PreInit()
+    protected override Task PreInit()
     {
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
@@ -98,49 +104,24 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _requestSigns);
-        base.PreInit();
+        AddSingletonRequirement(ref _traitManager);
+        if (UCWarfare.Config.EnableActionMenu)
+            AddSingletonRequirement(ref _actionManager);
+        return base.PreInit();
     }
-    protected override void PostInit()
+    protected override bool TimeToEvaluatePoints() => EveryXSeconds(Config.AASFlagTickSeconds);
+    public override Task DeclareWin(ulong winner)
     {
-        Commands.ReloadCommand.ReloadKits();
-        _gameStats = gameObject.AddComponent<StatTracker>();
-    }
-    protected override void OnReady()
-    {
-        RepairManager.LoadRepairStations();
-        RallyManager.WipeAllRallies();
-        base.OnReady();
-    }
-    protected override void PostDispose()
-    {
-        CTFUI.StagingUI.ClearFromAllPlayers();
-        Destroy(_gameStats);
-        base.PostDispose();
-    }
-    protected override bool TimeToCheck()
-    {
-        if (_counter > Config.TeamCTF.FlagTickInterval)
-        {
-            _counter = 0;
-            return true;
-        }
-        else
-        {
-            _counter++;
-            return false;
-        }
-    }
-    public override void DeclareWin(ulong winner)
-    {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        base.DeclareWin(winner);
         StartCoroutine(EndGameCoroutine(winner));
+        return base.DeclareWin(winner);
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
-        yield return new WaitForSeconds(Config.GeneralConfig.LeaderboardDelay);
+        yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -167,14 +148,15 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             _endScreen = null!;
         }
         _isScreenUp = false;
-        EndGame();
+        Task.Run(EndGame);
     }
-    protected override void PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad)
     {
+        ThreadUtil.assertIsGameThread();
         _gameStats.Reset();
         CTFUI.ClearCaptureUI();
         RallyManager.WipeAllRallies();
-        base.PostGameStarting(isOnLoad);
+        return base.PostGameStarting(isOnLoad);
     }
     protected void LoadFlagsIntoRotation()
     {
@@ -192,7 +174,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 L.LogError("Failed to path...");
                 throw new InvalidOperationException("Invalid pathing data entered.");
             }
-            //_rotation = ObjectivePathing.PathWithAdjacents(_allFlags, Config.MapConfig.Team1Adjacencies, Config.MapConfig.Team2Adjacencies);
         }
         while (_rotation.Count > CTFUI.ListUI.Parents.Length);
     }
@@ -209,18 +190,18 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         }
         _objectiveT1Index = 0;
         _objectiveT2Index = _rotation.Count - 1;
-        if (Config.TeamCTF.DiscoveryForesight < 1)
+        if (Config.AASDiscoveryForesight < 1)
         {
             L.LogWarning("Discovery Foresight is set to 0 in Flag Settings. The players can not see their next flags.");
         }
         else
         {
-            for (int i = 0; i < Config.TeamCTF.DiscoveryForesight; i++)
+            for (int i = 0; i < Config.AASDiscoveryForesight; i++)
             {
                 if (i >= _rotation.Count || i < 0) break;
                 _rotation[i].Discover(1);
             }
-            for (int i = _rotation.Count - 1; i > _rotation.Count - 1 - Config.TeamCTF.DiscoveryForesight; i--)
+            for (int i = _rotation.Count - 1; i > _rotation.Count - 1 - Config.AASDiscoveryForesight; i--)
             {
                 if (i >= _rotation.Count || i < 0) break;
                 _rotation[i].Discover(2);
@@ -253,11 +234,11 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             if (_gameStats != null)
                 _gameStats.flagOwnerChanges++;
             L.Log("Team 1 objective: " + (ObjectiveTeam1?.Name ?? "null") + ", Team 2 objective: " + (ObjectiveTeam2?.Name ?? "null"), ConsoleColor.Green);
-            if (Config.TeamCTF.DiscoveryForesight > 0)
+            if (Config.AASDiscoveryForesight > 0)
             {
                 if (Team == 1)
                 {
-                    for (int i = NewFlagObj.index; i < NewFlagObj.index + Config.TeamCTF.DiscoveryForesight; i++)
+                    for (int i = NewFlagObj.index; i < NewFlagObj.index + Config.AASDiscoveryForesight; i++)
                     {
                         if (i >= _rotation.Count || i < 0) break;
                         _rotation[i].Discover(1);
@@ -269,7 +250,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 }
                 else if (Team == 2)
                 {
-                    for (int i = NewFlagObj.index; i > NewFlagObj.index - Config.TeamCTF.DiscoveryForesight; i--)
+                    for (int i = NewFlagObj.index; i > NewFlagObj.index - Config.AASDiscoveryForesight; i--)
                     {
                         if (i >= _rotation.Count || i < 0) break;
                         _rotation[i].Discover(2);
@@ -286,9 +267,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     {
         base.EventLoopAction();
 
-        if (EveryXSeconds(5f))
-            FOBManager.Tick();
-
         if (EveryXSeconds(20f))
         {
             for (int i = 0; i < _rotation.Count; i++)
@@ -299,28 +277,28 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam1[j],
                             Points.XPConfig.FlagAttackXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].channel.owner.playerID.steamID.m_SteamID));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].Steam64));
                 }
                 else if (flag.LastDeltaPoints < 0 && flag.Owner != 2)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam2[j],
                             Points.XPConfig.FlagAttackXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].channel.owner.playerID.steamID.m_SteamID));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].Steam64));
                 }
                 else if (flag.Owner == 1 && flag.IsObj(2) && flag.Team2TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam1[j],
                             Points.XPConfig.FlagDefendXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].channel.owner.playerID.steamID.m_SteamID));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].Steam64));
                 }
                 else if (flag.Owner == 2 && flag.IsObj(1) && flag.Team1TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam2[j],
                             Points.XPConfig.FlagDefendXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].channel.owner.playerID.steamID.m_SteamID));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].Steam64));
                 }
             }
         }
@@ -334,14 +312,14 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
-            .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
+            .Select(x => x.Steam64).ToArray());
     }
     protected virtual void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
         if (capturedTeam == 1)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.Steam64).ToArray(), capturedTeam);
         else if (capturedTeam == 2)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.Steam64).ToArray(), capturedTeam);
         if (TicketManager.Provider is IFlagNeutralizedListener fnl)
             fnl.OnFlagNeutralized(flag, capturedTeam, lostTeam);
     }
@@ -350,7 +328,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
@@ -361,7 +338,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ITransportConnection channel = player.channel.owner.transportConnection;
-        ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.LeftCaptureRadius, flag);
         CTFUI.ClearCaptureUI(channel);
@@ -425,7 +401,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 InvokeOnFlagCaptured(flag, 1, lastOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                 {
-                    if (flag.PlayersOnFlagTeam1[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
+                    if (flag.PlayersOnFlagTeam1[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                         fg.AddCapture();
                 }
             }
@@ -447,28 +423,31 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 InvokeOnFlagCaptured(flag, 2, lastOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                 {
-                    if (flag.PlayersOnFlagTeam2[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
+                    if (flag.PlayersOnFlagTeam2[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                         fg.AddCapture();
                 }
             }
         }
-        if (lastOwner == 1)
+        else
         {
-            int oldindex = _objectiveT1Index;
-            _objectiveT1Index = flag.index;
-            if (oldindex != flag.index)
+            if (lastOwner == 1)
             {
-                InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                int oldindex = _objectiveT1Index;
+                _objectiveT1Index = flag.index;
+                if (oldindex != flag.index)
+                {
+                    InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                }
                 InvokeOnFlagNeutralized(flag, 2, 1);
             }
-        }
-        else if (lastOwner == 2)
-        {
-            int oldindex = _objectiveT2Index;
-            _objectiveT2Index = flag.index;
-            if (oldindex != flag.index)
+            else if (lastOwner == 2)
             {
-                InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                int oldindex = _objectiveT2Index;
+                _objectiveT2Index = flag.index;
+                if (oldindex != flag.index)
+                {
+                    InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                }
                 InvokeOnFlagNeutralized(flag, 1, 2);
             }
         }
@@ -495,20 +474,20 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             flag.SetOwner(0);
         UpdateFlag(flag);
     }
-    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    public override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (KitManager.KitExists(player.KitName, out Kit kit))
         {
-            if ((!kit.IsLoadout && kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
+            if ((!kit.IsLoadout && kit.IsLimited(out _, out _, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out _, out _, player.GetTeam())))
             {
                 if (!KitManager.TryGiveRiflemanKit(player))
                     KitManager.TryGiveUnarmedKit(player);
             }
         }
-        ulong team = player.GetTeam();
         if (!AllowCosmetics)
             player.SetCosmeticStates(false);
 
@@ -517,7 +496,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-        base.PlayerInit(player, wasAlreadyOnline);
+        return base.PlayerInit(player, wasAlreadyOnline);
     }
     public override void OnJoinTeam(UCPlayer player, ulong team)
     {

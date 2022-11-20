@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>net481</TargetFramework>
     <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
     <Product>Uncreated Warfare</Product>
     <OutputPath>C:\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Bin</OutputPath>
-	<Version>2.6.0.2</Version>
+	<Version>2.7.0.0</Version>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
@@ -24,8 +24,8 @@
     <PackageTags>Plugin</PackageTags>
     <NeutralLanguage>en-US</NeutralLanguage>
     <RootNamespace>Uncreated.Warfare</RootNamespace>
-    <AssemblyVersion>2.6.0.2</AssemblyVersion>
-    <FileVersion>2.6.0.2</FileVersion>
+    <AssemblyVersion>2.7.0.0</AssemblyVersion>
+    <FileVersion>2.7.0.0</FileVersion>
     <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <BaseOutputPath>C:\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Bin</BaseOutputPath>
@@ -55,34 +55,35 @@
       <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="com.rlabrecque.steamworks.net">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\com.rlabrecque.steamworks.net.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\com.rlabrecque.steamworks.net.dll</HintPath>
     </Reference>
     <Reference Include="SDG.NetPak.Runtime">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\SDG.NetPak.Runtime.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\SDG.NetPak.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="SDG.NetTransport">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\SDG.NetTransport.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\SDG.NetTransport.dll</HintPath>
     </Reference>
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Net.Http" />
     <Reference Include="UncreatedNetworking">
+<<<<<<< HEAD
       <HintPath>..\..\..\..\..\..\Libraries\UncreatedNetworking.dll</HintPath>
+=======
+      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\UncreatedNetworking.dll</HintPath>
+>>>>>>> 5bcfeef9a5d7eb9d827563fdbde0b26002cf7b74
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UI">
-      <HintPath>..\..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
     </Reference>
     <Reference Include="WindowsBase" />
   </ItemGroup>
@@ -97,9 +98,6 @@
     <PackageReference Include="Lib.Harmony" Version="2.2.1" />
     <PackageReference Include="MySqlConnector" Version="2.1.10" />
     <PackageReference Include="System.Text.Json" Version="6.0.4" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\UncreatedStats\UncreatedStats.csproj" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="SETLOCAL&#xD;&#xA;SET &quot;sourcedir=$(OutDir)&#xD;&#xA;FOR %25%25a IN (&quot;%25sourcedir%25\*&quot;) DO IF /i NOT &quot;%25%25~nxa&quot;==&quot;$(ProjectName).dll&quot; DEL &quot;%25%25a&quot;&#xD;&#xA;FOR %25%25a IN (&quot;%25sourcedir%25\..\..\..\Uncreated\Warfare\Lang\en-us\*&quot;) DO DEL &quot;%25%25a&quot; " />

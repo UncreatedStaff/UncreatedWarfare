@@ -3,11 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using Uncreated.Players;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Quests;
-using static UnityEngine.TouchScreenKeyboard;
 
 namespace Uncreated.Warfare.Ranks;
 public static class RankManager
@@ -24,7 +24,7 @@ public static class RankManager
         }
         catch (Exception ex)
         {
-            L.LogError(ex); 
+            L.LogError(ex);
         }
     }
     private static string GetSavePath(ulong steam64) => Path.DirectorySeparatorChar + Path.Combine("Players", steam64.ToString(Data.Locale) + "_0",
@@ -51,7 +51,7 @@ public static class RankManager
         RankStatus[] statuses;
         bool t = !ServerSavedata.fileExists(path);
         int l;
-        t:
+    t:
         if (t)
         {
             l = Config.Ranks.Length;
@@ -76,7 +76,8 @@ public static class RankManager
             L.LogError("RANKS WERE NOT SET UP IN THIS CONFIG FILE!");
             return new RankStatus[0];
         }
-        /*uint dataVersion =*/ block.readUInt32();
+        /*uint dataVersion =*/
+        block.readUInt32();
         int len = block.readInt32();
         l = Config.Ranks.Length;
         statuses = new RankStatus[l];
@@ -287,7 +288,7 @@ public static class RankManager
         ref RankStatus status = ref player.RankData[index + 1];
 
         ClearRank(player, in data);
-        
+
         for (int i = 0; i < Config.Ranks.Length; ++i)
         {
             data = ref Config.Ranks[i];
@@ -348,25 +349,25 @@ public static class RankManager
                     }
                 }
             }
-        n:;
+            n:;
         }
 
         if (Assets.find(data.QuestID) is QuestAsset qa)
             player.Player.quests.sendRemoveQuest(qa.id);
     }
 
-    public static bool OnQuestCompleted(UCPlayer player, Guid key)
+    public static bool OnQuestCompleted(QuestCompleted e)
     {
-        player.RankData ??= ReadRankData(player);
-        int index = GetRankIndex(player);
+        e.Player.RankData ??= ReadRankData(e.Player);
+        int index = GetRankIndex(e.Player);
         if (index != -1 && index < Config.Ranks.Length - 1)
         {
             ref RankData nextRank = ref Config.Ranks[index + 1];
-            ref RankStatus status = ref player.RankData[index + 1];
+            ref RankStatus status = ref e.Player.RankData[index + 1];
             bool write = false;
             for (int i = 0; i < nextRank.UnlockRequirements.Length; i++)
             {
-                if (nextRank.UnlockRequirements[i] == key)
+                if (nextRank.UnlockRequirements[i] == e.PresetKey)
                 {
                     status.Completions[i] = true;
                     L.LogDebug("Finished rank requirement " + i.ToString());
@@ -382,12 +383,12 @@ public static class RankManager
             {
                 status.IsCompelete = true;
                 L.LogDebug("Finished rank " + nextRank.GetName(0));
-                WriteRankData(player, player.RankData);
+                WriteRankData(e.Player, e.Player.RankData);
                 if (Assets.find(nextRank.QuestID) is QuestAsset quest)
                 {
-                    player.Player.quests.sendRemoveQuest(quest.id);
-                    ToastMessage.QueueMessage(player, new ToastMessage("Quest complete: " + quest.questName, EToastMessageSeverity.BIG));
-                    OnPlayerJoin(player);
+                    e.Player.Player.quests.sendRemoveQuest(quest.id);
+                    ToastMessage.QueueMessage(e.Player, new ToastMessage("Quest complete: " + quest.questName, EToastMessageSeverity.BIG));
+                    OnPlayerJoin(e.Player);
                 }
             }
             return true;
@@ -396,7 +397,7 @@ public static class RankManager
     }
 }
 
-public class RankConfig : ConfigData
+public class RankConfig : JSONConfigData
 {
     public RankData[] Ranks;
     public override void SetDefaults()
@@ -417,7 +418,7 @@ public class RankConfig : ConfigData
             new RankData(6, "Staff Sergeant", "Ssg", "rare", "6ca6d44bc07e4a4d98653dadf30be5a1",
                 "39a1fb42-f797-4190-a86c-147675ccd800", "2d23a366-fbcf-4847-a599-96c4f60e530c", "064f08a2-182d-4dae-ab70-bf4f28669c66"),
             new RankData(7, "Sergeant 1st Class", "Sfc", "epic", "0ac0318ac6064a2ab30f22e61769f21e",
-                "55c7e483-79f4-4b72-9b16-cd0f24c10844", "b5fc53f9-6184-4233-b683-cd141d14d892", "0600d9aa-9f7c-413f-959c-ab25b2f4c165", 
+                "55c7e483-79f4-4b72-9b16-cd0f24c10844", "b5fc53f9-6184-4233-b683-cd141d14d892", "0600d9aa-9f7c-413f-959c-ab25b2f4c165",
                 "8fdf2b79-52a0-4a65-81ef-d3df0b8bf6e3"),
             new RankData(8, "Warrant Officer", "W.O", "epic", "5730fa43425c48759ea31138572e575f",
                 "e2607e1f-2781-46fe-b53d-c13dd9921595", "d077f440-29e0-4f91-9406-f3050c44fadf", "edf07ac7-6e04-4167-9cb5-f3240d1e0ab8",
@@ -508,12 +509,13 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
         this.QuestID = questID;
         this.UnlockRequirements = unlockRequirements;
     }
-    public RankData(int order, string name, string abbreviation, string color, Guid questID, params Guid[] unlockRequirements) : 
+    public RankData(int order, string name, string abbreviation, string color, Guid questID, params Guid[] unlockRequirements) :
         this(order, new Dictionary<string, string>(1) { { L.DEFAULT, name } }, new Dictionary<string, string>(1) { { L.DEFAULT, abbreviation } },
             color, questID, unlockRequirements)
     { }
-    public RankData(int order, string name, string abbreviation, string color, string questID, params string[] unlockRequirements) : 
-        this(order, name, abbreviation, color, Guid.TryParse(questID, out Guid guid) ? guid : Guid.Empty, ToGuidArray(unlockRequirements)) { }
+    public RankData(int order, string name, string abbreviation, string color, string questID, params string[] unlockRequirements) :
+        this(order, name, abbreviation, color, Guid.TryParse(questID, out Guid guid) ? guid : Guid.Empty, ToGuidArray(unlockRequirements))
+    { }
     private static Guid[] ToGuidArray(string[] strings)
     {
         Guid[] res = new Guid[strings.Length];

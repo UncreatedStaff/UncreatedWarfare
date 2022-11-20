@@ -1,23 +1,31 @@
 ﻿using HarmonyLib;
+using JetBrains.Annotations;
 using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Text.RegularExpressions;
-using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Squads;
 using UnityEngine;
+// ReSharper disable InconsistentNaming
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Harmony;
 
 public static partial class Patches
 {
-    public static Harmony Patcher = new Harmony("net.uncreated.warfare");
+    public static HarmonyLib.Harmony Patcher = new HarmonyLib.Harmony("net.uncreated.warfare");
     /// <summary>Patch methods</summary>
     public static void DoPatching()
     {
         Patcher.PatchAll();
+        if (UCWarfare.Config.DisableMissingAssetKick)
+            InternalPatches.ServerMessageHandler_ValidateAssets_Patch.Patch(Patcher);
     }
     /// <summary>Unpatch methods</summary>
     public static void Unpatch()
@@ -35,7 +43,6 @@ public static partial class Patches
     public delegate void PlayerGesture(Player player, EPlayerGesture gesture, ref bool allow);
     public delegate void PlayerMarker(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed);
 
-    public static event StructureDestroyedEventArgs StructureDestroyedHandler;
     public static event OnPlayerTogglesCosmeticsDelegate OnPlayerTogglesCosmetics_Global;
     public static event OnPlayerSetsCosmeticsDelegate OnPlayerSetsCosmetics_Global;
     public static event BatteryStealingDelegate OnBatterySteal_Global;
@@ -67,6 +74,7 @@ public static partial class Patches
         }*/
         [HarmonyPatch(typeof(SteamPlayerID), "BypassIntegrityChecks", MethodType.Getter)]
         [HarmonyPostfix]
+        [UsedImplicitly]
         static void GetBypassIntegrityChecksPrefix(SteamPlayerID __instance, ref bool __result)
         {
 #if DEBUG
@@ -84,6 +92,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(Provider), "verifyNextPlayerInQueue")]
         [HarmonyPostfix]
+        [UsedImplicitly]
         static void OnPlayerEnteredQueuePost()
         {
 #if DEBUG
@@ -96,12 +105,12 @@ public static partial class Patches
                     SteamPending pending = Provider.pending[i];
                     if (pending.hasSentVerifyPacket)
                         continue;
-                    if (F.IsAdmin(pending.playerID.steamID.m_SteamID) || F.IsIntern(pending.playerID.steamID.m_SteamID) || PlayerManager.HasSave(pending.playerID.steamID.m_SteamID, out PlayerSave save) && save.HasQueueSkip)
+                    if (pending.playerID.steamID.m_SteamID.IsAdmin() || pending.playerID.steamID.m_SteamID.IsIntern() || PlayerManager.HasSave(pending.playerID.steamID.m_SteamID, out PlayerSave save) && save.HasQueueSkip)
                         pending.sendVerifyPacket();
                 }
             }
         }
-        private static readonly string[] dontLogCommands = new string[]
+        private static readonly string[] dontLogCommands =
         {
             "request",
             "req",
@@ -138,6 +147,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(ChatManager), nameof(ChatManager.ReceiveChatRequest))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool OnChatRequested(in ServerInvocationContext context, byte flags, string text)
         {
 #if DEBUG
@@ -159,7 +169,7 @@ public static partial class Patches
                 text = text.Substring(0, ChatManager.MAX_MESSAGE_LENGTH);
             if (CommandWindow.shouldLogChat)
             {
-                FPlayerName n = F.GetPlayerOriginalNames(callingPlayer);
+                PlayerNames n = caller is null ? new PlayerNames(callingPlayer) : caller.Name;
                 string name = $"[{n.PlayerName} ({n.CharacterName})]:";
                 int len = 40 - name.Length;
                 if (len > 0)
@@ -223,8 +233,11 @@ public static partial class Patches
 
             if (callingPlayer.isAdmin || duty)
                 text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: " + text;
+            else if (caller != null && SquadManager.Loaded && SquadManager.Singleton.Commanders.IsCommander(caller))
+                text = "<color=#" + UCWarfare.GetColorHex("commander") + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", string.Empty);
             else
-                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", "");
+                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(team) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", string.Empty);
+
             if (mode == EChatMode.GROUP)
                 text = "[T] " + text;
 
@@ -271,6 +284,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(PlayerAnimator), nameof(PlayerAnimator.ReceiveGestureRequest))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool OnGestureReceived(EPlayerGesture newGesture, PlayerAnimator __instance)
         {
 #if DEBUG
@@ -290,6 +304,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(PlayerQuests), "replicateSetMarker")]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool OnPlayerMarked(ref bool newIsMarkerPlaced, ref Vector3 newMarkerPosition, ref string newMarkerTextOverride, PlayerQuests __instance)
         {
 #if DEBUG
@@ -305,6 +320,7 @@ public static partial class Patches
         ///</summary>
         [HarmonyPatch(typeof(PlayerInventory), nameof(PlayerInventory.ReceiveDragItem))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool CancelStoringNonWhitelistedItem(PlayerInventory __instance, byte page_0, byte x_0, byte y_0, byte page_1, byte x_1, byte y_1, byte rot_1)
         {
 #if DEBUG
@@ -323,6 +339,7 @@ public static partial class Patches
         ///</summary>
         [HarmonyPatch(typeof(GroupManager), nameof(GroupManager.requestGroupExit))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool CancelLeavingGroup(Player player)
         {
 #if DEBUG
@@ -339,6 +356,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(PlayerClothing), nameof(PlayerClothing.ReceiveVisualToggleRequest))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool CancelCosmeticChangesPrefix(EVisualToggleType type, PlayerClothing __instance)
         {
 #if DEBUG
@@ -355,6 +373,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(PlayerClothing), nameof(PlayerClothing.ServerSetVisualToggleState))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool CancelCosmeticSetPrefix(EVisualToggleType type, ref bool isVisible, PlayerClothing __instance)
         {
 #if DEBUG
@@ -371,6 +390,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(VehicleManager), nameof(VehicleManager.ReceiveStealVehicleBattery))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool BatteryStealingOverride(in ServerInvocationContext context)
         {
 #if DEBUG
@@ -387,43 +407,105 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(UseableMelee), "fire")]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static void OnPreMeleeHit(UseableMelee __instance)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            var weaponAsset = ((ItemWeaponAsset)__instance.player.equipment.asset);
+            ItemWeaponAsset weaponAsset = ((ItemWeaponAsset)__instance.player.equipment.asset);
 
             RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), weaponAsset.range, RayMasks.BARRICADE, __instance.player);
             if (info.transform != null)
             {
-                var drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
+                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
                 if (drop != null)
                 {
                     UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);
 
                     if (builder != null && builder.GetTeam() == drop.GetServersideData().group)
                     {
-                        if (Gamemode.Config.Items.EntrenchingTool.MatchGuid(__instance.equippedMeleeAsset.GUID))
+                        if (Gamemode.Config.ItemEntrenchingTool.MatchGuid(__instance.equippedMeleeAsset.GUID))
                         {
                             if (drop.model.TryGetComponent(out RepairableComponent repairable))
                                 repairable.Repair(builder);
                             else if (drop.model.TryGetComponent(out BuildableComponent buildable))
                                 buildable.IncrementBuildPoints(builder);
                             else if (drop.model.TryGetComponent(out FOBComponent radio))
-                                radio.parent.Repair(builder);
+                                radio.Parent.Repair(builder);
                         }
                     }
                 }
             }
         }
-        [HarmonyPatch(typeof(SDG.Unturned.Rocket), "OnTriggerEnter")]
+        [HarmonyPatch(typeof(Rocket), "OnTriggerEnter")]
         [HarmonyPrefix]
-        static void OnProjectileCollided(SDG.Unturned.Rocket __instance, Collider other)
+        [UsedImplicitly]
+        static void OnProjectileCollided(Rocket __instance, Collider other)
         {
             if (__instance.gameObject.TryGetComponent(out ProjectileComponent projectile))
             {
                 projectile.OnCollided(other);
+            }
+        }
+        public static class ServerMessageHandler_ValidateAssets_Patch
+        {
+            private const string READ_MESSSAGE_NAME = "ReadMessage";
+            private const string VALIDATE_ASSETS_HANDLER_NAME = "ServerMessageHandler_ValidateAssets";
+            private const string SEND_KICK_NETCALL_NAME = "SendKickForInvalidGuid";
+            private static readonly Type? ValidateAssetsHandlerType = typeof(Provider).Assembly.GetType("SDG.Unturned." + VALIDATE_ASSETS_HANDLER_NAME);
+            private static readonly FieldInfo? SendKickForInvalidGuidField = typeof(Assets).GetField(SEND_KICK_NETCALL_NAME, BindingFlags.NonPublic | BindingFlags.Static);
+            private static readonly MethodInfo? LogMethod = typeof(L).GetMethod(nameof(L.LogWarning), BindingFlags.Public | BindingFlags.Static);
+            private static readonly MethodInfo? GuidToStringMethod = typeof(Guid).GetMethods(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault(x => x.Name.Equals(nameof(Guid.ToString), StringComparison.Ordinal) && x.GetParameters().Length == 2);
+            private static readonly MethodInfo? Concat2Method = typeof(string).GetMethods(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(x => x.Name.Equals(nameof(string.Concat)) && x.GetParameters().Length == 2 && x.GetParameters()[0].ParameterType == typeof(string));
+            private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                bool found = false;
+                foreach (CodeInstruction instruction in instructions)
+                {
+                    if (!found && instruction.opcode == OpCodes.Ldsfld && instruction.LoadsField(SendKickForInvalidGuidField))
+                    {
+                        yield return new CodeInstruction(OpCodes.Ldstr, "Unknown asset found: ");
+                        yield return new CodeInstruction(OpCodes.Ldloca_S, 5);
+                        yield return new CodeInstruction(OpCodes.Ldstr, "N");
+                        yield return new CodeInstruction(OpCodes.Ldnull);
+                        yield return new CodeInstruction(OpCodes.Callvirt, GuidToStringMethod);
+                        yield return new CodeInstruction(OpCodes.Call, Concat2Method); // message + guid
+                        yield return new CodeInstruction(OpCodes.Ldc_I4, (int)ConsoleColor.Yellow);
+                        yield return new CodeInstruction(OpCodes.Ldstr, "VALIDATE ASSETS");
+                        yield return new CodeInstruction(OpCodes.Call, LogMethod);
+                        yield return new CodeInstruction(OpCodes.Ret);
+                        found = true;
+                    }
+                    yield return instruction;
+                }
+                if (!found)
+                {
+                    L.LogWarning("Patch on " + VALIDATE_ASSETS_HANDLER_NAME + "." + READ_MESSSAGE_NAME + " failed to find an injection point.");
+                }
+            }
+
+            internal static void Patch(HarmonyLib.Harmony patcher)
+            {
+                if (SendKickForInvalidGuidField == null)
+                {
+                    L.LogWarning("Failed to find field: " + nameof(Assets) + "." + SEND_KICK_NETCALL_NAME + ".");
+                    return;
+                }
+                if (ValidateAssetsHandlerType != null)
+                {
+                    MethodInfo? original = ValidateAssetsHandlerType.GetMethod(READ_MESSSAGE_NAME, BindingFlags.NonPublic | BindingFlags.Static);
+                    if (original == null)
+                    {
+                        L.LogWarning("Failed to find method " + VALIDATE_ASSETS_HANDLER_NAME + "." + READ_MESSSAGE_NAME + ".");
+                        return;
+                    }
+                    patcher.Patch(original, transpiler: new HarmonyMethod(typeof(ServerMessageHandler_ValidateAssets_Patch).GetMethod(nameof(Transpiler), BindingFlags.NonPublic | BindingFlags.Static)));
+                }
+                else
+                {
+                    L.LogWarning("Failed to find method " + VALIDATE_ASSETS_HANDLER_NAME + ".");
+                }
             }
         }
     }

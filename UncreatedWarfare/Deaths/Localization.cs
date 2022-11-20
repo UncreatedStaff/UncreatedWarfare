@@ -3,14 +3,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using System.Windows.Interop;
 using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using Uncreated.Json;
 
 namespace Uncreated.Warfare.Deaths;
 internal static class Localization
@@ -376,7 +376,7 @@ internal static class Localization
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out after being hit by {1}'s {3} fragmentation from {4}m away using a {6}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} bled out after hitting themselves with {3} fragmentation using a {6}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.ITEM, "{0} was killed by {3} fragmentation from {4}m away using a {6} driven by {5}."),
-                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was killed {1}'s {3} fragmentation from {4}m away using a {6} driven by {5}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was killed by {1}'s {3} fragmentation from {4}m away using a {6} driven by {5}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} killed themselves with {3} fragmentation while in a {6} driven by {5}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after being hit by {3} fragmentation using a {6} driven by {5} from {4}m away."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out after being hit by {1}'s {3} fragmentation using a {6} driven by {5} from {4}m away."),
@@ -502,7 +502,7 @@ internal static class Localization
     }
     private static void Log(bool tk, string msg, PlayerDied e)
     {
-        string log = F.RemoveRichText(msg);
+        string log = Util.RemoveRichText(msg);
         L.Log(log, tk ? ConsoleColor.Cyan : ConsoleColor.DarkCyan);
         if (OffenseManager.IsValidSteam64ID(e.Instigator))
         {
@@ -588,7 +588,7 @@ internal static class Localization
         else DeathTranslations.TryGetValue(language, out causes);
         if (causes is null)
             return args.DeathCause.ToString() + " Dead: " + args.DeadPlayerName;
-    rtn:
+        rtn:
         int i = FindDeathCause(causes, ref args);
         if (i == -1)
         {
@@ -779,7 +779,7 @@ public class DeathCause : IJsonReadWrite
     {
         this.Cause = cause;
     }
-    public DeathCause(EDeathCause cause, DeathTranslation translation) : this (cause, new DeathTranslation[] { translation }) { }
+    public DeathCause(EDeathCause cause, DeathTranslation translation) : this(cause, new DeathTranslation[] { translation }) { }
     public DeathCause(EDeathCause cause, DeathTranslation[] translations) : this(cause)
     {
         this.Translations = translations;
@@ -843,7 +843,7 @@ public class DeathCause : IJsonReadWrite
                                 if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
                                     prop = reader.GetString();
-                                    if (reader.Read() && prop is not null && Enum.TryParse(prop, true, out EDeathFlags flags) 
+                                    if (reader.Read() && prop is not null && Enum.TryParse(prop, true, out EDeathFlags flags)
                                         && reader.TokenType == JsonTokenType.String && (prop = reader.GetString()) is not null)
                                     {
                                         translations.Add(new DeathTranslation(flags, prop));

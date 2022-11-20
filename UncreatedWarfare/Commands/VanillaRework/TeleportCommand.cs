@@ -61,7 +61,7 @@ public class TeleportCommand : Command
 
                     if (n is null)
                         throw ctx.Reply(T.TeleportLocationNotFound, input);
-                    if (ctx.Caller.Player.teleportToLocation(n.point, 0f))
+                    if (ctx.Caller.Player.teleportToLocation(new Vector3(n.point.x, F.GetTerrainHeightAt2DPoint(n.point.x, n.point.z, 1f), n.point.z), 0f))
                         throw ctx.Reply(T.TeleportSelfLocationSuccess, n.name);
                     else
                         throw ctx.Reply(T.TeleportSelfLocationObstructed, n.name);
@@ -111,7 +111,7 @@ public class TeleportCommand : Command
 
                         if (n is null)
                             throw ctx.Reply(T.TeleportLocationNotFound, input);
-                        if (target.Player.teleportToLocation(n.point, 0f))
+                        if (target.Player.teleportToLocation(new Vector3(n.point.x, F.GetTerrainHeightAt2DPoint(n.point.x, n.point.z, 1f), n.point.z), 0f))
                         {
                             target.SendChat(T.TeleportSelfLocationSuccess, n.name);
                             throw ctx.Reply(T.TeleportOtherSuccessLocation, target, n.name);
@@ -151,8 +151,8 @@ public class TeleportCommand : Command
                 }
 
                 pos = new Vector3(x, y, z);
-                throw ctx.Reply(ctx.Caller.Player.teleportToLocation(pos, ctx.Caller.Player.look.aim.transform.rotation.y) 
-                        ? T.TeleportSelfLocationSuccess 
+                throw ctx.Reply(ctx.Caller.Player.teleportToLocation(pos, ctx.Caller.Player.look.aim.transform.rotation.y)
+                        ? T.TeleportSelfLocationSuccess
                         : T.TeleportSelfLocationObstructed,
                     $"({x.ToString("0.##", Data.Locale)}, {y.ToString("0.##", Data.Locale)}, {z.ToString("0.##", Data.Locale)})");
             case 4:

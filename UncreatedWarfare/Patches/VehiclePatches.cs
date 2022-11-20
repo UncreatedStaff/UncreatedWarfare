@@ -1,15 +1,17 @@
 ﻿using HarmonyLib;
 using SDG.Unturned;
 using System;
+using JetBrains.Annotations;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Harmony;
 
 public static partial class Patches
 {
+    // ReSharper disable InconsistentNaming
     [HarmonyPatch]
     public class VehiclePatches
     {
@@ -19,6 +21,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(InteractableVehicle), nameof(InteractableVehicle.tryAddPlayer))]
         [HarmonyPostfix]
+        [UsedImplicitly]
         static void TryAddPlayerPostfix(ref byte seat, Player player, InteractableVehicle __instance, ref bool __result)
         {
 #if DEBUG
@@ -26,13 +29,14 @@ public static partial class Patches
 #endif
             if (__result)
             {
-                if (VehicleBay.VehicleExists(__instance.asset.GUID, out VehicleData vehicleData))
+                VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSync(__instance.asset.GUID);
+                if (data != null)
                 {
                     UCPlayer? enterer = UCPlayer.FromPlayer(player);
 
                     if (enterer != null)
                     {
-                        if (vehicleData.Type == EVehicleType.EMPLACEMENT)
+                        if (VehicleData.IsEmplacement(data.Type))
                         {
                             if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
                             {
@@ -40,9 +44,9 @@ public static partial class Patches
                                 return;
                             }
                         }
-                        else if (vehicleData.Type == EVehicleType.JET)
+                        else if (data.Type == EVehicleType.JET)
                         {
-                            if (VehicleBay.CountCrewmen(__instance, vehicleData) >= 2)
+                            if (VehicleBay.CountCrewmen(__instance, data) >= 2)
                             {
                                 __result = false;
                                 return;
@@ -51,9 +55,9 @@ public static partial class Patches
 
                         UCPlayer? owner = UCPlayer.FromCSteamID(__instance.lockedOwner);
 
-                        if (vehicleData.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
+                        if (data.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
                         {
-                            if (enterer.KitClass == vehicleData.RequiredClass) // for crewman trying to enter a crewed vehicle
+                            if (enterer.KitClass == data.RequiredClass) // for crewman trying to enter a crewed vehicle
                             {
                                 if (seat == 0)
                                 {
@@ -75,7 +79,7 @@ public static partial class Patches
                             }
                             else // for non crewman trying to enter a crewed vehicle
                             {
-                                if (!VehicleBay.TryGetFirstNonCrewSeat(__instance, vehicleData, out seat))
+                                if (!VehicleBay.TryGetFirstNonCrewSeat(__instance, data, out seat))
                                 {
                                     enterer.SendChat(T.VehicleNoPassengerSeats);
                                     __result = false;
@@ -86,7 +90,12 @@ public static partial class Patches
                         {
                             if (seat == 0)
                             {
-                                bool canEnterDriverSeat = owner is null || enterer == owner || (owner.Squad != null && owner.Squad.Members.Contains(enterer)) || (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2) || (vehicleData.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(__instance.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, __instance.lockedGroup.m_SteamID) != null);
+                                bool canEnterDriverSeat =
+                                    owner is null ||
+                                    enterer == owner ||
+                                    (owner.Squad != null && owner.Squad.Members.Contains(enterer)) ||
+                                    (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2) ||
+                                    (data.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(__instance.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, __instance.lockedGroup.m_SteamID) != null);
 
                                 if (!canEnterDriverSeat)
                                 {
@@ -100,13 +109,12 @@ public static partial class Patches
                                         __result = false;
                                     }
                                 }
-
                             }
                         }
                     }
                 }
                 if (seat == 0 && __instance.transform.TryGetComponent(out VehicleComponent c))
-                {   
+                {
                     c.LastDriver = player.channel.owner.playerID.steamID.m_SteamID;
                     c.LastDriverTime = Time.realtimeSinceStartup;
                 }

@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -15,13 +17,14 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 public sealed partial class Conquest :
-    TicketGamemode<ConquestTicketProvider>,
+    TicketFlagGamemode<ConquestTicketProvider>,
     IFlagRotation,
     IVehicles,
     IFOBs,
@@ -29,9 +32,9 @@ public sealed partial class Conquest :
     IRevives,
     ISquads,
     IImplementsLeaderboard<ConquestStats, ConquestStatTracker>,
-    IStructureSaving,
     IStagingPhase,
-    IGameStats
+    IGameStats,
+    ITraits
 {
     private VehicleSpawner _vehicleSpawner;
     private VehicleBay _vehicleBay;
@@ -44,6 +47,8 @@ public sealed partial class Conquest :
     private StructureSaver _structureSaver;
     private ConquestLeaderboard? _endScreen;
     private ConquestStatTracker _gameStats;
+    private TraitManager _traitManager;
+    private ActionManager _actionManager;
     private bool _isScreenUp = false;
     public override bool EnableAMC => true;
     public override bool ShowOFPUI => true;
@@ -62,14 +67,16 @@ public sealed partial class Conquest :
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
+    public TraitManager TraitManager => _traitManager;
+    public ActionManager ActionManager => _actionManager;
     Leaderboard<ConquestStats, ConquestStatTracker>? IImplementsLeaderboard<ConquestStats, ConquestStatTracker>.Leaderboard => _endScreen;
+    ConquestStatTracker IImplementsLeaderboard<ConquestStats, ConquestStatTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     public bool IsScreenUp => _isScreenUp;
-    public ConquestStatTracker WarstatsTracker => _gameStats;
     object IGameStats.GameStats => _gameStats;
     public override string DisplayName => "Conquest";
     public override EGamemode GamemodeType => EGamemode.CONQUEST;
-    public Conquest() : base(nameof(Conquest), Config.TeamCTF.EvaluateTime) { }
-    protected override void PreInit()
+    public Conquest() : base(nameof(Conquest), Config.AASEvaluateTime) { }
+    protected override Task PreInit()
     {
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
@@ -80,56 +87,24 @@ public sealed partial class Conquest :
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _requestSigns);
-        base.PreInit();
+        AddSingletonRequirement(ref _traitManager);
+        if (UCWarfare.Config.EnableActionMenu)
+            AddSingletonRequirement(ref _actionManager);
+        return base.PreInit();
     }
-    protected override void PostInit()
-    {
-        Commands.ReloadCommand.ReloadKits();
-        _gameStats = gameObject.AddComponent<ConquestStatTracker>();
-    }
-    protected override void OnReady()
-    {
-        RepairManager.LoadRepairStations();
-        RallyManager.WipeAllRallies();
-        base.OnReady();
-    }
-    protected override void PostDispose()
-    {
-        CTFUI.StagingUI.ClearFromAllPlayers();
-        Destroy(_gameStats);
-        base.PostDispose();
-    }
-    protected override void EventLoopAction()
-    {
-        base.EventLoopAction();
-
-        if (EveryXSeconds(5f))
-            FOBManager.Tick();
-    }
-    private void GetTeamBleed(out int t1Bleed, out int t2Bleed)
-    {
-        t1Bleed = 0;
-        t2Bleed = 0;
-        for (int i = 0; i < _rotation.Count; ++i)
-        {
-            Flag f = _rotation[i];
-            if (f.Owner == 1)
-                ++t2Bleed;
-            else if (f.Owner == 2)
-                ++t1Bleed;
-        }
-    }
-    protected override bool TimeToCheck() => EveryXSeconds(Config.Conquest.FlagTickSeconds);
+    protected override bool TimeToEvaluatePoints() => EveryXSeconds(Config.ConquestFlagTickSeconds);
     public override bool IsAttackSite(ulong team, Flag flag) => true;
     public override bool IsDefenseSite(ulong team, Flag flag) => true;
-    public override void DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner)
     {
-        base.DeclareWin(winner);
+        ThreadUtil.assertIsGameThread();
+
         StartCoroutine(EndGameCoroutine(winner));
+        return base.DeclareWin(winner);
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
-        yield return new WaitForSeconds(Config.GeneralConfig.LeaderboardDelay);
+        yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -156,16 +131,20 @@ public sealed partial class Conquest :
             _endScreen = null;
         }
         _isScreenUp = false;
-        EndGame();
+        Task.Run(EndGame);
     }
-    protected override void PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad)
     {
+        ThreadUtil.assertIsGameThread();
         _gameStats.Reset();
         CTFUI.ClearCaptureUI();
         RallyManager.WipeAllRallies();
-        SpawnBlockers();
-        StartStagingPhase(Config.Conquest.StagingPhaseSeconds);
-        base.PostGameStarting(isOnLoad);
+        if (Config.ConquestStagingPhaseSeconds > 0)
+        {
+            SpawnBlockers();
+            StartStagingPhase(Config.ConquestStagingPhaseSeconds);
+        }
+        return base.PostGameStarting(isOnLoad);
     }
     protected override void EndStagingPhase()
     {
@@ -197,7 +176,7 @@ public sealed partial class Conquest :
         base.InitFlag(flag);
         flag.Discover(1);
         flag.Discover(2);
-        flag.IsContestedOverride = IsContested;
+        flag.IsContestedOverride = ConventionalIsContested;
         flag.EvaluatePointsOverride = EvaluatePoints;
     }
     private void EvaluatePoints(Flag flag, bool overrideInactiveCheck)
@@ -208,41 +187,11 @@ public sealed partial class Conquest :
             {
                 if (winner == 1 || winner == 2)
                 {
-                    flag.Cap(winner, flag.GetCaptureAmount(Config.Conquest.CaptureScale, winner));
+                    flag.Cap(winner, flag.GetCaptureAmount(Config.ConquestCaptureScale, winner));
                 }
             }
             else flag.SetPoints(flag.Points);
         }
-    }
-    private static bool IsContested(Flag flag, out ulong winner)
-    {
-        if (flag.Team1TotalCappers == 0 && flag.Team2TotalCappers == 0)
-        {
-            winner = 0;
-            return false;
-        }
-        else if (flag.Team1TotalCappers == flag.Team2TotalCappers)
-            winner = 0;
-        else if (flag.Team1TotalCappers == 0 && flag.Team2TotalCappers > 0)
-            winner = 2;
-        else if (flag.Team2TotalCappers == 0 && flag.Team1TotalCappers > 0)
-            winner = 1;
-        else if (flag.Team1TotalCappers > flag.Team2TotalCappers)
-        {
-            if (flag.Team1TotalCappers - Config.TeamCTF.RequiredPlayerDifferenceToCapture >= flag.Team2TotalCappers)
-                winner = 1;
-            else
-                winner = 0;
-        }
-        else
-        {
-            if (flag.Team2TotalCappers - Config.TeamCTF.RequiredPlayerDifferenceToCapture >= flag.Team1TotalCappers)
-                winner = 2;
-            else
-                winner = 0;
-        }
-
-        return winner == 0;
     }
 
     protected override void FlagOwnerChanged(ulong oldOwner, ulong newOwner, Flag flag)
@@ -255,7 +204,7 @@ public sealed partial class Conquest :
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
             for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
             {
-                if (flag.PlayersOnFlagTeam1[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
+                if (flag.PlayersOnFlagTeam1[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                     fg.AddCapture();
             }
         }
@@ -264,7 +213,7 @@ public sealed partial class Conquest :
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
             for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
             {
-                if (flag.PlayersOnFlagTeam2[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
+                if (flag.PlayersOnFlagTeam2[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                     fg.AddCapture();
             }
         }
@@ -286,9 +235,9 @@ public sealed partial class Conquest :
 #endif
         Chat.Broadcast(T.FlagNeutralized, flag);
         if (neutralizingTeam == 1)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), neutralizingTeam);
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.Steam64).ToArray(), neutralizingTeam);
         else if (neutralizingTeam == 2)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), neutralizingTeam);
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.Steam64).ToArray(), neutralizingTeam);
         if (TicketManager.Provider is IFlagNeutralizedListener fnl)
             fnl.OnFlagNeutralized(flag, neutralizingTeam, lostTeam);
     }
@@ -305,7 +254,7 @@ public sealed partial class Conquest :
         StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         VehicleSigns.OnFlagCaptured();
         QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
-            .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
+            .Select(x => x.Steam64).ToArray());
         TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
     }
     private void UpdateFlag(Flag flag)
@@ -359,11 +308,12 @@ public sealed partial class Conquest :
         CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
         UpdateFlag(flag);
     }
-    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    public override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        ThreadUtil.assertIsGameThread();
         if (!KitManager.KitExists(player.KitName, out Kit kit) || (!kit.IsLoadout && kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
         {
             if (!KitManager.TryGiveRiflemanKit(player))
@@ -378,7 +328,7 @@ public sealed partial class Conquest :
 
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-        base.PlayerInit(player, wasAlreadyOnline);
+        return base.PlayerInit(player, wasAlreadyOnline);
     }
     public override void OnJoinTeam(UCPlayer player, ulong team)
     {
@@ -420,8 +370,8 @@ public class ConquestTicketProvider : BaseTicketProvider, IFlagCapturedListener,
     private int _t2Bleed;
     public override void OnGameStarting(bool isOnLoaded)
     {
-        Manager.Team1Tickets = Gamemode.Config.Conquest.StartingTickets;
-        Manager.Team2Tickets = Gamemode.Config.Conquest.StartingTickets;
+        Manager.Team1Tickets = Gamemode.Config.ConquestStartingTickets;
+        Manager.Team2Tickets = Gamemode.Config.ConquestStartingTickets;
     }
     public override void GetDisplayInfo(ulong team, out string message, out string tickets, out string bleed)
     {
@@ -468,13 +418,13 @@ public class ConquestTicketProvider : BaseTicketProvider, IFlagCapturedListener,
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
     {
         if (oldValue > 0 && newValue <= 0)
-            Data.Gamemode.DeclareWin(TeamManager.Other(team));
+            _ = Data.Gamemode.DeclareWin(TeamManager.Other(team));
     }
     public override void Tick()
     {
         if (Data.Gamemode.State == EState.ACTIVE)
         {
-            if (Data.Gamemode.EveryXSeconds(Gamemode.Config.Conquest.PointCount * Gamemode.Config.Conquest.TicketBleedIntervalPerPoint))
+            if (Data.Gamemode.EveryXSeconds(Gamemode.Config.ConquestPointCount * Gamemode.Config.ConquestTicketBleedIntervalPerPoint))
             {
                 if (_t1Bleed < 0)
                     Manager.Team1Tickets += _t1Bleed;

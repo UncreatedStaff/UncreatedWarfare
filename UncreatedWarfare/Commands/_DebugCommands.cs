@@ -6,11 +6,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -19,28 +22,33 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
-using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Squads.Commander;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+// ReSharper disable UnusedMember.Local
+// ReSharper disable InconsistentNaming
 
 namespace Uncreated.Warfare.Commands;
 
 #pragma warning disable IDE1006 // Naming Styles
-internal class _DebugCommand : Command
+public class DebugCommand : AsyncCommand
 #pragma warning restore IDE1006 // Naming Styles
 {
-    public static int currentstep = 0;
-    private readonly Type type = typeof(_DebugCommand);
-    public _DebugCommand() : base("test", EAdminType.MEMBER) { }
-    public override void Execute(CommandInteraction ctx)
+    public DebugCommand() : base("test", EAdminType.MEMBER)
+    {
+        AddAlias("dev");
+        AddAlias("tests");
+    }
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
         if (ctx.TryGet(0, out string operation))
         {
-            MethodInfo info;
+            MethodInfo? info;
             try
             {
-                info = type.GetMethod(operation, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                info = typeof(DebugCommand).GetMethod(operation, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase);
             }
             catch (AmbiguousMatchException)
             {
@@ -48,15 +56,30 @@ internal class _DebugCommand : Command
             }
             if (info == null)
                 throw ctx.Reply(T.DebugNoMethod, operation);
+            ParameterInfo[] parameters = info.GetParameters();
+            int len = 1;
+            if (parameters.Length == 0 || parameters[0].ParameterType != typeof(CommandInteraction))
+                throw ctx.Reply(T.DebugNoMethod, operation);
+            if (parameters.Length > 2 || (parameters.Length == 2 && parameters[1].ParameterType != typeof(CancellationToken)))
+                throw ctx.Reply(T.DebugNoMethod, operation);
+            if (typeof(Task).IsAssignableFrom(info.ReturnType) && parameters.Length == 2)
+                len = 2;
             try
             {
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking(info.Name + " Debug Command");
 #endif
                 ctx.Offset = 1;
-                info.Invoke(this, new object[1] { ctx });
+                object obj = info.Invoke(this, len == 2 ? new object[] { ctx, token } : new object[] { ctx });
+                if (obj is Task task)
+                {
+                    await task.ConfigureAwait(false);
+#if DEBUG
+                    profiler.Dispose();
+#endif
+                    await UCWarfare.ToUpdate();
+                }
                 ctx.Offset = 0;
-                ctx.Defer();
             }
             catch (Exception ex)
             {
@@ -69,10 +92,9 @@ internal class _DebugCommand : Command
         else throw ctx.SendCorrectUsage("/test <operation> [parameters...]");
     }
 #pragma warning disable IDE1006
-#pragma warning disable IDE0060
 #pragma warning disable IDE0051
     private const string GIVE_XP_SYNTAX = "/test givexp <player> <amount> [team - required if offline]";
-    private void givexp(CommandInteraction ctx)
+    private async Task givexp(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -90,16 +112,12 @@ internal class _DebugCommand : Command
                 {
                     if (PlayerSave.HasPlayerSave(player))
                     {
-                        if (team > 0 && team < 3)
+                        if (team is > 0 and < 3)
                         {
-                            Task.Run(async () =>
-                            {
-                                await Data.DatabaseManager.AddXP(player, team, amount);
-                                FPlayerName name = await Data.DatabaseManager.GetUsernamesAsync(player);
-                                await UCWarfare.ToUpdate();
-                                ctx.ReplyString($"Given {amount} XP to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
-                            });
-                            ctx.Defer();
+                            await Data.DatabaseManager.AddXP(player, team, amount, token).ConfigureAwait(false);
+                            PlayerNames name = await F.GetPlayerOriginalNamesAsync(player, token).ThenToUpdate(token);
+
+                            ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                         }
                         else
                             ctx.SendCorrectUsage(GIVE_XP_SYNTAX);
@@ -109,11 +127,14 @@ internal class _DebugCommand : Command
                 }
                 else
                 {
-                    if (team < 1 || team > 2)
+                    if (team is < 1 or > 2)
                         team = onlinePlayer.GetTeam();
-                    Points.AwardXP(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer);
-                    FPlayerName names = F.GetPlayerOriginalNames(onlinePlayer);
-                    ctx.ReplyString($"Given {amount} XP to {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}.");
+                    await XPParameters
+                        .WithTranslation(onlinePlayer, team, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, amount)
+                        .Award(token)
+                        .ThenToUpdate(token);
+                    ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> " +
+                                    $"to {(ctx.IsConsole ? onlinePlayer.Name.PlayerName : onlinePlayer.Name.CharacterName)}.");
                 }
             }
             else
@@ -123,7 +144,7 @@ internal class _DebugCommand : Command
             ctx.ReplyString($"Couldn't parse {ctx.Get(1)!} as a number.");
     }
     private const string GIVE_CREDITS_SYNTAX = "/test givecredits <player> <amount> [team - required if offline]";
-    private void givecredits(CommandInteraction ctx)
+    private async Task givecredits(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -141,16 +162,12 @@ internal class _DebugCommand : Command
                 {
                     if (PlayerSave.HasPlayerSave(player))
                     {
-                        if (team > 0 && team < 3)
+                        if (team is > 0 and < 3)
                         {
-                            Task.Run(async () =>
-                            {
-                                await Data.DatabaseManager.AddCredits(player, team, amount);
-                                FPlayerName name = await Data.DatabaseManager.GetUsernamesAsync(player);
-                                await UCWarfare.ToUpdate();
-                                ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}C</color> {amount} to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
-                            });
-                            ctx.Defer();
+                            await Data.DatabaseManager.AddCredits(player, team, amount, token).ConfigureAwait(false);
+                            PlayerNames name = await Data.DatabaseManager.GetUsernamesAsync(player, token).ThenToUpdate(token);
+                            
+                            ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                         }
                         else
                             ctx.SendCorrectUsage(GIVE_CREDITS_SYNTAX);
@@ -160,11 +177,12 @@ internal class _DebugCommand : Command
                 }
                 else
                 {
-                    if (team < 1 || team > 2)
+                    if (team is < 1 or > 2)
                         team = onlinePlayer.GetTeam();
-                    Points.AwardCredits(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer);
-                    FPlayerName names = F.GetPlayerOriginalNames(onlinePlayer);
-                    ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}C</color> {amount} to {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}.");
+                    await Points.AwardCreditsAsync(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, token: token)
+                        .ThenToUpdate(token);
+                    ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> " +
+                                    $"to {(ctx.IsConsole ? onlinePlayer.Name.PlayerName : onlinePlayer.Name.CharacterName)}.");
                 }
             }
             else
@@ -180,7 +198,7 @@ internal class _DebugCommand : Command
         ctx.AssertRanByPlayer();
         ctx.AssertGamemode(out IFlagRotation fg);
 
-        Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(ctx.Caller.Player));
+        Flag? flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(ctx.Caller));
         if (flag == default)
         {
             ctx.Reply(T.ZoneNoResultsLocation);
@@ -219,13 +237,13 @@ internal class _DebugCommand : Command
         if (ctx.TryGet(0, out ulong id))
             team = id;
         else if (!ctx.IsConsole)
-            team = ctx.Caller!.GetTeam();
+            team = ctx.Caller.GetTeam();
         else
         {
             ctx.Reply(T.NotOnCaptureTeam);
             return;
         }
-        Data.Gamemode.DeclareWin(team);
+        _ = Data.Gamemode.DeclareWin(team);
     }
     private void savemanyzones(CommandInteraction ctx)
     {
@@ -256,7 +274,6 @@ internal class _DebugCommand : Command
 
         if (!ctx.TryGet(0, out uint times))
             times = 1U;
-        List<Zone> zones = new List<Zone>();
         string directory = Path.Combine(Data.Paths.FlagStorage, "GraphExport", Path.DirectorySeparatorChar.ToString());
         if (!Directory.Exists(directory))
             Directory.CreateDirectory(directory);
@@ -264,7 +281,6 @@ internal class _DebugCommand : Command
         for (int i = 0; i < times; i++)
         {
             ObjectivePathing.TryPath(rot);
-            zones.Clear();
             ZoneDrawing.DrawZoneMap(fg.LoadedFlags, rot, Path.Combine(directory, "zonegraph_" + i.ToString(Data.Locale)));
             L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
             rot.Clear();
@@ -279,7 +295,7 @@ internal class _DebugCommand : Command
 
         Vector3 pos = ctx.Caller.Position;
         if (pos == Vector3.zero) return;
-        Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos));
+        Flag? flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos));
         string txt = $"Position: <#ff9999>({pos.x.ToString("0.##", Data.Locale)}, {pos.y.ToString("0.##", Data.Locale)}, {pos.z.ToString("0.##", Data.Locale)})</color>. " +
                      $"Yaw: <#ff9999>{ctx.Caller.Player.transform.eulerAngles.y.ToString("0.##", Data.Locale)}</color>.";
         if (flag is null)
@@ -347,10 +363,9 @@ internal class _DebugCommand : Command
         List<Zone> zones = new List<Zone>();
         if (all)
         {
-            if (extra)
-                zones.AddRange(Data.ZoneProvider.Zones);
-            else
-                zones.AddRange(Data.ZoneProvider.Zones.Where(x => x.Data.UseCase == EZoneUseCase.FLAG));
+            zones.AddRange(extra
+                ? Data.ZoneProvider.Zones
+                : Data.ZoneProvider.Zones.Where(x => x.Data.UseCase == EZoneUseCase.FLAG));
         }
         else
             zones.AddRange(fg.Rotation.Select(x => x.ZoneData));
@@ -365,11 +380,10 @@ internal class _DebugCommand : Command
         ctx.AssertGamemode(out IFlagRotation fg);
         Zone zone;
         string zoneName;
-        string zoneColor;
         Vector3 pos = ctx.Caller.Position;
         if (pos == Vector3.zero) return;
-        Flag flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(pos));
-        if (flag == default)
+        Flag? flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(pos));
+        if (flag == null)
         {
             ctx.Reply(T.ZoneNoResultsLocation);
             return;
@@ -378,7 +392,6 @@ internal class _DebugCommand : Command
         {
             zone = flag.ZoneData;
             zoneName = flag.Name;
-            zoneColor = flag.TeamSpecificHexColor;
         }
         List<Zone> zones = new List<Zone>(1) { zone };
         ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "DRAWZONE");
@@ -446,7 +459,7 @@ internal class _DebugCommand : Command
             Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { ctx.Caller.Connection });
         }
         ctx.Caller.HasUIHidden = !ctx.Caller.HasUIHidden;
-        
+        ctx.ReplyString("<#a4a5b3>UI " + (ctx.Caller.HasUIHidden ? "hidden." : "visible."));
     }
     private void game(CommandInteraction ctx)
     {
@@ -457,7 +470,7 @@ internal class _DebugCommand : Command
             ctx.SendGamemodeError();
     }
     private const string PLAYER_SAVE_USAGE = "/test playersave <player> <property> <value>";
-    private void playersave(CommandInteraction ctx)
+    private async Task playersave(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -476,7 +489,8 @@ internal class _DebugCommand : Command
                     switch (result)
                     {
                         case ESetFieldResult.SUCCESS:
-                            FPlayerName names = F.GetPlayerOriginalNames(player);
+                            PlayerNames names = onlinePlayer is not null ? onlinePlayer.Name :
+                                await F.GetPlayerOriginalNamesAsync(player, token).ThenToUpdate(token);
                             ctx.ReplyString($"Set {property} in {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}'s playersave to {value}.");
                             break;
                         case ESetFieldResult.FIELD_NOT_FOUND:
@@ -498,7 +512,7 @@ internal class _DebugCommand : Command
                     ctx.SendCorrectUsage(PLAYER_SAVE_USAGE);
             }
             else
-                ctx.ReplyString($"This player hasn't joined the server yet.");
+                ctx.ReplyString("This player hasn't joined the server yet.");
         }
         else
             ctx.SendCorrectUsage(PLAYER_SAVE_USAGE);
@@ -523,16 +537,28 @@ internal class _DebugCommand : Command
                     ctx.ReplyString($"Skipped staging phase.");
                     gm.SkipStagingPhase();
                 }
-                if (newGamemode == Data.Gamemode.GetType())
-                    Data.Singletons.ReloadSingleton(Gamemode.GAMEMODE_RELOAD_KEY);
-                else if (Gamemode.TryLoadGamemode(newGamemode))
-                {
-                    ctx.ReplyString($"Successfully loaded {newGamemode.Name}.");
-                }
                 else
+                    ctx.Defer();
+                Task.Run(async () =>
                 {
-                    ctx.ReplyString($"Failed to load {newGamemode.Name}.");
-                }
+                    await UCWarfare.ToUpdate();
+                    if (newGamemode == Data.Gamemode?.GetType())
+                    {
+                        await Data.Singletons.ReloadSingletonAsync(Gamemode.GAMEMODE_RELOAD_KEY);
+                        await UCWarfare.ToUpdate();
+                        ctx.ReplyString($"Successfully reloaded {newGamemode.Name}.");
+                    }
+                    else if (await Gamemode.TryLoadGamemode(newGamemode))
+                    {
+                        await UCWarfare.ToUpdate();
+                        ctx.ReplyString($"Successfully loaded {newGamemode.Name}.");
+                    }
+                    else
+                    {
+                        await UCWarfare.ToUpdate();
+                        ctx.ReplyString($"Failed to load {newGamemode.Name}.");
+                    }
+                });
             }
             else
                 ctx.ReplyString($"Gamemode not found: {gamemodeName}.");
@@ -606,13 +632,12 @@ internal class _DebugCommand : Command
             if (ctx.TryGet(0, out _, out UCPlayer? player) && player is not null)
             {
                 t.TeamSelector?.ResetState(player);
-                FPlayerName name = F.GetPlayerOriginalNames(player);
+                PlayerNames name = player.Name;
                 ctx.ReplyString($"Reset lobby for {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
             }
             else
             {
                 ctx.SendPlayerNotFound();
-                return;
             }
         }
         else ctx.SendGamemodeError();
@@ -697,7 +722,7 @@ internal class _DebugCommand : Command
         Task.Run(async () =>
         {
             L.Log("Sending chat abuse report.");
-            RequestResponse res = await Reporter.NetCalls.SendReportInvocation.Request(Reporter.NetCalls.ReceiveInvocationResponse, Data.NetClient!, report, false);
+            RequestResponse res = await Reporter.NetCalls.SendReportInvocation.Request(Reporter.NetCalls.ReceiveInvocationResponse, UCWarfare.I.NetClient!, report, false);
             L.Log(res.Responded && res.Parameters.Length > 1 && res.Parameters[1] is string url ? ("URL: " + url) : "No response.", ConsoleColor.DarkYellow);
         });
         ctx.Defer();
@@ -720,7 +745,7 @@ internal class _DebugCommand : Command
         {
             for (int i = 0; i < QuestManager.RegisteredTrackers.Count; i++)
             {
-                if (QuestManager.RegisteredTrackers[i].Player!.Steam64 == ctx.CallerID && 
+                if (QuestManager.RegisteredTrackers[i].Player!.Steam64 == ctx.CallerID &&
                     QuestManager.RegisteredTrackers[i].QuestData?.QuestType == type)
                 {
                     QuestManager.RegisteredTrackers[i].ManualComplete();
@@ -749,19 +774,13 @@ internal class _DebugCommand : Command
 
         if (ctx.TryGetRange(0, out string text) && ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
         {
-            BarricadeManager.ServerSetSignText(sign, text.Replace("\\n", "\n"));
-            if (RequestSigns.Loaded && RequestSigns.SignExists(sign, out RequestSign sign2))
+            if (!RequestSigns.Loaded || !RequestSigns.SignExists(sign, out _))
             {
-                sign2.SignText = text;
-                RequestSigns.SaveSingleton();
+                BarricadeManager.ServerSetSignText(sign, text.Replace("\\n", "\n"));
+                Signs.BroadcastSignUpdate(drop);
             }
-            if (StructureSaver.Loaded && StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out Structures.Structure str))
-            {
-                str.state = Convert.ToBase64String(drop.GetServersideData().barricade.state);
-                StructureSaver.SaveSingleton();
-            }
-            if (BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _) && plant == ushort.MaxValue)
-                F.InvokeSignUpdateForAll(sign, x, y, text);
+            else
+                ctx.ReplyString("Unable to set text on a request sign. Not supported.");
         }
     }
 #if DEBUG
@@ -796,14 +815,14 @@ internal class _DebugCommand : Command
         ctx.AssertArgs(1, "/test gettime <timestr>");
 
         string t = ctx.GetRange(0)!;
-        ctx.ReplyString("Time: " + F.ParseTimespan(t).ToString("g"));
+        ctx.ReplyString("Time: " + Util.ParseTimespan(t).ToString("g"));
     }
     private void getperms(CommandInteraction ctx)
     {
         ctx.ReplyString("Permission: " + ctx.Caller.GetPermissions());
     }
 #if DEBUG
-    private static InstanceSetter<InteractableVehicle, bool> SetEngineOn = F.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly InstanceSetter<InteractableVehicle, bool> SetEngineOn = Util.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
     private void drivetest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
@@ -833,7 +852,6 @@ internal class _DebugCommand : Command
         UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 20)));
         UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 10)));*/
     }
-
     private IEnumerator _coroutine(CommandInteraction ctx, VehicleAsset asset, Vector3 pos)
     {
         Vector3 forward = ctx.Caller.Player.look.aim.forward;
@@ -920,6 +938,7 @@ internal class _DebugCommand : Command
         ctx.AssertRanByPlayer();
         ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.Kit!);
     }
+
     private void quest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
@@ -994,5 +1013,186 @@ internal class _DebugCommand : Command
             }
         }
         ctx.ReplyString("Syntax: /test flag <set|get|remove> <flag> [value]");
+    }
+
+    private void findasset(CommandInteraction ctx)
+    {
+        if (ctx.TryGet(0, out Guid guid))
+        {
+            ctx.ReplyString("Asset: " + (Assets.find(guid)?.FriendlyName ?? "null"));
+        }
+        else if (ctx.TryGet(0, out ushort us) && ctx.TryGet(1, out EAssetType type))
+        {
+            ctx.ReplyString("Asset: " + (Assets.find(type, us)?.FriendlyName ?? "null"));
+        }
+        else
+        {
+            ctx.ReplyString("Please use a <GUID> or <uhort, type>");
+        }
+    }
+
+    private void traits(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        ctx.AssertGamemode<ITraits>();
+
+        ctx.AssertRanByPlayer();
+
+        L.Log("Traits: ");
+        using (IDisposable d = L.IndentLog(1))
+        {
+            for (int i = 0; i < ctx.Caller.ActiveTraits.Count; ++i)
+            {
+                Traits.Trait t = ctx.Caller.ActiveTraits[i];
+                L.Log(t.Data.TypeName + " (" + (Time.realtimeSinceStartup - t.StartTime) + " seconds active)");
+            }
+        }
+
+        L.Log("Buff UI:");
+        L.Log("[ " + (ctx.Caller.ActiveBuffs[0]?.GetType().Name ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[1]?.GetType().Name ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[2]?.GetType().Name ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[3]?.GetType().Name ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[4]?.GetType().Name ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[5]?.GetType().Name ?? "null") + " ]");
+    }
+
+    private void sendui(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        ctx.AssertRanByPlayer();
+
+        if (ctx.TryGet(0, out ushort id))
+        {
+            if (ctx.TryGet(1, out short key))
+            {
+                EffectManager.sendUIEffect(id, key, ctx.Caller.Connection, true);
+            }
+            else
+            {
+                EffectManager.sendUIEffect(id, unchecked((short)id), ctx.Caller.Connection, true);
+            }
+        }
+        else
+        {
+            ctx.ReplyString("Syntax: /test sendui <id> [key]");
+        }
+    }
+
+    private void advancedelays(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        if (ctx.TryGet(0, out float seconds))
+        {
+            Data.Gamemode.AdvanceDelays(seconds);
+            ctx.ReplyString("Advanced delays by " + seconds.ToString("0.##", Data.Locale) + " seconds.");
+        }
+        else
+            ctx.SendCorrectUsage("/test advancedelays <seconds>.");
+    }
+
+    private void listcooldowns(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        ctx.AssertRanByPlayer();
+        L.Log("Cooldowns for " + ctx.Caller.Name.PlayerName + ":");
+        using IDisposable d = L.IndentLog(1);
+        foreach (Cooldown cooldown in CooldownManager.Singleton.cooldowns.Where(x => x.player.Steam64 == ctx.Caller.Steam64))
+        {
+            L.Log($"{cooldown.type}: {cooldown.Timeleft:hh\\:mm\\:ss}, {(cooldown.data is null || cooldown.data.Length == 0 ? "NO DATA" : string.Join(";", cooldown.data))}");
+        }
+    }
+
+    private void giveuav(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        ctx.AssertRanByPlayer();
+        bool isMarker = ctx.Caller.Player.quests.isMarkerPlaced;
+        Vector3 pos = isMarker ? ctx.Caller.Player.quests.markerPosition : ctx.Caller.Player.transform.position;
+        pos = pos with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(pos, 0f) + UAV.GROUND_HEIGHT_OFFSET) };
+        UAV.GiveUAV(ctx.Caller.GetTeam(), ctx.Caller, ctx.Caller, isMarker, pos);
+        ctx.Defer();
+    }
+
+    private void requestuav(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        ctx.AssertRanByPlayer();
+
+        UAV.RequestUAV(ctx.Caller);
+        ctx.Defer();
+    }
+
+    private async Task squad(CommandInteraction ctx, CancellationToken token)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        ctx.AssertRanByPlayer();
+
+        ulong team = ctx.Caller.GetTeam();
+        string kitname = team == 1 ? "ussql1" : "mesql1";
+        if (!KitManager.KitExists(kitname, out Kit kit))
+            throw ctx.SendUnknownError();
+
+        KitManager.GiveKit(ctx.Caller, kit);
+        if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader != ctx.Caller)
+        {
+            SquadManager.CreateSquad(ctx.Caller, team);
+        }
+
+        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+        if (bay != null && bay.IsLoaded && VehicleSpawner.Loaded)
+        {
+            Vehicles.VehicleSpawn? logi;
+            await bay.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                await UCWarfare.ToUpdate();
+                Vector3 pos = ctx.Caller.Position;
+                logi = bay.Items
+                    .Where(x => x.Item != null && (x.Item.Team == team || x.Item.Team == 0) && x.Item.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT)
+                    .SelectMany(x => VehicleSpawner.Spawners
+                        .Where(y => y.VehicleGuid == x.Item!.VehicleID && y.HasLinkedVehicle(out _) && y.LinkedSign?.SignInteractable != null))
+                    .OrderBy(x => (pos - x.LinkedSign!.SignInteractable!.transform.position).sqrMagnitude)
+                    .FirstOrDefault();
+            }
+            finally
+            {
+                bay.Release();
+            }
+            if (logi == null)
+            {
+                ctx.ReplyString("No logistics vehicle nearby to request.", Color.red);
+            }
+            else if (logi.HasLinkedVehicle(out InteractableVehicle veh))
+            {
+                SqlItem<VehicleData>? data = await bay.GetDataProxy(logi.VehicleGuid, token).ConfigureAwait(false);
+                if (data?.Item == null)
+                {
+                    await UCWarfare.ToUpdate();
+                    ctx.ReplyString("Failed to get a logistics vehicle.", Color.red);
+                }
+                else
+                {
+                    await data.Enter(token).ConfigureAwait(false);
+                    try
+                    {
+                        await UCWarfare.ToUpdate();
+                        RequestCommand.GiveVehicle(ctx.Caller, veh, data.Item);
+                    }
+                    finally
+                    {
+                        data.Release();
+                    }
+                }
+            }
+        }
+        else throw ctx.SendGamemodeError();
+        if (Data.Gamemode.State == EState.STAGING)
+        {
+            Data.Gamemode.SkipStagingPhase();
+        }
     }
 }

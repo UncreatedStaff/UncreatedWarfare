@@ -1,6 +1,5 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Reflection;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Locations;
@@ -24,7 +23,7 @@ public readonly struct GridLocation : ITranslationArgument
         Y = y;
         Index = index;
 
-        _toStringCache = ToString(X, y, index);
+        _toStringCache = ToString(x, y, index);
     }
     private static unsafe string ToString(byte x, byte y, byte index)
     {
@@ -51,7 +50,7 @@ public readonly struct GridLocation : ITranslationArgument
         return new string(ptr, 0, len);
     }
     /// <returns>A cached string representation of the grid, formatted like A1-1.</returns>
-    public override readonly string ToString() => _toStringCache ?? "A1";
+    public override readonly string ToString() => _toStringCache;
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => _toStringCache;
     public static bool TryParse(string value, out GridLocation location)
     {

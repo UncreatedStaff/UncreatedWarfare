@@ -12,3 +12,13 @@ public class ConfirmCommand : Command
         ctx.Defer();
     }
 }
+
+public class DenyCommand : Command
+{
+    public DenyCommand() : base("deny", EAdminType.MEMBER) { }
+
+    public override void Execute(CommandInteraction ctx)
+    {
+        ctx.Defer();
+    }
+}

@@ -3,67 +3,68 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Traits.Buffs;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
 public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 {
-    protected int _counter;
-    protected int _counter2;
     protected List<Flag> _rotation = new List<Flag>();
     protected List<Flag> _allFlags = new List<Flag>();
     public Dictionary<ulong, int> _onFlag = new Dictionary<ulong, int>();
-    public List<Flag> Rotation { get => _rotation; }
-    public List<Flag> LoadedFlags { get => _allFlags; }
-    public Dictionary<ulong, int> OnFlag { get => _onFlag; }
+    public List<Flag> Rotation => _rotation;
+    public List<Flag> LoadedFlags => _allFlags;
+    public Dictionary<ulong, int> OnFlag => _onFlag;
     public virtual bool AllowPassengersToCapture => false;
-    public FlagGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
+    protected FlagGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
     { }
-    protected abstract bool TimeToCheck();
-    protected override void PostDispose()
+    protected abstract bool TimeToEvaluatePoints();
+    protected override Task PostDispose()
     {
+        ThreadUtil.assertIsGameThread();
         ResetFlags();
         _onFlag.Clear();
         _rotation.Clear();
-        _counter = 0;
-        _counter2 = 0;
-        base.PostDispose();
+        return base.PostDispose();
     }
-    protected override void OnReady()
+    protected override Task OnReady()
     {
+        ThreadUtil.assertIsGameThread();
         LoadAllFlags();
-        base.OnReady();
+        return base.OnReady();
     }
-    protected override void PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad)
     {
+        ThreadUtil.assertIsGameThread();
         LoadRotation();
-        base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad);
     }
     protected override void EventLoopAction()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        bool ttc = TimeToCheck();
-
+        base.EventLoopAction();
+        FlagCheck();
+    }
+    protected virtual void FlagCheck()
+    {
         for (int i = 0; i < _rotation.Count; i++)
         {
-            if (_rotation[i] == null) continue;
-            _rotation[i].GetUpdatedPlayers(out List<Player> newPlayers, out List<Player> departingPlayers);
+            Flag f = _rotation[i];
+            if (f == null) continue;
+            f.GetUpdatedPlayers(out List<Player> newPlayers, out List<Player> departingPlayers);
             foreach (Player player in departingPlayers)
-                RemovePlayerFromFlag(player, _rotation[i]);
+                RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, f);
             foreach (Player player in newPlayers)
-                AddPlayerOnFlag(player, _rotation[i]);
+                AddPlayerOnFlag(player, f);
         }
-        if (ttc)
+        if (TimeToEvaluatePoints())
         {
             EvaluatePoints();
             if (EnableAMC)
-                CheckPlayersAMC();
+                CheckMainCampZones();
             OnEvaluate();
-            Teams.TeamManager.EvaluateBases();
         }
     }
     protected void ConvertFlags()
@@ -82,7 +83,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
                 _allFlags.Add(new Flag(Data.ZoneProvider.Zones[i], this) { index = -1 });
             }
         }
-        _allFlags.Sort((Flag a, Flag b) => a.ID.CompareTo(b.ID));
+        _allFlags.Sort((a, b) => a.ID.CompareTo(b.ID));
     }
     public virtual void OnEvaluate()
     { }
@@ -129,15 +130,18 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         }
         _rotation.Clear();
     }
-    protected virtual void RemovePlayerFromFlag(Player player, Flag flag)
+    protected virtual void RemovePlayerFromFlag(ulong playerId, Player? player, Flag flag)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (_onFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID) && _onFlag[player.channel.owner.playerID.steamID.m_SteamID] == flag.ID)
+        if (flag == null)
+            return;
+        if (_onFlag.TryGetValue(playerId, out int fid) && fid == flag.ID)
         {
-            _onFlag.Remove(player.channel.owner.playerID.steamID.m_SteamID);
-            flag.ExitPlayer(player);
+            _onFlag.Remove(playerId);
+            if (player != null)
+                flag.ExitPlayer(player);
         }
     }
     public virtual void AddPlayerOnFlag(Player player, Flag flag)
@@ -145,13 +149,13 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (_onFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
+        if (_onFlag.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out int fid))
         {
-            if (_onFlag[player.channel.owner.playerID.steamID.m_SteamID] != flag.ID)
+            if (fid != flag.ID)
             {
-                Flag oldFlag = _rotation.FirstOrDefault(f => f.ID == _onFlag[player.channel.owner.playerID.steamID.m_SteamID]);
-                if (oldFlag == default(Flag)) _onFlag.Remove(player.channel.owner.playerID.steamID.m_SteamID);
-                else RemovePlayerFromFlag(player, oldFlag); // remove the player from their old flag first in the case of teleporting from one flag to another.
+                Flag? oldFlag = _rotation.FirstOrDefault(f => f.ID == fid);
+                if (oldFlag == null) _onFlag.Remove(player.channel.owner.playerID.steamID.m_SteamID);
+                else RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, oldFlag); // remove the player from their old flag first in the case of teleporting from one flag to another.
                 _onFlag.Add(player.channel.owner.playerID.steamID.m_SteamID, flag.ID);
             }
         }
@@ -172,11 +176,42 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
             if (f == 0) flags.Append('\n');
             Flag flag = _rotation[f];
             flags.Append(flag.Name).Append("\nOwner: ").Append(flag.Owner).Append(" Players: \n1: ")
-                .Append(string.Join(",", flag.PlayersOnFlagTeam1.Select(x => F.GetPlayerOriginalNames(x).PlayerName))).Append("\n2: ")
-                .Append(string.Join(",", flag.PlayersOnFlagTeam2.Select(x => F.GetPlayerOriginalNames(x).PlayerName)))
+                .Append(string.Join(",", flag.PlayersOnFlagTeam1.Select(x => x.Name.PlayerName))).Append("\n2: ")
+                .Append(string.Join(",", flag.PlayersOnFlagTeam2.Select(x => x.Name.PlayerName)))
                 .Append("\nPoints: ").Append(flag.Points).Append(" State: ").Append(flag.LastDeltaPoints).Append('\n');
         }
 
         return flags.ToString();
+    }
+    protected static bool ConventionalIsContested(Flag flag, out ulong winner)
+    {
+        int t1 = flag.Team1TotalCappers, t2 = flag.Team2TotalCappers;
+        if (t1 == 0 && t2 == 0)
+        {
+            winner = 0;
+            return false;
+        }
+        else if (t1 == t2)
+            winner = Intimidation.CheckSquadsForContestBoost(flag);
+        else if (t1 == 0 && t2 > 0)
+            winner = 2;
+        else if (t2 == 0 && t1 > 0)
+            winner = 1;
+        else if (t1 > t2)
+        {
+            if (t1 - Config.AASRequiredCapturingPlayerDifference >= t2)
+                winner = 1;
+            else
+                winner = Intimidation.CheckSquadsForContestBoost(flag);
+        }
+        else
+        {
+            if (t2 - Config.AASRequiredCapturingPlayerDifference >= t1)
+                winner = 2;
+            else
+                winner = Intimidation.CheckSquadsForContestBoost(flag);
+        }
+
+        return winner == 0;
     }
 }
