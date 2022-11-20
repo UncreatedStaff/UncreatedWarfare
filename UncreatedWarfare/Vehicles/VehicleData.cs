@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
@@ -55,6 +56,7 @@ public class VehicleData : ITranslationArgument, IListItem
     public BaseUnlockRequirement[] UnlockRequirements;
     public Guid[] Items;
     public Delay[] Delays;
+    [JsonConverter(typeof(ByteArrayConverter))]
     public byte[] CrewSeats;
     public MetaSave? Metadata;
     [JsonIgnore]
@@ -853,6 +855,65 @@ public struct Delay : IJsonReadWrite
             Nullable = true
         };
         return new Schema(tableName, columns, false, typeof(Delay));
+    }
+}
+internal sealed class ByteArrayConverter : JsonConverter<byte[]>
+{
+    public override byte[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return null;
+            case JsonTokenType.String:
+                string str = reader.GetString()!;
+                try
+                {
+                    return Convert.FromBase64String(str);
+                }
+                catch (FormatException ex)
+                {
+                    throw new JsonException("Unexpected token: Non-Base64 String.", ex);
+                }
+            case JsonTokenType.Number:
+                if (reader.TryGetByte(out byte b))
+                    return new byte[] { b };
+                throw new JsonException("Unexpected token: Number > 255 or < 0.");
+            case JsonTokenType.False:
+                return new byte[1];
+            case JsonTokenType.True:
+                return new byte[] { 1 };
+            case JsonTokenType.StartArray:
+                List<byte> bytes = new List<byte>(8);
+                while (reader.Read() && reader.TokenType == JsonTokenType.Number)
+                {
+                    if (reader.TryGetByte(out byte val))
+                        bytes.Add(val);
+                    else throw new JsonException("Invalid number in array[" + bytes.Count + "]");
+                }
+                return bytes.ToArray();
+            default:
+                throw new JsonException("Unexpected token: " + reader.TokenType + " when reading byte array.");
+        }
+    }
+    public override void Write(Utf8JsonWriter writer, byte[] value, JsonSerializerOptions options)
+    {
+        if (value is null)
+        {
+            writer.WriteNullValue();
+            return;
+        }
+        writer.WriteStartArray();
+        JsonWriterOptions options2 = writer.Options;
+        if (value.Length < 12 && options2.Indented)
+            JsonEx.SetOptions(writer, options2 with { Indented = false });
+        for (int i = 0; i < value.Length; ++i)
+        {
+            writer.WriteNumberValue(value[i]);
+        }
+        if (value.Length < 12 && options2.Indented)
+            JsonEx.SetOptions(writer, options2);
+        writer.WriteEndArray();
     }
 }
 public sealed class DelayConverter : JsonConverter<Delay>

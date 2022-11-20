@@ -63,6 +63,9 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         EventDispatcher.ExitVehicleRequested += OnVehicleExitRequested;
         EventDispatcher.ExitVehicle += OnVehicleExit;
         EventDispatcher.VehicleSpawned += OnVehicleSpawned;
+#if DEBUG
+        await ImportFromJson(Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json")).ConfigureAwait(false);
+#endif
         await WaitAsync();
         try
         {
