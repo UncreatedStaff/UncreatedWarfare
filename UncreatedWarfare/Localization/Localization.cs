@@ -834,20 +834,20 @@ public static class Localization
     internal static string GetLang(ulong player) => Data.Languages.TryGetValue(player, out string lang) ? lang : L.DEFAULT;
     public static string? GetDelaySignText(in Delay delay, string language, ulong team)
     {
-        if (delay.Type == EDelayType.OUT_OF_STAGING)
+        if (delay.Type == DelayType.OutOfStaging)
         {
             return T.VBSDelayStaging.Translate(language);
         }
-        else if (delay.Type == EDelayType.TIME)
+        else if (delay.Type == DelayType.Time)
         {
             float timeLeft = delay.Value - Data.Gamemode.SecondsSinceStart;
             return T.VBSDelayTime.Translate(language, Mathf.FloorToInt(timeLeft / 60f), Mathf.FloorToInt(timeLeft % 60), null, team);
         }
-        else if (delay.Type == EDelayType.FLAG || delay.Type == EDelayType.FLAG_PERCENT)
+        else if (delay.Type == DelayType.Flag || delay.Type == DelayType.FlagPercentage)
         {
             if (Data.Is(out Invasion invasion))
             {
-                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(invasion.Rotation.Count * (delay.Value / 100f));
+                int ct = delay.Type == DelayType.Flag ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(invasion.Rotation.Count * (delay.Value / 100f));
                 int ct2;
                 if (team == 1)
                 {
@@ -880,7 +880,7 @@ public static class Localization
             }
             else if (Data.Is(out IFlagTeamObjectiveGamemode flags))
             {
-                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
+                int ct = delay.Type == DelayType.Flag ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
                 int ct2;
                 if (team == 1)
                     ct2 = ct - flags.ObjectiveT1Index;
@@ -896,7 +896,7 @@ public static class Localization
             }
             else if (Data.Is(out IFlagRotation rot))
             {
-                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
+                int ct = delay.Type == DelayType.Flag ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
                 int ct2 = 0;
                 for (int i = 0; i < rot.Rotation.Count; ++i)
                 {
@@ -911,7 +911,7 @@ public static class Localization
             }
             else if (Data.Is(out Insurgency ins))
             {
-                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(ins.Caches.Count * (delay.Value / 100f));
+                int ct = delay.Type == DelayType.Flag ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(ins.Caches.Count * (delay.Value / 100f));
                 int ct2;
                 ct2 = ct - ins.CachesDestroyed;
                 int ind = ct - ct2;
@@ -948,7 +948,7 @@ public static class Localization
             EDelayMode.TRAITS => TraitDelayResponses,
             _ => VehicleDelayResponses,
         };
-        if (delay.Type == EDelayType.OUT_OF_STAGING &&
+        if (delay.Type == DelayType.OutOfStaging &&
             (delay.Gamemode is null ||
              (Data.Is(out Insurgency ins1) && delay.Gamemode == "Insurgency" && team == ins1.AttackingTeam) ||
              (Data.Is(out Invasion inv2) && delay.Gamemode == "Invasion" && team == inv2.AttackingTeam))
@@ -957,16 +957,16 @@ public static class Localization
             player.SendChat(res.StagingDelay);
             return;
         }
-        else if (delay.Type == EDelayType.TIME)
+        else if (delay.Type == DelayType.Time)
         {
             float timeLeft = delay.Value - Data.Gamemode.SecondsSinceStart;
             player.SendChat(res.TimeDelay, Mathf.RoundToInt(timeLeft).GetTimeFromSeconds(player.Steam64));
         }
-        else if (delay.Type == EDelayType.FLAG || delay.Type == EDelayType.FLAG_PERCENT)
+        else if (delay.Type == DelayType.Flag || delay.Type == DelayType.FlagPercentage)
         {
             if (Data.Is(out Invasion invasion))
             {
-                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(invasion.Rotation.Count * (delay.Value / 100f));
+                int ct = delay.Type == DelayType.Flag ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(invasion.Rotation.Count * (delay.Value / 100f));
                 int ct2;
                 if (team == 1)
                 {
@@ -1001,7 +1001,7 @@ public static class Localization
             }
             else if (Data.Is(out IFlagTeamObjectiveGamemode flags))
             {
-                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
+                int ct = delay.Type == DelayType.Flag ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
                 int ct2;
                 if (team == 1)
                     ct2 = ct - flags.ObjectiveT1Index;
@@ -1024,7 +1024,7 @@ public static class Localization
             }
             else if (Data.Is(out IFlagRotation rot))
             {
-                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
+                int ct = delay.Type == DelayType.Flag ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.Value / 100f));
                 int ct2 = 0;
                 for (int i = 0; i < rot.Rotation.Count; ++i)
                 {
@@ -1044,7 +1044,7 @@ public static class Localization
             }
             else if (Data.Is(out Insurgency ins))
             {
-                int ct = delay.Type == EDelayType.FLAG ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(ins.Caches.Count * (delay.Value / 100f));
+                int ct = delay.Type == DelayType.Flag ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(ins.Caches.Count * (delay.Value / 100f));
                 int ct2;
                 ct2 = ct - ins.CachesDestroyed;
                 int ind = ct - ct2;

@@ -80,17 +80,17 @@ public class VehicleBayCommand : AsyncCommand
                         ctx.Reply(T.VehicleBayRemovedDelay, rem);
                         return;
                     }
-                    EDelayType type;
+                    DelayType type;
                     if (ctx.MatchParameter(2, "time"))
-                        type = EDelayType.TIME;
+                        type = DelayType.Time;
                     else if (ctx.MatchParameter(2, "flag", "objective", "objectives"))
-                        type = EDelayType.FLAG;
+                        type = DelayType.Flag;
                     else if (ctx.MatchParameter(2, "flagpercent", "percent"))
-                        type = EDelayType.FLAG_PERCENT;
+                        type = DelayType.FlagPercentage;
                     else if (ctx.MatchParameter(2, "staging", "prep"))
-                        type = EDelayType.OUT_OF_STAGING;
+                        type = DelayType.OutOfStaging;
                     else if (ctx.MatchParameter(2, "none"))
-                        type = EDelayType.NONE;
+                        type = DelayType.None;
                     else
                     {
                         if (adding)
@@ -99,7 +99,7 @@ public class VehicleBayCommand : AsyncCommand
                             ctx.SendCorrectUsage("/vehiclebay delay remove <all|time|flag|percent|staging|none> [value] [!][gamemode]");
                         return;
                     }
-                    if (type == EDelayType.NONE && ctx.ArgumentCount < 4)
+                    if (type == DelayType.None && ctx.ArgumentCount < 4)
                     {
                         if (adding)
                             ctx.SendCorrectUsage("/vehiclebay delay add none [!]<gamemode>");
@@ -108,7 +108,7 @@ public class VehicleBayCommand : AsyncCommand
                         return;
                     }
                     string? gamemode = null;
-                    if (type == EDelayType.OUT_OF_STAGING || type == EDelayType.NONE)
+                    if (type == DelayType.OutOfStaging || type == DelayType.None)
                     {
                         if (ctx.HasArg(3))
                             gamemode = ctx.Get(3)!;
@@ -121,7 +121,7 @@ public class VehicleBayCommand : AsyncCommand
                     else if (ctx.ArgumentCount > 4)
                         gamemode = ctx.Get(4)!;
 
-                    if (string.IsNullOrEmpty(gamemode) && type == EDelayType.NONE)
+                    if (string.IsNullOrEmpty(gamemode) && type == DelayType.None)
                     {
                         gamemode = "<";
                         foreach (KeyValuePair<string, Type> gm in Gamemode.Gamemodes)
@@ -166,7 +166,7 @@ public class VehicleBayCommand : AsyncCommand
                     }
 
                     float val = 0;
-                    if (type != EDelayType.OUT_OF_STAGING && type != EDelayType.NONE && !ctx.TryGet(3, out val))
+                    if (type != DelayType.OutOfStaging && type != DelayType.None && !ctx.TryGet(3, out val))
                     {
                         ctx.SendCorrectUsage("/vehiclebay delay " + (adding ? "add" : "remove") + " " + ctx.Get(2)! + " <value (float)>" + (string.IsNullOrEmpty(gamemode) ? string.Empty : " [!]" + gamemode));
                         return;

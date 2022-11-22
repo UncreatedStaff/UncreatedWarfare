@@ -123,7 +123,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
         {
             foreach (VehicleSpawn spawn in VehicleSpawner.Spawners)
             {
-                if (spawn.Data?.Item != null && (spawn.Data.Item.HasDelayType(EDelayType.FLAG) || spawn.Data.Item.HasDelayType(EDelayType.FLAG_PERCENT)))
+                if (spawn.Data?.Item != null && (spawn.Data.Item.HasDelayType(DelayType.Flag) || spawn.Data.Item.HasDelayType(DelayType.FlagPercentage)))
                 {
                     spawn.UpdateSign();
                 }

@@ -388,7 +388,7 @@ public class RequestCommand : AsyncCommand
                 }
             }
         }
-        if (data.IsDelayed(out Delay delay) && delay.Type != EDelayType.NONE)
+        if (data.IsDelayed(out Delay delay) && delay.Type != DelayType.None)
         {
             Localization.SendDelayRequestText(in delay, ucplayer, team, Localization.EDelayMode.VEHICLE_BAYS);
             return;

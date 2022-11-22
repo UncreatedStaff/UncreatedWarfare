@@ -347,7 +347,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListenerAs
 
     void IStagingPhaseOverListener.OnStagingPhaseOver()
     {
-        UpdateSignsWhere(spawn => spawn.Data?.Item != null && spawn.Data.Item.HasDelayType(EDelayType.OUT_OF_STAGING));
+        UpdateSignsWhere(spawn => spawn.Data?.Item != null && spawn.Data.Item.HasDelayType(DelayType.OutOfStaging));
     }
 }
 [JsonSerializable(typeof(VehicleSpawn))]
@@ -828,7 +828,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
         IdleTime = 0f;
         DeadTime = 0f;
         if (vehicleData.Item != null && vehicleData.Item.IsDelayed(out Delay delay))
-            this.state = delay.Type == EDelayType.TIME ? EVehicleBayState.TIME_DELAYED : EVehicleBayState.DELAYED;
+            this.state = delay.Type == DelayType.Time ? EVehicleBayState.TIME_DELAYED : EVehicleBayState.DELAYED;
         else this.state = EVehicleBayState.READY;
     }
     public void OnRequest()
@@ -855,7 +855,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
             checkTime = false;
             if (vehicleData.Item != null && vehicleData.Item.IsDelayed(out Delay delay))
             {
-                if (delay.Type == EDelayType.TIME)
+                if (delay.Type == DelayType.Time)
                 {
                     state = EVehicleBayState.TIME_DELAYED;
                     lastSignUpdate = time;

@@ -63,7 +63,7 @@ public class VehicleData : ITranslationArgument, IListItem
     public PrimaryKey PrimaryKey { get; set; }
     [JsonIgnore]
     public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleGuid == VehicleID);
-    // for backwards compatability
+    // for JSON backwards compatability
     public ulong Team
     {
         get
@@ -144,7 +144,7 @@ public class VehicleData : ITranslationArgument, IListItem
     public static bool IsAircraft(EVehicleType type) => type is EVehicleType.HELI_TRANSPORT or EVehicleType.HELI_ATTACK or EVehicleType.JET;
     public static bool IsAssaultAircraft(EVehicleType type) => type is EVehicleType.HELI_ATTACK or EVehicleType.JET;
     public static bool IsEmplacement(EVehicleType type) => type is EVehicleType.HMG or EVehicleType.ATGM or EVehicleType.AA or EVehicleType.MORTAR;
-    public bool HasDelayType(EDelayType type) => Delay.HasDelayType(Delays, type);
+    public bool HasDelayType(DelayType type) => Delay.HasDelayType(Delays, type);
     public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
     public bool IsCrewSeat(byte seat)
     {
@@ -263,7 +263,7 @@ public class VBarricade : IListSubItem
     }
     public PrimaryKey LinkedKey { get; set; }
     public PrimaryKey PrimaryKey { get; set; }
-    internal VBarricade() { }
+    public VBarricade() { }
     public VBarricade(Guid barricadeID, ushort health, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, string state)
     {
         BarricadeID = barricadeID;
@@ -506,27 +506,27 @@ public enum EVehicleType
 }
 
 /// <summary>Max field character limit: <see cref="Delay.DELAY_TYPE_MAX_CHAR_LIMIT"/>.</summary>
-public enum EDelayType
+public enum DelayType
 {
-    NONE = 0,
-    TIME = 1,
+    None = 0,
+    Time = 1,
     /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
-    FLAG = 2,
+    Flag = 2,
     /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
-    FLAG_PERCENT = 3,
-    OUT_OF_STAGING = 4
+    FlagPercentage = 3,
+    OutOfStaging = 4
 }
 [JsonConverter(typeof(DelayConverter))]
 public struct Delay : IJsonReadWrite
 {
     public const int DELAY_TYPE_MAX_CHAR_LIMIT = 16;
-    public static readonly Delay Nil = new Delay(EDelayType.NONE, float.NaN, null);
+    public static readonly Delay Nil = new Delay(DelayType.None, float.NaN, null);
     [JsonIgnore]
     public bool IsNil => float.IsNaN(Value);
-    public EDelayType Type;
+    public DelayType Type;
     public string? Gamemode;
     public float Value;
-    public Delay(EDelayType type, float value, string? gamemode = null)
+    public Delay(DelayType type, float value, string? gamemode = null)
     {
         this.Type = type;
         this.Value = value;
@@ -534,7 +534,9 @@ public struct Delay : IJsonReadWrite
     }
     public override string ToString() =>
         $"{Type} Delay, {(string.IsNullOrEmpty(Gamemode) ? "any" : Gamemode)} " +
-        $"gamemode{(Type == EDelayType.NONE || Type == EDelayType.OUT_OF_STAGING ? string.Empty : $" Value: {Value}")}";
+        $"gamemode{(!UsesValue(Type) ? string.Empty : $" Value: {Value}")}";
+
+    public static bool UsesValue(DelayType type) => type is not DelayType.None and not DelayType.OutOfStaging;
     public void WriteJson(Utf8JsonWriter writer)
     {
         writer.WriteNumber(nameof(Type), (int)Type);
@@ -552,7 +554,7 @@ public struct Delay : IJsonReadWrite
                 {
                     case nameof(Type):
                         if (reader.TryGetInt32(out int i))
-                            Type = (EDelayType)i;
+                            Type = (DelayType)i;
                         break;
                     case nameof(Gamemode):
                         if (reader.TokenType == JsonTokenType.Null) Gamemode = null;
@@ -565,13 +567,13 @@ public struct Delay : IJsonReadWrite
             }
         }
     }
-    public static void AddDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
+    public static void AddDelay(ref Delay[] delays, DelayType type, float value, string? gamemode = null)
     {
         int index = -1;
         for (int i = 0; i < delays.Length; i++)
         {
             ref Delay del = ref delays[i];
-            if (del.Type == type && del.Value == value && (del.Gamemode == gamemode || (string.IsNullOrEmpty(del.Gamemode) && string.IsNullOrEmpty(gamemode))))
+            if (del.Type == type && Math.Abs(del.Value - value) < float.Epsilon && (del.Gamemode == gamemode || (string.IsNullOrEmpty(del.Gamemode) && string.IsNullOrEmpty(gamemode))))
             {
                 index = i;
                 break;
@@ -593,7 +595,7 @@ public struct Delay : IJsonReadWrite
             }
         }
     }
-    public static bool RemoveDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
+    public static bool RemoveDelay(ref Delay[] delays, DelayType type, float value, string? gamemode = null)
     {
         if (delays.Length == 0) return false;
         int index = -1;
@@ -615,7 +617,7 @@ public struct Delay : IJsonReadWrite
         Array.Copy(old, index + 1, delays, index, old.Length - index - 1);
         return true;
     }
-    public static bool HasDelayType(Delay[] delays, EDelayType type)
+    public static bool HasDelayType(Delay[] delays, DelayType type)
     {
         string gm = Data.Gamemode.Name;
         for (int i = 0; i < delays.Length; i++)
@@ -626,7 +628,7 @@ public struct Delay : IJsonReadWrite
         }
         return false;
     }
-    public static bool IsDelayedType(Delay[] delays, EDelayType type, ulong team)
+    public static bool IsDelayedType(Delay[] delays, DelayType type, ulong team)
     {
         string gm = Data.Gamemode.Name;
         for (int i = 0; i < delays.Length; i++)
@@ -652,21 +654,21 @@ public struct Delay : IJsonReadWrite
             {
                 switch (type)
                 {
-                    case EDelayType.NONE:
+                    case DelayType.None:
                         return false;
-                    case EDelayType.TIME:
+                    case DelayType.Time:
                         if (TimeDelayed(ref del))
                             return true;
                         break;
-                    case EDelayType.FLAG:
+                    case DelayType.Flag:
                         if (FlagDelayed(ref del, team))
                             return true;
                         break;
-                    case EDelayType.FLAG_PERCENT:
+                    case DelayType.FlagPercentage:
                         if (FlagPercentDelayed(ref del, team))
                             return true;
                         break;
-                    case EDelayType.OUT_OF_STAGING:
+                    case DelayType.OutOfStaging:
                         if (StagingDelayed(ref del))
                             return true;
                         break;
@@ -710,14 +712,14 @@ public struct Delay : IJsonReadWrite
             if (universal && anyVal) continue;
             switch (del.Type)
             {
-                case EDelayType.NONE:
+                case DelayType.None:
                     if (!universal)
                     {
                         delay = del;
                         isNoneYet = true;
                     }
                     break;
-                case EDelayType.TIME:
+                case DelayType.Time:
                     if ((!universal || !isNoneYet) && TimeDelayed(ref del))
                     {
                         delay = del;
@@ -725,7 +727,7 @@ public struct Delay : IJsonReadWrite
                         anyVal = true;
                     }
                     break;
-                case EDelayType.FLAG:
+                case DelayType.Flag:
                     if ((!universal || !isNoneYet) && FlagDelayed(ref del, team))
                     {
                         delay = del;
@@ -733,7 +735,7 @@ public struct Delay : IJsonReadWrite
                         anyVal = true;
                     }
                     break;
-                case EDelayType.FLAG_PERCENT:
+                case DelayType.FlagPercentage:
                     if ((!universal || !isNoneYet) && FlagPercentDelayed(ref del, team))
                     {
                         delay = del;
@@ -741,7 +743,7 @@ public struct Delay : IJsonReadWrite
                         anyVal = true;
                     }
                     break;
-                case EDelayType.OUT_OF_STAGING:
+                case DelayType.OutOfStaging:
                     if ((!universal || !isNoneYet) && StagingDelayed(ref del))
                     {
                         delay = del;

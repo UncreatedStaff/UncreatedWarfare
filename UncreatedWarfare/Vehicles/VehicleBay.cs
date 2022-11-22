@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
@@ -517,7 +518,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             }
             if (index == -1)
                 return false;
-            Util.RemoveFromArray(ref proxy.Item.CrewSeats!, index);
+            Util.RemoveFromArray(ref proxy.Item.CrewSeats, index);
             if (save)
                 await proxy.SaveItem(token).ConfigureAwait(false);
         }
@@ -739,7 +740,6 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             {
                 e.Player.SendChat(T.VehicleTooHigh);
                 e.Break();
-                return;
             }
         }
     }
@@ -969,13 +969,14 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         }, false, typeof(Guid));
         SCHEMAS[4] = F.GetListSchema<byte>(TABLE_CREW_SEATS, COLUMN_EXT_PK, COLUMN_CREW_SEATS_SEAT, TABLE_MAIN, COLUMN_PK);
         SCHEMAS[5] = KitItem.GetDefaultSchema(TABLE_TRUNK_ITEMS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, includePage: false);
-        Schema[] vbarrs = VBarricade.GetDefaultSchemas(TABLE_BARRICADES, TABLE_BARRICADE_ITEMS, TABLE_BARRICADE_DISPLAY_DATA, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, includeHealth: true);
+        Schema[] vbarrs = VBarricade.GetDefaultSchemas(TABLE_BARRICADES, TABLE_BARRICADE_ITEMS, TABLE_BARRICADE_DISPLAY_DATA, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, includeHealth: false);
         Array.Copy(vbarrs, 0, SCHEMAS, 6, vbarrs.Length);
     }
 
     [Obsolete]
     protected override async Task AddOrUpdateItem(VehicleData? item, PrimaryKey pk, CancellationToken token = default)
     {
+        await UCWarfare.ToLevelLoad(token);
         if (item == null)
         {
             if (!pk.IsValid)
@@ -987,8 +988,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         int pk2 = PrimaryKey.NotAssigned;
         object[] objs = new object[hasPk ? 15 : 14];
         objs[0] = item.Map < 0 ? DBNull.Value : item.Map;
-        objs[1] = item.Faction.IsValid ? item.Faction.Key : DBNull.Value;
-        objs[2] = item.VehicleID.ToByteArray();
+        objs[1] = item.Faction.IsValid && item.Faction.Key != 0 ? item.Faction.Key : DBNull.Value;
+        objs[2] = item.VehicleID.ToString("N");
         objs[3] = item.RespawnTime;
         objs[4] = item.TicketCost;
         objs[5] = item.CreditCost;
@@ -1001,7 +1002,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         objs[12] = item.DisallowAbandons;
         objs[13] = item.AbandonValueLossSpeed;
         if (hasPk)
-            objs[13] = pk.Key;
+            objs[14] = pk.Key;
         await Sql.QueryAsync($"INSERT INTO `{TABLE_MAIN}` (`{COLUMN_MAP}`,`{COLUMN_FACTION}`,`{COLUMN_VEHICLE_GUID}`,`{COLUMN_RESPAWN_TIME}`," +
                              $"`{COLUMN_TICKET_COST}`,`{COLUMN_CREDIT_COST}`,`{COLUMN_REARM_COST}`,`{COLUMN_COOLDOWN}`," +
                              $"`{COLUMN_BRANCH}`,`{COLUMN_REQUIRED_CLASS}`,`{COLUMN_VEHICLE_TYPE}`,`{COLUMN_REQUIRES_SQUADLEADER}`," +
@@ -1010,7 +1011,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                              ") VALUES (@0,@1,@2,@3,@4,@5,@6,@7,@8,@9,@10,@11,@12,@13" +
                              (hasPk ? ",@14" : string.Empty) +
                              ") ON DUPLICATE KEY UPDATE " +
-                             $"`{COLUMN_MAP}`=@0,`{COLUMN_FACTION}`=@1,`{COLUMN_RESPAWN_TIME}`=@3,`{COLUMN_TICKET_COST}`=@4," +
+                             $"`{COLUMN_MAP}`=@0,`{COLUMN_FACTION}`=@1,`{COLUMN_VEHICLE_GUID}`=@2,`{COLUMN_RESPAWN_TIME}`=@3,`{COLUMN_TICKET_COST}`=@4," +
                              $"`{COLUMN_CREDIT_COST}`=@5,`{COLUMN_REARM_COST}`=@6,`{COLUMN_COOLDOWN}`=@7,`{COLUMN_BRANCH}`=@8,`{COLUMN_REQUIRED_CLASS}`=@9," +
                              $"`{COLUMN_VEHICLE_TYPE}`=@10,`{COLUMN_REQUIRES_SQUADLEADER}`=@11,`{COLUMN_ABANDON_BLACKLISTED}`=@12,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}`=@13," +
                              $"`{COLUMN_PK}`=LAST_INSERT_ID(`{COLUMN_PK}`);" +
@@ -1040,25 +1041,12 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 Delay delay = item.Delays[i];
                 int index = i * 3;
                 objs[index] = delay.Type.ToString();
-                objs[index + 1] = delay.Type switch
-                {
-                    EDelayType.OUT_OF_STAGING or EDelayType.NONE => DBNull.Value,
-                    _ => delay.Value
-                };
+                objs[index + 1] = Delay.UsesValue(delay.Type) ? delay.Value : DBNull.Value;
                 objs[index + 2] = (object?)delay.Gamemode ?? DBNull.Value;
-                if (i != 0)
-                    builder.Append(',');
-                builder.Append('(');
-                for (int j = index; j < index + 3; ++j)
-                {
-                    if (j != index)
-                        builder.Append(',');
-                    builder.Append('@').Append(index);
-                }
-                builder.Append(')');
+                F.AppendPropertyList(builder, index, 3);
             }
             builder.Append(';');
-            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            await Sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
             builder.Clear();
         }
 
@@ -1071,19 +1059,10 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 int index = i * 2;
                 objs[index] = pk2;
                 objs[index + 1] = item.Items[i];
-                if (i != 0)
-                    builder.Append(',');
-                builder.Append('(');
-                for (int j = index; j < index + 2; ++j)
-                {
-                    if (j != index)
-                        builder.Append(',');
-                    builder.Append('@').Append(index);
-                }
-                builder.Append(')');
+                F.AppendPropertyList(builder, index, 2);
             }
             builder.Append(';');
-            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            await Sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
             builder.Clear();
         }
 
@@ -1096,19 +1075,10 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 int index = i * 2;
                 objs[index] = pk2;
                 objs[index + 1] = item.CrewSeats[i];
-                if (i != 0)
-                    builder.Append(',');
-                builder.Append('(');
-                for (int j = index; j < index + 2; ++j)
-                {
-                    if (j != index)
-                        builder.Append(',');
-                    builder.Append('@').Append(index);
-                }
-                builder.Append(')');
+                F.AppendPropertyList(builder, index, 2);
             }
             builder.Append(';');
-            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            await Sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
             builder.Clear();
         }
 
@@ -1129,20 +1099,133 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 int index = i * 2;
                 objs[index] = pk2;
                 objs[index + 1] = json;
-                if (i != 0)
-                    builder.Append(',');
-                builder.Append('(');
-                for (int j = index; j < index + 2; ++j)
-                {
-                    if (j != index)
-                        builder.Append(',');
-                    builder.Append('@').Append(index);
-                }
-                builder.Append(')');
+                F.AppendPropertyList(builder, index, 2);
             }
             builder.Append(';');
-            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            await Sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
             builder.Clear();
+        }
+
+        if (item.Metadata != null)
+        {
+            if (item.Metadata.Barricades != null && item.Metadata.Barricades.Count > 0)
+            {
+                builder.Append($"INSERT INTO `{TABLE_BARRICADES}` (`{COLUMN_EXT_PK}`,`{VBarricade.COLUMN_ITEM_GUID}`," +
+                               $"`{VBarricade.COLUMN_POS_X}`,`{VBarricade.COLUMN_POS_Y}`,`{VBarricade.COLUMN_POS_Z}`," +
+                               $"`{VBarricade.COLUMN_ROT_X}`,`{VBarricade.COLUMN_ROT_Y}`,`{VBarricade.COLUMN_ROT_Z}`,`{VBarricade.COLUMN_METADATA}`) VALUES ");
+                objs = new object[item.Metadata.Barricades.Count * 9];
+                List<VBarricade>? storages = null;
+                for (int i = 0; i < item.Metadata.Barricades.Count; ++i)
+                {
+                    VBarricade barricade = item.Metadata.Barricades[i];
+                    barricade.LinkedKey = pk2;
+                    int index = i * 9;
+                    objs[index] = pk2;
+                    objs[index + 1] = barricade.BarricadeID.ToByteArray();
+                    objs[index + 2] = barricade.PosX;
+                    objs[index + 3] = barricade.PosY;
+                    objs[index + 4] = barricade.PosZ;
+                    objs[index + 5] = barricade.AngleX;
+                    objs[index + 6] = barricade.AngleY;
+                    objs[index + 7] = barricade.AngleZ;
+                    if (Assets.find<ItemBarricadeAsset>(barricade.BarricadeID) is ItemStorageAsset)
+                    {
+                        (storages ??= new List<VBarricade>(4)).Add(barricade);
+                        if (barricade.Metadata == null)
+                            barricade.Metadata = new byte[16];
+                        else if (barricade.Metadata.Length > 15)
+                        {
+                            if (barricade.Metadata.Length != 16)
+                            {
+                                byte[] st2 = barricade.Metadata;
+                                barricade.Metadata = new byte[16];
+                                Buffer.BlockCopy(st2, 0, barricade.Metadata, 0, 16);
+                            }
+                        }
+                        else barricade.Metadata = Array.Empty<byte>();
+                    }
+                    objs[index + 8] = barricade.Metadata ?? Array.Empty<byte>();
+                    F.AppendPropertyList(builder, index, 9);
+                }
+                builder.Append(';');
+                int ind2 = -1;
+                builder.Append($"SELECT `{VBarricade.COLUMN_PK}`,`{VBarricade.COLUMN_ITEM_GUID}`," +
+                               $"`{VBarricade.COLUMN_POS_X}`,`{VBarricade.COLUMN_POS_Y}`,`{VBarricade.COLUMN_POS_Z}`" +
+                               $" FROM `{TABLE_BARRICADES}` WHERE `{COLUMN_EXT_PK}`=@0;");
+                await Sql.QueryAsync(builder.ToString(), objs, reader =>
+                {
+                    ++ind2;
+                    int pk = reader.GetInt32(0);
+                    Guid guid = reader.ReadGuid(1);
+                    float posx = reader.GetFloat(2);
+                    float posy = reader.GetFloat(3);
+                    float posz = reader.GetFloat(4);
+                    for (int i = ind2; i < item.Metadata.Barricades.Count; ++i)
+                    {
+                        VBarricade b = item.Metadata.Barricades[i];
+                        if (b.BarricadeID == guid && Mathf.Abs(b.PosX - posx) < 0.05
+                                                  && Mathf.Abs(b.PosY - posy) < 0.05
+                                                  && Mathf.Abs(b.PosZ - posz) < 0.05)
+                        {
+                            b.PrimaryKey = pk;
+                            return;
+                        }
+                    }
+                    for (int i = 0; i < ind2; ++i)
+                    {
+                        VBarricade b = item.Metadata.Barricades[i];
+                        if (b.BarricadeID == guid && Mathf.Abs(b.PosX - posx) < 0.05
+                                                  && Mathf.Abs(b.PosY - posy) < 0.05
+                                                  && Mathf.Abs(b.PosZ - posz) < 0.05)
+                        {
+                            b.PrimaryKey = pk;
+                            return;
+                        }
+                    }
+                }, token).ConfigureAwait(false);
+                builder.Clear();
+                await UCWarfare.ToUpdate(token);
+                if (storages != null)
+                {
+                    List<ItemJarData> jars = new List<ItemJarData>(storages.Count * 8);
+                    List<ItemDisplayData>? disp = null;
+                    for (int i = 0; i < storages.Count; ++i)
+                    {
+                        ItemStorageAsset storage = Assets.find<ItemStorageAsset>(storages[i].BarricadeID);
+                        VBarricade barricade = storages[i];
+                        jars.AddRange(F.GetItemsFromStorageState(storage, barricade.Metadata, out ItemDisplayData? display, barricade.PrimaryKey));
+                        if (display.HasValue)
+                            (disp ??= new List<ItemDisplayData>(4)).Add(display.Value);
+                    }
+                    if (jars.Count > 0)
+                    {
+                        builder.Append($"INSERT INTO `{TABLE_BARRICADE_ITEMS}` (" +
+                                       $"`{VBarricade.COLUMN_ITEM_BARRICADE_PK}`," +
+                                       $"`{VBarricade.COLUMN_ITEM_GUID}`,`{VBarricade.COLUMN_ITEM_AMOUNT}`,`{VBarricade.COLUMN_ITEM_QUALITY}`," +
+                                       $"`{VBarricade.COLUMN_ITEM_POS_X},`{VBarricade.COLUMN_ITEM_POS_Y}`,`{VBarricade.COLUMN_ITEM_ROT}`," +
+                                       $"`{VBarricade.COLUMN_ITEM_METADATA}`) VALUES ");
+                        objs = new object[jars.Count * 8];
+                        for (int i = 0; i < jars.Count; ++i)
+                        {
+                            ItemJarData data = jars[i];
+                            int index = i * 8;
+                            objs[index] = data.Structure.Key;
+                            objs[index + 1] = data.Item.ToByteArray();
+                            objs[index + 2] = data.Amount;
+                            objs[index + 3] = data.Quality;
+                            objs[index + 4] = data.X;
+                            objs[index + 5] = data.Y;
+                            objs[index + 6] = data.Rotation;
+                            objs[index + 7] = data.Metadata ?? Array.Empty<byte>();
+                            F.AppendPropertyList(builder, index, 8);
+                        }
+                    }
+                }
+            }
+            if (item.Metadata.TrunkItems != null && item.Metadata.TrunkItems.Count > 0)
+            {
+
+            }
         }
     }
     [Obsolete]
@@ -1208,8 +1291,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                  {
                                      if (list[i].PrimaryKey.Key == pk)
                                      {
-                                         EDelayType type = reader.ReadStringEnum(1, EDelayType.NONE);
-                                         if (type == EDelayType.NONE)
+                                         DelayType type = reader.ReadStringEnum(1, DelayType.None);
+                                         if (type == DelayType.None)
                                              break;
                                          Util.AddToArray(ref list[i].Delays!, new Delay(type, reader.IsDBNull(2) ? 0f : reader.GetFloat(2), reader.IsDBNull(3) ? null : reader.GetString(3)));
                                          break;
@@ -1493,8 +1576,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         await Sql.QueryAsync($"SELECT `{Delay.COLUMN_TYPE}`,`{Delay.COLUMN_VALUE}`,`{Delay.COLUMN_GAMEMODE}` " +
                              $"FROM `{TABLE_DELAYS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
                              {
-                                 EDelayType type = reader.ReadStringEnum(0, EDelayType.NONE);
-                                 if (type == EDelayType.NONE)
+                                 DelayType type = reader.ReadStringEnum(0, DelayType.None);
+                                 if (type == DelayType.None)
                                      return;
                                  Util.AddToArray(ref obj.Delays!, new Delay(type, reader.IsDBNull(1) ? 0f : reader.GetFloat(1), reader.IsDBNull(2) ? null : reader.GetString(2)));
                              }, token).ConfigureAwait(false);

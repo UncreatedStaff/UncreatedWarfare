@@ -1351,7 +1351,7 @@ public class Translation
             int ind1 = fmt!.IndexOf(T.PLURAL, StringComparison.Ordinal);
             if (ind1 != -1)
             {
-                if (fmt![fmt.Length - 1] == '}')
+                if (fmt[fmt.Length - 1] == '}')
                 {
                     int ind2 = fmt.LastIndexOf('{', fmt.Length - 2);
                     if (ind2 < fmt.Length - 4 || ind2 > fmt.Length - 3)
@@ -2321,8 +2321,7 @@ public sealed class TranslationDataAttribute : Attribute
         _description = description;
         for (int i = 0; i < parameters.Length; ++i)
         {
-            if (parameters[i] == null)
-                parameters[i] = string.Empty;
+            parameters[i] ??= string.Empty;
         }
 
         _formatArgs = parameters;

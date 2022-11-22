@@ -920,7 +920,7 @@ public static class Points
                         {
                             if (entry.Key == e.InstigatorId)
                             {
-                                AwardXP(attacker, reward, message.Translate(Data.Languages.TryGetValue(e.InstigatorId, out string lang) ? lang : L.DEFAULT, e.VehicleData.Type).ToUpperInvariant());
+                                AwardXP(attacker, reward, message.Translate(e.Instigator, e.VehicleData.Type).ToUpperInvariant());
                                 UCPlayer? pl = e.LastDriver ?? e.Owner;
                                 if (pl is not null && pl.Steam64 != e.InstigatorId)
                                     TryAwardDriverAssist(pl, fullXP, e.VehicleData.TicketCost);
