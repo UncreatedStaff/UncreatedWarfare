@@ -550,19 +550,19 @@ public struct Delay : IJsonReadWrite
             string? prop = reader.GetString();
             if (reader.Read() && prop != null)
             {
-                switch (prop)
+                if (prop.Equals(nameof(Type), StringComparison.OrdinalIgnoreCase))
                 {
-                    case nameof(Type):
-                        if (reader.TryGetInt32(out int i))
-                            Type = (DelayType)i;
-                        break;
-                    case nameof(Gamemode):
-                        if (reader.TokenType == JsonTokenType.Null) Gamemode = null;
-                        else Gamemode = reader.GetString();
-                        break;
-                    case nameof(Value):
-                        reader.TryGetSingle(out Value);
-                        break;
+                    if (reader.TryGetInt32(out int i))
+                        Type = (DelayType)i;
+                }
+                else if (prop.Equals(nameof(Gamemode), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (reader.TokenType == JsonTokenType.Null) Gamemode = null;
+                    else Gamemode = reader.GetString();
+                }
+                else if (prop.Equals(nameof(Value), StringComparison.OrdinalIgnoreCase))
+                {
+                    reader.TryGetSingle(out Value);
                 }
             }
         }

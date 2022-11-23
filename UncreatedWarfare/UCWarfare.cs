@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -66,9 +67,12 @@ public class UCWarfare : MonoBehaviour
         I = this;
     }
     [UsedImplicitly]
-    private void Start() => EarlyLoad();
-    private void EarlyLoad()
+    private void Start() => _earlyLoadTask = Util.TryWrap(EarlyLoad(), "Early load");
+
+    private Task? _earlyLoadTask;
+    private async Task EarlyLoad()
     {
+        await ToUpdate();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -85,6 +89,8 @@ public class UCWarfare : MonoBehaviour
 
         L.Log("Registering Commands: ", ConsoleColor.Magenta);
 
+        TeamManager.SetupConfig();
+
         OffenseManager.Init();
 
         CommandHandler.LoadCommands();
@@ -100,8 +106,8 @@ public class UCWarfare : MonoBehaviour
         StartCoroutine(RestartIn(seconds));
 
         new PermissionSaver();
-
-        TeamManager.SetupConfig();
+        await Data.LoadSQL().ConfigureAwait(false);
+        await TeamManager.ReloadFactions().ThenToUpdate();
 
         /* LOAD LOCALIZATION ASSETS */
         L.Log("Loading Localization and Color Data...", ConsoleColor.Magenta);
@@ -175,7 +181,12 @@ public class UCWarfare : MonoBehaviour
     }
     public async Task LoadAsync()
     {
-        await ToUpdate();
+        if (_earlyLoadTask != null && !_earlyLoadTask.IsCompleted)
+        {
+            await _earlyLoadTask.ThenToUpdate();
+            _earlyLoadTask = null;
+        }
+        else await ToUpdate();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif

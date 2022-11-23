@@ -11,12 +11,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Sources;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
@@ -35,6 +33,7 @@ public static class TeamManager
     {
         new FactionInfo("admins", "Admins", "ADMIN", "Admins", "0099ff", "default")
         {
+            PrimaryKey = 0,
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.RUSSIAN, "Администрация" }
@@ -42,6 +41,7 @@ public static class TeamManager
         },
         new FactionInfo("usa", "United States", "USA", "USA", "78b2ff", "usunarmed", @"https://i.imgur.com/P4JgkHB.png")
         {
+            PrimaryKey = 1,
             Build = "a70978a0b47e4017a0261e676af57042",
             Ammo = "51e1e372bf5341e1b4b16a0eacce37eb",
             FOBRadio = "7715ad81f1e24f60bb8f196dd09bd4ef",
@@ -57,6 +57,7 @@ public static class TeamManager
         },
         new FactionInfo("russia", "Russia", "RU", "Russia", "f53b3b", "ruunarmed", @"https://i.imgur.com/YMWSUZC.png")
         {
+            PrimaryKey = 2,
             Build = "6a8b8b3c79604aeea97f53c235947a1f",
             Ammo = "8dd66da5affa480ba324e270e52a46d7",
             FOBRadio = "fb910102ad954169abd4b0cb06a112c8",
@@ -72,14 +73,20 @@ public static class TeamManager
         },
         new FactionInfo("mec", "Middle Eastern Coalition", "MEC", "MEC", "ffcd8c", "meunarmed", @"https://i.imgur.com/rPmpNzz.png")
         {
+            PrimaryKey = 3,
             Build = "9c7122f7e70e4a4da26a49b871087f9f",
             Ammo = "bfc9aed75a3245acbfd01bc78fcfc875",
             FOBRadio = "c7754ac78083421da73006b12a56811a",
             RallyPoint = "c03352d9e6bb4e2993917924b604ee76"
         },
-        // don't even think about leaking these
-        new FactionInfo("germany", "Germany", "DE", "Germany", "ffcc00", "deunarmed"),
+        new FactionInfo("germany", "Germany", "DE", "Germany", "ffcc00", "deunarmed")
+        {
+            PrimaryKey = 4,
+        },
         new FactionInfo("china", "China", "CN", "China", "ef1620", "cnunarmed")
+        {
+            PrimaryKey = 5,
+        }
     };
     public static ushort Team1Tickets;
     public static ushort Team2Tickets;
@@ -707,6 +714,7 @@ public static class TeamManager
     }
     internal static void SetupConfig()
     {
+        /*
         (_factions ??= new List<FactionInfo>(16)).Clear();
 
         DirectoryInfo dinfo = new DirectoryInfo(Data.Paths.FactionsStorage);
@@ -759,9 +767,9 @@ public static class TeamManager
                 L.LogError("Error reading faction " + faction + ":");
                 L.LogError(ex);
             }
-        cont: continue;
+            cont:;
         }
-    tc:
+        tc:*/
         if (_data == null)
             _data = new TeamConfig();
         else
@@ -1371,7 +1379,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         reader.GetString(6),
                         reader.IsDBNull(7) ? UNKNOWN_TEAM_IMG_URL : reader.GetString(7))
                     {
-                        PrimaryKey = reader.GetInt32(0)
+                        PrimaryKey = pk
                     });
         }, token).ConfigureAwait(false);
         await sql.QueryAsync(

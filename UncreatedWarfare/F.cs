@@ -1471,7 +1471,6 @@ public static class F
 
         return rtn;
     }
-
     internal static void AppendPropertyList(StringBuilder builder, int startIndex, int length)
     {
         if (startIndex != 0)

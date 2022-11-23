@@ -1493,14 +1493,9 @@ public static class EventFunctions
                     UCWarfare.Config.MinAlphanumericStringLength);
                 return;
             }
-            else
-            {
-                player.playerID.characterName = cn!;
-                player.playerID.nickName = cn!;
-            }
 
-            player.playerID.characterName = Regex.Replace(player.playerID.characterName, "<.*>", string.Empty);
-            player.playerID.nickName = Regex.Replace(player.playerID.nickName, "<.*>", string.Empty);
+            player.playerID.characterName = Regex.Replace(cn!, "<.*>", string.Empty);
+            player.playerID.nickName = Regex.Replace(nn!, "<.*>", string.Empty);
 
             if (player.playerID.characterName.Length < 3 && player.playerID.nickName.Length < 3)
             {

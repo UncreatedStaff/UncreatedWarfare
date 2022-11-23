@@ -91,7 +91,8 @@ public class ReloadCommand : Command
         }
         else if (module.Equals("teams", StringComparison.OrdinalIgnoreCase))
         {
-            TeamManager.SetupConfig();
+            TeamManager.ReloadFactions();
+            //TeamManager.SetupConfig();
             ctx.Reply(T.ReloadedGeneric, "teams and factions");
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "TEAMS & FACTIONS");
         }

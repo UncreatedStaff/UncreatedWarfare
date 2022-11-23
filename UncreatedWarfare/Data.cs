@@ -32,7 +32,7 @@ public static class Data
 {
     public static class Paths
     {
-        public static readonly char[] BadFileNameCharacters = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
+        public static readonly char[] BadFileNameCharacters = { '>', ':', '"', '/', '\\', '|', '?', '*' };
         public static readonly string BaseDirectory = Path.Combine(Environment.CurrentDirectory, "Uncreated", "Warfare") + Path.DirectorySeparatorChar;
         private static string? _mapCache;
         public static string MapStorage
@@ -99,7 +99,7 @@ public static class Data
     public static Dictionary<string, Vector3> ExtraPoints;
     public static Dictionary<ulong, string> DefaultPlayerNames;
     public static Dictionary<ulong, string> Languages;
-    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames;
+    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
     public static Dictionary<string, LanguageAliasSet> LanguageAliases;
     public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = new Dictionary<ulong, UCPlayerData>();
     internal static JsonZoneProvider ZoneProvider;
@@ -139,10 +139,10 @@ public static class Data
     public static WarfareSQL AdminSql => RemoteSQL ?? DatabaseManager;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Is<TGamemode>(out TGamemode gamemode) where TGamemode : class, Gamemodes.Interfaces.IGamemode => (gamemode = (Gamemode as TGamemode)!) is not null;
+    public static bool Is<TGamemode>(out TGamemode gamemode) where TGamemode : class, IGamemode => (gamemode = (Gamemode as TGamemode)!) is not null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Is<TGamemode>() where TGamemode : class, Gamemodes.Interfaces.IGamemode => Gamemode is TGamemode;
+    public static bool Is<TGamemode>() where TGamemode : class, IGamemode => Gamemode is TGamemode;
 
     public static void LoadColoredConsole()
     {
@@ -169,7 +169,20 @@ public static class Data
             OutputToConsoleMethod = null;
         }
     }
-
+    internal static async Task LoadSQL()
+    {
+        DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
+        bool status = await DatabaseManager.OpenAsync();
+        L.Log("Local MySql database status: " + status + ".", ConsoleColor.Magenta);
+        if (UCWarfare.Config.RemoteSQL != null)
+        {
+            RemoteSQL = new WarfareSQL(UCWarfare.Config.RemoteSQL);
+            status = await RemoteSQL.OpenAsync();
+            L.Log("Remote MySql database status: " + status + ".", ConsoleColor.Magenta);
+        }
+        else
+            L.Log("Using local as remote MySql database.", ConsoleColor.Magenta);
+    }
     internal static async Task LoadVariables()
     {
 #if DEBUG
@@ -198,17 +211,6 @@ public static class Data
 #if DEBUG
         //L.Log("Connection string: " + UCWarfare.Config.SQL.GetConnectionString(), ConsoleColor.DarkGray);
 #endif
-        DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
-        bool status = await DatabaseManager.OpenAsync();
-        L.Log("Local MySql database status: " + status + ".", ConsoleColor.Magenta);
-        if (UCWarfare.Config.RemoteSQL != null)
-        {
-            RemoteSQL = new WarfareSQL(UCWarfare.Config.RemoteSQL);
-            status = await RemoteSQL.OpenAsync();
-            L.Log("Remote MySql database status: " + status + ".", ConsoleColor.Magenta);
-        }
-        else
-            L.Log("Using local as remote MySql database.", ConsoleColor.Magenta);
 
         await UCWarfare.ToUpdate();
         Points.Initialize();

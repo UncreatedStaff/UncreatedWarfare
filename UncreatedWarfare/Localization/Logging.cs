@@ -9,7 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Commands.VanillaRework;
 
 namespace Uncreated.Warfare;
 
@@ -78,7 +77,7 @@ public static class L
             Data.OutputToConsoleMethod!.Invoke(text, color);
             AddLog(text);
         }
-        else if (text.IndexOf('\n') < 1)
+        else if (text.IndexOf('\n') < 0)
         {
             AddLog(text = new string(' ', indention) + text);
             Data.OutputToConsoleMethod!.Invoke(text, color);

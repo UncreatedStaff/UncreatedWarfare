@@ -182,7 +182,7 @@ public class WarfareSQL : MySqlDatabase
         {
             await QueryAsync("INSERT INTO `" + LEVELS_TABLE +
                              "` (`Steam64`,`Team`,`Experience`) VALUES (@0,@1,@2) ON DUPLICATE KEY UPDATE `Experience`=`Experience`+@2;" +
-                             "SELECT `Experience` FROM `" + LEVELS_TABLE + "` WHERE `Steam64`=@0 AND `Team=@1 LIMIT 1;",
+                             "SELECT `Experience` FROM `" + LEVELS_TABLE + "` WHERE `Steam64`=@0 AND `Team`=@1 LIMIT 1;",
                 new object[] { player, team, amount },
                 reader =>
                 {
@@ -215,7 +215,7 @@ public class WarfareSQL : MySqlDatabase
         {
             await QueryAsync("INSERT INTO `" + LEVELS_TABLE +
                              "` (`Steam64`,`Team`,`Credits`) VALUES (@0,@1,@2) ON DUPLICATE KEY UPDATE `Credits`=`Credits`+@2;" +
-                             "SELECT `Credits` FROM `" + LEVELS_TABLE + "` WHERE `Steam64`=@0 AND `Team=@1 LIMIT 1;",
+                             "SELECT `Credits` FROM `" + LEVELS_TABLE + "` WHERE `Steam64`=@0 AND `Team`=@1 LIMIT 1;",
                 new object[] { player, team, amount },
                 reader =>
                 {
@@ -247,7 +247,7 @@ public class WarfareSQL : MySqlDatabase
         {
             await QueryAsync("INSERT INTO `" + LEVELS_TABLE +
                              "` (`Steam64`,`Team`,`Credits`,`Experience`) VALUES (@0,@1,@2,@3) ON DUPLICATE KEY UPDATE `Credits`=`Credits`+@2, `Experience`=`Experience`+@3;" +
-                             "SELECT `Credits`,`Experience` FROM `" + LEVELS_TABLE + "` WHERE `Steam64`=@0 AND `Team=@1 LIMIT 1;",
+                             "SELECT `Credits`,`Experience` FROM `" + LEVELS_TABLE + "` WHERE `Steam64`=@0 AND `Team`=@1 LIMIT 1;",
                 new object[] { player, team, credits, xp },
                 reader =>
                 {
@@ -294,7 +294,7 @@ public class WarfareSQL : MySqlDatabase
     {
         token.ThrowIfCancellationRequested();
         uint amt = 0;
-        await QueryAsync("SELECT `Kills` FROM `" + PLAYER_STATS_TABLE + "` WHERE `Steam64`=@0 AND `Team=@1` LIMIT 1;",
+        await QueryAsync("SELECT `Kills` FROM `" + PLAYER_STATS_TABLE + "` WHERE `Steam64`=@0 AND `Team`=@1` LIMIT 1;",
             new object[] { player, team }, reader => amt = reader.GetUInt32(0), token).ConfigureAwait(false);
         return amt;
     }
@@ -302,7 +302,7 @@ public class WarfareSQL : MySqlDatabase
     {
         token.ThrowIfCancellationRequested();
         uint amt = 0;
-        await QueryAsync("SELECT `Deaths` FROM `" + PLAYER_STATS_TABLE + "` WHERE `Steam64`=@0 AND `Team=@1` LIMIT 1;",
+        await QueryAsync("SELECT `Deaths` FROM `" + PLAYER_STATS_TABLE + "` WHERE `Steam64`=@0 AND `Team`=@1` LIMIT 1;",
             new object[] { player, team }, reader => amt = reader.GetUInt32(0), token).ConfigureAwait(false);
         return amt;
     }
@@ -310,7 +310,7 @@ public class WarfareSQL : MySqlDatabase
     {
         token.ThrowIfCancellationRequested();
         uint amt = 0;
-        await QueryAsync("SELECT `Teamkills` FROM `" + PLAYER_STATS_TABLE + "` WHERE `Steam64`=@0 AND `Team=@1` LIMIT 1;",
+        await QueryAsync("SELECT `Teamkills` FROM `" + PLAYER_STATS_TABLE + "` WHERE `Steam64`=@0 AND `Team`=@1` LIMIT 1;",
             new object[] { player, team }, reader => amt = reader.GetUInt32(0), token).ConfigureAwait(false);
         return amt;
     }
