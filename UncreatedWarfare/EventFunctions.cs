@@ -1123,7 +1123,7 @@ public static class EventFunctions
 #endif
         if (player == null) return;
         UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
-        if (ucplayer == null || ucplayer.Squad == null || !ucplayer.IsSquadLeader())
+        if (ucplayer == null || ucplayer.OffDuty() && (ucplayer.Squad == null || !ucplayer.IsSquadLeader()))
         {
             allowed = false;
             ucplayer?.SendChat(T.MarkerNotInSquad);
@@ -1134,7 +1134,8 @@ public static class EventFunctions
             ClearPlayerMarkerForSquad(ucplayer);
             return;
         }
-        overrideText = ucplayer.Squad.Name.ToUpper();
+        if (ucplayer.Squad != null)
+            overrideText = ucplayer.Squad.Name.ToUpper();
         Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
         PlaceMarker(ucplayer, effectposition, true, false);
     }

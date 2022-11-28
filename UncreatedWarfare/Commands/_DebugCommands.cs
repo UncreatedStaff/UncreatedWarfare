@@ -19,6 +19,7 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
@@ -291,13 +292,12 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.STAFF);
 
         ctx.AssertRanByPlayer();
-        ctx.AssertGamemode(out IFlagRotation fg);
 
         Vector3 pos = ctx.Caller.Position;
         if (pos == Vector3.zero) return;
-        Flag? flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos));
-        string txt = $"Position: <#ff9999>({pos.x.ToString("0.##", Data.Locale)}, {pos.y.ToString("0.##", Data.Locale)}, {pos.z.ToString("0.##", Data.Locale)})</color>. " +
-                     $"Yaw: <#ff9999>{ctx.Caller.Player.transform.eulerAngles.y.ToString("0.##", Data.Locale)}</color>.";
+        Flag? flag = Data.Is(out IFlagRotation fg) ? fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos)) : null;
+        string txt = $"Position: <#ff9999>({pos.x.ToString("0.##", Data.Locale)}, {pos.y.ToString("0.##", Data.Locale)}, {pos.z.ToString("0.##", Data.Locale)}) @ {new GridLocation(ctx.Caller.Position)}</color>. " +
+                     $"Yaw: <#ff9999>{ctx.Caller.Player.transform.eulerAngles.y.ToString("0.##", Data.Locale)}°</color>.";
         if (flag is null)
             ctx.ReplyString(txt);
         else

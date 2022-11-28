@@ -27,7 +27,7 @@ internal class MapScheduler : MonoBehaviour
     public static int Current => Instance is null ? -1 : Instance._map;
     // active map
     private int _map = -1;
-    private const int STATIC_MAP = 3;
+    private const int STATIC_MAP = 4;
 
     /* MAP DATA */
     private static readonly List<MapData> mapRotation = new List<MapData>()
@@ -36,7 +36,7 @@ internal class MapScheduler : MonoBehaviour
         new MapData("Goose Bay",        new ulong[] { 2301006771 }),
         new MapData("Nuijamaa",         new ulong[] { 2557112412 }),
         new MapData("Gulf of Aqaba",    new ulong[] { 2726964335 }),
-        new MapData("S3 Map",           new ulong[] { 0 }),
+        new MapData("S3 Uncreated",     new ulong[] { 2407740920 }),
     };
 
     /* MAP NAMES */

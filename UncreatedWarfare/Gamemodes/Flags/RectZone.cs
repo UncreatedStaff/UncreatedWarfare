@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
-public class RectZone : Zone
+public sealed class RectZone : Zone
 {
     private readonly Vector2 Size;
     private readonly Line[] lines;

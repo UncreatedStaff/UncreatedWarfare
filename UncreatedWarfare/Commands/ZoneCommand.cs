@@ -7,6 +7,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Locations;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -221,13 +222,32 @@ public class ZoneCommand : Command
             zone = GetZone(plpos);
         }
 
-        if (zone == null) throw ctx.Reply(T.ZoneNoResultsName);
+        Vector2 pos;
+        GridLocation location = default;
+        if (zone == null)
+        {
+            if (GridLocation.TryParse(zname, out location))
+            {
+                pos = location.Center;
+            }
+            else throw ctx.Reply(T.ZoneNoResultsName);
+        }
+        else pos = zone.Center;
 
-        if (Physics.Raycast(new Ray(new Vector3(zone.Center.x, Level.HEIGHT, zone.Center.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+
+        if (Physics.Raycast(new Ray(new Vector3(pos.x, Level.HEIGHT, pos.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
         {
             ctx.Caller.Player.teleportToLocationUnsafe(hit.point, 0);
-            ctx.Reply(T.ZoneGoSuccess, zone);
-            ctx.LogAction(EActionLogType.TELEPORT, zone.Name.ToUpper());
+            if (zone != null)
+                ctx.Reply(T.ZoneGoSuccess, zone);
+            else
+                ctx.Reply(T.ZoneGoSuccessGridLocation, location);
+            ctx.LogAction(EActionLogType.TELEPORT, zone == null ? location.ToString() : zone.Name.ToUpper());
+        }
+        else
+        {
+            ctx.SendUnknownError();
+            L.LogWarning("Tried to teleport to " + (zone == null ? location.ToString() : zone.Name.ToUpper()) + " and there was no terrain to teleport to at " + pos + ".");
         }
     }
     internal static Zone? GetZone(string nameInput)

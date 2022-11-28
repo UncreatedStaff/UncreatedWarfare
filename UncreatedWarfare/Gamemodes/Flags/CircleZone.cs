@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
-public class CircleZone : Zone
+public sealed class CircleZone : Zone
 {
     private readonly float _radius;
     /// <summary>

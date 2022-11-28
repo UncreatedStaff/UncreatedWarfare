@@ -43,7 +43,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
     protected override async Task PostInit()
     {
         ThreadUtil.assertIsGameThread();
-        await TeamManager.ReloadFactions().ConfigureAwait(false);
+        await TeamManager.ReloadFactions().ThenToUpdate();
+        ThreadUtil.assertIsGameThread();
         if (UseTeamSelector)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
@@ -51,7 +52,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
         }
         Task task = base.PostInit();
         if (!task.IsCompleted)
-            await task.ConfigureAwait(false);
+            await task.ThenToUpdate();
     }
     protected override Task PreGameStarting(bool isOnLoad)
     {

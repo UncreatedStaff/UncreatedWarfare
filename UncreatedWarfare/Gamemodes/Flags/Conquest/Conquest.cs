@@ -422,7 +422,7 @@ public class ConquestTicketProvider : BaseTicketProvider, IFlagCapturedListener,
     }
     public override void Tick()
     {
-        if (Data.Gamemode.State == EState.ACTIVE)
+        if (Data.Gamemode != null && Data.Gamemode.State == EState.ACTIVE)
         {
             if (Data.Gamemode.EveryXSeconds(Gamemode.Config.ConquestPointCount * Gamemode.Config.ConquestTicketBleedIntervalPerPoint))
             {

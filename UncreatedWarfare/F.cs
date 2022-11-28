@@ -10,7 +10,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -265,11 +264,6 @@ public static class F
             _ => TeamManager.LobbySpawn
         };
     }
-    public static Vector3 GetBaseSpawn(this ulong playerID, out ulong team)
-    {
-        team = playerID.GetTeamFromPlayerSteam64ID();
-        return !Data.Is<ITeams>(out _) ? TeamManager.LobbySpawn : team.GetBaseSpawnFromTeam();
-    }
     public static Vector3 GetBaseSpawnFromTeam(this ulong team)
     {
         if (!Data.Is<ITeams>(out _))
@@ -329,6 +323,17 @@ public static class F
         if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
             return h.point.y + above;
         return defaultY;
+    }
+    public static bool TryGetHeight(float x, float z, out float height, float add = 0f)
+    {
+        if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+        {
+            height = h.point.y + add;
+            return true;
+        }
+
+        height = 0f;
+        return false;
     }
     public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
     {
@@ -1364,37 +1369,57 @@ public static class F
     }
 
     public static ConfiguredTaskAwaitable ThenToUpdate(this Task task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
+        => ThenToUpdateIntl(task, token).ConfigureAwait(true);
     public static ConfiguredTaskAwaitable<T> ThenToUpdate<T>(this Task<T> task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
+        => ThenToUpdateIntl(task, token).ConfigureAwait(true);
     public static ConfiguredTaskAwaitable ThenToUpdate(this ValueTask task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
+        => ThenToUpdateIntl(task, token).ConfigureAwait(true);
     public static ConfiguredTaskAwaitable<T> ThenToUpdate<T>(this ValueTask<T> task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
+        => ThenToUpdateIntl(task, token).ConfigureAwait(true);
     private static async Task ThenToUpdateIntl(Task task, CancellationToken token = default)
     {
         await task.ConfigureAwait(false);
         if (!UCWarfare.IsMainThread)
+        {
             await UCWarfare.ToUpdate(token);
+#if DEBUG
+            ThreadUtil.assertIsGameThread();
+#endif
+        }
     }
     private static async Task<T> ThenToUpdateIntl<T>(Task<T> task, CancellationToken token = default)
     {
         T result = await task.ConfigureAwait(false);
         if (!UCWarfare.IsMainThread)
+        {
             await UCWarfare.ToUpdate(token);
+#if DEBUG
+            ThreadUtil.assertIsGameThread();
+#endif
+        }
         return result;
     }
     private static async Task ThenToUpdateIntl(ValueTask task, CancellationToken token = default)
     {
         await task.ConfigureAwait(false);
         if (!UCWarfare.IsMainThread)
+        {
             await UCWarfare.ToUpdate(token);
+#if DEBUG
+            ThreadUtil.assertIsGameThread();
+#endif
+        }
     }
     private static async Task<T> ThenToUpdateIntl<T>(ValueTask<T> task, CancellationToken token = default)
     {
         T result = await task.ConfigureAwait(false);
         if (!UCWarfare.IsMainThread)
+        {
             await UCWarfare.ToUpdate(token);
+#if DEBUG
+            ThreadUtil.assertIsGameThread();
+#endif
+        }
         return result;
     }
     public static ItemJarData[] GetItemsFromStorageState(ItemStorageAsset storage, byte[] state, out ItemDisplayData? displayData, PrimaryKey parent, bool clientState = false)

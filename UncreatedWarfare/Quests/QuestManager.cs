@@ -332,9 +332,11 @@ public static class QuestManager
 
     #region read/write
     public static readonly Dictionary<EQuestType, Type> QuestTypes = new Dictionary<EQuestType, Type>(32);
+    private static bool reflected;
     /// <summary>Registers all the <see cref="QuestDataAttribute"/>'s to <see cref="QuestTypes"/>.</summary>
     public static void InitTypesReflector()
     {
+        if (reflected) return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -348,7 +350,7 @@ public static class QuestManager
             types = e.Types;
         }
 
-        foreach (Type type in types.Where<Type>(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
+        foreach (Type type in types.Where(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {
             QuestDataAttribute? attribute = type.GetCustomAttributes().OfType<QuestDataAttribute>().FirstOrDefault();
             if (attribute != null && attribute.Type != EQuestType.INVALID && !QuestTypes.ContainsKey(attribute.Type))
@@ -356,6 +358,7 @@ public static class QuestManager
         }
 
         QuestRewards.LoadTypes(types);
+        reflected = true;
     }
     /// <summary>Creates an instance of the provided <paramref name="type"/>. Pulls from <see cref="QuestTypes"/>. <see cref="InitTypesReflector"/> should be ran before use.</summary>
     public static BaseQuestData? GetQuestData(EQuestType type)

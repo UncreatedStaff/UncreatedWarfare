@@ -121,27 +121,27 @@ public class JsonZoneProvider
         {
             if (!_file.Exists)
             {
+                if (!_file.Directory!.Exists)
+                    _file.Directory.Create();
+
                 this._zones.Clear();
                 this._zones.AddRange(JSONMethods.DefaultZones.Select(x => x.GetZone()));
                 _file.Create()?.Close();
             }
 
-            using (FileStream rs = new FileStream(_file.FullName, FileMode.Truncate, FileAccess.Write, FileShare.None))
+            using FileStream rs = new FileStream(_file.FullName, FileMode.Truncate, FileAccess.Write, FileShare.None);
+            Utf8JsonWriter writer = new Utf8JsonWriter(rs, JsonEx.writerOptions);
+            writer.WriteStartArray();
+            for (int i = 0; i < _zones.Count; i++)
             {
-                Utf8JsonWriter writer = new Utf8JsonWriter(rs, JsonEx.writerOptions);
-                writer.WriteStartArray();
-                for (int i = 0; i < _zones.Count; i++)
-                {
-                    ZoneModel mdl = _zones[i].Data;
-                    WriteJsonZone(writer, ref mdl);
-                }
-
-                writer.WriteEndArray();
-                writer.Dispose();
-                rs.Close();
-                rs.Dispose();
+                ZoneModel mdl = _zones[i].Data;
+                WriteJsonZone(writer, ref mdl);
             }
-            return;
+
+            writer.WriteEndArray();
+            writer.Dispose();
+            rs.Close();
+            rs.Dispose();
         }
         catch (Exception ex)
         {

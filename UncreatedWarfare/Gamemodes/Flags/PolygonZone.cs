@@ -4,7 +4,7 @@ using System.Text;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
-public class PolygonZone : Zone
+public sealed class PolygonZone : Zone
 {
     private readonly Vector2[] Points;
     private readonly Line[] Lines;

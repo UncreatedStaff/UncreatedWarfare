@@ -935,7 +935,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     }
     public override void Tick()
     {
-        if (!Data.Gamemode.EveryXSeconds(20f) || !Data.Is(out Insurgency ins)) return;
+        if (Data.Gamemode == null || !Data.Gamemode.EveryXSeconds(20f) || !Data.Is(out Insurgency ins)) return;
         for (int i = 0; i < ins.ActiveCaches.Count; i++)
         {
             Insurgency.CacheData cache = ins.ActiveCaches[i];

@@ -17,7 +17,15 @@ public static class QuestRewards
         foreach (Type type in types.Where(x => x != null && x.IsClass && typeof(IQuestReward).IsAssignableFrom(x)))
         {
             if (Attribute.GetCustomAttribute(type, typeof(QuestRewardAttribute)) is QuestRewardAttribute attr && attr.Type != EQuestRewardType.NONE)
-                QuestRewardTypes.Add(attr.Type, type);
+            {
+                if (QuestRewardTypes.TryGetValue(attr.Type, out Type first))
+                {
+                    if (first != type)
+                        L.LogWarning("Duplicate reward type: " + attr.Type + " on type " + type.Name + " and " + first.Name + ".");
+                }
+                else
+                    QuestRewardTypes.Add(attr.Type, type);
+            }
         }
     }
     public static IQuestReward? GetQuestReward(EQuestRewardType type)
