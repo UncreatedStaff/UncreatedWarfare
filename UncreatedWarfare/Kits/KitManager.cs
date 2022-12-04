@@ -25,7 +25,7 @@ using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 
-public class KitManager : ListSqlSingleton<Kit>
+public class KitManager : ListSqlSingleton<KitOld>
 {
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
@@ -35,15 +35,15 @@ public class KitManager : ListSqlSingleton<Kit>
     public KitManager(string reloadKey, Schema[] schemas) : base(reloadKey, schemas)
     {
     }
-    protected override Task AddOrUpdateItem(Kit? item, PrimaryKey pk, CancellationToken token = new CancellationToken())
+    protected override Task AddOrUpdateItem(KitOld? item, PrimaryKey pk, CancellationToken token = new CancellationToken())
     {
         throw new NotImplementedException();
     }
-    protected override Task<Kit?> DownloadItem(PrimaryKey pk, CancellationToken token = new CancellationToken())
+    protected override Task<KitOld?> DownloadItem(PrimaryKey pk, CancellationToken token = new CancellationToken())
     {
         throw new NotImplementedException();
     }
-    protected override Task<Kit[]> DownloadAllItems(CancellationToken token = new CancellationToken())
+    protected override Task<KitOld[]> DownloadAllItems(CancellationToken token = new CancellationToken())
     {
         throw new NotImplementedException();
     }
@@ -87,7 +87,7 @@ public class KitManager : ListSqlSingleton<Kit>
             new Schema.Column(COLUMN_DISABLED, SqlTypes.BOOLEAN) { Nullable = true },
             new Schema.Column(COLUMN_WEAPONS, "varchar(" + KitEx.WEAPON_TEXT_MAX_CHAR_LIMIT + ")") { Nullable = true },
             new Schema.Column(COLUMN_SQUAD_LEVEL, "varchar(" + KitEx.SQUAD_LEVEL_MAX_CHAR_LIMIT + ")") { Nullable = true }
-        }, true, typeof(Kit)),
+        }, true, typeof(KitOld)),
         PageItem.GetDefaultSchema(TABLE_ITEMS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, true, false, false),
     };
 }
@@ -101,7 +101,7 @@ public class KitManagerOld : BaseReloadSingleton
     public static event KitCallback? OnKitDeleted;
     public static event KitCallback? OnKitUpdated;
     public static event KitAccessCallback? OnKitAccessChanged;
-    public Dictionary<int, Kit> Kits = new Dictionary<int, Kit>(256);
+    public Dictionary<int, KitOld> Kits = new Dictionary<int, KitOld>(256);
     private static KitManager _singleton;
     public static bool Loaded => _singleton.IsLoaded();
     public KitManager() : base("kits") { }
@@ -136,7 +136,7 @@ public class KitManagerOld : BaseReloadSingleton
         try
         {
             int c = 0;
-            foreach (Kit v in singleton.Kits.Values)
+            foreach (KitOld v in singleton.Kits.Values)
             {
                 if (v.GetDisplayName().IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) != -1)
                 {
@@ -169,17 +169,17 @@ public class KitManagerOld : BaseReloadSingleton
         ulong team = player.GetTeam();
         if (team is 1 or 2)
         {
-            if (KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
+            if (KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out KitOld unarmed))
                 GiveKit(player, unarmed);
             else if (KitExists(TeamManager.DefaultKit, out unarmed))
                 GiveKit(player, unarmed);
             else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
         }
-        else if (KitExists(TeamManager.DefaultKit, out Kit @default))
+        else if (KitExists(TeamManager.DefaultKit, out KitOld @default))
             GiveKit(player, @default);
         else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
     }
-    private static void ReadToKit(MySqlDataReader reader, Kit kit)
+    private static void ReadToKit(MySqlDataReader reader, KitOld kit)
     {
         kit.PrimaryKey = reader.GetInt32(0);
         kit.Name = reader.GetString(1);
@@ -255,9 +255,9 @@ public class KitManagerOld : BaseReloadSingleton
     public async Task RedownloadKit(string name)
     {
         bool wasNew = false;
-        if (!KitExists(name, out Kit kit))
+        if (!KitExists(name, out KitOld kit))
         {
-            kit = new Kit(true);
+            kit = new KitOld(true);
             wasNew = true;
         }
         await _threadLocker.WaitAsync();
@@ -311,7 +311,7 @@ public class KitManagerOld : BaseReloadSingleton
             await Data.AdminSql.QueryAsync("SELECT `Kit`, `JSON` FROM `kit_unlock_requirements` WHERE `Kit` = @0;", parameters, R =>
             {
                 int kitPk = R.GetInt32(0);
-                if (Kits.TryGetValue(kitPk, out Kit kit))
+                if (Kits.TryGetValue(kitPk, out KitOld kit))
                 {
                     BaseUnlockRequirement? req = ReadUnlockRequirement(R);
                     if (req != null)
@@ -334,14 +334,14 @@ public class KitManagerOld : BaseReloadSingleton
             Kits.Clear();
             await Data.AdminSql.QueryAsync("SELECT * FROM `kit_data`;", Array.Empty<object>(), R =>
             {
-                Kit kit = new Kit(true);
+                KitOld kit = new KitOld(true);
                 ReadToKit(R, kit);
                 Kits.Add(kit.PrimaryKey, kit);
             });
             await Data.AdminSql.QueryAsync("SELECT * FROM `kit_items`;", Array.Empty<object>(), R =>
             {
                 int kitPk = R.GetInt32(1);
-                if (Kits.TryGetValue(kitPk, out Kit kit))
+                if (Kits.TryGetValue(kitPk, out KitOld kit))
                 {
                     PageItem item = new PageItem();
                     ReadToKitItem(R, item);
@@ -351,7 +351,7 @@ public class KitManagerOld : BaseReloadSingleton
             await Data.AdminSql.QueryAsync("SELECT * FROM `kit_clothes`;", Array.Empty<object>(), R =>
             {
                 int kitPk = R.GetInt32(1);
-                if (Kits.TryGetValue(kitPk, out Kit kit))
+                if (Kits.TryGetValue(kitPk, out KitOld kit))
                 {
                     ClothingItem clothing = new ClothingItem();
                     ReadToKitClothing(R, clothing);
@@ -361,7 +361,7 @@ public class KitManagerOld : BaseReloadSingleton
             await Data.AdminSql.QueryAsync("SELECT * FROM `kit_skillsets`;", Array.Empty<object>(), R =>
             {
                 int kitPk = R.GetInt32(1);
-                if (Kits.TryGetValue(kitPk, out Kit kit))
+                if (Kits.TryGetValue(kitPk, out KitOld kit))
                 {
                     Skillset set = ReadSkillset(R);
                     if (set.Level != int.MinValue)
@@ -373,7 +373,7 @@ public class KitManagerOld : BaseReloadSingleton
             await Data.AdminSql.QueryAsync("SELECT `Kit`, `Language`, `Text` FROM `kit_lang`;", Array.Empty<object>(), R =>
             {
                 int kitPk = R.GetInt32(0);
-                if (Kits.TryGetValue(kitPk, out Kit kit))
+                if (Kits.TryGetValue(kitPk, out KitOld kit))
                 {
                     string lang = R.GetString(1);
                     if (!kit.SignTexts.ContainsKey(lang))
@@ -386,7 +386,7 @@ public class KitManagerOld : BaseReloadSingleton
             await Data.AdminSql.QueryAsync("SELECT `Kit`, `JSON` FROM `kit_unlock_requirements`;", Array.Empty<object>(), R =>
             {
                 int kitPk = R.GetInt32(0);
-                if (Kits.TryGetValue(kitPk, out Kit kit))
+                if (Kits.TryGetValue(kitPk, out KitOld kit))
                 {
                     BaseUnlockRequirement? req = ReadUnlockRequirement(R);
                     if (req != null)
@@ -405,7 +405,7 @@ public class KitManagerOld : BaseReloadSingleton
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         SingletonEx.AssertLoaded<KitManager>(_isLoaded);
-        if (HasKit(life.player.channel.owner.playerID.steamID, out Kit kit))
+        if (HasKit(life.player.channel.owner.playerID.steamID, out KitOld kit))
         {
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
             {
@@ -434,7 +434,7 @@ public class KitManagerOld : BaseReloadSingleton
             }
         }
     }
-    public static async Task<Kit> AddKit(Kit kit)
+    public static async Task<KitOld> AddKit(KitOld kit)
     {
         KitManager singleton = GetSingleton();
         if (kit != null)
@@ -650,7 +650,7 @@ public class KitManagerOld : BaseReloadSingleton
 
         return kit!;
     }
-    public static async Task<bool> GiveAccess(Kit kit, ulong player, EKitAccessType type)
+    public static async Task<bool> GiveAccess(KitOld kit, ulong player, EKitAccessType type)
     {
         bool res;
         if (kit.PrimaryKey != -1)
@@ -676,7 +676,7 @@ public class KitManagerOld : BaseReloadSingleton
         }
         return res;
     }
-    public static async Task<bool> GiveAccess(Kit kit, UCPlayer player, EKitAccessType type)
+    public static async Task<bool> GiveAccess(KitOld kit, UCPlayer player, EKitAccessType type)
     {
         bool res;
         if (kit.PrimaryKey != -1)
@@ -701,7 +701,7 @@ public class KitManagerOld : BaseReloadSingleton
         }
         return res;
     }
-    /// <summary>Does not add to <see cref="UCPlayer.AccessibleKits"/>. Use <see cref="GiveAccess(Kit, ulong, EKitAccessType)"/> or <see cref="GiveAccess(Kit, UCPlayer, EKitAccessType)"/> instead.</summary>
+    /// <summary>Does not add to <see cref="UCPlayer.AccessibleKits"/>. Use <see cref="GiveAccess(KitOld, ulong, EKitAccessType)"/> or <see cref="GiveAccess(KitOld, UCPlayer, EKitAccessType)"/> instead.</summary>
     public static async Task<bool> GiveAccess(int primaryKey, ulong player, EKitAccessType type)
     {
         return await Data.DatabaseManager.NonQueryAsync("INSERT INTO `kit_access` (`Kit`, `Steam64`, `AccessType`) VALUES (@0, @1, @2);", new object[3]
@@ -709,7 +709,7 @@ public class KitManagerOld : BaseReloadSingleton
             primaryKey, player, type.ToString()
         }) > 0;
     }
-    /// <summary>Does not add to <see cref="UCPlayer.AccessibleKits"/>. Use <see cref="GiveAccess(Kit, ulong, EKitAccessType)"/> or <see cref="GiveAccess(Kit, UCPlayer, EKitAccessType)"/> instead.</summary>
+    /// <summary>Does not add to <see cref="UCPlayer.AccessibleKits"/>. Use <see cref="GiveAccess(KitOld, ulong, EKitAccessType)"/> or <see cref="GiveAccess(KitOld, UCPlayer, EKitAccessType)"/> instead.</summary>
     public static async Task<bool> GiveAccess(string name, ulong player, EKitAccessType type)
     {
         return await Data.DatabaseManager.NonQueryAsync("SET @pk := (SELECT `pk` FROM `kit_data` WHERE `InternalName` = @0 LIMIT 1); INSERT INTO `kit_access` (`Kit`, `Steam64`, `AccessType`) VALUES (@pk, @1, @2) WHERE @pk IS NOT NULL;", new object[3]
@@ -717,7 +717,7 @@ public class KitManagerOld : BaseReloadSingleton
             name, player, type.ToString()
         }) > 0;
     }
-    public static async Task<bool> RemoveAccess(Kit kit, UCPlayer player)
+    public static async Task<bool> RemoveAccess(KitOld kit, UCPlayer player)
     {
         bool res;
         if (kit.PrimaryKey != -1)
@@ -739,7 +739,7 @@ public class KitManagerOld : BaseReloadSingleton
         }
         return res;
     }
-    public static async Task<bool> RemoveAccess(Kit kit, ulong player)
+    public static async Task<bool> RemoveAccess(KitOld kit, ulong player)
     {
         bool res;
         if (kit.PrimaryKey != -1)
@@ -762,7 +762,7 @@ public class KitManagerOld : BaseReloadSingleton
         }
         return res;
     }
-    /// <summary>Does not remove from <see cref="UCPlayer.AccessibleKits"/>. Use <see cref="RemoveAccess(Kit, ulong)"/> or <see cref="RemoveAccess(Kit, UCPlayer)"/> instead.</summary>
+    /// <summary>Does not remove from <see cref="UCPlayer.AccessibleKits"/>. Use <see cref="RemoveAccess(KitOld, ulong)"/> or <see cref="RemoveAccess(KitOld, UCPlayer)"/> instead.</summary>
     public static async Task<bool> RemoveAccess(int primaryKey, ulong player)
     {
         return await Data.DatabaseManager.NonQueryAsync("DELETE FROM `kit_access` WHERE `Steam64` = @0 AND `Kit` = @1;", new object[2]
@@ -770,7 +770,7 @@ public class KitManagerOld : BaseReloadSingleton
             player, primaryKey
         }) > 0;
     }
-    /// <summary>Does not remove from <see cref="UCPlayer.AccessibleKits"/>. Use <see cref="RemoveAccess(Kit, ulong)"/> or <see cref="RemoveAccess(Kit, UCPlayer)"/> instead.</summary>
+    /// <summary>Does not remove from <see cref="UCPlayer.AccessibleKits"/>. Use <see cref="RemoveAccess(KitOld, ulong)"/> or <see cref="RemoveAccess(KitOld, UCPlayer)"/> instead.</summary>
     public static async Task<bool> RemoveAccess(string name, ulong player)
     {
         return await Data.DatabaseManager.NonQueryAsync("SET @pk := (SELECT `pk` FROM `kit_data` WHERE `InternalName` = @0 LIMIT 1); DELETE FROM `kit_access` WHERE `Steam64` = @1 AND `Kit` = @pk;", new object[2]
@@ -778,7 +778,7 @@ public class KitManagerOld : BaseReloadSingleton
             name, player
         }) > 0;
     }
-    public static Task<bool> HasAccess(Kit kit, ulong player)
+    public static Task<bool> HasAccess(KitOld kit, ulong player)
     {
         if (kit.PrimaryKey != -1)
         {
@@ -807,7 +807,7 @@ public class KitManagerOld : BaseReloadSingleton
         }, R => { ct = R.GetInt32(0); });
         return ct > 0;
     }
-    public static bool HasAccessFast(Kit kit, UCPlayer player)
+    public static bool HasAccessFast(KitOld kit, UCPlayer player)
     {
         return player != null && player.AccessibleKits != null && player.AccessibleKits.Exists(x => x.Equals(kit.Name, StringComparison.Ordinal));
     }
@@ -816,7 +816,7 @@ public class KitManagerOld : BaseReloadSingleton
         if (string.IsNullOrEmpty(name)) return false;
         return player != null && player.AccessibleKits != null && player.AccessibleKits.Exists(x => x.Equals(name, StringComparison.Ordinal));
     }
-    public static Task<bool> DeleteKit(Kit kit)
+    public static Task<bool> DeleteKit(KitOld kit)
     {
         if (kit.PrimaryKey != -1)
         {
@@ -859,7 +859,7 @@ public class KitManagerOld : BaseReloadSingleton
     {
         KitManager singleton = GetSingleton();
         await singleton._threadLocker.WaitAsync();
-        KeyValuePair<int, Kit> fod = singleton.Kits.FirstOrDefault(x => x.Value.Name.Equals(name, StringComparison.Ordinal));
+        KeyValuePair<int, KitOld> fod = singleton.Kits.FirstOrDefault(x => x.Value.Name.Equals(name, StringComparison.Ordinal));
         if (fod.Value != null)
             singleton.Kits.Remove(fod.Key);
         singleton._threadLocker.Release();
@@ -870,7 +870,7 @@ public class KitManagerOld : BaseReloadSingleton
             name
         }) > 0;
     }
-    internal static void ApplyKitChange(Kit kit)
+    internal static void ApplyKitChange(KitOld kit)
     {
         KitManager singleton = GetSingleton();
         singleton._threadLocker.Wait();
@@ -878,7 +878,7 @@ public class KitManagerOld : BaseReloadSingleton
         {
             if (singleton.Kits[i].Name.Equals(kit.Name, StringComparison.OrdinalIgnoreCase))
             {
-                Kit kit2 = singleton.Kits[i];
+                KitOld kit2 = singleton.Kits[i];
                 kit.ApplyTo(kit2);
                 UpdateSigns(kit2);
                 goto rtn;
@@ -889,25 +889,25 @@ public class KitManagerOld : BaseReloadSingleton
     rtn:
         singleton._threadLocker.Release();
     }
-    internal static Kit? GetRandomPublicKit()
+    internal static KitOld? GetRandomPublicKit()
     {
-        List<Kit> selection = GetAllPublicKits();
+        List<KitOld> selection = GetAllPublicKits();
         if (selection.Count == 0) return null;
         return selection[UnityEngine.Random.Range(0, selection.Count)];
     }
-    internal static List<Kit> GetAllPublicKits()
+    internal static List<KitOld> GetAllPublicKits()
     {
         return GetKitsWhere(x => !x.IsPremium && !x.IsLoadout && !x.Disabled && x.Class > Class.Unarmed);
     }
-    public static List<Kit> GetKitsWhere(Func<Kit, bool> predicate)
+    public static List<KitOld> GetKitsWhere(Func<KitOld, bool> predicate)
     {
         KitManager singleton = GetSingleton();
         singleton._threadLocker.Wait();
-        List<Kit> rtn = singleton.Kits.Values.Where(predicate).ToList();
+        List<KitOld> rtn = singleton.Kits.Values.Where(predicate).ToList();
         singleton._threadLocker.Release();
         return rtn;
     }
-    public static bool KitExists(string kitName, out Kit kit)
+    public static bool KitExists(string kitName, out KitOld kit)
     {
         KitManager singleton = GetSingleton();
         singleton._threadLocker.Wait();
@@ -915,7 +915,7 @@ public class KitManagerOld : BaseReloadSingleton
         singleton._threadLocker.Release();
         return kit != null;
     }
-    public static bool KitExists(Func<Kit, bool> predicate, out Kit kit)
+    public static bool KitExists(Func<KitOld, bool> predicate, out KitOld kit)
     {
         KitManager singleton = GetSingleton();
         singleton._threadLocker.Wait();
@@ -997,7 +997,7 @@ public class KitManagerOld : BaseReloadSingleton
         singleton._threadLocker.Wait();
         try
         {
-            foreach (Kit kit in singleton.Kits.Values)
+            foreach (KitOld kit in singleton.Kits.Values)
             {
                 if (!kit.IsLoadout && kit.UnlockRequirements != null)
                 {
@@ -1039,7 +1039,7 @@ public class KitManagerOld : BaseReloadSingleton
         singleton._threadLocker.Wait();
         try
         {
-            foreach (Kit kit in singleton.Kits.Values)
+            foreach (KitOld kit in singleton.Kits.Values)
             {
                 if (!kit.IsLoadout && kit.UnlockRequirements != null)
                 {
@@ -1065,7 +1065,7 @@ public class KitManagerOld : BaseReloadSingleton
         }
         return affectedKit;
     }
-    public static void GiveKit(UCPlayer player, Kit kit)
+    public static void GiveKit(UCPlayer player, KitOld kit)
     {
         if (kit == null)
             return;
@@ -1073,7 +1073,7 @@ public class KitManagerOld : BaseReloadSingleton
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (HasKit(player, out Kit oldKit))
+        if (HasKit(player, out KitOld oldKit))
         {
             if (oldKit.Skillsets != null)
             {
@@ -1194,7 +1194,7 @@ public class KitManagerOld : BaseReloadSingleton
             UpdateSigns(oldkit);
         UpdateSigns(kit);
     }
-    public static void ResupplyKit(UCPlayer player, Kit kit, bool ignoreAmmoBags = false)
+    public static void ResupplyKit(UCPlayer player, KitOld kit, bool ignoreAmmoBags = false)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1311,7 +1311,7 @@ public class KitManagerOld : BaseReloadSingleton
         else if (player.IsTeam2)
             unarmedKit = TeamManager.Team2UnarmedKit;
 
-        if (KitExists(unarmedKit, out Kit kit))
+        if (KitExists(unarmedKit, out KitOld kit))
         {
             GiveKit(player, kit);
             return true;
@@ -1324,7 +1324,7 @@ public class KitManagerOld : BaseReloadSingleton
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ulong t = player.GetTeam();
-        Kit rifleman = GetKitsWhere(k =>
+        KitOld rifleman = GetKitsWhere(k =>
                 !k.Disabled &&
                 k.Team == t &&
                 k.Class == Class.Rifleman &&
@@ -1341,7 +1341,7 @@ public class KitManagerOld : BaseReloadSingleton
         }
         return false;
     }
-    public static bool HasKit(ulong steamID, out Kit kit)
+    public static bool HasKit(ulong steamID, out KitOld kit)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1365,7 +1365,7 @@ public class KitManagerOld : BaseReloadSingleton
             return kit != null;
         }
     }
-    public static bool HasKit(UCPlayer player, out Kit kit)
+    public static bool HasKit(UCPlayer player, out KitOld kit)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1373,10 +1373,10 @@ public class KitManagerOld : BaseReloadSingleton
         kit = player.Kit!;
         return player.Kit != null;
     }
-    public static bool HasKit(SteamPlayer player, out Kit kit) => HasKit(player.playerID.steamID.m_SteamID, out kit);
-    public static bool HasKit(Player player, out Kit kit) => HasKit(player.channel.owner.playerID.steamID.m_SteamID, out kit);
-    public static bool HasKit(CSteamID player, out Kit kit) => HasKit(player.m_SteamID, out kit);
-    public static void UpdateText(Kit kit, string text, string language = L.DEFAULT, bool updateSigns = true)
+    public static bool HasKit(SteamPlayer player, out KitOld kit) => HasKit(player.playerID.steamID.m_SteamID, out kit);
+    public static bool HasKit(Player player, out KitOld kit) => HasKit(player.channel.owner.playerID.steamID.m_SteamID, out kit);
+    public static bool HasKit(CSteamID player, out KitOld kit) => HasKit(player.m_SteamID, out kit);
+    public static void UpdateText(KitOld kit, string text, string language = L.DEFAULT, bool updateSigns = true)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1400,14 +1400,14 @@ public class KitManagerOld : BaseReloadSingleton
         else
             UCWarfare.RunOnMainThread(() => UpdateSignsIntl(player));
     }
-    public static void UpdateSigns(Kit kit)
+    public static void UpdateSigns(KitOld kit)
     {
         if (UCWarfare.IsMainThread)
             UpdateSignsIntl(kit, null);
         else
             UCWarfare.RunOnMainThread(() => UpdateSignsIntl(kit, null));
     }
-    public static void UpdateSigns(Kit kit, UCPlayer player)
+    public static void UpdateSigns(KitOld kit, UCPlayer player)
     {
         if (UCWarfare.IsMainThread)
             UpdateSignsIntl(kit, player);
@@ -1448,7 +1448,7 @@ public class KitManagerOld : BaseReloadSingleton
             }
         }
     }
-    private static void UpdateSignsIntl(Kit kit, UCPlayer? player)
+    private static void UpdateSignsIntl(KitOld kit, UCPlayer? player)
     {
         if (RequestSigns.Loaded)
         {
@@ -1516,7 +1516,7 @@ public class KitManagerOld : BaseReloadSingleton
         });
         return let;
     }
-    internal async Task<(Kit?, int)> CreateLoadout(ulong fromPlayer, ulong player, ulong team, Class @class, string displayName)
+    internal async Task<(KitOld?, int)> CreateLoadout(ulong fromPlayer, ulong player, ulong team, Class @class, string displayName)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1530,7 +1530,7 @@ public class KitManagerOld : BaseReloadSingleton
         {
             List<PageItem> items;
             List<ClothingItem> clothes;
-            if (team is 1 or 2 && KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmedKit))
+            if (team is 1 or 2 && KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out KitOld unarmedKit))
             {
                 items = unarmedKit.Items.ToList();
                 clothes = unarmedKit.Clothes.ToList();
@@ -1541,7 +1541,7 @@ public class KitManagerOld : BaseReloadSingleton
                 clothes = new List<ClothingItem>(0);
             }
 
-            Kit loadout = new Kit(loadoutName, items, clothes);
+            KitOld loadout = new KitOld(loadoutName, items, clothes);
 
             loadout.IsLoadout = true;
             loadout.Team = team;
@@ -1565,7 +1565,7 @@ public class KitManagerOld : BaseReloadSingleton
             return (loadout, 0);
         }
     }
-    internal static void InvokeKitCreated(Kit kit)
+    internal static void InvokeKitCreated(KitOld kit)
     {
         OnKitCreated?.Invoke(kit);
         if (UCWarfare.Config.EnableSync)
@@ -1574,7 +1574,7 @@ public class KitManagerOld : BaseReloadSingleton
         }
     }
 
-    internal static void InvokeKitDeleted(Kit kit)
+    internal static void InvokeKitDeleted(KitOld kit)
     {
         OnKitDeleted?.Invoke(kit);
         if (UCWarfare.Config.EnableSync)
@@ -1583,7 +1583,7 @@ public class KitManagerOld : BaseReloadSingleton
         }
     }
 
-    internal static void InvokeKitUpdated(Kit kit)
+    internal static void InvokeKitUpdated(KitOld kit)
     {
         OnKitUpdated?.Invoke(kit);
         if (UCWarfare.Config.EnableSync)
@@ -1592,7 +1592,7 @@ public class KitManagerOld : BaseReloadSingleton
         }
     }
 
-    internal static void InvokeKitAccessUpdated(Kit kit, ulong player)
+    internal static void InvokeKitAccessUpdated(KitOld kit, ulong player)
     {
         OnKitAccessChanged?.Invoke(kit, player);
         if (UCWarfare.Config.EnableSync)
@@ -1602,9 +1602,9 @@ public class KitManagerOld : BaseReloadSingleton
     }
 }
 
-public delegate void KitCallback(Kit kit);
-public delegate void KitAccessCallback(Kit kit, ulong player);
-public delegate void KitChangedCallback(UCPlayer player, Kit kit, string oldKit);
+public delegate void KitCallback(KitOld kit);
+public delegate void KitAccessCallback(KitOld kit, ulong player);
+public delegate void KitChangedCallback(UCPlayer player, KitOld kit, string oldKit);
 public static class KitEx
 {
     public const int BRANCH_MAX_CHAR_LIMIT = 16;
@@ -1615,8 +1615,8 @@ public static class KitEx
     public const int SQUAD_LEVEL_MAX_CHAR_LIMIT = 16;
     public const int KIT_NAME_MAX_CHAR_LIMIT = 25;
     public const int WEAPON_TEXT_MAX_CHAR_LIMIT = 50;
-    public static bool HasItemOfID(this Kit kit, Guid ID) => kit.Items.Exists(i => i.Item == ID);
-    public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
+    public static bool HasItemOfID(this KitOld kit, Guid ID) => kit.Items.Exists(i => i.Item == ID);
+    public static bool IsLimited(this KitOld kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1634,7 +1634,7 @@ public static class KitEx
         return currentPlayers + 1 > allowedPlayers;
     }
 
-    public static bool IsClassLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
+    public static bool IsClassLimited(this KitOld kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1651,8 +1651,8 @@ public static class KitEx
             return false;
         return currentPlayers + 1 > allowedPlayers;
     }
-    private static readonly FieldInfo[] fields = typeof(Kit).GetFields(BindingFlags.Instance | BindingFlags.Public);
-    public static ESetFieldResult SetProperty(Kit kit, string property, string value, out FieldInfo? field)
+    private static readonly FieldInfo[] fields = typeof(KitOld).GetFields(BindingFlags.Instance | BindingFlags.Public);
+    public static ESetFieldResult SetProperty(KitOld kit, string property, string value, out FieldInfo? field)
     {
         field = null;
         if (kit is null) return ESetFieldResult.OBJECT_NOT_FOUND;
@@ -1717,7 +1717,7 @@ public static class KitEx
     {
         public static readonly NetCall<ulong, ulong, string, EKitAccessType, bool> RequestSetKitAccess = new NetCall<ulong, ulong, string, EKitAccessType, bool>(ReceiveSetKitAccess);
         public static readonly NetCall<ulong, ulong, string[], EKitAccessType, bool> RequestSetKitsAccess = new NetCall<ulong, ulong, string[], EKitAccessType, bool>(ReceiveSetKitsAccess);
-        public static readonly NetCallRaw<Kit?> CreateKit = new NetCallRaw<Kit?>(ReceiveCreateKit, Kit.Read, Kit.Write);
+        public static readonly NetCallRaw<KitOld?> CreateKit = new NetCallRaw<KitOld?>(ReceiveCreateKit, KitOld.Read, KitOld.Write);
         public static readonly NetCall<string> RequestKitClass = new NetCall<string>(ReceiveRequestKitClass);
         public static readonly NetCall<string> RequestKit = new NetCall<string>(ReceiveKitRequest);
         public static readonly NetCallRaw<string[]> RequestKits = new NetCallRaw<string[]>(ReceiveKitsRequest, null, null);
@@ -1727,8 +1727,8 @@ public static class KitEx
 
 
         public static readonly NetCall<string, Class, string> SendKitClass = new NetCall<string, Class, string>(1114);
-        public static readonly NetCallRaw<Kit?> SendKit = new NetCallRaw<Kit?>(1117, Kit.Read, Kit.Write);
-        public static readonly NetCallRaw<Kit?[]> SendKits = new NetCallRaw<Kit?[]>(1118, Kit.ReadMany, Kit.WriteMany);
+        public static readonly NetCallRaw<KitOld?> SendKit = new NetCallRaw<KitOld?>(1117, KitOld.Read, KitOld.Write);
+        public static readonly NetCallRaw<KitOld?[]> SendKits = new NetCallRaw<KitOld?[]>(1118, KitOld.ReadMany, KitOld.WriteMany);
         public static readonly NetCall<string, int> SendAckCreateLoadout = new NetCall<string, int>(1111);
         public static readonly NetCall<bool> SendAckSetKitAccess = new NetCall<bool>(1101);
         public static readonly NetCall<bool[]> SendAckSetKitsAccess = new NetCall<bool[]>(1133);
@@ -1738,7 +1738,7 @@ public static class KitEx
         [NetCall(ENetCall.FROM_SERVER, 1100)]
         internal static Task ReceiveSetKitAccess(MessageContext context, ulong admin, ulong player, string kit, EKitAccessType type, bool state)
         {
-            if (KitManager.KitExists(kit, out Kit k))
+            if (KitManager.KitExists(kit, out KitOld k))
             {
                 Task<bool> t = state ? KitManager.GiveAccess(k, player, type) : KitManager.RemoveAccess(k, player);
                 if (state)
@@ -1759,7 +1759,7 @@ public static class KitEx
             for (int i = 0; i < kits.Length; ++i)
             {
                 string kit = kits[i];
-                if (KitManager.KitExists(kit, out Kit k))
+                if (KitManager.KitExists(kit, out KitOld k))
                 {
                     Task<bool> t = state ? KitManager.GiveAccess(k, player, type) : KitManager.RemoveAccess(k, player);
                     await t;
@@ -1777,7 +1777,7 @@ public static class KitEx
         {
             if (!KitManager.Loaded)
                 context.Reply(SendKitAccess, (byte)1, false);
-            else if (KitManager.KitExists(kit, out Kit k))
+            else if (KitManager.KitExists(kit, out KitOld k))
                 context.Reply(SendKitAccess, (byte)0, await KitManager.HasAccess(kit, player));
             else
                 context.Reply(SendKitAccess, (byte)2, false);
@@ -1793,7 +1793,7 @@ public static class KitEx
             {
                 for (int i = 0; i < kits.Length; ++i)
                 {
-                    if (KitManager.KitExists(kits[i], out Kit k))
+                    if (KitManager.KitExists(kits[i], out KitOld k))
                         outp[i] = await KitManager.HasAccess(k, player) ? (byte)2 : (byte)1;
                     else outp[i] = 3;
                 }
@@ -1802,7 +1802,7 @@ public static class KitEx
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1109)]
-        internal static Task ReceiveCreateKit(MessageContext context, Kit? kit)
+        internal static Task ReceiveCreateKit(MessageContext context, KitOld? kit)
         {
             if (kit != null) return KitManager.AddKit(kit);
             return Task.CompletedTask;
@@ -1811,7 +1811,7 @@ public static class KitEx
         [NetCall(ENetCall.FROM_SERVER, 1113)]
         internal static void ReceiveRequestKitClass(MessageContext context, string kitID)
         {
-            if (KitManager.KitExists(kitID, out Kit kit))
+            if (KitManager.KitExists(kitID, out KitOld kit))
             {
                 if (!kit.SignTexts.TryGetValue(L.DEFAULT, out string signtext))
                     signtext = kit.SignTexts.Values.FirstOrDefault() ?? kit.Name;
@@ -1827,7 +1827,7 @@ public static class KitEx
         [NetCall(ENetCall.FROM_SERVER, 1115)]
         internal static void ReceiveKitRequest(MessageContext context, string kitID)
         {
-            if (KitManager.KitExists(kitID, out Kit kit))
+            if (KitManager.KitExists(kitID, out KitOld kit))
             {
                 context.Reply(SendKit, kit);
             }
@@ -1839,10 +1839,10 @@ public static class KitEx
         [NetCall(ENetCall.FROM_SERVER, 1116)]
         internal static void ReceiveKitsRequest(MessageContext context, string[] kitIDs)
         {
-            Kit[] kits = new Kit[kitIDs.Length];
+            KitOld[] kits = new KitOld[kitIDs.Length];
             for (int i = 0; i < kitIDs.Length; i++)
             {
-                if (KitManager.KitExists(kitIDs[i], out Kit kit))
+                if (KitManager.KitExists(kitIDs[i], out KitOld kit))
                 {
                     kits[i] = kit;
                 }
@@ -1858,7 +1858,7 @@ public static class KitEx
         {
             if (KitManager.Loaded)
             {
-                (Kit? kit, int code) = await KitManager.GetSingleton().CreateLoadout(fromPlayer, player, team, @class, displayName);
+                (KitOld? kit, int code) = await KitManager.GetSingleton().CreateLoadout(fromPlayer, player, team, @class, displayName);
 
                 context.Reply(SendAckCreateLoadout, kit is null ? string.Empty : kit.Name, code);
             }
