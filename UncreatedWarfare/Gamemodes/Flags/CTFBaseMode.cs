@@ -480,7 +480,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (KitManager.KitExists(player.KitName, out Kit kit))
+        if (KitManager.KitExists(player.KitName, out KitOld kit))
         {
             if ((!kit.IsLoadout && kit.IsLimited(out _, out _, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out _, out _, player.GetTeam())))
             {
@@ -502,14 +502,14 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     {
         if (team is 1 or 2)
         {
-            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
+            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out KitOld unarmed))
                 KitManager.GiveKit(player, unarmed);
             else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
             else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
         }
         else
         {
-            if (KitManager.KitExists(TeamManager.DefaultKit, out Kit @default)) KitManager.GiveKit(player, @default);
+            if (KitManager.KitExists(TeamManager.DefaultKit, out KitOld @default)) KitManager.GiveKit(player, @default);
             else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
         }
         _gameStats.OnPlayerJoin(player);

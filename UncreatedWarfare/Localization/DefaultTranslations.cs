@@ -602,32 +602,32 @@ internal static class T
     private const string SECTION_KITS = "Kits";
     
     [TranslationData(SECTION_KITS, "Sent when the player creates a new kit with /kit create <name>", "New Kit")]
-    public static readonly Translation<Kit> KitCreated          = new Translation<Kit>("<#a0ad8e>Created kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<KitOld> KitCreated          = new Translation<KitOld>("<#a0ad8e>Created kit: <#fff>{0}</color>.", KitOld.ID_FORMAT);
     
     [TranslationData(SECTION_KITS, "Sent when the player overwrites the items in a kit with /kit create <name>", "Overwritten Kit")]
-    public static readonly Translation<Kit> KitOverwrote        = new Translation<Kit>("<#a0ad8e>Overwritten items for kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<KitOld> KitOverwrote        = new Translation<KitOld>("<#a0ad8e>Overwritten items for kit: <#fff>{0}</color>.", KitOld.ID_FORMAT);
     
     [TranslationData(SECTION_KITS, "Sent when the player copies a kit with /kit copyfrom <source> <name>", "Source Kit", "New Kit")]
-    public static readonly Translation<Kit, Kit> KitCopied      = new Translation<Kit, Kit>("<#a0ad8e>Copied data from <#c7b197>{0}</color> into a new kit: <#fff>{1}</color>.", Kit.ID_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<KitOld, KitOld> KitCopied      = new Translation<KitOld, KitOld>("<#a0ad8e>Copied data from <#c7b197>{0}</color> into a new kit: <#fff>{1}</color>.", KitOld.ID_FORMAT, KitOld.ID_FORMAT);
     
     [TranslationData(SECTION_KITS, "Sent when the player deletes a kit with /kit delete <name>")]
-    public static readonly Translation<Kit> KitDeleted          = new Translation<Kit>("<#a0ad8e>Deleted kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<KitOld> KitDeleted          = new Translation<KitOld>("<#a0ad8e>Deleted kit: <#fff>{0}</color>.", KitOld.ID_FORMAT);
     public static readonly Translation<string> KitSearchResults = new Translation<string>("<#a0ad8e>Matches: <i>{0}</i>.");
-    public static readonly Translation<Kit> KitAccessGivenDm    = new Translation<Kit>("<#a0ad8e>You were given access to the kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
-    public static readonly Translation<Kit> KitAccessRevokedDm  = new Translation<Kit>("<#a0ad8e>Your access to <#fff>{0}</color> was revoked.", Kit.ID_FORMAT);
-    public static readonly Translation<string, Kit, string> KitPropertySet    = new Translation<string, Kit, string>("<#a0ad8e>Set <#aaa>{0}</color> on kit <#fff>{1}</color> to <#aaa><uppercase>{2}</uppercase></color>.", arg1Fmt: Kit.ID_FORMAT);
+    public static readonly Translation<KitOld> KitAccessGivenDm    = new Translation<KitOld>("<#a0ad8e>You were given access to the kit: <#fff>{0}</color>.", KitOld.ID_FORMAT);
+    public static readonly Translation<KitOld> KitAccessRevokedDm  = new Translation<KitOld>("<#a0ad8e>Your access to <#fff>{0}</color> was revoked.", KitOld.ID_FORMAT);
+    public static readonly Translation<string, KitOld, string> KitPropertySet    = new Translation<string, KitOld, string>("<#a0ad8e>Set <#aaa>{0}</color> on kit <#fff>{1}</color> to <#aaa><uppercase>{2}</uppercase></color>.", arg1Fmt: KitOld.ID_FORMAT);
     public static readonly Translation<string> KitNameTaken                   = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> already exists.");
     public static readonly Translation<string> KitNotFound                    = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> doesn't exists.");
     public static readonly Translation<string> KitPropertyNotFound            = new Translation<string>("<#ff8c69>Kits don't have a <#eee>{0}</color> property.");
     public static readonly Translation<string> KitPropertyProtected           = new Translation<string>("<#ff8c69><#eee>{0}</color> can not be changed on kits.");
-    public static readonly Translation<IPlayer, Kit> KitAlreadyHasAccess      = new Translation<IPlayer, Kit>("<#ff8c69>{0} already has access to <#fff>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
-    public static readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess  = new Translation<IPlayer, Kit>("<#ff8c69>{0} doesn't have access to <#fff>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, KitOld> KitAlreadyHasAccess      = new Translation<IPlayer, KitOld>("<#ff8c69>{0} already has access to <#fff>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, KitOld.ID_FORMAT);
+    public static readonly Translation<IPlayer, KitOld> KitAlreadyMissingAccess  = new Translation<IPlayer, KitOld>("<#ff8c69>{0} doesn't have access to <#fff>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, KitOld.ID_FORMAT);
     public static readonly Translation<Cooldown> KitOnCooldown                = new Translation<Cooldown>("<#ff8c69>You can request this kit again in: <#bafeff>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
     public static readonly Translation<Cooldown> KitOnGlobalCooldown          = new Translation<Cooldown>("<#ff8c69>You can request another kit again in: <#bafeff>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
-    public static readonly Translation<IPlayer, ulong, Kit> KitAccessGiven         = new Translation<IPlayer, ulong, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", UCPlayer.COLOR_PLAYER_NAME_FORMAT, arg2Fmt: Kit.ID_FORMAT);
-    public static readonly Translation<IPlayer, ulong, Kit> KitAccessRevoked       = new Translation<IPlayer, ulong, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", UCPlayer.COLOR_PLAYER_NAME_FORMAT, arg2Fmt: Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, ulong, KitOld> KitAccessGiven         = new Translation<IPlayer, ulong, KitOld>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", UCPlayer.COLOR_PLAYER_NAME_FORMAT, arg2Fmt: KitOld.ID_FORMAT);
+    public static readonly Translation<IPlayer, ulong, KitOld> KitAccessRevoked       = new Translation<IPlayer, ulong, KitOld>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", UCPlayer.COLOR_PLAYER_NAME_FORMAT, arg2Fmt: KitOld.ID_FORMAT);
     public static readonly Translation<string, Type, string> KitInvalidPropertyValue = new Translation<string, Type, string>("<#ff8c69><#fff>{2}</color> isn't a valid value for <#eee>{0}</color> (<#aaa>{1}</color>).");
-    public static readonly Translation<EClass, IPlayer, ulong, Kit> LoadoutCreated = new Translation<EClass, IPlayer, ulong, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg1Fmt: UCPlayer.COLOR_CHARACTER_NAME_FORMAT, arg3Fmt: Kit.ID_FORMAT);
+    public static readonly Translation<Class, IPlayer, ulong, KitOld> LoadoutCreated = new Translation<Class, IPlayer, ulong, KitOld>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg1Fmt: UCPlayer.COLOR_CHARACTER_NAME_FORMAT, arg3Fmt: KitOld.ID_FORMAT);
     public static readonly Translation<ItemAsset> KitProhibitedPickupAmt             = new Translation<ItemAsset>("<#ff8c69>Your kit does not allow you to have any more {0}.", RARITY_COLOR_FORMAT + PLURAL);
     #endregion
 
@@ -832,7 +832,7 @@ internal static class T
     public static readonly Translation<IPlayer, Squad> VehicleWaitForOwnerOrSquad = new Translation<IPlayer, Squad>("<#bda897>Only the owner, {0}, or members of {1} Squad can enter the driver's seat right now.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Squad.COLORED_NAME_FORMAT);
     public static readonly Translation VehicleNoKit = new Translation("<#ff684a>You can not get in a vehicle without a kit.");
     public static readonly Translation VehicleTooHigh = new Translation("<#ff684a>The vehicle is too high off the ground to exit.");
-    public static readonly Translation<EClass> VehicleMissingKit = new Translation<EClass>("<#bda897>You need a <#cedcde>{0}</color> kit in order to man this vehicle.");
+    public static readonly Translation<Class> VehicleMissingKit = new Translation<Class>("<#bda897>You need a <#cedcde>{0}</color> kit in order to man this vehicle.");
     public static readonly Translation VehicleDriverNeeded = new Translation("<#bda897>Your vehicle needs a <#cedcde>DRIVER</color> before you can switch to the gunner's seat on the battlefield.");
     public static readonly Translation VehicleAbandoningDriver = new Translation("<#bda897>You cannot abandon the driver's seat on the battlefield.");
     public static readonly Translation VehicleNoPassengerSeats = new Translation("<#bda897>There are no free passenger seats in this vehicle.");
@@ -1036,9 +1036,9 @@ internal static class T
     #endregion
 
     #region Request
-    public static readonly Translation<Kit> RequestSignSaved = new Translation<Kit>("<#a4baa9>Saved kit: <#ffebbd>{0}</color>.", Kit.ID_FORMAT);
-    public static readonly Translation<Kit> RequestSignRemoved = new Translation<Kit>("<#a8918a>Removed kit sign: <#ffebbd>{0}</color>.", Kit.ID_FORMAT);
-    public static readonly Translation<EClass> RequestSignGiven = new Translation<EClass>("<#a8918a>You have been allocated a <#cedcde>{0}</color> kit.");
+    public static readonly Translation<KitOld> RequestSignSaved = new Translation<KitOld>("<#a4baa9>Saved kit: <#ffebbd>{0}</color>.", KitOld.ID_FORMAT);
+    public static readonly Translation<KitOld> RequestSignRemoved = new Translation<KitOld>("<#a8918a>Removed kit sign: <#ffebbd>{0}</color>.", KitOld.ID_FORMAT);
+    public static readonly Translation<Class> RequestSignGiven = new Translation<Class>("<#a8918a>You have been allocated a <#cedcde>{0}</color> kit.");
     public static readonly Translation RequestNoTarget = new Translation("<#a4baa9>You must be looking at a request sign or vehicle.");
     public static readonly Translation RequestSignAlreadySaved = new Translation("<#a4baa9>That sign is already saved.");
     public static readonly Translation RequestSignNotSaved = new Translation("<#a4baa9>That sign is not saved.");
@@ -1062,7 +1062,7 @@ internal static class T
     public static readonly Translation RequestVehicleNotInSquad = new Translation("<#b3ab9f>You must be <#cedcde>IN A SQUAD</color> in order to request this vehicle.");
     public static readonly Translation RequestVehicleNoKit = new Translation("<#a8918a>Get a kit before you request vehicles.");
     public static readonly Translation<FactionInfo> RequestVehicleOtherTeam = new Translation<FactionInfo>("<#a8918a>You must be on {0} to request this vehicle.", FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
-    public static readonly Translation<EClass> RequestVehicleWrongClass = new Translation<EClass>("<#b3ab9f>You need a <#cedcde><uppercase>{0}</uppercase></color> kit in order to request this vehicle.");
+    public static readonly Translation<Class> RequestVehicleWrongClass = new Translation<Class>("<#b3ab9f>You need a <#cedcde><uppercase>{0}</uppercase></color> kit in order to request this vehicle.");
     public static readonly Translation<string> RequestVehicleMissingLevels = new Translation<string>("<#b3ab9f>You must be <#ffc29c>{0}</color> to request this vehicle.");
     public static readonly Translation<Ranks.RankData> RequestVehicleRankIncomplete = new Translation<Ranks.RankData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to request this vehicle.", Ranks.RankData.COLOR_NAME_FORMAT);
     public static readonly Translation<QuestAsset> RequestVehicleQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this vehicle.", BaseQuestData.COLOR_QUEST_ASSET_FORMAT);
@@ -1235,7 +1235,7 @@ internal static class T
     [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait without a kit.")]
     public static readonly Translation RequestTraitNoKit = new Translation("<#ff8c69>Request a kit before trying to request traits.");
     [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait with a kit class the trait doesn't allow.", "The trait", "Invalid class")]
-    public static readonly Translation<TraitData, EClass> RequestTraitClassLocked = new Translation<TraitData, EClass>("<#ff8c69>You can't use <#c$trait$>{0}</color> while a <#cedcde><uppercase>{1}</uppercase></color> kit is equipped.", TraitData.NAME);
+    public static readonly Translation<TraitData, Class> RequestTraitClassLocked = new Translation<TraitData, Class>("<#ff8c69>You can't use <#c$trait$>{0}</color> while a <#cedcde><uppercase>{1}</uppercase></color> kit is equipped.", TraitData.NAME);
     [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait while under the global trait cooldown.", "Global cooldown shared between all traits")]
     public static readonly Translation<Cooldown> RequestTraitGlobalCooldown = new Translation<Cooldown>("<#ff8c69>You can request a trait again in <#cedcde>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
     [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait while under the individual trait cooldown.", "Trait on cooldown", "Individual cooldown for this trait")]
@@ -1296,11 +1296,11 @@ internal static class T
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when the trait is locked in the current gamemode.")]
     public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#c$vbs_delay$>Locked</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait.", "Class name")]
-    public static readonly Translation<EClass> TraitSignClassBlacklisted = new Translation<EClass>("<#c$vbs_delay$>Locked for {0}</color>", TranslationFlags.NoColorOptimization, PLURAL);
+    public static readonly Translation<Class> TraitSignClassBlacklisted = new Translation<Class>("<#c$vbs_delay$>Locked for {0}</color>", TranslationFlags.NoColorOptimization, PLURAL);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 1 class.", "Class name")]
-    public static readonly Translation<EClass> TraitSignClassWhitelisted1 = new Translation<EClass>("<#c$vbs_delay$>{0} Required</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Class> TraitSignClassWhitelisted1 = new Translation<Class>("<#c$vbs_delay$>{0} Required</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 2 classes.", "Class name")]
-    public static readonly Translation<EClass, EClass> TraitSignClassWhitelisted2 = new Translation<EClass, EClass>("<#c$vbs_delay$>{0} or {1} Required</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Class, Class> TraitSignClassWhitelisted2 = new Translation<Class, Class>("<#c$vbs_delay$>{0} or {1} Required</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait and it expires in time.", "Minutes", "Seconds")]
     public static readonly Translation<int, int> TraitSignAlreadyActiveTime = new Translation<int, int>("<#c$vbs_delay$>Already Active: {0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait and it expires on death.")]

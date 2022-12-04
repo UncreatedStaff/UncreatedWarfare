@@ -291,7 +291,7 @@ public static class EventFunctions
 
             if (Gamemode.Config.BarricadeAmmoBag.ValidReference(out Guid guid) && guid == barricade.asset.GUID)
             {
-                if (!perms && player.KitClass != EClass.RIFLEMAN)
+                if (!perms && player.KitClass != Class.Rifleman)
                 {
                     shouldAllow = false;
                     player.SendChat(T.AmmoNotRifleman);

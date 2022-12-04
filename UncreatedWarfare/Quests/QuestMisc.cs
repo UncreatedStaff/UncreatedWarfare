@@ -1694,7 +1694,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
             }
             else if (value.type == EDynamicValueType.ANY && _isKitSelector)
             {
-                Kit? rand = KitManager.GetRandomPublicKit();
+                KitOld? rand = KitManager.GetRandomPublicKit();
                 if (rand is null)
                 {
                     _value = value.constant;
@@ -1816,7 +1816,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
                 {
                     if (_kitName == null)
                     {
-                        if (KitManager.KitExists(_value!, out Kit kit))
+                        if (KitManager.KitExists(_value!, out KitOld kit))
                             _kitName = GetKitName(kit, player);
                         else
                             _kitName = _value!;
@@ -1835,7 +1835,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
                         _kitNames = new string[_values!.Length];
                         for (int i = 0; i < _values.Length; ++i)
                         {
-                            if (KitManager.KitExists(_values[i], out Kit kit))
+                            if (KitManager.KitExists(_values[i], out KitOld kit))
                                 _kitNames[i] = GetKitName(kit, player);
                             else
                                 _kitNames[i] = _values[i];
@@ -1865,7 +1865,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
 
             return ToString();
         }
-        private static string GetKitName(Kit kit, ulong player)
+        private static string GetKitName(KitOld kit, ulong player)
         {
             if (player == 0 || !Data.Languages.TryGetValue(player, out string language))
                 language = L.DEFAULT;

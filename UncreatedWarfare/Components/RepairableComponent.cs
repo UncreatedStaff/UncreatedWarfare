@@ -32,7 +32,7 @@ internal class RepairableComponent : MonoBehaviour
 
         float amount = 30;
 
-        if (builder.KitClass == EClass.COMBAT_ENGINEER)
+        if (builder.KitClass == Class.CombatEngineer)
             amount *= 2;
 
         BarricadeManager.repair(transform, amount, 1, builder.CSteamID);

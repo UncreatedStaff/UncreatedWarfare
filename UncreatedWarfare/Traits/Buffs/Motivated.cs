@@ -5,14 +5,14 @@ using Uncreated.Warfare.Squads;
 namespace Uncreated.Warfare.Traits.Buffs;
 
 /// <summary>
-/// Shovel buildables at 2x speed. Does not stack with squadmates or with combat engineer (you can not have this while having a <see cref="EClass.COMBAT_ENGINEER"/> kit).
+/// Shovel buildables at 2x speed. Does not stack with squadmates or with combat engineer (you can not have this while having a <see cref="Class.CombatEngineer"/> kit).
 /// </summary>
 public sealed class Motivated : Buff
 {
     public static TraitData DEFAULT_DATA = new TraitData()
     {
         TypeName = nameof(Motivated),
-        ClassList = new EClass[] { EClass.COMBAT_ENGINEER },
+        ClassList = new Class[] { Class.CombatEngineer },
         ClassListIsBlacklist = true,
         NameTranslations = new TranslationList("Motivated"),
         DescriptionTranslations = new TranslationList("Build like a combat engineer.\n<#f0a31c>2x Speed</color>"),

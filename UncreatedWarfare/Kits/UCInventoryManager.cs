@@ -27,7 +27,7 @@ public static class UCInventoryManager
             L.LogError(ex);
         }
     }
-    public static void GiveKitToPlayer(UCPlayer player, Kit kit)
+    public static void GiveKitToPlayer(UCPlayer player, KitOld kit)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -35,32 +35,32 @@ public static class UCInventoryManager
         if (kit != null)
         {
             ClearInventory(player);
-            foreach (KitClothing clothing in kit.Clothes)
+            foreach (ClothingItem clothing in kit.Clothes)
             {
-                if (Assets.find(clothing.Id) is ItemAsset asset)
+                if (Assets.find(clothing.Item) is ItemAsset asset)
                 {
-                    if (clothing.Type == EClothingType.SHIRT)
+                    if (clothing.Type == ClothingType.SHIRT)
                         player.Player.clothing.askWearShirt(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == EClothingType.PANTS)
+                    if (clothing.Type == ClothingType.PANTS)
                         player.Player.clothing.askWearPants(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == EClothingType.VEST)
+                    if (clothing.Type == ClothingType.VEST)
                         player.Player.clothing.askWearVest(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == EClothingType.HAT)
+                    if (clothing.Type == ClothingType.HAT)
                         player.Player.clothing.askWearHat(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == EClothingType.MASK)
+                    if (clothing.Type == ClothingType.MASK)
                         player.Player.clothing.askWearMask(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == EClothingType.BACKPACK)
+                    if (clothing.Type == ClothingType.BACKPACK)
                         player.Player.clothing.askWearBackpack(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == EClothingType.GLASSES)
+                    if (clothing.Type == ClothingType.GLASSES)
                         player.Player.clothing.askWearGlasses(asset.id, 100, asset is ItemGlassesAsset ga && ga.vision != ELightingVision.NONE ? new byte[1] : asset.getState(true), true);
                 }
             }
 
-            foreach (KitItem k in kit.Items)
+            foreach (PageItem k in kit.Items)
             {
-                if (Assets.find(k.Id) is ItemAsset asset)
+                if (Assets.find(k.Item) is ItemAsset asset)
                 {
-                    Item item = new Item(asset.id, k.Amount, 100, Util.CloneBytes(k.Metadata));
+                    Item item = new Item(asset.id, k.Amount, 100, Util.CloneBytes(k.State));
 
                     if (!player.Player.inventory.tryAddItem(item, k.X, k.Y, k.Page, k.Rotation))
                         player.Player.inventory.tryAddItem(item, true);
@@ -164,7 +164,7 @@ public static class UCInventoryManager
             }
         }
     }
-    public static void LoadClothes(UCPlayer player, List<KitClothing> clothes)
+    public static void LoadClothes(UCPlayer player, List<ClothingItem> clothes)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -177,23 +177,23 @@ public static class UCInventoryManager
         bool hasPlayedEffect = false;
         for (int i = 0; i < clothes.Count; ++i)
         {
-            KitClothing clothing = clothes[i];
+            ClothingItem clothing = clothes[i];
             flag |= (byte)(1 << (int)clothing.Type);
             ClientInstanceMethod<Guid, byte, byte[], bool>? inv =
                 clothing.Type switch
                 {
-                    EClothingType.SHIRT => Data.SendWearShirt,
-                    EClothingType.PANTS => Data.SendWearPants,
-                    EClothingType.HAT => Data.SendWearHat,
-                    EClothingType.BACKPACK => Data.SendWearBackpack,
-                    EClothingType.VEST => Data.SendWearVest,
-                    EClothingType.MASK => Data.SendWearMask,
-                    EClothingType.GLASSES => Data.SendWearGlasses,
+                    ClothingType.SHIRT => Data.SendWearShirt,
+                    ClothingType.PANTS => Data.SendWearPants,
+                    ClothingType.HAT => Data.SendWearHat,
+                    ClothingType.BACKPACK => Data.SendWearBackpack,
+                    ClothingType.VEST => Data.SendWearVest,
+                    ClothingType.MASK => Data.SendWearMask,
+                    ClothingType.GLASSES => Data.SendWearGlasses,
                     _ => null
                 };
             if (inv != null)
             {
-                inv.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), TeamManager.CheckClothingAssetRedirect(clothing.Id, team), 100, blank, !hasPlayedEffect);
+                inv.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), TeamManager.CheckClothingAssetRedirect(clothing.Item, team), 100, blank, !hasPlayedEffect);
                 hasPlayedEffect = true;
             }
         }
@@ -201,15 +201,15 @@ public static class UCInventoryManager
         {
             if (((flag >> i) & 1) != 1)
             {
-                ((EClothingType)i switch
+                ((ClothingType)i switch
                 {
-                    EClothingType.SHIRT => Data.SendWearShirt,
-                    EClothingType.PANTS => Data.SendWearPants,
-                    EClothingType.HAT => Data.SendWearHat,
-                    EClothingType.BACKPACK => Data.SendWearBackpack,
-                    EClothingType.VEST => Data.SendWearVest,
-                    EClothingType.MASK => Data.SendWearMask,
-                    EClothingType.GLASSES => Data.SendWearGlasses,
+                    ClothingType.SHIRT => Data.SendWearShirt,
+                    ClothingType.PANTS => Data.SendWearPants,
+                    ClothingType.HAT => Data.SendWearHat,
+                    ClothingType.BACKPACK => Data.SendWearBackpack,
+                    ClothingType.VEST => Data.SendWearVest,
+                    ClothingType.MASK => Data.SendWearMask,
+                    ClothingType.GLASSES => Data.SendWearGlasses,
                     _ => null
                 })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
             }

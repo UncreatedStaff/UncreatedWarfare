@@ -3,26 +3,26 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Transactions;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 
-public class Kit : ITranslationArgument, ICloneable
+public class KitOld : IListItem, ITranslationArgument, ICloneable
 {
     public const int CAPACITY = 256;
-    internal int PrimaryKey = -1;
     public string Name;
     [CommandSettable]
-    public EClass Class;
+    public Class Class;
     [CommandSettable]
-    public EBranch Branch;
+    public Branch Branch;
     [CommandSettable]
     public ulong Team;
     public BaseUnlockRequirement[] UnlockRequirements;
@@ -44,22 +44,23 @@ public class Kit : ITranslationArgument, ICloneable
     [CommandSettable]
     public bool Disabled;
     [CommandSettable]
-    public ESquadLevel SquadLevel;
-    public List<KitItem> Items;
-    public List<KitClothing> Clothes;
+    public SquadLevel SquadLevel;
+    public List<PageItem> Items;
+    public List<ClothingItem> Clothes;
     public Dictionary<string, string> SignTexts;
     [CommandSettable]
     public string Weapons;
+    public PrimaryKey PrimaryKey { get; set; }
     public Kit(string name)
     {
         Name = name;
-        Items = new List<KitItem>();
-        Clothes = new List<KitClothing>();
-        Class = EClass.NONE;
-        Branch = EBranch.DEFAULT;
+        Items = new List<PageItem>();
+        Clothes = new List<ClothingItem>();
+        Class = Class.None;
+        Branch = Branch.Default;
         Team = 0;
-        UnlockRequirements = new BaseUnlockRequirement[0];
-        Skillsets = new Skillset[0];
+        UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
+        Skillsets = Array.Empty<Skillset>();
         CreditCost = 0;
         UnlockLevel = 0;
         IsPremium = false;
@@ -70,19 +71,19 @@ public class Kit : ITranslationArgument, ICloneable
         SignTexts = new Dictionary<string, string> { { L.DEFAULT, "Default" } };
         Weapons = string.Empty;
         Disabled = false;
-        SquadLevel = ESquadLevel.MEMBER;
+        SquadLevel = SquadLevel.Member;
     }
     public Kit() : this("default") { }
-    public Kit(string kitName, List<KitItem> items, List<KitClothing> clothing)
+    public Kit(string kitName, List<PageItem> items, List<ClothingItem> clothing)
     {
         Name = kitName;
-        Items = items ?? new List<KitItem>();
-        Clothes = clothing ?? new List<KitClothing>();
-        Class = EClass.NONE;
-        Branch = EBranch.DEFAULT;
+        Items = items ?? new List<PageItem>();
+        Clothes = clothing ?? new List<ClothingItem>();
+        Class = Class.None;
+        Branch = Branch.Default;
         Team = 0;
-        UnlockRequirements = new BaseUnlockRequirement[0];
-        Skillsets = new Skillset[0];
+        UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
+        Skillsets = Array.Empty<Skillset>();
         CreditCost = 0;
         UnlockLevel = 0;
         IsPremium = false;
@@ -93,15 +94,15 @@ public class Kit : ITranslationArgument, ICloneable
         SignTexts = new Dictionary<string, string> { { L.DEFAULT, kitName.ToProperCase() } };
         Weapons = string.Empty;
         Disabled = false;
-        SquadLevel = ESquadLevel.MEMBER;
+        SquadLevel = SquadLevel.Member;
     }
-    public void ApplyTo(Kit kit)
+    public void ApplyTo(KitOld kit)
     {
         kit.Class = Class;
         kit.Branch = Branch;
         kit.Team = Team;
-        kit.Items = new List<KitItem>(Items.Select(x => (KitItem)x.Clone()));
-        kit.Clothes = new List<KitClothing>(Clothes.Select(x => (KitClothing)x.Clone()));
+        kit.Items = new List<PageItem>(Items.Select(x => (PageItem)x.Clone()));
+        kit.Clothes = new List<ClothingItem>(Clothes.Select(x => (ClothingItem)x.Clone()));
         kit.UnlockRequirements = new BaseUnlockRequirement[UnlockRequirements.Length];
         for (int i = 0; i < UnlockRequirements.Length; ++i)
             kit.UnlockRequirements[i] = (BaseUnlockRequirement)UnlockRequirements[i].Clone();
@@ -120,7 +121,7 @@ public class Kit : ITranslationArgument, ICloneable
     }
     public object Clone()
     {
-        Kit clone = new Kit(false)
+        KitOld clone = new KitOld(false)
         {
             Name = Name
         };
@@ -138,50 +139,50 @@ public class Kit : ITranslationArgument, ICloneable
             return SignTexts.FirstOrDefault().Value ?? Name;
         return Name;
     }
-    public static Kit?[] ReadMany(ByteReader R)
+    public static KitOld?[] ReadMany(ByteReader R)
     {
-        Kit?[] kits = new Kit[R.ReadInt32()];
+        KitOld?[] kits = new KitOld[R.ReadInt32()];
         for (int i = 0; i < kits.Length; i++)
         {
             kits[i] = Read(R);
         }
         return kits;
     }
-    public static Kit? Read(ByteReader R)
+    public static KitOld? Read(ByteReader R)
     {
         if (R.ReadUInt8() == 1) return null;
-        Kit kit = new Kit(true);
+        KitOld kit = new KitOld(true);
         kit.PrimaryKey = R.ReadInt32();
         kit.Name = R.ReadString();
         ushort itemCount = R.ReadUInt16();
         ushort clothesCount = R.ReadUInt16();
-        List<KitItem> items = new List<KitItem>(itemCount);
-        List<KitClothing> clothes = new List<KitClothing>(clothesCount);
+        List<PageItem> items = new List<PageItem>(itemCount);
+        List<ClothingItem> clothes = new List<ClothingItem>(clothesCount);
         for (int i = 0; i < itemCount; i++)
         {
-            items.Add(new KitItem()
+            items.Add(new PageItem()
             {
-                Id = R.ReadGUID(),
+                Item = R.ReadGUID(),
                 Amount = R.ReadUInt8(),
                 Page = R.ReadUInt8(),
                 X = R.ReadUInt8(),
                 Y = R.ReadUInt8(),
                 Rotation = R.ReadUInt8(),
-                Metadata = R.ReadBytes() ?? new byte[0]
+                State = R.ReadBytes() ?? new byte[0]
             });
         }
         for (int i = 0; i < clothesCount; i++)
         {
-            clothes.Add(new KitClothing()
+            clothes.Add(new ClothingItem()
             {
-                Id = R.ReadGUID(),
-                Type = R.ReadEnum<EClothingType>()
+                Item = R.ReadGUID(),
+                Type = R.ReadEnum<ClothingType>()
             });
         }
         kit.Items = items;
         kit.Clothes = clothes;
-        kit.Branch = R.ReadEnum<EBranch>();
-        kit.Class = R.ReadEnum<EClass>();
+        kit.Branch = R.ReadEnum<Branch>();
+        kit.Class = R.ReadEnum<Class>();
         kit.Cooldown = R.ReadFloat();
         kit.IsPremium = R.ReadBool();
         kit.IsLoadout = R.ReadBool();
@@ -191,16 +192,16 @@ public class Kit : ITranslationArgument, ICloneable
         kit.CreditCost = R.ReadUInt16();
         kit.UnlockLevel = R.ReadUInt16();
         kit.Disabled = R.ReadBool();
-        kit.SquadLevel = R.ReadEnum<ESquadLevel>();
+        kit.SquadLevel = R.ReadEnum<SquadLevel>();
         return kit;
     }
-    public static void WriteMany(ByteWriter W, Kit?[] kits)
+    public static void WriteMany(ByteWriter W, KitOld?[] kits)
     {
         W.Write(kits.Length);
         for (int i = 0; i < kits.Length; i++)
             Write(W, kits[i]);
     }
-    public static void Write(ByteWriter W, Kit? kit)
+    public static void Write(ByteWriter W, KitOld? kit)
     {
         if (kit == null)
         {
@@ -214,19 +215,19 @@ public class Kit : ITranslationArgument, ICloneable
         W.Write((ushort)kit.Clothes.Count);
         for (int i = 0; i < kit.Items.Count; i++)
         {
-            KitItem item = kit.Items[i];
-            W.Write(item.Id);
+            PageItem item = kit.Items[i];
+            W.Write(item.Item);
             W.Write(item.Amount);
             W.Write(item.Page);
             W.Write(item.X);
             W.Write(item.Y);
             W.Write(item.Rotation);
-            W.Write(item.Metadata);
+            W.Write(item.State);
         }
         for (int i = 0; i < kit.Clothes.Count; i++)
         {
-            KitClothing clothing = kit.Clothes[i];
-            W.Write(clothing.Id);
+            ClothingItem clothing = kit.Clothes[i];
+            W.Write(clothing.Item);
             W.Write(clothing.Type);
         }
         W.Write(kit.Branch);
@@ -374,7 +375,7 @@ public class Kit : ITranslationArgument, ICloneable
     public const string ID_FORMAT = "i";
     [FormatDisplay("Display Name")]
     public const string DISPLAY_NAME_FORMAT = "d";
-    [FormatDisplay("Class (" + nameof(EClass) + ")")]
+    [FormatDisplay("Class (" + nameof(Kits.Class) + ")")]
     public const string CLASS_FORMAT = "c";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
@@ -389,6 +390,66 @@ public class Kit : ITranslationArgument, ICloneable
             return dspTxt;
 
         return SignTexts.Values.FirstOrDefault() ?? Name;
+    }
+
+}
+
+public class Kit : IListItem
+{
+    public PrimaryKey PrimaryKey { get; set; }
+    public PrimaryKey FactionKey { get; set; }
+    public string Id { get; set; }
+    public Class Class { get; set; }
+    public Branch Branch { get; set; }
+    public KitType Type { get; set; }
+    public bool Disabled { get; set; }
+    public int Season { get; set; }
+    public SquadLevel SquadLevel { get; set; }
+    public TranslationList SignText { get; set; }
+    public IKitItem[] Items { get; set; }
+    public BaseUnlockRequirement[] UnlockRequirements { get; set; }
+    public Skillset[] Skillsets { get; set; }
+    public PrimaryKey[] FactionBlacklist { get; set; }
+    public string? WeaponText { get; set; }
+    public FactionInfo? Faction
+    {
+        get => FactionKey.IsValid ? TeamManager.GetFactionInfo(FactionKey) : null;
+        set
+        {
+            if (value is null)
+                FactionKey = PrimaryKey.NotAssigned;
+            else if (!value.PrimaryKey.IsValid)
+                throw new ArgumentException("Invalid faction provided, no key set.", nameof(value));
+            else FactionKey = value.PrimaryKey;
+        }
+    }
+
+    public Kit(string id, Class @class, Branch branch, KitType type, SquadLevel squadLevel, string? weaponText, FactionInfo? faction)
+    {
+        Faction = faction;
+        this.Id = id;
+        this.Class = @class;
+        this.Branch = branch;
+        this.Type = type;
+        this.SquadLevel = squadLevel;
+        this.WeaponText = weaponText;
+        SignText = new TranslationList(id);
+        Items = Array.Empty<IKitItem>();
+        UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
+        Skillsets = Array.Empty<Skillset>();
+        FactionBlacklist = Array.Empty<PrimaryKey>();
+    }
+    public Kit() { }
+
+    public bool IsBlacklisted(FactionInfo faction)
+    {
+        if (FactionBlacklist.NullOrEmpty() || faction is null || !faction.PrimaryKey.IsValid) return false;
+        int pk = faction.PrimaryKey.Key;
+        for (int i = 0; i < FactionBlacklist.Length; ++i)
+            if (FactionBlacklist[i].Key == pk)
+                return true;
+
+        return false;
     }
 }
 public readonly struct Skillset : IEquatable<Skillset>
@@ -912,10 +973,103 @@ public sealed class UnlockRequirementAttribute : Attribute
     private readonly string[] _properties;
     private readonly int _type;
 }
-public class KitItem : ICloneable
+public interface IClothingJar
 {
+    ClothingType Type { get; set; }
+}
+
+public interface IKitItem
+{
+    public ItemAsset? GetItem(KitOld kit, FactionInfo targetTeam, out byte amount, out byte[] state);
+}
+public interface IItemJar
+{
+    byte X { get; set; }
+    byte Y { get; set; }
+    byte Rotation { get; set; }
+    Page Page { get; set; }
+}
+public interface IAssetRedirect
+{
+    RedirectType RedirectType { get; set; }
+}
+public interface IClothing
+{
+    Guid Item { get; set; }
+    [JsonConverter(typeof(Base64Converter))]
+    byte[] State { get; set; }
+}
+public interface IItem
+{
+    [JsonConverter(typeof(Base64Converter))]
+    byte[] State { get; set; }
+    Guid Item { get; set; }
+    byte Amount { get; set; }
+}
+
+public class AssetRedirectItem : ICloneable, IItemJar, IAssetRedirect, IKitItem
+{
+    public RedirectType RedirectType { get; set; }
+    public byte X { get; set; }
+    public byte Y { get; set; }
+    public byte Rotation { get; set; }
+    public Page Page { get; set; }
+    public AssetRedirectItem() { }
+    public AssetRedirectItem(RedirectType redirectType, byte x, byte y, byte rotation, Page page)
+    {
+        RedirectType = redirectType;
+        X = x;
+        Y = y;
+        Rotation = rotation;
+        Page = page;
+    }
+    public AssetRedirectItem(AssetRedirectItem copy)
+    {
+        RedirectType = copy.RedirectType;
+        X = copy.X;
+        Y = copy.Y;
+        Rotation = copy.Rotation;
+        Page = copy.Page;
+    }
+    public object Clone() => new AssetRedirectItem(this);
+    public ItemAsset? GetItem(KitOld kit, FactionInfo targetTeam, out byte amount, out byte[] state) =>
+        TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
+}
+public class AssetRedirectClothing : ICloneable, IClothingJar, IKitItem
+{
+    public RedirectType RedirectType { get; set; }
+    public ClothingType Type { get; set; }
+    public AssetRedirectClothing() { }
+    public AssetRedirectClothing(RedirectType redirectType, ClothingType type)
+    {
+        RedirectType = redirectType;
+        Type = type;
+    }
+    public AssetRedirectClothing(AssetRedirectClothing copy)
+    {
+        RedirectType = copy.RedirectType;
+        Type = copy.Type;
+    }
+    public object Clone() => new AssetRedirectClothing(this);
+    public ItemAsset? GetItem(KitOld kit, FactionInfo targetTeam, out byte amount, out byte[] state) =>
+        TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
+}
+public class PageItem : ICloneable, IItemJar, IItem, IKitItem
+{
+    private Guid _item;
+    private bool _isLegacyRedirect;
+    private RedirectType _legacyRedirect;
+
     [JsonPropertyName("id")]
-    public Guid Id { get; set; }
+    public Guid Item
+    {
+        get => _item;
+        set
+        {
+            _item = value;
+            _isLegacyRedirect = TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+        }
+    }
 
     [JsonPropertyName("x")]
     public byte X { get; set; }
@@ -927,28 +1081,37 @@ public class KitItem : ICloneable
     public byte Rotation { get; set; }
 
     [JsonPropertyName("page")]
-    public byte Page { get; set; }
+    public Page Page { get; set; }
 
     [JsonPropertyName("amount")]
     public byte Amount { get; set; }
 
     [JsonPropertyName("metadata")]
     [JsonConverter(typeof(Base64Converter))]
-    public byte[] Metadata { get; set; }
-
-    [JsonConstructor]
-    public KitItem(Guid id, byte x, byte y, byte rotation, byte[] metadata, byte amount, byte page)
+    public byte[] State { get; set; }
+    
+    public PageItem(Guid item, byte x, byte y, byte rotation, byte[] state, byte amount, Page page)
     {
-        this.Id = id;
+        this.Item = item;
         this.X = x;
         this.Y = y;
         this.Rotation = rotation;
-        this.Metadata = metadata;
-        this.Amount = amount;
         this.Page = page;
+        this.Amount = amount;
+        this.State = state;
     }
-    public KitItem() { }
-    public object Clone() => new KitItem(Id, X, Y, Rotation, Metadata, Amount, Page);
+    public PageItem(PageItem copy)
+    {
+        Item = copy.Item;
+        X = copy.X;
+        Y = copy.Y;
+        Rotation = copy.Rotation;
+        Page = copy.Page;
+        Amount = copy.Amount;
+        State = copy.State;
+    }
+    public PageItem() { }
+    public object Clone() => new PageItem(this);
     public const string COLUMN_PK = "pk";
     public const string COLUMN_GUID = "Item";
     public const string COLUMN_X = "X";
@@ -993,109 +1156,205 @@ public class KitItem : ICloneable
             columns[++index] = new Schema.Column(COLUMN_PAGE, SqlTypes.BYTE);
         columns[++index] = new Schema.Column(COLUMN_AMOUNT, SqlTypes.BYTE);
         columns[++index] = new Schema.Column(COLUMN_METADATA, SqlTypes.BYTES_255);
-        return new Schema(tableName, columns, false, typeof(KitItem));
+        return new Schema(tableName, columns, false, typeof(PageItem));
+    }
+
+    public ItemAsset? GetItem(KitOld kit, FactionInfo targetTeam, out byte amount, out byte[] state)
+    {
+        if (_isLegacyRedirect)
+            return TeamManager.GetRedirectInfo(_legacyRedirect, kit.Faction, targetTeam, out state, out amount);
+
+        if (Assets.find(Item) is ItemAsset item)
+        {
+            amount = Amount < 1 ? item.amount : Amount;
+            state = State is null ? item.getState(EItemOrigin.ADMIN) : Util.CloneBytes(State);
+            return item;
+        }
+
+        state = Array.Empty<byte>();
+        amount = default;
+        return null;
     }
 }
-public class KitClothing : ICloneable
+public class ClothingItem : ICloneable, IClothingJar, IClothing, IKitItem
 {
+    private Guid _item;
+    private bool _isLegacyRedirect;
+    private RedirectType _legacyRedirect;
+
     [JsonPropertyName("id")]
-    public Guid Id { get; set; }
+    public Guid Item
+    {
+        get => _item;
+        set
+        {
+            _item = value;
+            _isLegacyRedirect = TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+        }
+    }
 
     [JsonPropertyName("type")]
-    public EClothingType Type { get; set; }
+    public ClothingType Type { get; set; }
 
-    [JsonConstructor]
-    public KitClothing(Guid id, EClothingType type)
+    [JsonPropertyName("metadata")]
+    [JsonConverter(typeof(Base64Converter))]
+    public byte[] State { get; set; }
+    
+    public ClothingItem(Guid id, ClothingType type, byte[] state)
     {
-        this.Id = id;
+        this.Item = id;
         this.Type = type;
+        this.State = state ?? Array.Empty<byte>();
     }
-    public KitClothing() { }
 
-    public object Clone() => new KitClothing(Id, Type);
+    public ClothingItem(ClothingItem copy)
+    {
+        Item = copy.Item;
+        Type = copy.Type;
+        State = copy.State;
+    }
+
+    public ClothingItem() { }
+
+    public object Clone() => new ClothingItem(this);
+    public ItemAsset? GetItem(KitOld kit, FactionInfo targetTeam, out byte amount, out byte[] state)
+    {
+        amount = 1;
+        if (_isLegacyRedirect)
+            return TeamManager.GetRedirectInfo(_legacyRedirect, kit.Faction, targetTeam, out state, out amount);
+
+        if (Assets.find(Item) is ItemAsset item)
+        {
+            state = State.NullOrEmpty() ? item.getState(EItemOrigin.ADMIN) : Util.CloneBytes(State);
+            return item;
+        }
+
+        state = Array.Empty<byte>();
+        return null;
+    }
 }
 
 /// <summary>Max field character limit: <see cref="KitEx.SQUAD_LEVEL_MAX_CHAR_LIMIT"/>.</summary>
 [Translatable("Squad Level")]
-public enum ESquadLevel : byte
+public enum SquadLevel : byte
 {
     [Translatable("Member")]
-    MEMBER = 0,
+    Member = 0,
     [Translatable("Commander")]
-    COMMANDER = 4
+    Commander = 4
 }
 /// <summary>Max field character limit: <see cref="KitEx.BRANCH_MAX_CHAR_LIMIT"/>.</summary>
 [Translatable("Branch")]
-public enum EBranch : byte
+public enum Branch : byte
 {
-    DEFAULT,
-    INFANTRY,
-    ARMOR,
+    Default,
+    Infantry,
+    Armor,
     [Translatable("Air Force")]
-    AIRFORCE,
+    Airforce,
     [Translatable("Special Ops")]
-    SPECOPS,
-    NAVY
+    SpecOps,
+    Navy
 }
 /// <summary>Max field character limit: <see cref="KitEx.CLOTHING_MAX_CHAR_LIMIT"/>.</summary>
-public enum EClothingType : byte
+public enum ClothingType : byte
 {
-    SHIRT,
-    PANTS,
-    VEST,
-    HAT,
-    MASK,
-    BACKPACK,
-    GLASSES
+    Shirt,
+    Pants,
+    Vest,
+    Hat,
+    Mask,
+    Backpack,
+    Glasses
+}
+
+/// <summary>Max field character limit: <see cref="KitEx.TYPE_MAX_CHAR_LIMIT"/>.</summary>
+[Translatable("Kit Type")]
+public enum KitType : byte
+{
+    Public,
+    Elite,
+    Special,
+    Loadout
+}
+
+/// <summary>Max field character limit: <see cref="KitEx.REDIRECT_TYPE_CHAR_LIMIT"/>.</summary>
+public enum RedirectType : byte
+{
+    Shirt,
+    Pants,
+    Vest,
+    Hat,
+    Mask,
+    Backpack,
+    Glasses,
+    AmmoSupply,
+    BuildSupply,
+    RallyPoint,
+    Radio,
+    ZoneBlocker
+}
+
+public enum Page : byte
+{
+    Primary = 0,
+    Secondary = 1,
+    Hands = 2,
+    Backpack = 3,
+    Vest = 4,
+    Shirt = 5,
+    Pants = 6,
+    Storage = 7,
+    Area = 8
 }
 /// <summary>Max field character limit: <see cref="KitEx.CLASS_MAX_CHAR_LIMIT"/>.</summary>
 [JsonConverter(typeof(ClassConverter))]
 [Translatable("Kit Class")]
-public enum EClass : byte
+public enum Class : byte
 {
-    NONE = 0, //0
+    None = 0,
     [Translatable(LanguageAliasSet.RUSSIAN, "Безоружный")]
     [Translatable(LanguageAliasSet.SPANISH, "Desarmado")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Neinarmat")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Desarmado")]
     [Translatable(LanguageAliasSet.POLISH, "Nieuzbrojony")]
-    UNARMED = 1,
+    Unarmed = 1,
     [Translatable("Squad Leader")]
     [Translatable(LanguageAliasSet.RUSSIAN, "Лидер отряда")]
     [Translatable(LanguageAliasSet.SPANISH, "Líder De Escuadrón")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Lider de Echipa")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Líder de Esquadrão")]
     [Translatable(LanguageAliasSet.POLISH, "Dowódca Oddziału")]
-    SQUADLEADER = 2,
+    Squadleader = 2,
     [Translatable(LanguageAliasSet.RUSSIAN, "Стрелок")]
     [Translatable(LanguageAliasSet.SPANISH, "Fusilero")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Puscas")]
     [Translatable(LanguageAliasSet.POLISH, "Strzelec")]
-    RIFLEMAN = 3,
+    Rifleman = 3,
     [Translatable(LanguageAliasSet.RUSSIAN, "Медик")]
     [Translatable(LanguageAliasSet.SPANISH, "Médico")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Medic")]
     [Translatable(LanguageAliasSet.POLISH, "Medyk")]
-    MEDIC = 4,
+    Medic = 4,
     [Translatable(LanguageAliasSet.RUSSIAN, "Нарушитель")]
     [Translatable(LanguageAliasSet.SPANISH, "Brechador")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Breacher")]
     [Translatable(LanguageAliasSet.POLISH, "Wyłamywacz")]
-    BREACHER = 5,
+    Breacher = 5,
     [Translatable(LanguageAliasSet.RUSSIAN, "Солдат с автоматом")]
     [Translatable(LanguageAliasSet.SPANISH, "Fusilero Automático")]
     [Translatable(LanguageAliasSet.SPANISH, "Puscas Automat")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Fuzileiro Automobilístico")]
     [Translatable(LanguageAliasSet.POLISH, "Strzelec Automatyczny")]
-    AUTOMATIC_RIFLEMAN = 6,
+    AutomaticRifleman = 6,
     [Translatable(LanguageAliasSet.RUSSIAN, "Гренадёр")]
     [Translatable(LanguageAliasSet.SPANISH, "Granadero")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Grenadier")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Granadeiro")]
     [Translatable(LanguageAliasSet.POLISH, "Grenadier")]
-    GRENADIER = 7,
+    Grenadier = 7,
     [Translatable(LanguageAliasSet.ROMANIAN, "Mitralior")]
-    MACHINE_GUNNER = 8,
+    MachineGunner = 8,
     [Translatable("LAT")]
     [Translatable(LanguageAliasSet.RUSSIAN, "Лёгкий противотанк")]
     [Translatable(LanguageAliasSet.SPANISH, "Anti-Tanque Ligero")]
@@ -1109,70 +1368,85 @@ public enum EClass : byte
     [Translatable(LanguageAliasSet.SPANISH, "Tirador Designado")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Lunetist-Usor")]
     [Translatable(LanguageAliasSet.POLISH, "Zwiadowca")]
-    MARKSMAN = 11,
+    Marksman = 11,
     [Translatable(LanguageAliasSet.RUSSIAN, "Снайпер")]
     [Translatable(LanguageAliasSet.SPANISH, "Francotirador")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Lunetist")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Franco-Atirador")]
     [Translatable(LanguageAliasSet.POLISH, "Snajper")]
-    SNIPER = 12,
+    Sniper = 12,
     [Translatable("Anti-personnel Rifleman")]
     [Translatable(LanguageAliasSet.RUSSIAN, "Противопехотный")]
     [Translatable(LanguageAliasSet.SPANISH, "Fusilero Anti-Personal")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Puscas Anti-Personal")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Antipessoal")]
     [Translatable(LanguageAliasSet.POLISH, "Strzelec Przeciw-Piechotny")]
-    AP_RIFLEMAN = 13,
+    APRifleman = 13,
     [Translatable(LanguageAliasSet.RUSSIAN, "Инженер")]
     [Translatable(LanguageAliasSet.SPANISH, "Ingeniero")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Inginer")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Engenheiro")]
     [Translatable(LanguageAliasSet.POLISH, "Inżynier")]
-    COMBAT_ENGINEER = 14,
+    CombatEngineer = 14,
     [Translatable(LanguageAliasSet.RUSSIAN, "Механик-водитель")]
     [Translatable(LanguageAliasSet.SPANISH, "Tripulante")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Echipaj")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Tripulante")]
     [Translatable(LanguageAliasSet.POLISH, "Załogant")]
-    CREWMAN = 15,
+    Crewman = 15,
     [Translatable(LanguageAliasSet.RUSSIAN, "Пилот")]
     [Translatable(LanguageAliasSet.SPANISH, "Piloto")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Pilot")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Piloto")]
     [Translatable(LanguageAliasSet.POLISH, "Pilot")]
-    PILOT = 16,
+    Pilot = 16,
     [Translatable("Special Ops")]
     [Translatable(LanguageAliasSet.SPANISH, "Op. Esp.")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Trupe Speciale")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Op. Esp.")]
     [Translatable(LanguageAliasSet.POLISH, "Specjalista")]
-    SPEC_OPS = 17
+    SpecOps = 17,
+
+
+    // raise ClassConverter.MAX_CLASS if adding another class!
+
+    // Fallback values for Parsing
+    [Obsolete]
+    AUTOMATIC_RIFLEMAN = AutomaticRifleman,
+    [Obsolete]
+    MACHINE_GUNNER = MachineGunner,
+    [Obsolete]
+    AP_RIFLEMAN = APRifleman,
+    [Obsolete]
+    COMBAT_ENGINEER = CombatEngineer,
+    [Obsolete]
+    SPEC_OPS = SpecOps
 }
 
-public sealed class ClassConverter : JsonConverter<EClass>
+public sealed class ClassConverter : JsonConverter<Class>
 {
-    private const EClass MAX_CLASS = EClass.SPEC_OPS;
-    public override EClass Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    private const Class MAX_CLASS = Class.SpecOps;
+    public override Class Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.Number)
         {
             if (reader.TryGetByte(out byte b))
-                return (EClass)b;
+                return (Class)b;
             throw new JsonException("Invalid EClass value.");
         }
         else if (reader.TokenType == JsonTokenType.Null)
-            return EClass.NONE;
+            return Class.None;
         else if (reader.TokenType == JsonTokenType.String)
         {
-            if (Enum.TryParse(reader.GetString()!, true, out EClass rtn))
+            if (Enum.TryParse(reader.GetString()!, true, out Class rtn))
                 return rtn;
             throw new JsonException("Invalid EClass value.");
         }
         throw new JsonException("Invalid token for EClass parameter.");
     }
-    public override void Write(Utf8JsonWriter writer, EClass value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, Class value, JsonSerializerOptions options)
     {
-        if (value >= EClass.NONE && value <= MAX_CLASS)
+        if (value >= Class.None && value <= MAX_CLASS)
             writer.WriteStringValue(value.ToString());
         else
             writer.WriteNumberValue((byte)value);

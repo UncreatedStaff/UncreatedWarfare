@@ -44,7 +44,7 @@ public static class LeaderboardEx
 
             if (Data.Is<IKitRequests>(out _) && string.IsNullOrEmpty(player.KitName))
             {
-                if (KitManager.KitExists(player.KitName, out Kit kit))
+                if (KitManager.KitExists(player.KitName, out KitOld kit))
                     KitManager.ResupplyKit(player, kit);
             }
             if (Data.Is<IFlagRotation>(out _))

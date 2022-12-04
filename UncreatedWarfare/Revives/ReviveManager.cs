@@ -51,7 +51,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     public override void Load()
     {
-        Medics.AddRange(PlayerManager.OnlinePlayers.Where(x => x.KitClass == EClass.MEDIC).ToList());
+        Medics.AddRange(PlayerManager.OnlinePlayers.Where(x => x.KitClass == Class.Medic).ToList());
         EventDispatcher.PlayerDied += OnPlayerDeath;
         PlayerLife.OnRevived_Global += OnPlayerRespawned;
         UseableConsumeable.onPerformingAid += OnHealPlayer;
@@ -117,7 +117,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     {
         if (!player.Player.transform.gameObject.TryGetComponent<Reviver>(out _))
             player.Player.transform.gameObject.AddComponent<Reviver>();
-        if (player.KitClass == EClass.MEDIC)
+        if (player.KitClass == Class.Medic)
             Medics.Add(player);
         DownedPlayers.Remove(player.Steam64);
         DeathTracker.RemovePlayerInfo(player.Steam64);
@@ -154,7 +154,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         if (!DownedPlayers.ContainsKey(downed.channel.owner.playerID.steamID.m_SteamID)) // if not injured
             return;
-        if (medic.KitClass != EClass.MEDIC)
+        if (medic.KitClass != Class.Medic)
         {
             medic.SendChat(T.ReviveNotMedic);
             shouldAllow = false;
@@ -246,7 +246,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                     r2.AddRevive();
 
                 Stats.StatsManager.ModifyTeam(team, t => t.Revives++, false);
-                if (KitManager.HasKit(medic, out Kit kit))
+                if (KitManager.HasKit(medic, out KitOld kit))
                 {
                     Stats.StatsManager.ModifyStats(medic.channel.owner.playerID.steamID.m_SteamID, s =>
                     {
@@ -364,7 +364,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                     }
 
                     Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
-                    if (KitManager.HasKit(killer, out Kit kit))
+                    if (KitManager.HasKit(killer, out KitOld kit))
                     {
                         Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s =>
                         {

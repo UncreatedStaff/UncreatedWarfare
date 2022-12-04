@@ -19,7 +19,7 @@ namespace Uncreated.Warfare.FOBs
             //ResuppliedPlayers = new Dictionary<ulong, int>();
             Ammo = FOBManager.Config.AmmoBagMaxUses;
         }
-        public void ResupplyPlayer(UCPlayer player, Kit kit, int ammoCost)
+        public void ResupplyPlayer(UCPlayer player, KitOld kit, int ammoCost)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();

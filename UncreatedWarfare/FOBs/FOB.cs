@@ -288,7 +288,7 @@ public class FOB : IFOB, IDeployable
                     {
                         int xp = Points.XPConfig.UnloadSuppliesXP;
 
-                        if (creator.KitClass == EClass.PILOT)
+                        if (creator.KitClass == Class.Pilot)
                         {
                             xp *= 2;
                         }
@@ -366,7 +366,7 @@ public class FOB : IFOB, IDeployable
                         {
                             int xp = Points.XPConfig.UnloadSuppliesXP;
 
-                            if (player.KitClass == EClass.PILOT)
+                            if (player.KitClass == Class.Pilot)
                             {
                                 xp *= 2;
                             }
@@ -559,7 +559,7 @@ public class FOB : IFOB, IDeployable
 #endif
         float amount = 30;
 
-        if (builder.KitClass == EClass.COMBAT_ENGINEER)
+        if (builder.KitClass == Class.CombatEngineer)
             amount *= 2;
         if (Gamemode.Config.EffectDig.ValidReference(out EffectAsset effect))
             F.TriggerEffectReliable(effect, EffectManager.MEDIUM, builder.Position);

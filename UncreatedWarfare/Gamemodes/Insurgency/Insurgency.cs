@@ -300,7 +300,7 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!KitManager.KitExists(player.KitName, out Kit kit) || kit.IsLimited(out _, out _, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out _, out _, player.GetTeam())))
+        if (!KitManager.KitExists(player.KitName, out KitOld kit) || kit.IsLimited(out _, out _, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out _, out _, player.GetTeam())))
         {
             if (!KitManager.TryGiveRiflemanKit(player))
                 KitManager.TryGiveUnarmedKit(player);
@@ -326,7 +326,7 @@ public class Insurgency :
         PlayerNames names = player.Name;
         if (string.IsNullOrEmpty(player.KitName) && team is > 0 and < 3)
         {
-            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
+            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out KitOld unarmed))
                 KitManager.GiveKit(player, unarmed);
             else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
             else L.LogWarning("Unable to give " + names.PlayerName + " a kit.");

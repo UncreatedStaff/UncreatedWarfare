@@ -143,7 +143,7 @@ public class RequestSigns : ListSingleton<RequestSign>
             for (int i = 0; i < Singleton.Count; i++)
             {
                 RequestSign kn = Singleton[i];
-                if (kn.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.Ordinal) || (KitManager.KitExists(kn.KitName, out Kit kit) && kit.TeamLimit < 1f))
+                if (kn.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.Ordinal) || (KitManager.KitExists(kn.KitName, out KitOld kit) && kit.TeamLimit < 1f))
                     kn.InvokeUpdate();
             }
         }
@@ -152,7 +152,7 @@ public class RequestSigns : ListSingleton<RequestSign>
             for (int i = 0; i < Singleton.Count; i++)
             {
                 RequestSign kn = Singleton[i];
-                if (kn.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.Ordinal) || (KitManager.KitExists(kn.KitName, out Kit kit) && kit.TeamLimit < 1f))
+                if (kn.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.Ordinal) || (KitManager.KitExists(kn.KitName, out KitOld kit) && kit.TeamLimit < 1f))
                     kn.InvokeUpdate();
                 else
                     kn.InvokeUpdate(allPlayer);

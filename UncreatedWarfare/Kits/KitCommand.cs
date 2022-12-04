@@ -54,11 +54,11 @@ public class KitCommand : Command
 
             if (ctx.TryGet(1, out string kitName))
             {
-                if (!KitManager.KitExists(kitName, out Kit kit)) // create kit
+                if (!KitManager.KitExists(kitName, out KitOld kit)) // create kit
                 {
                     Task.Run(async () =>
                     {
-                        Kit? kit = await KitManager.AddKit(new Kit(kitName, KitManager.ItemsFromInventory(ctx.Caller!), KitManager.ClothesFromInventory(ctx.Caller!)));
+                        KitOld? kit = await KitManager.AddKit(new KitOld(kitName, KitManager.ItemsFromInventory(ctx.Caller!), KitManager.ClothesFromInventory(ctx.Caller!)));
                         if (kit is not null)
                         {
                             ctx.LogAction(EActionLogType.CREATE_KIT, kitName);
@@ -102,7 +102,7 @@ public class KitCommand : Command
 
             if (ctx.TryGet(1, out string kitName))
             {
-                if (KitManager.KitExists(kitName, out Kit kit))
+                if (KitManager.KitExists(kitName, out KitOld kit))
                 {
                     Task.Run(async () =>
                     {
@@ -137,10 +137,10 @@ public class KitCommand : Command
 
             if (ctx.TryGet(1, out string kitName))
             {
-                if (KitManager.KitExists(kitName, out Kit kit))
+                if (KitManager.KitExists(kitName, out KitOld kit))
                 {
                     bool branchChanged = false;
-                    if (KitManager.HasKit(ctx.Caller!, out Kit oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
+                    if (KitManager.HasKit(ctx.Caller!, out KitOld oldkit) && kit.Branch != Branch.Default && oldkit.Branch != kit.Branch)
                         branchChanged = true;
 
                     ctx.LogAction(EActionLogType.GIVE_KIT, kitName);
@@ -167,7 +167,7 @@ public class KitCommand : Command
 
             if (ctx.TryGet(3, out string newValue) && ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out string property))
             {
-                if (KitManager.KitExists(kitName, out Kit kit))
+                if (KitManager.KitExists(kitName, out KitOld kit))
                 {
                     if (ctx.MatchParameter(1, "level", "lvl"))
                     {
@@ -179,7 +179,7 @@ public class KitCommand : Command
                                 kit.AddSimpleLevelUnlock(level);
                             Task.Run(async () =>
                             {
-                                Kit _kit = await KitManager.AddKit(kit);
+                                KitOld _kit = await KitManager.AddKit(kit);
                                 await UCWarfare.ToUpdate();
                                 ctx.Reply(T.KitPropertySet, property, kit, newValue);
                                 ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
@@ -202,7 +202,7 @@ public class KitCommand : Command
                             KitManager.UpdateText(kit, newValue, language);
                             Task.Run(async () =>
                             {
-                                Kit _kit = await KitManager.AddKit(kit);
+                                KitOld _kit = await KitManager.AddKit(kit);
                                 newValue = newValue.Replace('\n', '\\');
                                 await UCWarfare.ToUpdate();
                                 ctx.Reply(T.KitPropertySet, "sign text", kit, language + " : " + newValue);
@@ -228,7 +228,7 @@ public class KitCommand : Command
                         }
                         bool wasLoadout = kit.IsLoadout;
                         bool wasPremium = kit.IsPremium;
-                        EClass oldclass = kit.Class;
+                        Class oldclass = kit.Class;
                         ESetFieldResult result = KitEx.SetProperty(kit, property, newValue, out FieldInfo? field);
                         if (field != null)
                             property = field.Name;
@@ -279,7 +279,7 @@ public class KitCommand : Command
 
             if (ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
-                if (KitManager.KitExists(kitName, out Kit kit))
+                if (KitManager.KitExists(kitName, out KitOld kit))
                 {
                     if (onlinePlayer is null && !PlayerSave.HasPlayerSave(playerId))
                     {
@@ -338,7 +338,7 @@ public class KitCommand : Command
 
             if (ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
-                if (KitManager.KitExists(kitName, out Kit kit))
+                if (KitManager.KitExists(kitName, out KitOld kit))
                 {
                     if (onlinePlayer is null && !PlayerSave.HasPlayerSave(playerId))
                     {
@@ -395,11 +395,11 @@ public class KitCommand : Command
 
             if (ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out string existingName))
             {
-                if (KitManager.KitExists(existingName, out Kit existing))
+                if (KitManager.KitExists(existingName, out KitOld existing))
                 {
                     if (!KitManager.KitExists(kitName, out _))
                     {
-                        Kit newKit = new Kit
+                        KitOld newKit = new KitOld
                         {
                             Name = kitName.ToLower(),
                             Items = existing.Items,
@@ -446,7 +446,7 @@ public class KitCommand : Command
                                    ")> <class> [sign text...] - Creates and prepares a loadout for the provided player with optional sign text.");
 
             ctx.AssertRanByPlayer();
-            if (ctx.TryGet(3, out EClass @class) && ctx.TryGet(2, out ulong team) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
+            if (ctx.TryGet(3, out Class @class) && ctx.TryGet(2, out ulong team) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
                 if (onlinePlayer is null && !PlayerSave.HasPlayerSave(playerId))
                 {
@@ -463,17 +463,17 @@ public class KitCommand : Command
                     if (let <= 'z' && !KitManager.KitExists(loadoutName, out _))
                     {
                         await UCWarfare.ToUpdate();
-                        Kit loadout = new Kit(loadoutName, KitManager.ItemsFromInventory(ctx.Caller!), KitManager.ClothesFromInventory(ctx.Caller!));
+                        KitOld loadout = new KitOld(loadoutName, KitManager.ItemsFromInventory(ctx.Caller!), KitManager.ClothesFromInventory(ctx.Caller!));
 
                         loadout.IsLoadout = true;
                         loadout.Team = team;
                         loadout.Class = @class;
-                        if (@class == EClass.PILOT)
-                            loadout.Branch = EBranch.AIRFORCE;
-                        else if (@class == EClass.CREWMAN)
-                            loadout.Branch = EBranch.ARMOR;
+                        if (@class == Class.Pilot)
+                            loadout.Branch = Branch.Airforce;
+                        else if (@class == Class.Crewman)
+                            loadout.Branch = Branch.Armor;
                         else
-                            loadout.Branch = EBranch.INFANTRY;
+                            loadout.Branch = Branch.Infantry;
 
                         loadout.TeamLimit = KitManager.GetDefaultTeamLimit(@class);
 

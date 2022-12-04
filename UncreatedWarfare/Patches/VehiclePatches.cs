@@ -55,7 +55,7 @@ public static partial class Patches
 
                         UCPlayer? owner = UCPlayer.FromCSteamID(__instance.lockedOwner);
 
-                        if (data.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
+                        if (data.RequiredClass != Class.None) // vehicle requires crewman or pilot
                         {
                             if (enterer.KitClass == data.RequiredClass) // for crewman trying to enter a crewed vehicle
                             {

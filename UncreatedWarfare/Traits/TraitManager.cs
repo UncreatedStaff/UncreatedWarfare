@@ -127,7 +127,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         if (e.NewGroup is 1 or 2)
             BuffUI.SendBuffs(e.Player);
     }
-    private void OnKitChagned(UCPlayer player, Kit kit, string oldKit)
+    private void OnKitChagned(UCPlayer player, KitOld kit, string oldKit)
     {
         TraitSigns.SendAllTraitSigns(player);
         for (int i = 0; i < player.ActiveTraits.Count; ++i)
@@ -515,7 +515,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
             }
         }
 
-        if (ctx.Caller.Kit is null || ctx.Caller.KitClass <= EClass.UNARMED)
+        if (ctx.Caller.Kit is null || ctx.Caller.KitClass <= Class.Unarmed)
             throw ctx.Reply(T.RequestTraitNoKit);
 
         if (!trait.CanClassUse(ctx.Caller.KitClass))

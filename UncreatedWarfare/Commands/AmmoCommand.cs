@@ -101,13 +101,13 @@ public class AmmoCommand : AsyncCommand
             if (!ctx.Caller.IsOnTeam)
                 throw ctx.Reply(T.NotOnCaptureTeam);
 
-            if (!KitManager.HasKit(ctx.Caller.Steam64, out Kit kit))
+            if (!KitManager.HasKit(ctx.Caller.Steam64, out KitOld kit))
                 throw ctx.Reply(T.AmmoNoKit);
 
             int ammoCost = ctx.Caller.KitClass switch
             {
-                EClass.HAT or EClass.MACHINE_GUNNER or EClass.COMBAT_ENGINEER => 3,
-                EClass.LAT or EClass.AUTOMATIC_RIFLEMAN or EClass.GRENADIER => 2,
+                Class.HAT or Class.MachineGunner or Class.CombatEngineer => 3,
+                Class.LAT or Class.AutomaticRifleman or Class.Grenadier => 2,
                 _ => 1
             };
 

@@ -18,7 +18,7 @@ public class Superheated : Buff
         CreditCost = 600,
         RequireSquadLeader = false,
         RequireSquad = false,
-        ClassList = new EClass[] { EClass.PILOT },
+        ClassList = new Class[] { Class.Pilot },
         ClassListIsBlacklist = false,
         Icon = "£",
         Cooldown = 900,

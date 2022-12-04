@@ -106,7 +106,7 @@ public class ActionManager : BaseSingleton
             return;
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
-            p.KitClass == EClass.MEDIC &&
+            p.KitClass == Class.Medic &&
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
@@ -122,7 +122,7 @@ public class ActionManager : BaseSingleton
             return;
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
-            p.KitClass == EClass.RIFLEMAN &&
+            p.KitClass == Class.Rifleman &&
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
@@ -174,12 +174,12 @@ public class ActionManager : BaseSingleton
             return;
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
-            p.KitClass == EClass.PILOT) ||
+            p.KitClass == Class.Pilot) ||
             p.IsInSameSquadAs(caller));
 
         IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
-            p.KitClass == EClass.PILOT &&
+            p.KitClass == Class.Pilot &&
             p.Player != caller);
 
         Action action = new Action(caller, Gamemode.Config.EffectActionHeliPickup.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_POSITION, T.HeliPickupChat, T.HeliPickupToast, squadWide: true)
@@ -210,7 +210,7 @@ public class ActionManager : BaseSingleton
             return;
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
-            p.KitClass == EClass.PILOT) ||
+            p.KitClass == Class.Pilot) ||
             p.IsInSameSquadAs(caller));
 
         IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
@@ -246,11 +246,11 @@ public class ActionManager : BaseSingleton
             return;
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
-            (p.KitClass == EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS)))) ||
+            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS)))) ||
             p.IsInSameSquadAs(caller));
 
         IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
-            (p.KitClass == EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS))) &&
+            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS))) &&
             p.Player != caller);
 
         Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesBuild.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, EActionOrigin.CALLER_POSITION, T.SuppliesBuildChat, T.SuppliesBuildToast, squadWide: true)
@@ -289,11 +289,11 @@ public class ActionManager : BaseSingleton
             return;
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
-            (p.KitClass == EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS)))) ||
+            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS)))) ||
             p.IsInSameSquadAs(caller));
 
         IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
-            (p.KitClass == EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS))) &&
+            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS))) &&
             p.Player != caller);
 
         Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesAmmo.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_POSITION, T.SuppliesAmmoChat, T.SuppliesAmmoToast, squadWide: true)
@@ -463,7 +463,7 @@ public class ActionManager : BaseSingleton
 
                 int xp = Points.XPConfig.UnloadSuppliesXP * Mathf.CeilToInt(difference / (float)REQUIRED_UNLOAD_AMOUNT_FOR_REWARD);
 
-                if (caller.KitClass == EClass.PILOT)
+                if (caller.KitClass == Class.Pilot)
                     xp *= 2;
 
                 Points.AwardXP(caller, xp, T.XPToastSuppliesUnloaded);

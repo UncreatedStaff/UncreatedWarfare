@@ -77,13 +77,13 @@ public class Whitelister : ListSingleton<WhitelistItem>
             return;
         }
 
-        if (KitManager.HasKit(player, out Kit kit))
+        if (KitManager.HasKit(player, out KitOld kit))
         {
             int itemCount = UCInventoryManager.CountItems(player.Player, itemData.item.id);
 
-            int allowedItems = kit.Items.Count(k => k.Id == a.GUID);
+            int allowedItems = kit.Items.Count(k => k.Item == a.GUID);
             if (allowedItems == 0)
-                allowedItems = kit.Clothes.Count(k => k.Id == a.GUID);
+                allowedItems = kit.Clothes.Count(k => k.Item == a.GUID);
 
             int max = isWhitelisted ? Math.Max(allowedItems, whitelistedItem.Amount) : allowedItems;
 
@@ -206,7 +206,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 player.SendChat(T.WhitelistProhibitedPlace, asset);
                 return;
             }
-            if (KitManager.HasKit(player.CSteamID, out Kit kit))
+            if (KitManager.HasKit(player.CSteamID, out KitOld kit))
             {
                 if (IsWhitelisted(barricade.asset.GUID, out _))
                 {
@@ -214,7 +214,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 }
                 else
                 {
-                    int allowedCount = kit.Items.Where(k => k.Id == barricade.asset.GUID).Count();
+                    int allowedCount = kit.Items.Where(k => k.Item == barricade.asset.GUID).Count();
 
                     if (allowedCount > 0)
                     {
@@ -266,9 +266,9 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 player.SendChat(T.WhitelistProhibitedPlace, asset);
                 return;
             }
-            if (KitManager.HasKit(player.CSteamID, out Kit kit))
+            if (KitManager.HasKit(player.CSteamID, out KitOld kit))
             {
-                if (kit.Items.Exists(k => k.Id == structure.asset.GUID))
+                if (kit.Items.Exists(k => k.Item == structure.asset.GUID))
                 {
                     return;
                 }

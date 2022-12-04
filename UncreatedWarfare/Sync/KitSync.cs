@@ -173,7 +173,7 @@ public static class KitSync
     }
     public static class NetCalls
     {
-        public static readonly NetCall<string> MulticastKitUpdated = new NetCall<string>(OnForeignKitUpdated!, Kit.CAPACITY);
+        public static readonly NetCall<string> MulticastKitUpdated = new NetCall<string>(OnForeignKitUpdated!, KitOld.CAPACITY);
         public static readonly NetCall<string> MulticastKitDeleted = new NetCall<string>(OnForeignKitDeleted);
         public static readonly NetCall<ulong> MulticastKitAccessChanged = new NetCall<ulong>(OnForeignAccessUpdated);
 

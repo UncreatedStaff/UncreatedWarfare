@@ -17,7 +17,7 @@ public class Ghost : Buff
         CreditCost = 500,
         RequireSquadLeader = false,
         RequireSquad = false,
-        ClassList = new EClass[] { EClass.PILOT, EClass.CREWMAN },
+        ClassList = new Class[] { Class.Pilot, Class.Crewman },
         ClassListIsBlacklist = true,
         Icon = "£",
         Cooldown = 900,

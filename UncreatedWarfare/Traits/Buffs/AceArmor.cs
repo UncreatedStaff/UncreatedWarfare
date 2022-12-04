@@ -20,7 +20,7 @@ public class AceArmor : Buff
         NameTranslations = new TranslationList("Ace Armor"),
         DescriptionTranslations = new TranslationList("Give an XP boost to crewmen."),
         CreditCost = 200,
-        ClassList = new EClass[] { EClass.CREWMAN },
+        ClassList = new Class[] { Class.Crewman },
         ClassListIsBlacklist = false,
         Icon = "§",
         Cooldown = 330,

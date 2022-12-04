@@ -35,7 +35,7 @@ public class BuyCommand : AsyncCommand
                 throw ctx.Reply(T.RequestKitNotRegistered);
             if (requestsign.KitName.StartsWith("loadout_"))
                 throw ctx.Reply(T.RequestNotBuyable);
-            if (!KitManager.KitExists(requestsign.KitName, out Kit kit))
+            if (!KitManager.KitExists(requestsign.KitName, out KitOld kit))
                 throw ctx.Reply(T.KitNotFound, requestsign.KitName);
             if (ctx.Caller.Rank.Level < kit.UnlockLevel)
                 throw ctx.Reply(T.RequestKitLowLevel, RankData.GetRankName(kit.UnlockLevel));

@@ -53,7 +53,7 @@ public class RequestCommand : AsyncCommand
                 {
                     if (RequestSigns.AddRequestSign(sign, out RequestSign signadded))
                     {
-                        if (KitManager.KitExists(signadded.KitName, out Kit kit))
+                        if (KitManager.KitExists(signadded.KitName, out KitOld kit))
                             ctx.Reply(T.RequestSignSaved, kit);
                         else
                             ctx.SendUnknownError();
@@ -72,7 +72,7 @@ public class RequestCommand : AsyncCommand
                 {
                     if (RequestSigns.SignExists(sign, out RequestSign requestsign))
                     {
-                        if (KitManager.KitExists(requestsign.KitName, out Kit kit))
+                        if (KitManager.KitExists(requestsign.KitName, out KitOld kit))
                             ctx.Reply(T.RequestSignRemoved, kit);
                         else
                             ctx.SendUnknownError();
@@ -99,10 +99,10 @@ public class RequestCommand : AsyncCommand
                         if (byte.TryParse(kitsign.KitName.Substring(8), NumberStyles.Number, Data.Locale, out byte loadoutId))
                         {
                             byte bteam = ctx.Caller!.Player.GetTeamByte();
-                            List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, caller2));
+                            List<KitOld> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, caller2));
                             if (loadoutId > 0 && loadoutId <= loadouts.Count)
                             {
-                                Kit loadout = loadouts[loadoutId - 1];
+                                KitOld loadout = loadouts[loadoutId - 1];
 
                                 if (loadout.IsClassLimited(out int currentPlayers, out int allowedPlayers, bteam))
                                 {
@@ -120,7 +120,7 @@ public class RequestCommand : AsyncCommand
                     }
                     else
                     {
-                        if (!KitManager.KitExists(kitsign.KitName, out Kit kit) || kit.IsLoadout)
+                        if (!KitManager.KitExists(kitsign.KitName, out KitOld kit) || kit.IsLoadout)
                             throw ctx.Reply(T.KitNotFound, kitsign.KitName);
                         if (caller2.KitName == kit.Name)
                             throw ctx.Reply(T.RequestKitAlreadyOwned);
@@ -139,14 +139,14 @@ public class RequestCommand : AsyncCommand
                         }
                         if (kit.IsLimited(out _, out int allowedPlayers, caller2.GetTeam()))
                             throw ctx.Reply(T.RequestKitLimited, allowedPlayers);
-                        if (kit.Class == EClass.SQUADLEADER && caller2.Squad is not null && !caller2.IsSquadLeader())
+                        if (kit.Class == Class.Squadleader && caller2.Squad is not null && !caller2.IsSquadLeader())
                             throw ctx.Reply(T.RequestKitNotSquadleader);
                         if (
                             Data.Gamemode.State == EState.ACTIVE &&
                             CooldownManager.HasCooldown(caller2, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) &&
                             !caller2.OnDutyOrAdmin() &&
                             !UCWarfare.Config.OverrideKitRequirements &&
-                            !(kit.Class == EClass.CREWMAN || kit.Class == EClass.PILOT))
+                            !(kit.Class == Class.Crewman || kit.Class == Class.Pilot))
                             throw ctx.Reply(T.KitOnGlobalCooldown, requestCooldown);
                         if (kit.IsPremium &&
                             CooldownManager.HasCooldown(caller2, ECooldownType.PREMIUM_KIT, out Cooldown premiumCooldown, kit.Name) &&
@@ -203,12 +203,12 @@ public class RequestCommand : AsyncCommand
                             ctx.Reply(T.RequestKitLimited, allowedPlayers);
                             return;
                         }
-                        if (kit.Class == EClass.SQUADLEADER && caller2.Squad is not null && !caller2.IsSquadLeader())
+                        if (kit.Class == Class.Squadleader && caller2.Squad is not null && !caller2.IsSquadLeader())
                         {
                             ctx.Reply(T.RequestKitNotSquadleader);
                             return;
                         }
-                        if (kit.Class == EClass.SQUADLEADER && caller2.Squad == null)
+                        if (kit.Class == Class.Squadleader && caller2.Squad == null)
                         {
                             if (SquadManager.Squads.Count(x => x.Team == team) < 8)
                             {
@@ -299,7 +299,7 @@ public class RequestCommand : AsyncCommand
             else throw ctx.Reply(T.RequestNoTarget);
         }
     }
-    private void GiveKit(UCPlayer ucplayer, Kit kit)
+    private void GiveKit(UCPlayer ucplayer, KitOld kit)
     {
         AmmoCommand.WipeDroppedItems(ucplayer.Steam64);
         KitManager.GiveKit(ucplayer, kit);
@@ -346,12 +346,12 @@ public class RequestCommand : AsyncCommand
             ucplayer.SendChat(T.RequestVehicleNotSquadLeader);
             return;
         }
-        if (!KitManager.HasKit(ucplayer.CSteamID, out Kit kit))
+        if (!KitManager.HasKit(ucplayer.CSteamID, out KitOld kit))
         {
             ucplayer.SendChat(T.RequestVehicleNoKit);
             return;
         }
-        if (data.RequiredClass != EClass.NONE && kit.Class != data.RequiredClass)
+        if (data.RequiredClass != Class.None && kit.Class != data.RequiredClass)
         {
             ucplayer.SendChat(T.RequestVehicleWrongClass, data.RequiredClass);
             return;

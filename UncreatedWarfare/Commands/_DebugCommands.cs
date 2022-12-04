@@ -1133,7 +1133,7 @@ public class DebugCommand : AsyncCommand
 
         ulong team = ctx.Caller.GetTeam();
         string kitname = team == 1 ? "ussql1" : "mesql1";
-        if (!KitManager.KitExists(kitname, out Kit kit))
+        if (!KitManager.KitExists(kitname, out KitOld kit))
             throw ctx.SendUnknownError();
 
         KitManager.GiveKit(ctx.Caller, kit);

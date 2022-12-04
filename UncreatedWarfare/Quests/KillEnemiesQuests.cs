@@ -462,7 +462,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && KitManager.HasKit(e.Killer, out Kit kit) && Kit.IsMatch(kit.Name) && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && KitManager.HasKit(e.Killer, out KitOld kit) && Kit.IsMatch(kit.Name) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
@@ -566,7 +566,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
         {
             if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= Range
                 && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH
-                && KitManager.HasKit(e.Killer, out Kit kit) && Kit.IsMatch(kit.Name) && e.Cause != EDeathCause.SHRED)
+                && KitManager.HasKit(e.Killer, out KitOld kit) && Kit.IsMatch(kit.Name) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
@@ -587,7 +587,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
 public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.Tracker, KillEnemiesQuestKitClass.State, KillEnemiesQuestKitClass>
 {
     public DynamicIntegerValue KillCount;
-    public DynamicEnumValue<EClass> Class;
+    public DynamicEnumValue<Class> Class;
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -601,7 +601,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
         {
             if (!reader.TryReadEnumValue(out Class))
             {
-                Class = new DynamicEnumValue<EClass>(EClass.NONE);
+                Class = new DynamicEnumValue<Class>(Kits.Class.None);
                 L.LogWarning("Invalid class in quest " + QuestType);
             }
         }
@@ -610,7 +610,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
     {
         [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
-        internal DynamicEnumValue<EClass>.Choice Class;
+        internal DynamicEnumValue<Class>.Choice Class;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestKitClass data)
@@ -623,7 +623,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
             if (prop.Equals("kills", StringComparison.Ordinal))
                 KillThreshold = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("class", StringComparison.Ordinal))
-                Class = DynamicEnumValue<EClass>.ReadChoiceIntl(ref reader);
+                Class = DynamicEnumValue<Class>.ReadChoiceIntl(ref reader);
         }
         public void WriteQuestState(Utf8JsonWriter writer)
         {
@@ -634,7 +634,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
         private readonly int KillThreshold = 0;
-        private readonly DynamicEnumValue<EClass>.Choice Class;
+        private readonly DynamicEnumValue<Class>.Choice Class;
         private readonly string translationCache1;
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;
@@ -657,7 +657,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && KitManager.HasKit(e.Killer, out Kit kit) && Class.IsMatch(kit.Class) && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && KitManager.HasKit(e.Killer, out KitOld kit) && Class.IsMatch(kit.Class) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
@@ -678,7 +678,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
 public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitClassRange.Tracker, KillEnemiesQuestKitClassRange.State, KillEnemiesQuestKitClassRange>
 {
     public DynamicIntegerValue KillCount;
-    public DynamicEnumValue<EClass> Class;
+    public DynamicEnumValue<Class> Class;
     public DynamicFloatValue Range;
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
@@ -693,7 +693,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
         {
             if (!reader.TryReadEnumValue(out Class))
             {
-                Class = new DynamicEnumValue<EClass>(EClass.NONE);
+                Class = new DynamicEnumValue<Class>(Kits.Class.None);
                 L.LogWarning("Invalid class in quest " + QuestType);
             }
         }
@@ -707,7 +707,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
     {
         [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
-        internal DynamicEnumValue<EClass>.Choice Class;
+        internal DynamicEnumValue<Class>.Choice Class;
         [RewardField("d")]
         public IDynamicValue<float>.IChoice Range;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
@@ -723,7 +723,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
             if (prop.Equals("kills", StringComparison.Ordinal))
                 KillThreshold = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("class", StringComparison.Ordinal))
-                Class = DynamicEnumValue<EClass>.ReadChoiceIntl(ref reader);
+                Class = DynamicEnumValue<Class>.ReadChoiceIntl(ref reader);
             else if (prop.Equals("range", StringComparison.Ordinal))
                 Range = DynamicFloatValue.ReadChoice(ref reader);
         }
@@ -737,7 +737,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
         private readonly int KillThreshold = 0;
-        private readonly DynamicEnumValue<EClass>.Choice Class;
+        private readonly DynamicEnumValue<Class>.Choice Class;
         private readonly string translationCache1;
         private readonly float Range;
         private int _kills;
@@ -764,7 +764,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
         {
             if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= Range
                 && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH &&
-                KitManager.HasKit(e.Killer, out Kit kit) && Class.IsMatch(kit.Class) && e.Cause != EDeathCause.SHRED)
+                KitManager.HasKit(e.Killer, out KitOld kit) && Class.IsMatch(kit.Class) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
@@ -876,7 +876,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
 public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Tracker, KillEnemiesQuestBranch.State, KillEnemiesQuestBranch>
 {
     public DynamicIntegerValue KillCount;
-    public DynamicEnumValue<EBranch> Branch;
+    public DynamicEnumValue<Branch> Branch;
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -890,7 +890,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
         {
             if (!reader.TryReadEnumValue(out Branch))
             {
-                Branch = new DynamicEnumValue<EBranch>(EBranch.DEFAULT);
+                Branch = new DynamicEnumValue<Branch>(Kits.Branch.Default);
                 L.LogWarning("Invalid branch in quest " + QuestType);
             }
         }
@@ -899,7 +899,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
     {
         [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
-        internal DynamicEnumValue<EBranch>.Choice Branch;
+        internal DynamicEnumValue<Branch>.Choice Branch;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestBranch data)
@@ -912,7 +912,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
             if (prop.Equals("kills", StringComparison.Ordinal))
                 KillThreshold = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("branch", StringComparison.Ordinal))
-                Branch = DynamicEnumValue<EBranch>.ReadChoiceIntl(ref reader);
+                Branch = DynamicEnumValue<Branch>.ReadChoiceIntl(ref reader);
         }
         public void WriteQuestState(Utf8JsonWriter writer)
         {
@@ -923,7 +923,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
         private readonly int KillThreshold = 0;
-        private readonly DynamicEnumValue<EBranch>.Choice Branch;
+        private readonly DynamicEnumValue<Branch>.Choice Branch;
         private readonly string translationCache1;
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;

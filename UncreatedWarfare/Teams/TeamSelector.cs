@@ -385,7 +385,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
     {
         for (int i = 0; i < kits.Count; ++i)
         {
-            if (KitManager.KitExists(kits[i], out Kit kit) && (kit.IsPremium || kit.IsLoadout))
+            if (KitManager.KitExists(kits[i], out KitOld kit) && (kit.IsPremium || kit.IsLoadout))
             {
                 if (kit.Team == 0)
                 {

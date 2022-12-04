@@ -314,7 +314,7 @@ public sealed partial class Conquest :
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ThreadUtil.assertIsGameThread();
-        if (!KitManager.KitExists(player.KitName, out Kit kit) || (!kit.IsLoadout && kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
+        if (!KitManager.KitExists(player.KitName, out KitOld kit) || (!kit.IsLoadout && kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
         {
             if (!KitManager.TryGiveRiflemanKit(player))
                 KitManager.TryGiveUnarmedKit(player);
@@ -334,14 +334,14 @@ public sealed partial class Conquest :
     {
         if (team is 1 or 2)
         {
-            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
+            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out KitOld unarmed))
                 KitManager.GiveKit(player, unarmed);
             else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
             else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
         }
         else
         {
-            if (KitManager.KitExists(TeamManager.DefaultKit, out Kit @default)) KitManager.GiveKit(player, @default);
+            if (KitManager.KitExists(TeamManager.DefaultKit, out KitOld @default)) KitManager.GiveKit(player, @default);
             else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
         }
         _gameStats.OnPlayerJoin(player);

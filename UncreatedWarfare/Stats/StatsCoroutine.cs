@@ -31,7 +31,7 @@ namespace Uncreated.Warfare.Stats
                         UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(Provider.clients[i]);
                         if (ucplayer == null) continue;
                         byte team = ucplayer.Player.channel.owner.GetTeamByte();
-                        if (KitManager.HasKit(ucplayer, out Kit kit))
+                        if (KitManager.HasKit(ucplayer, out KitOld kit))
                         {
                             StatsManager.ModifyStats(ucplayer.Steam64, s =>
                             {

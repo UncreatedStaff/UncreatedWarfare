@@ -56,7 +56,7 @@ public class BuildableComponent : MonoBehaviour
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EfobRadius.FULL, Foundation.GetServersideData().group.GetTeam());
-        if (fob == null && Buildable.Type != EBuildableType.RADIO && (builder.KitClass is not EClass.COMBAT_ENGINEER || Buildable.Type is not EBuildableType.FORTIFICATION))
+        if (fob == null && Buildable.Type != EBuildableType.RADIO && (builder.KitClass is not Class.CombatEngineer || Buildable.Type is not EBuildableType.FORTIFICATION))
         {
             builder.SendChat(T.BuildTickNotInRadius);
             return;
@@ -86,7 +86,7 @@ public class BuildableComponent : MonoBehaviour
                 }
                 break;
         }
-        float amount = builder.KitClass == EClass.COMBAT_ENGINEER ? 2f : 1f;
+        float amount = builder.KitClass == Class.CombatEngineer ? 2f : 1f;
 
         amount = Mathf.Max(builder.ShovelSpeedMultiplier, amount);
 
@@ -376,7 +376,7 @@ public class BuildableComponent : MonoBehaviour
                 return false;
             }
 
-            if (placer == null || (placer.KitClass != EClass.COMBAT_ENGINEER || !buildable.Foundation.ValidReference(out Guid foundGuid) || !KitManager.KitExists(placer.KitName, out Kit kit) || !kit.Items.Exists(i => i.Id == foundGuid)))
+            if (placer == null || (placer.KitClass != Class.CombatEngineer || !buildable.Foundation.ValidReference(out Guid foundGuid) || !KitManager.KitExists(placer.KitName, out KitOld kit) || !kit.Items.Exists(i => i.Item == foundGuid)))
             {
                 if (fob == null)
                 {

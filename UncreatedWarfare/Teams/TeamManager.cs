@@ -410,6 +410,7 @@ public static class TeamManager
             return _lobbySpawn;
         }
     }
+    [Obsolete]
     public static FactionInfo GetFaction(ulong team)
     {
         if (team == 1) return Team1Faction;
@@ -417,11 +418,34 @@ public static class TeamManager
         if (team == 3) return AdminFaction;
         throw new ArgumentOutOfRangeException(nameof(team));
     }
+    [Obsolete]
     public static FactionInfo? GetFactionSafe(ulong team)
     {
         if (team == 1) return Team1Faction;
         if (team == 2) return Team2Faction;
         if (team == 3) return AdminFaction;
+        return null;
+    }
+
+    public static FactionInfo? GetFactionInfo(PrimaryKey id)
+    {
+        int pk = id.Key;
+        for (int i = 0; i < _factions.Count; ++i)
+        {
+            if (_factions[i].PrimaryKey.Key == pk)
+                return _factions[i];
+        }
+
+        return null;
+    }
+    public static FactionInfo? GetFactionInfo(string id)
+    {
+        for (int i = 0; i < _factions.Count; ++i)
+        {
+            if (_factions[i].FactionId.Equals(id, StringComparison.OrdinalIgnoreCase))
+                return _factions[i];
+        }
+
         return null;
     }
     internal static void ResetLocations()
@@ -785,6 +809,108 @@ public static class TeamManager
         }
         return input;
     }
+
+    public static bool GetLegacyRedirect(Guid input, out RedirectType type)
+    {
+        type = default;
+        if (input == RADIO_REDIRECT)
+            type = RedirectType.Radio;
+        else if (input == RALLY_POINT_REDIRECT)
+            type = RedirectType.RallyPoint;
+        else if (input == BUILDING_SUPPLIES_REDIRECT)
+            type = RedirectType.BuildSupply;
+        else if (input == AMMO_SUPPLIES_REDIRECT)
+            type = RedirectType.AmmoSupply;
+        else if (input == ZONE_BLOCKER_REDIRECT)
+            type = RedirectType.ZoneBlocker;
+        else if (input == BACKPACK_REDIRECT)
+            type = RedirectType.Backpack;
+        else if (input == SHIRT_REDIRECT)
+            type = RedirectType.Shirt;
+        else if (input == PANTS_REDIRECT)
+            type = RedirectType.Pants;
+        else if (input == VEST_REDIRECT)
+            type = RedirectType.Vest;
+        else return false;
+
+        return true;
+    }
+    public static ItemAsset? GetRedirectInfo(RedirectType type, FactionInfo? kitFaction, FactionInfo requesterTeam, out byte[] state, out byte amount)
+    {
+        kitFaction ??= requesterTeam;
+        ItemAsset? rtn;
+        switch (type)
+        {
+            case RedirectType.Shirt:
+                kitFaction.DefaultShirt.ValidReference(out ItemShirtAsset sasset);
+                rtn = sasset;
+                break;
+            case RedirectType.Pants:
+                kitFaction.DefaultPants.ValidReference(out ItemPantsAsset passet);
+                rtn = passet;
+                break;
+            case RedirectType.Vest:
+                kitFaction.DefaultVest.ValidReference(out ItemVestAsset vasset);
+                rtn = vasset;
+                break;
+            case RedirectType.Backpack:
+                kitFaction.DefaultBackpack.ValidReference(out ItemBackpackAsset bkasset);
+                rtn = bkasset;
+                break;
+            case RedirectType.Glasses:
+                kitFaction.DefaultGlasses.ValidReference(out ItemGlassesAsset gasset);
+                rtn = gasset;
+                break;
+            case RedirectType.Mask:
+                kitFaction.DefaultMask.ValidReference(out ItemMaskAsset masset);
+                rtn = masset;
+                break;
+            case RedirectType.Hat:
+                kitFaction.DefaultHat.ValidReference(out ItemHatAsset hasset);
+                rtn = hasset;
+                break;
+            case RedirectType.BuildSupply:
+                requesterTeam.Build.ValidReference(out ItemAsset iasset);
+                rtn = iasset;
+                break;
+            case RedirectType.AmmoSupply:
+                requesterTeam.Ammo.ValidReference(out iasset);
+                rtn = iasset;
+                break;
+            case RedirectType.RallyPoint:
+                requesterTeam.RallyPoint.ValidReference(out ItemBarricadeAsset rasset);
+                rtn = rasset;
+                break;
+            case RedirectType.Radio:
+                requesterTeam.FOBRadio.ValidReference(out rasset);
+                rtn = rasset;
+                break;
+            case RedirectType.ZoneBlocker:
+                if (Team1Faction == requesterTeam)
+                    Gamemode.Config.BarricadeZoneBlockerTeam1.ValidReference(out rasset);
+                else if (Team2Faction == requesterTeam)
+                    Gamemode.Config.BarricadeZoneBlockerTeam2.ValidReference(out rasset);
+                else rasset = null!;
+                rtn = rasset;
+                break;
+            default:
+                L.LogWarning("Unknown redirect: " + type + ".");
+                rtn = null;
+                break;
+        }
+        if (rtn != null)
+        {
+            amount = rtn.amount;
+            state = rtn.getState(EItemOrigin.ADMIN);
+        }
+        else
+        {
+            state = Array.Empty<byte>();
+            amount = 1;
+        }
+
+        return rtn;
+    }
     internal static Guid GetClothingRedirectGuid(Guid input)
     {
         if (input == Guid.Empty) return input;
@@ -912,6 +1038,12 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     public JsonAssetReference<ItemPantsAsset>? DefaultPants;
     [JsonPropertyName("defaultVest")]
     public JsonAssetReference<ItemVestAsset>? DefaultVest;
+    [JsonPropertyName("defaultHat")]
+    public JsonAssetReference<ItemHatAsset>? DefaultHat;
+    [JsonPropertyName("defaultGlasses")]
+    public JsonAssetReference<ItemGlassesAsset>? DefaultGlasses;
+    [JsonPropertyName("defaultMask")]
+    public JsonAssetReference<ItemMaskAsset>? DefaultMask;
     [JsonIgnore]
     public PrimaryKey PrimaryKey { get; set; }
     [JsonPropertyName("factionId")]
@@ -1033,6 +1165,9 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     public const string COLUMN_ASSETS_DEFAULT_SHIRT = "DefaultShirt";
     public const string COLUMN_ASSETS_DEFAULT_PANTS = "DefaultPants";
     public const string COLUMN_ASSETS_DEFAULT_VEST = "DefaultVest";
+    public const string COLUMN_ASSETS_DEFAULT_GLASSES = "DefaultGlasses";
+    public const string COLUMN_ASSETS_DEFAULT_MASK = "DefaultMask";
+    public const string COLUMN_ASSETS_DEFAULT_HAT = "DefaultHat";
     private const string EMPTY_GUID = "00000000000000000000000000000000";
     public static readonly Schema[] SCHEMAS =
     {
@@ -1112,7 +1247,22 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             {
                 Default = EMPTY_GUID,
                 Nullable = true
-            }
+            },
+            new Schema.Column(COLUMN_ASSETS_DEFAULT_GLASSES, SqlTypes.GUID_STRING)
+            {
+                Default = EMPTY_GUID,
+                Nullable = true
+            },
+            new Schema.Column(COLUMN_ASSETS_DEFAULT_MASK, SqlTypes.GUID_STRING)
+            {
+                Default = EMPTY_GUID,
+                Nullable = true
+            },
+            new Schema.Column(COLUMN_ASSETS_DEFAULT_HAT, SqlTypes.GUID_STRING)
+            {
+                Default = EMPTY_GUID,
+                Nullable = true
+            },
         }, false, typeof(FactionInfo)),
         F.GetTranslationListSchema(TABLE_NAME_TRANSLATIONS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, FACTION_NAME_MAX_CHAR_LIMIT),
         F.GetTranslationListSchema(TABLE_SHORT_NAME_TRANSLATIONS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, FACTION_SHORT_NAME_MAX_CHAR_LIMIT),
@@ -1154,22 +1304,15 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         builder.Clear();
         builder.Append($"INSERT INTO `{TABLE_MAP_ASSETS}` (`{COLUMN_EXT_PK}`,`{COLUMN_ASSETS_SUPPLY_AMMO}`,`{COLUMN_ASSETS_SUPPLY_BUILD}`,`{COLUMN_ASSETS_RALLY_POINT}`," +
                        $"`{COLUMN_ASSETS_FOB_RADIO}`,`{COLUMN_ASSETS_DEFAULT_BACKPACK}`,`{COLUMN_ASSETS_DEFAULT_SHIRT}`," +
-                       $"`{COLUMN_ASSETS_DEFAULT_PANTS}`,`{COLUMN_ASSETS_DEFAULT_VEST}`) VALUES ");
-        objs = new object[TeamManager.DefaultFactions.Length * 9];
+                       $"`{COLUMN_ASSETS_DEFAULT_PANTS}`,`{COLUMN_ASSETS_DEFAULT_VEST}`,`{COLUMN_ASSETS_DEFAULT_GLASSES}`," +
+                       $"`{COLUMN_ASSETS_DEFAULT_MASK}`,`{COLUMN_ASSETS_DEFAULT_HAT}`) VALUES ");
+        const int length = 12;
+        objs = new object[TeamManager.DefaultFactions.Length * length];
         for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
         {
             FactionInfo def = TeamManager.DefaultFactions[i];
-            if (i != 0)
-                builder.Append(',');
-            builder.Append('(');
-            int st = i * 9;
-            for (int j = 0; j < 9; ++j)
-            {
-                if (j != 0)
-                    builder.Append(',');
-                builder.Append('@').Append(st + j);
-            }
-            builder.Append(')');
+            int st = i * length;
+            F.AppendPropertyList(builder, st, length);
             objs[st] = def.PrimaryKey.Key;
             if (def.Ammo is null) objs[st + 1] = DBNull.Value;
             else objs[st + 1] = def.Ammo.Guid.ToString("N");
@@ -1194,6 +1337,15 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
 
             if (def.DefaultVest is null) objs[st + 8] = DBNull.Value;
             else objs[st + 8] = def.DefaultVest.Guid.ToString("N");
+
+            if (def.DefaultGlasses is null) objs[st + 9] = DBNull.Value;
+            else objs[st + 9] = def.DefaultGlasses.Guid.ToString("N");
+
+            if (def.DefaultMask is null) objs[st + 10] = DBNull.Value;
+            else objs[st + 10] = def.DefaultMask.Guid.ToString("N");
+
+            if (def.DefaultHat is null) objs[st + 11] = DBNull.Value;
+            else objs[st + 11] = def.DefaultHat.Guid.ToString("N");
         }
 
         builder.Append(';');
@@ -1315,6 +1467,9 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         faction.DefaultShirt = def.DefaultShirt?.Clone() as JsonAssetReference<ItemShirtAsset>;
                         faction.DefaultPants = def.DefaultPants?.Clone() as JsonAssetReference<ItemPantsAsset>;
                         faction.DefaultVest = def.DefaultVest?.Clone() as JsonAssetReference<ItemVestAsset>;
+                        faction.DefaultGlasses = def.DefaultGlasses?.Clone() as JsonAssetReference<ItemGlassesAsset>;
+                        faction.DefaultMask = def.DefaultMask?.Clone() as JsonAssetReference<ItemMaskAsset>;
+                        faction.DefaultHat = def.DefaultHat?.Clone() as JsonAssetReference<ItemHatAsset>;
                         found = true;
                         break;
                     }
@@ -1364,7 +1519,8 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         await sql.QueryAsync(
             $"SELECT `{COLUMN_EXT_PK}`,`{COLUMN_ASSETS_SUPPLY_AMMO}`,`{COLUMN_ASSETS_SUPPLY_BUILD}`," +
             $"`{COLUMN_ASSETS_RALLY_POINT}`,`{COLUMN_ASSETS_FOB_RADIO}`,`{COLUMN_ASSETS_DEFAULT_BACKPACK}`," +
-            $"`{COLUMN_ASSETS_DEFAULT_SHIRT}`,`{COLUMN_ASSETS_DEFAULT_PANTS}`,`{COLUMN_ASSETS_DEFAULT_VEST}` FROM `{TABLE_MAP_ASSETS}`;", null,
+            $"`{COLUMN_ASSETS_DEFAULT_SHIRT}`,`{COLUMN_ASSETS_DEFAULT_PANTS}`,`{COLUMN_ASSETS_DEFAULT_VEST}`," +
+            $"`{COLUMN_ASSETS_DEFAULT_GLASSES}`,`{COLUMN_ASSETS_DEFAULT_MASK}`,`{COLUMN_ASSETS_DEFAULT_HAT}` FROM `{TABLE_MAP_ASSETS}`;", null,
             reader =>
             {
                 int pk = reader.GetInt32(0);
@@ -1420,6 +1576,24 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                             Guid? guid = reader.ReadGuidString(8);
                             if (guid.HasValue)
                                 faction.DefaultVest = new JsonAssetReference<ItemVestAsset>(guid.Value);
+                        }
+                        if (!reader.IsDBNull(9))
+                        {
+                            Guid? guid = reader.ReadGuidString(9);
+                            if (guid.HasValue)
+                                faction.DefaultGlasses = new JsonAssetReference<ItemGlassesAsset>(guid.Value);
+                        }
+                        if (!reader.IsDBNull(10))
+                        {
+                            Guid? guid = reader.ReadGuidString(10);
+                            if (guid.HasValue)
+                                faction.DefaultMask = new JsonAssetReference<ItemMaskAsset>(guid.Value);
+                        }
+                        if (!reader.IsDBNull(11))
+                        {
+                            Guid? guid = reader.ReadGuidString(11);
+                            if (guid.HasValue)
+                                faction.DefaultHat = new JsonAssetReference<ItemHatAsset>(guid.Value);
                         }
                         break;
                     }
@@ -1496,7 +1670,10 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             DefaultBackpack = DefaultBackpack?.Clone() as JsonAssetReference<ItemBackpackAsset>,
             DefaultShirt = DefaultShirt?.Clone() as JsonAssetReference<ItemShirtAsset>,
             DefaultPants = DefaultPants?.Clone() as JsonAssetReference<ItemPantsAsset>,
-            DefaultVest = DefaultVest?.Clone() as JsonAssetReference<ItemVestAsset>
+            DefaultVest = DefaultVest?.Clone() as JsonAssetReference<ItemVestAsset>,
+            DefaultGlasses = DefaultGlasses?.Clone() as JsonAssetReference<ItemGlassesAsset>,
+            DefaultMask = DefaultMask?.Clone() as JsonAssetReference<ItemMaskAsset>,
+            DefaultHat = DefaultHat?.Clone() as JsonAssetReference<ItemHatAsset>
         };
     }
 }

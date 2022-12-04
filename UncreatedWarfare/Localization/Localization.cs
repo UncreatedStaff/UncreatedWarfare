@@ -265,7 +265,7 @@ public static class Localization
             {
                 return TranslateLoadoutSign(key2, language, ucplayer);
             }
-            else if (KitManager.KitExists(key2, out Kit kit))
+            else if (KitManager.KitExists(key2, out KitOld kit))
             {
                 return TranslateKitSign(language, kit, ucplayer);
             }
@@ -289,13 +289,13 @@ public static class Localization
         if (ucplayer != null && key.Length > 8 && ushort.TryParse(key.Substring(8), System.Globalization.NumberStyles.Any, Data.Locale, out ushort loadoutid))
         {
             ulong team = ucplayer.GetTeam();
-            List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, ucplayer));
+            List<KitOld> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, ucplayer));
             loadouts.Sort((k1, k2) => k1.Name.CompareTo(k2.Name));
             if (loadouts.Count > 0)
             {
                 if (loadoutid > 0 && loadoutid <= loadouts.Count)
                 {
-                    Kit kit = loadouts[loadoutid - 1];
+                    KitOld kit = loadouts[loadoutid - 1];
 
                     string name;
                     bool keepline = false;
@@ -370,7 +370,7 @@ public static class Localization
         }
         return key;
     }
-    public static string TranslateKitSign(string language, Kit kit, UCPlayer ucplayer)
+    public static string TranslateKitSign(string language, KitOld kit, UCPlayer ucplayer)
     {
         bool keepline = false;
         ulong team = ucplayer.GetTeam();
@@ -399,13 +399,13 @@ public static class Localization
         {
             name = kit.Name;
         }
-        name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex(kit.SquadLevel == ESquadLevel.COMMANDER ? "kit_public_commander_header" : "kit_public_header"), true) + "</b>";
+        name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex(kit.SquadLevel == SquadLevel.Commander ? "kit_public_commander_header" : "kit_public_header"), true) + "</b>";
         string weapons = kit.Weapons ?? string.Empty;
         if (weapons.Length > 0)
             weapons = "<b>" + weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true) + "</b>";
         string cost = string.Empty;
         string playercount;
-        if (kit.SquadLevel == ESquadLevel.COMMANDER && SquadManager.Loaded)
+        if (kit.SquadLevel == SquadLevel.Commander && SquadManager.Loaded)
         {
             UCPlayer? c = SquadManager.Singleton.Commanders.GetCommander(team);
             if (c != null)

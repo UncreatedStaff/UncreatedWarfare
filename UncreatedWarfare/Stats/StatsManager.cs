@@ -498,7 +498,7 @@ public static class StatsManager
     }
     private static void OnPlayerDied(PlayerDied e)
     {
-        Kit kit;
+        KitOld kit;
         if (e.Killer is not null)
         {
             if (e.WasTeamkill)
@@ -640,7 +640,7 @@ public static class StatsManager
             for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
             {
                 ModifyStats(flag.PlayersOnFlagTeam1[p].Steam64, s => s.FlagsCaptured++, false);
-                if (KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out Kit kit) && !kits.Contains(kit.Name))
+                if (KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out KitOld kit) && !kits.Contains(kit.Name))
                 {
                     ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
                     kits.Add(kit.Name);
@@ -658,7 +658,7 @@ public static class StatsManager
             for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
             {
                 ModifyStats(flag.PlayersOnFlagTeam2[p].Steam64, s => s.FlagsCaptured++, false);
-                if (KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out Kit kit) && !kits.Contains(kit.Name))
+                if (KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out KitOld kit) && !kits.Contains(kit.Name))
                 {
                     ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
                     kits.Add(kit.Name);
@@ -715,9 +715,9 @@ public static class StatsManager
         [NetCall(ENetCall.FROM_SERVER, 2002)]
         internal static void ReceiveRequestKitData(MessageContext context, string kitId)
         {
-            EClass @class = EClass.NONE;
+            Class @class = Class.None;
             string sname = kitId;
-            if (KitManager.KitExists(kitId, out Kit kit2))
+            if (KitManager.KitExists(kitId, out KitOld kit2))
             {
                 @class = kit2.Class;
                 if (!kit2.SignTexts.TryGetValue(L.DEFAULT, out sname))
@@ -747,7 +747,7 @@ public static class StatsManager
             {
                 string name = Assets.find(EAssetType.ITEM, weaponid) is ItemAsset asset ? asset.itemName : weaponid.ToString();
                 string kitname;
-                if (KitManager.KitExists(kitId, out Kit kit))
+                if (KitManager.KitExists(kitId, out KitOld kit))
                 {
                     if (!kit.SignTexts.TryGetValue(L.DEFAULT, out kitname))
                     {
@@ -789,7 +789,7 @@ public static class StatsManager
                 {
                     weapons.Add(w);
                     string kitname = w.KitID;
-                    if (KitManager.KitExists(w.KitID, out Kit kit))
+                    if (KitManager.KitExists(w.KitID, out KitOld kit))
                         if (!kit.SignTexts.TryGetValue(L.DEFAULT, out kitname))
                             if (kit.SignTexts.Count > 0)
                                 kitname = kit.SignTexts.Values.ElementAt(0);
@@ -839,7 +839,7 @@ public static class StatsManager
             byte[] classes = new byte[Kits.Count];
             for (int i = 0; i < kitnames.Length; i++)
             {
-                if (KitManager.KitExists(Kits[i].KitID, out Kit kit))
+                if (KitManager.KitExists(Kits[i].KitID, out KitOld kit))
                 {
                     classes[i] = (byte)kit.Class;
                     kitnames[i] = Kits[i].KitID;

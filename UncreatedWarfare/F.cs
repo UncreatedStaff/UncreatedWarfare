@@ -1509,4 +1509,8 @@ public static class F
         }
         builder.Append(')');
     }
+    public static bool NullOrEmpty<T>(this ICollection<T>? collection)
+    {
+        return collection == null || collection.Count == 0;
+    }
 }

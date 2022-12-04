@@ -136,7 +136,7 @@ public class VehicleComponent : MonoBehaviour
         if (IsInVehiclebay)
             EvaluateUsage(e.Player.Player.channel.owner);
 
-        if (e.Player.KitClass == EClass.SQUADLEADER &&
+        if (e.Player.KitClass == Class.Squadleader &&
             (Data?.Item != null && VehicleData.IsLogistics(Data.Item.Type)) &&
             !F.IsInMain(e.Player.Position) &&
             FOB.GetNearestFOB(e.Player.Position, EfobRadius.FULL_WITH_BUNKER_CHECK, e.Player.GetTeam()) == null
@@ -155,7 +155,7 @@ public class VehicleComponent : MonoBehaviour
         if (TransportTable.TryGetValue(e.Player.Steam64, out Vector3 original))
         {
             float distance = (e.Player.Position - original).magnitude;
-            if (distance >= 200 && e.Player.KitClass is not EClass.CREWMAN and not EClass.PILOT)
+            if (distance >= 200 && e.Player.KitClass is not Class.Crewman and not Class.Pilot)
             {
                 if (!(_timeRewardedTable.TryGetValue(e.Player.Steam64, out DateTime time) && (DateTime.UtcNow - time).TotalSeconds < 60))
                 {
@@ -362,17 +362,17 @@ public class VehicleComponent : MonoBehaviour
             yield break;
         if (Data.Item.Metadata?.TrunkItems != null)
         {
-            List<KitItem> trunk = Data.Item.Metadata.TrunkItems;
+            List<PageItem> trunk = Data.Item.Metadata.TrunkItems;
             for (int i = 0; i < trunk.Count; i++)
             {
                 ItemAsset? asset;
-                if (build is not null && trunk[i].Id == build.GUID) asset = build;
-                else if (ammo is not null && trunk[i].Id == ammo.GUID) asset = ammo;
-                else asset = Assets.find(trunk[i].Id) as ItemAsset;
+                if (build is not null && trunk[i].Item == build.GUID) asset = build;
+                else if (ammo is not null && trunk[i].Item == ammo.GUID) asset = ammo;
+                else asset = Assets.find(trunk[i].Item) as ItemAsset;
 
                 if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].X, trunk[i].Y, asset.size_x, asset.size_y, trunk[i].Rotation))
                 {
-                    Item item = new Item(asset.id, trunk[i].Amount, 100, Util.CloneBytes(trunk[i].Metadata));
+                    Item item = new Item(asset.id, trunk[i].Amount, 100, Util.CloneBytes(trunk[i].State));
                     Vehicle.trunkItems.addItem(trunk[i].X, trunk[i].Y, trunk[i].Rotation, item);
                     loaderCount++;
 

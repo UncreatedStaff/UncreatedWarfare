@@ -75,13 +75,13 @@ public class UAV : MonoBehaviour, IBuff
             requester.SendChat(T.GamemodeError);
             return;
         }
-        if (!KitManager.HasKit(requester, out Kit kit))
+        if (!KitManager.HasKit(requester, out KitOld kit))
         {
             requester.SendChat(T.RequestUAVNoKit);
             return;
         }
 
-        if (kit.Class != EClass.SQUADLEADER || !requester.IsSquadLeader())
+        if (kit.Class != Class.Squadleader || !requester.IsSquadLeader())
             requester.SendChat(T.RequestUAVNotSquadleader);
         UCPlayer? activeCommander = SquadManager.Singleton.Commanders.GetCommander(team);
         if (activeCommander != null)
@@ -135,7 +135,7 @@ public class UAV : MonoBehaviour, IBuff
                 requester.SendChat(T.RequestUAVCommanderChangedTeams, activeCommander);
                 goto cancel;
             }
-            if (!requester.IsSquadLeader() || requester.KitClass != EClass.SQUADLEADER)
+            if (!requester.IsSquadLeader() || requester.KitClass != Class.Squadleader)
             {
                 activeCommander.SendChat(T.RequestUAVRequesterNotSquadLeader, requester);
                 goto cancel;

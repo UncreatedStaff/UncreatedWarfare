@@ -256,7 +256,7 @@ public class TraitData : ITranslationArgument
     public bool ClassListIsBlacklist;
 
     [JsonPropertyName("class_list")]
-    public EClass[] ClassList;
+    public Class[] ClassList;
 
     [JsonPropertyName("lasts_until_death")]
     public bool LastsUntilDeath;
@@ -299,7 +299,7 @@ public class TraitData : ITranslationArgument
     {
 
     }
-    public bool CanClassUse(EClass @class)
+    public bool CanClassUse(Class @class)
     {
         if (ClassList is null) return true;
         for (int i = 0; i < ClassList.Length; ++i)

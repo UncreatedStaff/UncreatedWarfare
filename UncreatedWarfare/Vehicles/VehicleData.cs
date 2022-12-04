@@ -36,9 +36,9 @@ public class VehicleData : ITranslationArgument, IListItem
     [CommandSettable]
     public float Cooldown;
     [CommandSettable]
-    public EBranch Branch;
+    public Branch Branch;
     [CommandSettable]
-    public EClass RequiredClass;
+    public Class RequiredClass;
     [CommandSettable]
     public int RearmCost;
     [CommandSettable]
@@ -95,14 +95,14 @@ public class VehicleData : ITranslationArgument, IListItem
         {
             Name = va.name;
             if (va.engine == EEngine.PLANE || va.engine == EEngine.HELICOPTER || va.engine == EEngine.BLIMP)
-                Branch = EBranch.AIRFORCE;
+                Branch = Branch.Airforce;
             else if (va.engine == EEngine.BOAT)
-                Branch = (EBranch)5; // navy
+                Branch = (Branch)5; // navy
             else
-                Branch = EBranch.DEFAULT;
+                Branch = Branch.Default;
         }
-        else Branch = EBranch.DEFAULT;
-        RequiredClass = EClass.NONE;
+        else Branch = Branch.Default;
+        RequiredClass = Class.None;
         UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
         RearmCost = 3;
         Type = EVehicleType.NONE;
@@ -123,8 +123,8 @@ public class VehicleData : ITranslationArgument, IListItem
         TicketCost = 0;
         CreditCost = 0;
         Cooldown = 0;
-        Branch = EBranch.DEFAULT;
-        RequiredClass = EClass.NONE;
+        Branch = Branch.Default;
+        RequiredClass = Class.None;
         RearmCost = 3;
         Type = EVehicleType.NONE;
         RequiresSL = false;
@@ -164,17 +164,17 @@ public class VehicleData : ITranslationArgument, IListItem
     public void SaveMetaData(InteractableVehicle vehicle)
     {
         List<VBarricade>? barricades = null;
-        List<KitItem>? trunk = null;
+        List<PageItem>? trunk = null;
 
         if (vehicle.trunkItems.items.Count > 0)
         {
-            trunk = new List<KitItem>();
+            trunk = new List<PageItem>();
 
             foreach (ItemJar jar in vehicle.trunkItems.items)
             {
                 if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
                 {
-                    trunk.Add(new KitItem(
+                    trunk.Add(new PageItem(
                         asset.GUID,
                         jar.x,
                         jar.y,
@@ -234,9 +234,9 @@ public class VehicleData : ITranslationArgument, IListItem
 public class MetaSave
 {
     public List<VBarricade>? Barricades;
-    public List<KitItem>? TrunkItems;
+    public List<PageItem>? TrunkItems;
     public MetaSave() { }
-    public MetaSave(List<VBarricade>? barricades, List<KitItem>? trunkItems)
+    public MetaSave(List<VBarricade>? barricades, List<PageItem>? trunkItems)
     {
         Barricades = barricades;
         TrunkItems = trunkItems;

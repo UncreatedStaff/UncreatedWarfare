@@ -18,7 +18,7 @@ public class GuidedByGod : Buff
         CreditCost = 500,
         RequireSquadLeader = false,
         RequireSquad = false,
-        ClassList = new EClass[] { EClass.PILOT },
+        ClassList = new Class[] { Class.Pilot },
         ClassListIsBlacklist = true,
         Icon = "£",
         Cooldown = 1200,

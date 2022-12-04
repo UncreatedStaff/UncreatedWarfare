@@ -59,7 +59,7 @@ public static class TraitSigns
             }
         }
 
-        if (player.Kit != null && player.KitClass > EClass.UNARMED)
+        if (player.Kit != null && player.KitClass > Class.Unarmed)
         {
             if (!trait.CanClassUse(player.KitClass))
             {

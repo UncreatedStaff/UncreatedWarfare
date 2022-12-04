@@ -144,7 +144,7 @@ public static class Signs
     private static void BroadcastClientKitSign(string kitname, InteractableSign sign, byte x, byte y)
     {
         bool ld = kitname.StartsWith(LOADOUT_PREFIX, StringComparison.OrdinalIgnoreCase);
-        Kit kit = null!;
+        KitOld kit = null!;
         if (!KitManager.Loaded || (!ld && !KitManager.KitExists(kitname, out kit)))
         {
             BroadcastClientSign(kitname, sign, x, y);
@@ -163,7 +163,7 @@ public static class Signs
     private static string GetClientTextKitSign(UCPlayer player, string kitname)
     {
         bool ld = kitname.StartsWith(LOADOUT_PREFIX, StringComparison.OrdinalIgnoreCase);
-        Kit kit = null!;
+        KitOld kit = null!;
         if (!KitManager.Loaded || (!ld && !KitManager.KitExists(kitname, out kit)))
         {
             return GetClientTextSign(player, kitname);

@@ -78,13 +78,13 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         Squads.Clear();
     }
-    private static void OnKitChanged(UCPlayer player, Kit kit, string oldkit)
+    private static void OnKitChanged(UCPlayer player, KitOld kit, string oldkit)
     {
         _singleton.IsLoaded();
         ReplicateKitChange(player);
         ulong team = player.GetTeam();
         UCPlayer? cmd = _singleton.Commanders.GetCommander(team);
-        if (cmd != null && cmd.Steam64 == player.Steam64 && kit.SquadLevel != ESquadLevel.COMMANDER)
+        if (cmd != null && cmd.Steam64 == player.Steam64 && kit.SquadLevel != SquadLevel.Commander)
         {
             if (team == 1ul)
                 _singleton.Commanders.ActiveCommanderTeam1 = null;
@@ -542,7 +542,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             if (squad.Leader != null)
             {
                 squad.Leader.SendChat(T.SquadDisbanded, squad);
-                if (squad.Leader.KitClass == EClass.SQUADLEADER)
+                if (squad.Leader.KitClass == Class.Squadleader)
                     KitManager.TryGiveUnarmedKit(squad.Leader);
             }
 
@@ -665,7 +665,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (squad.Leader.KitClass == EClass.SQUADLEADER)
+        if (squad.Leader.KitClass == Class.Squadleader)
             KitManager.TryGiveUnarmedKit(squad.Leader);
 
         Traits.TraitManager.OnPlayerPromotedSquadleader(newLeader, squad);
@@ -730,7 +730,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
 {
     public string Name;
     public ulong Team;
-    public EBranch Branch;
+    public Branch Branch;
     public bool IsLocked;
     public UCPlayer Leader;
     public List<UCPlayer> Members;
@@ -749,7 +749,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
         }
     }
 
-    public Squad(string name, UCPlayer leader, ulong team, EBranch branch)
+    public Squad(string name, UCPlayer leader, ulong team, Branch branch)
     {
         Name = name;
         Team = team;

@@ -7,9 +7,9 @@ namespace Uncreated.Warfare.Point;
 [Obsolete("Unused", true)]
 public class RankDataOLD
 {
-    public static readonly RankDataOLD Nil = new RankDataOLD(0, -1, EBranch.DEFAULT, 0);
+    public static readonly RankDataOLD Nil = new RankDataOLD(0, -1, Kits.Branch.Default, 0);
     public readonly ulong Steam64;
-    public readonly EBranch Branch;
+    public readonly Branch Branch;
     public int TotalXP;
     public int Level;
     public int RankTier;
@@ -19,7 +19,7 @@ public class RankDataOLD
     public int RequiredXP;
     public string Name;
     public string Abbreviation;
-    public RankDataOLD(ulong steamID, int xp, EBranch branch, ulong officerTeam)
+    public RankDataOLD(ulong steamID, int xp, Branch branch, ulong officerTeam)
     {
         Steam64 = steamID;
         Branch = branch;

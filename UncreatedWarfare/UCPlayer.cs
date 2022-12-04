@@ -70,11 +70,11 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public string NickName;
     public string KitName;
     public string? MuteReason;
-    public EClass KitClass;
-    public EBranch Branch;
+    public Class KitClass;
+    public Branch Branch;
     public EMuteType MuteType;
     public DateTime TimeUnmuted;
-    public Kit? Kit;
+    public KitOld? Kit;
     public Squad? Squad;
     public TeamSelectorData? TeamSelectorData;
     public Coroutine? StorageCoroutine;
@@ -96,15 +96,15 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public UCPlayer(CSteamID steamID, string kitName, Player player, string characterName, string nickName, bool donator)
     {
         Steam64 = steamID.m_SteamID;
-        if (KitManager.KitExists(kitName, out Kit kit))
+        if (KitManager.KitExists(kitName, out KitOld kit))
         {
             KitClass = kit.Class;
             Branch = kit.Branch;
         }
         else
         {
-            KitClass = EClass.NONE;
-            Branch = EBranch.DEFAULT;
+            KitClass = Class.None;
+            Branch = Branch.Default;
         }
         KitName = kitName;
         KitManager.KitExists(kitName, out Kit);
@@ -498,7 +498,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     public void DeactivateMarker(SpottedComponent marker) => CurrentMarkers.Remove(marker);
 
-    public void ChangeKit(Kit kit)
+    public void ChangeKit(KitOld kit)
     {
         KitName = kit.Name;
         Kit = kit;
@@ -594,7 +594,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                 new object[] { Steam64 },
                 reader =>
                 {
-                    if (singleton.Kits.TryGetValue(reader.GetInt32(0), out Kit kit))
+                    if (singleton.Kits.TryGetValue(reader.GetInt32(0), out KitOld kit))
                         kits.Add(kit.Name);
                 }, token).ConfigureAwait(false);
             AccessibleKits = kits;
