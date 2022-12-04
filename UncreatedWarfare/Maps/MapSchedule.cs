@@ -27,10 +27,9 @@ internal class MapScheduler : MonoBehaviour
     public static int Current => Instance is null ? -1 : Instance._map;
     // active map
     private int _map = -1;
-    private const int STATIC_MAP = 4;
 
     /* MAP DATA */
-    private static readonly List<MapData> mapRotation = new List<MapData>()
+    private static readonly List<MapData> MapRotation = new List<MapData>
     {
         new MapData("Fool's Road",      new ulong[] { 2407566267, 2407740920 }, removeChildren: new ulong[] { 2407566267 }),
         new MapData("Goose Bay",        new ulong[] { 2301006771 }),
@@ -40,14 +39,17 @@ internal class MapScheduler : MonoBehaviour
     };
 
     /* MAP NAMES */
-    public static readonly string FoolsRoad = mapRotation[0].Name;
-    public static readonly string GooseBay = mapRotation[1].Name;
-    public static readonly string Nuijamaa = mapRotation[2].Name;
-    public static readonly string GulfOfAqaba = mapRotation[3].Name;
-    public static readonly string S3Map = mapRotation[4].Name;
+    public static readonly string FoolsRoad     = MapRotation[0].Name;
+    public static readonly string GooseBay      = MapRotation[1].Name;
+    public static readonly string Nuijamaa      = MapRotation[2].Name;
+    public static readonly string GulfOfAqaba   = MapRotation[3].Name;
+    public static readonly string S3Map         = MapRotation[4].Name;
 
-    private static List<ulong> originalMods;
-    private static List<ulong> originalIgnoreChildren;
+    // Map to load if rotation is undefined
+    private static readonly string DefaultMap = GulfOfAqaba;
+
+    private static List<ulong> _originalMods;
+    private static List<ulong> _originalIgnoreChildren;
 
     void Awake()
     {
@@ -55,16 +57,16 @@ internal class MapScheduler : MonoBehaviour
             Destroy(Instance);
         Instance = this;
         WorkshopDownloadConfig config = WorkshopDownloadConfig.getOrLoad();
-        originalMods = config.File_IDs;
-        originalIgnoreChildren = config.Ignore_Children_File_IDs;
-        LoadMap(STATIC_MAP);
+        _originalMods = config.File_IDs;
+        _originalIgnoreChildren = config.Ignore_Children_File_IDs;
+        TryLoadMap(DefaultMap);
     }
 
     public bool TryLoadMap(string name)
     {
-        for (int i = 0; i < mapRotation.Count; ++i)
+        for (int i = 0; i < MapRotation.Count; ++i)
         {
-            MapData d = mapRotation[i];
+            MapData d = MapRotation[i];
             if (d.Name.Equals(name, StringComparison.Ordinal))
             {
                 LoadMap(i);
@@ -75,7 +77,7 @@ internal class MapScheduler : MonoBehaviour
     }
     private void LoadMap(int index)
     {
-        MapData d = mapRotation[index];
+        MapData d = MapRotation[index];
         if (Level.info != null)
         {
             // trigger restart or something idk
@@ -86,8 +88,8 @@ internal class MapScheduler : MonoBehaviour
             L.Log("Selected " + d.Name + " to load.", ConsoleColor.Blue);
             Provider.map = d.Name;
             WorkshopDownloadConfig config = WorkshopDownloadConfig.getOrLoad();
-            config.File_IDs = originalMods.ToList();
-            config.Ignore_Children_File_IDs = originalIgnoreChildren.ToList();
+            config.File_IDs = _originalMods.ToList();
+            config.Ignore_Children_File_IDs = _originalIgnoreChildren.ToList();
             for (int i = 0; i < d.AddMods.Length; ++i)
             {
                 ulong mod = d.AddMods[i];

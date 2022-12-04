@@ -67,12 +67,24 @@ public class UCWarfare : MonoBehaviour
         I = this;
     }
     [UsedImplicitly]
-    private void Start() => _earlyLoadTask = Util.TryWrap(EarlyLoad(), "Early load");
+    private void Start() => _earlyLoadTask = Task.Run( async () =>
+    {
+        try
+        {
+            await ToUpdate();
+            await EarlyLoad().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logging.LogError("Error in early load!");
+            Logging.LogException(ex);
+            Provider.shutdown();
+        }
+    });
 
     private Task? _earlyLoadTask;
     private async Task EarlyLoad()
     {
-        await ToUpdate();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -107,6 +119,7 @@ public class UCWarfare : MonoBehaviour
 
         new PermissionSaver();
         await Data.LoadSQL().ConfigureAwait(false);
+        await ItemIconProvider.DownloadConfig().ConfigureAwait(false);
         await TeamManager.ReloadFactions().ThenToUpdate();
 
         /* LOAD LOCALIZATION ASSETS */

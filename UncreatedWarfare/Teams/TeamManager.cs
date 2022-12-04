@@ -79,14 +79,46 @@ public static class TeamManager
             FOBRadio = "c7754ac78083421da73006b12a56811a",
             RallyPoint = "c03352d9e6bb4e2993917924b604ee76"
         },
-        new FactionInfo("germany", "Germany", "DE", "Germany", "ffcc00", "deunarmed")
+        new FactionInfo("germany", "Germany", "DE", "Germany", "ffcc00", "deunarmed", @"https://i.imgur.com/lgrkCdY.png")
         {
             PrimaryKey = 4,
         },
-        new FactionInfo("china", "China", "CN", "China", "ef1620", "cnunarmed")
+        new FactionInfo("china", "China", "CN", "China", "ee1c25", "cnunarmed", @"https://i.imgur.com/Yns89Yk.png")
         {
             PrimaryKey = 5,
-        }
+        },
+        new FactionInfo("usmc", "US Marine Corps", "USMC", "U.S.M.C.", "004481", null, @"https://i.imgur.com/MO9nPmf.png")
+        {
+            PrimaryKey = 6,
+        },
+        new FactionInfo("sov", "Soviet", "SOV", "Soviet", "cc0000", null, @"https://i.imgur.com/vk8gBBm.png")
+        {
+            PrimaryKey = 7,
+        },
+        new FactionInfo("pl", "Poland", "PL", "Poland", "dc143c", null, @"https://i.imgur.com/fu3nCS3.png")
+        {
+            PrimaryKey = 8,
+        },
+        new FactionInfo("mi", "Militia", "MIL", "Militia", "526257", null)
+        {
+            PrimaryKey = 9,
+        },
+        new FactionInfo("idf", "Israel Defense Forces", "IDF", "IDF", "005eb8", null, @"https://i.imgur.com/Wzdspd3.png")
+        {
+            PrimaryKey = 10,
+        },
+        new FactionInfo("fr", "France", "FR", "France", "002654", null, @"https://i.imgur.com/TYY0kwp.png")
+        {
+            PrimaryKey = 11,
+        },
+        new FactionInfo("caf", "Canadian Armed Forces", "CAF", "Canada", "d80621", null, @"https://i.imgur.com/zs81UMe.png")
+        {
+            PrimaryKey = 12,
+        },
+        new FactionInfo("africa", "Africa", "AF", "Africa", "fabc0c", null, @"https://i.imgur.com/rcxb36o.png")
+        {
+            PrimaryKey = 12,
+        },
     };
     public static ushort Team1Tickets;
     public static ushort Team2Tickets;
@@ -714,62 +746,6 @@ public static class TeamManager
     }
     internal static void SetupConfig()
     {
-        /*
-        (_factions ??= new List<FactionInfo>(16)).Clear();
-
-        DirectoryInfo dinfo = new DirectoryInfo(Data.Paths.FactionsStorage);
-        if (!dinfo.Exists)
-        {
-            dinfo.Create();
-            for (int i = 0; i < DefaultFactions.Length; ++i)
-            {
-                FactionInfo info = DefaultFactions[i];
-                string path = Path.Combine(Data.Paths.FactionsStorage, info.FactionId + ".json");
-                try
-                {
-                    using (FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
-                    {
-                        JsonSerializer.Serialize(str, info, JsonEx.serializerSettings);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    L.LogError("Error writing default faction " + info.FactionId + ":");
-                    L.LogError(ex);
-                }
-            }
-
-            _factions.AddRange(DefaultFactions);
-            goto tc;
-        }
-        foreach (FileInfo file in dinfo.EnumerateFiles("*.json", SearchOption.TopDirectoryOnly))
-        {
-            string faction = Path.GetFileNameWithoutExtension(file.Name);
-
-            for (int i = 0; i < _factions.Count; ++i)
-                if (_factions[i].FactionId.Equals(faction, StringComparison.Ordinal))
-                    goto cont;
-
-            try
-            {
-                using (FileStream str = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
-                {
-                    FactionInfo? info = JsonSerializer.Deserialize<FactionInfo>(str, JsonEx.serializerSettings);
-                    if (info != null)
-                    {
-                        _factions.Add(info);
-                        L.Log("Registered faction: " + info.Name, ConsoleColor.Magenta);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                L.LogError("Error reading faction " + faction + ":");
-                L.LogError(ex);
-            }
-            cont:;
-        }
-        tc:*/
         if (_data == null)
             _data = new TeamConfig();
         else
@@ -804,7 +780,7 @@ public static class TeamManager
         {
             if (team == 1)
                 Gamemode.Config.BarricadeZoneBlockerTeam1.ValidReference(out input);
-            else if (team == 2)
+            else
                 Gamemode.Config.BarricadeZoneBlockerTeam2.ValidReference(out input);
         }
         return input;
@@ -917,7 +893,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     [JsonPropertyName("color")]
     public string HexColor;
     [JsonPropertyName("unarmed")]
-    public string UnarmedKit;
+    public string? UnarmedKit;
     [JsonPropertyName("flagImg")]
     public string FlagImageURL;
     [JsonPropertyName("ammoSupplies")]
@@ -951,7 +927,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     }
 
     public FactionInfo() { }
-    public FactionInfo(string factionId, string name, string abbreviation, string shortName, string hexColor, string unarmedKit, string flagImage = UNKNOWN_TEAM_IMG_URL)
+    public FactionInfo(string factionId, string name, string abbreviation, string shortName, string hexColor, string? unarmedKit, string flagImage = UNKNOWN_TEAM_IMG_URL)
     {
         FactionId = factionId;
         Name = name;
@@ -1078,7 +1054,10 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             {
                 Nullable = true
             },
-            new Schema.Column(COLUMN_UNARMED_KIT, "varchar(" + KitEx.KIT_NAME_MAX_CHAR_LIMIT.ToString(CultureInfo.InvariantCulture) + ")"),
+            new Schema.Column(COLUMN_UNARMED_KIT, "varchar(" + KitEx.KIT_NAME_MAX_CHAR_LIMIT.ToString(CultureInfo.InvariantCulture) + ")")
+            {
+                Nullable = true
+            },
             new Schema.Column(COLUMN_FLAG_IMAGE_URL, "varchar(" + FACTION_IMAGE_LINK_MAX_CHAR_LIMIT.ToString(CultureInfo.InvariantCulture) + ")")
             {
                 Nullable = true
@@ -1147,7 +1126,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         object[] objs = new object[TeamManager.DefaultFactions.Length * 8];
         for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
         {
-            FactionInfo def = TeamManager.DefaultFactions[i];
+            FactionInfo def = TeamManager.DefaultFactions[i];   
             def.PrimaryKey = i + 1;
             if (i != 0)
                 builder.Append(',');
@@ -1164,10 +1143,10 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             objs[st + 1] = def.FactionId;
             objs[st + 2] = def.Name;
             objs[st + 3] = def.ShortName;
-            objs[st + 4] = def.Abbreviation;
-            objs[st + 5] = def.HexColor;
-            objs[st + 6] = def.UnarmedKit;
-            objs[st + 7] = def.FlagImageURL;
+            objs[st + 4] = (object?)def.Abbreviation ?? DBNull.Value;
+            objs[st + 5] = (object?)def.HexColor ?? DBNull.Value;
+            objs[st + 6] = (object?)def.UnarmedKit ?? DBNull.Value;
+            objs[st + 7] = (object?)def.FlagImageURL ?? DBNull.Value;
         }
 
         builder.Append(';');
@@ -1362,9 +1341,9 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         faction.FactionId = reader.GetString(1);
                         faction.Name = name;
                         faction.ShortName = reader.IsDBNull(3) ? name : reader.GetString(3);
-                        faction.Abbreviation = reader.GetString(4);
+                        faction.Abbreviation = reader.IsDBNull(4) ? faction.ShortName.ToUpperInvariant() : reader.GetString(4);
                         faction.HexColor = reader.IsDBNull(5) ? UCWarfare.GetColorHex("default") : reader.GetString(5);
-                        faction.UnarmedKit = reader.GetString(6);
+                        faction.UnarmedKit = reader.IsDBNull(6) ? null : reader.GetString(6);
                         faction.FlagImageURL = reader.IsDBNull(7) ? UNKNOWN_TEAM_IMG_URL : reader.GetString(7);
                         return;
                     }
@@ -1376,7 +1355,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         reader.GetString(4),
                         reader.IsDBNull(3) ? name : reader.GetString(3),
                         reader.IsDBNull(5) ? UCWarfare.GetColorHex("default") : reader.GetString(5),
-                        reader.GetString(6),
+                        reader.IsDBNull(6) ? null : reader.GetString(6),
                         reader.IsDBNull(7) ? UNKNOWN_TEAM_IMG_URL : reader.GetString(7))
                     {
                         PrimaryKey = pk
@@ -1557,8 +1536,6 @@ public class TeamConfigData : JSONConfigData
     public float AllowedDifferencePercent;
     [JsonPropertyName("balanceTeams")]
     public bool BalanceTeams;
-
-    public TeamConfigData() { }
     public override void SetDefaults()
     {
         // don't even think about leaking these

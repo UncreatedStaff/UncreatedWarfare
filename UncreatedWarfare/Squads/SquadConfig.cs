@@ -64,7 +64,7 @@ public class SquadConfigData : JSONConfigData
             new ClassConfig(EClass.COMBAT_ENGINEER,    'ª', "b677dde97254483380a31c7a78152501", "c5771f8815584f56ae3791aa839f6201"),
             new ClassConfig(EClass.CREWMAN,            '§', "36d38dbde16c4e76ba4322430696cb7d", "7626dcd783434a0b850527ca7c9c6cc2"),
             new ClassConfig(EClass.PILOT,              '°', "c29f7ce8667b4daa976c81531379007f", "a37bafeb17264b1f9ebae34dd06537a1"),
-            new ClassConfig(EClass.SPEC_OPS,           'À', "a1ebe4722dc24da5a7eef7604436c9e3", "21fe1dcba8bf49caa3f7928fc2bb3f36")
+            new ClassConfig(EClass.SPEC_OPS,           '×', "a1ebe4722dc24da5a7eef7604436c9e3", "21fe1dcba8bf49caa3f7928fc2bb3f36")
         };
 
         SquadMenuUI = "98154002fbcd4b7499552d6497db8fc5";

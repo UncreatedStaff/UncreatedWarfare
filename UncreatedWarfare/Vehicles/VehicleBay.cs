@@ -1432,125 +1432,134 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         pkeys = sb.ToString();
         sb = null!;
         pkeyObjs = objs2.ToArray();
-        List<ItemJarData> items = new List<ItemJarData>(32);
-        List<ItemDisplayData> display = new List<ItemDisplayData>(16);
-        await Sql.QueryAsync(
-            $"SELECT `{VBarricade.COLUMN_ITEM_PK}`,`{VBarricade.COLUMN_ITEM_BARRICADE_PK}`,`{VBarricade.COLUMN_ITEM_GUID}`," +
-            $"`{VBarricade.COLUMN_ITEM_POS_X}`,`{VBarricade.COLUMN_ITEM_POS_Y}`,`{VBarricade.COLUMN_ITEM_ROT}`,`{VBarricade.COLUMN_ITEM_AMOUNT}`," +
-            $"`{VBarricade.COLUMN_ITEM_QUALITY}`,`{VBarricade.COLUMN_ITEM_METADATA}` " +
-            $"FROM `{TABLE_BARRICADE_ITEMS}` WHERE `{VBarricade.COLUMN_ITEM_BARRICADE_PK}` " +
-            pkeys, pkeyObjs,
-            reader =>
-            {
-                items.Add(new ItemJarData(reader.GetInt32(0), reader.GetInt32(1), reader.ReadGuid(2), reader.GetByte(3),
-                    reader.GetByte(4), reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
-                    reader.ReadByteArray(8)));
-            }, token);
-        await Sql.QueryAsync(
-            $"SELECT `{VBarricade.COLUMN_PK}`,`{VBarricade.COLUMN_DISPLAY_SKIN}`,`{VBarricade.COLUMN_DISPLAY_MYTHIC}`," +
-            $"`{VBarricade.COLUMN_DISPLAY_ROT}`,`{VBarricade.COLUMN_DISPLAY_TAGS}`,`{VBarricade.COLUMN_DISPLAY_DYNAMIC_PROPS}` " +
-            $"FROM `{TABLE_BARRICADE_DISPLAY_DATA}` WHERE `{VBarricade.COLUMN_PK}` " +
-            pkeys, pkeyObjs,
-            reader =>
-            {
-                display.Add(new ItemDisplayData(reader.GetInt32(0), reader.GetUInt16(1), reader.GetUInt16(2), reader.GetByte(3),
-                    reader.IsDBNull(4) ? null : reader.GetString(4),
-                    reader.IsDBNull(5) ? null : reader.GetString(5)));
-            }, token);
-
-        List<ItemJarData> current = new List<ItemJarData>(32);
-        for (int i = 0; i < list.Count; ++i)
+        if (pkeyObjs.Length > 0)
         {
-            if (list[i].Metadata?.Barricades == null)
-                continue;
-            List<VBarricade> barricades = list[i].Metadata!.Barricades!;
-            for (int k = 0; k < barricades.Count; ++k)
+            List<ItemJarData> items = new List<ItemJarData>(32);
+            List<ItemDisplayData> display = new List<ItemDisplayData>(16);
+            await Sql.QueryAsync(
+                $"SELECT `{VBarricade.COLUMN_ITEM_PK}`,`{VBarricade.COLUMN_ITEM_BARRICADE_PK}`,`{VBarricade.COLUMN_ITEM_GUID}`," +
+                $"`{VBarricade.COLUMN_ITEM_POS_X}`,`{VBarricade.COLUMN_ITEM_POS_Y}`,`{VBarricade.COLUMN_ITEM_ROT}`,`{VBarricade.COLUMN_ITEM_AMOUNT}`," +
+                $"`{VBarricade.COLUMN_ITEM_QUALITY}`,`{VBarricade.COLUMN_ITEM_METADATA}` " +
+                $"FROM `{TABLE_BARRICADE_ITEMS}` WHERE `{VBarricade.COLUMN_ITEM_BARRICADE_PK}` " +
+                pkeys, pkeyObjs,
+                reader =>
+                {
+                    items.Add(new ItemJarData(reader.GetInt32(0), reader.GetInt32(1), reader.ReadGuid(2),
+                        reader.GetByte(3),
+                        reader.GetByte(4), reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
+                        reader.ReadByteArray(8)));
+                }, token);
+            await Sql.QueryAsync(
+                $"SELECT `{VBarricade.COLUMN_PK}`,`{VBarricade.COLUMN_DISPLAY_SKIN}`,`{VBarricade.COLUMN_DISPLAY_MYTHIC}`," +
+                $"`{VBarricade.COLUMN_DISPLAY_ROT}`,`{VBarricade.COLUMN_DISPLAY_TAGS}`,`{VBarricade.COLUMN_DISPLAY_DYNAMIC_PROPS}` " +
+                $"FROM `{TABLE_BARRICADE_DISPLAY_DATA}` WHERE `{VBarricade.COLUMN_PK}` " +
+                pkeys, pkeyObjs,
+                reader =>
+                {
+                    display.Add(new ItemDisplayData(reader.GetInt32(0), reader.GetUInt16(1), reader.GetUInt16(2),
+                        reader.GetByte(3),
+                        reader.IsDBNull(4) ? null : reader.GetString(4),
+                        reader.IsDBNull(5) ? null : reader.GetString(5)));
+                }, token);
+
+            List<ItemJarData> current = new List<ItemJarData>(32);
+            for (int i = 0; i < list.Count; ++i)
             {
-                VBarricade b = barricades[k];
-                int pk = b.PrimaryKey.Key;
-                f = true;
-                for (int j = 0; j < items.Count; ++j)
-                {
-                    if (items[j].Structure.Key == pk)
-                    {
-                        if (f)
-                        {
-                            current.Clear();
-                            f = false;
-                        }
-                        current.Add(items[j]);
-                        items.RemoveAtFast(j);
-                        --j;
-                    }
-                }
-
-                ItemDisplayData data = display.Find(x => x.Key.Key == pk);
-                if (f && data.Key.Key != pk)
+                if (list[i].Metadata?.Barricades == null)
                     continue;
-                if (f)
-                    current.Clear();
-                else if (current.Count > byte.MaxValue)
-                    current.RemoveRange(byte.MaxValue - 1, current.Count - byte.MaxValue - 1);
-                int ct = 17;
-                for (int j = 0; j < current.Count; ++j)
-                    ct += 8 + current[j].Metadata.Length;
-                if (data.Key.Key == pk)
+                List<VBarricade> barricades = list[i].Metadata!.Barricades!;
+                for (int k = 0; k < barricades.Count; ++k)
                 {
-                    ct += 7;
-                    if (!string.IsNullOrEmpty(data.Tags))
-                        ct += data.Tags!.Length;
-                    if (!string.IsNullOrEmpty(data.DynamicProps))
-                        ct += data.DynamicProps!.Length;
-                }
-                byte[] state = new byte[ct];
-                int index = 16;
-                state[++index] = (byte)current.Count;
-                for (int j = 0; j < current.Count; ++j)
-                {
-                    ItemJarData jar = current[j];
-                    state[++index] = jar.X;
-                    state[++index] = jar.Y;
-                    state[++index] = jar.Rotation;
-                    if (Assets.find(jar.Item) is ItemAsset item)
-                        Buffer.BlockCopy(BitConverter.GetBytes(item.id), 0, state, index + 1, sizeof(ushort));
-                    else L.LogWarning("Unable to find item: " + jar.Item.ToString("N"));
-                    index += sizeof(ushort);
-                    state[++index] = jar.Amount;
-                    state[++index] = jar.Quality;
-                    if (jar.Metadata is { Length: > 0 })
+                    VBarricade b = barricades[k];
+                    int pk = b.PrimaryKey.Key;
+                    f = true;
+                    for (int j = 0; j < items.Count; ++j)
                     {
-                        state[++index] = (byte)Math.Min(jar.Metadata.Length, byte.MaxValue);
-                        Buffer.BlockCopy(jar.Metadata, 0, state, index + 1, state[index]);
-                        index += state[index];
-                    }
-                    else ++index;
-                }
-                if (data.Key.Key == pk)
-                {
-                    Buffer.BlockCopy(BitConverter.GetBytes(data.Skin), 0, state, index + 1, sizeof(ushort));
-                    Buffer.BlockCopy(BitConverter.GetBytes(data.Mythic), 0, state, index + 3, sizeof(ushort));
-                    index += sizeof(ushort) * 2;
-                    if (!string.IsNullOrEmpty(data.Tags))
-                    {
-                        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data.Tags!);
-                        state[++index] = checked((byte)bytes.Length);
-                        Buffer.BlockCopy(bytes, 0, state, index + 1, bytes.Length);
-                        index += bytes.Length;
-                    }
-                    else ++index;
-                    if (!string.IsNullOrEmpty(data.DynamicProps))
-                    {
-                        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data.DynamicProps!);
-                        state[++index] = checked((byte)bytes.Length);
-                        Buffer.BlockCopy(bytes, 0, state, index + 1, bytes.Length);
-                        index += bytes.Length;
-                    }
-                    else ++index;
+                        if (items[j].Structure.Key == pk)
+                        {
+                            if (f)
+                            {
+                                current.Clear();
+                                f = false;
+                            }
 
-                    state[index + 1] = data.Rotation;
-                }
+                            current.Add(items[j]);
+                            items.RemoveAtFast(j);
+                            --j;
+                        }
+                    }
 
-                b.Metadata = state;
+                    ItemDisplayData data = display.Find(x => x.Key.Key == pk);
+                    if (f && data.Key.Key != pk)
+                        continue;
+                    if (f)
+                        current.Clear();
+                    else if (current.Count > byte.MaxValue)
+                        current.RemoveRange(byte.MaxValue - 1, current.Count - byte.MaxValue - 1);
+                    int ct = 17;
+                    for (int j = 0; j < current.Count; ++j)
+                        ct += 8 + current[j].Metadata.Length;
+                    if (data.Key.Key == pk)
+                    {
+                        ct += 7;
+                        if (!string.IsNullOrEmpty(data.Tags))
+                            ct += data.Tags!.Length;
+                        if (!string.IsNullOrEmpty(data.DynamicProps))
+                            ct += data.DynamicProps!.Length;
+                    }
+
+                    byte[] state = new byte[ct];
+                    int index = 16;
+                    state[++index] = (byte)current.Count;
+                    for (int j = 0; j < current.Count; ++j)
+                    {
+                        ItemJarData jar = current[j];
+                        state[++index] = jar.X;
+                        state[++index] = jar.Y;
+                        state[++index] = jar.Rotation;
+                        if (Assets.find(jar.Item) is ItemAsset item)
+                            Buffer.BlockCopy(BitConverter.GetBytes(item.id), 0, state, index + 1, sizeof(ushort));
+                        else L.LogWarning("Unable to find item: " + jar.Item.ToString("N"));
+                        index += sizeof(ushort);
+                        state[++index] = jar.Amount;
+                        state[++index] = jar.Quality;
+                        if (jar.Metadata is { Length: > 0 })
+                        {
+                            state[++index] = (byte)Math.Min(jar.Metadata.Length, byte.MaxValue);
+                            Buffer.BlockCopy(jar.Metadata, 0, state, index + 1, state[index]);
+                            index += state[index];
+                        }
+                        else ++index;
+                    }
+
+                    if (data.Key.Key == pk)
+                    {
+                        Buffer.BlockCopy(BitConverter.GetBytes(data.Skin), 0, state, index + 1, sizeof(ushort));
+                        Buffer.BlockCopy(BitConverter.GetBytes(data.Mythic), 0, state, index + 3, sizeof(ushort));
+                        index += sizeof(ushort) * 2;
+                        if (!string.IsNullOrEmpty(data.Tags))
+                        {
+                            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data.Tags!);
+                            state[++index] = checked((byte)bytes.Length);
+                            Buffer.BlockCopy(bytes, 0, state, index + 1, bytes.Length);
+                            index += bytes.Length;
+                        }
+                        else ++index;
+
+                        if (!string.IsNullOrEmpty(data.DynamicProps))
+                        {
+                            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data.DynamicProps!);
+                            state[++index] = checked((byte)bytes.Length);
+                            Buffer.BlockCopy(bytes, 0, state, index + 1, bytes.Length);
+                            index += bytes.Length;
+                        }
+                        else ++index;
+
+                        state[index + 1] = data.Rotation;
+                    }
+
+                    b.Metadata = state;
+                }
             }
         }
 
