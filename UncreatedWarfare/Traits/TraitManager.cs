@@ -481,7 +481,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
 
         for (int i = 0; i < trait.UnlockRequirements.Length; i++)
         {
-            BaseUnlockRequirement req = trait.UnlockRequirements[i];
+            UnlockRequirement req = trait.UnlockRequirements[i];
             if (req.CanAccess(ctx.Caller))
                 continue;
             if (req is LevelUnlockRequirement level)

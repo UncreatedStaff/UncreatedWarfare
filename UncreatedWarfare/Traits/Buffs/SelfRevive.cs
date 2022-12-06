@@ -17,7 +17,7 @@ public class SelfRevive : Buff
         Icon = "¢",
         Cooldown = 600,
         LastsUntilDeath = true,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 8 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 8 } },
         EffectDistributedToSquad = false,
         Data = "5" // self revive cooldown after being downed
     };

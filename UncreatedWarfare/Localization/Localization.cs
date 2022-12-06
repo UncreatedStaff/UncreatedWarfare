@@ -430,7 +430,7 @@ public static class Localization
         {
             for (int i = 0; i < kit.UnlockRequirements.Length; i++)
             {
-                BaseUnlockRequirement req = kit.UnlockRequirements[i];
+                UnlockRequirement req = kit.UnlockRequirements[i];
                 if (req.CanAccess(ucplayer)) continue;
                 cost = req.GetSignText(ucplayer);
                 break;

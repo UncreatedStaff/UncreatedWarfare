@@ -29,8 +29,9 @@ public static class UCBarricadeManager
             else
             {
                 tolerance = tolerance < 0 ? -tolerance : tolerance;
-                foreach (BarricadeDrop drop in region.drops)
+                for (int i = 0; i < region.drops.Count; i++)
                 {
+                    BarricadeDrop drop = region.drops[i];
                     Vector3 pos2 = drop.model.position - pos;
                     if (pos2.x > -tolerance && pos2.x < tolerance &&
                         pos2.y > -tolerance && pos2.y < tolerance &&

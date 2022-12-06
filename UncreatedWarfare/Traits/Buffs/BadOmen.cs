@@ -24,7 +24,7 @@ public class BadOmen : Buff
         Icon = "¯",
         EffectDuration = 600,
         Cooldown = 1200,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 6 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 6 } },
         EffectDistributedToSquad = false,
         Data = "15" // max notice given in seconds
     };

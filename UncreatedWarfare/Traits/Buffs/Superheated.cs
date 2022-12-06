@@ -23,7 +23,7 @@ public class Superheated : Buff
         Icon = "£",
         Cooldown = 900,
         EffectDuration = 600,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 7 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 7 } },
         EffectDistributedToSquad = false,
         Data = "0.2"
     };

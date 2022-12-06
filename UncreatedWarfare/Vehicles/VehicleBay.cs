@@ -955,7 +955,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 Default = "0.125"
             },
         }, true, typeof(VehicleData));
-        SCHEMAS[1] = BaseUnlockRequirement.GetDefaultSchema(TABLE_UNLOCK_REQUIREMENTS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK);
+        SCHEMAS[1] = UnlockRequirement.GetDefaultSchema(TABLE_UNLOCK_REQUIREMENTS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK);
         SCHEMAS[2] = Delay.GetDefaultSchema(TABLE_DELAYS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK);
         SCHEMAS[3] = new Schema(TABLE_ITEMS, new Schema.Column[]
         {
@@ -1085,16 +1085,16 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
 
         if (item.UnlockRequirements is { Length: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_UNLOCK_REQUIREMENTS}` (`{COLUMN_EXT_PK}`,`{BaseUnlockRequirement.COLUMN_JSON}`) VALUES ");
+            builder.Append($"INSERT INTO `{TABLE_UNLOCK_REQUIREMENTS}` (`{COLUMN_EXT_PK}`,`{UnlockRequirement.COLUMN_JSON}`) VALUES ");
             objs = new object[item.UnlockRequirements.Length * 2];
             using MemoryStream str = new MemoryStream(48);
             for (int i = 0; i < item.UnlockRequirements.Length; ++i)
             {
-                BaseUnlockRequirement req = item.UnlockRequirements[i];
+                UnlockRequirement req = item.UnlockRequirements[i];
                 if (i != 0)
                     str.Seek(0L, SeekOrigin.Begin);
                 Utf8JsonWriter writer = new Utf8JsonWriter(str, JsonEx.condensedWriterOptions);
-                BaseUnlockRequirement.Write(writer, req);
+                UnlockRequirement.Write(writer, req);
                 writer.Dispose();
                 string json = System.Text.Encoding.UTF8.GetString(str.GetBuffer(), 0, checked((int)str.Position));
                 int index = i * 2;
@@ -1326,7 +1326,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                      }
                                  }
                              }, token).ConfigureAwait(false);
-        await Sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{BaseUnlockRequirement.COLUMN_JSON}` " +
+        await Sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{UnlockRequirement.COLUMN_JSON}` " +
                              $"FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}` " + pkeys, pkeyObjs, reader =>
                              {
                                  int pk = reader.GetInt32(0);
@@ -1334,11 +1334,9 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                  {
                                      if (list[i].PrimaryKey.Key == pk)
                                      {
-                                         byte[] bytes = System.Text.Encoding.UTF8.GetBytes(reader.GetString(1));
-                                         Utf8JsonReader reader2 = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                                         BaseUnlockRequirement? req = BaseUnlockRequirement.Read(ref reader2);
-                                         if (req != null) return;
-                                         Util.AddToArray(ref list[i].UnlockRequirements!, req);
+                                         UnlockRequirement? req = UnlockRequirement.Read(reader);
+                                         if (req != null)
+                                            Util.AddToArray(ref list[i].UnlockRequirements!, req);
                                          break;
                                      }
                                  }
@@ -1617,12 +1615,12 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                      return;
                                  Util.AddToArray(ref obj.Delays!, new Delay(type, reader.IsDBNull(1) ? 0f : reader.GetFloat(1), reader.IsDBNull(2) ? null : reader.GetString(2)));
                              }, token).ConfigureAwait(false);
-        await Sql.QueryAsync($"SELECT `{BaseUnlockRequirement.COLUMN_JSON}` " +
+        await Sql.QueryAsync($"SELECT `{UnlockRequirement.COLUMN_JSON}` " +
                              $"FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
                              {
                                  byte[] bytes = System.Text.Encoding.UTF8.GetBytes(reader.GetString(0));
                                  Utf8JsonReader reader2 = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                                 BaseUnlockRequirement? req = BaseUnlockRequirement.Read(ref reader2);
+                                 UnlockRequirement? req = UnlockRequirement.Read(ref reader2);
                                  if (req != null) return;
                                  Util.AddToArray(ref obj.UnlockRequirements!, req);
                              }, token).ConfigureAwait(false);

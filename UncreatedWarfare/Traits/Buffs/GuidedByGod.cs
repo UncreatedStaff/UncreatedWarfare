@@ -23,7 +23,7 @@ public class GuidedByGod : Buff
         Icon = "£",
         Cooldown = 1200,
         EffectDuration = 600,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 5 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 5 } },
         EffectDistributedToSquad = false,
         Data = "0.15"
     };

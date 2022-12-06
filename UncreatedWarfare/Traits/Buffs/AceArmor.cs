@@ -25,7 +25,7 @@ public class AceArmor : Buff
         Icon = "§",
         Cooldown = 330,
         EffectDuration = 300,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 1 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 1 } },
         Delays = new Delay[] { new Delay(DelayType.Time, 540f) }, // same delay as lowest armor vehicle
         EffectDistributedToSquad = false,
         Data = "0.45,0,¼" // xp boost multiplier, xp refund multiplier, xp boost icon

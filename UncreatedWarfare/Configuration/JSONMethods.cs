@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
 using Uncreated.Json;
+using Uncreated.SQL;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -260,6 +261,7 @@ public struct SerializableTransform : IJsonReadWrite
 [JsonConverter(typeof(TranslationListConverter))]
 public sealed class TranslationList : Dictionary<string, string>
 {
+    public const int DEFAULT_CHAR_LENGTH = 255;
     public TranslationList() { }
     public TranslationList(int capacity) : base(capacity) { }
     public TranslationList(string @default)
@@ -269,6 +271,12 @@ public sealed class TranslationList : Dictionary<string, string>
     public TranslationList(int capacity, string @default) : base(capacity)
     {
         Add(L.DEFAULT, @default);
+    }
+    public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool oneToOne = false, bool hasPk = false)
+    {
+        if (!oneToOne)
+            throw new NotSupportedException("One-to-one only rn");
+        return F.GetTranslationListSchema(tableName, fkColumn, mainTable, mainPkColumn, DEFAULT_CHAR_LENGTH);
     }
 }
 public sealed class TranslationListConverter : JsonConverter<TranslationList>

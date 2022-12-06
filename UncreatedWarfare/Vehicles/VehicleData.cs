@@ -53,7 +53,7 @@ public class VehicleData : ITranslationArgument, IListItem
     public float AbandonValueLossSpeed = 0.125f;
     [CommandSettable]
     public int Map = -1;
-    public BaseUnlockRequirement[] UnlockRequirements;
+    public UnlockRequirement[] UnlockRequirements;
     public Guid[] Items;
     public Delay[] Delays;
     [JsonConverter(typeof(ByteArrayConverter))]
@@ -103,7 +103,7 @@ public class VehicleData : ITranslationArgument, IListItem
         }
         else Branch = Branch.Default;
         RequiredClass = Class.None;
-        UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
+        UnlockRequirements = Array.Empty<UnlockRequirement>();
         RearmCost = 3;
         Type = EVehicleType.NONE;
         RequiresSL = false;
@@ -118,7 +118,7 @@ public class VehicleData : ITranslationArgument, IListItem
         Name = string.Empty;
         VehicleID = Guid.Empty;
         Team = 0;
-        UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
+        UnlockRequirements = Array.Empty<UnlockRequirement>();
         RespawnTime = 600;
         TicketCost = 0;
         CreditCost = 0;
@@ -210,7 +210,7 @@ public class VehicleData : ITranslationArgument, IListItem
         {
             for (int i = 0; i < UnlockRequirements.Length; i++)
             {
-                BaseUnlockRequirement req = UnlockRequirements[i];
+                UnlockRequirement req = UnlockRequirements[i];
                 if (req.CanAccess(ucplayer))
                     continue;
                 return req.GetSignText(ucplayer);

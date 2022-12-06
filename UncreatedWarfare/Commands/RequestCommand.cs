@@ -156,7 +156,7 @@ public class RequestCommand : AsyncCommand
 
                         for (int i = 0; i < kit.UnlockRequirements.Length; i++)
                         {
-                            BaseUnlockRequirement req = kit.UnlockRequirements[i];
+                            UnlockRequirement req = kit.UnlockRequirements[i];
                             if (req.CanAccess(caller2))
                                 continue;
                             if (req is LevelUnlockRequirement level)
@@ -396,7 +396,7 @@ public class RequestCommand : AsyncCommand
 
         for (int i = 0; i < data.UnlockRequirements.Length; i++)
         {
-            BaseUnlockRequirement req = data.UnlockRequirements[i];
+            UnlockRequirement req = data.UnlockRequirements[i];
             if (req.CanAccess(ucplayer))
                 continue;
             if (req is LevelUnlockRequirement level)

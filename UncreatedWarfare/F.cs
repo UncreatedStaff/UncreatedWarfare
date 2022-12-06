@@ -5,11 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using MySqlConnector;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -30,6 +32,8 @@ namespace Uncreated.Warfare;
 
 public static class F
 {
+    private static readonly char[] ignore = { '.', ',', '&', '-', '_' };
+    private static readonly char[] splits = { ' ' };
     public const string COLUMN_LANGUAGE = "Language";
     public const string COLUMN_VALUE = "Value";
     public static bool IsMono { get; } = Type.GetType("Mono.Runtime") != null;
@@ -722,7 +726,7 @@ public static class F
         player.SendURL(message, $"https://steamcommunity.com/profiles/{s64}/");
     public static void SendURL(this SteamPlayer player, string message, string url)
     {
-        if (player == default || url == default) return;
+        if (player == null || url == null) return;
         player.player.sendBrowserRequest(message, url);
     }
     public static bool CanStandAtLocation(Vector3 source) => PlayerStance.hasStandingHeightClearanceAtPosition(source);
@@ -1367,7 +1371,19 @@ public static class F
             new Schema.Column(COLUMN_VALUE, "varchar(" + length.ToString(CultureInfo.InvariantCulture) + ")")
         }, false, typeof(KeyValuePair<string, string>));
     }
-
+    public static void ReadToTranslationList(MySqlDataReader reader, TranslationList list, int colOffset = 0)
+    {
+        if (list is null)
+            throw new ArgumentNullException(nameof(list));
+        string lang = reader.GetString(colOffset + 1).ToLowerInvariant();
+        if (list.ContainsKey(lang))
+        {
+            L.LogWarning("Duplicate language entry found for TranslationList with entry #" + reader.GetInt32(0) +
+                         " (" + reader.GetColumnSchema().FirstOrDefault()?.ColumnName + "). " +
+                         "Value (\"" + reader.GetString(colOffset + 2) + "\") is being ignored.");
+        }
+        else list.Add(lang, reader.GetString(colOffset + 2));
+    }
     public static ConfiguredTaskAwaitable ThenToUpdate(this Task task, CancellationToken token = default)
         => ThenToUpdateIntl(task, token).ConfigureAwait(true);
     public static ConfiguredTaskAwaitable<T> ThenToUpdate<T>(this Task<T> task, CancellationToken token = default)
@@ -1512,5 +1528,35 @@ public static class F
     public static bool NullOrEmpty<T>(this ICollection<T>? collection)
     {
         return collection == null || collection.Count == 0;
+    }
+    public static int StringSearch<T>(IList<T> collection, Func<T, string?> selector, string input, bool equalsOnly = false)
+    {
+        if (input == null)
+            return -1;
+
+        for (int i = 0; i < collection.Count; ++i)
+        {
+            if (string.Equals(selector(collection[i]), input, StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+        if (!equalsOnly)
+        {
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? n = selector(collection[i]);
+                if (n != null && n.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
+                    return i;
+            }
+
+            string[] inSplits = input.Split(splits);
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? name = selector(collection[i]);
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                    return i;
+            }
+        }
+
+        return -1;
     }
 }

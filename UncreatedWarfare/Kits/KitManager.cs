@@ -25,43 +25,89 @@ using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 
-public class KitManager : ListSqlSingleton<KitOld>
+public class KitManager : ListSqlSingleton<Kit>
 {
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
-    public KitManager(Schema[] schemas) : base(schemas)
+    public KitManager() : base("kits", SCHEMAS)
     {
     }
-    public KitManager(string reloadKey, Schema[] schemas) : base(reloadKey, schemas)
+    public static float GetDefaultTeamLimit(Class @class) => @class switch
     {
+        Class.HAT => 0.1f,
+        _ => 1f
+    };
+    public async Task TryGiveKitOnJoinTeam(UCPlayer player, CancellationToken token = default)
+    {
+        ulong team = player.GetTeam();
+        if (team is 1 or 2)
+        {
+            SqlItem<Kit>? kit = await FindKit(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, token).ConfigureAwait(false);
+            if (kit?.Item != null)
+            {
+                await GiveKit(player, kit, token).ConfigureAwait(false);
+            }
+            else if (KitExists(TeamManager.DefaultKit, out unarmed))
+                GiveKit(player, unarmed);
+            else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
+        }
+        else if (KitExists(TeamManager.DefaultKit, out KitOld @default))
+            GiveKit(player, @default);
+        else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
     }
-    protected override Task AddOrUpdateItem(KitOld? item, PrimaryKey pk, CancellationToken token = new CancellationToken())
+    public async Task<SqlItem<Kit>?> FindKit(string id, CancellationToken token = default, bool exactMatchOnly = true)
     {
-        throw new NotImplementedException();
-    }
-    protected override Task<KitOld?> DownloadItem(PrimaryKey pk, CancellationToken token = new CancellationToken())
-    {
-        throw new NotImplementedException();
-    }
-    protected override Task<KitOld[]> DownloadAllItems(CancellationToken token = new CancellationToken())
-    {
-        throw new NotImplementedException();
+        await WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            int index = F.StringSearch(List, x => x.Item?.Id, id, exactMatchOnly);
+            return index == -1 ? null : List[index];
+        }
+        finally
+        {
+            Release();
+        }
     }
 
+    public static async Task GiveKit(UCPlayer player, SqlItem<Kit> kit, CancellationToken token = default)
+    {
+        await kit.Enter(token)
+    }
+
+
+
+    #region Sql
+    // ReSharper disable InconsistentNaming
     public const string TABLE_MAIN = "kits";
     public const string TABLE_ITEMS = "kits_items";
+    public const string TABLE_UNLOCK_REQUIREMENTS = "kits_unlock_requirements";
+    public const string TABLE_SKILLSETS = "kits_skillsets";
+    public const string TABLE_FACTION_BLACKLIST = "kits_faction_blacklist";
+    public const string TABLE_SIGN_TEXT = "kits_sign_text";
+
     public const string COLUMN_PK = "pk";
-    public const string COLUMN_EXT_PK = "Kit";
     public const string COLUMN_KIT_ID = "Id";
     public const string COLUMN_FACTION = "Faction";
     public const string COLUMN_CLASS = "Class";
     public const string COLUMN_BRANCH = "Branch";
     public const string COLUMN_TYPE = "Type";
     public const string COLUMN_REQUEST_COOLDOWN = "RequestCooldown";
+    public const string COLUMN_TEAM_LIMIT = "TeamLimit";
     public const string COLUMN_SEASON = "Season";
     public const string COLUMN_DISABLED = "Disabled";
     public const string COLUMN_WEAPONS = "Weapons";
     public const string COLUMN_SQUAD_LEVEL = "SquadLevel";
+
+    public const string COLUMN_EXT_PK = "Kit";
+    public const string COLUMN_ITEM_GUID = "Item";
+    public const string COLUMN_ITEM_X = "X";
+    public const string COLUMN_ITEM_Y = "Y";
+    public const string COLUMN_ITEM_ROTATION = "Rotation";
+    public const string COLUMN_ITEM_PAGE = "Page";
+    public const string COLUMN_ITEM_CLOTHING = "ClothingSlot";
+    public const string COLUMN_ITEM_REDIRECT = "Redirect";
+    public const string COLUMN_ITEM_AMOUNT = "Amount";
+    public const string COLUMN_ITEM_METADATA = "Metadata";
     private static readonly Schema[] SCHEMAS =
     {
         new Schema(TABLE_MAIN, new Schema.Column[]
@@ -71,7 +117,7 @@ public class KitManager : ListSqlSingleton<KitOld>
                 PrimaryKey = true,
                 AutoIncrement = true
             },
-            new Schema.Column(COLUMN_KIT_ID, "varchar(" + KitEx.KIT_NAME_MAX_CHAR_LIMIT + ")"),
+            new Schema.Column(COLUMN_KIT_ID, SqlTypes.String(KitEx.KIT_NAME_MAX_CHAR_LIMIT)),
             new Schema.Column(COLUMN_FACTION, SqlTypes.INCREMENT_KEY)
             {
                 ForeignKey = true,
@@ -79,17 +125,509 @@ public class KitManager : ListSqlSingleton<KitOld>
                 ForeignKeyTable = FactionInfo.TABLE_MAIN,
                 Nullable = true
             },
-            new Schema.Column(COLUMN_CLASS, "varchar(" + KitEx.CLASS_MAX_CHAR_LIMIT + ")"),
-            new Schema.Column(COLUMN_BRANCH, "varchar(" + KitEx.BRANCH_MAX_CHAR_LIMIT + ")"),
-            new Schema.Column(COLUMN_TYPE, "varchar(" + KitEx.TYPE_MAX_CHAR_LIMIT + ")"),
+            new Schema.Column(COLUMN_CLASS, SqlTypes.Enum(Class.None)),
+            new Schema.Column(COLUMN_BRANCH, SqlTypes.Enum(Branch.Default)),
+            new Schema.Column(COLUMN_TYPE, SqlTypes.Enum<KitType>()),
             new Schema.Column(COLUMN_REQUEST_COOLDOWN, SqlTypes.FLOAT) { Nullable = true },
+            new Schema.Column(COLUMN_TEAM_LIMIT, SqlTypes.FLOAT) { Nullable = true },
             new Schema.Column(COLUMN_SEASON, SqlTypes.BYTE) { Nullable = true },
             new Schema.Column(COLUMN_DISABLED, SqlTypes.BOOLEAN) { Nullable = true },
-            new Schema.Column(COLUMN_WEAPONS, "varchar(" + KitEx.WEAPON_TEXT_MAX_CHAR_LIMIT + ")") { Nullable = true },
-            new Schema.Column(COLUMN_SQUAD_LEVEL, "varchar(" + KitEx.SQUAD_LEVEL_MAX_CHAR_LIMIT + ")") { Nullable = true }
+            new Schema.Column(COLUMN_WEAPONS, SqlTypes.String(KitEx.WEAPON_TEXT_MAX_CHAR_LIMIT)) { Nullable = true },
+            new Schema.Column(COLUMN_SQUAD_LEVEL, SqlTypes.Enum<SquadLevel>()) { Nullable = true }
         }, true, typeof(KitOld)),
-        PageItem.GetDefaultSchema(TABLE_ITEMS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, true, false, false),
+        new Schema(TABLE_ITEMS, new Schema.Column[]
+        {
+            new Schema.Column(COLUMN_EXT_PK, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyTable = TABLE_MAIN,
+                ForeignKeyColumn = COLUMN_PK
+            },
+            new Schema.Column(COLUMN_ITEM_GUID, SqlTypes.GUID_STRING) { Nullable = true },
+            new Schema.Column(COLUMN_ITEM_X, SqlTypes.BYTE) { Nullable = true },
+            new Schema.Column(COLUMN_ITEM_Y, SqlTypes.BYTE) { Nullable = true },
+            new Schema.Column(COLUMN_ITEM_ROTATION, SqlTypes.BYTE) { Nullable = true },
+            new Schema.Column(COLUMN_ITEM_PAGE, SqlTypes.Enum<Page>()) { Nullable = true },
+            new Schema.Column(COLUMN_ITEM_CLOTHING, SqlTypes.Enum<ClothingType>()) { Nullable = true },
+            new Schema.Column(COLUMN_ITEM_REDIRECT, SqlTypes.Enum<RedirectType>()) { Nullable = true },
+            new Schema.Column(COLUMN_ITEM_AMOUNT, SqlTypes.BYTE) { Default = "0" },
+            new Schema.Column(COLUMN_ITEM_METADATA, SqlTypes.Binary(KitEx.MAX_STATE_ARRAY_LIMIT)) { Nullable = true },
+        }, false, typeof(IKitItem)),
+        UnlockRequirement.GetDefaultSchema(TABLE_UNLOCK_REQUIREMENTS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK),
+        Skillset.GetDefaultSchema(TABLE_SKILLSETS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK),
+        F.GetListSchema<PrimaryKey>(TABLE_FACTION_BLACKLIST, COLUMN_EXT_PK, COLUMN_FACTION, TABLE_MAIN, COLUMN_PK),
+        F.GetTranslationListSchema(TABLE_SIGN_TEXT, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, KitEx.SIGN_TEXT_MAX_CHAR_LIMIT)
     };
+    // ReSharper restore InconsistentNaming
+    [Obsolete]
+    protected override async Task AddOrUpdateItem(Kit? item, PrimaryKey pk, CancellationToken token = default)
+    {
+        if (item == null)
+        {
+            if (!pk.IsValid)
+                throw new ArgumentException("If item is null, pk must have a value to delete the item.", nameof(pk));
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_MAIN}` WHERE `{COLUMN_PK}`=@0;", new object[] { pk.Key }, token).ConfigureAwait(false);
+            return;
+        }
+        bool hasPk = pk.IsValid;
+        int pk2 = PrimaryKey.NotAssigned;
+        object[] objs = new object[hasPk ? 12 : 11];
+        objs[0] = item.Id ??= (hasPk ? pk.ToString() : "invalid_" + unchecked((uint)DateTime.UtcNow.Ticks));
+        objs[1] = item.FactionKey.IsValid && item.FactionKey.Key != 0 ? item.FactionKey.Key : DBNull.Value;
+        objs[2] = item.Class.ToString();
+        objs[3] = item.Branch.ToString();
+        objs[4] = item.Type.ToString();
+        objs[5] = item.RequestCooldown <= 0f ? DBNull.Value : item.RequestCooldown;
+        objs[6] = item.TeamLimit;
+        objs[7] = item.Season;
+        objs[8] = item.Disabled;
+        objs[9] = (object?)item.WeaponText ?? DBNull.Value;
+        objs[10] = item.SquadLevel <= SquadLevel.Member ? DBNull.Value : item.SquadLevel.ToString();
+        if (hasPk)
+            objs[11] = pk.Key;
+        await Sql.QueryAsync($"INSERT INTO `{TABLE_MAIN}` ({SqlTypes.ColumnList(COLUMN_KIT_ID, COLUMN_FACTION, COLUMN_CLASS, COLUMN_BRANCH,
+            COLUMN_TYPE, COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT, COLUMN_SEASON, COLUMN_DISABLED, COLUMN_WEAPONS,
+            COLUMN_SQUAD_LEVEL)}" +
+            (hasPk ? $",`{COLUMN_PK}`" : string.Empty) +
+            ") VALUES (@0,@1,@2,@3,@4,@5,@6,@7,@8,@9,@10" +
+            (hasPk ? ",@11" : string.Empty) +
+            ") ON DUPLICATE KEY UPDATE " +
+            $"{SqlTypes.ColumnUpdateList(0, COLUMN_KIT_ID, COLUMN_FACTION, COLUMN_CLASS, COLUMN_BRANCH,
+                COLUMN_TYPE, COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT, COLUMN_SEASON, COLUMN_DISABLED, COLUMN_WEAPONS,
+                COLUMN_SQUAD_LEVEL)}," +
+            $"`{COLUMN_PK}`=LAST_INSERT_ID(`{COLUMN_PK}`);" +
+            "SET @pk := (SELECT LAST_INSERT_ID() as `pk`);" +
+            $"DELETE FROM `{TABLE_ITEMS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+            $"DELETE FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+            $"DELETE FROM `{TABLE_SKILLSETS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+            $"DELETE FROM `{TABLE_FACTION_BLACKLIST}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+            $"DELETE FROM `{TABLE_SIGN_TEXT}` WHERE `{COLUMN_EXT_PK}`=@pk; SELECT @pk;",
+            objs, reader =>
+            {
+                pk2 = reader.GetInt32(0);
+            }, token).ConfigureAwait(false);
+
+        StringBuilder builder = new StringBuilder(128);
+        if (item.Items is { Length: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_ITEMS}` ({SqlTypes.ColumnList(
+                COLUMN_EXT_PK, COLUMN_ITEM_GUID, COLUMN_ITEM_X, COLUMN_ITEM_Y, COLUMN_ITEM_ROTATION, COLUMN_ITEM_PAGE,
+                COLUMN_ITEM_CLOTHING, COLUMN_ITEM_REDIRECT, COLUMN_ITEM_AMOUNT, COLUMN_ITEM_METADATA)}) VALUES ");
+            objs = new object[item.Items.Length * 10];
+            bool one = false;
+            for (int i = 0; i < item.Items.Length; ++i)
+            {
+                IKitItem item2 = item.Items[i];
+                if (item2 is not IItem && item2 is not IClothing && item2 is not IAssetRedirect || item2 is not IItemJar && item2 is not IClothingJar)
+                {
+                    L.LogWarning("Item in kit \"" + item.Id + "\" (" + item2 + ") not a valid type: " + item2.GetType().Name + ".");
+                    continue;
+                }
+
+                one = true;
+                int index = i * 10;
+                IItem? itemObj = item2 as IItem;
+                IClothing? clothingObj = item2 as IClothing;
+                objs[index] = pk2;
+                objs[index + 1] = itemObj != null ? itemObj.Item.ToString("N") : DBNull.Value;
+                if (item2 is IItemJar jarObj)
+                {
+                    objs[index + 2] = jarObj.X;
+                    objs[index + 3] = jarObj.Y;
+                    objs[index + 4] = jarObj.Rotation % 4;
+                    objs[index + 5] = jarObj.Page.ToString();
+                }
+                else
+                    objs[index + 2] = objs[index + 3] = objs[index + 4] = objs[index + 5] = DBNull.Value;
+
+                objs[index + 6] = clothingObj != null ? clothingObj.Item.ToString("N") : DBNull.Value;
+                objs[index + 7] = item2 is IAssetRedirect redirObj ? redirObj.RedirectType.ToString() : DBNull.Value;
+                objs[index + 8] = itemObj != null ? itemObj.Amount : DBNull.Value;
+                objs[index + 9] = itemObj != null
+                    ? itemObj.State
+                    : clothingObj != null
+                        ? clothingObj.State
+                        : DBNull.Value;
+                F.AppendPropertyList(builder, index, 10);
+            }
+            builder.Append(';');
+            if (one)
+                await Sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
+            builder.Clear();
+        }
+
+        if (item.UnlockRequirements is { Length: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_UNLOCK_REQUIREMENTS}` ({SqlTypes.ColumnList(
+                COLUMN_EXT_PK, UnlockRequirement.COLUMN_JSON)}) VALUES ");
+            objs = new object[item.UnlockRequirements.Length * 2];
+            using MemoryStream str = new MemoryStream(48);
+            for (int i = 0; i < item.UnlockRequirements.Length; ++i)
+            {
+                UnlockRequirement req = item.UnlockRequirements[i];
+                if (i != 0)
+                    str.Seek(0L, SeekOrigin.Begin);
+                Utf8JsonWriter writer = new Utf8JsonWriter(str, JsonEx.condensedWriterOptions);
+                UnlockRequirement.Write(writer, req);
+                writer.Dispose();
+                string json = System.Text.Encoding.UTF8.GetString(str.GetBuffer(), 0, checked((int)str.Position));
+                int index = i * 2;
+                objs[index] = pk2;
+                objs[index + 1] = json;
+                F.AppendPropertyList(builder, index, 2);
+            }
+            builder.Append("; ");
+        }
+
+        if (item.Skillsets is { Length: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_SKILLSETS}` ({SqlTypes.ColumnList(
+                COLUMN_EXT_PK, Skillset.COLUMN_SKILL, Skillset.COLUMN_LEVEL)}) VALUES ");
+            objs = new object[item.Skillsets.Length * 3];
+            for (int i = 0; i < item.Skillsets.Length; ++i)
+            {
+                Skillset set = item.Skillsets[i];
+                if (set.Speciality is not EPlayerSpeciality.DEFENSE and not EPlayerSpeciality.OFFENSE and not EPlayerSpeciality.SUPPORT)
+                    continue;
+                int index = i * 3;
+                objs[index] = pk2;
+                objs[index + 1] = set.Speciality switch
+                    { EPlayerSpeciality.DEFENSE => set.Defense.ToString(), EPlayerSpeciality.OFFENSE => set.Offense.ToString(), _ => set.Support.ToString() };
+                objs[index + 2] = set.Level;
+                F.AppendPropertyList(builder, index, 3);
+            }
+            builder.Append("; ");
+        }
+        if (item.FactionBlacklist is { Length: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_FACTION_BLACKLIST}` ({SqlTypes.ColumnList(
+                COLUMN_EXT_PK, COLUMN_FACTION)}) VALUES ");
+            objs = new object[item.FactionBlacklist.Length * 2];
+            for (int i = 0; i < item.FactionBlacklist.Length; ++i)
+            {
+                PrimaryKey f = item.FactionBlacklist[i];
+                if (!f.IsValid)
+                    continue;
+                int index = i * 2;
+                objs[index] = pk2;
+                objs[index + 1] = f.Key;
+                F.AppendPropertyList(builder, index, 2);
+            }
+            builder.Append("; ");
+        }
+        if (item.SignText is { Count: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_SIGN_TEXT}` ({SqlTypes.ColumnList(
+                COLUMN_EXT_PK, F.COLUMN_LANGUAGE, F.COLUMN_VALUE)}) VALUES ");
+            objs = new object[item.SignText.Count * 3];
+            int i = 0;
+            foreach (KeyValuePair<string, string> pair in item.SignText)
+            {
+                int index = i * 3;
+                objs[index] = pk2;
+                objs[index + 1] = pair.Key;
+                objs[index + 2] = pair.Value;
+                F.AppendPropertyList(builder, index, 3);
+                ++i;
+            }
+            builder.Append(';');
+        }
+
+        if (builder.Length > 0)
+        {
+            await Sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
+            builder.Clear();
+        }
+    }
+    [Obsolete]
+    protected override async Task<Kit?> DownloadItem(PrimaryKey pk, CancellationToken token = default)
+    {
+        Kit? obj = null;
+        if (!pk.IsValid)
+            throw new ArgumentException("Primary key is not valid.", nameof(pk));
+        int pk2 = pk;
+        object[] pkObjs = { pk2 };
+        await Sql.QueryAsync(
+            $"SELECT {SqlTypes.ColumnList(COLUMN_KIT_ID, COLUMN_FACTION, COLUMN_CLASS, COLUMN_BRANCH,
+                COLUMN_TYPE, COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT, COLUMN_SEASON, COLUMN_DISABLED, COLUMN_WEAPONS,
+                COLUMN_SQUAD_LEVEL)} FROM `{TABLE_MAIN}` " +
+            $"WHERE `{COLUMN_PK}`=@0 LIMIT 1;", pkObjs, reader =>
+            {
+                obj = ReadKit(reader, -1);
+            }, token).ConfigureAwait(false);
+        if (obj != null)
+        {
+            List<IKitItem> items = new List<IKitItem>(16);
+            await Sql.QueryAsync(
+                $"SELECT {SqlTypes.ColumnList(
+                    COLUMN_ITEM_GUID, COLUMN_ITEM_X, COLUMN_ITEM_Y, COLUMN_ITEM_ROTATION, COLUMN_ITEM_PAGE,
+                    COLUMN_ITEM_CLOTHING, COLUMN_ITEM_REDIRECT, COLUMN_ITEM_AMOUNT, COLUMN_ITEM_METADATA)} " +
+                $"FROM `{TABLE_ITEMS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkObjs, reader =>
+                {
+                    items.Add(ReadItem(reader, -1));
+                }, token).ConfigureAwait(false);
+            obj.Items = items.ToArray();
+            items = null!;
+
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(UnlockRequirement.COLUMN_JSON)} " +
+                                 $"FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkObjs, reader =>
+            {
+                UnlockRequirement? req = UnlockRequirement.Read(reader, -1);
+                if (req == null)
+                    throw new FormatException("Invalid unlock requirement from JSON data \"" + reader.GetString(0) + "\".");
+                UnlockRequirement[]? arr = obj.UnlockRequirements;
+                Util.AddToArray(ref arr, req);
+                obj.UnlockRequirements = arr!;
+            }, token).ConfigureAwait(false);
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(Skillset.COLUMN_SKILL, Skillset.COLUMN_LEVEL)} " +
+                                 $"FROM `{TABLE_SKILLSETS}` WHERE `{COLUMN_EXT_PK}`=@0;", pkObjs, reader =>
+            {
+                Skillset set = Skillset.Read(reader);
+                Skillset[]? arr = obj.Skillsets;
+                Util.AddToArray(ref arr, set);
+                obj.Skillsets = arr!;
+            }, token).ConfigureAwait(false);
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_FACTION)} " +
+                                 $"FROM `{TABLE_FACTION_BLACKLIST}`;", null, reader =>
+            {
+                int faction = reader.GetInt32(0);
+                PrimaryKey[]? arr = obj.FactionBlacklist;
+                Util.AddToArray(ref arr, faction);
+                obj.FactionBlacklist = arr!;
+            }, token).ConfigureAwait(false);
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(F.COLUMN_LANGUAGE, F.COLUMN_VALUE)} " +
+                                 $"FROM `{TABLE_SIGN_TEXT}` WHERE `{COLUMN_EXT_PK}`=@0;", pkObjs, reader =>
+            {
+                F.ReadToTranslationList(reader, obj.SignText ??= new TranslationList(1), -1);
+            }, token).ConfigureAwait(false);
+        }
+        return obj;
+    }
+    [Obsolete]
+    protected override async Task<Kit[]> DownloadAllItems(CancellationToken token = default)
+    {
+        List<Kit> list = new List<Kit>(32);
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(
+            COLUMN_PK, COLUMN_KIT_ID, COLUMN_FACTION, COLUMN_CLASS, COLUMN_BRANCH, COLUMN_TYPE,
+            COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT, COLUMN_SEASON, COLUMN_DISABLED, COLUMN_WEAPONS, COLUMN_SQUAD_LEVEL)}" +
+                             $" FROM `{TABLE_MAIN}`;",
+            null, reader =>
+            {
+                list.Add(ReadKit(reader));
+            }, token).ConfigureAwait(false);
+
+        if (list.Count == 0)
+            return list.ToArray();
+
+        List<KeyValuePair<int, IKitItem>> tempList = new List<KeyValuePair<int, IKitItem>>(list.Count * 16);
+        await Sql.QueryAsync(
+            $"SELECT {SqlTypes.ColumnList(
+                COLUMN_EXT_PK, COLUMN_ITEM_GUID, COLUMN_ITEM_X, COLUMN_ITEM_Y, COLUMN_ITEM_ROTATION, COLUMN_ITEM_PAGE,
+                COLUMN_ITEM_CLOTHING, COLUMN_ITEM_REDIRECT, COLUMN_ITEM_AMOUNT, COLUMN_ITEM_METADATA)} " +
+            $"FROM `{TABLE_ITEMS}`;", null, reader =>
+            {
+                int pk = reader.GetInt32(0);
+                IKitItem item = ReadItem(reader);
+                tempList.Add(new KeyValuePair<int, IKitItem>(pk, item));
+            }, token).ConfigureAwait(false);
+
+        int[] ct = new int[list.Count];
+        for (int i = 0; i < tempList.Count; ++i)
+        {
+            int pk = tempList[i].Key;
+            for (int j = 0; j < list.Count; ++j)
+            {
+                if (list[j].PrimaryKey.Key == pk)
+                {
+                    ++ct[j];
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < list.Count; ++i)
+            list[i].Items = new IKitItem[ct[i]];
+
+        for (int i = 0; i < tempList.Count; ++i)
+        {
+            int pk = tempList[i].Key;
+            for (int j = 0; j < list.Count; ++j)
+            {
+                if (list[j].PrimaryKey.Key == pk)
+                {
+                    Kit kit = list[j];
+                    kit.Items[kit.Items.Length - ct[j]--] = tempList[i].Value;
+                    break;
+                }
+            }
+        }
+
+        tempList = null!;
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_EXT_PK, UnlockRequirement.COLUMN_JSON)} " +
+                             $"FROM `{TABLE_UNLOCK_REQUIREMENTS}`;", null, reader =>
+        {
+            int pk = reader.GetInt32(0);
+            for (int i = 0; i < list.Count; ++i)
+            {
+                if (list[i].PrimaryKey.Key == pk)
+                {
+                    UnlockRequirement? req = UnlockRequirement.Read(reader);
+                    if (req != null)
+                    {
+                        UnlockRequirement[]? arr = list[i].UnlockRequirements;
+                        Util.AddToArray(ref arr, req);
+                        list[i].UnlockRequirements = arr!;
+                        break;
+                    }
+                    throw new FormatException("Invalid unlock requirement from JSON data \"" + reader.GetString(1) + "\".");
+                }
+            }
+        }, token).ConfigureAwait(false);
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_EXT_PK, Skillset.COLUMN_SKILL, Skillset.COLUMN_LEVEL)} " +
+                             $"FROM `{TABLE_SKILLSETS}`;", null, reader =>
+        {
+            int pk = reader.GetInt32(0);
+            for (int i = 0; i < list.Count; ++i)
+            {
+                if (list[i].PrimaryKey.Key == pk)
+                {
+                    Skillset set = Skillset.Read(reader);
+                    Skillset[]? arr = list[i].Skillsets;
+                    Util.AddToArray(ref arr, set);
+                    list[i].Skillsets = arr!;
+                    break;
+                }
+            }
+        }, token).ConfigureAwait(false);
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_EXT_PK, COLUMN_FACTION)} " +
+                             $"FROM `{TABLE_FACTION_BLACKLIST}`;", null, reader =>
+        {
+            int pk = reader.GetInt32(0);
+            for (int i = 0; i < list.Count; ++i)
+            {
+                if (list[i].PrimaryKey.Key == pk)
+                {
+                    int faction = reader.GetInt32(1);
+                    PrimaryKey[]? arr = list[i].FactionBlacklist;
+                    Util.AddToArray(ref arr, faction);
+                    list[i].FactionBlacklist = arr!;
+                    break;
+                }
+            }
+        }, token).ConfigureAwait(false);
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_EXT_PK, F.COLUMN_LANGUAGE, F.COLUMN_VALUE)} " +
+                             $"FROM `{TABLE_SIGN_TEXT}`;", null, reader =>
+        {
+            int pk = reader.GetInt32(0);
+            for (int i = 0; i < list.Count; ++i)
+            {
+                if (list[i].PrimaryKey.Key == pk)
+                {
+                    F.ReadToTranslationList(reader, list[i].SignText ??= new TranslationList(1));
+                    break;
+                }
+            }
+        }, token).ConfigureAwait(false);
+        
+        return list.ToArray();
+    }
+    /// <exception cref="FormatException"/>
+    private static Kit ReadKit(MySqlDataReader reader, int colOffset = 0)
+    {
+        string id = reader.GetString(colOffset + 1);
+        if (id.Length is < 1 or > KitEx.KIT_NAME_MAX_CHAR_LIMIT)
+            throw new FormatException("Invalid kit ID: \"" + id + "\".");
+        Class @class = reader.ReadStringEnum<Class>(colOffset + 3) ?? throw new FormatException("Invalid class: \"" + reader.GetString(colOffset + 3) + "\".");
+        return new Kit
+        {
+            Type = reader.ReadStringEnum<KitType>(colOffset + 5) ?? throw new FormatException("Invalid type: \"" + reader.GetString(colOffset + 5) + "\"."),
+            Branch = reader.ReadStringEnum<Branch>(colOffset + 4) ?? throw new FormatException("Invalid branch: \"" + reader.GetString(colOffset + 4) + "\"."),
+            SquadLevel = reader.IsDBNull(colOffset + 11)
+                ? SquadLevel.Member
+                : reader.ReadStringEnum<SquadLevel>(colOffset + 11) ?? throw new FormatException("Invalid squad level: \"" + reader.GetString(colOffset + 11) + "\"."),
+            PrimaryKey = reader.GetInt32(colOffset + 0),
+            Id = id,
+            FactionKey = reader.IsDBNull(colOffset + 2) ? -1 : reader.GetInt32(colOffset + 2),
+            Class = @class,
+            RequestCooldown = reader.IsDBNull(colOffset + 6) ? 0f : reader.GetFloat(colOffset + 6),
+            TeamLimit = reader.IsDBNull(colOffset + 7) ? GetDefaultTeamLimit(@class) : reader.GetFloat(colOffset + 7),
+            Season = reader.IsDBNull(colOffset + 8) ? UCWarfare.Season : reader.GetByte(colOffset + 8),
+            Disabled = !reader.IsDBNull(colOffset + 9) && reader.GetBoolean(colOffset + 9),
+            WeaponText = reader.IsDBNull(colOffset + 10) ? null : reader.GetString(colOffset + 10)
+        };
+    }
+    /// <exception cref="FormatException"/>
+    private static IKitItem ReadItem(MySqlDataReader reader, int colOffset = 0)
+    {
+        IKitItem item;
+        bool hasGuid = !reader.IsDBNull(colOffset + 1);
+        bool hasRedir = !reader.IsDBNull(colOffset + 7);
+        bool hasPageStuff = !(reader.IsDBNull(colOffset + 2) || reader.IsDBNull(colOffset + 3) || reader.IsDBNull(colOffset + 5));
+        bool hasClothing = !reader.IsDBNull(colOffset + 6);
+        if (!hasGuid && !hasRedir)
+            throw new FormatException("Item row must either have a GUID or a redirect type.");
+        if (!hasPageStuff && !hasClothing)
+            throw new FormatException("Item row must either have jar information or a clothing type.");
+        if (hasGuid)
+        {
+            Guid? guid = reader.ReadGuidString(colOffset + 1);
+            if (!guid.HasValue)
+            {
+                if (hasRedir)
+                {
+                    L.LogWarning("Invalid GUID in item row: \"" + reader.GetString(colOffset + 1) + "\", falling back to redirect type.");
+                    goto redir;
+                }
+                throw new FormatException("Invalid GUID in item row: \"" + reader.GetString(colOffset + 1) + "\".");
+            }
+            if (hasPageStuff)
+            {
+                byte x = reader.GetByte(colOffset + 2),
+                     y = reader.GetByte(colOffset + 3),
+                     rot = reader.IsDBNull(colOffset + 4) ? (byte)0 : reader.GetByte(colOffset + 4),
+                     amt = reader.IsDBNull(colOffset + 8) ? (byte)0 : reader.GetByte(colOffset + 8);
+                rot %= 4;
+                Page? pg = reader.ReadStringEnum<Page>(colOffset + 5);
+                if (!pg.HasValue)
+                    throw new FormatException("Invalid page in item row: \"" + reader.GetString(colOffset + 5) + "\".");
+                item = new PageItem(guid.Value, x, y, rot, reader.IsDBNull(colOffset + 9) ? Array.Empty<byte>() : reader.ReadByteArray(colOffset + 9), amt, pg.Value);
+            }
+            else
+            {
+                ClothingType? type = reader.ReadStringEnum<ClothingType>(colOffset + 6);
+                if (!type.HasValue)
+                    throw new FormatException("Invalid clothing type in item row: \"" + reader.GetString(colOffset + 6) + "\".");
+                item = new ClothingItem(guid.Value, type.Value, reader.IsDBNull(colOffset + 9) ? Array.Empty<byte>() : reader.ReadByteArray(colOffset + 9));
+            }
+
+            return item;
+        }
+        redir:
+        RedirectType? redirect = reader.ReadStringEnum<RedirectType>(colOffset + 7);
+        if (!redirect.HasValue)
+            throw new FormatException("Invalid redirect in item row: \"" + reader.GetString(colOffset + 7) + "\".");
+        if (hasPageStuff)
+        {
+            byte x = reader.GetByte(colOffset + 2),
+                y = reader.GetByte(colOffset + 3),
+                rot = reader.IsDBNull(colOffset + 4) ? (byte)0 : reader.GetByte(colOffset + 4);
+            rot %= 4;
+            Page? pg = reader.ReadStringEnum<Page>(colOffset + 5);
+            if (!pg.HasValue)
+                throw new FormatException("Invalid page in item row: \"" + reader.GetString(colOffset + 5) + "\".");
+            item = new AssetRedirectItem(redirect.Value, x, y, rot, pg.Value);
+        }
+        else
+        {
+            ClothingType? type = reader.ReadStringEnum<ClothingType>(colOffset + 6);
+            if (!type.HasValue)
+                throw new FormatException("Invalid clothing type in item row: \"" + reader.GetString(colOffset + 6) + "\".");
+            item = new AssetRedirectClothing(redirect.Value, type.Value);
+        }
+
+        return item;
+    }
+    #endregion
 }
 
 public class KitManagerOld : BaseReloadSingleton
@@ -102,9 +640,9 @@ public class KitManagerOld : BaseReloadSingleton
     public static event KitCallback? OnKitUpdated;
     public static event KitAccessCallback? OnKitAccessChanged;
     public Dictionary<int, KitOld> Kits = new Dictionary<int, KitOld>(256);
-    private static KitManager _singleton;
+    private static KitManagerOld _singleton;
     public static bool Loaded => _singleton.IsLoaded();
-    public KitManager() : base("kits") { }
+    public KitManagerOld() : base("kits") { }
     public override void Load()
     {
         PlayerLife.OnPreDeath += PlayerLife_OnPreDeath;
@@ -153,31 +691,11 @@ public class KitManagerOld : BaseReloadSingleton
         }
         return sb.ToString();
     }
-    public static float GetDefaultTeamLimit(Class @class) => @class switch
-    {
-        Class.HAT => 0.1f,
-        _ => 1f
-    };
     public override void Unload()
     {
         _isLoaded = false;
         _singleton = null!;
         PlayerLife.OnPreDeath -= PlayerLife_OnPreDeath;
-    }
-    public static void TryGiveKitOnJoinTeam(UCPlayer player)
-    {
-        ulong team = player.GetTeam();
-        if (team is 1 or 2)
-        {
-            if (KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out KitOld unarmed))
-                GiveKit(player, unarmed);
-            else if (KitExists(TeamManager.DefaultKit, out unarmed))
-                GiveKit(player, unarmed);
-            else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
-        }
-        else if (KitExists(TeamManager.DefaultKit, out KitOld @default))
-            GiveKit(player, @default);
-        else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
     }
     private static void ReadToKit(MySqlDataReader reader, KitOld kit)
     {
@@ -199,7 +717,7 @@ public class KitManagerOld : BaseReloadSingleton
         kit.Items = new List<PageItem>(12);
         kit.Clothes = new List<ClothingItem>(5);
         kit.SignTexts = new Dictionary<string, string>(1);
-        kit.UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
+        kit.UnlockRequirements = Array.Empty<UnlockRequirement>();
         kit.Skillsets = Array.Empty<Skillset>();
     }
     private static void ReadToKitItem(MySqlDataReader reader, PageItem item)
@@ -247,10 +765,10 @@ public class KitManagerOld : BaseReloadSingleton
         }
         return set;
     }
-    private static BaseUnlockRequirement? ReadUnlockRequirement(MySqlDataReader reader)
+    private static UnlockRequirement? ReadUnlockRequirement(MySqlDataReader reader)
     {
         Utf8JsonReader jsonReader = new Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(reader.GetString(1)));
-        return BaseUnlockRequirement.Read(ref jsonReader);
+        return UnlockRequirement.Read(ref jsonReader);
     }
     public async Task RedownloadKit(string name)
     {
@@ -313,7 +831,7 @@ public class KitManagerOld : BaseReloadSingleton
                 int kitPk = R.GetInt32(0);
                 if (Kits.TryGetValue(kitPk, out KitOld kit))
                 {
-                    BaseUnlockRequirement? req = ReadUnlockRequirement(R);
+                    UnlockRequirement? req = ReadUnlockRequirement(R);
                     if (req != null)
                         kit.AddUnlockRequirement(req);
                 }
@@ -388,7 +906,7 @@ public class KitManagerOld : BaseReloadSingleton
                 int kitPk = R.GetInt32(0);
                 if (Kits.TryGetValue(kitPk, out KitOld kit))
                 {
-                    BaseUnlockRequirement? req = ReadUnlockRequirement(R);
+                    UnlockRequirement? req = ReadUnlockRequirement(R);
                     if (req != null)
                         kit.AddUnlockRequirement(req);
                 }
@@ -626,7 +1144,7 @@ public class KitManagerOld : BaseReloadSingleton
                             }
                             objs[index++] = pk;
                             Utf8JsonWriter writer = new Utf8JsonWriter(str, JsonEx.condensedWriterOptions);
-                            BaseUnlockRequirement.Write(writer, kit.UnlockRequirements[i]);
+                            UnlockRequirement.Write(writer, kit.UnlockRequirements[i]);
                             writer.Dispose();
                             objs[index++] = System.Text.Encoding.UTF8.GetString(str.ToArray());
                             str.Position = 0;
@@ -1080,9 +1598,9 @@ public class KitManagerOld : BaseReloadSingleton
                 for (int i = 0; i < oldKit.Skillsets.Length; i++)
                 {
                     ref Skillset skillset = ref kit.Skillsets[i];
-                    for (int j = 0; j < Skillset.DEFAULT_SKILLSETS.Length; j++)
+                    for (int j = 0; j < Skillset.DefaultSkillsets.Length; j++)
                     {
-                        ref Skillset skillset2 = ref Skillset.DEFAULT_SKILLSETS[j];
+                        ref Skillset skillset2 = ref Skillset.DefaultSkillsets[j];
                         if (skillset2.TypeEquals(in skillset))
                         {
                             for (int k = 0; k < kit.Skillsets.Length; k++)
@@ -1615,6 +2133,8 @@ public static class KitEx
     public const int SQUAD_LEVEL_MAX_CHAR_LIMIT = 16;
     public const int KIT_NAME_MAX_CHAR_LIMIT = 25;
     public const int WEAPON_TEXT_MAX_CHAR_LIMIT = 50;
+    public const int SIGN_TEXT_MAX_CHAR_LIMIT = 50;
+    public const int MAX_STATE_ARRAY_LIMIT = 18;
     public static bool HasItemOfID(this KitOld kit, Guid ID) => kit.Items.Exists(i => i.Item == ID);
     public static bool IsLimited(this KitOld kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
     {

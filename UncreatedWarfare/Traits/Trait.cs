@@ -265,7 +265,7 @@ public class TraitData : ITranslationArgument
     public ulong Team;
 
     [JsonPropertyName("unlock_requirements")]
-    public BaseUnlockRequirement[] UnlockRequirements { get; set; }
+    public UnlockRequirement[] UnlockRequirements { get; set; }
 
     [JsonPropertyName("name")]
     public TranslationList NameTranslations;

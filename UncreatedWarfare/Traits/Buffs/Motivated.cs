@@ -22,7 +22,7 @@ public sealed class Motivated : Buff
         Icon = "ª",
         Cooldown = 900,
         EffectDuration = 300,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 4 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 4 } },
         EffectDistributedToSquad = true,
         Data = "2"
     };

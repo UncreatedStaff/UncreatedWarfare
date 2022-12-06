@@ -22,7 +22,7 @@ public class RapidDeployment : Buff
         Icon = "¦",
         Cooldown = 420,
         EffectDuration = 300,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 3 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 3 } },
         EffectDistributedToSquad = true,
         Data = "0.75"
     };

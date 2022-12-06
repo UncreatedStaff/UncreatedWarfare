@@ -22,7 +22,7 @@ public class Ghost : Buff
         Icon = "£",
         Cooldown = 900,
         EffectDuration = 600,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 5 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 5 } },
         EffectDistributedToSquad = false,
         Data = string.Empty
     };

@@ -26,7 +26,7 @@ public class StrengthInNumbers : Buff
         Icon = "¦",
         Cooldown = 330,
         EffectDuration = 300,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 2 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 2 } },
         EffectDistributedToSquad = true,
         // half of armor increase is base, other half is multiplied by nearby squadmembers count
         Data = "250,0.1" // distance threshold, armor increase % (from 0)

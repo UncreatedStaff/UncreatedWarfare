@@ -53,7 +53,7 @@ public static class TraitSigns
         {
             for (int i = 0; i < trait.UnlockRequirements.Length; ++i)
             {
-                BaseUnlockRequirement req = trait.UnlockRequirements[i];
+                UnlockRequirement req = trait.UnlockRequirements[i];
                 if (!req.CanAccess(player))
                     return Signs.QuickFormat(tr2, req.GetSignText(player));
             }
