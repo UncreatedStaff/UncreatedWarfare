@@ -55,7 +55,7 @@ public class KitOld : IListItem, ITranslationArgument, ICloneable
     [CommandSettable]
     public string Weapons;
     public PrimaryKey PrimaryKey { get; set; }
-    public Kit(string name)
+    public KitOld(string name)
     {
         Name = name;
         Items = new List<PageItem>();
@@ -77,8 +77,8 @@ public class KitOld : IListItem, ITranslationArgument, ICloneable
         Disabled = false;
         SquadLevel = SquadLevel.Member;
     }
-    public Kit() : this("default") { }
-    public Kit(string kitName, List<PageItem> items, List<ClothingItem> clothing)
+    public KitOld() : this("default") { }
+    public KitOld(string kitName, List<PageItem> items, List<ClothingItem> clothing)
     {
         Name = kitName;
         Items = items ?? new List<PageItem>();
@@ -133,7 +133,7 @@ public class KitOld : IListItem, ITranslationArgument, ICloneable
         return clone;
     }
     /// <summary>empty constructor</summary>
-    public Kit(bool dummy) { }
+    public KitOld(bool dummy) { }
     public string GetDisplayName()
     {
         if (SignTexts is null) return Name;
@@ -142,62 +142,6 @@ public class KitOld : IListItem, ITranslationArgument, ICloneable
         if (SignTexts.Count > 0)
             return SignTexts.FirstOrDefault().Value ?? Name;
         return Name;
-    }
-    public static KitOld?[] ReadMany(ByteReader R)
-    {
-        KitOld?[] kits = new KitOld[R.ReadInt32()];
-        for (int i = 0; i < kits.Length; i++)
-        {
-            kits[i] = Read(R);
-        }
-        return kits;
-    }
-    public static KitOld? Read(ByteReader R)
-    {
-        if (R.ReadUInt8() == 1) return null;
-        KitOld kit = new KitOld(true);
-        kit.PrimaryKey = R.ReadInt32();
-        kit.Name = R.ReadString();
-        ushort itemCount = R.ReadUInt16();
-        ushort clothesCount = R.ReadUInt16();
-        List<PageItem> items = new List<PageItem>(itemCount);
-        List<ClothingItem> clothes = new List<ClothingItem>(clothesCount);
-        for (int i = 0; i < itemCount; i++)
-        {
-            items.Add(new PageItem()
-            {
-                Item = R.ReadGUID(),
-                Amount = R.ReadUInt8(),
-                Page = R.ReadUInt8(),
-                X = R.ReadUInt8(),
-                Y = R.ReadUInt8(),
-                Rotation = R.ReadUInt8(),
-                State = R.ReadBytes() ?? new byte[0]
-            });
-        }
-        for (int i = 0; i < clothesCount; i++)
-        {
-            clothes.Add(new ClothingItem()
-            {
-                Item = R.ReadGUID(),
-                Type = R.ReadEnum<ClothingType>()
-            });
-        }
-        kit.Items = items;
-        kit.Clothes = clothes;
-        kit.Branch = R.ReadEnum<Branch>();
-        kit.Class = R.ReadEnum<Class>();
-        kit.Cooldown = R.ReadFloat();
-        kit.IsPremium = R.ReadBool();
-        kit.IsLoadout = R.ReadBool();
-        kit.PremiumCost = R.ReadFloat();
-        kit.Team = R.ReadUInt64();
-        kit.TeamLimit = R.ReadFloat();
-        kit.CreditCost = R.ReadUInt16();
-        kit.UnlockLevel = R.ReadUInt16();
-        kit.Disabled = R.ReadBool();
-        kit.SquadLevel = R.ReadEnum<SquadLevel>();
-        return kit;
     }
     public static void WriteMany(ByteWriter W, KitOld?[] kits)
     {
@@ -398,7 +342,7 @@ public class KitOld : IListItem, ITranslationArgument, ICloneable
 
 }
 
-public class Kit : IListItem
+public class Kit : IListItem, ITranslationArgument
 {
     public PrimaryKey PrimaryKey { get; set; }
     public PrimaryKey FactionKey { get; set; }
@@ -459,6 +403,33 @@ public class Kit : IListItem
 
         return false;
     }
+    public string GetDisplayName(string language = L.DEFAULT)
+    {
+        if (SignText is null) return Id;
+        if (SignText.TryGetValue(language, out string val))
+            return val ?? Id;
+        if (SignText.Count > 0)
+            return SignText.FirstOrDefault().Value ?? Id;
+        return Id;
+    }
+    [FormatDisplay("Kit Id")]
+    public const string IdFormat = "i";
+    [FormatDisplay("Display Name")]
+    public const string DisplayNameFormat = "d";
+    [FormatDisplay("Class (" + nameof(Kits.Class) + ")")]
+    public const string ClassFormat = "c";
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        if (format is not null)
+        {
+            if (format.Equals(IdFormat, StringComparison.Ordinal))
+                return Id;
+            if (format.Equals(ClassFormat, StringComparison.Ordinal))
+                return Localization.TranslateEnum(Class, language);
+        }
+
+        return GetDisplayName(language);
+    }
 }
 public readonly struct Skillset : IEquatable<Skillset>
 {
@@ -497,7 +468,7 @@ public readonly struct Skillset : IEquatable<Skillset>
         Level = level;
     }
 
-    private Skillset(EPlayerSpeciality specialty, byte skill, byte level)
+    internal Skillset(EPlayerSpeciality specialty, byte skill, byte level)
     {
         Speciality = specialty;
         SkillIndex = skill;
@@ -634,7 +605,7 @@ public readonly struct Skillset : IEquatable<Skillset>
             EPlayerSpeciality.OFFENSE => "Offense: " + Offense,
             EPlayerSpeciality.DEFENSE => "Defense: " + Defense,
             EPlayerSpeciality.SUPPORT => "Support: " + Support,
-            _ => "Invalid speciality"
+            _ => "Invalid speciality #" + SkillIndex.ToString(Data.Locale)
         } + " at level " + Level.ToString(Data.Locale) + ".";
     }
     public override int GetHashCode()
@@ -981,7 +952,7 @@ public interface IClothingJar
 
 public interface IKitItem
 {
-    public ItemAsset? GetItem(KitOld kit, FactionInfo targetTeam, out byte amount, out byte[] state);
+    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state);
 }
 public interface IItemJar
 {
@@ -1033,7 +1004,7 @@ public class AssetRedirectItem : ICloneable, IItemJar, IAssetRedirect, IKitItem
         Page = copy.Page;
     }
     public object Clone() => new AssetRedirectItem(this);
-    public ItemAsset? GetItem(KitOld kit, FactionInfo targetTeam, out byte amount, out byte[] state) =>
+    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
         TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
 }
 public class AssetRedirectClothing : ICloneable, IClothingJar, IKitItem
@@ -1052,7 +1023,7 @@ public class AssetRedirectClothing : ICloneable, IClothingJar, IKitItem
         Type = copy.Type;
     }
     public object Clone() => new AssetRedirectClothing(this);
-    public ItemAsset? GetItem(KitOld kit, FactionInfo targetTeam, out byte amount, out byte[] state) =>
+    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
         TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
 }
 public class PageItem : ICloneable, IItemJar, IItem, IKitItem
@@ -1160,7 +1131,7 @@ public class PageItem : ICloneable, IItemJar, IItem, IKitItem
         return new Schema(tableName, columns, false, typeof(PageItem));
     }
 
-    public ItemAsset? GetItem(KitOld kit, FactionInfo targetTeam, out byte amount, out byte[] state)
+    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
         if (_isLegacyRedirect)
             return TeamManager.GetRedirectInfo(_legacyRedirect, kit.Faction, targetTeam, out state, out amount);
@@ -1218,7 +1189,7 @@ public class ClothingItem : ICloneable, IClothingJar, IClothing, IKitItem
     public ClothingItem() { }
 
     public object Clone() => new ClothingItem(this);
-    public ItemAsset? GetItem(KitOld kit, FactionInfo targetTeam, out byte amount, out byte[] state)
+    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
         amount = 1;
         if (_isLegacyRedirect)
@@ -1235,7 +1206,7 @@ public class ClothingItem : ICloneable, IClothingJar, IClothing, IKitItem
     }
 }
 
-/// <summary>Max field character limit: <see cref="KitEx.SQUAD_LEVEL_MAX_CHAR_LIMIT"/>.</summary>
+/// <summary>Max field character limit: <see cref="KitEx.SquadLevelMaxCharLimit"/>.</summary>
 [Translatable("Squad Level")]
 public enum SquadLevel : byte
 {
@@ -1244,7 +1215,7 @@ public enum SquadLevel : byte
     [Translatable("Commander")]
     Commander = 4
 }
-/// <summary>Max field character limit: <see cref="KitEx.BRANCH_MAX_CHAR_LIMIT"/>.</summary>
+/// <summary>Max field character limit: <see cref="KitEx.BranchMaxCharLimit"/>.</summary>
 [Translatable("Branch")]
 public enum Branch : byte
 {
@@ -1257,7 +1228,7 @@ public enum Branch : byte
     SpecOps,
     Navy
 }
-/// <summary>Max field character limit: <see cref="KitEx.CLOTHING_MAX_CHAR_LIMIT"/>.</summary>
+/// <summary>Max field character limit: <see cref="KitEx.ClothingMaxCharLimit"/>.</summary>
 public enum ClothingType : byte
 {
     Shirt,
@@ -1269,7 +1240,7 @@ public enum ClothingType : byte
     Glasses
 }
 
-/// <summary>Max field character limit: <see cref="KitEx.TYPE_MAX_CHAR_LIMIT"/>.</summary>
+/// <summary>Max field character limit: <see cref="KitEx.TypeMaxCharLimit"/>.</summary>
 [Translatable("Kit Type")]
 public enum KitType : byte
 {
@@ -1279,7 +1250,7 @@ public enum KitType : byte
     Loadout
 }
 
-/// <summary>Max field character limit: <see cref="KitEx.REDIRECT_TYPE_CHAR_LIMIT"/>.</summary>
+/// <summary>Max field character limit: <see cref="KitEx.RedirectTypeCharLimit"/>.</summary>
 public enum RedirectType : byte
 {
     Shirt,
@@ -1308,7 +1279,7 @@ public enum Page : byte
     Storage = 7,
     Area = 8
 }
-/// <summary>Max field character limit: <see cref="KitEx.CLASS_MAX_CHAR_LIMIT"/>.</summary>
+/// <summary>Max field character limit: <see cref="KitEx.ClassMaxCharLimit"/>.</summary>
 [JsonConverter(typeof(ClassConverter))]
 [Translatable("Kit Class")]
 public enum Class : byte

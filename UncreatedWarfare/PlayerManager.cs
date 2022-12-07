@@ -52,14 +52,15 @@ public static class PlayerManager
     }
     public static void ApplyTo(UCPlayer player)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave? save) || save == null)
             save = new PlayerSave(player.Steam64);
         save.Team = player.GetTeam();
-        save.KitName = player.KitName;
-        save.SquadName = player.Squad?.Name ?? string.Empty;
+        save.KitName = player.ActiveKit?.Item?.Id ?? string.Empty;
+        save.SquadName = player.Squad is { IsLocked: false } ? player.Squad.Name : string.Empty;
         save.LastGame = Data.Gamemode.GameID;
         PlayerSave.WriteToSaveFile(save);
     }

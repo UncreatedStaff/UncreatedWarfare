@@ -835,63 +835,122 @@ public static class TeamManager
 
         return true;
     }
-    public static ItemAsset? GetRedirectInfo(RedirectType type, FactionInfo? kitFaction, FactionInfo requesterTeam, out byte[] state, out byte amount)
+    public static ItemAsset? GetRedirectInfo(RedirectType type, FactionInfo? kitFaction, FactionInfo? requesterTeam, out byte[] state, out byte amount)
     {
-        kitFaction ??= requesterTeam;
+        if (requesterTeam == null)
+            requesterTeam = kitFaction;
+        else if (kitFaction == null)
+            kitFaction = requesterTeam;
         ItemAsset? rtn;
         switch (type)
         {
             case RedirectType.Shirt:
-                kitFaction.DefaultShirt.ValidReference(out ItemShirtAsset sasset);
-                rtn = sasset;
+                if (kitFaction == null)
+                    rtn = null;
+                else
+                {
+                    kitFaction.DefaultShirt.ValidReference(out ItemShirtAsset sasset);
+                    rtn = sasset;
+                }
                 break;
             case RedirectType.Pants:
-                kitFaction.DefaultPants.ValidReference(out ItemPantsAsset passet);
-                rtn = passet;
+                if (kitFaction == null)
+                    rtn = null;
+                else
+                {
+                    kitFaction.DefaultPants.ValidReference(out ItemPantsAsset passet);
+                    rtn = passet;
+                }
                 break;
             case RedirectType.Vest:
-                kitFaction.DefaultVest.ValidReference(out ItemVestAsset vasset);
-                rtn = vasset;
+                if (kitFaction == null)
+                    rtn = null;
+                else
+                {
+                    kitFaction.DefaultVest.ValidReference(out ItemVestAsset vasset);
+                    rtn = vasset;
+                }
                 break;
             case RedirectType.Backpack:
-                kitFaction.DefaultBackpack.ValidReference(out ItemBackpackAsset bkasset);
-                rtn = bkasset;
+                if (kitFaction == null)
+                    rtn = null;
+                else
+                {
+                    kitFaction.DefaultBackpack.ValidReference(out ItemBackpackAsset bkasset);
+                    rtn = bkasset;
+                }
                 break;
             case RedirectType.Glasses:
-                kitFaction.DefaultGlasses.ValidReference(out ItemGlassesAsset gasset);
-                rtn = gasset;
+                if (kitFaction == null)
+                    rtn = null;
+                else
+                {
+                    kitFaction.DefaultGlasses.ValidReference(out ItemGlassesAsset gasset);
+                    rtn = gasset;
+                }
                 break;
             case RedirectType.Mask:
-                kitFaction.DefaultMask.ValidReference(out ItemMaskAsset masset);
-                rtn = masset;
+                if (kitFaction == null)
+                    rtn = null;
+                else
+                {
+                    kitFaction.DefaultMask.ValidReference(out ItemMaskAsset masset);
+                    rtn = masset;
+                }
                 break;
             case RedirectType.Hat:
-                kitFaction.DefaultHat.ValidReference(out ItemHatAsset hasset);
-                rtn = hasset;
+                if (kitFaction == null)
+                    rtn = null;
+                else
+                {
+                    kitFaction.DefaultHat.ValidReference(out ItemHatAsset hasset);
+                    rtn = hasset;
+                }
                 break;
             case RedirectType.BuildSupply:
-                requesterTeam.Build.ValidReference(out ItemAsset iasset);
-                rtn = iasset;
+                if (requesterTeam == null)
+                    rtn = null;
+                else
+                {
+                    requesterTeam.Build.ValidReference(out ItemAsset iasset);
+                    rtn = iasset;
+                }
                 break;
             case RedirectType.AmmoSupply:
-                requesterTeam.Ammo.ValidReference(out iasset);
-                rtn = iasset;
+                if (requesterTeam == null)
+                    rtn = null;
+                else
+                {
+                    requesterTeam.Ammo.ValidReference(out ItemAsset iasset);
+                    rtn = iasset;
+                }
                 break;
             case RedirectType.RallyPoint:
-                requesterTeam.RallyPoint.ValidReference(out ItemBarricadeAsset rasset);
-                rtn = rasset;
+                if (requesterTeam == null)
+                    rtn = null;
+                else
+                {
+                    requesterTeam.RallyPoint.ValidReference(out ItemBarricadeAsset rasset);
+                    rtn = rasset;
+                }
                 break;
             case RedirectType.Radio:
-                requesterTeam.FOBRadio.ValidReference(out rasset);
-                rtn = rasset;
+                if (requesterTeam == null)
+                    rtn = null;
+                else
+                {
+                    requesterTeam.FOBRadio.ValidReference(out ItemBarricadeAsset rasset);
+                    rtn = rasset;
+                }
                 break;
             case RedirectType.ZoneBlocker:
+                ItemBarricadeAsset rasset2;
                 if (Team1Faction == requesterTeam)
-                    Gamemode.Config.BarricadeZoneBlockerTeam1.ValidReference(out rasset);
+                    Gamemode.Config.BarricadeZoneBlockerTeam1.ValidReference(out rasset2);
                 else if (Team2Faction == requesterTeam)
-                    Gamemode.Config.BarricadeZoneBlockerTeam2.ValidReference(out rasset);
-                else rasset = null!;
-                rtn = rasset;
+                    Gamemode.Config.BarricadeZoneBlockerTeam2.ValidReference(out rasset2);
+                else rasset2 = null!;
+                rtn = rasset2;
                 break;
             default:
                 L.LogWarning("Unknown redirect: " + type + ".");
@@ -1189,7 +1248,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             {
                 Nullable = true
             },
-            new Schema.Column(COLUMN_UNARMED_KIT, "varchar(" + KitEx.KIT_NAME_MAX_CHAR_LIMIT.ToString(CultureInfo.InvariantCulture) + ")")
+            new Schema.Column(COLUMN_UNARMED_KIT, "varchar(" + KitEx.KitNameMaxCharLimit.ToString(CultureInfo.InvariantCulture) + ")")
             {
                 Nullable = true
             },

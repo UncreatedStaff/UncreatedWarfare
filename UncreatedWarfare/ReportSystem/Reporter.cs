@@ -337,12 +337,12 @@ public class Reporter : MonoBehaviour
         });
     }
     /// <summary>Slow, use rarely.</summary>
-    public ulong RecentPlayerNameCheck(string name, UCPlayer.ENameSearchType type)
+    public ulong RecentPlayerNameCheck(string name, UCPlayer.NameSearch type)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (type == UCPlayer.ENameSearchType.CHARACTER_NAME)
+        if (type == UCPlayer.NameSearch.CharacterName)
         {
             foreach (PlayerData current in data.OrderBy(x => x.characterName.Length))
             {
@@ -361,7 +361,7 @@ public class Reporter : MonoBehaviour
             }
             return 0;
         }
-        else if (type == UCPlayer.ENameSearchType.NICK_NAME)
+        else if (type == UCPlayer.NameSearch.NickName)
         {
             foreach (PlayerData current in data.OrderBy(x => x.nickName.Length))
             {
@@ -380,7 +380,7 @@ public class Reporter : MonoBehaviour
             }
             return 0;
         }
-        else if (type == UCPlayer.ENameSearchType.PLAYER_NAME)
+        else if (type == UCPlayer.NameSearch.PlayerName)
         {
             foreach (PlayerData current in data.OrderBy(x => x.playerName.Length))
             {
@@ -399,7 +399,7 @@ public class Reporter : MonoBehaviour
             }
             return 0;
         }
-        else return RecentPlayerNameCheck(name, UCPlayer.ENameSearchType.CHARACTER_NAME);
+        else return RecentPlayerNameCheck(name, UCPlayer.NameSearch.CharacterName);
     }
     internal void OnPlayerChat(ulong player, string message)
     {

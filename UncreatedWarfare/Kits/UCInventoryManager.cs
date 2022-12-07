@@ -27,50 +27,9 @@ public static class UCInventoryManager
             L.LogError(ex);
         }
     }
-    public static void GiveKitToPlayer(UCPlayer player, KitOld kit)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (kit != null)
-        {
-            ClearInventory(player);
-            foreach (ClothingItem clothing in kit.Clothes)
-            {
-                if (Assets.find(clothing.Item) is ItemAsset asset)
-                {
-                    if (clothing.Type == ClothingType.SHIRT)
-                        player.Player.clothing.askWearShirt(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == ClothingType.PANTS)
-                        player.Player.clothing.askWearPants(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == ClothingType.VEST)
-                        player.Player.clothing.askWearVest(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == ClothingType.HAT)
-                        player.Player.clothing.askWearHat(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == ClothingType.MASK)
-                        player.Player.clothing.askWearMask(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == ClothingType.BACKPACK)
-                        player.Player.clothing.askWearBackpack(asset.id, 100, asset.getState(true), true);
-                    if (clothing.Type == ClothingType.GLASSES)
-                        player.Player.clothing.askWearGlasses(asset.id, 100, asset is ItemGlassesAsset ga && ga.vision != ELightingVision.NONE ? new byte[1] : asset.getState(true), true);
-                }
-            }
-
-            foreach (PageItem k in kit.Items)
-            {
-                if (Assets.find(k.Item) is ItemAsset asset)
-                {
-                    Item item = new Item(asset.id, k.Amount, 100, Util.CloneBytes(k.State));
-
-                    if (!player.Player.inventory.tryAddItem(item, k.X, k.Y, k.Page, k.Rotation))
-                        player.Player.inventory.tryAddItem(item, true);
-                }
-            }
-        }
-    }
     public static void ClearInventory(UCPlayer player, bool clothes = true)
     {
-        byte[] blank = Array.Empty<byte>();
+        ThreadUtil.assertIsGameThread();
         if (Data.UseFastKits)
         {
             // clears the inventory quickly
@@ -81,10 +40,7 @@ public static class UCInventoryManager
             Items[] inv = player.Player.inventory.items;
             inv[0].removeItem(0);
             inv[1].removeItem(0);
-
-            //inv[PlayerInventory.SLOTS].onItemsResized(PlayerInventory.SLOTS, 0, 0);
-            //inv[PlayerInventory.SLOTS].onItemsResized(PlayerInventory.SLOTS, 5, 3);
-
+            
             byte m = (byte)(PlayerInventory.PAGES - 2);
             for (byte i = PlayerInventory.SLOTS; i < m; ++i)
             {
@@ -104,6 +60,7 @@ public static class UCInventoryManager
             }
             if (clothes)
             {
+                byte[] blank = Array.Empty<byte>();
                 id = player.Player.clothing.GetNetId();
                 if (player.Player.clothing.shirt != 0)
                     Data.SendWearShirt!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
@@ -135,6 +92,7 @@ public static class UCInventoryManager
 
             if (clothes)
             {
+                byte[] blank = Array.Empty<byte>();
                 player.Player.clothing.askWearBackpack(0, 0, blank, true);
                 player.Player.inventory.removeItem(2, 0);
 
@@ -182,13 +140,13 @@ public static class UCInventoryManager
             ClientInstanceMethod<Guid, byte, byte[], bool>? inv =
                 clothing.Type switch
                 {
-                    ClothingType.SHIRT => Data.SendWearShirt,
-                    ClothingType.PANTS => Data.SendWearPants,
-                    ClothingType.HAT => Data.SendWearHat,
-                    ClothingType.BACKPACK => Data.SendWearBackpack,
-                    ClothingType.VEST => Data.SendWearVest,
-                    ClothingType.MASK => Data.SendWearMask,
-                    ClothingType.GLASSES => Data.SendWearGlasses,
+                    ClothingType.Shirt => Data.SendWearShirt,
+                    ClothingType.Pants => Data.SendWearPants,
+                    ClothingType.Hat => Data.SendWearHat,
+                    ClothingType.Backpack => Data.SendWearBackpack,
+                    ClothingType.Vest => Data.SendWearVest,
+                    ClothingType.Mask => Data.SendWearMask,
+                    ClothingType.Glasses => Data.SendWearGlasses,
                     _ => null
                 };
             if (inv != null)
@@ -203,13 +161,13 @@ public static class UCInventoryManager
             {
                 ((ClothingType)i switch
                 {
-                    ClothingType.SHIRT => Data.SendWearShirt,
-                    ClothingType.PANTS => Data.SendWearPants,
-                    ClothingType.HAT => Data.SendWearHat,
-                    ClothingType.BACKPACK => Data.SendWearBackpack,
-                    ClothingType.VEST => Data.SendWearVest,
-                    ClothingType.MASK => Data.SendWearMask,
-                    ClothingType.GLASSES => Data.SendWearGlasses,
+                    ClothingType.Shirt => Data.SendWearShirt,
+                    ClothingType.Pants => Data.SendWearPants,
+                    ClothingType.Hat => Data.SendWearHat,
+                    ClothingType.Backpack => Data.SendWearBackpack,
+                    ClothingType.Vest => Data.SendWearVest,
+                    ClothingType.Mask => Data.SendWearMask,
+                    ClothingType.Glasses => Data.SendWearGlasses,
                     _ => null
                 })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
             }

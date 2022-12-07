@@ -71,7 +71,7 @@ public class BuyCommand : AsyncCommand
                 ctx.Caller.PurchaseSync.Release();
             }
 
-            await KitManager.GiveAccess(kit, ctx.Caller, EKitAccessType.CREDITS).ThenToUpdate(token);
+            await KitManager.GiveAccess(kit, ctx.Caller, KitAccessType.CREDITS).ThenToUpdate(token);
 
             KitManager.UpdateSigns(kit, ctx.Caller);
             if (Gamemode.Config.EffectPurchase.ValidReference(out EffectAsset effect))

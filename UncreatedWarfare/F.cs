@@ -20,6 +20,7 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
@@ -1559,4 +1560,16 @@ public static class F
 
         return -1;
     }
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="type"/> is not a valid value.</exception>
+    public static EItemType GetItemType(this ClothingType type) => type switch
+    {
+        ClothingType.Shirt => EItemType.SHIRT,
+        ClothingType.Pants => EItemType.PANTS,
+        ClothingType.Vest => EItemType.VEST,
+        ClothingType.Hat => EItemType.HAT,
+        ClothingType.Mask => EItemType.MASK,
+        ClothingType.Backpack => EItemType.BACKPACK,
+        ClothingType.Glasses => EItemType.GLASSES,
+        _ => throw new ArgumentOutOfRangeException(nameof(type))
+    };
 }

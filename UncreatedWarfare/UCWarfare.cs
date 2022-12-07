@@ -458,7 +458,7 @@ public class UCWarfare : MonoBehaviour
         }
     }
     /// <summary>Continues to run main thread operations in between spins so that calls to <see cref="ToUpdate"/> are not blocked.</summary>
-    public static bool SpinWaitUntil(Func<bool> condition, int millisecondsTimeout = -1)
+    public static bool SpinWaitUntil(Func<bool> condition, int millisecondsTimeout = -1, CancellationToken token = default)
     {
         if (!IsMainThread)
             return SpinWait.SpinUntil(condition, millisecondsTimeout);
@@ -469,6 +469,8 @@ public class UCWarfare : MonoBehaviour
         SpinWait spinWait = new SpinWait();
         while (!condition())
         {
+            if (token.IsCancellationRequested)
+                throw new OperationCanceledException(token);
             if (millisecondsTimeout == 0)
                 return false;
             spinWait.SpinOnce();

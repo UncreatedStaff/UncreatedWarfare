@@ -202,7 +202,7 @@ public class KitAccessReward : IQuestReward
     public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
         if (KitManager.KitExists(KitId, out KitOld kit))
-            return KitManager.GiveAccess(kit, player, EKitAccessType.QUEST_REWARD);
+            return KitManager.GiveAccess(kit, player, KitAccessType.QUEST_REWARD);
         return Task.CompletedTask;
     }
     public void Init(object value)

@@ -286,8 +286,8 @@ public class KitCommand : Command
                         ctx.Reply(T.PlayerNotFound);
                         return;
                     }
-                    if (!ctx.TryGet(3, out EKitAccessType type) || type == EKitAccessType.UNKNOWN)
-                        type = EKitAccessType.PURCHASE;
+                    if (!ctx.TryGet(3, out KitAccessType type) || type == KitAccessType.UNKNOWN)
+                        type = KitAccessType.PURCHASE;
                     Task.Run(async () =>
                     {
                         bool hasAccess;
@@ -309,9 +309,9 @@ public class KitCommand : Command
                             return;
                         }
                         if (onlinePlayer is not null)
-                            await KitManager.GiveAccess(kit, onlinePlayer, EKitAccessType.PURCHASE);
+                            await KitManager.GiveAccess(kit, onlinePlayer, KitAccessType.PURCHASE);
                         else
-                            await KitManager.GiveAccess(kit, playerId, EKitAccessType.PURCHASE);
+                            await KitManager.GiveAccess(kit, playerId, KitAccessType.PURCHASE);
                         ctx.LogAction(EActionLogType.CHANGE_KIT_ACCESS, playerId.ToString(Data.Locale) + " GIVEN ACCESS TO " + kitName + ", REASON: " + type.ToString());
 
                         await UCWarfare.ToUpdate();
@@ -480,7 +480,7 @@ public class KitCommand : Command
                         KitManager.UpdateText(loadout, signText, L.DEFAULT, false);
 
                         loadout = await KitManager.AddKit(loadout);
-                        await KitManager.GiveAccess(loadout, playerId, EKitAccessType.PURCHASE);
+                        await KitManager.GiveAccess(loadout, playerId, KitAccessType.PURCHASE);
                         ctx.LogAction(EActionLogType.CREATE_KIT, loadoutName);
                         await UCWarfare.ToUpdate();
                         KitManager.UpdateSigns(loadout);

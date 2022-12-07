@@ -61,7 +61,7 @@ public class ReportCommand : AsyncCommand
                 goto Help;
             if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, NumberStyles.Any, Data.Locale, out target)))
             {
-                UCPlayer.ENameSearchType search = GetNameType(type);
+                UCPlayer.NameSearch search = GetNameType(type);
                 target = Data.Reporter.RecentPlayerNameCheck(inPlayer, search);
                 if (target == 0)
                     goto PlayerNotFound;
@@ -81,7 +81,7 @@ public class ReportCommand : AsyncCommand
 
             if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out target)))
             {
-                UCPlayer.ENameSearchType search = GetNameType(type);
+                UCPlayer.NameSearch search = GetNameType(type);
                 UCPlayer? temptarget = UCPlayer.FromName(inPlayer, search);
                 target = temptarget == null ? Data.Reporter.RecentPlayerNameCheck(inPlayer, search) : temptarget.Steam64;
                 if (target == 0)
@@ -237,13 +237,13 @@ public class ReportCommand : AsyncCommand
         new KeyValuePair<string, EReportType>("hacker",                  EReportType.CHEATING),
         new KeyValuePair<string, EReportType>("cheater",                 EReportType.CHEATING)
     };
-    public UCPlayer.ENameSearchType GetNameType(EReportType type)
+    public UCPlayer.NameSearch GetNameType(EReportType type)
     {
         return type switch
         {
-            EReportType.CUSTOM or EReportType.INTENTIONAL_TEAMKILL or EReportType.GREIFING_FOBS or EReportType.SOLOING_VEHICLE or EReportType.VOICE_CHAT_ABUSE or EReportType.WASTING_ASSETS or EReportType.CHEATING => UCPlayer.ENameSearchType.NICK_NAME,
-            EReportType.CHAT_ABUSE => UCPlayer.ENameSearchType.CHARACTER_NAME,
-            _ => UCPlayer.ENameSearchType.CHARACTER_NAME,
+            EReportType.CUSTOM or EReportType.INTENTIONAL_TEAMKILL or EReportType.GREIFING_FOBS or EReportType.SOLOING_VEHICLE or EReportType.VOICE_CHAT_ABUSE or EReportType.WASTING_ASSETS or EReportType.CHEATING => UCPlayer.NameSearch.NickName,
+            EReportType.CHAT_ABUSE => UCPlayer.NameSearch.CharacterName,
+            _ => UCPlayer.NameSearch.CharacterName,
         };
     }
     public string GetName(EReportType type)

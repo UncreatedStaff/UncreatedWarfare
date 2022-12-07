@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
@@ -22,6 +23,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Revives;
 
+[SingletonDependency(typeof(KitManager))]
 public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinListener
 {
     private readonly Dictionary<ulong, DownedPlayerData> DownedPlayers;
@@ -59,9 +61,11 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         _updater = UCWarfare.I.StartCoroutine(UpdatePositions());
         UCPlayerKeys.SubscribeKeyUp(GiveUpPressed, Data.Keys.GiveUp);
         UCPlayerKeys.SubscribeKeyUp(SelfRevivePressed, Data.Keys.SelfRevive);
+        KitManager.OnKitChanged += OnKitChanged;
     }
     public override void Unload()
     {
+        KitManager.OnKitChanged -= OnKitChanged;
         UCPlayerKeys.UnsubscribeKeyUp(SelfRevivePressed, Data.Keys.SelfRevive);
         UCPlayerKeys.UnsubscribeKeyUp(GiveUpPressed, Data.Keys.GiveUp);
         _singleton = null!;
@@ -425,13 +429,25 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         ClearInjuredMarker(e.Steam64, e.Player.GetTeam());
     }
-    public void RegisterMedic(UCPlayer player)
+    private void OnKitChanged(UCPlayer player, SqlItem<Kit>? oldkit, SqlItem<Kit>? newKit)
+    {
+        bool oldIsMedic = oldkit?.Item != null && oldkit.Item.Class == Class.Medic;
+        if (newKit?.Item != null && newKit.Item.Class == Class.Medic)
+        {
+            if (!oldIsMedic)
+                RegisterMedic(player);
+            return;
+        }
+        if (oldIsMedic)
+            DeregisterMedic(player);
+    }
+    private void RegisterMedic(UCPlayer player)
     {
         Medics.Add(player);
         IEnumerable<Vector3> newpositions = GetPositionsOfTeam(player.GetTeam());
         SpawnInjuredMarkers(player.Player.channel.owner.transportConnection, newpositions, true, player.Position);
     }
-    public void DeregisterMedic(UCPlayer player)
+    private void DeregisterMedic(UCPlayer player)
     {
         Medics.RemoveAll(x => x == null || x.Steam64 == player.Steam64);
         ClearInjuredMarkers(player);

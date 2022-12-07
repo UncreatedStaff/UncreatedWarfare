@@ -1200,7 +1200,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     internal async Task HandleQuestCompleted(QuestCompleted e)
     {
-        if (!RankManager.OnQuestCompleted(e) && !KitManager.OnQuestCompleted(e))
+        if (!RankManager.OnQuestCompleted(e))
         {
             for (int i = 0; i < _singletons.Count; ++i)
             {

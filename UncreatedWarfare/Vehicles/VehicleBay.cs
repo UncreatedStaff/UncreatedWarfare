@@ -940,11 +940,11 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             {
                 Default = nameof(EVehicleType.NONE)
             },
-            new Schema.Column(COLUMN_BRANCH, "varchar(" + KitEx.BRANCH_MAX_CHAR_LIMIT + ")")
+            new Schema.Column(COLUMN_BRANCH, "varchar(" + KitEx.BranchMaxCharLimit + ")")
             {
                 Default = nameof(Branch.Default)
             },
-            new Schema.Column(COLUMN_REQUIRED_CLASS, "varchar(" + KitEx.CLASS_MAX_CHAR_LIMIT + ")")
+            new Schema.Column(COLUMN_REQUIRED_CLASS, "varchar(" + KitEx.ClassMaxCharLimit + ")")
             {
                 Default = nameof(Class.None)
             },
