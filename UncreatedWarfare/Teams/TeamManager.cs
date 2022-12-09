@@ -133,13 +133,15 @@ public static class TeamManager
     private static FactionInfo? _t1Faction;
     private static FactionInfo? _t2Faction;
     private static FactionInfo? _t3Faction;
-    private static Vector3 _lobbySpawn = default;
+    private static Vector3 _lobbySpawn;
     internal static readonly Dictionary<ulong, byte> PlayerBaseStatus = new Dictionary<ulong, byte>();
     public static event PlayerTeamDelegate OnPlayerEnteredMainBase;
     public static event PlayerTeamDelegate OnPlayerLeftMainBase;
     public const ulong Team1ID = 1;
     public const ulong Team2ID = 2;
     public const ulong AdminID = 3;
+    private static IReadOnlyList<FactionInfo> _factionsReadonly;
+    public static IReadOnlyList<FactionInfo> Factions => _factionsReadonly ?? throw new NullReferenceException("Factions have not been loaded yet.");
     public static TeamConfigData Config => _data.Data;
     public static string Team1Name => Team1Faction.Name;
     public static string Team2Name => Team2Faction.Name;
@@ -244,8 +246,8 @@ public static class TeamManager
             else return "ffffff";
         }
     }
-    public static string Team1UnarmedKit => Team1Faction.UnarmedKit;
-    public static string Team2UnarmedKit => Team1Faction.UnarmedKit;
+    public static string? Team1UnarmedKit => Team1Faction.UnarmedKit;
+    public static string? Team2UnarmedKit => Team1Faction.UnarmedKit;
     public static float Team1SpawnAngle => _data.Data.Team1SpawnYaw;
     public static float Team2SpawnAngle => _data.Data.Team2SpawnYaw;
     public static float LobbySpawnAngle => _data.Data.LobbySpawnpointYaw;
@@ -410,21 +412,25 @@ public static class TeamManager
             return _lobbySpawn;
         }
     }
-    [Obsolete]
     public static FactionInfo GetFaction(ulong team)
     {
-        if (team == 1) return Team1Faction;
-        if (team == 2) return Team2Faction;
-        if (team == 3) return AdminFaction;
-        throw new ArgumentOutOfRangeException(nameof(team));
+        return team switch
+        {
+            1 => Team1Faction,
+            2 => Team2Faction,
+            3 => AdminFaction,
+            _ => throw new ArgumentOutOfRangeException(nameof(team))
+        };
     }
-    [Obsolete]
     public static FactionInfo? GetFactionSafe(ulong team)
     {
-        if (team == 1) return Team1Faction;
-        if (team == 2) return Team2Faction;
-        if (team == 3) return AdminFaction;
-        return null;
+        return team switch
+        {
+            1 => Team1Faction,
+            2 => Team2Faction,
+            3 => AdminFaction,
+            _ => null
+        };
     }
 
     public static FactionInfo? GetFactionInfo(PrimaryKey id)
@@ -447,6 +453,19 @@ public static class TeamManager
         }
 
         return null;
+    }
+    /// <summary>Advanced search using name, abbreviation, and short name.</summary>
+    /// <remarks>Exact matches for Id are prioritized.</remarks>
+    public static FactionInfo? FindFactionInfo(string search)
+    {
+        FactionInfo? faction = GetFactionInfo(search);
+        if (faction != null) return faction;
+        int index = F.StringSearch(_factions, x => x.Name, search);
+        if (index != -1) return _factions[index];
+        index = F.StringSearch(_factions, x => x.Abbreviation, search);
+        if (index != -1) return _factions[index];
+        index = F.StringSearch(_factions, x => x.ShortName, search);
+        return index != -1 ? _factions[index] : null;
     }
     internal static void ResetLocations()
     {
@@ -535,8 +554,8 @@ public static class TeamManager
         else if (team == 2) return 1;
         else return team;
     }
-    public static bool IsTeam1(this ulong ID) => ID == Team1ID;
-    public static bool IsTeam2(this ulong ID) => ID == Team2ID;
+    public static bool IsTeam1(this ulong group) => group == Team1ID;
+    public static bool IsTeam2(this ulong group) => group == Team2ID;
     public static bool IsInMain(Player player)
     {
         if (player.life.isDead) return false;
@@ -650,13 +669,6 @@ public static class TeamManager
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
     }
-    public static string GetUnarmedFromS64ID(ulong playerSteam64)
-    {
-        ulong team = playerSteam64.GetTeamFromPlayerSteam64ID();
-        if (team == 1) return Team1UnarmedKit;
-        else if (team == 2) return Team2UnarmedKit;
-        else return DefaultKit;
-    }
     public static string GetTeamHexColor(ulong team)
     {
         return team switch
@@ -684,6 +696,19 @@ public static class TeamManager
         else if (team == 3) return AdminID;
         else return 0;
     }
+    public static ulong GetTeamNumber(FactionInfo? faction)
+    {
+        if (faction is not null)
+        {
+            if (faction == Team1Faction)
+                return 1ul;
+            if (faction == Team2Faction)
+                return 2ul;
+            if (faction == AdminFaction)
+                return 3ul;
+        }
+        return 0ul;
+    }
     public static bool HasTeam(Player player)
     {
         ulong t = player.GetTeam();
@@ -694,18 +719,18 @@ public static class TeamManager
     {
         if (_data.Data.BalanceTeams)
         {
-            int Team1Count = PlayerManager.OnlinePlayers.Count(x => x.GetTeam() == 1);
-            int Team2Count = PlayerManager.OnlinePlayers.Count(x => x.GetTeam() == 2);
-            if (Team1Count == Team2Count) return true;
+            int t1Count = PlayerManager.OnlinePlayers.Count(x => x.GetTeam() == 1);
+            int t2Count = PlayerManager.OnlinePlayers.Count(x => x.GetTeam() == 2);
+            if (t1Count == t2Count) return true;
             if (team == 1)
             {
-                if (Team2Count > Team1Count) return true;
-                if ((float)(Team1Count - Team2Count) / (Team1Count + Team2Count) >= _data.Data.AllowedDifferencePercent) return false;
+                if (t2Count > t1Count) return true;
+                if ((float)(t1Count - t2Count) / (t1Count + t2Count) >= _data.Data.AllowedDifferencePercent) return false;
             }
             else if (team == 2)
             {
-                if (Team1Count > Team2Count) return true;
-                if ((float)(Team2Count - Team1Count) / (Team1Count + Team2Count) >= _data.Data.AllowedDifferencePercent) return false;
+                if (t1Count > t2Count) return true;
+                if ((float)(t2Count - t1Count) / (t1Count + t2Count) >= _data.Data.AllowedDifferencePercent) return false;
             }
         }
         return true;
@@ -775,32 +800,34 @@ public static class TeamManager
         else
             _data.Reload();
     }
+    [Obsolete]
     internal static Guid CheckClothingAssetRedirect(Guid input, ulong team)
     {
         if (team is not 1 and not 2) return input;
-        if (input == BACKPACK_REDIRECT)
+        if (input == BackpackRedirect)
             GetFaction(team).DefaultBackpack.ValidReference(out input);
-        else if (input == SHIRT_REDIRECT)
+        else if (input == ShirtRedirect)
             GetFaction(team).DefaultShirt.ValidReference(out input);
-        else if (input == PANTS_REDIRECT)
+        else if (input == PantsRedirect)
             GetFaction(team).DefaultPants.ValidReference(out input);
-        else if (input == VEST_REDIRECT)
+        else if (input == VestRedirect)
             GetFaction(team).DefaultVest.ValidReference(out input);
 
         return input;
     }
+    [Obsolete]
     internal static Guid CheckAssetRedirect(Guid input, ulong team)
     {
         if (team is < 1 or > 2) return input;
-        if (input == RADIO_REDIRECT)
+        if (input == RadioRedirect)
             GetFaction(team).FOBRadio.ValidReference(out input);
-        else if (input == RALLY_POINT_REDIRECT)
+        else if (input == RallyPointRedirect)
             GetFaction(team).RallyPoint.ValidReference(out input);
-        else if (input == BUILDING_SUPPLIES_REDIRECT)
+        else if (input == BuildingSuppliesRedirect)
             GetFaction(team).Build.ValidReference(out input);
-        else if (input == AMMO_SUPPLIES_REDIRECT)
+        else if (input == AmmoSuppliesRedirect)
             GetFaction(team).Ammo.ValidReference(out input);
-        else if (input == ZONE_BLOCKER_REDIRECT)
+        else if (input == ZoneBlockerRedirect)
         {
             if (team == 1)
                 Gamemode.Config.BarricadeZoneBlockerTeam1.ValidReference(out input);
@@ -810,26 +837,92 @@ public static class TeamManager
         return input;
     }
 
+    public static RedirectType GetRedirectInfo(Guid input, out FactionInfo? faction, bool clothingOnly = false)
+    {
+        FactionInfo team1 = Team1Faction;
+        FactionInfo team2 = Team2Faction;
+        for (int i = -2; i < _factions.Count; ++i)
+        {
+            faction = i == -2 ? team2 : (i == -1 ? team1 : _factions[i]);
+            if (i > -1 && (faction == team1 || faction == team2))
+                continue;
+            if (faction.DefaultBackpack.ValidReference(out Guid guid) && guid == input)
+                return RedirectType.Backpack;
+            if (faction.DefaultVest.ValidReference(out guid) && guid == input)
+                return RedirectType.Vest;
+            if (faction.DefaultShirt.ValidReference(out guid) && guid == input)
+                return RedirectType.Shirt;
+            if (faction.DefaultPants.ValidReference(out guid) && guid == input)
+                return RedirectType.Pants;
+            if (faction.DefaultHat.ValidReference(out guid) && guid == input)
+                return RedirectType.Hat;
+            if (faction.DefaultMask.ValidReference(out guid) && guid == input)
+                return RedirectType.Mask;
+            if (faction.DefaultGlasses.ValidReference(out guid) && guid == input)
+                return RedirectType.Glasses;
+            if (clothingOnly) continue;
+            if (faction.RallyPoint.ValidReference(out guid) && guid == input)
+                return RedirectType.RallyPoint;
+            if (faction.FOBRadio.ValidReference(out guid) && guid == input)
+                return RedirectType.Radio;
+            if (faction.Build.ValidReference(out guid) && guid == input)
+                return RedirectType.BuildSupply;
+            if (faction.Ammo.ValidReference(out guid) && guid == input)
+                return RedirectType.AmmoSupply;
+        }
+        faction = null;
+        if (!clothingOnly)
+        {
+            if (Gamemode.Config.BarricadeAmmoBag.AnyMapsContainGuid(input))
+                return RedirectType.AmmoBag;
+            if (Gamemode.Config.BarricadeFOBBunkerBase.AnyMapsContainGuid(input))
+                return RedirectType.Bunker;
+            if (Gamemode.Config.BarricadeFOBBunker.AnyMapsContainGuid(input))
+                return RedirectType.BunkerBuilt;
+            if (Gamemode.Config.BarricadeAmmoCrateBase.AnyMapsContainGuid(input))
+                return RedirectType.AmmoCrate;
+            if (Gamemode.Config.BarricadeRepairStationBase.AnyMapsContainGuid(input))
+                return RedirectType.RepairStation;
+            if (Gamemode.Config.BarricadeAmmoCrate.AnyMapsContainGuid(input))
+                return RedirectType.AmmoCrateBuilt;
+            if (Gamemode.Config.BarricadeRepairStation.AnyMapsContainGuid(input))
+                return RedirectType.RepairStationBuilt;
+            if (Gamemode.Config.BarricadeUAV.AnyMapsContainGuid(input))
+                return RedirectType.UAV;
+            if (Gamemode.Config.BarricadeInsurgencyCache.AnyMapsContainGuid(input))
+                return RedirectType.Cache;
+            if (Gamemode.Config.ItemEntrenchingTool.AnyMapsContainGuid(input))
+                return RedirectType.EntrenchingTool;
+            if (Gamemode.Config.BarricadeFOBRadioDamaged.AnyMapsContainGuid(input))
+                return RedirectType.RadioDamaged;
+            if (Gamemode.Config.BarricadeZoneBlockerTeam1.AnyMapsContainGuid(input) ||
+                Gamemode.Config.BarricadeZoneBlockerTeam2.AnyMapsContainGuid(input))
+                return RedirectType.ZoneBlocker;
+        }
+        
+        return RedirectType.None;
+    }
+    [Obsolete]
     public static bool GetLegacyRedirect(Guid input, out RedirectType type)
     {
         type = default;
-        if (input == RADIO_REDIRECT)
+        if (input == RadioRedirect)
             type = RedirectType.Radio;
-        else if (input == RALLY_POINT_REDIRECT)
+        else if (input == RallyPointRedirect)
             type = RedirectType.RallyPoint;
-        else if (input == BUILDING_SUPPLIES_REDIRECT)
+        else if (input == BuildingSuppliesRedirect)
             type = RedirectType.BuildSupply;
-        else if (input == AMMO_SUPPLIES_REDIRECT)
+        else if (input == AmmoSuppliesRedirect)
             type = RedirectType.AmmoSupply;
-        else if (input == ZONE_BLOCKER_REDIRECT)
+        else if (input == ZoneBlockerRedirect)
             type = RedirectType.ZoneBlocker;
-        else if (input == BACKPACK_REDIRECT)
+        else if (input == BackpackRedirect)
             type = RedirectType.Backpack;
-        else if (input == SHIRT_REDIRECT)
+        else if (input == ShirtRedirect)
             type = RedirectType.Shirt;
-        else if (input == PANTS_REDIRECT)
+        else if (input == PantsRedirect)
             type = RedirectType.Pants;
-        else if (input == VEST_REDIRECT)
+        else if (input == VestRedirect)
             type = RedirectType.Vest;
         else return false;
 
@@ -841,6 +934,8 @@ public static class TeamManager
             requesterTeam = kitFaction;
         else if (kitFaction == null)
             kitFaction = requesterTeam;
+        state = null!;
+        byte amt2 = 0;
         ItemAsset? rtn;
         switch (type)
         {
@@ -959,90 +1054,49 @@ public static class TeamManager
         }
         if (rtn != null)
         {
-            amount = rtn.amount;
-            state = rtn.getState(EItemOrigin.ADMIN);
+            amount = amt2 == 0 ? rtn.amount : amt2;
+            state ??= rtn.getState(EItemOrigin.ADMIN);
         }
         else
         {
-            state = Array.Empty<byte>();
-            amount = 1;
+            state ??= Array.Empty<byte>();
+            amount = amt2 == 0 ? (byte)1 : amt2;
         }
 
         return rtn;
     }
-    internal static Guid GetClothingRedirectGuid(Guid input)
-    {
-        if (input == Guid.Empty) return input;
-
-        // backpack
-        FactionInfo faction1 = GetFaction(1);
-        if (faction1.DefaultBackpack.ValidReference(out Guid guid) && guid == input)
-            return BACKPACK_REDIRECT;
-        FactionInfo faction2 = GetFaction(2);
-        if (faction2.DefaultBackpack.ValidReference(out guid) && guid == input)
-            return BACKPACK_REDIRECT;
-
-        // shirt
-        if (faction1.DefaultShirt.ValidReference(out guid) && guid == input || faction2.DefaultShirt.ValidReference(out guid) && guid == input)
-            return SHIRT_REDIRECT;
-
-        // pants
-        if (faction1.DefaultPants.ValidReference(out guid) && guid == input || faction2.DefaultPants.ValidReference(out guid) && guid == input)
-            return PANTS_REDIRECT;
-
-        // vest
-        if (faction1.DefaultVest.ValidReference(out guid) && guid == input || faction2.DefaultVest.ValidReference(out guid) && guid == input)
-            return VEST_REDIRECT;
-
-        return input;
-    }
-    internal static Guid GetRedirectGuid(Guid input)
-    {
-        if (input == Guid.Empty) return input;
-
-        FactionInfo faction1 = GetFaction(1);
-        // radio
-        if (faction1.FOBRadio.ValidReference(out Guid guid) && guid == input)
-            return RADIO_REDIRECT;
-        FactionInfo faction2 = GetFaction(2);
-        if (faction2.FOBRadio.ValidReference(out guid) && guid == input)
-            return RADIO_REDIRECT;
-
-        // rally point supplies
-        if (faction1.RallyPoint.ValidReference(out guid) && guid == input || faction2.RallyPoint.ValidReference(out guid) && guid == input)
-            return RALLY_POINT_REDIRECT;
-
-        // building supplies
-        if (faction1.Build.ValidReference(out guid) && guid == input || faction2.Build.ValidReference(out guid) && guid == input)
-            return BUILDING_SUPPLIES_REDIRECT;
-
-        // ammo supplies
-        if (faction1.Ammo.ValidReference(out guid) && guid == input || faction2.Ammo.ValidReference(out guid) && guid == input)
-            return AMMO_SUPPLIES_REDIRECT;
-
-        // zone blockers
-        if (Gamemode.Config.BarricadeZoneBlockerTeam1.ValidReference(out guid) && guid == input || Gamemode.Config.BarricadeZoneBlockerTeam2.ValidReference(out guid) && guid == input)
-            return ZONE_BLOCKER_REDIRECT;
-
-        return input;
-    }
+    internal static RedirectType GetClothingRedirect(Guid input) => GetRedirectInfo(input, out _, true);
+    internal static RedirectType GetItemRedirect(Guid input) => GetRedirectInfo(input, out _, false);
 
     // items
-    private static readonly Guid RADIO_REDIRECT = new Guid("dea738f0e4894bd4862fd0c850185a6d");
-    private static readonly Guid RALLY_POINT_REDIRECT = new Guid("60240b23b1604ffbbc1bb3771ea5081f");
-    private static readonly Guid BUILDING_SUPPLIES_REDIRECT = new Guid("96e27895c1b34e128121296c14dd9bf5");
-    private static readonly Guid AMMO_SUPPLIES_REDIRECT = new Guid("c4cee82e290b4b26b7a6e2be9cd70df7");
-    private static readonly Guid ZONE_BLOCKER_REDIRECT = new Guid("7959dc824a154035934049289e011a70");
+    [Obsolete]
+    private static readonly Guid RadioRedirect              = new Guid("dea738f0e4894bd4862fd0c850185a6d");
+    [Obsolete]
+    private static readonly Guid RallyPointRedirect         = new Guid("60240b23b1604ffbbc1bb3771ea5081f");
+    [Obsolete]
+    private static readonly Guid BuildingSuppliesRedirect   = new Guid("96e27895c1b34e128121296c14dd9bf5");
+    [Obsolete]
+    private static readonly Guid AmmoSuppliesRedirect       = new Guid("c4cee82e290b4b26b7a6e2be9cd70df7");
+    [Obsolete]
+    private static readonly Guid ZoneBlockerRedirect        = new Guid("7959dc824a154035934049289e011a70");
 
     // clothes
-    private static readonly Guid BACKPACK_REDIRECT = new Guid("bfc294a392294438b29194abfa9792f9");
-    private static readonly Guid SHIRT_REDIRECT = new Guid("bc84a3c778884f38a4804da8ab1ca925");
-    private static readonly Guid PANTS_REDIRECT = new Guid("dacac5a5628a44d7b40b16f14be681f4");
-    private static readonly Guid VEST_REDIRECT = new Guid("2b22ac1b5de74755a24c2f05219c5e1f");
+    [Obsolete]
+    private static readonly Guid BackpackRedirect           = new Guid("bfc294a392294438b29194abfa9792f9");
+    [Obsolete]
+    private static readonly Guid ShirtRedirect              = new Guid("bc84a3c778884f38a4804da8ab1ca925");
+    [Obsolete]
+    private static readonly Guid PantsRedirect              = new Guid("dacac5a5628a44d7b40b16f14be681f4");
+    [Obsolete]
+    private static readonly Guid VestRedirect               = new Guid("2b22ac1b5de74755a24c2f05219c5e1f");
 
     public static Task ReloadFactions()
     {
-        _factions ??= new List<FactionInfo>(DefaultFactions.Length);
+        if (_factions == null)
+        {
+            _factions = new List<FactionInfo>(DefaultFactions.Length);
+            _factionsReadonly = _factions.AsReadOnly();
+        }
         return FactionInfo.DownloadFactions(Data.AdminSql, _factions, CancellationToken.None);
     }
 }
@@ -1227,7 +1281,6 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     public const string COLUMN_ASSETS_DEFAULT_GLASSES = "DefaultGlasses";
     public const string COLUMN_ASSETS_DEFAULT_MASK = "DefaultMask";
     public const string COLUMN_ASSETS_DEFAULT_HAT = "DefaultHat";
-    private const string EMPTY_GUID = "00000000000000000000000000000000";
     public static readonly Schema[] SCHEMAS =
     {
         new Schema(TABLE_MAIN, new Schema.Column[]
@@ -1269,57 +1322,46 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             },
             new Schema.Column(COLUMN_ASSETS_SUPPLY_AMMO, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID,
                 Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_SUPPLY_BUILD, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID,
                 Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_RALLY_POINT, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID,
                 Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_FOB_RADIO, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID,
                 Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_DEFAULT_BACKPACK, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID,
                 Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_DEFAULT_SHIRT, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID,
                 Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_DEFAULT_PANTS, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID,
                 Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_DEFAULT_VEST, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID,
                 Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_DEFAULT_GLASSES, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID,
                 Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_DEFAULT_MASK, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID,
                 Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_DEFAULT_HAT, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID,
                 Nullable = true
             },
         }, false, typeof(FactionInfo)),

@@ -299,10 +299,13 @@ public class RequestCommand : AsyncCommand
             else throw ctx.Reply(T.RequestNoTarget);
         }
     }
-    private void GiveKit(UCPlayer ucplayer, KitOld kit)
+    private async Task GiveKit(UCPlayer ucplayer, SqlItem<Kit>? kit, CancellationToken token = default)
     {
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate(token);
+        KitManager? manager = KitManager.GetSingletonQuick();
         AmmoCommand.WipeDroppedItems(ucplayer.Steam64);
-        KitManager.GiveKit(ucplayer, kit);
+        await KitManager.GiveKit(ucplayer, kit, token).ConfigureAwait(false);
         Stats.StatsManager.ModifyKit(kit.Name, k => k.TimesRequested++);
         Stats.StatsManager.ModifyStats(ucplayer.Steam64, s =>
         {

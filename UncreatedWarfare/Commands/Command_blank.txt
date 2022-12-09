@@ -7,7 +7,7 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class BlankCommand : Command
+public sealed class BlankCommand : Command
 {
     private const string SYNTAX = "/blank";
     private const string HELP = "Does nothing.";

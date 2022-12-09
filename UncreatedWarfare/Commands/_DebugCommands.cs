@@ -741,7 +741,7 @@ public class DebugCommand : AsyncCommand
 
         ctx.AssertRanByPlayer();
 
-        if (ctx.TryGet(0, out EQuestType type))
+        if (ctx.TryGet(0, out QuestType type))
         {
             for (int i = 0; i < QuestManager.RegisteredTrackers.Count; i++)
             {
@@ -936,7 +936,7 @@ public class DebugCommand : AsyncCommand
     private void translationtest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
-        ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.Kit!);
+        ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.ActiveKit?.Item);
     }
 
     private void quest(CommandInteraction ctx)
@@ -1040,7 +1040,7 @@ public class DebugCommand : AsyncCommand
         ctx.AssertRanByPlayer();
 
         L.Log("Traits: ");
-        using (IDisposable d = L.IndentLog(1))
+        using (L.IndentLog(1))
         {
             for (int i = 0; i < ctx.Caller.ActiveTraits.Count; ++i)
             {
@@ -1131,12 +1131,17 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
 
+        KitManager? manager = KitManager.GetSingletonQuick();
         ulong team = ctx.Caller.GetTeam();
-        string kitname = team == 1 ? "ussql1" : "mesql1";
-        if (!KitManager.KitExists(kitname, out KitOld kit))
-            throw ctx.SendUnknownError();
+        if (manager != null)
+        {
+            SqlItem<Kit>? sql = await manager.FindKit(team == 1 ? "ussql1" : "mesql1", token).ConfigureAwait(false);
+            if (sql?.Item == null)
+                ctx.SendUnknownError();
+            else
+                await manager.GiveKit(ctx.Caller, sql, token).ConfigureAwait(false);
+        }
 
-        KitManager.GiveKit(ctx.Caller, kit);
         if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader != ctx.Caller)
         {
             SquadManager.CreateSquad(ctx.Caller, team);

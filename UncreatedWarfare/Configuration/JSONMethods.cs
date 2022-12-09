@@ -259,7 +259,7 @@ public struct SerializableTransform : IJsonReadWrite
 /// <summary>Wrapper for a <see cref="Dictionary{string, string}"/>, has custom JSON reading to take a string or dictionary of translations.<br/><see langword="null"/> = empty list.</summary>
 /// <remarks>Extension methods located in <see cref="T"/>.</remarks>
 [JsonConverter(typeof(TranslationListConverter))]
-public sealed class TranslationList : Dictionary<string, string>
+public sealed class TranslationList : Dictionary<string, string>, ICloneable
 {
     public const int DEFAULT_CHAR_LENGTH = 255;
     public TranslationList() { }
@@ -272,12 +272,21 @@ public sealed class TranslationList : Dictionary<string, string>
     {
         Add(L.DEFAULT, @default);
     }
+    public TranslationList(TranslationList copy) : base(copy.Count)
+    {
+        foreach (KeyValuePair<string, string> pair in copy)
+        {
+            Add(pair.Key, pair.Value);
+        }
+    }
     public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool oneToOne = false, bool hasPk = false)
     {
         if (!oneToOne)
             throw new NotSupportedException("One-to-one only rn");
         return F.GetTranslationListSchema(tableName, fkColumn, mainTable, mainPkColumn, DEFAULT_CHAR_LENGTH);
     }
+
+    public object Clone() => new TranslationList(this);
 }
 public sealed class TranslationListConverter : JsonConverter<TranslationList>
 {

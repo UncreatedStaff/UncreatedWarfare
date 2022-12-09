@@ -8,6 +8,7 @@ using Uncreated.Framework;
 namespace Uncreated.Warfare.Commands.CommandSystem;
 public abstract class Command : IExecutableCommand
 {
+    protected const string Default = CommandInteraction.Default;
     private readonly string commandName;
     private readonly int priority;
     private readonly EAdminType allowedUsers;
@@ -60,6 +61,7 @@ public abstract class Command : IExecutableCommand
 
 public abstract class AsyncCommand : IExecutableCommand
 {
+    protected const string Default = CommandInteraction.Default;
     private readonly string commandName;
     private readonly int priority;
     private readonly EAdminType allowedUsers;

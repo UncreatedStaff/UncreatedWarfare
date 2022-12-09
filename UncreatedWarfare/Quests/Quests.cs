@@ -5,17 +5,17 @@ using System.Linq;
 using System.Text.Json;
 
 namespace Uncreated.Warfare.Quests;
-/// <summary>Stores information about a <see cref="EQuestType"/> of quest. Isn't necessarily constant, some can have varients that are used for daily quests.
+/// <summary>Stores information about a <see cref="Quests.QuestType"/> of quest. Isn't necessarily constant, some can have varients that are used for daily quests.
 /// Rank and kit quests should overridden with a set <see cref="IQuestState{TTracker, TDataNew}"/>.</summary>
 public abstract class BaseQuestData : ITranslationArgument
 {
-    private EQuestType _type;
+    private QuestType _type;
     private Dictionary<string, string> _translations;
     private RewardExpression[] _rewardExpressions;
     public bool CanBeDailyQuest = true;
     public abstract IEnumerable<IQuestPreset> Presets { get; }
     public abstract int TickFrequencySeconds { get; }
-    public EQuestType QuestType { get => _type; internal set => _type = value; }
+    public QuestType QuestType { get => _type; internal set => _type = value; }
     public Dictionary<string, string> Translations { get => _translations; internal set => _translations = value; }
     public virtual bool ResetOnGameEnd => false;
     public IQuestReward[] EvaluateRewards(in IQuestState state)
@@ -93,7 +93,7 @@ public abstract class BaseQuestData : ITranslationArgument
         }
     }
     public abstract IQuestPreset CreateRandomPreset(ushort flag = 0);
-    [FormatDisplay("Quest Type (" + nameof(EQuestType) + ")")]
+    [FormatDisplay("Quest Type (" + nameof(Quests.QuestType) + ")")]
     public const string TYPE_FORMAT = "t";
 
     [FormatDisplay(typeof(QuestAsset), "Quest Name")]

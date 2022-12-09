@@ -985,6 +985,17 @@ public static class F
     {
         return reference.ValidReference(out Guid guid) && match.ValidReference(out Guid guid2) && guid == guid2;
     }
+    public static bool AnyMapsContainGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? config, Guid guid) where TAsset : Asset
+    {
+        if (config is null) return false;
+        foreach(JsonAssetReference<TAsset>? asset in config.Values)
+        {
+            if (asset.MatchGuid(guid))
+                return true;
+        }
+
+        return false;
+    }
     public static string RemoveColorTag(string questName)
     {
         if (questName is null || questName.Length < 6) return questName!;
@@ -1560,6 +1571,36 @@ public static class F
 
         return -1;
     }
+    public static void StringSearch<T>(IList<T> collection, IList<T> output, Func<T, string?> selector, string input, bool equalsOnly = false)
+    {
+        if (input == null)
+            return;
+
+        for (int i = 0; i < collection.Count; ++i)
+        {
+            if (string.Equals(selector(collection[i]), input, StringComparison.OrdinalIgnoreCase))
+                output.Add(collection[i]);
+        }
+        if (!equalsOnly)
+        {
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? n = selector(collection[i]);
+                if (n != null && n.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
+                    output.Add(collection[i]);
+            }
+
+            string[] inSplits = input.Split(splits);
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? name = selector(collection[i]);
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                    output.Add(collection[i]);
+            }
+        }
+    }
+    public static string ActionLogDisplay(this Asset asset) =>
+        $"{asset.FriendlyName} / {asset.id.ToString(Data.AdminLocale)} / {asset.GUID:N}";
     /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="type"/> is not a valid value.</exception>
     public static EItemType GetItemType(this ClothingType type) => type switch
     {
@@ -1572,4 +1613,15 @@ public static class F
         ClothingType.Glasses => EItemType.GLASSES,
         _ => throw new ArgumentOutOfRangeException(nameof(type))
     };
+    public static T[] CloneArray<T>(T[] source) where T : ICloneable
+    {
+        if (source == null)
+            return null!;
+        if (source.Length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[source.Length];
+        for (int i = 0; i < result.Length; ++i)
+            result[i] = (T)source[i].Clone();
+        return result;
+    }
 }

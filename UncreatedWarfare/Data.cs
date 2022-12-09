@@ -92,7 +92,9 @@ public static class Data
     public const string SUPPRESS_CATEGORY = "Microsoft.Performance";
     public const string SUPPRESS_ID = "IDE0051";
     public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/][il][gqb](?!h)\W{0,1}[gqb]{0,1}\W{0,1}[gqb]{0,1}\W{0,1}[ae]{0,1}\W{0,1}[r]{0,1}(?:ia){0,1})|(?:f\W{0,1}a\W{0,1}g{1,2}\W{0,1}o{0,1}\W{0,1}t{0,1})");
+    [Obsolete("Choose between LocalLocale and AdminLocale")]
     public static CultureInfo Locale = LanguageAliasSet.ENGLISH_C;
+    public static CultureInfo LocalLocale = LanguageAliasSet.ENGLISH_C; // todo set from config
     public static readonly CultureInfo AdminLocale = LanguageAliasSet.ENGLISH_C;
     public static Dictionary<string, Color> Colors;
     public static Dictionary<string, string> ColorsHex;

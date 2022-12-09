@@ -721,13 +721,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     {
         if (e.OldPassengerIndex == 0 && e.Vehicle.transform.TryGetComponent(out VehicleComponent comp))
             comp.LastDriverTime = Time.realtimeSinceStartup;
-        if (KitManager.KitExists(e.Player.KitName, out KitOld kit))
-        {
-            if (kit.Class is Class.LAT or Class.HAT)
-            {
-                e.Player.Player.equipment.dequip();
-            }
-        }
+        if (KitManager.ShouldDequipOnExitVehicle(e.Player.KitClass))
+            e.Player.Player.equipment.dequip();
     }
     private static void OnVehicleExitRequested(ExitVehicleRequested e)
     {
@@ -1383,7 +1378,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                          VehicleData data = list[i];
                                          data.Metadata ??= new MetaSave();
                                          data.Metadata.TrunkItems ??= new List<PageItem>(8);
-                                         PageItem item = new PageItem(reader.ReadGuid(1), reader.GetByte(2), reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(6), reader.GetByte(5), PlayerInventory.STORAGE);
+                                         PageItem item = new PageItem(reader.ReadGuid(1), reader.GetByte(2), reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(6), reader.GetByte(5), (Page)PlayerInventory.STORAGE);
                                          data.Metadata.TrunkItems.Add(item);
                                          break;
                                      }
@@ -1644,7 +1639,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                              {
                                  obj.Metadata ??= new MetaSave();
                                  obj.Metadata.TrunkItems ??= new List<PageItem>(8);
-                                 PageItem item = new PageItem(reader.ReadGuid(1), reader.GetByte(2), reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(6), reader.GetByte(5), PlayerInventory.STORAGE);
+                                 PageItem item = new PageItem(reader.ReadGuid(1), reader.GetByte(2), reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(6), reader.GetByte(5), (Page)PlayerInventory.STORAGE);
                                  obj.Metadata.TrunkItems.Add(item);
                              }, token).ConfigureAwait(false);
         List<object> objs2 = new List<object>(4);

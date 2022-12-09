@@ -376,7 +376,10 @@ public class BuildableComponent : MonoBehaviour
                 return false;
             }
 
-            if (placer == null || (placer.KitClass != Class.CombatEngineer || !buildable.Foundation.ValidReference(out Guid foundGuid) || !KitManager.KitExists(placer.KitName, out KitOld kit) || !kit.Items.Exists(i => i.Item == foundGuid)))
+            if (placer is not { KitClass: Class.CombatEngineer } ||
+                !buildable.Foundation.ValidReference(out Guid foundGuid) ||
+                !placer.HasKit ||
+                !placer.ActiveKit!.Item!.ContainsItem(foundGuid))
             {
                 if (fob == null)
                 {

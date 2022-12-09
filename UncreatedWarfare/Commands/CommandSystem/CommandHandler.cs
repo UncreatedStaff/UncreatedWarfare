@@ -24,7 +24,7 @@ public static class CommandHandler
     private static readonly ArgumentInfo[] ArgBuffer = new ArgumentInfo[MAX_ARG_COUNT];
     internal static CancellationTokenSource GlobalCommandCancel = new CancellationTokenSource();
     internal static List<CommandInteraction> ActiveCommands = new List<CommandInteraction>(8);
-    internal static bool TryingToCancel = false;
+    internal static bool TryingToCancel;
     static CommandHandler()
     {
         RegisteredCommands = Commands.AsReadOnly();
@@ -63,7 +63,6 @@ public static class CommandHandler
         Commands.Clear();
         RegisterVanillaCommands();
         Type t = typeof(IExecutableCommand);
-        Type v = typeof(VanillaCommand);
         foreach (Type cmdType in Assembly.GetCallingAssembly().GetTypes().Where(x => !x.IsAbstract && !x.IsGenericType && !x.IsSpecialName && !x.IsNested && t.IsAssignableFrom(x)))
         {
             if (cmdType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance).Any(x => x.GetParameters().Length == 0))
@@ -439,21 +438,22 @@ public static class CommandHandler
 public abstract class BaseCommandInteraction : Exception
 {
     public readonly IExecutableCommand Command;
-    protected bool responded;
-    public bool Responded => responded;
+    protected bool _responded;
+    public bool Responded => _responded;
     protected BaseCommandInteraction(IExecutableCommand cmd, string message) : base(message)
     {
         this.Command = cmd;
     }
     internal virtual void MarkComplete()
     {
-        responded = true;
+        _responded = true;
     }
 }
 
 /// <summary>Provides helpful information and helper functions relating to the currently executing command.</summary>
 public sealed class CommandInteraction : BaseCommandInteraction
 {
+    public const string Default = "-";
     internal Task? Task;
     private readonly ContextData _ctx;
     private int _offset;
@@ -557,7 +557,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     public Exception Defer()
     {
-        responded = true;
+        _responded = true;
         return this;
     }
     /// <summary>Zero based. Checks if the argument at index <paramref name="position"/> exists.</summary>
@@ -679,7 +679,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return int.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return int.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out byte value)
     {
@@ -689,7 +689,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out short value)
     {
@@ -699,7 +699,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return short.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return short.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out sbyte value)
     {
@@ -709,7 +709,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out Guid value)
     {
@@ -729,7 +729,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out ushort value)
     {
@@ -739,7 +739,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out ulong value)
     {
@@ -749,7 +749,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGetTeam(int parameter, out ulong value)
     {
@@ -761,7 +761,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
 
         string p = GetParamForParse(parameter);
-        if (ulong.TryParse(p, NumberStyles.Number, Warfare.Data.Locale, out value))
+        if (ulong.TryParse(p, NumberStyles.Number, Warfare.Data.LocalLocale, out value))
         {
             return value is > 0 and < 4;
         }
@@ -794,7 +794,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return float.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value) && !float.IsNaN(value) && !float.IsInfinity(value);
+        return float.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value) && !float.IsNaN(value) && !float.IsInfinity(value);
     }
     public bool TryGet(int parameter, out double value)
     {
@@ -804,7 +804,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return double.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return double.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out decimal value)
     {
@@ -814,7 +814,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     // the ref ones are so you can count on your already existing variable not being overwritten
     public bool TryGetRef<TEnum>(int parameter, ref TEnum value) where TEnum : unmanaged, Enum
@@ -840,7 +840,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (int.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out int value2))
+        if (int.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out int value2))
         {
             value = value2;
             return true;
@@ -855,7 +855,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out byte value2))
+        if (byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out byte value2))
         {
             value = value2;
             return true;
@@ -870,7 +870,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out sbyte value2))
+        if (sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out sbyte value2))
         {
             value = value2;
             return true;
@@ -900,7 +900,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out uint value2))
+        if (uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out uint value2))
         {
             value = value2;
             return true;
@@ -915,7 +915,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out ushort value2))
+        if (ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out ushort value2))
         {
             value = value2;
             return true;
@@ -930,7 +930,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out ulong value2))
+        if (ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out ulong value2))
         {
             value = value2;
             return true;
@@ -945,7 +945,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (float.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out float value2) && !float.IsNaN(value2) && !float.IsInfinity(value2))
+        if (float.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out float value2) && !float.IsNaN(value2) && !float.IsInfinity(value2))
         {
             value = value2;
             return true;
@@ -960,7 +960,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (double.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out double value2) && !double.IsNaN(value2) && !double.IsInfinity(value2))
+        if (double.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out double value2) && !double.IsNaN(value2) && !double.IsInfinity(value2))
         {
             value = value2;
             return true;
@@ -975,7 +975,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out decimal value2))
+        if (decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out decimal value2))
         {
             value = value2;
             return true;
@@ -993,7 +993,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
 
         string s = GetParamForParse(parameter);
-        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
+        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
         {
             onlinePlayer = UCPlayer.FromID(steam64);
             return true;
@@ -1018,7 +1018,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
 
         string s = GetParamForParse(parameter);
-        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
+        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
         {
             foreach (UCPlayer player in selection)
             {
@@ -1358,7 +1358,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, color);
-        responded = true;
+        _responded = true;
 
         return this;
     }
@@ -1372,7 +1372,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, Util.GetColor(color));
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception ReplyString(string message, string hex)
@@ -1386,7 +1386,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, hex);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception ReplyString(string message)
@@ -1399,7 +1399,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception Reply(Translation translation)
@@ -1414,7 +1414,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception Reply<T>(Translation<T> translation, T arg)
@@ -1429,7 +1429,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2>(Translation<T1, T2> translation, T1 arg1, T2 arg2)
@@ -1444,7 +1444,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3>(Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
@@ -1459,7 +1459,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4>(Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
@@ -1474,7 +1474,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5>(Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
@@ -1489,7 +1489,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6>(Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
@@ -1504,7 +1504,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7>(Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
@@ -1519,7 +1519,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
@@ -1534,7 +1534,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
@@ -1549,7 +1549,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-        responded = true;
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
@@ -1564,7 +1564,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
-        responded = true;
+        _responded = true;
         return this;
     }
 

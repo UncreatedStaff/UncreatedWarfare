@@ -52,26 +52,24 @@ public class Whitelister : ListSingleton<WhitelistItem>
             shouldAllow = false;
         }
     }
-    private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, ItemData itemData, ref bool shouldAllow)
+    private void OnItemPickup(Player pl, byte x, byte y, uint instanceID, byte toX, byte toY, byte toRot, byte toPage, ItemData itemData, ref bool shouldAllow)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer? player = UCPlayer.FromPlayer(P);
+        UCPlayer? player = UCPlayer.FromPlayer(pl);
 
         if (player is null || player.OnDuty())
             return;
-        WhitelistItem whitelistedItem;
-        bool isWhitelisted;
         if (Assets.find(EAssetType.ITEM, itemData.item.id) is not ItemAsset a)
         {
             L.LogError("Unknown asset on item " + itemData.item.id.ToString());
             shouldAllow = false;
             return;
         }
-        else
-            isWhitelisted = IsWhitelisted(a.GUID, out whitelistedItem);
-        if (to_page == PlayerInventory.STORAGE && !isWhitelisted)
+        bool isWhitelisted = IsWhitelisted(a.GUID, out WhitelistItem whitelistedItem);
+
+        if (toPage == PlayerInventory.STORAGE && !isWhitelisted)
         {
             shouldAllow = false;
             return;
@@ -79,7 +77,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
 
         if (KitManager.HasKit(player, out KitOld kit))
         {
-            int itemCount = UCInventoryManager.CountItems(player.Player, itemData.item.id);
+            int itemCount = UCInventoryManager.CountItems(player.Player, a.GUID);
 
             int allowedItems = kit.Items.Count(k => k.Item == a.GUID);
             if (allowedItems == 0)
@@ -119,7 +117,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             shouldAllow = false;
             player.SendChat(T.WhitelistNoKit);
         }
-        if (EventFunctions.droppeditems.TryGetValue(P.channel.owner.playerID.steamID.m_SteamID, out List<uint> instances))
+        if (EventFunctions.droppeditems.TryGetValue(pl.channel.owner.playerID.steamID.m_SteamID, out List<uint> instances))
         {
             if (instances != null)
                 instances.Remove(instanceID);

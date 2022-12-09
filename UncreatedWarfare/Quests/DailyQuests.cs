@@ -383,7 +383,7 @@ public static class DailyQuests
         {
             ref DailyQuestSave.Preset preset = ref save.Presets[i];
 
-            EQuestType type = preset.Type;
+            QuestType type = preset.Type;
             BaseQuestData? data = QuestManager.Quests.Find(x => x != null && x.QuestType == type);
             if (data != null)
             {
@@ -566,7 +566,7 @@ public static class DailyQuests
                                                                                     string? v = reader.GetString();
                                                                                     ref DailyQuestSave.Preset preset = ref save.Presets[j];
                                                                                     ref DailyQuest.Condition cond = ref send.conditions[j];
-                                                                                    if (v != null && Enum.TryParse(v, true, out EQuestType type))
+                                                                                    if (v != null && Enum.TryParse(v, true, out QuestType type))
                                                                                     {
                                                                                         preset.Type = type;
                                                                                         BaseQuestData? data = QuestManager.Quests.Find(x => x.QuestType == type);
@@ -804,7 +804,7 @@ public struct DailyQuestSave
     public struct Preset
     {
         public bool IsValid;
-        public EQuestType Type;
+        public QuestType Type;
         public IQuestPreset PresetObj;
     }
 }

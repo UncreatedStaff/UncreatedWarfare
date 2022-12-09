@@ -18,9 +18,9 @@ public class RewardExpression
     private readonly string _expression;
     private readonly string _expression2;
     private readonly EvaluateDelegate _method = null!;
-    public EQuestType QuestType { get; internal set; }
+    public QuestType QuestType { get; internal set; }
     public EQuestRewardType RewardType { get; private set; }
-    private RewardExpression(EQuestRewardType type, EQuestType questType, EvaluateDelegate method)
+    private RewardExpression(EQuestRewardType type, QuestType questType, EvaluateDelegate method)
     {
         RewardType = type;
         QuestType = questType;
@@ -28,7 +28,7 @@ public class RewardExpression
         _expression = "0";
         _expression2 = _expression;
     }
-    public RewardExpression(EQuestRewardType type, EQuestType questType, string expression)
+    public RewardExpression(EQuestRewardType type, QuestType questType, string expression)
     {
         RewardType = type;
         QuestType = questType;
@@ -673,7 +673,7 @@ public class RewardExpression
             return null;
         }
     }
-    public static RewardExpression? ReadFromJson(ref Utf8JsonReader reader, EQuestType quest)
+    public static RewardExpression? ReadFromJson(ref Utf8JsonReader reader, QuestType quest)
     {
         EQuestRewardType reward = EQuestRewardType.NONE;
         string? expression = null;

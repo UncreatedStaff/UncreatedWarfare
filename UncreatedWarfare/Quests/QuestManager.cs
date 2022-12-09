@@ -331,7 +331,7 @@ public static class QuestManager
     }
 
     #region read/write
-    public static readonly Dictionary<EQuestType, Type> QuestTypes = new Dictionary<EQuestType, Type>(32);
+    public static readonly Dictionary<QuestType, Type> QuestTypes = new Dictionary<QuestType, Type>(32);
     private static bool reflected;
     /// <summary>Registers all the <see cref="QuestDataAttribute"/>'s to <see cref="QuestTypes"/>.</summary>
     public static void InitTypesReflector()
@@ -353,7 +353,7 @@ public static class QuestManager
         foreach (Type type in types.Where(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {
             QuestDataAttribute? attribute = type.GetCustomAttributes().OfType<QuestDataAttribute>().FirstOrDefault();
-            if (attribute != null && attribute.Type != EQuestType.INVALID && !QuestTypes.ContainsKey(attribute.Type))
+            if (attribute != null && attribute.Type != QuestType.INVALID && !QuestTypes.ContainsKey(attribute.Type))
                 QuestTypes.Add(attribute.Type, type);
         }
 
@@ -361,7 +361,7 @@ public static class QuestManager
         reflected = true;
     }
     /// <summary>Creates an instance of the provided <paramref name="type"/>. Pulls from <see cref="QuestTypes"/>. <see cref="InitTypesReflector"/> should be ran before use.</summary>
-    public static BaseQuestData? GetQuestData(EQuestType type)
+    public static BaseQuestData? GetQuestData(QuestType type)
     {
         if (QuestTypes.TryGetValue(type, out Type result))
         {
@@ -404,7 +404,7 @@ public static class QuestManager
                 {
                     if (!reader.Read()) return quest;
                     string? typeValue = reader.GetString()!;
-                    if (typeValue != null && Enum.TryParse(typeValue, true, out EQuestType type))
+                    if (typeValue != null && Enum.TryParse(typeValue, true, out QuestType type))
                     {
                         quest = GetQuestData(type);
                     }

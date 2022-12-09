@@ -1,18 +1,16 @@
-﻿using SDG.Unturned;
+﻿using MySqlConnector;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using MySqlConnector;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
@@ -331,7 +329,7 @@ public class KitOld : IListItem, ITranslationArgument, ICloneable
         {
             if (format.Equals(ID_FORMAT, StringComparison.Ordinal))
                 return Name;
-            else if (format.Equals(CLASS_FORMAT, StringComparison.Ordinal))
+            if (format.Equals(CLASS_FORMAT, StringComparison.Ordinal))
                 return Localization.TranslateEnum(Class, language);
         }
         if (SignTexts.TryGetValue(language, out string dspTxt))
@@ -342,7 +340,7 @@ public class KitOld : IListItem, ITranslationArgument, ICloneable
 
 }
 
-public class Kit : IListItem, ITranslationArgument
+public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
 {
     public PrimaryKey PrimaryKey { get; set; }
     public PrimaryKey FactionKey { get; set; }
@@ -354,6 +352,8 @@ public class Kit : IListItem, ITranslationArgument
     public int Season { get; set; }
     public float RequestCooldown { get; set; }
     public float TeamLimit { get; set; }
+    public int CreditCost { get; set; }
+    public decimal PremiumCost { get; set; }
     public SquadLevel SquadLevel { get; set; }
     public TranslationList SignText { get; set; }
     public IKitItem[] Items { get; set; }
@@ -374,26 +374,42 @@ public class Kit : IListItem, ITranslationArgument
             else FactionKey = value.PrimaryKey;
         }
     }
-
-    public Kit(string id, Class @class, Branch branch, KitType type, SquadLevel squadLevel, string? weaponText, FactionInfo? faction)
+    public bool PublicKit => Type == KitType.Public && Class > Class.Unarmed &&
+                             !Disabled && (Season == UCWarfare.Season || Season < 1) &&
+                             !IsCurrentMapBlacklisted() &&
+                             (!IsBlacklisted(TeamManager.Team1Faction) || !IsBlacklisted(TeamManager.Team2Faction));
+    public Kit(string id, Class @class, Branch branch, KitType type, SquadLevel squadLevel, FactionInfo? faction)
     {
         Faction = faction;
-        this.Id = id;
-        this.Class = @class;
-        this.Branch = branch;
-        this.Type = type;
-        this.SquadLevel = squadLevel;
-        this.WeaponText = weaponText;
+        Id = id;
+        Class = @class;
+        Branch = branch;
+        Type = type;
+        SquadLevel = squadLevel;
         SignText = new TranslationList(id);
         Items = Array.Empty<IKitItem>();
         UnlockRequirements = Array.Empty<UnlockRequirement>();
         Skillsets = Array.Empty<Skillset>();
         FactionBlacklist = Array.Empty<PrimaryKey>();
         MapBlacklist = Array.Empty<PrimaryKey>();
+        Season = UCWarfare.Season;
+        TeamLimit = KitManager.GetDefaultTeamLimit(@class);
+        RequestCooldown = KitManager.GetDefaultRequestCooldown(@class);
+    }
+    public Kit(Kit copy)
+    {
+        FactionKey = copy.FactionKey;
+        Id = copy.Id;
+        Class = copy.Class;
+        Branch = copy.Branch;
+        Type = copy.Type;
+        SquadLevel = copy.SquadLevel;
+        SignText = (TranslationList)copy.SignText.Clone();
+        Items = F.CloneArray(copy.Items);
+        UnlockRequirements = F.CloneArray(copy.UnlockRequirements);
     }
     public Kit() { }
-
-    public bool IsBlacklisted(FactionInfo faction)
+    public bool IsBlacklisted(FactionInfo? faction)
     {
         if (FactionBlacklist.NullOrEmpty() || faction is null || !faction.PrimaryKey.IsValid) return false;
         int pk = faction.PrimaryKey.Key;
@@ -402,6 +418,27 @@ public class Kit : IListItem, ITranslationArgument
                 return true;
 
         return false;
+    }
+    public bool IsCurrentMapBlacklisted()
+    {
+        PrimaryKey map = MapScheduler.Current;
+        for (int i = 0; i < MapBlacklist.Length; ++i)
+        {
+            if (MapBlacklist[i].Key == map.Key) return true;
+        }
+
+        return false;
+    }
+    public bool MeetsUnlockRequirements(UCPlayer player)
+    {
+        if (UnlockRequirements is not { Length: > 0 }) return false;
+        for (int i = 0; i < UnlockRequirements.Length; ++i)
+        {
+            if (!UnlockRequirements[i].CanAccess(player))
+                return false;
+        }
+
+        return true;
     }
     public string GetDisplayName(string language = L.DEFAULT)
     {
@@ -412,6 +449,15 @@ public class Kit : IListItem, ITranslationArgument
             return SignText.FirstOrDefault().Value ?? Id;
         return Id;
     }
+    public void Write(ByteWriter writer)
+    {
+        throw new NotImplementedException(); // todo
+    }
+    public void Read(ByteReader reader)
+    {
+        throw new NotImplementedException(); // todo
+    }
+
     [FormatDisplay("Kit Id")]
     public const string IdFormat = "i";
     [FormatDisplay("Display Name")]
@@ -430,6 +476,8 @@ public class Kit : IListItem, ITranslationArgument
 
         return GetDisplayName(language);
     }
+
+    public object Clone() => new Kit(this);
 }
 public readonly struct Skillset : IEquatable<Skillset>
 {
@@ -950,7 +998,7 @@ public interface IClothingJar
     ClothingType Type { get; set; }
 }
 
-public interface IKitItem
+public interface IKitItem : ICloneable
 {
     public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state);
 }
@@ -1039,7 +1087,8 @@ public class PageItem : ICloneable, IItemJar, IItem, IKitItem
         set
         {
             _item = value;
-            _isLegacyRedirect = TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+            _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, false);
+            _isLegacyRedirect = _legacyRedirect != RedirectType.None;
         }
     }
 
@@ -1148,7 +1197,7 @@ public class PageItem : ICloneable, IItemJar, IItem, IKitItem
         return null;
     }
 }
-public class ClothingItem : ICloneable, IClothingJar, IClothing, IKitItem
+public class ClothingItem : IClothingJar, IClothing, IKitItem
 {
     private Guid _item;
     private bool _isLegacyRedirect;
@@ -1161,7 +1210,8 @@ public class ClothingItem : ICloneable, IClothingJar, IClothing, IKitItem
         set
         {
             _item = value;
-            _isLegacyRedirect = TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+            _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, true);
+            _isLegacyRedirect = _legacyRedirect != RedirectType.None;
         }
     }
 
@@ -1253,7 +1303,8 @@ public enum KitType : byte
 /// <summary>Max field character limit: <see cref="KitEx.RedirectTypeCharLimit"/>.</summary>
 public enum RedirectType : byte
 {
-    Shirt,
+    None = 255,
+    Shirt = 0,
     Pants,
     Vest,
     Hat,
@@ -1264,7 +1315,19 @@ public enum RedirectType : byte
     BuildSupply,
     RallyPoint,
     Radio,
-    ZoneBlocker
+    ZoneBlocker,
+    AmmoBag,
+    AmmoCrate,
+    RepairStation,
+    Bunker,
+    VehicleBay,
+    EntrenchingTool,
+    UAV,
+    RepairStationBuilt,
+    AmmoCrateBuilt,
+    BunkerBuilt,
+    Cache,
+    RadioDamaged
 }
 
 public enum Page : byte

@@ -182,6 +182,7 @@ public class AmmoCommand : AsyncCommand
     }
     internal static void WipeDroppedItems(ulong player)
     {
+        ThreadUtil.assertIsGameThread();
         if (!EventFunctions.droppeditems.TryGetValue(player, out List<uint> instances))
             return;
         ushort build1 = TeamManager.Team1Faction.Build is null || !TeamManager.Team1Faction.Build.Exists ? (ushort)0 : TeamManager.Team1Faction.Build.Id;

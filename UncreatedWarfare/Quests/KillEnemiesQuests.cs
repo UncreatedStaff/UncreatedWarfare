@@ -2,17 +2,16 @@
 using System;
 using System.Linq;
 using System.Text.Json;
-using Uncreated.Warfare.Configuration;
+using Uncreated.Json;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Uncreated.Json;
 
 namespace Uncreated.Warfare.Quests.Types;
 
 // Attribute links the kit to the Type
-[QuestData(EQuestType.KILL_ENEMIES)]
+[QuestData(QuestType.KILL_ENEMIES)]
 public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnemiesQuest.State, KillEnemiesQuest>
 {
     // dynamic int allows for constants, ranges, or sets
@@ -59,15 +58,15 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
     // one tracker is created per player working on the quest. Add the notify interfaces defined in QuestsMisc.cs and add cases for them in QuestManager under the events region
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold;
+        private readonly int _killThreshold;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
-        public override int Reward => KillThreshold * 10;
+        public override int Reward => _killThreshold * 10;
         // loads a tracker from a state instead of randomly picking values each time.
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue(); // insisting for a value asks for ONE value (defined with a $, otherwise it returns 0)
+            _killThreshold = questState.KillThreshold.InsistValue(); // insisting for a value asks for ONE value (defined with a $, otherwise it returns 0)
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -83,7 +82,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
             if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
-                if (_kills >= KillThreshold)
+                if (_kills >= _killThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
@@ -92,16 +91,16 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
         public override void ResetToDefaults() => _kills = 0;
         // translate the description of the quest, pass any data that will show up in the description once we make them
         //                                         in this case, "Kill {_kills}/{KillThreshold} enemies."
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
 
-[QuestData(EQuestType.KILL_FROM_RANGE)]
+[QuestData(QuestType.KILL_FROM_RANGE)]
 public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker, KillEnemiesRangeQuest.State, KillEnemiesRangeQuest>
 {
     public DynamicIntegerValue KillCount;
@@ -149,15 +148,15 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
-        private readonly float Range;
+        private readonly int _killThreshold;
+        private readonly float _range;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
-            Range = questState.Range.InsistValue();
+            _killThreshold = questState.KillThreshold.InsistValue();
+            _range = questState.Range.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -172,29 +171,29 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
         public void OnKill(PlayerDied e)
         {
             if (e.Killer!.Steam64 == _player.Steam64 &&
-                e.KillDistance >= Range &&
+                e.KillDistance >= _range &&
                 e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
-                if (_kills >= KillThreshold)
+                if (_kills >= _killThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, Range);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _range);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_ENEMIES_WITH_WEAPON)]
+[QuestData(QuestType.KILL_ENEMIES_WITH_WEAPON)]
 public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Tracker, KillEnemiesQuestWeapon.State, KillEnemiesQuestWeapon>
 {
     public DynamicIntegerValue KillCount;
-    public DynamicAssetValue<ItemWeaponAsset> Weapon = new DynamicAssetValue<ItemWeaponAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
+    public DynamicAssetValue<ItemWeaponAsset> Weapon = new DynamicAssetValue<ItemWeaponAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -207,7 +206,7 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
         else if (propertyname.Equals("weapons", StringComparison.Ordinal))
         {
             if (!reader.TryReadAssetValue(out Weapon))
-                Weapon = new DynamicAssetValue<ItemWeaponAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
+                Weapon = new DynamicAssetValue<ItemWeaponAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
         }
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestWeapon>
@@ -237,19 +236,19 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
-        private readonly DynamicAssetValue<ItemWeaponAsset>.Choice Weapon;
-        private readonly string translationCache1;
-        private readonly string translationCache2;
+        private readonly int _killThreshold;
+        private readonly DynamicAssetValue<ItemWeaponAsset>.Choice _weapon;
+        private readonly string _translationCache1;
+        private readonly string _translationCache2;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
-            Weapon = questState.Weapon;
-            translationCache1 = Weapon.GetCommaList();
-            translationCache2 = F.FilterRarityToHex(Weapon.GetAssetValueSet().FirstOrDefault()?.rarity.ToString().ToLower() ?? null!);
+            _killThreshold = questState.KillThreshold.InsistValue();
+            _weapon = questState.Weapon;
+            _translationCache1 = _weapon.GetCommaList();
+            _translationCache2 = F.FilterRarityToHex(_weapon.GetAssetValueSet().FirstOrDefault()?.rarity.ToString().ToLower() ?? null!);
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -265,29 +264,29 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
         {
             if (e.Killer!.Steam64 == _player.Steam64 && e.PrimaryAsset != default && e.Cause != EDeathCause.SHRED)
             {
-                if (Weapon.IsMatch(e.PrimaryAsset))
+                if (_weapon.IsMatch(e.PrimaryAsset))
                 {
                     _kills++;
-                    if (_kills >= KillThreshold)
+                    if (_kills >= _killThreshold)
                         TellCompleted();
                     else
                         TellUpdated();
                 }
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, translationCache1, translationCache2);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _translationCache1, _translationCache2);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_FROM_RANGE_WITH_WEAPON)]
+[QuestData(QuestType.KILL_FROM_RANGE_WITH_WEAPON)]
 public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWeapon.Tracker, KillEnemiesRangeQuestWeapon.State, KillEnemiesRangeQuestWeapon>
 {
     public DynamicIntegerValue KillCount;
-    public DynamicAssetValue<ItemWeaponAsset> Weapon = new DynamicAssetValue<ItemWeaponAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
+    public DynamicAssetValue<ItemWeaponAsset> Weapon = new DynamicAssetValue<ItemWeaponAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
     public DynamicFloatValue Range;
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
@@ -301,7 +300,7 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
         else if (propertyname.Equals("weapons", StringComparison.Ordinal))
         {
             if (!reader.TryReadAssetValue(out Weapon))
-                Weapon = new DynamicAssetValue<ItemWeaponAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
+                Weapon = new DynamicAssetValue<ItemWeaponAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
         }
         else if (propertyname.Equals("range", StringComparison.Ordinal))
         {
@@ -342,21 +341,21 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
-        private readonly DynamicAssetValue<ItemWeaponAsset>.Choice Weapon;
-        private readonly float Range;
-        private readonly string translationCache1;
-        private readonly string translationCache2;
+        private readonly int _killThreshold;
+        private readonly DynamicAssetValue<ItemWeaponAsset>.Choice _weapon;
+        private readonly float _range;
+        private readonly string _translationCache1;
+        private readonly string _translationCache2;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
-            Weapon = questState.Weapon;
-            Range = questState.Range.InsistValue();
-            translationCache1 = Weapon.GetCommaList();
-            translationCache2 = F.FilterRarityToHex(Weapon.GetAssetValueSet().FirstOrDefault()?.rarity.ToString().ToLower() ?? null!);
+            _killThreshold = questState.KillThreshold.InsistValue();
+            _weapon = questState.Weapon;
+            _range = questState.Range.InsistValue();
+            _translationCache1 = _weapon.GetCommaList();
+            _translationCache2 = F.FilterRarityToHex(_weapon.GetAssetValueSet().FirstOrDefault()?.rarity.ToString().ToLower() ?? null!);
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -370,32 +369,32 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.PrimaryAsset != default && e.KillDistance >= Range
+            if (e.Killer!.Steam64 == _player.Steam64 && e.PrimaryAsset != default && e.KillDistance >= _range
                 && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH && e.Cause != EDeathCause.SHRED)
             {
-                if (Weapon.IsMatch(e.PrimaryAsset))
+                if (_weapon.IsMatch(e.PrimaryAsset))
                 {
                     _kills++;
-                    if (_kills >= KillThreshold)
+                    if (_kills >= _killThreshold)
                         TellCompleted();
                     else
                         TellUpdated();
                 }
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, Range.ToString(Data.Locale), translationCache1, translationCache2);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _range.ToString(Data.Locale), _translationCache1, _translationCache2);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_ENEMIES_WITH_KIT)]
+[QuestData(QuestType.KILL_ENEMIES_WITH_KIT)]
 public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, KillEnemiesQuestKit.State, KillEnemiesQuestKit>
 {
     public DynamicIntegerValue KillCount;
-    public DynamicStringValue Kits = new DynamicStringValue(true, EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+    public DynamicStringValue Kits = new DynamicStringValue(true, DynamicValueType.Wildcard, ChoiceBehavior.Selective);
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -408,7 +407,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         else if (propertyname.Equals("kit", StringComparison.Ordinal))
         {
             if (!reader.TryReadStringValue(out Kits, true))
-                Kits = new DynamicStringValue(true, EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+                Kits = new DynamicStringValue(true, DynamicValueType.Wildcard, ChoiceBehavior.Selective);
         }
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestKit>
@@ -438,17 +437,17 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
-        private readonly DynamicStringValue.Choice Kit;
-        private readonly string translationCache1;
+        private readonly int _killThreshold;
+        private readonly DynamicStringValue.Choice _kit;
+        private readonly string _translationCache1;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
-            Kit = questState.Kit;
-            translationCache1 = Kit.GetKitNames(_player == null ? 0 : _player.Steam64);
+            _killThreshold = questState.KillThreshold.InsistValue();
+            _kit = questState.Kit;
+            _translationCache1 = _kit.GetKitNames(_player == null ? 0 : _player.Steam64);
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -462,24 +461,24 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && KitManager.HasKit(e.Killer, out KitOld kit) && Kit.IsMatch(kit.Name) && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.Killer.HasKit && _kit.IsMatch(e.Killer.ActiveKit!.Item!.Id) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
-                if (_kills >= KillThreshold)
+                if (_kills >= _killThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, translationCache1);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _translationCache1);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_FROM_RANGE_WITH_KIT)]
+[QuestData(QuestType.KILL_FROM_RANGE_WITH_KIT)]
 public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.Tracker, KillEnemiesQuestKitRange.State, KillEnemiesQuestKitRange>
 {
     public DynamicIntegerValue KillCount;
@@ -497,7 +496,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
         else if (propertyname.Equals("kit", StringComparison.Ordinal))
         {
             if (!reader.TryReadStringValue(out Kits, true))
-                Kits = new DynamicStringValue(true, EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+                Kits = new DynamicStringValue(true, DynamicValueType.Wildcard, ChoiceBehavior.Selective);
         }
         else if (propertyname.Equals("range", StringComparison.Ordinal))
         {
@@ -538,19 +537,19 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
-        private readonly DynamicStringValue.Choice Kit;
-        private readonly string translationCache1;
-        private readonly float Range;
+        private readonly int _killThreshold;
+        private readonly DynamicStringValue.Choice _kit;
+        private readonly string _translationCache1;
+        private readonly float _range;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
-            Kit = questState.Kit;
-            Range = questState.Range.InsistValue();
-            translationCache1 = Kit.GetKitNames(_player == null ? 0 : _player.Steam64);
+            _killThreshold = questState.KillThreshold.InsistValue();
+            _kit = questState.Kit;
+            _range = questState.Range.InsistValue();
+            _translationCache1 = _kit.GetKitNames(_player == null ? 0 : _player.Steam64);
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -564,26 +563,26 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= Range
+            if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= _range
                 && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH
-                && KitManager.HasKit(e.Killer, out KitOld kit) && Kit.IsMatch(kit.Name) && e.Cause != EDeathCause.SHRED)
+                && e.Killer.HasKit && _kit.IsMatch(e.Killer.ActiveKit!.Item!.Id) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
-                if (_kills >= KillThreshold)
+                if (_kills >= _killThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, Range.ToString(Data.Locale), translationCache1);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _range.ToString(Data.Locale), _translationCache1);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_ENEMIES_WITH_KIT_CLASS)]
+[QuestData(QuestType.KILL_ENEMIES_WITH_KIT_CLASS)]
 public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.Tracker, KillEnemiesQuestKitClass.State, KillEnemiesQuestKitClass>
 {
     public DynamicIntegerValue KillCount;
@@ -633,17 +632,17 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
-        private readonly DynamicEnumValue<Class>.Choice Class;
-        private readonly string translationCache1;
+        private readonly int _killThreshold;
+        private readonly DynamicEnumValue<Class>.Choice _class;
+        private readonly string _translationCache1;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
-            Class = questState.Class;
-            translationCache1 = Class.GetCommaList(_player == null ? 0 : _player.Steam64);
+            _killThreshold = questState.KillThreshold.InsistValue();
+            _class = questState.Class;
+            _translationCache1 = _class.GetCommaList(_player == null ? 0 : _player.Steam64);
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -657,24 +656,24 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && KitManager.HasKit(e.Killer, out KitOld kit) && Class.IsMatch(kit.Class) && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && _class.IsMatch(_player.KitClass))
             {
                 _kills++;
-                if (_kills >= KillThreshold)
+                if (_kills >= _killThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, translationCache1);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _translationCache1);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_FROM_RANGE_WITH_CLASS)]
+[QuestData(QuestType.KILL_FROM_RANGE_WITH_CLASS)]
 public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitClassRange.Tracker, KillEnemiesQuestKitClassRange.State, KillEnemiesQuestKitClassRange>
 {
     public DynamicIntegerValue KillCount;
@@ -736,19 +735,19 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
-        private readonly DynamicEnumValue<Class>.Choice Class;
-        private readonly string translationCache1;
-        private readonly float Range;
+        private readonly int _killThreshold;
+        private readonly DynamicEnumValue<Class>.Choice _class;
+        private readonly string _translationCache1;
+        private readonly float _range;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
-            Class = questState.Class;
-            Range = questState.Range.InsistValue();
-            translationCache1 = Class.GetCommaList(_player == null ? 0 : _player.Steam64);
+            _killThreshold = questState.KillThreshold.InsistValue();
+            _class = questState.Class;
+            _range = questState.Range.InsistValue();
+            _translationCache1 = _class.GetCommaList(_player == null ? 0 : _player.Steam64);
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -762,30 +761,30 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= Range
-                && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH &&
-                KitManager.HasKit(e.Killer, out KitOld kit) && Class.IsMatch(kit.Class) && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= _range
+                && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.SPLASH &&
+                _class.IsMatch(e.Killer.KitClass))
             {
                 _kills++;
-                if (_kills >= KillThreshold)
+                if (_kills >= _killThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, Range.ToString(Data.Locale), translationCache1);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _range.ToString(Data.Locale), _translationCache1);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_ENEMIES_WITH_WEAPON_CLASS)]
+[QuestData(QuestType.KILL_ENEMIES_WITH_WEAPON_CLASS)]
 public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponClass.Tracker, KillEnemiesQuestWeaponClass.State, KillEnemiesQuestWeaponClass>
 {
     public DynamicIntegerValue KillCount;
-    public DynamicEnumValue<EWeaponClass> Class;
+    public DynamicEnumValue<WeaponClass> Class;
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -799,7 +798,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
         {
             if (!reader.TryReadEnumValue(out Class))
             {
-                Class = new DynamicEnumValue<EWeaponClass>(EWeaponClass.UNKNOWN);
+                Class = new DynamicEnumValue<WeaponClass>(WeaponClass.Unknown);
                 L.LogWarning("Invalid weapon class in quest " + QuestType);
             }
         }
@@ -808,7 +807,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
     {
         [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
-        internal DynamicEnumValue<EWeaponClass>.Choice Class;
+        internal DynamicEnumValue<WeaponClass>.Choice Class;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestWeaponClass data)
@@ -821,7 +820,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
             if (prop.Equals("kills", StringComparison.Ordinal))
                 KillThreshold = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("class", StringComparison.Ordinal))
-                Class = DynamicEnumValue<EWeaponClass>.ReadChoiceIntl(ref reader);
+                Class = DynamicEnumValue<WeaponClass>.ReadChoiceIntl(ref reader);
         }
         public void WriteQuestState(Utf8JsonWriter writer)
         {
@@ -831,18 +830,18 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
-        private readonly DynamicEnumValue<EWeaponClass>.Choice Class;
-        private readonly string translationCache1;
+        private readonly int _killThreshold;
+        private readonly DynamicEnumValue<WeaponClass>.Choice _class;
+        private readonly string _translationCache1;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
-            Class = questState.Class;
-            translationCache1 = Class.GetCommaList(_player == null ? 0 : _player.Steam64);
+            _killThreshold = questState.KillThreshold.InsistValue();
+            _class = questState.Class;
+            _translationCache1 = _class.GetCommaList(_player == null ? 0 : _player.Steam64);
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -855,24 +854,24 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
         }
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && !e.PrimaryAssetIsVehicle && Class.IsMatch(e.PrimaryAsset.GetWeaponClass()) && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && !e.PrimaryAssetIsVehicle && _class.IsMatch(e.PrimaryAsset.GetWeaponClass()) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
-                if (_kills >= KillThreshold)
+                if (_kills >= _killThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, translationCache1);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _translationCache1);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_ENEMIES_WITH_BRANCH)]
+[QuestData(QuestType.KILL_ENEMIES_WITH_BRANCH)]
 public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Tracker, KillEnemiesQuestBranch.State, KillEnemiesQuestBranch>
 {
     public DynamicIntegerValue KillCount;
@@ -922,18 +921,18 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
-        private readonly DynamicEnumValue<Branch>.Choice Branch;
-        private readonly string translationCache1;
+        private readonly int _killThreshold;
+        private readonly DynamicEnumValue<Branch>.Choice _branch;
+        private readonly string _translationCache1;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
-            Branch = questState.Branch;
-            translationCache1 = Branch.GetCommaList(_player == null ? 0 : _player.Steam64);
+            _killThreshold = questState.KillThreshold.InsistValue();
+            _branch = questState.Branch;
+            _translationCache1 = _branch.GetCommaList(_player == null ? 0 : _player.Steam64);
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -946,24 +945,24 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
         }
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && Branch.IsMatch(_player.Branch) && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && _branch.IsMatch(_player.Branch) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
-                if (_kills >= KillThreshold)
+                if (_kills >= _killThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, translationCache1);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _translationCache1);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_ENEMIES_WITH_TURRET)]
+[QuestData(QuestType.KILL_ENEMIES_WITH_TURRET)]
 public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Tracker, KillEnemiesQuestTurret.State, KillEnemiesQuestTurret>
 {
     public DynamicIntegerValue KillCount;
@@ -1012,18 +1011,18 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
-        private readonly DynamicAssetValue<ItemGunAsset>.Choice Weapon;
+        private readonly int _killThreshold;
+        private readonly DynamicAssetValue<ItemGunAsset>.Choice _weapon;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
-        private string translationCache1;
+        private readonly string _translationCache1;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
-            Weapon = questState.Weapon;
-            translationCache1 = Weapon.GetCommaList();
+            _killThreshold = questState.KillThreshold.InsistValue();
+            _weapon = questState.Weapon;
+            _translationCache1 = _weapon.GetCommaList();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -1044,10 +1043,10 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
                 {
                     Passenger passenger = veh.turrets[i];
                     if (passenger != null && passenger.player != null && passenger.player.playerID.steamID.m_SteamID == _player.Steam64 &&
-                        passenger.turret != null && Weapon.IsMatch(passenger.turret.itemID))
+                        passenger.turret != null && _weapon.IsMatch(passenger.turret.itemID))
                     {
                         _kills++;
-                        if (_kills >= KillThreshold)
+                        if (_kills >= _killThreshold)
                             TellCompleted();
                         else
                             TellUpdated();
@@ -1056,15 +1055,15 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
                 }
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, translationCache1);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _translationCache1);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_ENEMIES_IN_SQUAD)]
+[QuestData(QuestType.KILL_ENEMIES_IN_SQUAD)]
 public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker, KillEnemiesQuestSquad.State, KillEnemiesQuestSquad>
 {
     public DynamicIntegerValue KillCount;
@@ -1100,14 +1099,14 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
+        private readonly int _killThreshold;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
+            _killThreshold = questState.KillThreshold.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -1123,21 +1122,21 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
             if (e.Killer!.Steam64 == _player.Steam64 && _player.Squad != null && _player.Squad.Members.Count > 1 && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
-                if (_kills >= KillThreshold)
+                if (_kills >= _killThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_ENEMIES_IN_FULL_SQUAD)]
+[QuestData(QuestType.KILL_ENEMIES_IN_FULL_SQUAD)]
 public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad.Tracker, KillEnemiesQuestFullSquad.State, KillEnemiesQuestFullSquad>
 {
     public DynamicIntegerValue KillCount;
@@ -1173,14 +1172,14 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
+        private readonly int _killThreshold;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
+            _killThreshold = questState.KillThreshold.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -1196,21 +1195,21 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
             if (e.Killer!.Steam64 == _player.Steam64 && _player.Squad != null && _player.Squad.IsFull() && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
-                if (_kills >= KillThreshold)
+                if (_kills >= _killThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_ENEMIES_ON_POINT_DEFENSE)]
+[QuestData(QuestType.KILL_ENEMIES_ON_POINT_DEFENSE)]
 public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tracker, KillEnemiesQuestDefense.State, KillEnemiesQuestDefense>
 {
     public DynamicIntegerValue KillCount;
@@ -1246,14 +1245,14 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
+        private readonly int _killThreshold;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
+            _killThreshold = questState.KillThreshold.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -1315,20 +1314,20 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
             return;
         add:
             _kills++;
-            if (_kills >= KillThreshold)
+            if (_kills >= _killThreshold)
                 TellCompleted();
             else
                 TellUpdated();
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_ENEMIES_ON_POINT_ATTACK)]
+[QuestData(QuestType.KILL_ENEMIES_ON_POINT_ATTACK)]
 public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Tracker, KillEnemiesQuestAttack.State, KillEnemiesQuestAttack>
 {
     public DynamicIntegerValue KillCount;
@@ -1364,14 +1363,14 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
+        private readonly int _killThreshold;
         private int _kills;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
+            _killThreshold = questState.KillThreshold.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -1433,20 +1432,20 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
             return;
         add:
             _kills++;
-            if (_kills >= KillThreshold)
+            if (_kills >= _killThreshold)
                 TellCompleted();
             else
                 TellUpdated();
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KING_SLAYER)]
+[QuestData(QuestType.KING_SLAYER)]
 public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayerQuest.State, KingSlayerQuest>
 {
     public DynamicIntegerValue KillCount;
@@ -1482,15 +1481,15 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
-        private readonly int KillThreshold = 0;
+        private readonly int _killThreshold;
         private int _kills;
         private UCPlayer? _kingSlayer;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
-        protected override bool CompletedCheck => _kills >= KillThreshold;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            KillThreshold = questState.KillThreshold.InsistValue();
+            _killThreshold = questState.KillThreshold.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -1502,7 +1501,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
             writer.WriteProperty("kills", _kills);
         }
 
-        private int prevInd = -1;
+        private int _prevInd = -1;
         public void OnKill(PlayerDied e)
         {
             ulong team = e.Killer!.GetTeam();
@@ -1528,30 +1527,30 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
                     if (_kingSlayer.Steam64 == e.Player.Steam64)
                     {
                         _kills++;
-                        if (_kills >= KillThreshold)
+                        if (_kills >= _killThreshold)
                             TellCompleted();
                         else
                             TellUpdated();
-                        prevInd = ind;
+                        _prevInd = ind;
                         return;
                     }
                 }
-                if (prevInd != ind)
+                if (_prevInd != ind)
                 {
                     TellUpdated(true);
-                    prevInd = ind;
+                    _prevInd = ind;
                 }
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold);
         public override void ManualComplete()
         {
-            _kills = KillThreshold;
+            _kills = _killThreshold;
             base.ManualComplete();
         }
     }
 }
-[QuestData(EQuestType.KILL_STREAK)]
+[QuestData(QuestType.KILL_STREAK)]
 public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreakQuest.State, KillStreakQuest>
 {
     public DynamicIntegerValue StreakCount;
@@ -1599,11 +1598,11 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
     }
     public class Tracker : BaseQuestTracker, INotifyOnKill, INotifyOnDeath
     {
-        private readonly int StreakCount = 0;
-        private readonly int StreakLength = 0;
+        private readonly int _streakCount;
+        private readonly int _streakLength;
         private int _streakProgress;
         private int _streaks;
-        protected override bool CompletedCheck => _streaks >= StreakCount;
+        protected override bool CompletedCheck => _streaks >= _streakCount;
         public override short FlagValue => (short)_streaks;
         public override void ResetToDefaults()
         {
@@ -1612,8 +1611,8 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
         }
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            StreakCount = questState.StreakCount.InsistValue();
-            StreakLength = questState.StreakLength.InsistValue();
+            _streakCount = questState.StreakCount.InsistValue();
+            _streakLength = questState.StreakLength.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -1629,15 +1628,14 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
         }
         public void OnKill(PlayerDied e)
         {
-            ulong team = e.Killer!.GetTeam();
             if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
             {
                 _streakProgress++;
-                if (_streakProgress >= StreakLength)
+                if (_streakProgress >= _streakLength)
                 {
                     _streakProgress = 0;
                     _streaks++;
-                    if (_streaks >= StreakCount)
+                    if (_streaks >= _streakCount)
                         TellCompleted();
                     else
                         TellUpdated();
@@ -1652,11 +1650,11 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
                 TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _streakProgress, StreakLength, StreakCount);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _streakProgress, _streakLength, _streakCount);
         public override void ManualComplete()
         {
             _streakProgress = 0;
-            _streakProgress = StreakCount;
+            _streakProgress = _streakCount;
             base.ManualComplete();
         }
     }

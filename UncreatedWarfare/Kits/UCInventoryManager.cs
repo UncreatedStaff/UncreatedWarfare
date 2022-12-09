@@ -27,6 +27,89 @@ public static class UCInventoryManager
             L.LogError(ex);
         }
     }
+    public static IKitItem[] ItemsFromInventory(UCPlayer player, bool addClothes = true, bool addItems = true, bool findAssetRedirects = false)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (!addItems && !addClothes)
+            return Array.Empty<IKitItem>();
+        List<IKitItem> items = new List<IKitItem>(32);
+        RedirectType type;
+        if (addItems)
+        {
+            Items[] ia = player.Player.inventory.items;
+            for (byte page = 0; page < PlayerInventory.STORAGE; ++page)
+            {
+                Items it = ia[page];
+                byte ct = it.getItemCount();
+                for (byte index = 0; index < ct; ++index)
+                {
+                    ItemJar jar = it.items[index];
+                    ItemAsset asset = jar.GetAsset();
+                    if (asset == null)
+                        continue;
+                    if (findAssetRedirects && (type = TeamManager.GetItemRedirect(asset.GUID)) != RedirectType.None)
+                        items.Add(new AssetRedirectItem(type, jar.x, jar.y, jar.rot, (Page)page));
+                    else items.Add(new PageItem(asset.GUID, jar.x, jar.y, jar.rot, jar.item.state, jar.item.amount, (Page)page));
+                }
+            }
+        }
+        if (addClothes)
+        {
+            PlayerClothing playerClothes = player.Player.clothing;
+            if (playerClothes.shirtAsset != null)
+            {
+                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.shirtAsset.GUID)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothing(type, ClothingType.Shirt));
+                else
+                    items.Add(new ClothingItem(playerClothes.shirtAsset.GUID, ClothingType.Shirt, playerClothes.shirtState));
+            }
+            if (playerClothes.pantsAsset != null)
+            {
+                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.pantsAsset.GUID)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothing(type, ClothingType.Pants));
+                else
+                    items.Add(new ClothingItem(playerClothes.pantsAsset.GUID, ClothingType.Pants, playerClothes.pantsState));
+            }
+            if (playerClothes.vestAsset != null)
+            {
+                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.vestAsset.GUID)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothing(type, ClothingType.Vest));
+                else
+                    items.Add(new ClothingItem(playerClothes.vestAsset.GUID, ClothingType.Vest, playerClothes.vestState));
+            }
+            if (playerClothes.hatAsset != null)
+            {
+                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.hatAsset.GUID)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothing(type, ClothingType.Hat));
+                else
+                    items.Add(new ClothingItem(playerClothes.hatAsset.GUID, ClothingType.Hat, playerClothes.hatState));
+            }
+            if (playerClothes.maskAsset != null)
+            {
+                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.maskAsset.GUID)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothing(type, ClothingType.Mask));
+                else
+                    items.Add(new ClothingItem(playerClothes.maskAsset.GUID, ClothingType.Mask, playerClothes.maskState));
+            }
+            if (playerClothes.backpackAsset != null)
+            {
+                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.backpackAsset.GUID)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothing(type, ClothingType.Backpack));
+                else
+                    items.Add(new ClothingItem(playerClothes.backpackAsset.GUID, ClothingType.Backpack, playerClothes.backpackState));
+            }
+            if (playerClothes.glassesAsset != null)
+            {
+                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.glassesAsset.GUID)) != RedirectType.None)
+                    items.Add(new AssetRedirectClothing(type, ClothingType.Glasses));
+                else
+                    items.Add(new ClothingItem(playerClothes.glassesAsset.GUID, ClothingType.Glasses, playerClothes.glassesState));
+            }
+        }
+
+        return items.ToArray();
+    }
+
     public static void ClearInventory(UCPlayer player, bool clothes = true)
     {
         ThreadUtil.assertIsGameThread();
@@ -220,7 +303,7 @@ public static class UCInventoryManager
             }
         }
     }
-
+    [Obsolete]
     public static int CountItems(Player player, ushort itemID)
     {
 #if DEBUG
@@ -242,6 +325,12 @@ public static class UCInventoryManager
         }
 
         return count;
+    }
+    public static int CountItems(Player player, Guid item)
+    {
+#pragma warning disable CS0612
+        return Assets.find(item) is not ItemAsset asset ? 0 : CountItems(player, asset.id);
+#pragma warning restore CS0612
     }
 
     public static void RemoveSingleItem(UCPlayer player, ushort itemID)
