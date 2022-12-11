@@ -66,7 +66,7 @@ public class SystemConfigData : JSONConfigData
     [JsonPropertyName("enableActionMenu")]
     public bool EnableActionMenu;
     [JsonPropertyName("loadoutPremiumCost")]
-    public float LoadoutCost;
+    public decimal LoadoutCost;
     [JsonPropertyName("vehicleAbandonmentDistance")]
     public float MaxVehicleAbandonmentDistance;
     [JsonPropertyName("vehicleDismountMaxHeight")]
@@ -118,7 +118,7 @@ public class SystemConfigData : JSONConfigData
         RelayMicsDuringEndScreen = true;
         EnableSquads = true;
         EnableActionMenu = true;
-        LoadoutCost = 10;
+        LoadoutCost = 10m;
         MaxVehicleAbandonmentDistance = 300f;
         MaxVehicleHeightToLeave = 50f;
         GamemodeRotation = "TeamCTF:2.0, Invasion:1.0, Insurgency:1.0, Conquest:1.0";

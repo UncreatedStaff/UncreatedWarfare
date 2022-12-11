@@ -413,7 +413,6 @@ partial class JSONMethods
         { "vbs_active", "ff9933" },
         { "vbs_ready", "33cc33" },
     };
-    public static List<KitOld> DefaultKits = new List<KitOld> { };
     public static readonly List<LanguageAliasSet> DefaultLanguageAliasSets = new List<LanguageAliasSet>
     {
         new LanguageAliasSet(LanguageAliasSet.ENGLISH, "English", new string[] { "english", "enus", "en", "us", "inglés", "inglesa", "ingles",

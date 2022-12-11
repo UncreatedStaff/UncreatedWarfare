@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Uncreated.Framework;
 using Uncreated.Json;
+using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
@@ -134,7 +135,7 @@ public static class Localization
         if (seconds == 0)
             seconds = 1;
         if (seconds < 60) // < 1 minute
-            return seconds.ToString(Data.Locale) + ' ' + (seconds == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player);
+            return seconds.ToString(Data.LocalLocale) + ' ' + (seconds == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player);
         int val;
         int overflow;
         if (seconds < 3600) // < 1 hour
@@ -174,7 +175,7 @@ public static class Localization
         if (seconds == 0)
             seconds = 1;
         if (seconds < 60) // < 1 minute
-            return seconds.ToString(Data.Locale) + ' ' + (seconds == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player);
+            return seconds.ToString(Data.LocalLocale) + ' ' + (seconds == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player);
         int val;
         int overflow;
         if (seconds < 3600) // < 1 hour
@@ -214,7 +215,7 @@ public static class Localization
         if (seconds == 0)
             seconds = 1;
         if (seconds < 60) // < 1 minute
-            return seconds.ToString(Data.Locale) + ' ' + (seconds == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(language);
+            return seconds.ToString(Data.LocalLocale) + ' ' + (seconds == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(language);
         int val;
         int overflow;
         if (seconds < 3600) // < 1 hour
@@ -265,17 +266,13 @@ public static class Localization
             {
                 return TranslateLoadoutSign(key2, language, ucplayer);
             }
-            else if (KitManager.KitExists(key2, out KitOld kit))
-            {
+            Kit? kit = KitManager.GetSingletonQuick()?.FindKitNoLock(key2, true)?.Item;
+            if (kit != null)
                 return TranslateKitSign(language, kit, ucplayer);
-            }
-            else
-            {
-                Translation? tr = Translation.FromSignId(key2);
-                if (tr != null) return tr.Translate(language);
+            Translation? tr = Translation.FromSignId(key2);
+            if (tr != null) return tr.Translate(language);
 
-                return Translation.FromSignId(key)?.Translate(language) ?? key;
-            }
+            return Translation.FromSignId(key)?.Translate(language) ?? key;
         }
         catch (Exception ex)
         {
@@ -286,81 +283,69 @@ public static class Localization
     }
     public static string TranslateLoadoutSign(string key, string language, UCPlayer ucplayer)
     {
-        if (ucplayer != null && key.Length > 8 && ushort.TryParse(key.Substring(8), System.Globalization.NumberStyles.Any, Data.Locale, out ushort loadoutid))
+        KitManager? manager = KitManager.GetSingletonQuick();
+        if (manager != null && ucplayer != null && key.Length > 8 && ushort.TryParse(key.Substring(8), System.Globalization.NumberStyles.Any, Data.AdminLocale, out ushort loadoutid))
         {
             ulong team = ucplayer.GetTeam();
-            List<KitOld> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, ucplayer));
-            loadouts.Sort((k1, k2) => k1.Name.CompareTo(k2.Name));
-            if (loadouts.Count > 0)
+            SqlItem<Kit>? proxy = manager.GetLoadoutQuick(ucplayer, loadoutid, team);
+            Kit? kit = proxy?.Item;
+            if (kit != null)
             {
-                if (loadoutid > 0 && loadoutid <= loadouts.Count)
+                string name;
+                bool keepline = false;
+                if (!ucplayer.OnDuty())
                 {
-                    KitOld kit = loadouts[loadoutid - 1];
-
-                    string name;
-                    bool keepline = false;
-                    if (!ucplayer.OnDuty())
+                    name = kit.GetDisplayName(language);
+                    for (int i = 0; i < name.Length; i++)
                     {
-                        if (!kit.SignTexts.TryGetValue(language, out name))
-                            if (!kit.SignTexts.TryGetValue(L.DEFAULT, out name))
-                                if (kit.SignTexts.Count > 0)
-                                    name = kit.SignTexts.First().Value;
-                                else
-                                    name = kit.Name;
-                        for (int i = 0; i < name.Length; i++)
+                        char @char = name[i];
+                        if (@char == '\n')
                         {
-                            char @char = name[i];
-                            if (@char == '\n')
-                            {
-                                keepline = true;
-                                break;
-                            }
+                            keepline = true;
+                            break;
                         }
                     }
-                    else
-                    {
-                        name = kit.Name;
-                        if (name.Length > 18 && ulong.TryParse(name.Substring(0, 17), System.Globalization.NumberStyles.Any, Data.Locale, out ulong id) && OffenseManager.IsValidSteam64ID(id) && id == ucplayer.Steam64)
-                        {
-                            name = "PL #" + loadoutid.ToString(Data.Locale);
-                        }
-                    }
-                    name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
-                    string cost = "<sub>" + T.LoadoutName.Translate(language, loadoutid) + "</sub>";
-                    if (!keepline) cost = "\n" + cost;
+                }
+                else
+                {
+                    name = kit.Id + '\n' + "(" + (char)(loadoutid + 47) + ") " + kit.GetDisplayName(language);
+                    keepline = true;
+                }
+                name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
+                string cost = "<sub>" + T.LoadoutName.Translate(language, loadoutid) + "</sub>";
+                if (!keepline) cost = "\n" + cost;
 
-                    string playercount = string.Empty;
+                string playercount = string.Empty;
 
-                    if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
-                    {
-                        playercount = T.KitUnlimited.Translate(language);
-                    }
-                    else if (kit.IsClassLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : team, true))
-                    {
-                        playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_unavailable"), true);
-                    }
-                    else
-                    {
-                        playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_available"), true);
-                    }
+                if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
+                {
+                    playercount = T.KitUnlimited.Translate(language);
+                }
+                else if (kit.IsClassLimited(out int total, out int allowed, team, true))
+                {
+                    playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_unavailable"), true);
+                }
+                else
+                {
+                    playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_available"), true);
+                }
 
-                    string weapons = kit.Weapons ?? string.Empty;
+                string weapons = kit.WeaponText ?? string.Empty;
 
-                    if (weapons.Length > 0)
-                    {
-                        weapons = weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true);
-                        return
-                            name + "\n" +
-                            cost + "\n" +
-                            weapons + "\n" +
-                            playercount;
-                    }
-
+                if (weapons.Length > 0)
+                {
+                    weapons = weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true);
                     return
-                        name + "\n\n" +
+                        name + "\n" +
                         cost + "\n" +
+                        weapons + "\n" +
                         playercount;
                 }
+
+                return
+                    name + "\n\n" +
+                    cost + "\n" +
+                    playercount;
             }
 
             return
@@ -370,21 +355,15 @@ public static class Localization
         }
         return key;
     }
-    public static string TranslateKitSign(string language, KitOld kit, UCPlayer ucplayer)
+    public static string TranslateKitSign(string language, Kit kit, UCPlayer ucplayer)
     {
+        KitManager? manager = KitManager.GetSingletonQuick();
         bool keepline = false;
         ulong team = ucplayer.GetTeam();
         string name;
-        if (!ucplayer.OnDuty() && kit.SignTexts != null)
+        if (!ucplayer.OnDuty())
         {
-            if (!kit.SignTexts.TryGetValue(language, out name) && !kit.SignTexts.TryGetValue(L.DEFAULT, out name))
-            {
-                if (kit.SignTexts.Count > 0)
-                    name = kit.SignTexts.First().Value;
-                else
-                    name = kit.Name;
-            }
-
+            name = kit.GetDisplayName(language);
             for (int i = 0; i < name.Length; i++)
             {
                 char @char = name[i];
@@ -397,34 +376,33 @@ public static class Localization
         }
         else
         {
-            name = kit.Name;
+            name = kit.Id + "\n" + kit.GetDisplayName(language);
+            keepline = true;
         }
         name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex(kit.SquadLevel == SquadLevel.Commander ? "kit_public_commander_header" : "kit_public_header"), true) + "</b>";
-        string weapons = kit.Weapons ?? string.Empty;
+        string weapons = kit.WeaponText ?? string.Empty;
         if (weapons.Length > 0)
             weapons = "<b>" + weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true) + "</b>";
-        string cost = string.Empty;
+        string cost;
         string playercount;
         if (kit.SquadLevel == SquadLevel.Commander && SquadManager.Loaded)
         {
             UCPlayer? c = SquadManager.Singleton.Commanders.GetCommander(team);
             if (c != null)
             {
-                if (c.Steam64 != ucplayer.Steam64)
-                    cost = T.KitCommanderTaken.Translate(language, c);
-                else
-                    cost = T.KitCommanderTakenByViewer.Translate(language);
+                cost = c.Steam64 != ucplayer.Steam64 ? T.KitCommanderTaken.Translate(language, c) : T.KitCommanderTakenByViewer.Translate(language);
                 goto n;
             }
         }
-        if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
+        if (kit.Type is KitType.Elite or KitType.Special)
         {
-            if (KitManager.HasAccessFast(kit, ucplayer))
+            if (manager != null && KitManager.HasAccessQuick(kit, ucplayer))
                 cost = T.KitPremiumOwned.Translate(language);
-            else if (kit.PremiumCost == -1)
+            else if (kit.Type == KitType.Special)
                 cost = T.KitExclusive.Translate(language);
             else
-                cost = T.KitPremiumCost.Translate(language, kit.PremiumCost);
+                cost = kit.PremiumCost <= 0m ? T.KitFree.Translate(language) : T.KitPremiumCost.Translate(language, kit.PremiumCost);
+            goto n;
         }
         else if (kit.UnlockRequirements != null && kit.UnlockRequirements.Length != 0)
         {
@@ -433,35 +411,21 @@ public static class Localization
                 UnlockRequirement req = kit.UnlockRequirements[i];
                 if (req.CanAccess(ucplayer)) continue;
                 cost = req.GetSignText(ucplayer);
-                break;
+                goto n;
             }
         }
-        else if (kit.CreditCost > 0)
+        if (kit.CreditCost > 0)
         {
-            if (KitManager.HasAccessFast(kit, ucplayer))
-                cost = T.KitPremiumOwned.Translate(language);
-            else
-                cost = T.KitCreditCost.Translate(language, kit.CreditCost);
+            cost = KitManager.HasAccessQuick(kit, ucplayer) ? T.KitPremiumOwned.Translate(language) : T.KitCreditCost.Translate(language, kit.CreditCost);
         }
         else cost = T.KitFree.Translate(language);
-    n:
-        if (cost == string.Empty && kit.CreditCost > 0)
-        {
-            if (ucplayer != null)
-            {
-                if (!KitManager.HasAccessFast(kit, ucplayer))
-                    cost = T.KitCreditCost.Translate(language, kit.CreditCost);
-                else
-                    cost = T.KitPremiumOwned.Translate(language);
-            }
-        }
-
+        n:
         if (!keepline) cost = "\n" + cost;
         if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
         {
             playercount = T.KitUnlimited.Translate(language);
         }
-        else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : team, true))
+        else if (kit.IsLimited(out int total, out int allowed, team, true))
         {
             playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_unavailable"), true);
         }
@@ -515,7 +479,7 @@ public static class Localization
             if (unlock != string.Empty)
                 unlock += "    ";
 
-            unlock += $"<color=#b8ffc1>C</color> {data.CreditCost.ToString(Data.Locale)}";
+            unlock += $"<color=#b8ffc1>C</color> {data.CreditCost.ToString(Data.LocalLocale)}";
         }
 
         string finalformat =
@@ -558,56 +522,53 @@ public static class Localization
     {
         if (enumTranslations.TryGetValue(typeof(TEnum), out Dictionary<string, Dictionary<string, string>> t))
         {
-            if (!t.TryGetValue(language, out Dictionary<string, string> v) &&
+            if (!t.TryGetValue(language, out Dictionary<string, string>? v) &&
                 (L.DEFAULT.Equals(language, StringComparison.Ordinal) ||
                  !t.TryGetValue(L.DEFAULT, out v)))
                 v = t.Values.FirstOrDefault();
             string strRep = value!.ToString();
             if (v == null || !v.TryGetValue(strRep, out string v2))
                 return strRep.ToProperCase();
-            else return v2;
+            return v2;
         }
-        else return value!.ToString().ToProperCase();
+        return value!.ToString().ToProperCase();
     }
     public static string TranslateEnum<TEnum>(TEnum value, ulong player)
     {
         if (player != 0 && Data.Languages.TryGetValue(player, out string language))
             return TranslateEnum(value, language);
-        else return TranslateEnum(value, L.DEFAULT);
+        return TranslateEnum(value, L.DEFAULT);
     }
     private const string ENUM_NAME_PLACEHOLDER = "%NAME%";
     public static string TranslateEnumName(Type type, string language)
     {
         if (enumTranslations.TryGetValue(type, out Dictionary<string, Dictionary<string, string>> t))
         {
-            if (!t.TryGetValue(language, out Dictionary<string, string> v) &&
+            if (!t.TryGetValue(language, out Dictionary<string, string>? v) &&
                 (L.DEFAULT.Equals(language, StringComparison.Ordinal) ||
                  !t.TryGetValue(L.DEFAULT, out v)))
                 v = t.Values.FirstOrDefault();
             if (v == null || !v.TryGetValue(ENUM_NAME_PLACEHOLDER, out string v2))
                 return ENUM_NAME_PLACEHOLDER.ToProperCase();
-            else return v2;
+            return v2;
         }
-        else
-        {
-            string name = type.Name;
-            if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
-                name = name.Substring(1);
-            return name;
-        }
+        string name = type.Name;
+        if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
+            name = name.Substring(1);
+        return name;
     }
     public static string TranslateEnumName<TEnum>(string language) where TEnum : struct, Enum => TranslateEnumName(typeof(TEnum), language);
     public static string TranslateEnumName<TEnum>(ulong player) where TEnum : struct, Enum
     {
         if (player != 0 && Data.Languages.TryGetValue(player, out string language))
             return TranslateEnumName<TEnum>(language);
-        else return TranslateEnumName<TEnum>(L.DEFAULT);
+        return TranslateEnumName<TEnum>(L.DEFAULT);
     }
     public static string TranslateEnumName(Type type, ulong player)
     {
         if (player != 0 && Data.Languages.TryGetValue(player, out string language))
             return TranslateEnumName(type, language);
-        else return TranslateEnumName(type, L.DEFAULT);
+        return TranslateEnumName(type, L.DEFAULT);
     }
     private static readonly Dictionary<Type, Dictionary<string, Dictionary<string, string>>> enumTranslations = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>();
     private static readonly string ENUM_TRANSLATION_FILE_NAME = "Enums" + Path.DirectorySeparatorChar;

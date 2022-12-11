@@ -158,6 +158,25 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             Release();
         }
     }
+    /// <param name="index">Indexed from 1.</param>
+    public SqlItem<Kit>? GetLoadoutQuick(UCPlayer ucplayer, int index, ulong team)
+    {
+        if (index <= 0)
+            throw new ArgumentOutOfRangeException(nameof(index));
+        if (ucplayer.AccessibleKits != null)
+        {
+            FactionInfo? faction = TeamManager.GetFactionSafe(team);
+            foreach (SqlItem<Kit> kit in ucplayer.AccessibleKits
+                         .Where(x => x.Item != null && x.Item.Type == KitType.Loadout && !x.Item.IsRequestable(faction))
+                         .OrderBy(x => x.Item?.Id ?? string.Empty))
+            {
+                if (--index <= 0)
+                    return kit;
+            }
+        }
+
+        return null;
+    }
     public SqlItem<Kit>? FindKitNoLock(string id, bool exactMatchOnly = true)
     {
         int index = F.StringSearch(List, x => x.Item?.Id, id, exactMatchOnly);
@@ -1715,6 +1734,29 @@ public static class KitEx
         if (kit.TeamLimit >= 1f)
             return false;
         return currentPlayers + 1 > allowedPlayers;
+    }
+    public static bool TryParseClass(string val, out Class @class)
+    {
+        if (Enum.TryParse(val, true, out @class))
+            return true;
+        // checks old values for the enum before renaming.
+        if (val.Equals("AUTOMATIC_RIFLEMAN", StringComparison.OrdinalIgnoreCase))
+            @class = Class.AutomaticRifleman;
+        else if (val.Equals("MACHINE_GUNNER", StringComparison.OrdinalIgnoreCase))
+            @class = Class.MachineGunner;
+        else if (val.Equals("AP_RIFLEMAN", StringComparison.OrdinalIgnoreCase))
+            @class = Class.APRifleman;
+        else if (val.Equals("COMBAT_ENGINEER", StringComparison.OrdinalIgnoreCase))
+            @class = Class.CombatEngineer;
+        else if (val.Equals("SPEC_OPS", StringComparison.OrdinalIgnoreCase))
+            @class = Class.SpecOps;
+        else
+        {
+            @class = default;
+            return false;
+        }
+
+        return true;
     }
     public static class NetCalls
     {

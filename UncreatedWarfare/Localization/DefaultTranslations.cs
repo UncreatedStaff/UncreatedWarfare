@@ -1341,7 +1341,7 @@ internal static class T
     public static readonly Translation KitExclusive = new Translation("<#c$kit_level_dollars_exclusive$>EXCLUSIVE</color>", TranslationFlags.NoColorOptimization);
     public static readonly Translation<string> KitName = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColorOptimization);
     public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColorOptimization);
-    public static readonly Translation<float> KitPremiumCost = new Translation<float>("<#c$kit_level_dollars$>$ {0}</color>", TranslationFlags.NoColorOptimization, "N2");
+    public static readonly Translation<decimal> KitPremiumCost = new Translation<decimal>("<#c$kit_level_dollars$>$ {0}</color>", TranslationFlags.NoColorOptimization, "N2");
     [TranslationData(FormattingDescriptions = new string[] { "Level", "Color depending on player's current level." })]
     public static readonly Translation<string, Color> KitRequiredLevel = new Translation<string, Color>("<#f0a31c>Rank:</color> <#{1}>{0}</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(FormattingDescriptions = new string[] { "Rank", "Color depending on player's current rank." })]

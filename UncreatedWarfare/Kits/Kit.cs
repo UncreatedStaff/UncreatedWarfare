@@ -17,329 +17,6 @@ using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 
-public class KitOld : IListItem, ITranslationArgument, ICloneable
-{
-    public const int CAPACITY = 256;
-    public string Name;
-    [CommandSettable]
-    public Class Class;
-    [CommandSettable]
-    public Branch Branch;
-    [CommandSettable]
-    public ulong Team;
-    public UnlockRequirement[] UnlockRequirements;
-    public Skillset[] Skillsets;
-    [CommandSettable]
-    public ushort CreditCost;
-    [CommandSettable]
-    public ushort UnlockLevel;
-    [CommandSettable]
-    public bool IsPremium;
-    [CommandSettable]
-    public float PremiumCost;
-    [CommandSettable]
-    public bool IsLoadout;
-    [CommandSettable]
-    public float TeamLimit;
-    [CommandSettable]
-    public float Cooldown;
-    [CommandSettable]
-    public bool Disabled;
-    [CommandSettable]
-    public SquadLevel SquadLevel;
-    public List<PageItem> Items;
-    public List<ClothingItem> Clothes;
-    public Dictionary<string, string> SignTexts;
-    [CommandSettable]
-    public string Weapons;
-    public PrimaryKey PrimaryKey { get; set; }
-    public KitOld(string name)
-    {
-        Name = name;
-        Items = new List<PageItem>();
-        Clothes = new List<ClothingItem>();
-        Class = Class.None;
-        Branch = Branch.Default;
-        Team = 0;
-        UnlockRequirements = Array.Empty<UnlockRequirement>();
-        Skillsets = Array.Empty<Skillset>();
-        CreditCost = 0;
-        UnlockLevel = 0;
-        IsPremium = false;
-        PremiumCost = 0;
-        IsLoadout = false;
-        TeamLimit = 1;
-        Cooldown = 0;
-        SignTexts = new Dictionary<string, string> { { L.DEFAULT, "Default" } };
-        Weapons = string.Empty;
-        Disabled = false;
-        SquadLevel = SquadLevel.Member;
-    }
-    public KitOld() : this("default") { }
-    public KitOld(string kitName, List<PageItem> items, List<ClothingItem> clothing)
-    {
-        Name = kitName;
-        Items = items ?? new List<PageItem>();
-        Clothes = clothing ?? new List<ClothingItem>();
-        Class = Class.None;
-        Branch = Branch.Default;
-        Team = 0;
-        UnlockRequirements = Array.Empty<UnlockRequirement>();
-        Skillsets = Array.Empty<Skillset>();
-        CreditCost = 0;
-        UnlockLevel = 0;
-        IsPremium = false;
-        PremiumCost = 0;
-        IsLoadout = false;
-        TeamLimit = 1;
-        Cooldown = 0;
-        SignTexts = new Dictionary<string, string> { { L.DEFAULT, kitName.ToProperCase() } };
-        Weapons = string.Empty;
-        Disabled = false;
-        SquadLevel = SquadLevel.Member;
-    }
-    public void ApplyTo(KitOld kit)
-    {
-        kit.Class = Class;
-        kit.Branch = Branch;
-        kit.Team = Team;
-        kit.Items = new List<PageItem>(Items.Select(x => (PageItem)x.Clone()));
-        kit.Clothes = new List<ClothingItem>(Clothes.Select(x => (ClothingItem)x.Clone()));
-        kit.UnlockRequirements = new UnlockRequirement[UnlockRequirements.Length];
-        for (int i = 0; i < UnlockRequirements.Length; ++i)
-            kit.UnlockRequirements[i] = (UnlockRequirement)UnlockRequirements[i].Clone();
-        kit.Skillsets = new Skillset[Skillsets.Length];
-        Array.Copy(Skillsets, kit.Skillsets, Skillsets.Length);
-        kit.CreditCost = CreditCost;
-        kit.UnlockLevel = UnlockLevel;
-        kit.IsPremium = IsPremium;
-        kit.PremiumCost = PremiumCost;
-        kit.IsLoadout = IsLoadout;
-        kit.TeamLimit = TeamLimit;
-        kit.Cooldown = Cooldown;
-        kit.Disabled = Disabled;
-        kit.SquadLevel = SquadLevel;
-        kit.SignTexts = new Dictionary<string, string>(SignTexts);
-    }
-    public object Clone()
-    {
-        KitOld clone = new KitOld(false)
-        {
-            Name = Name
-        };
-        ApplyTo(clone);
-        return clone;
-    }
-    /// <summary>empty constructor</summary>
-    public KitOld(bool dummy) { }
-    public string GetDisplayName()
-    {
-        if (SignTexts is null) return Name;
-        if (SignTexts.TryGetValue(L.DEFAULT, out string val))
-            return val ?? Name;
-        if (SignTexts.Count > 0)
-            return SignTexts.FirstOrDefault().Value ?? Name;
-        return Name;
-    }
-    public static void WriteMany(ByteWriter W, KitOld?[] kits)
-    {
-        W.Write(kits.Length);
-        for (int i = 0; i < kits.Length; i++)
-            Write(W, kits[i]);
-    }
-    public static void Write(ByteWriter W, KitOld? kit)
-    {
-        if (kit == null)
-        {
-            W.Write((byte)1);
-            return;
-        }
-        else W.Write((byte)0);
-        W.Write(kit.PrimaryKey);
-        W.Write(kit.Name);
-        W.Write((ushort)kit.Items.Count);
-        W.Write((ushort)kit.Clothes.Count);
-        for (int i = 0; i < kit.Items.Count; i++)
-        {
-            PageItem item = kit.Items[i];
-            W.Write(item.Item);
-            W.Write(item.Amount);
-            W.Write(item.Page);
-            W.Write(item.X);
-            W.Write(item.Y);
-            W.Write(item.Rotation);
-            W.Write(item.State);
-        }
-        for (int i = 0; i < kit.Clothes.Count; i++)
-        {
-            ClothingItem clothing = kit.Clothes[i];
-            W.Write(clothing.Item);
-            W.Write(clothing.Type);
-        }
-        W.Write(kit.Branch);
-        W.Write(kit.Class);
-        W.Write(kit.Cooldown);
-        W.Write(kit.IsPremium);
-        W.Write(kit.IsLoadout);
-        W.Write(kit.PremiumCost);
-        W.Write(kit.Team);
-        W.Write(kit.TeamLimit);
-        W.Write(kit.CreditCost);
-        W.Write(kit.UnlockLevel);
-        W.Write(kit.Disabled);
-        W.Write(kit.SquadLevel);
-    }
-    public void AddSimpleLevelUnlock(int level)
-    {
-        int index = -1;
-        for (int i = 0; i < UnlockRequirements.Length; i++)
-        {
-            UnlockRequirement unlock = UnlockRequirements[i];
-            if (unlock is LevelUnlockRequirement unlockLevel)
-            {
-                unlockLevel.UnlockLevel = level;
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-        {
-            LevelUnlockRequirement unlock = new LevelUnlockRequirement();
-            unlock.UnlockLevel = level;
-            UnlockRequirement[] old = UnlockRequirements;
-            UnlockRequirements = new UnlockRequirement[old.Length + 1];
-            if (old.Length > 0)
-            {
-                Array.Copy(old, 0, UnlockRequirements, 0, old.Length);
-                UnlockRequirements[UnlockRequirements.Length - 1] = unlock;
-            }
-            else
-            {
-                UnlockRequirements[0] = unlock;
-            }
-        }
-    }
-    public void AddUnlockRequirement(UnlockRequirement req)
-    {
-        int index = -1;
-        for (int i = 0; i < UnlockRequirements.Length; i++)
-        {
-            UnlockRequirement unlock = UnlockRequirements[i];
-            if (req == unlock)
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-        {
-            UnlockRequirement[] old = UnlockRequirements;
-            UnlockRequirements = new UnlockRequirement[old.Length + 1];
-            if (old.Length > 0)
-            {
-                Array.Copy(old, 0, UnlockRequirements, 0, old.Length);
-                UnlockRequirements[UnlockRequirements.Length - 1] = req;
-            }
-            else
-            {
-                UnlockRequirements[0] = req;
-            }
-        }
-    }
-    public bool RemoveLevelUnlock()
-    {
-        if (UnlockRequirements.Length == 0) return false;
-        int index = -1;
-        for (int i = 0; i < UnlockRequirements.Length; i++)
-        {
-            LevelUnlockRequirement unlock = new LevelUnlockRequirement();
-            if (unlock is LevelUnlockRequirement unlockLevel)
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) return false;
-        UnlockRequirement[] old = UnlockRequirements;
-        UnlockRequirements = new UnlockRequirement[old.Length - 1];
-        if (old.Length == 1) return true;
-        if (index != 0)
-            Array.Copy(old, 0, UnlockRequirements, 0, index);
-        Array.Copy(old, index + 1, UnlockRequirements, index, old.Length - index - 1);
-        return true;
-    }
-    public void AddSkillset(Skillset set)
-    {
-        int index = -1;
-        for (int i = 0; i < Skillsets.Length; i++)
-        {
-            ref Skillset skillset = ref Skillsets[i];
-            if (skillset == set)
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-        {
-            Skillset[] old = Skillsets;
-            Skillsets = new Skillset[old.Length + 1];
-            if (old.Length > 0)
-            {
-                Array.Copy(old, 0, Skillsets, 0, old.Length);
-                Skillsets[Skillsets.Length - 1] = set;
-            }
-            else
-            {
-                Skillsets[0] = set;
-            }
-        }
-    }
-    public bool RemoveSkillset(Skillset set)
-    {
-        if (Skillsets.Length == 0) return false;
-        int index = -1;
-        for (int i = 0; i < Skillsets.Length; i++)
-        {
-            ref Skillset skillset = ref Skillsets[i];
-            if (skillset == set)
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) return false;
-        Skillset[] old = Skillsets;
-        Skillsets = new Skillset[old.Length - 1];
-        if (old.Length == 1) return true;
-        if (index != 0)
-            Array.Copy(old, 0, Skillsets, 0, index);
-        Array.Copy(old, index + 1, Skillsets, index, old.Length - index - 1);
-        return true;
-    }
-    [FormatDisplay("Kit Id")]
-    public const string ID_FORMAT = "i";
-    [FormatDisplay("Display Name")]
-    public const string DISPLAY_NAME_FORMAT = "d";
-    [FormatDisplay("Class (" + nameof(Kits.Class) + ")")]
-    public const string CLASS_FORMAT = "c";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
-    {
-        if (format is not null)
-        {
-            if (format.Equals(ID_FORMAT, StringComparison.Ordinal))
-                return Name;
-            if (format.Equals(CLASS_FORMAT, StringComparison.Ordinal))
-                return Localization.TranslateEnum(Class, language);
-        }
-        if (SignTexts.TryGetValue(language, out string dspTxt))
-            return dspTxt;
-
-        return SignTexts.Values.FirstOrDefault() ?? Name;
-    }
-
-}
-
 public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
 {
     public PrimaryKey PrimaryKey { get; set; }
@@ -374,10 +51,19 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
             else FactionKey = value.PrimaryKey;
         }
     }
-    public bool PublicKit => Type == KitType.Public && Class > Class.Unarmed &&
-                             !Disabled && (Season == UCWarfare.Season || Season < 1) &&
+    public bool PublicKit => Type == KitType.Public && Class > Class.Unarmed && Requestable;
+    /// <summary>Checks disabled status, season, map blacklist, faction blacklist. Checks both active teams, use <see cref="IsRequestable(ulong)"/> to check for a certain team.</summary>
+    public bool Requestable => !Disabled && (Season == UCWarfare.Season || Season < 1) &&
                              !IsCurrentMapBlacklisted() &&
                              (!IsBlacklisted(TeamManager.Team1Faction) || !IsBlacklisted(TeamManager.Team2Faction));
+    /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
+    public bool IsRequestable(ulong team) => team is not 1ul and not 2ul ? Requestable : (!Disabled && (Season == UCWarfare.Season || Season < 1) &&
+                             !IsCurrentMapBlacklisted() &&
+                             !IsBlacklisted(TeamManager.GetFaction(team)));
+    /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
+    public bool IsRequestable(FactionInfo? faction) => faction is null ? Requestable : (!Disabled && (Season == UCWarfare.Season || Season < 1) &&
+                                                                               !IsCurrentMapBlacklisted() &&
+                                                                               !IsBlacklisted(faction));
     public Kit(string id, Class @class, Branch branch, KitType type, SquadLevel squadLevel, FactionInfo? faction)
     {
         Faction = faction;
@@ -479,6 +165,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
 
     public object Clone() => new Kit(this);
 }
+[JsonConverter(typeof(SkillsetConverter))]
 public readonly struct Skillset : IEquatable<Skillset>
 {
     public static readonly Skillset[] DefaultSkillsets =
@@ -624,7 +311,7 @@ public readonly struct Skillset : IEquatable<Skillset>
         L.Log("Error parsing skillset.");
         return default;
     }
-    public static void Write(Utf8JsonWriter writer, ref Skillset skillset)
+    public static void Write(Utf8JsonWriter writer, in Skillset skillset)
     {
         switch (skillset.Speciality)
         {
@@ -653,8 +340,8 @@ public readonly struct Skillset : IEquatable<Skillset>
             EPlayerSpeciality.OFFENSE => "Offense: " + Offense,
             EPlayerSpeciality.DEFENSE => "Defense: " + Defense,
             EPlayerSpeciality.SUPPORT => "Support: " + Support,
-            _ => "Invalid speciality #" + SkillIndex.ToString(Data.Locale)
-        } + " at level " + Level.ToString(Data.Locale) + ".";
+            _ => "Invalid speciality #" + SkillIndex.ToString(Data.AdminLocale)
+        } + " at level " + Level.ToString(Data.AdminLocale) + ".";
     }
     public override int GetHashCode()
     {
@@ -713,6 +400,7 @@ public readonly struct Skillset : IEquatable<Skillset>
         return new Schema(tableName, columns, false, typeof(Skillset));
     }
 }
+
 [JsonConverter(typeof(UnlockRequirementConverter))]
 public abstract class UnlockRequirement : ICloneable
 {
@@ -978,7 +666,6 @@ public class QuestUnlockRequirement : UnlockRequirement
         writer.Write(UnlockPresets);
     }
 }
-
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class UnlockRequirementAttribute : Attribute
 {
@@ -997,7 +684,6 @@ public interface IClothingJar
 {
     ClothingType Type { get; set; }
 }
-
 public interface IKitItem : ICloneable
 {
     public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state);
@@ -1026,8 +712,7 @@ public interface IItem
     Guid Item { get; set; }
     byte Amount { get; set; }
 }
-
-public class AssetRedirectItem : ICloneable, IItemJar, IAssetRedirect, IKitItem
+public class AssetRedirectItem : IItemJar, IAssetRedirect, IKitItem
 {
     public RedirectType RedirectType { get; set; }
     public byte X { get; set; }
@@ -1055,7 +740,7 @@ public class AssetRedirectItem : ICloneable, IItemJar, IAssetRedirect, IKitItem
     public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
         TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
 }
-public class AssetRedirectClothing : ICloneable, IClothingJar, IKitItem
+public class AssetRedirectClothing : IClothingJar, IAssetRedirect, IKitItem
 {
     public RedirectType RedirectType { get; set; }
     public ClothingType Type { get; set; }
@@ -1074,7 +759,7 @@ public class AssetRedirectClothing : ICloneable, IClothingJar, IKitItem
     public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
         TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
 }
-public class PageItem : ICloneable, IItemJar, IItem, IKitItem
+public class PageItem : IItemJar, IItem, IKitItem
 {
     private Guid _item;
     private bool _isLegacyRedirect;
@@ -1265,6 +950,7 @@ public enum SquadLevel : byte
     [Translatable("Commander")]
     Commander = 4
 }
+
 /// <summary>Max field character limit: <see cref="KitEx.BranchMaxCharLimit"/>.</summary>
 [Translatable("Branch")]
 public enum Branch : byte
@@ -1278,6 +964,7 @@ public enum Branch : byte
     SpecOps,
     Navy
 }
+
 /// <summary>Max field character limit: <see cref="KitEx.ClothingMaxCharLimit"/>.</summary>
 public enum ClothingType : byte
 {
@@ -1329,7 +1016,6 @@ public enum RedirectType : byte
     Cache,
     RadioDamaged
 }
-
 public enum Page : byte
 {
     Primary = 0,
@@ -1441,43 +1127,29 @@ public enum Class : byte
     [Translatable(LanguageAliasSet.PORTUGUESE, "Op. Esp.")]
     [Translatable(LanguageAliasSet.POLISH, "Specjalista")]
     SpecOps = 17,
-
-
-    // raise ClassConverter.MAX_CLASS if adding another class!
-
-    // Fallback values for Parsing
-    [Obsolete]
-    AUTOMATIC_RIFLEMAN = AutomaticRifleman,
-    [Obsolete]
-    MACHINE_GUNNER = MachineGunner,
-    [Obsolete]
-    AP_RIFLEMAN = APRifleman,
-    [Obsolete]
-    COMBAT_ENGINEER = CombatEngineer,
-    [Obsolete]
-    SPEC_OPS = SpecOps
+    // increment ClassConverter.MAX_CLASS if adding another field!
 }
-
 public sealed class ClassConverter : JsonConverter<Class>
 {
     private const Class MAX_CLASS = Class.SpecOps;
     public override Class Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType == JsonTokenType.Number)
+        switch (reader.TokenType)
         {
-            if (reader.TryGetByte(out byte b))
-                return (Class)b;
-            throw new JsonException("Invalid EClass value.");
+            case JsonTokenType.Null:
+                return Class.None;
+            case JsonTokenType.Number:
+                if (reader.TryGetByte(out byte b))
+                    return (Class)b;
+                throw new JsonException("Invalid Class value.");
+            case JsonTokenType.String:
+                string val = reader.GetString()!;
+                if (!KitEx.TryParseClass(val, out Class @class))
+                    return @class;
+                throw new JsonException("Invalid Class value.");
+            default:
+                throw new JsonException("Invalid token for Class parameter.");
         }
-        else if (reader.TokenType == JsonTokenType.Null)
-            return Class.None;
-        else if (reader.TokenType == JsonTokenType.String)
-        {
-            if (Enum.TryParse(reader.GetString()!, true, out Class rtn))
-                return rtn;
-            throw new JsonException("Invalid EClass value.");
-        }
-        throw new JsonException("Invalid token for EClass parameter.");
     }
     public override void Write(Utf8JsonWriter writer, Class value, JsonSerializerOptions options)
     {
@@ -1486,4 +1158,9 @@ public sealed class ClassConverter : JsonConverter<Class>
         else
             writer.WriteNumberValue((byte)value);
     }
+}
+public sealed class SkillsetConverter : JsonConverter<Skillset>
+{
+    public override Skillset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => Skillset.Read(ref reader);
+    public override void Write(Utf8JsonWriter writer, Skillset value, JsonSerializerOptions options) => Skillset.Write(writer, in value);
 }

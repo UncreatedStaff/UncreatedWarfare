@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Json;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
@@ -127,7 +128,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         if (e.NewGroup is 1 or 2)
             BuffUI.SendBuffs(e.Player);
     }
-    private void OnKitChagned(UCPlayer player, KitOld kit, string oldKit)
+    private void OnKitChagned(UCPlayer player, SqlItem<Ki> kit, SqlItem<Kit>? oldKit)
     {
         TraitSigns.SendAllTraitSigns(player);
         for (int i = 0; i < player.ActiveTraits.Count; ++i)
@@ -136,7 +137,8 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
             {
                 if (buff.IsActivated)
                 {
-                    if (!buff.Data.CanClassUse(kit.Class))
+                    // todo nullref
+                    if (!buff.Data.CanClassUse(kit.Item.Class))
                     {
                         buff.IsActivated = false;
                         player.SendChat(T.TraitDisabledKitNotSupported, buff);

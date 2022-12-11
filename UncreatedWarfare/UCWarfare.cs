@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -45,6 +46,7 @@ public class UCWarfare : MonoBehaviour
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
     public static readonly Version Version = new Version(2, 7, 1, 1);
     private readonly SystemConfig _config = new SystemConfig();
+    private readonly List<KeyValuePair<Task, string?>> _tasks = new List<KeyValuePair<Task, string?>>(16);
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
     public Coroutine? StatsRoutine;
@@ -441,6 +443,195 @@ public class UCWarfare : MonoBehaviour
     public static MainThreadTask ToUpdate(CancellationToken token = default) => new MainThreadTask(false, token);
     public static MainThreadTask SkipFrame(CancellationToken token = default) => new MainThreadTask(true, token);
     public static LevelLoadTask ToLevelLoad(CancellationToken token = default) => new LevelLoadTask(token);
+
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T1, T2, T3>(Func<T1, T2, T3, CancellationToken, Task> task, T1 arg1, T2 arg2, T3 arg3, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "")
+    {
+        Task t;
+        try
+        {
+            t = task(arg1, arg2, arg3, token);
+            RunTask(t, ctx, member, fp);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T1, T2, T3>(Func<T1, T2, T3, Task> task, T1 arg1, T2 arg2, T3 arg3, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "")
+    {
+        Task t;
+        try
+        {
+            t = task(arg1, arg2, arg3);
+            RunTask(t, ctx, member, fp);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T1, T2>(Func<T1, T2, CancellationToken, Task> task, T1 arg1, T2 arg2, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "")
+    {
+        Task t;
+        try
+        {
+            t = task(arg1, arg2, token);
+            RunTask(t, ctx, member, fp);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T1, T2>(Func<T1, T2, Task> task, T1 arg1, T2 arg2, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "")
+    {
+        Task t;
+        try
+        {
+            t = task(arg1, arg2);
+            RunTask(t, ctx, member, fp);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T>(Func<T, CancellationToken, Task> task, T arg1, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "")
+    {
+        Task t;
+        try
+        {
+            t = task(arg1, token);
+            RunTask(t, ctx, member, fp);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T>(Func<T, Task> task, T arg1, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "")
+    {
+        Task t;
+        try
+        {
+            t = task(arg1);
+            RunTask(t, ctx, member, fp);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask(Func<CancellationToken, Task> task, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "")
+    {
+        Task t;
+        try
+        {
+            t = task(default);
+            RunTask(t, ctx, member, fp);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask(Func<Task> task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "")
+    {
+        Task t;
+        try
+        {
+            t = task();
+            RunTask(t, ctx, member, fp);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask(Task task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "")
+    {
+        if (!IsLoaded)
+            throw new SingletonUnloadedException(typeof(UCWarfare));
+
+        member = fp + " :: " + member;
+
+        if (string.IsNullOrEmpty(ctx))
+            ctx = member;
+        else
+            ctx += " Member: " + member;
+
+        if (task.IsFaulted)
+        {
+            RegisterErroredTask(task, ctx);
+            return;
+        }
+        if (task.IsCompleted)
+            return;
+        I._tasks.Add(new KeyValuePair<Task, string?>(task, ctx));
+    }
+    private static void RegisterErroredTask(Task task, string? ctx)
+    {
+        AggregateException? ex = task.Exception;
+        if (ex is null)
+        {
+            L.LogError("A registered task has failed without exception!" + (string.IsNullOrEmpty(ctx) ? string.Empty : (" Context: " + ctx)));
+        }
+        else
+        {
+            L.LogError("A registered task has failed!" + (string.IsNullOrEmpty(ctx) ? string.Empty : (" Context: " + ctx)));
+            L.LogError(ex);
+        }
+    }
     public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
     public static void RunOnMainThread(System.Action action) => RunOnMainThread(action, false, default);
     public static void RunOnMainThread(System.Action action, CancellationToken token) => RunOnMainThread(action, false, token);
@@ -486,6 +677,22 @@ public class UCWarfare : MonoBehaviour
         ProcessQueues();
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             PlayerManager.OnlinePlayers[i].Update();
+        for (int i = _tasks.Count - 1; i >= 0; --i)
+        {
+            KeyValuePair<Task, string?> task = _tasks[i];
+            if (!task.Key.IsCompleted)
+                continue;
+            if (task.Key.IsCanceled)
+            {
+                L.LogDebug("Task cancelled." + (string.IsNullOrEmpty(task.Value) ? string.Empty : (" Context: " + task.Value)));
+            }
+            else if (task.Key.IsFaulted)
+            {
+                RegisterErroredTask(task.Key, task.Value);
+            }
+            if (task.Key.IsCompleted)
+                _tasks.RemoveAtFast(i);
+        }
     }
     private static void ProcessQueues()
     {

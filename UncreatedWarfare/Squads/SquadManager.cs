@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
+using Uncreated.SQL;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
@@ -44,7 +45,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     {
         base.Load();
         Squads.Clear();
-        KitManager.OnPlayersKitChanged += OnKitChanged;
+        KitManager.OnKitChanged += OnKitChanged;
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.PlayerLeaving += OnPlayerLeaving;
         Commanders = new Commanders();
@@ -62,7 +63,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         ClearSquads();
         EventDispatcher.PlayerLeaving -= OnPlayerLeaving;
         EventDispatcher.GroupChanged -= OnGroupChanged;
-        KitManager.OnPlayersKitChanged -= OnKitChanged;
+        KitManager.OnKitChanged -= OnKitChanged;
         Commanders = null!;
     }
     private void ClearSquads()
@@ -78,18 +79,19 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         Squads.Clear();
     }
-    private static void OnKitChanged(UCPlayer player, KitOld kit, string oldkit)
+    private static void OnKitChanged(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>? oldKit)
     {
         _singleton.IsLoaded();
         ReplicateKitChange(player);
         ulong team = player.GetTeam();
         UCPlayer? cmd = _singleton.Commanders.GetCommander(team);
-        if (cmd != null && cmd.Steam64 == player.Steam64 && kit.SquadLevel != SquadLevel.Commander)
+        if (cmd != null && cmd.Steam64 == player.Steam64 && (kit?.Item == null || kit.Item.SquadLevel != SquadLevel.Commander))
         {
             if (team == 1ul)
                 _singleton.Commanders.ActiveCommanderTeam1 = null;
             else if (team == 2ul)
                 _singleton.Commanders.ActiveCommanderTeam2 = null;
+            L.LogDebug($"{cmd} is no longer the commander of team {team}.");
         }
     }
     private void OnPlayerLeaving(PlayerEvent e)
@@ -499,12 +501,12 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         UpdateMemberList(squad);
         UpdateUIMemberCount(squad.Team);
 
-        ActionLogger.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + squad.Leader.Steam64.ToString(Data.Locale), player);
+        ActionLogger.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + squad.Leader.Steam64.ToString(Data.AdminLocale), player);
 
         if (RallyManager.HasRally(squad, out RallyPoint rally))
             rally.ShowUIForSquad();
 
-        PlayerManager.ApplyToOnline();
+        PlayerManager.ApplyTo(player);
     }
     private static void SortMembers(Squad squad)
     {
@@ -538,12 +540,17 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         if (squad.Members.Count == 0)
         {
             Squads.Remove(squad);
-
+            squad.Disbanded = true;
             if (squad.Leader != null)
             {
                 squad.Leader.SendChat(T.SquadDisbanded, squad);
                 if (squad.Leader.KitClass == Class.Squadleader)
-                    KitManager.TryGiveUnarmedKit(squad.Leader);
+                {
+                    KitManager? manager = KitManager.GetSingletonQuick();
+                    if (manager != null)
+                        UCWarfare.RunTask(manager.TryGiveUnarmedKit, squad.Leader, ctx: "Unequipping squadleader kit after leaving squad.");
+                }
+                PlayerManager.ApplyTo(squad.Leader);
             }
 
             UpdateUIMemberCount(squad.Team);
@@ -558,7 +565,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 RallyManager.TryDeleteRallyPoint(rally1.Drop.instanceID);
             }
 
-            PlayerManager.ApplyToOnline();
 
             SendSquadList(player);
 
@@ -592,7 +598,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         SendSquadList(player);
 
-        PlayerManager.ApplyToOnline();
+        PlayerManager.ApplyTo(player);
     }
     public static void DisbandSquad(Squad squad)
     {
@@ -600,7 +606,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Squads.RemoveAll(s => s.Name == squad.Name);
+        Squads.Remove(squad);
+        squad.Disbanded = true;
 
         ActionLogger.Add(EActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
 
@@ -613,6 +620,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
             member.SendChat(T.SquadDisbanded, squad);
             ClearMenu(member.Player);
+            PlayerManager.ApplyTo(member);
         }
         SendSquadListToTeam(squad.Team);
         UpdateUIMemberCount(squad.Team);
@@ -625,7 +633,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             RallyManager.TryDeleteRallyPoint(rally.Drop!.instanceID);
         }
 
-        PlayerManager.ApplyToOnline();
     }
     public static void KickPlayerFromSquad(UCPlayer player, Squad squad)
     {
@@ -657,7 +664,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         if (RallyManager.HasRally(squad, out RallyPoint rally))
             rally.ClearUIForPlayer(player);
 
-        PlayerManager.ApplyToOnline();
+        PlayerManager.ApplyTo(player);
     }
     public static void PromoteToLeader(Squad squad, UCPlayer newLeader)
     {
@@ -666,7 +673,11 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (squad.Leader.KitClass == Class.Squadleader)
-            KitManager.TryGiveUnarmedKit(squad.Leader);
+        {
+            KitManager? manager = KitManager.GetSingletonQuick();
+            if (manager != null)
+                UCWarfare.RunTask(manager.TryGiveUnarmedKit, squad.Leader, ctx: "Unequipping squadleader kit after someone else was promoted to leader.");
+        }
 
         Traits.TraitManager.OnPlayerPromotedSquadleader(newLeader, squad);
 
@@ -734,6 +745,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     public bool IsLocked;
     public UCPlayer Leader;
     public List<UCPlayer> Members;
+    public bool Disbanded;
     /// <summary><see langword="true"/> if this <see cref="Squad"/>'s <seealso cref="Leader"/> is a commander.</summary>
     public bool IsCommandingSquad
     {
