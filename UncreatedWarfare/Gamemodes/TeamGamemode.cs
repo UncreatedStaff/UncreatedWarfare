@@ -268,15 +268,6 @@ public abstract class TeamGamemode : Gamemode, ITeams
         mainCampers.Remove(e.Player.Steam64);
         EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
-    public override async Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
-    {
-        ThreadUtil.assertIsGameThread();
-        await base.PlayerInit(player, wasAlreadyOnline);
-        await UCWarfare.ToUpdate();
-        ThreadUtil.assertIsGameThread();
-        if (UseTeamSelector)
-            _teamSelector.JoinSelectionMenu(player);
-    }
     public virtual void OnJoinTeam(UCPlayer player, ulong team)
     {
         if (team is 1 or 2 && _state == EState.STAGING)

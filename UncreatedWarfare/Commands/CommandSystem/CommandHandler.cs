@@ -1567,7 +1567,10 @@ public sealed class CommandInteraction : BaseCommandInteraction
         _responded = true;
         return this;
     }
-
+    public IFormatProvider GetLocale()
+    {
+        return IsConsole ? Warfare.Data.AdminLocale : Localization.GetLocale(Localization.GetLang(CallerID));
+    }
     public struct ContextData
     {
         public readonly UCPlayer Caller;

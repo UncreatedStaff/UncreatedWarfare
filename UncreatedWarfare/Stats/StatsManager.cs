@@ -137,7 +137,7 @@ public static class StatsManager
             if (UCWarfare.Config.Debug)
                 L.Log("[WEAPON] Backed up: " + (Assets.find(EAssetType.ITEM, Weapons[_weaponCounter].ID) is ItemAsset asset ?
                     (asset.itemName + " - " + Weapons[_weaponCounter].KitID) :
-                    (Weapons[_weaponCounter].ID.ToString() + " - " + Weapons[_weaponCounter].KitID)));
+                    (Weapons[_weaponCounter].ID.ToString(Data.AdminLocale) + " - " + Weapons[_weaponCounter].KitID)));
         }
         if (Vehicles.Count > 0)
         {
@@ -145,7 +145,7 @@ public static class StatsManager
             if (UCWarfare.Config.Debug)
                 L.Log("[VEHICLE] Backed up: " + (Assets.find(EAssetType.VEHICLE, Vehicles[_vehicleCounter].ID) is VehicleAsset asset ?
                     asset.vehicleName :
-                    Vehicles[_vehicleCounter].ID.ToString()));
+                    Vehicles[_vehicleCounter].ID.ToString(Data.AdminLocale)));
         }
         if (Kits.Count > 0)
         {
@@ -334,7 +334,7 @@ public static class StatsManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = Path.Combine(VehiclesDirectory, id.ToString(Data.Locale) + ".dat");
+        string dir = Path.Combine(VehiclesDirectory, id.ToString(Data.AdminLocale) + ".dat");
         for (int i = 0; i < Vehicles.Count; i++)
         {
             if (Vehicles[i].ID == id)
@@ -368,7 +368,7 @@ public static class StatsManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + ".dat");
+        string dir = Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + ".dat");
         for (int i = 0; i < OnlinePlayers.Count; i++)
         {
             if (OnlinePlayers[i].Steam64 == s64)
@@ -436,7 +436,7 @@ public static class StatsManager
 #endif
         if (!Directory.Exists(StatsDirectory))
             Directory.CreateDirectory(StatsDirectory);
-        string dir = Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + ".dat");
+        string dir = Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + ".dat");
         if (!OnlinePlayers.Exists(x => x.Steam64 == s64))
         {
             if (File.Exists(dir))
@@ -448,8 +448,8 @@ public static class StatsManager
                 else
                 {
                     // copy to new file appended with _corrupt
-                    L.LogWarning("Failed to read " + s64.ToString(Data.Locale) + "'s stat file, creating a backup and resetting it.");
-                    File.Move(dir, Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + "_corrupt.dat"));
+                    L.LogWarning("Failed to read " + s64.ToString(Data.AdminLocale) + "'s stat file, creating a backup and resetting it.");
+                    File.Move(dir, Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + "_corrupt.dat"));
                     WarfareStats reset = new WarfareStats()
                     {
                         DATA_VERSION = WarfareStats.CURRENT_DATA_VERSION,
@@ -480,7 +480,7 @@ public static class StatsManager
 #endif
         WarfareStats? stats = OnlinePlayers.FirstOrDefault(x => x.Steam64 == s64);
         if (stats == null) return;
-        WarfareStats.IO.WriteTo(stats, Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + ".dat"));
+        WarfareStats.IO.WriteTo(stats, Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + ".dat"));
         NetCalls.BackupStats.NetInvoke(stats);
         OnlinePlayers.Remove(stats);
     }
@@ -809,7 +809,7 @@ public static class StatsManager
         {
             if (!Directory.Exists(WeaponsDirectory)) SendWeapons.NetInvoke(Array.Empty<WarfareWeapon>(), string.Empty, Array.Empty<string>());
             string[] files = Directory.GetFiles(WeaponsDirectory, $"{weapon}*.dat");
-            string itemName = Assets.find(EAssetType.ITEM, weapon) is ItemAsset asset ? asset.itemName : weapon.ToString(Data.Locale);
+            string itemName = Assets.find(EAssetType.ITEM, weapon) is ItemAsset asset ? asset.itemName : weapon.ToString(Data.AdminLocale);
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {

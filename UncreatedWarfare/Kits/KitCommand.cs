@@ -424,59 +424,30 @@ public sealed class KitCommand : AsyncCommand
                 if (existing?.Item == null)
                     throw ctx.Reply(T.KitNotFound, existingName);
                 await existing.Enter(token).ConfigureAwait(false);
+                Kit kit;
                 try
                 {
-                    if (existing?.Item == null)
+                    if (existing.Item == null)
                         throw ctx.Reply(T.KitNotFound, existingName);
                     SqlItem<Kit>? newKitProxy = await manager.FindKit(kitName, token).ConfigureAwait(false);
                     if (newKitProxy?.Item != null)
                         throw ctx.Reply(T.KitNameTaken, kitName);
-                    Kit kit = new Kit(existing.Item);
+                    kit = new Kit(kitName, existing.Item)
+                    {
+                        Season = UCWarfare.Season,
+                        Disabled = false
+                    };
                 }
                 finally
                 {
                     existing.Release();
                 }
-                if (KitManager.KitExists(existingName, out KitOld existing))
-                {
-                    if (!KitManager.KitExists(kitName, out _))
-                    {
-                        KitOld newKit = new KitOld
-                        {
-                            Name = kitName.ToLower(),
-                            Items = existing.Items,
-                            Clothes = existing.Clothes,
-                            Class = existing.Class,
-                            Branch = existing.Branch,
-                            Team = existing.Team,
-                            Skillsets = existing.Skillsets,
-                            UnlockRequirements = existing.UnlockRequirements,
-                            CreditCost = existing.CreditCost,
-                            IsPremium = existing.IsPremium,
-                            PremiumCost = existing.PremiumCost,
-                            IsLoadout = existing.IsLoadout,
-                            TeamLimit = existing.TeamLimit,
-                            Cooldown = existing.Cooldown,
-                            SignTexts = existing.SignTexts,
-                            Weapons = existing.Weapons
-                        };
 
-                        Task.Run(async () =>
-                        {
-                            await KitManager.AddKit(newKit);
-                            ctx.LogAction(EActionLogType.CREATE_KIT, kitName + " COPIED FROM " + existingName);
-                            await UCWarfare.ToUpdate();
-                            KitManager.UpdateSigns(newKit);
-                            ctx.Reply(T.KitCopied, existing, newKit);
-                            KitManager.InvokeKitCreated(newKit);
-                        });
-                        ctx.Defer();
-                    }
-                    else
-                        ctx.Reply(T.KitNameTaken, kitName);
-                }
-                else
-                    ctx.Reply(T.KitNotFound, existingName);
+                await manager.AddOrUpdate(kit, token).ConfigureAwait(false);
+                ctx.LogAction(EActionLogType.CREATE_KIT, kitName + " COPIED FROM " + existingName);
+                await UCWarfare.ToUpdate();
+                KitManager.UpdateSigns(kit);
+                ctx.Reply(T.KitCopied, existing.Item, kit);
             }
             else
                 ctx.SendCorrectUsage("/kit <copyfrom|cf> <kitname> <newkitname>");

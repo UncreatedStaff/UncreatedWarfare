@@ -474,30 +474,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             flag.SetOwner(0);
         UpdateFlag(flag);
     }
-    public override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
-    {
-        ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (KitManager.KitExists(player.KitName, out KitOld kit))
-        {
-            if ((!kit.IsLoadout && kit.IsLimited(out _, out _, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out _, out _, player.GetTeam())))
-            {
-                if (!KitManager.TryGiveRiflemanKit(player))
-                    KitManager.TryGiveUnarmedKit(player);
-            }
-        }
-        if (!AllowCosmetics)
-            player.SetCosmeticStates(false);
-
-        if (UCWarfare.Config.ModifySkillLevels)
-            Skillset.SetDefaultSkills(player);
-
-        StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
-        StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-        return base.PlayerInit(player, wasAlreadyOnline);
-    }
     public override void OnJoinTeam(UCPlayer player, ulong team)
     {
         if (team is 1 or 2)

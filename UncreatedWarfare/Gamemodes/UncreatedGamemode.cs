@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -330,8 +331,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
             return;
-        if (!wasAlreadyOnline)
-            _ = Data.DatabaseManager.UpdateUsernames(player.Name);
+        PlayerInitIntl(player, wasAlreadyOnline);
         task = PlayerInit(player, wasAlreadyOnline);
         if (!task.IsCompleted)
             await task.ConfigureAwait(false);
@@ -352,6 +352,17 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 }
             }
         }
+    }
+    private void PlayerInitIntl(UCPlayer player, bool wasAlreadyOnline)
+    {
+        if (!AllowCosmetics)
+            player.SetCosmeticStates(false);
+        if (!wasAlreadyOnline)
+        {
+            StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
+            UCWarfare.RunTask(Data.DatabaseManager.UpdateUsernames, player.Name, ctx: "Updaing usernames.");
+        }
+        StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.UtcNow.Ticks);
     }
     private void InternalPreDispose()
     {
@@ -1075,6 +1086,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
     }
 
+    // todo rewrite this is awful
     public static void ReadGamemodes()
     {
 #if DEBUG
@@ -1119,11 +1131,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 {
                     if (c == ',')
                     {
-                        if (float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale,
-                                out weight))
-                            gms.Add(new KeyValuePair<string?, float>(name, weight));
-                        else
-                            gms.Add(new KeyValuePair<string?, float>(name, 1f));
+                        gms.Add(new KeyValuePair<string?, float>(name, float.TryParse(current.ToString(), NumberStyles.Any, Data.AdminLocale, out weight) ? weight : 1f));
                         name = null;
                         current.Clear();
                         inName = true;
@@ -1135,8 +1143,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 }
             }
 
-            if (name != null && float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale,
-                    out weight))
+            if (name != null && float.TryParse(current.ToString(), NumberStyles.Any, Data.AdminLocale, out weight))
                 gms.Add(new KeyValuePair<string?, float>(name, weight));
         }
 

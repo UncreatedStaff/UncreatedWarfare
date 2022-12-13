@@ -1257,6 +1257,38 @@ public static class F
         return Mathf.Abs(left.x - right.x) < tolerance &&
                Mathf.Abs(left.y - right.y) < tolerance;
     }
+    public static Schema GetForeignKeyListSchema(string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, string foreignTableName, string foreignTablePkColumn, bool hasPk = false, bool oneToOne = false, bool nullable = false, bool unique = false, string pkName = "pk")
+    {
+        Schema.Column[] columns = new Schema.Column[hasPk ? 3 : 2];
+
+        int index = 0;
+        if (hasPk)
+        {
+            columns[0] = new Schema.Column(pkName, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true
+            };
+        }
+        else index = -1;
+        columns[++index] = new Schema.Column(pkColumn, SqlTypes.INCREMENT_KEY)
+        {
+            PrimaryKey = !hasPk && oneToOne,
+            AutoIncrement = !hasPk && oneToOne,
+            ForeignKey = true,
+            ForeignKeyColumn = primaryTablePkColumn,
+            ForeignKeyTable = primaryTableName
+        };
+        columns[++index] = new Schema.Column(valueColumn, SqlTypes.INCREMENT_KEY)
+        {
+            Nullable = nullable,
+            UniqueKey = unique,
+            ForeignKey = true,
+            ForeignKeyColumn = foreignTablePkColumn,
+            ForeignKeyTable = foreignTableName
+        };
+        return new Schema(tableName, columns, false, typeof(PrimaryKey));
+    }
     public static Schema GetListSchema<T>(string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, bool hasPk = false, bool oneToOne = false, int length = -1, bool nullable = false, bool unique = false, string pkName = "pk")
     {
         Type type = typeof(T);
@@ -1365,7 +1397,6 @@ public static class F
         };
         return new Schema(tableName, columns, false, type);
     }
-
     public static Schema GetTranslationListSchema(string tableName, string pkColumn, string mainTable, string mainPkColumn, int length)
     {
         return new Schema(tableName, new Schema.Column[]
@@ -1622,6 +1653,16 @@ public static class F
         T[] result = new T[source.Length];
         for (int i = 0; i < result.Length; ++i)
             result[i] = (T)source[i].Clone();
+        return result;
+    }
+    public static T[] CloneStructArray<T>(T[] source) where T : struct
+    {
+        if (source == null)
+            return null!;
+        if (source.Length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[source.Length];
+        Array.Copy(source, result, source.Length);
         return result;
     }
 }

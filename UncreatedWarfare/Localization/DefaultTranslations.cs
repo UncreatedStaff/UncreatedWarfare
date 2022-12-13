@@ -1060,6 +1060,9 @@ internal static class T
     public static readonly Translation<int> RequestKitBought = new Translation<int>("<#c4a36a>Kit bought for <#c$credits$>C </color><#ffffff>{0}</color>. Request it with '<#b3b0ab>/request</color>'.");
     public static readonly Translation RequestKitNotRegistered = new Translation("<#a8918a>This kit has not been created yet.");
     public static readonly Translation RequestKitAlreadyOwned = new Translation("<#a8918a>You already have this kit.");
+    public static readonly Translation RequestKitDisabled = new Translation("<#a8918a>This kit is disabled.");
+    public static readonly Translation RequestKitMapBlacklisted = new Translation("<#a8918a>This kit is not allowed on this map.");
+    public static readonly Translation RequestKitFactionBlacklisted = new Translation("<#a8918a>Your team is not allowed to use this kit.");
     public static readonly Translation RequestKitMissingAccess = new Translation("<#a8918a>You don't have access to this kit.");
     public static readonly Translation<int> RequestKitNotBought = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this kit permanently for <#c$credits$>C </color><#ffffff>{0}</color>.");
     public static readonly Translation<int, int> RequestKitCantAfford = new Translation<int, int>("<#a8918a>You are missing <#c$credits$>C </color><#ffffff>{0}</color> / <#c$credits$>C </color><#ffffff>{1}</color> needed to unlock this kit.");

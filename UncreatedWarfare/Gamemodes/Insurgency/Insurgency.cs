@@ -295,26 +295,6 @@ public class Insurgency :
         }
         base.OnPlayerDeath(e);
     }
-    public override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (!KitManager.KitExists(player.KitName, out KitOld kit) || kit.IsLimited(out _, out _, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out _, out _, player.GetTeam())))
-        {
-            if (!KitManager.TryGiveRiflemanKit(player))
-                KitManager.TryGiveUnarmedKit(player);
-        }
-        if (!AllowCosmetics)
-            player.SetCosmeticStates(false);
-
-        if (UCWarfare.Config.ModifySkillLevels)
-            Skillset.SetDefaultSkills(player);
-
-        StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
-        StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-        return base.PlayerInit(player, wasAlreadyOnline);
-    }
     public override void OnJoinTeam(UCPlayer player, ulong newTeam)
     {
         OnPlayerJoinedTeam(player);

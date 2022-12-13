@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Uncreated.SQL;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -307,28 +308,6 @@ public sealed partial class Conquest :
         player.SendChat(T.LeftCaptureRadius, flag);
         CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
         UpdateFlag(flag);
-    }
-    public override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ThreadUtil.assertIsGameThread();
-        if (!KitManager.KitExists(player.KitName, out KitOld kit) || (!kit.IsLoadout && kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
-        {
-            if (!KitManager.TryGiveRiflemanKit(player))
-                KitManager.TryGiveUnarmedKit(player);
-        }
-        ulong team = player.GetTeam();
-        if (!AllowCosmetics)
-            player.SetCosmeticStates(false);
-
-        if (UCWarfare.Config.ModifySkillLevels)
-            Skillset.SetDefaultSkills(player);
-
-        StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
-        StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-        return base.PlayerInit(player, wasAlreadyOnline);
     }
     public override void OnJoinTeam(UCPlayer player, ulong team)
     {

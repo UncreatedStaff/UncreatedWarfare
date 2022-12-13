@@ -46,7 +46,7 @@ public class UCWarfare : MonoBehaviour
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
     public static readonly Version Version = new Version(2, 7, 1, 1);
     private readonly SystemConfig _config = new SystemConfig();
-    private readonly List<KeyValuePair<Task, string?>> _tasks = new List<KeyValuePair<Task, string?>>(16);
+    private readonly List<UCTask> _tasks = new List<UCTask>(16);
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
     public Coroutine? StatsRoutine;
@@ -444,6 +444,8 @@ public class UCWarfare : MonoBehaviour
     public static MainThreadTask SkipFrame(CancellationToken token = default) => new MainThreadTask(true, token);
     public static LevelLoadTask ToLevelLoad(CancellationToken token = default) => new LevelLoadTask(token);
 
+    // 'fire and forget' functions that will report errors once the task completes.
+
     /// <exception cref="SingletonUnloadedException"/>
     public static void RunTask<T1, T2, T3>(Func<T1, T2, T3, CancellationToken, Task> task, T1 arg1, T2 arg2, T3 arg3, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "")
     {
@@ -617,7 +619,7 @@ public class UCWarfare : MonoBehaviour
         }
         if (task.IsCompleted)
             return;
-        I._tasks.Add(new KeyValuePair<Task, string?>(task, ctx));
+        I._tasks.Add(new UCTask(task, ctx));
     }
     private static void RegisterErroredTask(Task task, string? ctx)
     {
@@ -677,20 +679,32 @@ public class UCWarfare : MonoBehaviour
         ProcessQueues();
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             PlayerManager.OnlinePlayers[i].Update();
+#if DEBUG
+        DateTime now = _tasks.Count > 0 ? DateTime.UtcNow : default;
+#endif
         for (int i = _tasks.Count - 1; i >= 0; --i)
         {
-            KeyValuePair<Task, string?> task = _tasks[i];
-            if (!task.Key.IsCompleted)
+            UCTask task = _tasks[i];
+            if (!task.Task.IsCompleted)
+            {
+#if DEBUG
+                double sec = (now - task.StartTime).TotalSeconds;
+                if (sec > 180f)
+                {
+                    L.LogDebug($"Task not completed after a long time ({sec} seconds)." + (string.IsNullOrEmpty(task.Context) ? string.Empty : (" Context: " + task.Context)));
+                }
+#endif
                 continue;
-            if (task.Key.IsCanceled)
-            {
-                L.LogDebug("Task cancelled." + (string.IsNullOrEmpty(task.Value) ? string.Empty : (" Context: " + task.Value)));
             }
-            else if (task.Key.IsFaulted)
+            if (task.Task.IsCanceled)
             {
-                RegisterErroredTask(task.Key, task.Value);
+                L.LogDebug("Task cancelled." + (string.IsNullOrEmpty(task.Context) ? string.Empty : (" Context: " + task.Context)));
             }
-            if (task.Key.IsCompleted)
+            else if (task.Task.IsFaulted)
+            {
+                RegisterErroredTask(task.Task, task.Context);
+            }
+            if (task.Task.IsCompleted)
                 _tasks.RemoveAtFast(i);
         }
     }
@@ -913,6 +927,22 @@ public class UCWarfare : MonoBehaviour
         ShutdownCommand.NetCalls.SendShuttingDownInstant.NetInvoke(instigator, reason);
         yield return new WaitForSeconds(1f);
         ShutdownInAwaitUnload(2, reason);
+    }
+    private readonly struct UCTask
+    {
+        public readonly Task Task;
+        public readonly string? Context;
+#if DEBUG
+        public readonly DateTime StartTime;
+#endif
+        public UCTask(Task task, string context)
+        {
+            Task = task;
+            Context = context;
+#if DEBUG
+            StartTime = DateTime.UtcNow;
+#endif
+        }
     }
 }
 

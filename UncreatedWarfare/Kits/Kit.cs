@@ -10,10 +10,13 @@ using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -26,6 +29,8 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public Branch Branch { get; set; }
     public KitType Type { get; set; }
     public bool Disabled { get; set; }
+    public bool MapFilterIsWhitelist { get; set; }
+    public bool FactionFilterIsWhitelist { get; set; }
     public int Season { get; set; }
     public float RequestCooldown { get; set; }
     public float TeamLimit { get; set; }
@@ -36,8 +41,9 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public IKitItem[] Items { get; set; }
     public UnlockRequirement[] UnlockRequirements { get; set; }
     public Skillset[] Skillsets { get; set; }
-    public PrimaryKey[] FactionBlacklist { get; set; }
-    public PrimaryKey[] MapBlacklist { get; set; }
+    public PrimaryKey[] FactionFilter { get; set; }
+    public PrimaryKey[] MapFilter { get; set; }
+    public PrimaryKey[] RequestSigns { get; set; }
     public string? WeaponText { get; set; }
     public FactionInfo? Faction
     {
@@ -51,19 +57,23 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
             else FactionKey = value.PrimaryKey;
         }
     }
-    public bool PublicKit => Type == KitType.Public && Class > Class.Unarmed && Requestable;
+    /// <summary>Checks that the kit is publicly available and has a vaild class (not None or Unarmed).</summary>
+    public bool IsPublicKit => Type == KitType.Public && Class > Class.Unarmed;
+
+    /// <summary>Elite kit or loadout.</summary>
+    public bool IsPaid => Type is KitType.Elite or KitType.Loadout;
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist. Checks both active teams, use <see cref="IsRequestable(ulong)"/> to check for a certain team.</summary>
     public bool Requestable => !Disabled && (Season == UCWarfare.Season || Season < 1) &&
-                             !IsCurrentMapBlacklisted() &&
-                             (!IsBlacklisted(TeamManager.Team1Faction) || !IsBlacklisted(TeamManager.Team2Faction));
+                             !IsCurrentMapAllowed() &&
+                             (!IsFactionAllowed(TeamManager.Team1Faction) || !IsFactionAllowed(TeamManager.Team2Faction));
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
     public bool IsRequestable(ulong team) => team is not 1ul and not 2ul ? Requestable : (!Disabled && (Season == UCWarfare.Season || Season < 1) &&
-                             !IsCurrentMapBlacklisted() &&
-                             !IsBlacklisted(TeamManager.GetFaction(team)));
+                             !IsCurrentMapAllowed() &&
+                             !IsFactionAllowed(TeamManager.GetFaction(team)));
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
     public bool IsRequestable(FactionInfo? faction) => faction is null ? Requestable : (!Disabled && (Season == UCWarfare.Season || Season < 1) &&
-                                                                               !IsCurrentMapBlacklisted() &&
-                                                                               !IsBlacklisted(faction));
+                                                                               !IsCurrentMapAllowed() &&
+                                                                               !IsFactionAllowed(faction));
     public Kit(string id, Class @class, Branch branch, KitType type, SquadLevel squadLevel, FactionInfo? faction)
     {
         Faction = faction;
@@ -76,16 +86,25 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         Items = Array.Empty<IKitItem>();
         UnlockRequirements = Array.Empty<UnlockRequirement>();
         Skillsets = Array.Empty<Skillset>();
-        FactionBlacklist = Array.Empty<PrimaryKey>();
-        MapBlacklist = Array.Empty<PrimaryKey>();
+        FactionFilter = Array.Empty<PrimaryKey>();
+        MapFilter = Array.Empty<PrimaryKey>();
+        RequestSigns = Array.Empty<PrimaryKey>();
         Season = UCWarfare.Season;
         TeamLimit = KitManager.GetDefaultTeamLimit(@class);
         RequestCooldown = KitManager.GetDefaultRequestCooldown(@class);
+        /* DEFAULTS *
+        FactionFilterIsWhitelist = false;
+        MapFilterIsWhitelist = false;
+        Disabled = false;
+        CreditCost = 0;
+        PremiumCost = 0m;
+        WeaponText = null;
+        */
     }
-    public Kit(Kit copy)
+    public Kit(string id, Kit copy)
     {
         FactionKey = copy.FactionKey;
-        Id = copy.Id;
+        Id = id;
         Class = copy.Class;
         Branch = copy.Branch;
         Type = copy.Type;
@@ -93,24 +112,37 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         SignText = (TranslationList)copy.SignText.Clone();
         Items = F.CloneArray(copy.Items);
         UnlockRequirements = F.CloneArray(copy.UnlockRequirements);
+        Skillsets = F.CloneStructArray(copy.Skillsets);
+        FactionFilter = F.CloneStructArray(copy.FactionFilter);
+        MapFilter = F.CloneStructArray(copy.MapFilter);
+        RequestSigns = Array.Empty<PrimaryKey>();
+        Season = copy.Season;
+        TeamLimit = copy.TeamLimit;
+        RequestCooldown = copy.RequestCooldown;
+        FactionFilterIsWhitelist = copy.FactionFilterIsWhitelist;
+        MapFilterIsWhitelist = copy.MapFilterIsWhitelist;
+        Disabled = copy.Disabled;
+        CreditCost = copy.CreditCost;
+        PremiumCost = copy.PremiumCost;
+        WeaponText = copy.WeaponText;
     }
     public Kit() { }
-    public bool IsBlacklisted(FactionInfo? faction)
+    public bool IsFactionAllowed(FactionInfo? faction)
     {
-        if (FactionBlacklist.NullOrEmpty() || faction is null || !faction.PrimaryKey.IsValid) return false;
+        if (FactionFilter.NullOrEmpty() || faction is null || !faction.PrimaryKey.IsValid) return false;
         int pk = faction.PrimaryKey.Key;
-        for (int i = 0; i < FactionBlacklist.Length; ++i)
-            if (FactionBlacklist[i].Key == pk)
+        for (int i = 0; i < FactionFilter.Length; ++i)
+            if (FactionFilter[i].Key == pk)
                 return true;
 
         return false;
     }
-    public bool IsCurrentMapBlacklisted()
+    public bool IsCurrentMapAllowed()
     {
         PrimaryKey map = MapScheduler.Current;
-        for (int i = 0; i < MapBlacklist.Length; ++i)
+        for (int i = 0; i < MapFilter.Length; ++i)
         {
-            if (MapBlacklist[i].Key == map.Key) return true;
+            if (MapFilter[i].Key == map.Key) return true;
         }
 
         return false;
@@ -163,7 +195,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         return GetDisplayName(language);
     }
 
-    public object Clone() => new Kit(this);
+    public object Clone() => new Kit(Id, this);
 }
 [JsonConverter(typeof(SkillsetConverter))]
 public readonly struct Skillset : IEquatable<Skillset>
@@ -355,10 +387,7 @@ public readonly struct Skillset : IEquatable<Skillset>
     public bool TypeEquals(in Skillset skillset) => EqualsHelper(in skillset, false);
     public static void SetDefaultSkills(UCPlayer player)
     {
-        for (int i = 0; i < DefaultSkillsets.Length; ++i)
-        {
-            DefaultSkillsets[i].ServerSet(player);
-        }
+        player.EnsureSkillsets(Array.Empty<Skillset>());
     }
     public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(in b, true);
     public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(in b, true);
@@ -366,9 +395,9 @@ public readonly struct Skillset : IEquatable<Skillset>
     public const string COLUMN_SKILL = "Skill";
     public const string COLUMN_LEVEL = "Level";
 
-    private static readonly string SkillEnumName = "enum(" + string.Join(",",
+    private static readonly string SkillEnumName = "enum('" + string.Join("','",
         typeof(EPlayerOffense).GetEnumNames().Concat(typeof(EPlayerDefense).GetEnumNames())
-            .Concat(typeof(EPlayerSupport).GetEnumNames())) + ")";
+            .Concat(typeof(EPlayerSupport).GetEnumNames())) + "')";
     public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool oneToOne = false, bool hasPk = false)
     {
         if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
@@ -505,6 +534,21 @@ public abstract class UnlockRequirement : ICloneable
         columns[++index] = new Schema.Column(COLUMN_JSON, SqlTypes.STRING_255);
         return new Schema(tableName, columns, false, typeof(UnlockRequirement));
     }
+    public virtual Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    {
+        L.LogWarning("Unhandled kit requirement type: " + GetType().Name);
+        return ctx.SendUnknownError();
+    }
+    public virtual Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    {
+        L.LogWarning("Unhandled vehicle requirement type: " + GetType().Name);
+        return ctx.SendUnknownError();
+    }
+    public virtual Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    {
+        L.LogWarning("Unhandled trait requirement type: " + GetType().Name);
+        return ctx.SendUnknownError();
+    }
 }
 public class UnlockRequirementConverter : JsonConverter<UnlockRequirement>
 {
@@ -553,6 +597,20 @@ public class LevelUnlockRequirement : UnlockRequirement
     {
         writer.Write(UnlockLevel);
     }
+
+    public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    {
+        return ctx.Reply(T.RequestKitLowLevel, RankData.GetRankName(UnlockLevel));
+    }
+    public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    {
+        return ctx.Reply(T.RequestVehicleMissingLevels, RankData.GetRankName(UnlockLevel));
+    }
+    public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    {
+        RankData data = new RankData(Points.GetLevelXP(UnlockLevel));
+        return ctx.Reply(T.RequestTraitLowLevel, trait, data);
+    }
 }
 [UnlockRequirement(2, "unlock_rank")]
 public class RankUnlockRequirement : UnlockRequirement
@@ -589,6 +647,28 @@ public class RankUnlockRequirement : UnlockRequirement
     {
         writer.Write(UnlockRank);
     }
+
+    public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    {
+        ref Ranks.RankData data = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
+        if (!success)
+            L.LogWarning("Invalid rank order in kit requirement: " + (kit?.Id ?? string.Empty) + " :: " + UnlockRank + ".");
+        return ctx.Reply(T.RequestKitLowRank, data);
+    }
+    public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    {
+        ref Ranks.RankData rankData = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
+        if (!success)
+            L.LogWarning("Invalid rank order in vehicle requirement: " + data.VehicleID + " :: " + UnlockRank + ".");
+        return ctx.Reply(T.RequestVehicleRankIncomplete, rankData);
+    }
+    public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    {
+        ref Ranks.RankData data = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
+        if (!success)
+            L.LogWarning("Invalid rank order in trait requirement: " + trait.TypeName + " :: " + UnlockRank + ".");
+        return ctx.Reply(T.RequestTraitLowRank, trait, data);
+    }
 }
 [UnlockRequirement(3, "unlock_presets", "quest_id")]
 public class QuestUnlockRequirement : UnlockRequirement
@@ -597,10 +677,9 @@ public class QuestUnlockRequirement : UnlockRequirement
     public Guid[] UnlockPresets = Array.Empty<Guid>();
     public override bool CanAccess(UCPlayer player)
     {
-        QuestManager.QuestComplete(player, QuestID);
         for (int i = 0; i < UnlockPresets.Length; i++)
         {
-            if (!QuestManager.QuestComplete(player, UnlockPresets[i]))
+            if (!player.QuestComplete(UnlockPresets[i]))
                 return false;
         }
         return true;
@@ -650,8 +729,11 @@ public class QuestUnlockRequirement : UnlockRequirement
     }
     public override object Clone()
     {
-        QuestUnlockRequirement req = new QuestUnlockRequirement() { QuestID = QuestID };
-        req.UnlockPresets = new Guid[UnlockPresets.Length];
+        QuestUnlockRequirement req = new QuestUnlockRequirement
+        {
+            QuestID = QuestID,
+            UnlockPresets = new Guid[UnlockPresets.Length]
+        };
         Array.Copy(UnlockPresets, req.UnlockPresets, UnlockPresets.Length);
         return req;
     }
@@ -664,6 +746,34 @@ public class QuestUnlockRequirement : UnlockRequirement
     {
         writer.Write(QuestID);
         writer.Write(UnlockPresets);
+    }
+
+    public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    {
+        if (Assets.find(QuestID) is QuestAsset asset)
+        {
+            ctx.Caller.Player.quests.ServerAddQuest(asset);
+            return ctx.Reply(T.RequestKitQuestIncomplete, asset);
+        }
+        return ctx.Reply(T.RequestKitQuestIncomplete, null!);
+    }
+    public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    {
+        if (Assets.find(QuestID) is QuestAsset asset)
+        {
+            ctx.Caller.Player.quests.ServerAddQuest(asset);
+            return ctx.Reply(T.RequestVehicleQuestIncomplete, asset);
+        }
+        return ctx.Reply(T.RequestVehicleQuestIncomplete, null!);
+    }
+    public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    {
+        if (Assets.find(QuestID) is QuestAsset asset)
+        {
+            ctx.Caller.Player.quests.ServerAddQuest(asset);
+            return ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
+        }
+        return ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);
     }
 }
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]

@@ -429,9 +429,9 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         ClearInjuredMarker(e.Steam64, e.Player.GetTeam());
     }
-    private void OnKitChanged(UCPlayer player, SqlItem<Kit>? oldkit, SqlItem<Kit>? newKit)
+    private void OnKitChanged(UCPlayer player, SqlItem<Kit>? newKit, SqlItem<Kit>? oldKit)
     {
-        bool oldIsMedic = oldkit?.Item != null && oldkit.Item.Class == Class.Medic;
+        bool oldIsMedic = oldKit?.Item != null && oldKit.Item.Class == Class.Medic;
         if (newKit?.Item != null && newKit.Item.Class == Class.Medic)
         {
             if (!oldIsMedic)

@@ -793,6 +793,10 @@ public static class Localization
         }
     }
     internal static string GetLang(ulong player) => Data.Languages.TryGetValue(player, out string lang) ? lang : L.DEFAULT;
+    internal static IFormatProvider GetLocale(string language)
+    {
+        return LanguageAliasSet.GetCultureInfo(language);
+    }
     public static string? GetDelaySignText(in Delay delay, string language, ulong team)
     {
         if (delay.Type == DelayType.OutOfStaging)
@@ -902,11 +906,11 @@ public static class Localization
         }
         return null;
     }
-    public static void SendDelayRequestText(in Delay delay, UCPlayer player, ulong team, EDelayMode mode)
+    public static void SendDelayRequestText(in Delay delay, UCPlayer player, ulong team, DelayTarget target)
     {
-        DelayResponses res = mode switch
+        DelayResponses res = target switch
         {
-            EDelayMode.TRAITS => TraitDelayResponses,
+            DelayTarget.Trait => TraitDelayResponses,
             _ => VehicleDelayResponses,
         };
         if (delay.Type == DelayType.OutOfStaging &&
@@ -1040,14 +1044,14 @@ public static class Localization
             player.SendChat(res.UnknownDelay, delay.ToString());
         }
     }
-    public enum EDelayMode
+    public enum DelayTarget
     {
-        VEHICLE_BAYS,
-        TRAITS
+        VehicleBay,
+        Trait
     }
 
-    private static readonly DelayResponses VehicleDelayResponses = new DelayResponses(EDelayMode.VEHICLE_BAYS);
-    private static readonly DelayResponses TraitDelayResponses = new DelayResponses(EDelayMode.TRAITS);
+    private static readonly DelayResponses VehicleDelayResponses = new DelayResponses(DelayTarget.VehicleBay);
+    private static readonly DelayResponses TraitDelayResponses = new DelayResponses(DelayTarget.Trait);
     private class DelayResponses
     {
         public readonly Translation<string> UnknownDelay;
@@ -1063,9 +1067,9 @@ public static class Localization
         public readonly Translation<Gamemodes.Flags.Flag> LoseFlagDelay1;
         public readonly Translation<string> TimeDelay;
         public readonly Translation StagingDelay;
-        public DelayResponses(EDelayMode mode)
+        public DelayResponses(DelayTarget target)
         {
-            if (mode == EDelayMode.TRAITS)
+            if (target == DelayTarget.Trait)
             {
                 UnknownDelay = T.RequestTraitUnknownDelay;
                 CacheDelayMultipleDef = T.RequestTraitCacheDelayMultipleDef;

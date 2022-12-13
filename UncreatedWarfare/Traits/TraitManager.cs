@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
@@ -25,7 +24,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
     public List<Trait> ActiveTraits;
     public static TraitManager Singleton;
     public static readonly BuffUI BuffUI = new BuffUI();
-    private static readonly TraitData[] DEFAULT_TRAITS = new TraitData[]
+    private static readonly TraitData[] DefaultTraits =
     {
         Motivated.DEFAULT_DATA,
         RapidDeployment.DEFAULT_DATA,
@@ -40,7 +39,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
     };
     public static bool Loaded => Singleton.IsLoaded<TraitManager, TraitData>();
     public TraitManager() : base("traits", Data.Paths.TraitDataStorage) { }
-    protected override string LoadDefaults() => JsonSerializer.Serialize(DEFAULT_TRAITS, JsonEx.serializerSettings);
+    protected override string LoadDefaults() => JsonSerializer.Serialize(DefaultTraits, JsonEx.serializerSettings);
     public override void Load()
     {
         Singleton = this;
@@ -58,13 +57,13 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
 
 
 
-        KitManager.OnPlayersKitChanged += OnKitChagned;
+        KitManager.OnKitChanged += OnKitChagned;
         EventDispatcher.GroupChanged += OnGroupChanged;
     }
     public override void Unload()
     {
         EventDispatcher.GroupChanged -= OnGroupChanged;
-        KitManager.OnPlayersKitChanged -= OnKitChagned;
+        KitManager.OnKitChanged -= OnKitChagned;
         if (ActiveTraits != null)
         {
             for (int j = ActiveTraits.Count - 1; j >= 0; --j)
@@ -128,17 +127,17 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         if (e.NewGroup is 1 or 2)
             BuffUI.SendBuffs(e.Player);
     }
-    private void OnKitChagned(UCPlayer player, SqlItem<Ki> kit, SqlItem<Kit>? oldKit)
+    private void OnKitChagned(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>? oldKit)
     {
         TraitSigns.SendAllTraitSigns(player);
+        Kit? kit2 = kit?.Item;
         for (int i = 0; i < player.ActiveTraits.Count; ++i)
         {
             if (player.ActiveTraits[i] is Buff buff)
             {
                 if (buff.IsActivated)
                 {
-                    // todo nullref
-                    if (!buff.Data.CanClassUse(kit.Item.Class))
+                    if (!buff.Data.CanClassUse(kit2 == null ? Class.None : kit2.Class))
                     {
                         buff.IsActivated = false;
                         player.SendChat(T.TraitDisabledKitNotSupported, buff);
@@ -458,7 +457,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
 
         if (trait.Delays != null && trait.Delays.Length > 0 && Delay.IsDelayed(trait.Delays, out Delay delay, team))
         {
-            Localization.SendDelayRequestText(in delay, ctx.Caller, team, Localization.EDelayMode.TRAITS);
+            Localization.SendDelayRequestText(in delay, ctx.Caller, team, Localization.DelayTarget.Trait);
             throw ctx.Defer();
         }
 
@@ -486,38 +485,10 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
             UnlockRequirement req = trait.UnlockRequirements[i];
             if (req.CanAccess(ctx.Caller))
                 continue;
-            if (req is LevelUnlockRequirement level)
-            {
-                RankData data = new RankData(Points.GetLevelXP(level.UnlockLevel));
-                throw ctx.Reply(T.RequestTraitLowLevel, trait, data);
-            }
-            else if (req is RankUnlockRequirement rank)
-            {
-                ref Ranks.RankData data = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
-                if (!success)
-                    L.LogWarning("Invalid rank order in trait requirement: " + trait.TypeName + " :: " + rank.UnlockRank + ".");
-                throw ctx.Reply(T.RequestTraitLowRank, trait, data);
-            }
-            else if (req is QuestUnlockRequirement quest)
-            {
-                if (Assets.find(quest.QuestID) is QuestAsset asset)
-                {
-                    ctx.Caller.Player.quests.sendAddQuest(asset.id);
-                    throw ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
-                }
-                else
-                {
-                    throw ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);
-                }
-            }
-            else
-            {
-                L.LogWarning("Unhandled trait requirement type: " + req.GetType().Name);
-                throw ctx.SendUnknownError();
-            }
+            throw req.RequestTraitFailureToMeet(ctx, trait);
         }
 
-        if (ctx.Caller.Kit is null || ctx.Caller.KitClass <= Class.Unarmed)
+        if (!ctx.Caller.HasKit || ctx.Caller.KitClass <= Class.Unarmed)
             throw ctx.Reply(T.RequestTraitNoKit);
 
         if (!trait.CanClassUse(ctx.Caller.KitClass))

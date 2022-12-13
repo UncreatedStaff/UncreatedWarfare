@@ -369,34 +369,36 @@ public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
 
     public static CultureInfo GetCultureInfo(string? language)
     {
-        if (language is null)
-            return Data.Locale;
-        if (language.Equals(ENGLISH, StringComparison.Ordinal))
-            return ENGLISH_C;
-        if (language.Equals(RUSSIAN, StringComparison.Ordinal))
-            return RUSSIAN_C;
-        if (language.Equals(SPANISH, StringComparison.Ordinal))
-            return SPANISH_C;
-        if (language.Equals(GERMAN, StringComparison.Ordinal))
-            return GERMAN_C;
-        if (language.Equals(ARABIC, StringComparison.Ordinal))
-            return ARABIC_C;
-        if (language.Equals(FRENCH, StringComparison.Ordinal))
-            return FRENCH_C;
-        if (language.Equals(POLISH, StringComparison.Ordinal))
-            return POLISH_C;
-        if (language.Equals(PORTUGUESE, StringComparison.Ordinal))
-            return PORTUGUESE_C;
-        if (language.Equals(NORWEGIAN, StringComparison.Ordinal))
-            return NORWEGIAN_C;
-        if (language.Equals(ROMANIAN, StringComparison.Ordinal))
-            return ROMANIAN_C;
-        if (language.Equals(DUTCH, StringComparison.Ordinal))
-            return DUTCH_C;
-        if (language.Equals(CHINESE_SIMPLIFIED, StringComparison.Ordinal) ||
-            language.Equals(CHINESE_TRADITIONAL, StringComparison.Ordinal))
-            return CHINESE_C;
-        return Data.Locale;
+        if (language is not null)
+        {
+            if (language.Equals(ENGLISH, StringComparison.Ordinal))
+                return ENGLISH_C;
+            if (language.Equals(RUSSIAN, StringComparison.Ordinal))
+                return RUSSIAN_C;
+            if (language.Equals(SPANISH, StringComparison.Ordinal))
+                return SPANISH_C;
+            if (language.Equals(GERMAN, StringComparison.Ordinal))
+                return GERMAN_C;
+            if (language.Equals(ARABIC, StringComparison.Ordinal))
+                return ARABIC_C;
+            if (language.Equals(FRENCH, StringComparison.Ordinal))
+                return FRENCH_C;
+            if (language.Equals(POLISH, StringComparison.Ordinal))
+                return POLISH_C;
+            if (language.Equals(PORTUGUESE, StringComparison.Ordinal))
+                return PORTUGUESE_C;
+            if (language.Equals(NORWEGIAN, StringComparison.Ordinal))
+                return NORWEGIAN_C;
+            if (language.Equals(ROMANIAN, StringComparison.Ordinal))
+                return ROMANIAN_C;
+            if (language.Equals(DUTCH, StringComparison.Ordinal))
+                return DUTCH_C;
+            if (language.Equals(CHINESE_SIMPLIFIED, StringComparison.Ordinal) ||
+                language.Equals(CHINESE_TRADITIONAL, StringComparison.Ordinal))
+                return CHINESE_C;
+        }
+
+        return Data.LocalLocale;
     }
     public string key;
     public string display_name;

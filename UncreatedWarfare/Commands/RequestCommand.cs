@@ -1,9 +1,7 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -14,11 +12,9 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Commands;
@@ -40,8 +36,7 @@ public class RequestCommand : AsyncCommand
         ctx.AssertRanByPlayer();
 
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
-
-        ulong team = ctx.Caller!.GetTeam();
+        
         if (ctx.HasArg(0))
         {
             if (ctx.MatchParameter(0, "save"))
@@ -51,12 +46,10 @@ public class RequestCommand : AsyncCommand
 
                 if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
                 {
+                    // todo redo request signs
                     if (RequestSigns.AddRequestSign(sign, out RequestSign signadded))
                     {
-                        if (KitManager.KitExists(signadded.KitName, out KitOld kit))
-                            ctx.Reply(T.RequestSignSaved, kit);
-                        else
-                            ctx.SendUnknownError();
+                        ctx.SendUnknownError();
                         ctx.LogAction(EActionLogType.SAVE_REQUEST_SIGN, signadded.KitName);
                     }
                     else throw ctx.Reply(T.RequestSignAlreadySaved); // sign already registered
@@ -68,14 +61,12 @@ public class RequestCommand : AsyncCommand
                 ctx.AssertGamemode<IKitRequests>();
                 ctx.AssertPermissions(EAdminType.STAFF);
 
+                // todo redo request signs
                 if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
                 {
                     if (RequestSigns.SignExists(sign, out RequestSign requestsign))
                     {
-                        if (KitManager.KitExists(requestsign.KitName, out KitOld kit))
-                            ctx.Reply(T.RequestSignRemoved, kit);
-                        else
-                            ctx.SendUnknownError();
+                        ctx.SendUnknownError();
                         RequestSigns.RemoveRequestSign(requestsign);
                         ctx.LogAction(EActionLogType.UNSAVE_REQUEST_SIGN, requestsign.KitName);
                     }
@@ -89,30 +80,20 @@ public class RequestCommand : AsyncCommand
         {
             if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
             {
+                KitManager? manager = KitManager.GetSingletonQuick();
+                if (manager == null)
+                    throw ctx.SendGamemodeError();
                 if (RequestSigns.Loaded && RequestSigns.SignExists(sign, out RequestSign kitsign))
                 {
                     ctx.AssertGamemode<IKitRequests>();
-
-                    UCPlayer caller2 = ctx.Caller!;
-                    if (kitsign.KitName.StartsWith("loadout_", StringComparison.OrdinalIgnoreCase))
+                    
+                    if (kitsign.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (byte.TryParse(kitsign.KitName.Substring(8), NumberStyles.Number, Data.Locale, out byte loadoutId))
+                        if (byte.TryParse(kitsign.KitName.Substring(8), NumberStyles.Number, Data.AdminLocale, out byte loadoutId))
                         {
-                            byte bteam = ctx.Caller!.Player.GetTeamByte();
-                            List<KitOld> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, caller2));
-                            if (loadoutId > 0 && loadoutId <= loadouts.Count)
+                            if (loadoutId > 0)
                             {
-                                KitOld loadout = loadouts[loadoutId - 1];
-
-                                if (loadout.IsClassLimited(out int currentPlayers, out int allowedPlayers, bteam))
-                                {
-                                    ctx.Reply(T.RequestKitLimited, allowedPlayers);
-                                    return;
-                                }
-
-                                ctx.LogAction(EActionLogType.REQUEST_KIT, $"Loadout #{loadoutId}: {loadout.Name}, Team {loadout.Team}, Class: {Localization.TranslateEnum(loadout.Class, 0)}");
-                                GiveKit(caller2, loadout);
-                                ctx.Defer();
+                                await manager.RequestLoadout(loadoutId, ctx, token).ConfigureAwait(false);
                             }
                             else throw ctx.Reply(T.RequestLoadoutNotOwned);
                         }
@@ -120,111 +101,10 @@ public class RequestCommand : AsyncCommand
                     }
                     else
                     {
-                        if (!KitManager.KitExists(kitsign.KitName, out KitOld kit) || kit.IsLoadout)
+                        SqlItem<Kit>? proxy = await manager.FindKit(kitsign.KitName, token).ConfigureAwait(false);
+                        if (proxy?.Item == null)
                             throw ctx.Reply(T.KitNotFound, kitsign.KitName);
-                        if (caller2.KitName == kit.Name)
-                            throw ctx.Reply(T.RequestKitAlreadyOwned);
-                        if (kit.IsPremium && !KitManager.HasAccessFast(kit, caller2) && !UCWarfare.Config.OverrideKitRequirements)
-                            throw ctx.Reply(T.RequestKitMissingAccess);
-                        if (kit.Team != 0 && kit.Team != team)
-                            throw ctx.Reply(T.RequestKitWrongTeam, TeamManager.GetFactionSafe(team)!);
-                        if (caller2.Rank.Level < kit.UnlockLevel)
-                            throw ctx.Reply(T.RequestKitLowLevel, RankData.GetRankName(kit.UnlockLevel));
-                        if (!kit.IsPremium && kit.CreditCost > 0 && !KitManager.HasAccessFast(kit, caller2) && !UCWarfare.Config.OverrideKitRequirements)
-                        {
-                            if (caller2.CachedCredits >= kit.CreditCost)
-                                throw ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
-                            else
-                                throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - caller2.CachedCredits, kit.CreditCost);
-                        }
-                        if (kit.IsLimited(out _, out int allowedPlayers, caller2.GetTeam()))
-                            throw ctx.Reply(T.RequestKitLimited, allowedPlayers);
-                        if (kit.Class == Class.Squadleader && caller2.Squad is not null && !caller2.IsSquadLeader())
-                            throw ctx.Reply(T.RequestKitNotSquadleader);
-                        if (
-                            Data.Gamemode.State == EState.ACTIVE &&
-                            CooldownManager.HasCooldown(caller2, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) &&
-                            !caller2.OnDutyOrAdmin() &&
-                            !UCWarfare.Config.OverrideKitRequirements &&
-                            !(kit.Class == Class.Crewman || kit.Class == Class.Pilot))
-                            throw ctx.Reply(T.KitOnGlobalCooldown, requestCooldown);
-                        if (kit.IsPremium &&
-                            CooldownManager.HasCooldown(caller2, ECooldownType.PREMIUM_KIT, out Cooldown premiumCooldown, kit.Name) &&
-                            !caller2.OnDutyOrAdmin() &&
-                            !UCWarfare.Config.OverrideKitRequirements)
-                            throw ctx.Reply(T.KitOnCooldown, premiumCooldown);
-
-                        for (int i = 0; i < kit.UnlockRequirements.Length; i++)
-                        {
-                            UnlockRequirement req = kit.UnlockRequirements[i];
-                            if (req.CanAccess(caller2))
-                                continue;
-                            if (req is LevelUnlockRequirement level)
-                                throw ctx.Reply(T.RequestKitLowLevel, level.UnlockLevel.ToString(Data.Locale));
-                            if (req is RankUnlockRequirement rank)
-                            {
-                                Ranks.RankData data = Ranks.RankManager.GetRank(rank.UnlockRank);
-                                if (data.Order == -1)
-                                    L.LogWarning("Invalid rank order in kit requirement: " + kit.Name + " :: " + rank.UnlockRank + ".");
-                                throw ctx.Reply(T.RequestKitLowRank, data);
-                            }
-                            if (req is QuestUnlockRequirement quest)
-                            {
-                                if (Assets.find(quest.QuestID) is QuestAsset asset)
-                                {
-                                    ctx.Caller.Player.quests.sendAddQuest(asset.id);
-                                    throw ctx.Reply(T.RequestKitQuestIncomplete, asset);
-                                }
-                                throw ctx.Reply(T.RequestKitQuestIncomplete, null!);
-                            }
-                            L.LogWarning("Unhandled kit requirement type: " + req.GetType().Name);
-                            throw ctx.SendUnknownError();
-                        }
-                        
-                        bool hasKit = kit.CreditCost == 0 && !kit.IsPremium;
-                        if (!hasKit)
-                        {
-                            hasKit = await KitManager.HasAccess(kit, caller2.Steam64).ConfigureAwait(false);
-                            await UCWarfare.ToUpdate();
-                            if (!hasKit)
-                            {
-                                if (kit.IsPremium)
-                                    ctx.Reply(T.RequestKitMissingAccess);
-                                else if (caller2.CachedCredits >= kit.CreditCost)
-                                    ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
-                                else
-                                    ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - caller2.CachedCredits, kit.CreditCost);
-                                return;
-                            }
-                        }
-                        // recheck limits to make sure people can't request at the same time to avoid limits.
-                        if (kit.IsLimited(out _, out allowedPlayers, caller2.GetTeam()))
-                        {
-                            ctx.Reply(T.RequestKitLimited, allowedPlayers);
-                            return;
-                        }
-                        if (kit.Class == Class.Squadleader && caller2.Squad is not null && !caller2.IsSquadLeader())
-                        {
-                            ctx.Reply(T.RequestKitNotSquadleader);
-                            return;
-                        }
-                        if (kit.Class == Class.Squadleader && caller2.Squad == null)
-                        {
-                            if (SquadManager.Squads.Count(x => x.Team == team) < 8)
-                            {
-                                // create a squad automatically if someone requests a squad leader kit.
-                                Squad squad = SquadManager.CreateSquad(caller2, caller2.GetTeam());
-                                ctx.Reply(T.SquadCreated, squad);
-                            }
-                            else
-                            {
-                                ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
-                                return;
-                            }
-                        }
-                        ctx.LogAction(EActionLogType.REQUEST_KIT, $"Kit {kit.Name}, Team {kit.Team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
-                        GiveKit(caller2, kit);
-                        ctx.Defer();
+                        await manager.RequestKit(proxy, ctx, token).ConfigureAwait(false);
                     }
                 }
                 else if (VehicleSigns.Loaded && VehicleSigns.SignExists(sign, out VehicleSign vbsign))
@@ -243,7 +123,7 @@ public class RequestCommand : AsyncCommand
                                 await data.Enter(token).ConfigureAwait(false);
                                 try
                                 {
-                                    await RequestVehicle(ctx.Caller!, vehicle, data.Item, token);
+                                    await RequestVehicle(ctx, vehicle, data.Item, token);
                                     ctx.Defer();
                                 }
                                 finally
@@ -284,7 +164,7 @@ public class RequestCommand : AsyncCommand
                         await data.Enter(token).ConfigureAwait(false);
                         try
                         {
-                            await RequestVehicle(ctx.Caller, vehicle, data.Item, token).ConfigureAwait(false);
+                            await RequestVehicle(ctx, vehicle, data.Item, token).ConfigureAwait(false);
                             ctx.Defer();
                         }
                         finally
@@ -299,174 +179,107 @@ public class RequestCommand : AsyncCommand
             else throw ctx.Reply(T.RequestNoTarget);
         }
     }
-    private async Task GiveKit(UCPlayer ucplayer, SqlItem<Kit>? kit, CancellationToken token = default)
-    {
-        if (!UCWarfare.IsMainThread)
-            await UCWarfare.ToUpdate(token);
-        KitManager? manager = KitManager.GetSingletonQuick();
-        AmmoCommand.WipeDroppedItems(ucplayer.Steam64);
-        await KitManager.GiveKit(ucplayer, kit, token).ConfigureAwait(false);
-        Stats.StatsManager.ModifyKit(kit.Name, k => k.TimesRequested++);
-        Stats.StatsManager.ModifyStats(ucplayer.Steam64, s =>
-        {
-            Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == kit.Team);
-            if (kitData == default)
-            {
-                kitData = new Stats.WarfareStats.KitData() { KitID = kit.Name, Team = (byte)kit.Team, TimesRequested = 1 };
-                s.Kits.Add(kitData);
-            }
-            else
-                kitData.TimesRequested++;
-        }, false);
-
-        ucplayer.SendChat(T.RequestSignGiven, kit.Class);
-
-        if (kit.IsPremium && kit.Cooldown > 0)
-            CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
-        CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.Config.RequestKitCooldown);
-
-        //PlayerManager.ApplyTo(ucplayer);
-    }
     /// <remarks>Thread Safe</remarks>
-    internal Task RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, VehicleData data, CancellationToken token = default) => RequestVehicle(ucplayer, vehicle, data, ucplayer.GetTeam(), token);
+    internal Task RequestVehicle(CommandInteraction ctx, InteractableVehicle vehicle, VehicleData data, CancellationToken token = default) => RequestVehicle(ctx, vehicle, data, ctx.Caller.GetTeam(), token);
     /// <remarks>Thread Safe</remarks>
-    internal async Task RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, VehicleData data, ulong team, CancellationToken token = default)
+    internal async Task RequestVehicle(CommandInteraction ctx, InteractableVehicle vehicle, VehicleData data, ulong team, CancellationToken token = default)
     {
         if (!UCWarfare.IsMainThread)
             await UCWarfare.ToUpdate();
         if (vehicle.lockedOwner != CSteamID.Nil || vehicle.lockedGroup != CSteamID.Nil)
-        {
-            ucplayer.SendChat(T.RequestVehicleAlreadyRequested, await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ThenToUpdate(token));
-            return;
-        }
-        if (data.Team != 0 && data.Team != team)
-        {
-            ucplayer.SendChat(T.RequestVehicleOtherTeam, TeamManager.GetFactionSafe(data.Team)!);
-            return;
-        }
-        if (data.RequiresSL && ucplayer.Squad == null)
-        {
-            ucplayer.SendChat(T.RequestVehicleNotSquadLeader);
-            return;
-        }
-        if (!KitManager.HasKit(ucplayer.CSteamID, out KitOld kit))
-        {
-            ucplayer.SendChat(T.RequestVehicleNoKit);
-            return;
-        }
-        if (data.RequiredClass != Class.None && kit.Class != data.RequiredClass)
-        {
-            ucplayer.SendChat(T.RequestVehicleWrongClass, data.RequiredClass);
-            return;
-        }
-        if (ucplayer.Rank.Level < data.UnlockLevel)
-        {
-            ucplayer.SendChat(T.RequestVehicleMissingLevels, RankData.GetRankName(data.UnlockLevel));
-            return;
-        }
-        if (ucplayer.CachedCredits < data.CreditCost)
-        {
-            ucplayer.SendChat(T.RequestVehicleCantAfford, data.CreditCost - ucplayer.CachedCredits, data.CreditCost);
-            return;
-        }
-        if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
-        {
-            ucplayer.SendChat(T.RequestVehicleCooldown, cooldown);
-            return;
-        }
+            throw ctx.Reply(T.RequestVehicleAlreadyRequested, await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ThenToUpdate(token));
 
-        if (VehicleSpawner.Loaded) // check if an owned vehicle is nearby
+        if (data.Team != 0 && data.Team != team)
+            throw ctx.Reply(T.RequestVehicleOtherTeam, TeamManager.GetFactionSafe(data.Team)!);
+        if (data.RequiresSL && ctx.Caller.Squad == null)
+            throw ctx.Reply(T.RequestVehicleNotSquadLeader);
+
+        SqlItem<Kit>? proxy = ctx.Caller.ActiveKit;
+        if (proxy?.Item == null)
+            throw ctx.Reply(T.RequestVehicleNoKit);
+
+        await proxy.Enter(token).ThenToUpdate(token);
+        try
         {
-            foreach (VehicleSpawn spawn in VehicleSpawner.Spawners)
+            if (proxy.Item == null)
+                throw ctx.Reply(T.RequestVehicleNoKit);
+
+            Kit kit = proxy.Item;
+            if (data.RequiredClass != Class.None && kit.Class != data.RequiredClass)
+                throw ctx.Reply(T.RequestVehicleWrongClass, data.RequiredClass);
+            if (ctx.Caller.CachedCredits < data.CreditCost)
+                throw ctx.Reply(T.RequestVehicleCantAfford, data.CreditCost - ctx.Caller.CachedCredits, data.CreditCost);
+            if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
+                throw ctx.Reply(T.RequestVehicleCooldown, cooldown);
+
+            if (VehicleSpawner.Loaded) // check if an owned vehicle is nearby
             {
-                if (spawn is not null && spawn.HasLinkedVehicle(out InteractableVehicle veh))
+                foreach (VehicleSpawn spawn in VehicleSpawner.Spawners)
                 {
-                    if (veh == null || veh.isDead) continue;
-                    if (veh.lockedOwner.m_SteamID == ucplayer.Steam64 &&
-                        (veh.transform.position - vehicle.transform.position).sqrMagnitude < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
+                    if (spawn is not null && spawn.HasLinkedVehicle(out InteractableVehicle veh))
                     {
-                        ucplayer.SendChat(T.RequestVehicleAlreadyOwned, data);
-                        return;
+                        if (veh == null || veh.isDead) continue;
+                        if (veh.lockedOwner.m_SteamID == ctx.CallerID &&
+                            (veh.transform.position - vehicle.transform.position).sqrMagnitude < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
+                            throw ctx.Reply(T.RequestVehicleAlreadyOwned, data);
                     }
                 }
             }
-        }
-        if (data.IsDelayed(out Delay delay) && delay.Type != DelayType.None)
-        {
-            Localization.SendDelayRequestText(in delay, ucplayer, team, Localization.EDelayMode.VEHICLE_BAYS);
-            return;
-        }
+            if (data.IsDelayed(out Delay delay) && delay.Type != DelayType.None)
+            {
+                Localization.SendDelayRequestText(in delay, ctx.Caller, team, Localization.DelayTarget.VehicleBay);
+                ctx.Defer();
+                return;
+            }
 
-        for (int i = 0; i < data.UnlockRequirements.Length; i++)
-        {
-            UnlockRequirement req = data.UnlockRequirements[i];
-            if (req.CanAccess(ucplayer))
-                continue;
-            if (req is LevelUnlockRequirement level)
+            for (int i = 0; i < data.UnlockRequirements.Length; i++)
             {
-                ucplayer.SendChat(T.RequestVehicleMissingLevels, RankData.GetRankName(level.UnlockLevel));
+                UnlockRequirement req = data.UnlockRequirements[i];
+                if (req.CanAccess(ctx.Caller))
+                    continue;
+                throw req.RequestVehicleFailureToMeet(ctx, data);
             }
-            else if (req is RankUnlockRequirement rank)
+
+            if (vehicle.asset.canBeLocked)
             {
-                Ranks.RankData rankData = Ranks.RankManager.GetRank(rank.UnlockRank);
-                if (rankData.Order == -1)
-                    L.LogWarning("Invalid rank order in vehicle requirement: " + data.VehicleID + " :: " + rank.UnlockRank + ".");
-                ucplayer.SendChat(T.RequestVehicleRankIncomplete, rankData);
-            }
-            else if (req is QuestUnlockRequirement quest)
-            {
-                if (Assets.find(quest.QuestID) is QuestAsset asset)
+                if (data.CreditCost > 0)
                 {
-                    ucplayer.Player.quests.sendAddQuest(asset.id);
-                    ucplayer.SendChat(T.RequestVehicleQuestIncomplete, asset);
+                    await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+                    try
+                    {
+                        await Points.UpdatePointsAsync(ctx.Caller, false, token).ConfigureAwait(false);
+                        if (ctx.Caller.CachedCredits >= data.CreditCost)
+                        {
+                            await Points.AwardCreditsAsync(ctx.Caller, -data.CreditCost, isPurchase: true, @lock: false, token: token).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            await UCWarfare.ToUpdate(token);
+                            ctx.Caller.SendChat(T.RequestVehicleCantAfford, data.CreditCost - ctx.Caller.CachedCredits, data.CreditCost);
+                            return;
+                        }
+                    }
+                    finally
+                    {
+                        ctx.Caller.PurchaseSync.Release();
+                    }
                 }
-                else
-                {
-                    ucplayer.SendChat(T.RequestVehicleQuestIncomplete, null!);
-                }
+
+                await UCWarfare.ToUpdate(token);
+                GiveVehicle(ctx.Caller, vehicle, data);
+                Stats.StatsManager.ModifyStats(ctx.Caller.Steam64, x => x.VehiclesRequested++, false);
+                Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
+                Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
+                CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REQUEST_VEHICLE, CooldownManager.Config.RequestVehicleCooldown, vehicle.id);
             }
             else
             {
-                L.LogWarning("Unhandled vehicle requirement type: " + req.GetType().Name);
+                ctx.Caller.SendChat(T.RequestVehicleAlreadyRequested);
             }
-            return;
         }
-
-        if (vehicle.asset.canBeLocked)
+        finally
         {
-            if (data.CreditCost > 0)
-            {
-                await ucplayer.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-                try
-                {
-                    await Points.UpdatePointsAsync(ucplayer, false, token).ConfigureAwait(false);
-                    if (ucplayer.CachedCredits >= data.CreditCost)
-                    {
-                        await Points.AwardCreditsAsync(ucplayer, -data.CreditCost, isPurchase: true, @lock: false, token: token).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await UCWarfare.ToUpdate(token);
-                        ucplayer.SendChat(T.RequestVehicleCantAfford, data.CreditCost - ucplayer.CachedCredits, data.CreditCost);
-                        return;
-                    }
-                }
-                finally
-                {
-                    ucplayer.PurchaseSync.Release();
-                }
-            }
-
-            await UCWarfare.ToUpdate(token);
-            GiveVehicle(ucplayer, vehicle, data);
-            Stats.StatsManager.ModifyStats(ucplayer.Steam64, x => x.VehiclesRequested++, false);
-            Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
-            Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
-            CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, CooldownManager.Config.RequestVehicleCooldown, vehicle.id);
-        }
-        else
-        {
-            ucplayer.SendChat(T.RequestVehicleAlreadyRequested);
+            proxy.Release();
         }
     }
 
@@ -482,7 +295,7 @@ public class RequestCommand : AsyncCommand
             if (comp != null)
             {
                 comp.OnRequest();
-                ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} at spawn {comp.gameObject.transform.position.ToString("N2", Data.Locale)}", ucplayer);
+                ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} at spawn {comp.gameObject.transform.position.ToString("N2", Data.AdminLocale)}", ucplayer);
             }
             else
                 ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
