@@ -7,6 +7,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -118,7 +119,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
         player.Player.life.askDamage(byte.MaxValue, Vector3.up / 8f, DeathTracker.MAIN_DEATH, ELimb.SPINE, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
         ActionLogger.Add(EActionLogType.MAIN_CAMP_ATTEMPT, $"Player team: {TeamManager.TranslateName(team, 0, false)}, " +
                                                            $"Team: {TeamManager.TranslateName(TeamManager.Other(team), 0, false)}, " +
-                                                           $"Location: {player.Position.ToString("0.#", Data.Locale)}", player);
+                                                           $"Location: {player.Position.ToString("0.#", Data.AdminLocale)}", player);
     }
     public void SpawnBlockers()
     {
@@ -129,13 +130,13 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
         if (Config.BarricadeZoneBlockerTeam1.ValidReference(out ItemBarricadeAsset asset))
             _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset),
-                TeamManager.Team1Main.Center3D + Vector3.up, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
+                TeamManager.Team1Main.Center3D + Vector3.up, Quaternion.Euler(BlockerSpawnRotation), 0, 0);
     }
     public void SpawnBlockerOnT2()
     {
         if (Config.BarricadeZoneBlockerTeam2.ValidReference(out ItemBarricadeAsset asset))
             _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset),
-                TeamManager.Team2Main.Center3D, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
+                TeamManager.Team2Main.Center3D, Quaternion.Euler(BlockerSpawnRotation), 0, 0);
     }
     public void DestoryBlockerOnT1()
     {
@@ -268,10 +269,53 @@ public abstract class TeamGamemode : Gamemode, ITeams
         mainCampers.Remove(e.Player.Steam64);
         EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
+    protected override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    {
+        if (!UseTeamSelector)
+            InitUI(player);
+        return base.PlayerInit(player, wasAlreadyOnline);
+    }
+    protected abstract void InitUI(UCPlayer player);
     public virtual void OnJoinTeam(UCPlayer player, ulong team)
     {
-        if (team is 1 or 2 && _state == EState.STAGING)
+        if (team is 1 or 2 && _state == State.Staging)
             ShowStagingUI(player);
+        if (this is IGameStats gs)
+            gs.GameStats.OnPlayerJoin(player);
+        if (this is IEndScreen es && es.IsScreenUp)
+        {
+            if (this is IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> impl && impl.Leaderboard != null)
+                impl.Leaderboard.OnPlayerJoined(player);
+        }
+        else if (this is ITickets tickets)
+        {
+            tickets.TicketManager.SendUI(player);
+            InitUI(player);
+        }
+        UCWarfare.RunTask(async () =>
+        {
+            await UCWarfare.ToUpdate();
+            if (this is IJoinedTeamListenerAsync jas)
+            {
+                await jas.OnJoinTeamAsync(player, team).ConfigureAwait(false);
+                await UCWarfare.ToUpdate();
+            }
+            for (int i = 0; i < this.Singletons.Count; ++i)
+            {
+                IUncreatedSingleton singleton = Singletons[i];
+                if (singleton is ILevelStartListener l1)
+                    l1.OnLevelReady();
+                if (singleton is ILevelStartListenerAsync l2)
+                {
+                    Task task = l2.OnLevelReady();
+                    if (!task.IsCompleted)
+                    {
+                        await task.ConfigureAwait(false);
+                        await UCWarfare.ToUpdate();
+                    }
+                }
+            }
+        });
     }
     public override void PlayerLeave(UCPlayer player)
     {

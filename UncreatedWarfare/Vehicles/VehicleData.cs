@@ -793,7 +793,7 @@ public struct Delay : IJsonReadWrite
         }
         return false;
     }
-    private static bool StagingDelayed(ref Delay delay) => Data.Is(out IStagingPhase sp) && sp.State == EState.STAGING;
+    private static bool StagingDelayed(ref Delay delay) => Data.Is(out IStagingPhase sp) && sp.State == State.Staging;
     private static int GetHighestObjectiveIndex(ulong team, IFlagTeamObjectiveGamemode gm)
     {
         if (team == 1)

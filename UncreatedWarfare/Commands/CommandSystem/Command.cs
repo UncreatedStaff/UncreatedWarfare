@@ -14,6 +14,7 @@ public abstract class Command : IExecutableCommand
     private readonly EAdminType allowedUsers;
     private readonly List<string> _aliases = new List<string>(0);
     public readonly IReadOnlyList<string> Aliases;
+    bool IExecutableCommand.ExecuteAsynchronously => false;
     IReadOnlyList<string>? IExecutableCommand.Aliases => Aliases;
     public string CommandName => commandName;
     public EAdminType AllowedPermissions => allowedUsers;
@@ -25,17 +26,7 @@ public abstract class Command : IExecutableCommand
         this.priority = priority;
         Aliases = _aliases.AsReadOnly();
     }
-
-    Task IExecutableCommand.Execute(CommandInteraction ctx, CancellationToken token)
-    {
-#if DEBUG
-        ThreadUtil.assertIsGameThread();
-#endif
-        if (token.IsCancellationRequested)
-            return Task.FromCanceled(token);
-        this.Execute(ctx);
-        return Task.CompletedTask;
-    }
+    Task IExecutableCommand.Execute(CommandInteraction ctx, CancellationToken token) => throw new NotImplementedException();
     protected void AddAlias(string alias) => _aliases.Add(alias);
     /// <summary>Runs before <see cref="Execute"/>. Sends "no_permissions" translation to the player if it returns <see langword="false"/>. This could also be done in <see cref="Execute"/> if desired.</summary>
     /// <returns><see langword="true"/> if the player has permission to run the command. Otherwise returns <see langword="false"/>.</returns>
@@ -69,6 +60,7 @@ public abstract class AsyncCommand : IExecutableCommand
     public readonly IReadOnlyList<string> Aliases;
     IReadOnlyList<string>? IExecutableCommand.Aliases => Aliases;
     public string CommandName => commandName;
+    bool IExecutableCommand.ExecuteAsynchronously => true;
     public EAdminType AllowedPermissions => allowedUsers;
     public int Priority => priority;
     protected AsyncCommand(string command, EAdminType allowedUsers = 0, int priority = 0)
@@ -86,6 +78,7 @@ public abstract class AsyncCommand : IExecutableCommand
         if (ctx.IsConsole || ctx.Caller!.Player.channel.owner.isAdmin) return true;
         return ctx.Caller.PermissionCheck(allowedUsers, PermissionComparison.AtLeast);
     }
+    void IExecutableCommand.Execute(CommandInteraction ctx) => throw new NotImplementedException();
     public abstract Task Execute(CommandInteraction ctx, CancellationToken token);
     public CommandInteraction SetupCommand(UCPlayer? caller, string[] args, string message, bool keepSlash)
     {

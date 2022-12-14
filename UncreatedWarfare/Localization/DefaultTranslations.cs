@@ -1683,9 +1683,7 @@ internal static class T
     public static readonly Translation<Cooldown> TeamsCooldown = new Translation<Cooldown>("<#ff8c69>You can't use /teams for another {0}.", Cooldown.LONG_TIME_FORMAT);
     public static readonly Translation TeamsUIHeader = new Translation("Choose a Team", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIClickToJoin = new Translation("CLICK TO JOIN", TranslationFlags.UnityUI);
-    public static readonly Translation TeamsUIClickToJoinDonor = new Translation("<#e3b552>CLICK TO JOIN", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIJoined = new Translation("JOINED", TranslationFlags.UnityUI);
-    public static readonly Translation TeamsUIJoinedDonor = new Translation("<#e3b552>JOINED", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIFull = new Translation("<#bf6363>FULL", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIConfirm = new Translation("<#888888>CONFIRM", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIJoining = new Translation("<#999999>JOINING...", TranslationFlags.UnityUI);
@@ -1839,6 +1837,7 @@ internal static class T
 
     #endregion
 
+    [FormatDisplay(typeof(object), "Plural")]
     internal const string PLURAL = "$plural$";
     [FormatDisplay(typeof(object), "Uppercase")]
     internal const string UPPERCASE = "upper";
@@ -1870,6 +1869,9 @@ internal static class T
     internal static readonly List<string> AllLanguages = new List<string>(4);
     static T()
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking("Translation reflection");
+#endif
         FieldInfo[] fields = typeof(T).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).Where(x => typeof(Translation).IsAssignableFrom(x.FieldType)).ToArray();
         Translations = new Translation[fields.Length];
         int i2 = -1;

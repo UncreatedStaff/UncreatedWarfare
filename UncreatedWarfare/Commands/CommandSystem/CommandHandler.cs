@@ -15,13 +15,13 @@ using UnityEngine;
 namespace Uncreated.Warfare.Commands.CommandSystem;
 public static class CommandHandler
 {
-    public const int MILLISECONDS_COMMAND_MAX_TIMEOUT_AT_GAME_END = 11000;
+    public const int CommandMaxTimeoutAtGameEndMs = 11000;
     private static readonly List<IExecutableCommand> Commands = new List<IExecutableCommand>(8);
     public static readonly IReadOnlyList<IExecutableCommand> RegisteredCommands;
     private static readonly char[] Prefixes = { '/', '@', '\\' };
     private static readonly char[] ContinueArgChars = { '\'', '"', '`', '“', '”', '‘', '’' };
-    private const int MAX_ARG_COUNT = 16;
-    private static readonly ArgumentInfo[] ArgBuffer = new ArgumentInfo[MAX_ARG_COUNT];
+    private const int MaxArgCount = 16;
+    private static readonly ArgumentInfo[] ArgBuffer = new ArgumentInfo[MaxArgCount];
     internal static CancellationTokenSource GlobalCommandCancel = new CancellationTokenSource();
     internal static List<CommandInteraction> ActiveCommands = new List<CommandInteraction>(8);
     internal static bool TryingToCancel;
@@ -31,21 +31,36 @@ public static class CommandHandler
         ChatManager.onCheckPermissions += OnChatProcessing;
         CommandWindow.onCommandWindowInputted += OnCommandInput;
     }
-
+    private static readonly List<KeyValuePair<KeyValuePair<UCPlayer?, bool>, string>> PendingMessages = new List<KeyValuePair<KeyValuePair<UCPlayer?, bool>, string>>(32);
     public static async Task LetCommandsFinish()
     {
         TryingToCancel = true;
-        GlobalCommandCancel.CancelAfter(MILLISECONDS_COMMAND_MAX_TIMEOUT_AT_GAME_END);
+        GlobalCommandCancel.CancelAfter(CommandMaxTimeoutAtGameEndMs);
         foreach (CommandInteraction intx in ActiveCommands.ToList())
         {
             if (intx.Task != null && !intx.Task.IsCompleted)
             {
-                await intx.Task.ConfigureAwait(false);
+                try
+                {
+                    await intx.Task.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) { }
             }
         }
 
         GlobalCommandCancel = new CancellationTokenSource();
+        await UCWarfare.ToUpdate(GlobalCommandCancel.Token);
         TryingToCancel = false;
+        for (int i = 0; i < PendingMessages.Count; i++)
+        {
+            KeyValuePair<KeyValuePair<UCPlayer?, bool>, string> msg = PendingMessages[i];
+            if (msg.Key.Key == null || msg.Key.Key.IsOnline)
+            {
+                CheckRunCommand(msg.Key.Key, msg.Value, msg.Key.Value);
+            }
+        }
+
+        PendingMessages.Clear();
     }
     private static void OnChatProcessing(SteamPlayer player, string text, ref bool shouldExecuteCommand, ref bool shouldList)
     {
@@ -129,10 +144,7 @@ public static class CommandHandler
         ThreadUtil.assertIsGameThread();
         if (TryingToCancel)
         {
-            if (player != null)
-                player.SendChat(T.ErrorCommandCancelled);
-            else
-                L.Log(T.ErrorCommandCancelled.Translate(L.DEFAULT));
+            PendingMessages.Add(new KeyValuePair<KeyValuePair<UCPlayer?, bool>, string>(new KeyValuePair<UCPlayer?, bool>(player, requirePrefix), message));
             return true;
         }
             
@@ -257,7 +269,7 @@ public static class CommandHandler
                             info2.End = i - 1;
                     }
                     if (i == len - 1) break;
-                    if (argCt >= MAX_ARG_COUNT - 1)
+                    if (argCt >= MaxArgCount - 1)
                         goto runCommand;
                     ref ArgumentInfo info = ref ArgBuffer[++argCt];
                     info.End = -1;
@@ -286,7 +298,7 @@ public static class CommandHandler
                         }
                     }
                     if (i == len - 1) break;
-                    if (argCt >= MAX_ARG_COUNT - 1)
+                    if (argCt >= MaxArgCount - 1)
                         goto runCommand;
                     ref ArgumentInfo info = ref ArgBuffer[++argCt];
                     info.Start = i + 1;
@@ -421,7 +433,14 @@ public static class CommandHandler
         IExecutableCommand cmd = Commands[index];
         CommandInteraction interaction = cmd.SetupCommand(player, args, message, keepSlash);
         ActiveCommands.Add(interaction);
-        Task.Run(interaction.ExecuteCommand);
+        if (cmd.ExecuteAsynchronously)
+        {
+            UCWarfare.RunTask(interaction.ExecuteCommandAsync, ctx: (player == null ? "Console" : player.Steam64.ToString(Data.AdminLocale)) + " executing /" + cmd.CommandName + " with " + args.Length + " args.");
+        }
+        else
+        {
+            interaction.ExecuteCommandSync();
+        }
     }
     
     private static void OnCommandInput(string text, ref bool shouldExecuteCommand)
@@ -438,15 +457,14 @@ public static class CommandHandler
 public abstract class BaseCommandInteraction : Exception
 {
     public readonly IExecutableCommand Command;
-    protected bool _responded;
-    public bool Responded => _responded;
+    public bool Responded { get; protected set; }
     protected BaseCommandInteraction(IExecutableCommand cmd, string message) : base(message)
     {
         this.Command = cmd;
     }
     internal virtual void MarkComplete()
     {
-        _responded = true;
+        Responded = true;
     }
 }
 
@@ -475,7 +493,49 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
 
     public string? this[int index] => Get(index);
-    internal async Task ExecuteCommand()
+    internal void ExecuteCommandSync()
+    {
+        if (Command.CheckPermission(this))
+        {
+            try
+            {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking("Execute command: " + Command.CommandName);
+#endif
+                Command.Execute(this);
+#if DEBUG
+                profiler.Dispose();
+#endif
+                CommandHandler.ActiveCommands.Remove(this);
+                if (!Responded)
+                {
+                    Reply(T.UnknownError);
+                    MarkComplete();
+                }
+
+                if (Caller is not null)
+                    CommandWaiter.OnCommandExecuted(Caller, Command);
+            }
+            catch (BaseCommandInteraction i)
+            {
+                i.MarkComplete();
+                if (Caller is not null)
+                    CommandWaiter.OnCommandExecuted(Caller, Command);
+            }
+            catch (Exception ex)
+            {
+                Reply(T.UnknownError);
+                MarkComplete();
+                L.LogError(ex);
+            }
+        }
+        else
+        {
+            Reply(T.NoPermissions);
+            MarkComplete();
+        }
+    }
+    internal async Task ExecuteCommandAsync()
     {
         bool rem = false;
         try
@@ -492,12 +552,17 @@ public sealed class CommandInteraction : BaseCommandInteraction
 #if DEBUG
                     using IDisposable profiler = ProfilingUtils.StartTracking("Execute command: " + Command.CommandName);
 #endif
-                    await (Task = Command.Execute(this, CommandHandler.GlobalCommandCancel.Token)).ConfigureAwait(false);
-                    CommandHandler.ActiveCommands.Remove(this);
-                    rem = true;
+                    
+                    await (Task = Command.Execute(this,
+                        (Caller is null || !Caller.IsOnline
+                            ? CommandHandler.GlobalCommandCancel
+                            : CancellationTokenSource.CreateLinkedTokenSource(CommandHandler.GlobalCommandCancel.Token, Caller.DisconnectToken)).Token)
+                        ).ConfigureAwait(false);
 #if DEBUG
                     profiler.Dispose();
 #endif
+                    CommandHandler.ActiveCommands.Remove(this);
+                    rem = true;
                     if (CommandHandler.TryingToCancel)
                         return;
                     if (!UCWarfare.IsMainThread)
@@ -545,7 +610,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             {
                 if (!UCWarfare.IsMainThread)
                     await UCWarfare.ToUpdate();
-                Reply(T.UnknownError);
+                Reply(T.NoPermissions);
                 MarkComplete();
             }
         }
@@ -557,7 +622,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     public Exception Defer()
     {
-        _responded = true;
+        Responded = true;
         return this;
     }
     /// <summary>Zero based. Checks if the argument at index <paramref name="position"/> exists.</summary>
@@ -1358,7 +1423,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, color);
-        _responded = true;
+        Responded = true;
 
         return this;
     }
@@ -1372,7 +1437,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, Util.GetColor(color));
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception ReplyString(string message, string hex)
@@ -1386,7 +1451,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, hex);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception ReplyString(string message)
@@ -1399,7 +1464,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply(Translation translation)
@@ -1414,7 +1479,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T>(Translation<T> translation, T arg)
@@ -1429,7 +1494,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2>(Translation<T1, T2> translation, T1 arg1, T2 arg2)
@@ -1444,7 +1509,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3>(Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
@@ -1459,7 +1524,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4>(Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
@@ -1474,7 +1539,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5>(Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
@@ -1489,7 +1554,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6>(Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
@@ -1504,7 +1569,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7>(Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
@@ -1519,7 +1584,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
@@ -1534,7 +1599,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
@@ -1549,7 +1614,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
@@ -1564,7 +1629,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
-        _responded = true;
+        Responded = true;
         return this;
     }
     public IFormatProvider GetLocale()

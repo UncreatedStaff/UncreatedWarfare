@@ -2,12 +2,10 @@
 using SDG.Unturned;
 using Steamworks;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
@@ -19,8 +17,8 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
     public static readonly JoinUI JoinUI = new JoinUI();
     public static event PlayerDelegate OnPlayerSelecting;
     public static event PlayerDelegate OnPlayerSelected;
-    private const string SELECTED_HEX = "afffc9";
-    private const string SELF_HEX = "9bf3f3";
+    private const string SelectedHex = "afffc9";
+    private const string SelfHex = "9bf3f3";
     public override void Load()
     {
         Instance = this;
@@ -52,21 +50,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
     }
     public void OnPostPlayerInit(UCPlayer player)
     {
-        bool t1Donor = false, t2Donor = false;
-        if (player.IsOtherDonator)
-        {
-            t1Donor = true;
-            t2Donor = true;
-        }
-        else if (player.AccessibleKits is not null)
-            CheckAccess(player.AccessibleKits, ref t1Donor, ref t2Donor);
-        if (player.TeamSelectorData is null)
-            player.TeamSelectorData = new TeamSelectorData(false, t1Donor, t2Donor);
-        else
-        {
-            player.TeamSelectorData.IsTeam1Donator = t1Donor;
-            player.TeamSelectorData.IsTeam2Donator = t2Donor;
-        }
+        player.TeamSelectorData ??= new TeamSelectorData(false);
 
         JoinSelectionMenu(player);
     }
@@ -86,25 +70,18 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
 
         ITransportConnection c = player.Connection;
 
-        if (CheckTeam(team, player.TeamSelectorData.SelectedTeam) ||
-            (team == 1 ? player.TeamSelectorData.IsTeam1Donator : player.TeamSelectorData.IsTeam2Donator) ||
-            player.IsOtherDonator)
+        if (CheckTeam(team, player.TeamSelectorData.SelectedTeam))
         {
             if (player.TeamSelectorData.SelectedTeam != 0 && player.TeamSelectorData.SelectedTeam != team)
             {
                 (team == 2 ? JoinUI.Team1Highlight : JoinUI.Team2Highlight).SetVisibility(c, false);
                 bool otherTeamHasRoom = CheckTeam(team == 1 ? 2ul : 1ul, team);
-                bool donor = team == 2 ? player.TeamSelectorData!.IsTeam1Donator : player.TeamSelectorData!.IsTeam2Donator;
-                if (donor || (donor = player.IsOtherDonator)) otherTeamHasRoom = true;
-                (team == 2 ? JoinUI.Team1Select : JoinUI.Team2Select)
-                    .SetText(c, (otherTeamHasRoom ? (donor ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin) : T.TeamsUIFull)
-                        .Translate(player));
+                (team == 2 ? JoinUI.Team1Select : JoinUI.Team2Select).SetText(c, (otherTeamHasRoom ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
             }
             player.TeamSelectorData.SelectedTeam = team;
             UpdateList();
             (team == 1 ? JoinUI.Team1Highlight : JoinUI.Team2Highlight).SetVisibility(c, true);
-            (team == 1 ? JoinUI.Team1Select : JoinUI.Team2Select).SetText(c, ((team == 1 ?
-                player.TeamSelectorData!.IsTeam1Donator : player.TeamSelectorData!.IsTeam2Donator) ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin).Translate(player));
+            (team == 1 ? JoinUI.Team1Select : JoinUI.Team2Select).SetText(c, T.TeamsUIClickToJoin.Translate(player));
         }
     }
     private void OnConfirmClicked(UnturnedButton button, Player player)
@@ -137,15 +114,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
     {
         if (player.TeamSelectorData is null)
         {
-            bool t1Donor = false, t2Donor = false;
-            if (player.IsOtherDonator)
-            {
-                t1Donor = true;
-                t2Donor = true;
-            }
-            else if (player.HasDownloadedKits && player.AccessibleKits is not null)
-                CheckAccess(player.AccessibleKits, ref t1Donor, ref t2Donor);
-            player.TeamSelectorData = new TeamSelectorData(true, t1Donor, t2Donor);
+            player.TeamSelectorData = new TeamSelectorData(true);
         }
         else
         {
@@ -232,7 +201,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         }
         else
         {
-            L.LogError("Failed to assign group " + team.ToString(Data.Locale) + " to " + player.CharacterName + ".", method: "TEAM SELECTOR");
+            L.LogError("Failed to assign group " + team.ToString(Data.LocalLocale) + " to " + player.CharacterName + ".", method: "TEAM SELECTOR");
         }
     }
 
@@ -242,8 +211,8 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         JoinUI.SendToPlayer(c);
 
         JoinUI.Heading.SetText(c, T.TeamsUIHeader.Translate(player));
-        JoinUI.Team1Name.SetText(c, F.Colorize(TeamManager.Team1Name, TeamManager.Team1ColorHex));
-        JoinUI.Team2Name.SetText(c, F.Colorize(TeamManager.Team2Name, TeamManager.Team2ColorHex));
+        JoinUI.Team1Name.SetText(c, TeamManager.Team1Name.Colorize(TeamManager.Team1ColorHex));
+        JoinUI.Team2Name.SetText(c, TeamManager.Team2Name.Colorize(TeamManager.Team2ColorHex));
 
         OnDonorsChanged(player);
 
@@ -252,41 +221,37 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         JoinUI.Team1Image.SetImage(c, TeamManager.Team1Faction.FlagImageURL);
         JoinUI.Team2Image.SetImage(c, TeamManager.Team2Faction.FlagImageURL);
 
-        int t1ct = 0, t2ct = 0;
+        int t1Ct = 0, t2Ct = 0;
         foreach (UCPlayer pl in PlayerManager.OnlinePlayers.OrderBy(pl => pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting))
         {
             bool sel = pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting;
             ulong team = sel ? pl.TeamSelectorData!.SelectedTeam : pl.GetTeam();
             if (team is not 1 and not 2) continue;
-            string text = player.Steam64 == pl.Steam64 ? F.Colorize(pl.CharacterName, SELF_HEX) : (sel ? F.Colorize(pl.CharacterName, SELECTED_HEX) : pl.CharacterName);
+            string text = player.Steam64 == pl.Steam64 ? pl.CharacterName.Colorize(SelfHex) : (sel ? pl.CharacterName.Colorize(SelectedHex) : pl.CharacterName);
             if (team is 1)
-                JoinUI.Team1Players[t1ct++].SetText(c, text);
+                JoinUI.Team1Players[t1Ct++].SetText(c, text);
             else
-                JoinUI.Team2Players[t2ct++].SetText(c, text);
+                JoinUI.Team2Players[t2Ct++].SetText(c, text);
         }
 
-        SetButtonState(player, 1, CheckTeam(1, 0, t1ct, t2ct));
-        SetButtonState(player, 2, CheckTeam(2, 0, t1ct, t2ct));
+        SetButtonState(player, 1, CheckTeam(1, 0, t1Ct, t2Ct));
+        SetButtonState(player, 2, CheckTeam(2, 0, t1Ct, t2Ct));
 
-        JoinUI.Team1PlayerCount.SetText(c, t1ct.ToString(Data.Locale));
-        JoinUI.Team2PlayerCount.SetText(c, t2ct.ToString(Data.Locale));
+        JoinUI.Team1PlayerCount.SetText(c, t1Ct.ToString(Data.LocalLocale));
+        JoinUI.Team2PlayerCount.SetText(c, t2Ct.ToString(Data.LocalLocale));
     }
     private void SetButtonState(UCPlayer player, ulong team, bool hasSpace)
     {
         ITransportConnection c = player.Connection;
         if (team == 1)
         {
-            if (player.TeamSelectorData!.IsTeam1Donator)
-                hasSpace = true;
             JoinUI.Team1Button.SetVisibility(c, hasSpace);
-            JoinUI.Team1Select.SetText(c, (hasSpace ? (player.TeamSelectorData!.IsTeam1Donator ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin) : T.TeamsUIFull).Translate(player));
+            JoinUI.Team1Select.SetText(c, (hasSpace ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
         }
         else if (team == 2)
         {
-            if (player.TeamSelectorData!.IsTeam2Donator)
-                hasSpace = true;
             JoinUI.Team2Button.SetVisibility(c, hasSpace);
-            JoinUI.Team2Select.SetText(c, (hasSpace ? (player.TeamSelectorData!.IsTeam2Donator ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin) : T.TeamsUIFull).Translate(player));
+            JoinUI.Team2Select.SetText(c, (hasSpace ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
         }
     }
 
@@ -294,19 +259,19 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
     private int _t2Amt = -1;
     private void UpdateList()
     {
-        int t1ct = 0, t2ct = 0;
+        int t1Ct = 0, t2Ct = 0;
         foreach (UCPlayer pl in PlayerManager.OnlinePlayers.OrderBy(pl => pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting))
         {
             bool sel = pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting;
             ulong team = sel ? pl.TeamSelectorData!.SelectedTeam : pl.GetTeam();
             if (team is not 1 and not 2) continue;
-            string text = sel ? F.Colorize(pl.CharacterName, SELECTED_HEX) : pl.CharacterName;
-            UnturnedLabel lbl = team is 1 ? JoinUI.Team1Players[t1ct++] : JoinUI.Team2Players[t2ct++];
+            string text = sel ? pl.CharacterName.Colorize(SelectedHex) : pl.CharacterName;
+            UnturnedLabel lbl = team is 1 ? JoinUI.Team1Players[t1Ct++] : JoinUI.Team2Players[t2Ct++];
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is not null && pl2.TeamSelectorData.IsSelecting)
-                    lbl.SetText(pl2.Connection, pl.Steam64 == pl2.Steam64 ? F.Colorize(pl.CharacterName, SELF_HEX) : text);
+                    lbl.SetText(pl2.Connection, pl.Steam64 == pl2.Steam64 ? pl.CharacterName.Colorize(SelfHex) : text);
             }
         }
 
@@ -316,22 +281,22 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             if (pl.TeamSelectorData is null || !pl.TeamSelectorData.IsSelecting)
                 continue;
             ITransportConnection c = pl.Connection;
-            for (int i = t1ct; i < _t1Amt; ++i)
+            for (int i = t1Ct; i < _t1Amt; ++i)
                 JoinUI.Team1Players[i].SetText(c, string.Empty);
-            for (int i = t2ct; i < _t2Amt; ++i)
+            for (int i = t2Ct; i < _t2Amt; ++i)
                 JoinUI.Team2Players[i].SetText(c, string.Empty);
         }
 
-        if (_t1Amt < t1ct)
-            _t1Amt = t1ct;
+        if (_t1Amt < t1Ct)
+            _t1Amt = t1Ct;
 
-        if (_t2Amt < t2ct)
-            _t2Amt = t2ct;
+        if (_t2Amt < t2Ct)
+            _t2Amt = t2Ct;
 
-        bool b1 = CheckTeam(1, 0, t1ct, t2ct),
-             b2 = CheckTeam(2, 0, t1ct, t2ct),
-             b3 = CheckTeam(1, 2, t1ct, t2ct),
-             b4 = CheckTeam(2, 1, t1ct, t2ct);
+        bool b1 = CheckTeam(1, 0, t1Ct, t2Ct),
+             b2 = CheckTeam(2, 0, t1Ct, t2Ct),
+             b3 = CheckTeam(1, 2, t1Ct, t2Ct),
+             b4 = CheckTeam(2, 1, t1Ct, t2Ct);
 
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
@@ -339,8 +304,8 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             if (pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting)
             {
                 ITransportConnection c = pl.Connection;
-                JoinUI.Team1PlayerCount.SetText(c, t1ct.ToString(Data.Locale));
-                JoinUI.Team2PlayerCount.SetText(c, t2ct.ToString(Data.Locale));
+                JoinUI.Team1PlayerCount.SetText(c, t1Ct.ToString(Data.LocalLocale));
+                JoinUI.Team2PlayerCount.SetText(c, t2Ct.ToString(Data.LocalLocale));
                 if (pl.TeamSelectorData.SelectedTeam is 1)
                 {
                     JoinUI.Team1Button.SetVisibility(c, false);
@@ -366,44 +331,19 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
     }
     private void OnDonorsChanged(UCPlayer player)
     {
-        GetTeamCounts(out int t1ct, out int t2ct);
+        GetTeamCounts(out int t1Ct, out int t2Ct);
         if (player.TeamSelectorData!.SelectedTeam is 1)
         {
-            SetButtonState(player, 2, CheckTeam(2, 1, t1ct, t2ct));
+            SetButtonState(player, 2, CheckTeam(2, 1, t1Ct, t2Ct));
         }
         else if (player.TeamSelectorData.SelectedTeam is 2)
         {
-            SetButtonState(player, 1, CheckTeam(1, 2, t1ct, t2ct));
+            SetButtonState(player, 1, CheckTeam(1, 2, t1Ct, t2Ct));
         }
         else
         {
-            SetButtonState(player, 1, CheckTeam(1, 0, t1ct, t2ct));
-            SetButtonState(player, 2, CheckTeam(2, 0, t1ct, t2ct));
-        }
-    }
-    private static void CheckAccess(List<string> kits, ref bool t1Donor, ref bool t2Donor)
-    {
-        for (int i = 0; i < kits.Count; ++i)
-        {
-            if (KitManager.KitExists(kits[i], out KitOld kit) && (kit.IsPremium || kit.IsLoadout))
-            {
-                if (kit.Team == 0)
-                {
-                    t1Donor = true;
-                    t2Donor = true;
-                    break;
-                }
-                else if (kit.Team == 1)
-                {
-                    t1Donor = true;
-                    if (t2Donor) break;
-                }
-                else if (kit.Team == 2)
-                {
-                    t2Donor = true;
-                    if (t1Donor) break;
-                }
-            }
+            SetButtonState(player, 1, CheckTeam(1, 0, t1Ct, t2Ct));
+            SetButtonState(player, 2, CheckTeam(2, 0, t1Ct, t2Ct));
         }
     }
     private bool CheckTeam(ulong team, ulong toBeLeft)
@@ -414,7 +354,6 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
     }
     private void GetTeamCounts(out int t1, out int t2)
     {
-        ulong team2;
         t1 = 0;
         t2 = 0;
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
@@ -422,7 +361,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
             if (pl.TeamSelectorData is null || !pl.TeamSelectorData.IsSelecting)
             {
-                team2 = pl.GetTeam();
+                ulong team2 = pl.GetTeam();
                 if (team2 is 1)
                     ++t1;
                 else if (team2 is 2)
@@ -463,15 +402,11 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
 public class TeamSelectorData
 {
     public bool IsSelecting;
-    public bool IsTeam1Donator;
-    public bool IsTeam2Donator;
     public ulong SelectedTeam;
     public Coroutine? JoiningCoroutine;
-    public TeamSelectorData(bool isInLobby, bool t1Donor, bool t2Donor)
+    public TeamSelectorData(bool isInLobby)
     {
         IsSelecting = isInLobby;
-        IsTeam1Donator = t1Donor;
-        IsTeam2Donator = t2Donor;
     }
 }
 

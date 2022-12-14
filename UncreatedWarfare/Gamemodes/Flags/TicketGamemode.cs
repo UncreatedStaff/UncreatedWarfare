@@ -20,7 +20,7 @@ public abstract class TicketFlagGamemode<TProvider> : FlagGamemode, ITickets whe
     protected override void EventLoopAction()
     {
         base.EventLoopAction();
-        if (State == EState.ACTIVE && TicketManager.Provider != null)
+        if (State == State.Active && TicketManager.Provider != null)
             TicketManager.Provider.Tick();
     }
     public override Task DeclareWin(ulong winner)
@@ -46,7 +46,7 @@ public abstract class TicketGamemode<TProvider> : TeamGamemode, ITickets where T
     }
     protected override void EventLoopAction()
     {
-        if (State == EState.ACTIVE && TicketManager.Provider != null)
+        if (State == State.Active && TicketManager.Provider != null)
             TicketManager.Provider.Tick();
         base.EventLoopAction();
     }

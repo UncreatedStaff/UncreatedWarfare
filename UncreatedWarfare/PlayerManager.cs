@@ -3,6 +3,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.Permissions;
@@ -21,15 +22,31 @@ public static class PlayerManager
 {
     public static readonly List<UCPlayer> OnlinePlayers;
     private static readonly Dictionary<ulong, UCPlayer> _dict;
-    public static readonly Type Type = typeof(PlayerSave);
-    private static readonly FieldInfo[] fields = Type.GetFields();
+    internal static List<KeyValuePair<ulong, CancellationTokenSource>> PlayerConnectCancellationTokenSources = new List<KeyValuePair<ulong, CancellationTokenSource>>(Provider.queueSize);
 
     static PlayerManager()
     {
         OnlinePlayers = new List<UCPlayer>(50);
         _dict = new Dictionary<ulong, UCPlayer>(50);
         EventDispatcher.GroupChanged += OnGroupChagned;
+        Provider.onRejectingPlayer += OnRejectingPlayer;
+        EventDispatcher.PlayerPending += OnPlayerPending;
     }
+
+    private static void OnPlayerPending(PlayerPending e)
+    {
+        for (int i = PlayerConnectCancellationTokenSources.Count - 1; i >= 0; --i)
+        {
+            KeyValuePair<ulong, CancellationTokenSource> kvp = PlayerConnectCancellationTokenSources[i];
+            if (kvp.Key == e.Steam64)
+            {
+                kvp.Value.Cancel();
+                PlayerConnectCancellationTokenSources.RemoveAt(i);
+            }
+        }
+        PlayerConnectCancellationTokenSources.Add(new KeyValuePair<ulong, CancellationTokenSource>(e.Steam64, new CancellationTokenSource()));
+    }
+
     public static UCPlayer? FromID(ulong steam64)
     {
         lock (_dict)
@@ -37,7 +54,18 @@ public static class PlayerManager
             return _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
         }
     }
-
+    private static void OnRejectingPlayer(CSteamID steamid, ESteamRejection rejection, string explanation)
+    {
+        for (int i = PlayerConnectCancellationTokenSources.Count - 1; i >= 0; --i)
+        {
+            KeyValuePair<ulong, CancellationTokenSource> kvp = PlayerConnectCancellationTokenSources[i];
+            if (kvp.Key == steamid.m_SteamID)
+            {
+                kvp.Value.Cancel();
+                PlayerConnectCancellationTokenSources.RemoveAt(i);
+            }
+        }
+    }
     public static bool HasSave(ulong playerID, out PlayerSave save) => PlayerSave.TryReadSaveFile(playerID, out save!);
     public static PlayerSave? GetSave(ulong playerID) => PlayerSave.TryReadSaveFile(playerID, out PlayerSave? save) ? save : null;
     public static void ApplyToOnline()
@@ -85,18 +113,31 @@ public static class PlayerManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!PlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave? save) || save == null)
+        ulong s64 = player.channel.owner.playerID.steamID.m_SteamID;
+        if (!PlayerSave.TryReadSaveFile(s64, out PlayerSave? save) || save == null)
         {
-            save = new PlayerSave(player.channel.owner.playerID.steamID.m_SteamID);
+            save = new PlayerSave(s64);
             PlayerSave.WriteToSaveFile(save);
+        }
+
+        CancellationTokenSource? src = null;
+        for (int i = 0; i < PlayerConnectCancellationTokenSources.Count; ++i)
+        {
+            KeyValuePair<ulong, CancellationTokenSource> kvp = PlayerConnectCancellationTokenSources[i];
+            if (kvp.Key == s64)
+            {
+                PlayerConnectCancellationTokenSources.RemoveAt(i);
+                src = kvp.Value;
+                break;
+            }
         }
         UCPlayer ucplayer = new UCPlayer(
             player.channel.owner.playerID.steamID,
-            save.KitName,
             player,
             player.channel.owner.playerID.characterName,
             player.channel.owner.playerID.nickName,
-            save.IsOtherDonator
+            save.IsOtherDonator,
+            src ?? new CancellationTokenSource()
         );
         Data.OriginalPlayerNames.Remove(ucplayer.Steam64);
 
@@ -123,8 +164,7 @@ public static class PlayerManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        player.IsOnline = false;
-        player.Events.Dispose();
+        player.SetOffline();
 
         OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == player.Steam64);
         lock (_dict)
@@ -190,96 +230,6 @@ public static class PlayerManager
         }
         GroupManager.save();
 
-    }
-    public static ESetFieldResult SetProperty(PlayerSave obj, ref string property, string value)
-    {
-        if (obj is null) return ESetFieldResult.OBJECT_NOT_FOUND;
-        if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
-        FieldInfo? field = GetField(ref property, out ESetFieldResult reason);
-        if (field is not null && reason == ESetFieldResult.SUCCESS)
-        {
-            if (Util.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
-            {
-                try
-                {
-                    field.SetValue(obj, val);
-                }
-                catch (Exception ex)
-                {
-                    L.LogError(ex);
-                    return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
-                }
-                return ESetFieldResult.SUCCESS;
-            }
-            return ESetFieldResult.INVALID_INPUT;
-        }
-        else return reason;
-    }
-    public static ESetFieldResult SetProperty<TValue>(PlayerSave obj, string property, TValue value)
-    {
-        if (obj is null) return ESetFieldResult.OBJECT_NOT_FOUND;
-        if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
-        FieldInfo? field = GetField(ref property, out ESetFieldResult reason);
-        if (field is not null && reason == ESetFieldResult.SUCCESS)
-        {
-            if (field.FieldType.IsAssignableFrom(value.GetType()))
-            {
-                try
-                {
-                    field.SetValue(obj, value);
-                }
-                catch (Exception ex)
-                {
-                    L.LogError(ex);
-                    return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
-                }
-                return ESetFieldResult.SUCCESS;
-            }
-            return ESetFieldResult.INVALID_INPUT;
-        }
-        else return reason;
-    }
-    private static FieldInfo? GetField(ref string property, out ESetFieldResult reason)
-    {
-        for (int i = 0; i < fields.Length; i++)
-        {
-            FieldInfo fi = fields[i];
-            if (fi.Name.Equals(property, StringComparison.Ordinal))
-            {
-                property = fi.Name;
-                return ValidateField(fi, out reason) ? fi : null;
-            }
-        }
-        for (int i = 0; i < fields.Length; i++)
-        {
-            FieldInfo fi = fields[i];
-            if (fi.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
-            {
-                property = fi.Name;
-                return ValidateField(fi, out reason) ? fi : null;
-            }
-        }
-        reason = ESetFieldResult.FIELD_NOT_FOUND;
-        return default;
-    }
-    private static bool ValidateField(FieldInfo field, out ESetFieldResult reason)
-    {
-        if (field == null || field.IsStatic || field.IsInitOnly)
-        {
-            reason = ESetFieldResult.FIELD_NOT_FOUND;
-            return false;
-        }
-        Attribute atr = Attribute.GetCustomAttribute(field, typeof(CommandSettable));
-        if (atr is not null)
-        {
-            reason = ESetFieldResult.SUCCESS;
-            return true;
-        }
-        else
-        {
-            reason = ESetFieldResult.FIELD_PROTECTED;
-            return false;
-        }
     }
     public static class NetCalls
     {

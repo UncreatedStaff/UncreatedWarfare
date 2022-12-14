@@ -17,6 +17,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch;
 
+// todo make use tickets instead, would just make more sense
 public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISquads, IRevives, ITeamScore, ITraits
 {
     protected TraitManager _traitManager;
@@ -100,6 +101,12 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         Commands.ClearCommand.ClearItems();
         Task.Run(EndGame);
     }
+
+    protected override void InitUI(UCPlayer player)
+    {
+        OnScoreUpdated();
+    }
+
     private void OnScoreUpdated()
     {
         // todo update ui?
@@ -110,6 +117,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         _t2score = 0;
         return base.PreGameStarting(isOnLoad);
     }
+    
     private void OnDeath(PlayerDied e)
     {
         if (e.Killer is not null)

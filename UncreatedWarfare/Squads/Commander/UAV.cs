@@ -70,18 +70,21 @@ public class UAV : MonoBehaviour, IBuff
             requester.SendChat(T.RequestAlreadyActive);
             return;
         }
-        if (!KitManager.Loaded || !SquadManager.Loaded)
+        KitManager? manager = KitManager.GetSingletonQuick();
+        if (manager == null || !SquadManager.Loaded)
         {
             requester.SendChat(T.GamemodeError);
             return;
         }
-        if (!KitManager.HasKit(requester, out KitOld kit))
+
+        Kit? reqKit = requester.ActiveKit?.Item;
+        if (reqKit == null)
         {
             requester.SendChat(T.RequestUAVNoKit);
             return;
         }
 
-        if (kit.Class != Class.Squadleader || !requester.IsSquadLeader())
+        if (reqKit.Class != Class.Squadleader || !requester.IsSquadLeader())
             requester.SendChat(T.RequestUAVNotSquadleader);
         UCPlayer? activeCommander = SquadManager.Singleton.Commanders.GetCommander(team);
         if (activeCommander != null)

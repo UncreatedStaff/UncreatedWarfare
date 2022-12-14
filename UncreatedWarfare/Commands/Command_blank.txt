@@ -9,8 +9,8 @@ using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 namespace Uncreated.Warfare.Commands;
 public sealed class BlankCommand : Command
 {
-    private const string SYNTAX = "/blank";
-    private const string HELP = "Does nothing.";
+    private const string Syntax = "/blank";
+    private const string Help = "Does nothing.";
 
     public BlankCommand() : base("blank", EAdminType.MEMBER) { }
 

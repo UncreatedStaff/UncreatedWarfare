@@ -337,7 +337,7 @@ public sealed class TranslationListConverter : JsonConverter<TranslationList>
     }
 }
 
-public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
+public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
 {
     public const string ENGLISH = "en-us";
     public const string RUSSIAN = "ru-ru";
@@ -410,6 +410,8 @@ public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
         this.display_name = display_name;
         this.values = values;
     }
+
+    public LanguageAliasSet(ref Utf8JsonReader reader) => ReadJson(ref reader);
     public void ReadJson(ref Utf8JsonReader reader)
     {
         while (reader.Read())
@@ -450,7 +452,7 @@ public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
         return display_name;
     }
 
-    public readonly void WriteJson(Utf8JsonWriter writer)
+    public void WriteJson(Utf8JsonWriter writer)
     {
         writer.WriteProperty(nameof(key), key);
         writer.WriteProperty(nameof(display_name), display_name);
@@ -802,7 +804,7 @@ public static partial class JSONMethods
             SaveLangs(Data.Languages);
         }
     }
-    public static Dictionary<string, LanguageAliasSet> LoadLangAliases()
+    public static List<LanguageAliasSet> LoadLangAliases()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -813,24 +815,21 @@ public static partial class JSONMethods
         {
             if (!File.Exists(langAliases))
             {
-                Dictionary<string, LanguageAliasSet> defaultLanguageAliasSets2 = new Dictionary<string, LanguageAliasSet>(DefaultLanguageAliasSets.Count);
-                using (FileStream stream = new FileStream(langAliases, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                List<LanguageAliasSet> defaultLanguageAliasSets2 = new List<LanguageAliasSet>(DefaultLanguageAliasSets.Count);
+                using FileStream stream = new FileStream(langAliases, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+                Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                writer.WriteStartArray();
+                for (int i = 0; i < DefaultLanguageAliasSets.Count; i++)
                 {
-                    Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                    writer.WriteStartArray();
-                    for (int i = 0; i < DefaultLanguageAliasSets.Count; i++)
-                    {
-                        LanguageAliasSet set = DefaultLanguageAliasSets[i];
-                        writer.WriteStartObject();
-                        set.WriteJson(writer);
-                        writer.WriteEndObject();
-                        defaultLanguageAliasSets2.Add(set.key, set);
-                    }
-                    writer.WriteEndArray();
-                    writer.Dispose();
-                    stream.Close();
-                    stream.Dispose();
+                    LanguageAliasSet set = DefaultLanguageAliasSets[i];
+                    writer.WriteStartObject();
+                    set.WriteJson(writer);
+                    writer.WriteEndObject();;
                 }
+                writer.WriteEndArray();
+                writer.Dispose();
+                stream.Close();
+                stream.Dispose();
                 return defaultLanguageAliasSets2;
             }
             using (FileStream stream = new FileStream(langAliases, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -841,7 +840,7 @@ public static partial class JSONMethods
                     L.LogError("Language alias sets at aliases.json is too long to read.");
                     goto def;
                 }
-                Dictionary<string, LanguageAliasSet> languageAliasSets = new Dictionary<string, LanguageAliasSet>(DefaultLanguageAliasSets.Count);
+                List<LanguageAliasSet> languageAliasSets = new List<LanguageAliasSet>(DefaultLanguageAliasSets.Count);
                 byte[] bytes = new byte[len];
                 stream.Read(bytes, 0, (int)len);
                 try
@@ -850,13 +849,12 @@ public static partial class JSONMethods
                     while (reader.Read())
                     {
                         if (reader.TokenType == JsonTokenType.StartArray) continue;
-                        else if (reader.TokenType == JsonTokenType.EndArray) break;
-                        else if (reader.TokenType == JsonTokenType.StartObject)
+                        if (reader.TokenType == JsonTokenType.EndArray) break;
+                        if (reader.TokenType == JsonTokenType.StartObject)
                         {
-                            LanguageAliasSet set = new LanguageAliasSet();
-                            set.ReadJson(ref reader);
+                            LanguageAliasSet set = new LanguageAliasSet(ref reader);
                             if (set.key != null)
-                                languageAliasSets.Add(set.key, set);
+                                languageAliasSets.Add(set);
                         }
                     }
 
@@ -866,21 +864,19 @@ public static partial class JSONMethods
                 {
                     L.LogError("Failed to read language aliases at aliases.json.");
                     L.LogError(e);
-                    goto def;
                 }
             }
         }
         else
         {
             L.LogError("Failed to load language aliases, see above. Loading default language aliases.");
-            goto def;
         }
-    def:
-        Dictionary<string, LanguageAliasSet> defaultLanguageAliasSets = new Dictionary<string, LanguageAliasSet>(DefaultLanguageAliasSets.Count);
+        def:
+        List<LanguageAliasSet> defaultLanguageAliasSets = new List<LanguageAliasSet>(DefaultLanguageAliasSets.Count);
         for (int i = 0; i < DefaultLanguageAliasSets.Count; i++)
         {
             LanguageAliasSet set = DefaultLanguageAliasSets[i];
-            defaultLanguageAliasSets.Add(set.key, set);
+            defaultLanguageAliasSets.Add(set);
         }
         return defaultLanguageAliasSets;
     }

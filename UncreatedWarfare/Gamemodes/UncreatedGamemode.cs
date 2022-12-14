@@ -39,9 +39,9 @@ namespace Uncreated.Warfare.Gamemodes;
 
 public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelStartListenerAsync, IReloadableSingleton, ITranslationArgument
 {
-    public const float MATCH_PRESENT_THRESHOLD = 0.65f;
-    public const string GAMEMODE_RELOAD_KEY = "gamemode";
-    protected static readonly Vector3 BLOCKER_SPAWN_ROTATION = new Vector3(270f, 0f, 180f);
+    public const float MatchPresentThreshold = 0.65f;
+    public const string GamemodeReloadKey = "gamemode";
+    protected static readonly Vector3 BlockerSpawnRotation = new Vector3(270f, 0f, 180f);
     public static readonly List<KeyValuePair<Type, float>> GamemodeRotation = new List<KeyValuePair<Type, float>>();
     public static readonly List<KeyValuePair<string, Type>> Gamemodes = new List<KeyValuePair<string, Type>>
     {
@@ -64,22 +64,25 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     internal bool shutdownAfterGame = false;
     internal ulong shutdownPlayer = 0;
     protected readonly string _name;
+    protected Coroutine? StagingPhaseTimer;
     protected float _startTime = 0f;
     protected long _gameID;
     protected int _ticks = 0;
     protected float _stagingSeconds;
-    protected EState _state;
+    protected State _state;
     private float _eventLoopSpeed;
-    private bool useEventLoop;
+    private bool _useEventLoop;
     private bool _isPreLoading;
     private List<IUncreatedSingleton> _singletons;
-    private bool wasLevelLoadedOnStart;
+    private IReadOnlyList<IUncreatedSingleton> _singletonsRl;
+    private bool _wasLevelLoadedOnStart;
     private bool _hasOnReadyRan = false;
     private bool _hasTimeSynced = false;
     public event Action? OnGameTick;
+    protected IReadOnlyList<IUncreatedSingleton> Singletons => _singletonsRl;
     public bool LoadAsynchronous => true;
     public override bool AwaitLoad => true;
-    public EState State => _state;
+    public State State => _state;
     public float StartTime => _startTime;
     public float StagingSeconds => _stagingSeconds;
     public float SecondsSinceStart => Time.realtimeSinceStartup - _startTime;
@@ -91,7 +94,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public bool Every30Seconds => _ticks % Mathf.RoundToInt(30f / _eventLoopSpeed) == 0;
     public bool Every15Seconds => _ticks % Mathf.RoundToInt(15f / _eventLoopSpeed) == 0;
     public bool Every10Seconds => _ticks % Mathf.RoundToInt(10f / _eventLoopSpeed) == 0;
-    public string ReloadKey => GAMEMODE_RELOAD_KEY;
+    public string ReloadKey => GamemodeReloadKey;
     public virtual bool UseWhitelist => true;
     public abstract string DisplayName { get; }
     public virtual bool TransmitMicWhileNotActive => true;
@@ -99,20 +102,20 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public virtual bool ShowOFPUI => true;
     public virtual bool UseTips => true;
     public virtual bool AllowCosmetics => false;
-    public virtual EGamemode GamemodeType => EGamemode.UNDEFINED;
+    public virtual GamemodeType GamemodeType => GamemodeType.Undefined;
     protected bool HasOnReadyRan => _hasOnReadyRan;
     public bool EndScreenUp => this is IEndScreen es && es.IsScreenUp;
     protected Gamemode(string name, float eventLoopSpeed)
     {
         this._name = name;
         this._eventLoopSpeed = eventLoopSpeed;
-        this.useEventLoop = eventLoopSpeed > 0;
-        this._state = EState.LOADING;
+        this._useEventLoop = eventLoopSpeed > 0;
+        this._state = State.Loading;
     }
     public void SetTiming(float newSpeed)
     {
         this._eventLoopSpeed = newSpeed;
-        this.useEventLoop = newSpeed > 0;
+        this._useEventLoop = newSpeed > 0;
     }
     public void AdvanceDelays(float seconds)
     {
@@ -129,11 +132,14 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         using IDisposable profiler = ProfilingUtils.StartTracking(Name + " Load Sequence");
 #endif
         if (this._singletons is null)
+        {
             this._singletons = new List<IUncreatedSingleton>(16);
+            this._singletonsRl = _singletons.AsReadOnly();
+        }
         else
             this._singletons.Clear();
         _hasOnReadyRan = false;
-        wasLevelLoadedOnStart = Level.isLoaded;
+        _wasLevelLoadedOnStart = Level.isLoaded;
         _isPreLoading = true;
         InternalPreInit();
         await PreInit().ThenToUpdate();
@@ -169,7 +175,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 break;
             }
         }
-        if (wasLevelLoadedOnStart)
+        if (_wasLevelLoadedOnStart)
         {
             for (int i = 0; i < _singletons.Count; ++i)
             {
@@ -278,7 +284,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
     /// <summary>Ran when a player joins or per online player after the game starts.</summary>
     /// <remarks>No base</remarks>
-    public virtual Task PlayerInit(UCPlayer player, bool wasAlreadyOnline) => Task.CompletedTask;
+    protected virtual Task PlayerInit(UCPlayer player, bool wasAlreadyOnline) => Task.CompletedTask;
 
     /// <summary>Run in <see cref="EventLoopAction"/>, returns true if <param name="seconds"/> ago it would've also returned true. Based on tick speed and number of ticks.</summary>
     /// <remarks>Returns true if the second mark passed between the end of last tick and the start of this tick. Inlined when possible.</remarks>
@@ -366,13 +372,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     private void InternalPreDispose()
     {
-        if (_stagingPhaseTimer is not null)
-            StopCoroutine(_stagingPhaseTimer);
-        if (_state == EState.STAGING)
+        if (StagingPhaseTimer is not null)
+            StopCoroutine(StagingPhaseTimer);
+        if (_state == State.Staging)
         {
             _stagingSeconds = 0;
             EndStagingPhase();
-            _stagingPhaseTimer = null;
+            StagingPhaseTimer = null;
         }
     }
     private void InternalOnReady()
@@ -386,7 +392,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
         ReplaceBarricadesAndStructures();
         _hasTimeSynced = false;
-        if (useEventLoop)
+        if (_useEventLoop)
         {
             EventLoopCoroutine = StartCoroutine(EventLoop());
         }
@@ -413,7 +419,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     public async Task OnLevelReady()
     {
-        if (!wasLevelLoadedOnStart)
+        if (!_wasLevelLoadedOnStart)
         {
             await UCWarfare.ToUpdate();
             Task task;
@@ -576,7 +582,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         TraitSigns.TimeSync();
         VehicleSigns.TimeSync();
     }
-
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => DisplayName;
     public void ShutdownAfterGame(string reason, ulong player)
     {
@@ -590,13 +595,12 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         shutdownMessage = string.Empty;
         shutdownPlayer = 0;
     }
-
     public virtual async Task DeclareWin(ulong winner)
     {
         try
         {
             ThreadUtil.assertIsGameThread();
-            this._state = EState.FINISHED;
+            this._state = State.Finished;
             L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
             for (int i = 0; i < _singletons.Count; ++i)
             {
@@ -631,7 +635,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     switch (played)
                     {
                         // Any player who was online for 65% of the match will be awarded a win or punished with a loss
-                        case ITeamPresenceStats ps when tps.GetPresence(ps, 1) >= MATCH_PRESENT_THRESHOLD:
+                        case ITeamPresenceStats ps when tps.GetPresence(ps, 1) >= MatchPresentThreshold:
                         {
                             if (winner == 1)
                                 StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
@@ -641,7 +645,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                         }
                         case ITeamPresenceStats ps:
                         {
-                            if (tps.GetPresence(ps, 2) >= MATCH_PRESENT_THRESHOLD)
+                            if (tps.GetPresence(ps, 2) >= MatchPresentThreshold)
                             {
                                 if (winner == 2)
                                     StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
@@ -653,7 +657,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                         }
                         case IPresenceStats ps2:
                         {
-                            if (tps.GetPresence(ps2) >= MATCH_PRESENT_THRESHOLD)
+                            if (tps.GetPresence(ps2) >= MatchPresentThreshold)
                             {
                                 if (IsWinner(played.Player))
                                     StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
@@ -676,7 +680,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             L.LogError(ex);
         }
     }
-
     internal virtual bool IsWinner(UCPlayer player) =>
         throw new NotImplementedException("IsWinner is not overridden by a non-team gamemode.");
     public static async Task<bool> TryLoadGamemode(Type type)
@@ -685,7 +688,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             if (Data.Gamemode is not null)
             {
-                Data.Gamemode._state = EState.DISCARD;
+                Data.Gamemode._state = State.Discarded;
                 await Data.Singletons.UnloadSingletonAsync(Data.Gamemode).ConfigureAwait(false);
                 Data.Gamemode = null!;
                 await UCWarfare.ToUpdate();
@@ -714,7 +717,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         await FailToLoadGame(new Exception("Invalid type: " + (type?.Name ?? "<null>"))).ConfigureAwait(false);
         return false;
     }
-
     internal static async Task FailToLoadGame(Exception? ex)
     {
         L.LogError("Failed to load gamemode , shutting down in 10 seconds.");
@@ -736,7 +738,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         Data.Gamemode = null!;
         UCWarfare.ForceUnload();
     }
-
     protected virtual async Task EndGame()
     {
         try
@@ -799,7 +800,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         ThreadUtil.assertIsGameThread();
         CooldownManager.OnGameStarting();
         L.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
-        _state = EState.ACTIVE;
+        _state = State.Active;
         _gameID = DateTime.UtcNow.Ticks;
         _startTime = Time.realtimeSinceStartup;
         for (int i = 0; i < Provider.clients.Count; i++)
@@ -887,7 +888,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public virtual void OnGroupChanged(GroupChanged e) { }
     private void OnGroupChangedIntl(GroupChanged e)
     {
-        if (State == EState.STAGING)
+        if (State == State.Staging)
         {
             if (e.NewTeam is < 1 or > 2)
                 ClearStagingUI(e.Player);
@@ -898,7 +899,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     public virtual void PlayerLeave(UCPlayer player)
     {
-        if (State is not EState.ACTIVE or EState.STAGING && PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave save))
+        if (State is not State.Active or State.Staging && PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave save))
         {
             save.ShouldRespawnOnJoin = true;
             PlayerSave.WriteToSaveFile(save);
@@ -906,7 +907,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         foreach (IPlayerDisconnectListener listener in _singletons.OfType<IPlayerDisconnectListener>())
             listener.OnPlayerDisconnecting(player);
     }
-
     public virtual void OnPlayerDeath(PlayerDied e)
     {
         Points.OnPlayerDeath(e);
@@ -943,13 +943,12 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     public virtual void Subscribe() { }
     public virtual void Unsubscribe() { }
-    protected Coroutine? _stagingPhaseTimer;
     public virtual void StartStagingPhase(float seconds)
     {
         _stagingSeconds = seconds;
-        _state = EState.STAGING;
+        _state = State.Staging;
 
-        _stagingPhaseTimer = StartCoroutine(StagingPhaseLoop());
+        StagingPhaseTimer = StartCoroutine(StagingPhaseLoop());
     }
     public void SkipStagingPhase()
     {
@@ -961,10 +960,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
         while (StagingSeconds > 0)
         {
-            if (State != EState.STAGING)
+            if (State != State.Staging)
             {
                 EndStagingPhase();
-                _stagingPhaseTimer = null;
+                StagingPhaseTimer = null;
                 yield break;
             }
 
@@ -974,7 +973,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             _stagingSeconds--;
         }
         EndStagingPhase();
-        _stagingPhaseTimer = null;
+        StagingPhaseTimer = null;
     }
     public virtual void ShowStagingUI(UCPlayer player)
     {
@@ -1012,7 +1011,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     protected virtual void EndStagingPhase()
     {
         CTFUI.StagingUI.ClearFromAllPlayers();
-        _state = EState.ACTIVE;
+        _state = State.Active;
         OnStagingComplete();
     }
     public void ReplaceBarricadesAndStructures()
@@ -1159,7 +1158,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             }
         }
     }
-
     public static Type? GetNextGamemode()
     {
 #if DEBUG
@@ -1179,12 +1177,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
         return null;
     }
-
     internal virtual string DumpState()
     {
         return "Mode: " + DisplayName;
     }
-
     internal async Task OnQuestCompleted(QuestCompleted e)
     {
         for (int i = 0; i < _singletons.Count; ++i)
@@ -1235,26 +1231,30 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
         else e.Break();
     }
+    internal virtual bool CanRefillAmmoAt(ItemBarricadeAsset barricade)
+    {
+        return Config.BarricadeAmmoCrate.MatchGuid(barricade.GUID);
+    }
 }
-public enum EState : byte
+public enum State : byte
 {
-    ACTIVE,
-    PAUSED,
-    FINISHED,
-    LOADING,
-    STAGING,
-    DISCARD
+    Active,
+    Paused,
+    Finished,
+    Loading,
+    Staging,
+    Discarded
 }
 
 [Translatable("Gamemode Type")]
-public enum EGamemode : byte
+public enum GamemodeType : byte
 {
     [Translatable("Vanilla")]
-    UNDEFINED,
+    Undefined,
     [Translatable("Advance and Secure")]
-    TEAM_CTF,
-    INVASION,
-    INSURGENCY,
-    CONQUEST,
-    HARDPOINT
+    TeamCTF,
+    Invasion,
+    Insurgency,
+    Conquest,
+    Hardpoint
 }

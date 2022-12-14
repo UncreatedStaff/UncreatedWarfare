@@ -73,9 +73,9 @@ public sealed partial class Conquest :
     Leaderboard<ConquestStats, ConquestStatTracker>? IImplementsLeaderboard<ConquestStats, ConquestStatTracker>.Leaderboard => _endScreen;
     ConquestStatTracker IImplementsLeaderboard<ConquestStats, ConquestStatTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     public bool IsScreenUp => _isScreenUp;
-    object IGameStats.GameStats => _gameStats;
+    IStatTracker IGameStats.GameStats => _gameStats;
     public override string DisplayName => "Conquest";
-    public override EGamemode GamemodeType => EGamemode.CONQUEST;
+    public override GamemodeType GamemodeType => GamemodeType.Conquest;
     public Conquest() : base(nameof(Conquest), Config.AASEvaluateTime) { }
     protected override Task PreInit()
     {
@@ -182,7 +182,7 @@ public sealed partial class Conquest :
     }
     private void EvaluatePoints(Flag flag, bool overrideInactiveCheck)
     {
-        if (State == EState.ACTIVE || overrideInactiveCheck)
+        if (State == Warfare.Gamemodes.State.Active || overrideInactiveCheck)
         {
             if (!flag.IsContested(out ulong winner))
             {
@@ -309,29 +309,9 @@ public sealed partial class Conquest :
         CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
         UpdateFlag(flag);
     }
-    public override void OnJoinTeam(UCPlayer player, ulong team)
+    protected override void InitUI(UCPlayer player)
     {
-        if (team is 1 or 2)
-        {
-            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out KitOld unarmed))
-                KitManager.GiveKit(player, unarmed);
-            else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
-            else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
-        }
-        else
-        {
-            if (KitManager.KitExists(TeamManager.DefaultKit, out KitOld @default)) KitManager.GiveKit(player, @default);
-            else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
-        }
-        _gameStats.OnPlayerJoin(player);
-        if (IsScreenUp && _endScreen != null)
-            _endScreen.OnPlayerJoined(player);
-        else
-        {
-            TicketManager.SendUI(player);
-            ConquestUI.SendFlagList(player);
-        }
-        base.OnJoinTeam(player, team);
+        ConquestUI.SendFlagList(player);
     }
     public override void OnGroupChanged(GroupChanged e)
     {
@@ -401,7 +381,7 @@ public class ConquestTicketProvider : BaseTicketProvider, IFlagCapturedListener,
     }
     public override void Tick()
     {
-        if (Data.Gamemode != null && Data.Gamemode.State == EState.ACTIVE)
+        if (Data.Gamemode != null && Data.Gamemode.State == State.Active)
         {
             if (Data.Gamemode.EveryXSeconds(Gamemode.Config.ConquestPointCount * Gamemode.Config.ConquestTicketBleedIntervalPerPoint))
             {

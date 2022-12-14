@@ -5,5 +5,5 @@ public interface IGamemode
     string DisplayName { get; }
     long GameID { get; }
     string Name { get; }
-    EState State { get; }
+    State State { get; }
 }

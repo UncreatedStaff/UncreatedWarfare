@@ -203,7 +203,7 @@ public static class UCBarricadeManager
             return list;
         }
     }
-    public static int CountBarricadesWhere(float range, Vector3 origin, Predicate<BarricadeDrop> predicate)
+    public static int CountBarricadesWhere(float range, Vector3 origin, Predicate<BarricadeDrop> predicate, int max = -1)
     {
         lock (RegionBuffer)
         {
@@ -220,13 +220,42 @@ public static class UCBarricadeManager
                 foreach (BarricadeDrop barricade in region.drops)
                 {
                     if (predicate.Invoke(barricade))
-                        ++rtn;
+                    {
+                        if (max <= ++rtn && max > 0)
+                            return rtn;
+                    }
                 }
             }
             return rtn;
         }
     }
-    public static int CountBarricadesWhere(Predicate<BarricadeDrop> predicate)
+    public static int CountStructuresWhere(float range, Vector3 origin, Predicate<StructureDrop> predicate, int max = -1)
+    {
+        lock (RegionBuffer)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            RegionBuffer.Clear();
+            int rtn = 0;
+            Regions.getRegionsInRadius(origin, range, RegionBuffer);
+            for (int r = 0; r < RegionBuffer.Count; r++)
+            {
+                RegionCoordinate rc = RegionBuffer[r];
+                StructureRegion region = StructureManager.regions[rc.x, rc.y];
+                foreach (StructureDrop barricade in region.drops)
+                {
+                    if (predicate.Invoke(barricade))
+                    {
+                        if (max <= ++rtn && max > 0)
+                            return rtn;
+                    }
+                }
+            }
+            return rtn;
+        }
+    }
+    public static int CountBarricadesWhere(Predicate<BarricadeDrop> predicate, int max = -1)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -240,7 +269,34 @@ public static class UCBarricadeManager
                 foreach (BarricadeDrop barricade in region.drops)
                 {
                     if (predicate.Invoke(barricade))
-                        ++rtn;
+                    {
+                        if (max <= ++rtn && max > 0)
+                            return rtn;
+                    }
+                }
+            }
+        }
+
+        return rtn;
+    }
+    public static int CountStructuresWhere(Predicate<StructureDrop> predicate, int max = -1)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        int rtn = 0;
+        for (int x = 0; x < Regions.WORLD_SIZE; x++)
+        {
+            for (int y = 0; y < Regions.WORLD_SIZE; y++)
+            {
+                StructureRegion region = StructureManager.regions[x, y];
+                foreach (StructureDrop barricade in region.drops)
+                {
+                    if (predicate.Invoke(barricade))
+                    {
+                        if (max <= ++rtn && max > 0)
+                            return rtn;
+                    }
                 }
             }
         }

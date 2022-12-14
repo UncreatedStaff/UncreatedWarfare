@@ -101,18 +101,14 @@ public class AmmoCommand : AsyncCommand
             if (!ctx.Caller.IsOnTeam)
                 throw ctx.Reply(T.NotOnCaptureTeam);
 
-            if (!KitManager.HasKit(ctx.Caller.Steam64, out KitOld kit))
+            SqlItem<Kit>? kit = ctx.Caller.ActiveKit;
+            Kit? kit2 = kit?.Item;
+            if (kit2 == null)
                 throw ctx.Reply(T.AmmoNoKit);
 
-            int ammoCost = ctx.Caller.KitClass switch
-            {
-                Class.HAT or Class.MachineGunner or Class.CombatEngineer => 3,
-                Class.LAT or Class.AutomaticRifleman or Class.Grenadier => 2,
-                _ => 1
-            };
+            int ammoCost = KitManager.GetAmmoCost(kit2.Class);
 
-            if (Gamemode.Config.BarricadeAmmoCrate.MatchGuid(barricade.asset.GUID) ||
-                (Data.Is<Insurgency>() && Gamemode.Config.BarricadeInsurgencyCache.MatchGuid(barricade.asset.GUID)))
+            if (Data.Gamemode.CanRefillAmmoAt(barricade))
             {
                 if (TeamManager.Team1Faction.Ammo is null || !TeamManager.Team1Faction.Ammo.Exists || TeamManager.Team2Faction.Ammo is null || !TeamManager.Team2Faction.Ammo.Exists)
                 {
@@ -136,7 +132,7 @@ public class AmmoCommand : AsyncCommand
                     throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, ammoCost);
 
                 WipeDroppedItems(ctx.CallerID);
-                KitManager.ResupplyKit(ctx.Caller, kit);
+                await KitManager.ResupplyKit(ctx.Caller, kit!, token: token).ThenToUpdate(token);
 
                 if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
                     F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);
@@ -163,7 +159,7 @@ public class AmmoCommand : AsyncCommand
                     if (ammobag.Ammo < ammoCost)
                         throw ctx.Reply(T.AmmoOutOfStock, ammobag.Ammo, ammoCost);
 
-                    ammobag.ResupplyPlayer(ctx.Caller, kit, ammoCost);
+                    await ammobag.ResupplyPlayer(ctx.Caller, kit!, ammoCost, token).ThenToUpdate(token);
 
                     if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
                         F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);

@@ -743,14 +743,14 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING)
+        if (Data.Gamemode.State != State.Active && Data.Gamemode.State != State.Staging)
         {
             e.Player.SendChat(T.VehicleStaging, e.Vehicle.asset);
             e.Break();
             return;
         }
         if (!e.Vehicle.asset.canBeLocked) return;
-        if (!e.Player.OnDuty() && Data.Gamemode.State == EState.STAGING && Data.Is<IStagingPhase>(out _) && (!Data.Is(out IAttackDefense atk) || e.Player.GetTeam() == atk.AttackingTeam))
+        if (!e.Player.OnDuty() && Data.Gamemode.State == State.Staging && Data.Is<IStagingPhase>(out _) && (!Data.Is(out IAttackDefense atk) || e.Player.GetTeam() == atk.AttackingTeam))
         {
             e.Player.SendChat(T.VehicleStaging, e.Vehicle.asset);
             e.Break();
@@ -761,12 +761,11 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             e.Break();
             return;
         }
-
-        if (!KitManager.HasKit(e.Player, out KitOld kit))
+        
+        if (!e.Player.HasKit)
         {
             e.Player.SendChat(T.VehicleNoKit);
             e.Break();
-            return;
         }
     }
     private void OnVehicleSwapSeatRequested(VehicleSwapSeatRequested e)
@@ -782,7 +781,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         }
         else
         {
-            if (!KitManager.HasKit(e.Player, out KitOld kit))
+            if (!e.Player.HasKit)
             {
                 e.Player.SendChat(T.VehicleNoKit);
                 e.Break();

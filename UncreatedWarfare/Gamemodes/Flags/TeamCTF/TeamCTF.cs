@@ -12,7 +12,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTracker, TeamCTFTicketProvider>
 {
     public override string DisplayName => "Advance and Secure";
-    public override EGamemode GamemodeType => EGamemode.TEAM_CTF;
+    public override GamemodeType GamemodeType => GamemodeType.TeamCTF;
     public TeamCTF() : base(nameof(TeamCTF), Config.AASEvaluateTime) { }
     protected override Task PostDispose()
     {

@@ -584,7 +584,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
             }
         }
 
-        if (Data.Gamemode.State == EState.STAGING)
+        if (Data.Gamemode.State == State.Staging)
         {
             for (int i = 0; i < player.ActiveTraits.Count; ++i)
             {

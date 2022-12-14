@@ -620,7 +620,7 @@ public static class EventFunctions
             cullingHandler = NO_COMMS;
             shouldBroadcastOverRadio = false;
         }
-        else if (Data.Gamemode.State is EState.FINISHED or EState.LOADING)
+        else if (Data.Gamemode.State is State.Finished or State.Loading)
         {
             if (!UCWarfare.Config.RelayMicsDuringEndScreen)
             {
@@ -669,8 +669,8 @@ public static class EventFunctions
         }
         switch (Data.Gamemode.State)
         {
-            case EState.STAGING:
-            case EState.ACTIVE:
+            case State.Staging:
+            case State.Active:
                 if (squad)
                 {
                     bool CullingHandler(PlayerVoice source, PlayerVoice target)
@@ -690,8 +690,8 @@ public static class EventFunctions
                     return;
                 }
                 return;
-            case EState.LOADING:
-            case EState.FINISHED:
+            case State.Loading:
+            case State.Finished:
                 if (!UCWarfare.Config.RelayMicsDuringEndScreen)
                 {
                     cullingHandler = NO_COMMS;
@@ -1040,7 +1040,7 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.Gamemode.State != EState.ACTIVE)
+        if (Data.Gamemode.State != State.Active)
         {
             shouldAllow = false;
             return;
@@ -1591,6 +1591,8 @@ public static class EventFunctions
     }
     internal static void OnPostHealedPlayer(Player instigator, Player target)
     {
+        UCPlayer? pl = UCPlayer.FromPlayer(target);
+        UCPlayer? pl2 = UCPlayer.FromPlayer(instigator);
         if (instigator.equipment.asset is ItemConsumeableAsset asset)
         {
             if (asset.bleedingModifier == ItemConsumeableAsset.Bleeding.Heal)
@@ -1605,8 +1607,6 @@ public static class EventFunctions
             {
                 if (target.TryGetPlayerData(out UCPlayerData data))
                 {
-                    UCPlayer? pl = UCPlayer.FromPlayer(target);
-                    UCPlayer? pl2 = UCPlayer.FromPlayer(instigator);
                     data.LastBleedingArgs = new DeathMessageArgs
                     {
                         DeadPlayerName = pl == null ? target.channel.owner.playerID.characterName : pl.Name.CharacterName,
@@ -1637,7 +1637,7 @@ public static class EventFunctions
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             r.ReviveManager.ClearInjuredMarker(instigator.channel.owner.playerID.steamID.m_SteamID, instigator.GetTeam());
-            r.ReviveManager.OnPlayerHealed(instigator, target);
+            r.ReviveManager.OnPlayerHealed(pl2, pl);
         }
     }
     internal static void OnGameUpdateDetected(string newVersion, ref bool shouldShutdown)

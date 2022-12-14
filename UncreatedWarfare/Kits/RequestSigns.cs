@@ -138,25 +138,14 @@ public class RequestSigns : ListSingleton<RequestSign>
     }
     internal static void OnTeamPlayerCountChanged(UCPlayer? allPlayer = null)
     {
-        if (allPlayer is null)
+        // todo update all loadouts or request signs where team limit < 1
+        for (int i = 0; i < Singleton.Count; i++)
         {
-            for (int i = 0; i < Singleton.Count; i++)
-            {
-                RequestSign kn = Singleton[i];
-                if (kn.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.Ordinal) || (KitManager.KitExists(kn.KitName, out KitOld kit) && kit.TeamLimit < 1f))
-                    kn.InvokeUpdate();
-            }
-        }
-        else
-        {
-            for (int i = 0; i < Singleton.Count; i++)
-            {
-                RequestSign kn = Singleton[i];
-                if (kn.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.Ordinal) || (KitManager.KitExists(kn.KitName, out KitOld kit) && kit.TeamLimit < 1f))
-                    kn.InvokeUpdate();
-                else
-                    kn.InvokeUpdate(allPlayer);
-            }
+            RequestSign kn = Singleton[i];
+            if (kn.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.Ordinal) || (KitManager.KitExists(kn.KitName, out KitOld kit) && kit.TeamLimit < 1f))
+                kn.InvokeUpdate();
+            else if (allPlayer is { IsOnline: true })
+                kn.InvokeUpdate(allPlayer);
         }
     }
     public static void UpdateAllSigns(UCPlayer? player = null)

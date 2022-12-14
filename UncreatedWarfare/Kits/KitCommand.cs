@@ -4,25 +4,20 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Steamworks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 public sealed class KitCommand : AsyncCommand
 {
-    private const string SYNTAX = "/kit <search|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
-    private const string HELP = "Admin command to manage kits; creating, deleting, editing, and giving/removing access is done through this command.";
+    private const string Syntax = "/kit <search|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
+    private const string Help = "Admin command to manage kits; creating, deleting, editing, and giving/removing access is done through this command.";
 
     public KitCommand() : base("kit", EAdminType.STAFF) { }
 
@@ -38,7 +33,7 @@ public sealed class KitCommand : AsyncCommand
 
         ctx.AssertOnDuty();
 
-        ctx.AssertArgs(1, SYNTAX + " - " + HELP);
+        ctx.AssertArgs(1, Syntax + " - " + Help);
 
         if (ctx.MatchParameter(0, "search", "find"))
         {
@@ -85,7 +80,7 @@ public sealed class KitCommand : AsyncCommand
                         await proxy.SaveItem(token).ConfigureAwait(false);
                         await UCWarfare.ToUpdate();
                         KitManager.UpdateSigns(kit);
-                        ctx.Reply(T.KitOverwrote, kit!);
+                        ctx.Reply(T.KitOverwrote, kit);
                     }
                     finally
                     {
@@ -454,63 +449,46 @@ public sealed class KitCommand : AsyncCommand
         }
         else if (ctx.MatchParameter(0, "createloadout", "cloadout", "cl"))
         {
-            ctx.AssertHelpCheck(1, "/kit <createloadout|cloadout|cl> <player> <team (1 = " +
-                                   TeamManager.TranslateShortName(1, ctx.CallerID, false) + ", 2 = " + TeamManager.TranslateShortName(2, ctx.CallerID, false) +
-                                   ")> <class> [sign text...] - Creates and prepares a loadout for the provided player with optional sign text.");
+            ctx.AssertHelpCheck(1, "/kit <createloadout|cloadout|cl> <player> <faction> <class> [sign text...] - Creates and prepares a loadout for the provided player with optional sign text.");
 
             ctx.AssertRanByPlayer();
-            if (ctx.TryGet(3, out Class @class) && ctx.TryGet(2, out ulong team) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
+            if (ctx.TryGet(3, out Class @class) && ctx.TryGet(2, out string factionStr) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
                 if (onlinePlayer is null && !PlayerSave.HasPlayerSave(playerId))
+                    throw ctx.Reply(T.PlayerNotFound);
+                FactionInfo? faction = TeamManager.FindFactionInfo(factionStr);
+                if (faction == null)
+                    throw ctx.Reply(T.FactionNotFoundCreateKit, factionStr);
+
+                PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
+                char let = await KitManager.GetLoadoutCharacter(playerId);
+                if (!ctx.TryGetRange(4, out string? signText) || string.IsNullOrWhiteSpace(signText))
+                    signText = null;
+                await UCWarfare.ToUpdate(token);
+                Kit loadout = new Kit(playerId, let, @class, signText, faction)
                 {
-                    ctx.Reply(T.PlayerNotFound);
-                    return;
+                    Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true)
+                };
+                SqlItem<Kit>? oldKit = await manager.FindKit(loadout.Id, token).ConfigureAwait(false);
+                if (let <= 'z' && oldKit?.Item == null)
+                {
+                    await UCWarfare.ToUpdate();
+                    SqlItem<Kit> kit = await manager.AddOrUpdate(loadout, token).ConfigureAwait(false);
+                    await KitManager.GiveAccess(kit, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
+                    ctx.LogAction(EActionLogType.CREATE_KIT, loadout.Id);
+                    await UCWarfare.ToUpdate();
+                    KitManager.UpdateSigns(loadout);
+                    ctx.Reply(T.LoadoutCreated, @class, onlinePlayer as IPlayer ?? names, playerId, loadout);
                 }
-                Task.Run(async () =>
+                else
                 {
-                    PlayerNames names = onlinePlayer is not null ? onlinePlayer.Name : await Data.DatabaseManager.GetUsernamesAsync(playerId);
-                    char let = await KitManager.GetLoadoutCharacter(playerId);
-                    string loadoutName = playerId.ToString() + "_" + let;
-                    if (!ctx.TryGetRange(4, out string signText) || string.IsNullOrEmpty(signText))
-                        signText = loadoutName;
-                    if (let <= 'z' && !KitManager.KitExists(loadoutName, out _))
-                    {
-                        await UCWarfare.ToUpdate();
-                        KitOld loadout = new KitOld(loadoutName, KitManager.ItemsFromInventory(ctx.Caller!), KitManager.ClothesFromInventory(ctx.Caller!));
-
-                        loadout.IsLoadout = true;
-                        loadout.Team = team;
-                        loadout.Class = @class;
-                        if (@class == Class.Pilot)
-                            loadout.Branch = Branch.Airforce;
-                        else if (@class == Class.Crewman)
-                            loadout.Branch = Branch.Armor;
-                        else
-                            loadout.Branch = Branch.Infantry;
-
-                        loadout.TeamLimit = KitManager.GetDefaultTeamLimit(@class);
-
-                        KitManager.SetText(loadout, signText, L.DEFAULT, false);
-
-                        loadout = await KitManager.AddKit(loadout);
-                        await KitManager.GiveAccess(loadout, playerId, KitAccessType.PURCHASE);
-                        ctx.LogAction(EActionLogType.CREATE_KIT, loadoutName);
-                        await UCWarfare.ToUpdate();
-                        KitManager.UpdateSigns(loadout);
-                        ctx.Reply(T.LoadoutCreated, @class, onlinePlayer as IPlayer ?? names, playerId, loadout);
-                        KitManager.InvokeKitCreated(loadout);
-                    }
-                    else
-                    {
-                        await UCWarfare.ToUpdate();
-                        ctx.Reply(T.KitNameTaken, loadoutName);
-                    }
-                }).ConfigureAwait(false);
-                ctx.Defer();
+                    await UCWarfare.ToUpdate();
+                    ctx.Reply(T.KitNameTaken, loadout.Id);
+                }
             }
             else
-                ctx.SendCorrectUsage("/kit <createloadout|cloadout|cl> <player> <team (1 = " + TeamManager.Team1Code + ", 2 = " + TeamManager.Team2Code + "> <class> <sign text>");
+                throw ctx.SendCorrectUsage("/kit <createloadout|cloadout|cl> <player> <faction> <class> [sign text...]");
         }
-        else ctx.SendCorrectUsage(SYNTAX);
+        else ctx.SendCorrectUsage(Syntax);
     }
 }

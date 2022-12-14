@@ -1,6 +1,5 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using Uncreated.Framework;

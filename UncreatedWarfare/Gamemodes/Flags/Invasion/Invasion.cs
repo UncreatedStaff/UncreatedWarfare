@@ -23,7 +23,7 @@ public class Invasion :
     protected ulong _defenseTeam;
     protected SpecialFOB? _vcp;
     public override string DisplayName => "Invasion";
-    public override EGamemode GamemodeType => EGamemode.INVASION;
+    public override GamemodeType GamemodeType => GamemodeType.Invasion;
     public ulong AttackingTeam => _attackTeam;
     public ulong DefendingTeam => _defenseTeam;
     public SpecialFOB? FirstPointFOB => _vcp;
@@ -147,7 +147,7 @@ public class Invasion :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (State == EState.ACTIVE || overrideInactiveCheck)
+        if (State == State.Active || overrideInactiveCheck)
         {
             if (flag.ID == (AttackingTeam == 1ul ? ObjectiveTeam1!.ID : ObjectiveTeam2!.ID))
             {

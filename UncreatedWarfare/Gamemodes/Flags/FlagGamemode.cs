@@ -107,7 +107,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     public abstract void LoadRotation();
     protected virtual void EvaluatePoints()
     {
-        if (_state == EState.ACTIVE)
+        if (_state == Warfare.Gamemodes.State.Active)
             for (int i = 0; i < _rotation.Count; i++)
                 _rotation[i].EvaluatePoints();
     }

@@ -44,6 +44,8 @@ internal static class EventPatches
         PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(
                 new Action<StructureDrop, byte, byte, Vector3, bool>(StructureManager.destroyStructure)),
             postfix: PatchUtil.GetMethodInfo(OnStructureDestroyed));
+
+        PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(new Action<SteamPending>(Provider.accept)), postfix: PatchUtil.GetMethodInfo(OnAcceptingPlayer));
     }
     // SDG.Unturned.BarricadeManager
     /// <summary>
@@ -112,7 +114,7 @@ internal static class EventPatches
             __instance.transform.parent == other.transform.parent && other.transform.parent != null ||
             time - ___lastTriggered < ___cooldown ||    // on cooldown
                                                         // gamemode not active
-            Data.Gamemode is null || Data.Gamemode.State != Gamemodes.EState.ACTIVE
+            Data.Gamemode is null || Data.Gamemode.State != Gamemodes.State.Active
             )
             return false;
         ___lastTriggered = time;
@@ -419,5 +421,13 @@ internal static class EventPatches
         else destroyer = 0ul;
 
         EventDispatcher.InvokeOnStructureDestroyed(structure, destroyer, ragdoll, wasPickedUp);
+    }
+    // SDG.Provider.accept
+    /// <summary>
+    /// Allows us to defer accepting a player to check stuff with async calls.
+    /// </summary>
+    private static bool OnAcceptingPlayer(SteamPending pending)
+    {
+        return !EventDispatcher.InvokeOnAsyncPrePlayerConnect(pending);
     }
 }

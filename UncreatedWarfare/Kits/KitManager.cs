@@ -17,6 +17,7 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
@@ -27,7 +28,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Kits;
 
-public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync
+public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync
 {
     private static KitManager? _km;
     public override bool AwaitLoad => true;
@@ -65,6 +66,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     public static float GetDefaultRequestCooldown(Class @class) => @class switch
     {
         _ => 0f
+    };
+    /// <returns>The number of ammo boxes required to refill the kit based on it's <see cref="Class"/>.</returns>
+    public static int GetAmmoCost(Class @class) => @class switch
+    {
+        Class.HAT or Class.MachineGunner or Class.CombatEngineer => 3,
+        Class.LAT or Class.AutomaticRifleman or Class.Grenadier => 2,
+        _ => 1
     };
     /// <remarks>Thread Safe</remarks>
     public async Task TryGiveKitOnJoinTeam(UCPlayer player, CancellationToken token = default)
@@ -281,7 +289,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (kit?.Item == null)
+            if (kit.Item == null)
             {
                 await RemoveKit(player, token, psLock).ConfigureAwait(false);
                 return;
@@ -341,6 +349,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         }
         else
             UCInventoryManager.ClearInventory(player, true);
+    }
+    public static async Task ResupplyKit(UCPlayer player, bool ignoreAmmoBags = false, CancellationToken token = default)
+    {
+        if (player.HasKit)
+        {
+            await ResupplyKit(player, player.ActiveKit!, ignoreAmmoBags, token).ConfigureAwait(false);
+        }
     }
     public static async Task ResupplyKit(UCPlayer player, SqlItem<Kit> kit, bool ignoreAmmoBags = false, CancellationToken token = default)
     {
@@ -1250,7 +1265,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
 
             // cooldowns
             if (
-                Data.Gamemode.State == EState.ACTIVE &&
+                Data.Gamemode.State == State.Active &&
                 CooldownManager.HasCooldown(ctx.Caller, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) &&
                 !ctx.Caller.OnDutyOrAdmin() &&
                 !UCWarfare.Config.OverrideKitRequirements &&
@@ -1311,6 +1326,66 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         {
             proxy.Release();
         }
+    }
+    /// <exception cref="BaseCommandInteraction"/>
+    public async Task BuyKit(CommandInteraction ctx, SqlItem<Kit> proxy, Vector3? effectPos = null, CancellationToken token = default)
+    {
+        ulong team = ctx.Caller.GetTeam();
+        await proxy.Enter(token).ConfigureAwait(false);
+        Kit? kit;
+        try
+        {
+            kit = proxy.Item;
+            if (kit == null)
+                throw ctx.Reply(T.KitNotFound, proxy.LastPrimaryKey.ToString());
+            if (!kit.IsPublicKit)
+                throw ctx.Reply(T.RequestNotBuyable);
+            if (kit.CreditCost == 0 || HasAccessQuick(kit, ctx.Caller))
+                throw ctx.Reply(T.RequestKitAlreadyOwned);
+            if (ctx.Caller.CachedCredits < kit.CreditCost)
+                throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+
+            await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            if (!ctx.Caller.HasDownloadedKits)
+                await ctx.Caller.DownloadKits(false, token).ConfigureAwait(false);
+            try
+            {
+                await Points.UpdatePointsAsync(ctx.Caller, false, token).ConfigureAwait(false);
+                if (ctx.Caller.CachedCredits < kit.CreditCost)
+                {
+                    await UCWarfare.ToUpdate();
+                    throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+                }
+
+                CreditsParameters parameters = new CreditsParameters(ctx.Caller, team, -kit.CreditCost)
+                {
+                    IsPurchase = true,
+                    IsPunishment = false
+                };
+                await Points.AwardCreditsAsync(parameters, token, false).ConfigureAwait(false);
+            }
+            finally
+            {
+                ctx.Caller.PurchaseSync.Release();
+            }
+
+            if (!await GiveAccess(kit, ctx.Caller, KitAccessType.Credits, token).ThenToUpdate(token))
+                throw ctx.SendUnknownError();
+            ctx.LogAction(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Id + " FOR " + kit.CreditCost + " CREDITS");
+            L.Log(ctx.Caller.Name.PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Id);
+        }
+        finally
+        {
+            proxy.Release();
+        }
+
+        UpdateSigns(kit, ctx.Caller);
+        if (Gamemode.Config.EffectPurchase.ValidReference(out EffectAsset effect))
+        {
+            F.TriggerEffectReliable(effect, EffectManager.SMALL, effectPos ?? ctx.Caller.Position);
+        }
+
+        ctx.Reply(T.RequestKitBought, kit.CreditCost);
     }
     private async Task<bool> GrantKitRequest(CommandInteraction ctx, SqlItem<Kit> kit, CancellationToken token = default)
     {
@@ -2018,8 +2093,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         return item;
     }
     #endregion
-
-    public async Task OnPostPlayerInit(UCPlayer player)
+    private async Task SetupPlayer(UCPlayer player)
     {
         ulong team = player.GetTeam();
         Kit? kit = player.ActiveKit?.Item;
@@ -2027,6 +2101,21 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             await TryGiveRiflemanKit(player).ThenToUpdate();
         else if (UCWarfare.Config.ModifySkillLevels)
             player.EnsureSkillsets(kit.Skillsets ?? Array.Empty<Skillset>());
+    }
+    public Task OnPostPlayerInit(UCPlayer player)
+    {
+        if (Data.Gamemode is not TeamGamemode tgm || !tgm.UseTeamSelector)
+        {
+            return SetupPlayer(player);
+        }
+        UCInventoryManager.ClearInventory(player);
+        player.EnsureSkillsets(Array.Empty<Skillset>());
+        return Task.CompletedTask;
+    }
+
+    public Task OnJoinTeamAsync(UCPlayer player, ulong team)
+    {
+        return TryGiveKitOnJoinTeam(player);
     }
 }
 

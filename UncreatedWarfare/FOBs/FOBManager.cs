@@ -406,7 +406,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         if (!fob.IsWipedByAuthority)
         {
-            if (killer != null && killerteam != 0 && killerteam != team && Data.Gamemode.State == EState.ACTIVE && Data.Is(out IGameStats w) && w.GameStats is IFobsTracker ft)
+            if (killer != null && killerteam != 0 && killerteam != team && Data.Gamemode.State == State.Active && Data.Is(out IGameStats w) && w.GameStats is IFobsTracker ft)
             // doesnt count destroying fobs after game ends
             {
                 if (killer.Player.TryGetPlayerData(out UCPlayerData c) && c.stats is IFOBStats f)

@@ -39,7 +39,7 @@ public interface ITickets : IGamemode
 }
 public interface IGameStats : IGamemode
 {
-    object GameStats { get; }
+    IStatTracker GameStats { get; }
 }
 public interface IFlagRotation : IGamemode
 {

@@ -67,7 +67,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public int LifeCounter;
     public int CachedCredits;
     public bool HasUIHidden = false;
-    public bool IsOnline;
     public float LastSpoken;
     public string CharacterName;
     public string NickName;
@@ -87,15 +86,17 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     internal bool _isLeaving;
     internal Action<byte, ItemJar> SendItemRemove;
     internal List<Guid>? CompletedQuests;
+    private readonly CancellationTokenSource _disconnectTokenSrc;
     private int _multVersion = -1;
     private bool _isTalking;
+    private bool _isOnline;
     private bool _lastMuted;
     private float _multCache = 1f;
     private string? _lang;
     private EAdminType? _pLvl;
     private RankData? _rank;
     private PlayerNames _cachedName;
-    public UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator)
+    public UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc)
     {
         Steam64 = steamID.m_SteamID;
         Squad = null;
@@ -105,11 +106,12 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             _cachedName = new PlayerNames(player);
         else Data.OriginalPlayerNames.Remove(Steam64);
         NickName = nickName;
-        IsOnline = true;
+        _isOnline = true;
         IsOtherDonator = donator;
         LifeCounter = 0;
         SuppliesUnloaded = 0;
         CurrentMarkers = new List<SpottedComponent>();
+        _disconnectTokenSrc = pendingSrc;
         if (Data.UseFastKits)
         {
             try
@@ -145,7 +147,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         if (format.Equals(PLAYER_NAME_FORMAT, StringComparison.Ordinal))
             return Name.PlayerName;
         if (format.Equals(STEAM_64_FORMAT, StringComparison.Ordinal))
-            return Steam64.ToString(Data.Locale);
+            return Steam64.ToString(Data.LocalLocale);
 
         string hex = TeamManager.GetTeamHexColor(this.GetTeam());
         if (format.Equals(COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
@@ -155,7 +157,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         if (format.Equals(COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
             return Localization.Colorize(hex, Name.PlayerName, flags);
         if (format.Equals(COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(hex, Steam64.ToString(Data.Locale), flags);
+            return Localization.Colorize(hex, Steam64.ToString(Data.LocalLocale), flags);
         end:
         return Name.CharacterName;
     }
@@ -176,10 +178,12 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public string Language => _lang ??= Localization.GetLang(Steam64);
     public bool IsTalking => !_lastMuted && _isTalking && IsOnline;
     public bool IsLeaving => _isLeaving;
+    public bool IsOnline => _isOnline;
     public bool VanishMode { get; set; }
     public bool IsActionMenuOpen { get; internal set; }
     public bool IsOtherDonator { get; set; }
     public bool GodMode { get; set; }
+    public CancellationToken DisconnectToken => _disconnectTokenSrc.Token;
     public FactionInfo? Faction => Player.quests.groupID.m_SteamID switch
     {
         TeamManager.Team1ID => TeamManager.Team1Faction,
@@ -349,6 +353,13 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public static implicit operator CSteamID(UCPlayer player) => player.Player.channel.owner.playerID.steamID;
     public static implicit operator Player(UCPlayer player) => player.Player;
     public static implicit operator SteamPlayer(UCPlayer player) => player.Player.channel.owner;
+    internal void SetOffline()
+    {
+        _isOnline = false;
+        _disconnectTokenSrc.Cancel();
+        Events.Dispose();
+        Keys.Dispose();
+    }
     public static UCPlayer? FromID(ulong steamID)
     {
         if (steamID == 0) return null;
@@ -817,6 +828,31 @@ public struct OfflinePlayer : IPlayer
         return (_names ??= Data.DatabaseManager.GetUsernames(_s64)).CharacterName;
     }
 }
+public class UCPlayerLocale // todo implement
+{
+    public UCPlayer Player { get; }
+    public string Language { get; private set; }
+    public IFormatProvider Format { get; private set; }
+    public UCPlayerLocale(UCPlayer player, string language)
+    {
+        Player = player;
+        if (Localization.TryGetLangData(language, out string langName, out IFormatProvider format))
+        {
+            this.Format = format;
+            this.Language = langName;
+        }
+    }
+    public UCPlayerLocale(UCPlayer player) : this(player, L.DEFAULT) { }
+    internal void Update(string language)
+    {
+        if (Localization.TryGetLangData(language, out string langName, out IFormatProvider format))
+        {
+            this.Format = format;
+            this.Language = langName;
+        }
+    }
+}
+
 public class PlayerSave
 {
     public const uint CURRENT_DATA_VERSION = 1;

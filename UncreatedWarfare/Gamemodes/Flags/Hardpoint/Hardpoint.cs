@@ -52,7 +52,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     private float nextObjectivePickTime;
     private ulong objectiveOwner;
     private bool _isScreenUp;
-    public override EGamemode GamemodeType => EGamemode.HARDPOINT;
+    public override GamemodeType GamemodeType => GamemodeType.Hardpoint;
     public override string DisplayName => "Hardpoint";
     public override bool EnableAMC => true;
     public override bool ShowOFPUI => true;
@@ -68,7 +68,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     public HardpointTracker WarstatsTracker => _gameStats;
     HardpointTracker IImplementsLeaderboard<HardpointPlayerStats, HardpointTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     Leaderboard<HardpointPlayerStats, HardpointTracker>? IImplementsLeaderboard<HardpointPlayerStats, HardpointTracker>.Leaderboard => _endScreen;
-    object IGameStats.GameStats => _gameStats;
+    IStatTracker IGameStats.GameStats => _gameStats;
     /// <summary>0 = clear, 1 = t1, 2 = t2, 3 = contested</summary>
     public ulong ObjectiveState => objectiveOwner;
     Flag? IFlagTeamObjectiveGamemode.ObjectiveTeam1 => Objective;
@@ -123,7 +123,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     }
     protected override void EventLoopAction()
     {
-        if (State == EState.ACTIVE && nextObjectivePickTime < Time.realtimeSinceStartup)
+        if (State == Warfare.Gamemodes.State.Active && nextObjectivePickTime < Time.realtimeSinceStartup)
         {
             PickObjective(false);
             Chat.Broadcast(T.HardpointObjectiveChanged, Objective, nextObjectivePickTime - Time.realtimeSinceStartup);
@@ -141,7 +141,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
                 v = -v;
         }
         nextObjectivePickTime = Time.realtimeSinceStartup + Config.HardpointObjectiveChangeTime + v;
-        if (State == EState.STAGING)
+        if (State == Warfare.Gamemodes.State.Staging)
             nextObjectivePickTime += StagingSeconds;
         objectiveOwner = 0ul;
         int old = _objIndex;
@@ -235,18 +235,9 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         flag.Discover(2);
         base.InitFlag(flag);
     }
-    public override void OnJoinTeam(UCPlayer player, ulong team)
+    protected override void InitUI(UCPlayer player)
     {
-        KitManager.TryGiveKitOnJoinTeam(player);
-        _gameStats.OnPlayerJoin(player);
-        if (IsScreenUp && _endScreen != null)
-            _endScreen.OnPlayerJoined(player);
-        else
-        {
-            TicketManager.SendUI(player);
-            SendListUI(player);
-        }
-        base.OnJoinTeam(player, team);
+        SendListUI(player);
     }
     public override Task DeclareWin(ulong winner)
     {
@@ -307,7 +298,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     protected override void PlayerLeftFlagRadius(Flag flag, Player player) { }
     protected override void FlagCheck()
     {
-        if (_objIndex < 0 || _objIndex >= _rotation.Count || State != EState.ACTIVE)
+        if (_objIndex < 0 || _objIndex >= _rotation.Count || State != Warfare.Gamemodes.State.Active)
             return;
 
         Flag f = this.Objective;
@@ -321,7 +312,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     }
     private void UpdateObjectiveState()
     {
-        if (_objIndex < 0 || _objIndex >= _rotation.Count || State != EState.ACTIVE)
+        if (_objIndex < 0 || _objIndex >= _rotation.Count || State != Warfare.Gamemodes.State.Active)
             return;
         ulong old = objectiveOwner;
         objectiveOwner = ConventionalIsContested(Objective, out ulong winner) ? 3ul : winner;

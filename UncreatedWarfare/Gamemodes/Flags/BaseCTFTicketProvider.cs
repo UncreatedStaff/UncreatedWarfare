@@ -23,7 +23,7 @@ public abstract class BaseCTFTicketProvider : BaseTicketProvider
     }
     public override void Tick()
     {
-        if (Data.Gamemode != null && Data.Gamemode.State == EState.ACTIVE)
+        if (Data.Gamemode != null && Data.Gamemode.State == State.Active)
         {
             if (Data.Gamemode.EveryMinute)
             {

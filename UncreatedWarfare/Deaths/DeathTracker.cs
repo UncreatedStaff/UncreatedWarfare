@@ -66,7 +66,7 @@ public class DeathTracker : BaseReloadSingleton
             FillArgs(dead, cause, limb, instigator, ref args, e);
             Localization.BroadcastDeath(e, args);
         }
-    clear:
+        clear:
         if (dead.Player.TryGetPlayerData(out UCPlayerData data))
         {
             data.LastInfectableConsumed = default;
@@ -76,10 +76,10 @@ public class DeathTracker : BaseReloadSingleton
             data.LastVehicleHitBy = default;
         }
     }
-    internal static void OnInjured(ref DamagePlayerParameters parameters)
+    internal static PlayerDied OnInjured(in DamagePlayerParameters parameters)
     {
         UCPlayer? pl = UCPlayer.FromPlayer(parameters.player);
-        if (pl is null) return;
+        if (pl is null) return null!;
         if (parameters.cause == EDeathCause.BLEEDING)
         {
             if (pl.Player.TryGetPlayerData(out UCPlayerData deadData))
@@ -88,7 +88,7 @@ public class DeathTracker : BaseReloadSingleton
                 {
                     deadData.LastBleedingArgs.Flags |= EDeathFlags.BLEEDING;
                     _injuredPlayers.Add(pl.Steam64, new InjuredDeathCache(deadData.LastBleedingEvent, deadData.LastBleedingArgs));
-                    return;
+                    return deadData.LastBleedingEvent;
                 }
             }
         }

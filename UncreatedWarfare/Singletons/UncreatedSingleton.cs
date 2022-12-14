@@ -118,6 +118,10 @@ public interface IJoinedTeamListener
 {
     void OnJoinTeam(UCPlayer player, ulong team);
 }
+public interface IJoinedTeamListenerAsync
+{
+    Task OnJoinTeamAsync(UCPlayer player, ulong team);
+}
 public interface IPlayerPreInitListener
 {
     void OnPrePlayerInit(UCPlayer player, bool wasAlreadyOnline);

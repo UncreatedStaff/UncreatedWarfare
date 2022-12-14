@@ -126,6 +126,33 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         PremiumCost = copy.PremiumCost;
         WeaponText = copy.WeaponText;
     }
+    public Kit(ulong loadoutOwner, char loadout, Class @class, string? displayName, FactionInfo? faction)
+    {
+        Faction = faction;
+        Id = loadoutOwner.ToString(Data.AdminLocale) + "_" + new string(loadout, 1);
+        Class = @class;
+        Branch = KitManager.GetDefaultBranch(@class);
+        Type = KitType.Loadout;
+        SquadLevel = SquadLevel.Member;
+        SignText = displayName == null ? new TranslationList() : new TranslationList(displayName);
+        Items = Array.Empty<IKitItem>();
+        UnlockRequirements = Array.Empty<UnlockRequirement>();
+        Skillsets = Array.Empty<Skillset>();
+        FactionFilter = Array.Empty<PrimaryKey>();
+        MapFilter = Array.Empty<PrimaryKey>();
+        RequestSigns = Array.Empty<PrimaryKey>();
+        Season = UCWarfare.Season;
+        TeamLimit = KitManager.GetDefaultTeamLimit(@class);
+        RequestCooldown = KitManager.GetDefaultRequestCooldown(@class);
+        PremiumCost = UCWarfare.Config.LoadoutCost;
+        /* DEFAULTS *
+        FactionFilterIsWhitelist = false;
+        MapFilterIsWhitelist = false;
+        Disabled = false;
+        CreditCost = 0;
+        WeaponText = null;
+        */
+    }
     public Kit() { }
     public bool IsFactionAllowed(FactionInfo? faction)
     {

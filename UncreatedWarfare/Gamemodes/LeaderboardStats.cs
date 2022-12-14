@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using JetBrains.Annotations;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -42,12 +43,11 @@ public static class LeaderboardEx
             else
                 player.Player.life.ServerRespawn(false);
 
-            if (Data.Is<IKitRequests>(out _) && string.IsNullOrEmpty(player.KitName))
+            if (Data.Is<IKitRequests>())
             {
-                if (KitManager.KitExists(player.KitName, out KitOld kit))
-                    KitManager.ResupplyKit(player, kit);
+                UCWarfare.RunTask(KitManager.ResupplyKit(player), ctx: "Resupplying " + player + "'s kit for leaderboard.");
             }
-            if (Data.Is<IFlagRotation>(out _))
+            if (Data.Is<IFlagRotation>())
                 CTFUI.ClearFlagList(player.Connection);
         }
         catch (Exception ex)
@@ -110,7 +110,17 @@ public abstract class Leaderboard<Stats, StatTracker> : MonoBehaviour where Stat
     protected virtual void Update() { }
 }
 
-public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour where IndividualStats : BasePlayerStats
+public interface IStatTracker
+{
+    TimeSpan Duration { get; }
+    void OnPlayerJoin(UCPlayer player);
+    void Reset();
+    float GetPresence(IPresenceStats stats);
+    float GetPresence(ITeamPresenceStats stats, ulong team);
+    void ClearAllStats();
+    void StartTracking();
+}
+public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTracker where IndividualStats : BasePlayerStats
 {
     private DateTime start;
     public TimeSpan Duration { get => DateTime.Now - start; }
@@ -118,7 +128,8 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour where Ind
     protected int coroutinect;
     public List<IndividualStats> stats;
     protected Coroutine ticker;
-    public void Awake() => Reset();
+    [UsedImplicitly]
+    private void Awake() => Reset();
     public float GetPresence(IPresenceStats stats) => (float)stats.OnlineTicks / coroutinect;
     public float GetPresence(ITeamPresenceStats stats, ulong team) => team == 1 ? ((float)stats.OnlineTicksT1 / coroutinect) : (team == 2 ? (stats.OnlineTicksT2 / coroutinect) : 0f);
     public virtual void Reset()

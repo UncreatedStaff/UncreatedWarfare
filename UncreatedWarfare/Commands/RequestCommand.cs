@@ -80,12 +80,10 @@ public class RequestCommand : AsyncCommand
         {
             if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
             {
-                KitManager? manager = KitManager.GetSingletonQuick();
-                if (manager == null)
-                    throw ctx.SendGamemodeError();
                 if (RequestSigns.Loaded && RequestSigns.SignExists(sign, out RequestSign kitsign))
                 {
-                    ctx.AssertGamemode<IKitRequests>();
+                    ctx.AssertGamemode(out IKitRequests gm);
+                    KitManager manager = gm.KitManager;
                     
                     if (kitsign.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.OrdinalIgnoreCase))
                     {

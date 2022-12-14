@@ -48,7 +48,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         if (!_inited)
             throw new InvalidOperationException("Trait " + this.GetType().Name + " was not initialized. You must run Trait.Init(...) within the same frame of creating it.");
         TraitManager.ActivateTrait(this);
-        if (Warfare.Data.Gamemode.State == Gamemodes.EState.STAGING)
+        if (Warfare.Data.Gamemode.State == Gamemodes.State.Staging)
         {
             Warfare.Data.Gamemode.StagingPhaseOver += InternalStart;
             IsAwaitingStagingPhase = true;

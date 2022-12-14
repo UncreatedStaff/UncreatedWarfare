@@ -144,7 +144,7 @@ public sealed class UCPlayerEvents : IDisposable
     }
     private void OnDropItemRequested(PlayerInventory inventory, Item item, ref bool shouldAllow) => EventDispatcher.InvokeOnDropItemRequested(Player ?? UCPlayer.FromPlayer(inventory.player)!, inventory, item, ref shouldAllow);
 }
-public sealed class UCPlayerKeys
+public sealed class UCPlayerKeys : IDisposable
 {
     private static readonly int KEY_COUNT = 10 + ControlsSettings.NUM_PLUGIN_KEYS;
 
@@ -154,9 +154,10 @@ public sealed class UCPlayerKeys
     private static bool anySubs = false;
 
     public readonly UCPlayer Player;
-    private readonly bool[] lastKeys = new bool[KEY_COUNT];
-    private readonly float[] keyDownTimes = new float[KEY_COUNT];
+    private bool[] lastKeys = new bool[KEY_COUNT];
+    private float[] keyDownTimes = new float[KEY_COUNT];
     private bool first = true;
+    private bool disposed;
     public UCPlayerKeys(UCPlayer player)
     {
         Player = player;
@@ -169,7 +170,7 @@ public sealed class UCPlayerKeys
     public bool IsKeyDown(PlayerKey key)
     {
         CheckKey(key);
-        return Player.Player.input.keys[(int)key];
+        return !disposed && Player.Player.input.keys[(int)key];
     }
     public static void SubscribeKeyUp(KeyUp action, PlayerKey key)
     {
@@ -240,6 +241,7 @@ public sealed class UCPlayerKeys
     }
     internal void Simulate()
     {
+        if (disposed) return;
         bool[] keys = Player.Player.input.keys;
         if (first || !anySubs)
         {
@@ -268,6 +270,16 @@ public sealed class UCPlayerKeys
                 }
                 this.lastKeys[i] = st;
             }
+        }
+    }
+    public void Dispose()
+    {
+        if (!disposed)
+        {
+            lastKeys = null!;
+            keyDownTimes = null!;
+            first = false;
+            disposed = true;
         }
     }
 }

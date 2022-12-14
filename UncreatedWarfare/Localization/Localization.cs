@@ -28,6 +28,8 @@ public static class Localization
     public const string RICH_TEXT_COLOR_END = ">";
     public const string TMPRO_RICH_TEXT_COLOR_BASE = "<#";
     public const string RICH_TEXT_COLOR_CLOSE = "</color>";
+    private static LanguageAliasSet? _defaultSet;
+    public static LanguageAliasSet DefaultSet => _defaultSet ??= FindLanguageSet(L.DEFAULT, true, true) ?? throw new Exception("Unknown default language alias set (" + L.DEFAULT + ").");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string Colorize(string hex, string inner, TranslationFlags flags)
@@ -796,6 +798,69 @@ public static class Localization
     internal static IFormatProvider GetLocale(string language)
     {
         return LanguageAliasSet.GetCultureInfo(language);
+    }
+    internal static LanguageAliasSet? FindLanguageSet(string language, bool keyOnly = false, bool exact = false)
+    {
+        if (language.Equals(L.DEFAULT, StringComparison.OrdinalIgnoreCase) && _defaultSet != null)
+            return _defaultSet;
+        LanguageAliasSet? set = null;
+        for (int i = 0; i < Data.LanguageAliases.Count; ++i)
+        {
+            set = Data.LanguageAliases[i];
+            if (set.key.Equals(language, StringComparison.OrdinalIgnoreCase))
+                goto found;
+        }
+        if (!keyOnly)
+        {
+            for (int i = 0; i < Data.LanguageAliases.Count; ++i)
+            {
+                set = Data.LanguageAliases[i];
+                if (set.display_name.Equals(language, StringComparison.OrdinalIgnoreCase))
+                    goto found;
+            }
+            for (int i = 0; i < Data.LanguageAliases.Count; ++i)
+            {
+                set = Data.LanguageAliases[i];
+                for (int j = 0; j < set.values.Length; ++j)
+                {
+                    if (set.values[j].Equals(language, StringComparison.OrdinalIgnoreCase))
+                        goto found;
+                }
+            }
+            if (!exact)
+            {
+                for (int i = 0; i < Data.LanguageAliases.Count; ++i)
+                {
+                    set = Data.LanguageAliases[i];
+                    if (set.display_name.IndexOf(language, StringComparison.OrdinalIgnoreCase) != -1)
+                        goto found;
+                }
+                for (int i = 0; i < Data.LanguageAliases.Count; ++i)
+                {
+                    set = Data.LanguageAliases[i];
+                    for (int j = 0; j < set.values.Length; ++j)
+                    {
+                        if (set.values[j].IndexOf(language, StringComparison.OrdinalIgnoreCase) != -1)
+                            goto found;
+                    }
+                }
+            }
+        }
+        found:
+        return set;
+    }
+    public static bool TryGetLangData(string language, out string langId, out IFormatProvider provider)
+    {
+        LanguageAliasSet? set = FindLanguageSet(language);
+        if (set != null)
+        {
+            langId = set.key;
+            provider = LanguageAliasSet.GetCultureInfo(langId);
+            return true;
+        }
+        langId = language;
+        provider = Data.LocalLocale;
+        return false;
     }
     public static string? GetDelaySignText(in Delay delay, string language, ulong team)
     {

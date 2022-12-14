@@ -1,7 +1,8 @@
-﻿using SDG.Unturned;
+﻿using System.Threading.Tasks;
+using SDG.Unturned;
 
 namespace Uncreated.Warfare.Events.Players;
-public class PlayerPending : BreakableEvent
+public sealed class PlayerPending : BreakableEvent
 {
     private readonly SteamPending _pending;
     private readonly PlayerSave? _save;
@@ -33,9 +34,10 @@ public class PlayerPending : BreakableEvent
         if (!shouldAllow) Break();
         _rejectReason = explanation;
     }
-    public void Reject(string reason)
+    public ControlException Reject(string reason)
     {
         RejectReason = reason;
         Break();
+        return new ControlException();
     }
 }

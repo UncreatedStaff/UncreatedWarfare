@@ -5,7 +5,7 @@ using Uncreated.Warfare.Squads;
 namespace Uncreated.Warfare.Traits.Buffs;
 
 /// <summary>
-/// Increases the accuracy of ground AA.
+/// Increases the influence that flares have on heat-seeking missiles.
 /// </summary>
 public class Superheated : Buff
 {

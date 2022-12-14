@@ -36,14 +36,12 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency;
 
 public class Insurgency :
     TicketGamemode<InsurgencyTicketProvider>,
-    ITeams,
     IFOBs,
     IVehicles,
     IKitRequests,
     IRevives,
     ISquads,
     IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>,
-    ITickets,
     IStagingPhase,
     IAttackDefense,
     IGameStats,
@@ -70,7 +68,7 @@ public class Insurgency :
     private List<Vector3> SeenCaches;
     public bool _isScreenUp;
     public override string DisplayName => "Insurgency";
-    public override EGamemode GamemodeType => EGamemode.INVASION;
+    public override GamemodeType GamemodeType => GamemodeType.Invasion;
     public override bool EnableAMC => true;
     public override bool ShowOFPUI => true;
     public override bool ShowXPUI => true;
@@ -99,7 +97,7 @@ public class Insurgency :
     public bool IsScreenUp => _isScreenUp;
     InsurgencyTracker IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     Leaderboard<InsurgencyPlayerStats, InsurgencyTracker> IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.Leaderboard => _endScreen;
-    object IGameStats.GameStats => _gameStats;
+    IStatTracker IGameStats.GameStats => _gameStats;
     public Insurgency() : base("Insurgency", 0.25F) { }
     protected override Task PreInit()
     {
@@ -295,32 +293,9 @@ public class Insurgency :
         }
         base.OnPlayerDeath(e);
     }
-    public override void OnJoinTeam(UCPlayer player, ulong newTeam)
+    protected override void InitUI(UCPlayer player)
     {
-        OnPlayerJoinedTeam(player);
-        base.OnJoinTeam(player, newTeam);
-    }
-    private void OnPlayerJoinedTeam(UCPlayer player)
-    {
-        ulong team = player.GetTeam();
-        PlayerNames names = player.Name;
-        if (string.IsNullOrEmpty(player.KitName) && team is > 0 and < 3)
-        {
-            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out KitOld unarmed))
-                KitManager.GiveKit(player, unarmed);
-            else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
-            else L.LogWarning("Unable to give " + names.PlayerName + " a kit.");
-        }
-        _gameStats.OnPlayerJoin(player);
-        if (IsScreenUp && _endScreen != null)
-        {
-            _endScreen.OnPlayerJoined(player);
-        }
-        else
-        {
-            InsurgencyUI.SendCacheList(player);
-            TicketManager.SendUI(player);
-        }
+        InsurgencyUI.SendCacheList(player);
     }
     public override void OnGroupChanged(GroupChanged e)
     {
@@ -615,7 +590,10 @@ public class Insurgency :
             DestoryBlockerOnT2();
         StartCoroutine(TryDiscoverFirstCache());
     }
-
+    internal override bool CanRefillAmmoAt(ItemBarricadeAsset barricade)
+    {
+        return base.CanRefillAmmoAt(barricade) || Config.BarricadeInsurgencyCache.MatchGuid(barricade.GUID);
+    }
     internal void AddCacheSpawn(SerializableTransform transform)
     {
         CacheSpawns.Add(transform);

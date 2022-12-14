@@ -532,7 +532,7 @@ public class DebugCommand : AsyncCommand
             Type? newGamemode = Gamemode.FindGamemode(gamemodeName);
             if (newGamemode is not null)
             {
-                if (Data.Is(out IStagingPhase gm) && gm.State == EState.STAGING)
+                if (Data.Is(out IStagingPhase gm) && gm.State == State.Staging)
                 {
                     ctx.ReplyString($"Skipped staging phase.");
                     gm.SkipStagingPhase();
@@ -544,7 +544,7 @@ public class DebugCommand : AsyncCommand
                     await UCWarfare.ToUpdate();
                     if (newGamemode == Data.Gamemode?.GetType())
                     {
-                        await Data.Singletons.ReloadSingletonAsync(Gamemode.GAMEMODE_RELOAD_KEY);
+                        await Data.Singletons.ReloadSingletonAsync(Gamemode.GamemodeReloadKey);
                         await UCWarfare.ToUpdate();
                         ctx.ReplyString($"Successfully reloaded {newGamemode.Name}.");
                     }
@@ -607,7 +607,7 @@ public class DebugCommand : AsyncCommand
 
         ctx.AssertGamemode(out IStagingPhase gm);
 
-        if (gm.State == EState.STAGING)
+        if (gm.State == State.Staging)
         {
             gm.SkipStagingPhase();
             ctx.ReplyString("Skipped staging phase.");
@@ -1195,7 +1195,7 @@ public class DebugCommand : AsyncCommand
             }
         }
         else throw ctx.SendGamemodeError();
-        if (Data.Gamemode.State == EState.STAGING)
+        if (Data.Gamemode.State == State.Staging)
         {
             Data.Gamemode.SkipStagingPhase();
         }

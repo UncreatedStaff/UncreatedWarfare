@@ -42,7 +42,7 @@ public static class OffenseManager
     {
         EventDispatcher.PlayerDied += OnPlayerDied;
         EventDispatcher.PlayerJoined += OnPlayerJoined;
-        EventDispatcher.PlayerPending += OnPlayerPending;
+        EventDispatcher.PlayerPendingAsync += OnPlayerPending;
         Load<Ban>(0);
         Load<Unban>(1);
         Load<Kick>(2);
@@ -55,7 +55,7 @@ public static class OffenseManager
     }
     internal static void Deinit()
     {
-        EventDispatcher.PlayerPending -= OnPlayerPending;
+        EventDispatcher.PlayerPendingAsync -= OnPlayerPending;
         EventDispatcher.PlayerJoined -= OnPlayerJoined;
         EventDispatcher.PlayerDied -= OnPlayerDied;
         for (int i = 0; i < Pendings.Length; ++i)
@@ -65,10 +65,10 @@ public static class OffenseManager
                 l.Clear();
         }
     }
-    private static void OnPlayerPending(PlayerPending e)
+    private static async Task OnPlayerPending(PlayerPending e, CancellationToken token)
     {
         List<uint> packs = new List<uint>(4);
-        Data.DatabaseManager.Query("SELECT `Packed` FROM `ip_addresses` WHERE `Steam64` = @0;", new object[] { e.Steam64 }, reader =>
+        await Data.DatabaseManager.QueryAsync("SELECT `Packed` FROM `ip_addresses` WHERE `Steam64` = @0;", new object[] { e.Steam64 }, reader =>
         {
             packs.Add(reader.GetUInt32(0));
         });
@@ -79,8 +79,7 @@ public static class OffenseManager
             {
                 if (ip != 0 && ip == packs[j])
                 {
-                    e.Reject("Your IP is banned for: " + SteamBlacklist.list[i].reason);
-                    return;
+                    throw e.Reject("Your IP is banned for: " + SteamBlacklist.list[i].reason);
                 }
             }
         }

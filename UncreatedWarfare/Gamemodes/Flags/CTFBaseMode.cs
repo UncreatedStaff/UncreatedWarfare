@@ -88,7 +88,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     Leaderboard<Stats, StatTracker>? IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
     public bool IsScreenUp => _isScreenUp;
     StatTracker IImplementsLeaderboard<Stats, StatTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
-    object IGameStats.GameStats => ((IImplementsLeaderboard<Stats, StatTracker>)this).WarstatsTracker;
+    IStatTracker IGameStats.GameStats => ((IImplementsLeaderboard<Stats, StatTracker>)this).WarstatsTracker;
     protected CTFBaseMode(string name, float timing) : base(name, timing)
     {
 
@@ -474,34 +474,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             flag.SetOwner(0);
         UpdateFlag(flag);
     }
-    public override void OnJoinTeam(UCPlayer player, ulong team)
-    {
-        if (team is 1 or 2)
-        {
-            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out KitOld unarmed))
-                KitManager.GiveKit(player, unarmed);
-            else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
-            else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
-        }
-        else
-        {
-            if (KitManager.KitExists(TeamManager.DefaultKit, out KitOld @default)) KitManager.GiveKit(player, @default);
-            else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
-        }
-        _gameStats.OnPlayerJoin(player);
-        if (IsScreenUp && _endScreen != null)
-        {
-            _endScreen.OnPlayerJoined(player);
-        }
-        else
-        {
-            TicketManager.SendUI(player);
-            InitUI(player);
-        }
-        base.OnJoinTeam(player, team);
-    }
-
-    protected abstract void InitUI(UCPlayer player);
     public override void PlayerLeave(UCPlayer player)
     {
 #if DEBUG
@@ -518,7 +490,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 }
             }
         }
-        StatsCoroutine.previousPositions.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
+        StatsCoroutine.RemovePlayer(player.Player.channel.owner.playerID.steamID.m_SteamID);
         _reviveManager.OnPlayerDisconnected(player.Player.channel.owner);
         StatsManager.DeregisterPlayer(player.CSteamID.m_SteamID);
         base.PlayerLeave(player);

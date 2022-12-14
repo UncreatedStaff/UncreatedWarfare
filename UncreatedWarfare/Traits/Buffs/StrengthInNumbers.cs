@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Traits.Buffs;
 
 /// <summary>
-/// Decrease those affected's deployment cooldown by 25% (* by .75).
+/// Increases player armor by 10% when fighting near the rest of their squad.
 /// </summary>
 public class StrengthInNumbers : Buff
 {
@@ -128,9 +128,9 @@ public class StrengthInNumbers : Buff
             string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(dataSplitChars, StringSplitOptions.RemoveEmptyEntries);
             if (datas.Length > 0)
             {
-                float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.Locale, out _distance);
+                float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.AdminLocale, out _distance);
                 if (datas.Length > 1)
-                    float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.Locale, out _armorMultiplier);
+                    float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.AdminLocale, out _armorMultiplier);
             }
 
             if (_distance == -1f)

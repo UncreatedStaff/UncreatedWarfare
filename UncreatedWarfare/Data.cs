@@ -102,7 +102,7 @@ public static class Data
     public static Dictionary<ulong, string> DefaultPlayerNames;
     public static Dictionary<ulong, string> Languages;
     public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
-    public static Dictionary<string, LanguageAliasSet> LanguageAliases;
+    public static List<LanguageAliasSet> LanguageAliases;
     public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = new Dictionary<ulong, UCPlayerData>();
     internal static JsonZoneProvider ZoneProvider;
     internal static WarfareSQL DatabaseManager;

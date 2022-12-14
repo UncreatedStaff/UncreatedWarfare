@@ -495,7 +495,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             EvaluatePointsOverride(this, overrideInactiveCheck);
             return;
         }
-        if (Manager.State == EState.ACTIVE || overrideInactiveCheck)
+        if (Manager.State == State.Active || overrideInactiveCheck)
         {
             if (IsAnObj)
             {
