@@ -26,7 +26,7 @@ public class BuyCommand : AsyncCommand
 
         if (ctx.MatchParameter(0, "help"))
             throw ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
-        if (!RequestSigns.Loaded)
+        if (!RequestSignsOld.Loaded)
             throw ctx.SendGamemodeError();
         ctx.AssertGamemode(out IKitRequests gm);
         KitManager manager = gm.KitManager;
@@ -34,9 +34,9 @@ public class BuyCommand : AsyncCommand
             throw ctx.SendUnknownError();
         if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
         {
-            if (!RequestSigns.SignExists(sign, out RequestSign requestsign))
+            if (!RequestSignsOld.SignExists(sign, out RequestSign requestsign))
                 throw ctx.Reply(T.RequestKitNotRegistered);
-            if (requestsign.KitName.StartsWith(Signs.LOADOUT_PREFIX))
+            if (requestsign.KitName.StartsWith(Signs.LoadoutPrefix))
                 throw ctx.Reply(T.RequestNotBuyable);
             SqlItem<Kit>? proxy = await manager.FindKit(requestsign.KitName, token).ConfigureAwait(false);
             if (proxy?.Item == null)

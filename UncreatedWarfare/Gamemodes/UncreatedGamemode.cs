@@ -391,6 +391,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             RallyManager.WipeAllRallies();
 
         ReplaceBarricadesAndStructures();
+        Signs.CheckAllSigns();
+
         _hasTimeSynced = false;
         if (_useEventLoop)
         {
@@ -1040,7 +1042,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                             for (int i = barricadeRegion.drops.Count - 1; i >= 0; i--)
                             {
                                 BarricadeDrop drop = barricadeRegion.drops[i];
-                                if (!((saver != null && saver.IsLoaded && saver.TryGetSave(drop, out SavedStructure _)) || (RequestSigns.Loaded && RequestSigns.SignExists(drop.instanceID, out _))))
+                                if (!((saver != null && saver.IsLoaded && saver.TryGetSave(drop, out SavedStructure _)) || (RequestSignsOld.Loaded && RequestSignsOld.SignExists(drop.instanceID, out _))))
                                 {
                                     if (drop.model.TryGetComponent(out FOBComponent fob))
                                     {
@@ -1074,8 +1076,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     }
                 }
             }
-            if (RequestSigns.Loaded)
-                RequestSigns.DropAllSigns();
             IconManager.OnLevelLoaded();
         }
         catch (Exception ex)

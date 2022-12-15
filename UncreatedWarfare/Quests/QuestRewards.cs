@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 
@@ -201,9 +202,7 @@ public class KitAccessReward : IQuestReward
     public string KitId { get; private set; }
     public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
-        if (KitManager.KitExists(KitId, out KitOld kit))
-            return KitManager.GiveAccess(kit, player, KitAccessType.QUEST_REWARD);
-        return Task.CompletedTask;
+        return string.IsNullOrEmpty(KitId) ? Task.CompletedTask : KitManager.GiveAccess(KitId, player, KitAccessType.QuestReward, token);
     }
     public void Init(object value)
     {

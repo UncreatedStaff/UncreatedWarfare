@@ -395,35 +395,25 @@ public static class Points
                     ToastMessage.QueueMessage(player,
                         new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Rank.Name.ToUpper(),
                             EToastMessageSeverity.BIG));
-
-                    if (VehicleSpawner.Loaded)
-                        VehicleSpawner.UpdateSigns(player);
-
-                    if (RequestSigns.Loaded)
-                        RequestSigns.UpdateAllSigns(player);
-
-                    if (TraitManager.Loaded)
-                        TraitSigns.SendAllTraitSigns(player);
                 }
                 else if (player.Rank.Level < oldRank.Level)
                 {
                     ToastMessage.QueueMessage(player,
                         new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Rank.Name.ToUpper(),
                             EToastMessageSeverity.BIG));
-
-                    if (VehicleSpawner.Loaded)
-                    {
-                        foreach (Vehicles.VehicleSpawn spawn in VehicleSpawner.Spawners)
-                            spawn.UpdateSign(player.SteamPlayer);
-                    }
-
-                    if (RequestSigns.Loaded)
-                        RequestSigns.UpdateAllSigns(player);
-
-                    if (TraitManager.Loaded)
-                        TraitSigns.SendAllTraitSigns(player);
                 }
+                else goto skipUpdates;
 
+                Signs.UpdateKitSigns(player, null);
+                Signs.UpdateLoadoutSigns(player);
+
+                if (VehicleSpawner.Loaded)
+                    VehicleSpawner.UpdateSigns(player);
+
+                if (TraitManager.Loaded)
+                    TraitSigns.SendAllTraitSigns(player);
+
+                skipUpdates:
                 for (int i = 0; i < player.ActiveBuffs.Length; ++i)
                     if (player.ActiveBuffs[i] is IXPBoostBuff buff)
                         buff.OnXPBoostUsed(amount, parameters.AwardCredits);
@@ -815,8 +805,8 @@ public static class Points
         if (VehicleSpawner.Loaded && VehicleSigns.Loaded)
             VehicleSpawner.UpdateSigns(caller);
 
-        if (RequestSigns.Loaded)
-            RequestSigns.UpdateAllSigns(caller);
+        Signs.UpdateKitSigns(caller, null);
+        Signs.UpdateLoadoutSigns(caller);
     }
     /*
     public static void AwardSquadXP(UCPlayer ucplayer, float range, int xp, int ofp, string KeyplayerTranslationKey, string squadTranslationKey, float squadMultiplier)

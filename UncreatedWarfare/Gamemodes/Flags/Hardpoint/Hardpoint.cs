@@ -39,7 +39,6 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     private VehicleBay _vehicleBay;
     private VehicleSigns _vehicleSigns;
     private FOBManager _FOBManager;
-    private RequestSigns _requestSigns;
     private KitManager _kitManager;
     private ReviveManager _reviveManager;
     private SquadManager _squadManager;
@@ -79,7 +78,6 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     public VehicleBay VehicleBay => _vehicleBay;
     public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _FOBManager;
-    public RequestSigns RequestSigns => _requestSigns;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
@@ -98,7 +96,6 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         AddSingletonRequirement(ref _FOBManager);
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _vehicleSigns);
-        AddSingletonRequirement(ref _requestSigns);
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);

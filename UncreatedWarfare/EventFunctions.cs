@@ -1306,11 +1306,11 @@ public static class EventFunctions
         BarricadeDrop? drop = UCBarricadeManager.FindBarricade(instanceID, point);
         if (drop is { interactable: InteractableSign sign })
         {
-            if (RequestSigns.SignExists(sign, out RequestSign rsign))
+            if (RequestSignsOld.SignExists(sign, out RequestSign rsign))
             {
                 rsign.Position = drop.model.position;
                 rsign.Rotation = drop.model.rotation.eulerAngles;
-                RequestSigns.SaveSingleton();
+                RequestSignsOld.SaveSingleton();
             }
             TraitSigns.OnBarricadeMoved(drop, sign);
         }
@@ -1432,7 +1432,7 @@ public static class EventFunctions
         }
         try
         {
-            if (RequestSigns.SignExists(kit, out RequestSign sign))
+            if (RequestSignsOld.SignExists(kit, out RequestSign sign))
                 sign.InvokeUpdate();
         }
         catch (Exception ex)

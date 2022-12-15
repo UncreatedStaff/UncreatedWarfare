@@ -51,7 +51,6 @@ public class Insurgency :
     protected VehicleBay _vehicleBay;
     protected VehicleSigns _vehicleSigns;
     protected FOBManager _FOBManager;
-    protected RequestSigns _requestSigns;
     protected KitManager _kitManager;
     protected ReviveManager _reviveManager;
     protected SquadManager _squadManager;
@@ -80,7 +79,6 @@ public class Insurgency :
     public VehicleBay VehicleBay => _vehicleBay;
     public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _FOBManager;
-    public RequestSigns RequestSigns => _requestSigns;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
@@ -109,7 +107,6 @@ public class Insurgency :
         AddSingletonRequirement(ref _FOBManager);
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _vehicleSigns);
-        AddSingletonRequirement(ref _requestSigns);
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);

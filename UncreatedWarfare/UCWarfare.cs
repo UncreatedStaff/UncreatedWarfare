@@ -389,7 +389,7 @@ public class UCWarfare : MonoBehaviour
                 {
                     if (VehicleSpawner.Loaded && VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn))
                         spawn.UpdateSign(player);
-                    else if (sign.text.StartsWith(Signs.PREFIX))
+                    else if (sign.text.StartsWith(Signs.Prefix))
                         Signs.BroadcastSignUpdate(drop);
                 }
             }

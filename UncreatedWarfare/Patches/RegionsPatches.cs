@@ -35,7 +35,7 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (trimmedText.StartsWith(Signs.PREFIX, StringComparison.OrdinalIgnoreCase))
+            if (trimmedText.StartsWith(Signs.Prefix, StringComparison.OrdinalIgnoreCase))
             {
                 BarricadeDrop drop = region.FindBarricadeByRootTransform(sign.transform);
                 if (drop == null)
@@ -49,7 +49,7 @@ public static partial class Patches
                     Buffer.BlockCopy(bytes, 0, newState, sizeof(ulong) * 2 + 1, bytes.Length);
                 BarricadeManager.updateState(drop.model, newState, newState.Length);
                 sign.updateState(drop.asset, newState);
-                Signs.BroadcastSign(trimmedText, sign, x, y);
+                Signs.CheckSign(drop);
                 StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
                 if (saver != null && saver.TryGetSave(drop, out SavedStructure structure))
                 {
@@ -204,7 +204,7 @@ public static partial class Patches
                             else if (drop.interactable is InteractableSign sign)
                             {
                                 string newtext = sign.text;
-                                if (lang == null || !newtext.StartsWith(Signs.PREFIX, StringComparison.OrdinalIgnoreCase))
+                                if (lang == null || !newtext.StartsWith(Signs.Prefix, StringComparison.OrdinalIgnoreCase))
                                     goto writeState;
                                 newtext = Signs.GetClientText(newtext, pl, sign);
                                 byte[] textbytes = System.Text.Encoding.UTF8.GetBytes(newtext);

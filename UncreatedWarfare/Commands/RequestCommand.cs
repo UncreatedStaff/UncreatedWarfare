@@ -12,6 +12,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
@@ -41,141 +42,103 @@ public class RequestCommand : AsyncCommand
         {
             if (ctx.MatchParameter(0, "save"))
             {
-                ctx.AssertGamemode<IKitRequests>();
                 ctx.AssertPermissions(EAdminType.STAFF);
-
-                if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
-                {
-                    // todo redo request signs
-                    if (RequestSigns.AddRequestSign(sign, out RequestSign signadded))
-                    {
-                        ctx.SendUnknownError();
-                        ctx.LogAction(EActionLogType.SAVE_REQUEST_SIGN, signadded.KitName);
-                    }
-                    else throw ctx.Reply(T.RequestSignAlreadySaved); // sign already registered
-                }
-                else throw ctx.Reply(T.RequestNoTarget);
+                throw ctx.ReplyString("Saving request signs should now be done using the structure command.");
             }
-            else if (ctx.MatchParameter(0, "remove", "delete"))
+            if (ctx.MatchParameter(0, "remove", "delete"))
             {
-                ctx.AssertGamemode<IKitRequests>();
                 ctx.AssertPermissions(EAdminType.STAFF);
-
-                // todo redo request signs
-                if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
-                {
-                    if (RequestSigns.SignExists(sign, out RequestSign requestsign))
-                    {
-                        ctx.SendUnknownError();
-                        RequestSigns.RemoveRequestSign(requestsign);
-                        ctx.LogAction(EActionLogType.UNSAVE_REQUEST_SIGN, requestsign.KitName);
-                    }
-                    else throw ctx.Reply(T.RequestSignNotSaved);
-                }
-                else throw ctx.Reply(T.RequestNoTarget);
+                throw ctx.ReplyString("Removing request signs should now be done using the structure command.");
             }
-            else throw ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
+            throw ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
         }
-        else
+        if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
         {
-            if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
+            StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+            if (saver != null && await saver.GetSave(drop, token).ThenToUpdate(token) == null)
+                throw ctx.Reply(T.RequestKitNotRegistered);
+
+            SqlItem<Kit>? proxy = Signs.GetKitFromSign(drop, out int loadoutId);
+            if (proxy?.Item != null || loadoutId > 0)
             {
-                if (RequestSigns.Loaded && RequestSigns.SignExists(sign, out RequestSign kitsign))
-                {
-                    ctx.AssertGamemode(out IKitRequests gm);
-                    KitManager manager = gm.KitManager;
-                    
-                    if (kitsign.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (byte.TryParse(kitsign.KitName.Substring(8), NumberStyles.Number, Data.AdminLocale, out byte loadoutId))
-                        {
-                            if (loadoutId > 0)
-                            {
-                                await manager.RequestLoadout(loadoutId, ctx, token).ConfigureAwait(false);
-                            }
-                            else throw ctx.Reply(T.RequestLoadoutNotOwned);
-                        }
-                        else throw ctx.Reply(T.RequestLoadoutNotOwned);
-                    }
-                    else
-                    {
-                        SqlItem<Kit>? proxy = await manager.FindKit(kitsign.KitName, token).ConfigureAwait(false);
-                        if (proxy?.Item == null)
-                            throw ctx.Reply(T.KitNotFound, kitsign.KitName);
-                        await manager.RequestKit(proxy, ctx, token).ConfigureAwait(false);
-                    }
-                }
-                else if (VehicleSigns.Loaded && VehicleSigns.SignExists(sign, out VehicleSign vbsign))
-                {
-                    ctx.AssertGamemode<IVehicles>();
+                ctx.AssertGamemode(out IKitRequests gm);
+                KitManager manager = gm.KitManager;
 
-                    if (vbsign.VehicleBay.HasLinkedVehicle(out InteractableVehicle vehicle))
-                    {
-                        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
-                        if (bay != null && bay.IsLoaded)
-                        {
-                            SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
-                            await UCWarfare.ToUpdate();
-                            if (data?.Item != null)
-                            {
-                                await data.Enter(token).ConfigureAwait(false);
-                                try
-                                {
-                                    await RequestVehicle(ctx, vehicle, data.Item, token);
-                                    ctx.Defer();
-                                }
-                                finally
-                                {
-                                    data.Release();
-                                }
-                                return;
-                            }
-                        }
-                        else throw ctx.SendGamemodeError();
-                    }
-                    throw ctx.Reply(T.RequestNoTarget);
-                }
-                else if (TraitManager.Loaded && sign.text.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX, StringComparison.OrdinalIgnoreCase))
-                {
-                    ctx.AssertGamemode<ITraits>();
-
-                    if (!TraitManager.Loaded)
-                        throw ctx.SendGamemodeError();
-
-                    TraitData? d = TraitManager.GetData(sign.text.Substring(TraitSigns.TRAIT_SIGN_PREFIX.Length));
-                    if (d == null)
-                        throw ctx.Reply(T.RequestNoTarget);
-
-                    TraitManager.RequestTrait(d, ctx);
-                }
-                else throw ctx.Reply(T.RequestNoTarget);
+                if (loadoutId > 0)
+                    await manager.RequestLoadout(loadoutId, ctx, token).ConfigureAwait(false);
+                else
+                    await manager.RequestKit(proxy!, ctx, token).ConfigureAwait(false);
             }
-            else if (ctx.TryGetTarget(out InteractableVehicle vehicle))
+            else if (VehicleSigns.Loaded && VehicleSigns.SignExists(sign, out VehicleSign vbsign))
             {
-                VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
-                if (bay != null && bay.IsLoaded)
+                ctx.AssertGamemode<IVehicles>();
+
+                if (vbsign.VehicleBay.HasLinkedVehicle(out InteractableVehicle vehicle))
                 {
-                    SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate();
-                    if (data?.Item != null)
+                    VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+                    if (bay != null && bay.IsLoaded)
                     {
-                        await data.Enter(token).ConfigureAwait(false);
-                        try
+                        SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
+                        await UCWarfare.ToUpdate();
+                        if (data?.Item != null)
                         {
-                            await RequestVehicle(ctx, vehicle, data.Item, token).ConfigureAwait(false);
-                            ctx.Defer();
-                        }
-                        finally
-                        {
-                            data.Release();
+                            await data.Enter(token).ConfigureAwait(false);
+                            try
+                            {
+                                await RequestVehicle(ctx, vehicle, data.Item, token);
+                                ctx.Defer();
+                            }
+                            finally
+                            {
+                                data.Release();
+                            }
+                            return;
                         }
                     }
-                    else throw ctx.Reply(T.RequestNoTarget);
+                    else throw ctx.SendGamemodeError();
                 }
-                else throw ctx.SendGamemodeError();
+                throw ctx.Reply(T.RequestNoTarget);
+            }
+            else if (TraitManager.Loaded && sign.text.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX, StringComparison.OrdinalIgnoreCase))
+            {
+                ctx.AssertGamemode<ITraits>();
+
+                if (!TraitManager.Loaded)
+                    throw ctx.SendGamemodeError();
+
+                TraitData? d = TraitManager.GetData(sign.text.Substring(TraitSigns.TRAIT_SIGN_PREFIX.Length));
+                if (d == null)
+                    throw ctx.Reply(T.RequestNoTarget);
+
+                TraitManager.RequestTrait(d, ctx);
             }
             else throw ctx.Reply(T.RequestNoTarget);
         }
+        else if (ctx.TryGetTarget(out InteractableVehicle vehicle))
+        {
+            VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+            if (bay != null && bay.IsLoaded)
+            {
+                SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate();
+                if (data?.Item != null)
+                {
+                    await data.Enter(token).ConfigureAwait(false);
+                    try
+                    {
+                        await RequestVehicle(ctx, vehicle, data.Item, token).ConfigureAwait(false);
+                        ctx.Defer();
+                    }
+                    finally
+                    {
+                        data.Release();
+                    }
+                }
+                else throw ctx.Reply(T.RequestNoTarget);
+            }
+            else throw ctx.SendGamemodeError();
+        }
+        else throw ctx.Reply(T.RequestNoTarget);
     }
     /// <remarks>Thread Safe</remarks>
     internal Task RequestVehicle(CommandInteraction ctx, InteractableVehicle vehicle, VehicleData data, CancellationToken token = default) => RequestVehicle(ctx, vehicle, data, ctx.Caller.GetTeam(), token);

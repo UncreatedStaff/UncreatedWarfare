@@ -12,7 +12,7 @@ namespace Uncreated.Warfare.Traits;
 
 public static class TraitSigns
 {
-    public const string TRAIT_SIGN_PREFIX = Signs.PREFIX + Signs.TRAIT_PREFIX;
+    public const string TRAIT_SIGN_PREFIX = Signs.Prefix + Signs.TraitPrefix;
     internal static string TranslateTraitSign(TraitData trait, UCPlayer player)
     {
         string str = Localization.GetLang(player.Steam64);

@@ -92,7 +92,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
             {
                 if (Singleton[i] != null && Singleton[i].InstanceId == drop.instanceID)
                 {
-                    RequestSigns.SetSignTextSneaky(sign, string.Empty);
+                    Signs.SetSignTextServerOnly(sign, string.Empty);
                     VehicleSign vs = Singleton[i];
                     Data.Singletons.GetSingleton<StructureSaver>()?.RemoveItem(vs.StructureSave);
                     Singleton.Remove(Singleton[i]);
@@ -163,7 +163,8 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
                     VehicleSign n = Singleton.AddObjectToSave(new VehicleSign(drop, sign, item.Item!, spawn));
                     spawn.LinkedSign = n;
 
-                    n.StructureSave.Metadata = RequestSigns.SetSignTextSneaky(sign, n.SignText);
+                    Signs.SetSignTextServerOnly(sign, n.SignText);
+                    n.StructureSave.Metadata = drop.GetServersideData().barricade.state;
                     spawn.UpdateSign();
                 }
                 catch (Exception ex)

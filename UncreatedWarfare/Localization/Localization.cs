@@ -283,77 +283,80 @@ public static class Localization
             return ex.GetType().Name;
         }
     }
-    public static string TranslateLoadoutSign(string key, string language, UCPlayer ucplayer)
+    public static string TranslateLoadoutSign(byte loadoutId, string language, UCPlayer ucplayer)
     {
-        KitManager? manager = KitManager.GetSingletonQuick();
-        if (manager != null && ucplayer != null && key.Length > 8 && ushort.TryParse(key.Substring(8), System.Globalization.NumberStyles.Any, Data.AdminLocale, out ushort loadoutid))
+        ulong team = ucplayer.GetTeam();
+        SqlItem<Kit>? proxy = KitManager.GetLoadoutQuick(ucplayer, loadoutId, team);
+        Kit? kit = proxy?.Item;
+        if (kit != null)
         {
-            ulong team = ucplayer.GetTeam();
-            SqlItem<Kit>? proxy = manager.GetLoadoutQuick(ucplayer, loadoutid, team);
-            Kit? kit = proxy?.Item;
-            if (kit != null)
+            string name;
+            bool keepline = false;
+            if (!ucplayer.OnDuty())
             {
-                string name;
-                bool keepline = false;
-                if (!ucplayer.OnDuty())
+                name = kit.GetDisplayName(language);
+                for (int i = 0; i < name.Length; i++)
                 {
-                    name = kit.GetDisplayName(language);
-                    for (int i = 0; i < name.Length; i++)
+                    char @char = name[i];
+                    if (@char == '\n')
                     {
-                        char @char = name[i];
-                        if (@char == '\n')
-                        {
-                            keepline = true;
-                            break;
-                        }
+                        keepline = true;
+                        break;
                     }
                 }
-                else
-                {
-                    name = kit.Id + '\n' + "(" + (char)(loadoutid + 47) + ") " + kit.GetDisplayName(language);
-                    keepline = true;
-                }
-                name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
-                string cost = "<sub>" + T.LoadoutName.Translate(language, loadoutid) + "</sub>";
-                if (!keepline) cost = "\n" + cost;
+            }
+            else
+            {
+                name = kit.Id + '\n' + "(" + (char)(loadoutId + 47) + ") " + kit.GetDisplayName(language);
+                keepline = true;
+            }
+            name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
+            string cost = "<sub>" + T.LoadoutName.Translate(language, loadoutId) + "</sub>";
+            if (!keepline) cost = "\n" + cost;
 
-                string playercount = string.Empty;
+            string playercount;
 
-                if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
-                {
-                    playercount = T.KitUnlimited.Translate(language);
-                }
-                else if (kit.IsClassLimited(out int total, out int allowed, team, true))
-                {
-                    playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_unavailable"), true);
-                }
-                else
-                {
-                    playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_available"), true);
-                }
+            if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
+            {
+                playercount = T.KitUnlimited.Translate(language);
+            }
+            else if (kit.IsClassLimited(out int total, out int allowed, team, true))
+            {
+                playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_unavailable"), true);
+            }
+            else
+            {
+                playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_available"), true);
+            }
 
-                string weapons = kit.WeaponText ?? string.Empty;
+            string weapons = kit.WeaponText ?? string.Empty;
 
-                if (weapons.Length > 0)
-                {
-                    weapons = weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true);
-                    return
-                        name + "\n" +
-                        cost + "\n" +
-                        weapons + "\n" +
-                        playercount;
-                }
-
+            if (weapons.Length > 0)
+            {
+                weapons = weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true);
                 return
-                    name + "\n\n" +
+                    name + "\n" +
                     cost + "\n" +
+                    weapons + "\n" +
                     playercount;
             }
 
             return
-                "<b>" + T.LoadoutName.Translate(language, loadoutid) + "</b>\n\n\n\n" +
-                T.KitPremiumCost.Translate(language, UCWarfare.Config.LoadoutCost)
-                    .ColorizeTMPro(UCWarfare.GetColorHex("kit_level_dollars"), true);
+                name + "\n\n" +
+                cost + "\n" +
+                playercount;
+        }
+
+        return
+            "<b>" + T.LoadoutName.Translate(language, loadoutId) + "</b>\n\n\n\n" +
+            T.KitPremiumCost.Translate(language, UCWarfare.Config.LoadoutCost)
+                .ColorizeTMPro(UCWarfare.GetColorHex("kit_level_dollars"), true);
+    }
+    public static string TranslateLoadoutSign(string key, string language, UCPlayer ucplayer)
+    {
+        if (ucplayer != null && key.Length > 8 && byte.TryParse(key.Substring(8), System.Globalization.NumberStyles.Any, Data.AdminLocale, out byte loadoutid))
+        {
+            return TranslateLoadoutSign(loadoutid, language, ucplayer);
         }
         return key;
     }

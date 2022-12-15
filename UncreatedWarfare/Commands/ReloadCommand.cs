@@ -232,20 +232,12 @@ public class ReloadCommand : Command
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         KitManager manager = SingletonEx.AssertAndGet<KitManager>();
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
-            await manager.ReloadKits();
+            await manager.DownloadAll();
             await UCWarfare.ToUpdate();
-            if (RequestSigns.Loaded)
-            {
-                RequestSigns.UpdateAllSigns();
-            }
-            if (!KitManager.KitExists(TeamManager.Team1UnarmedKit, out _))
-                L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(TeamManager.Team2UnarmedKit, out _))
-                L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(TeamManager.DefaultKit, out _))
-                L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
+            Signs.UpdateKitSigns(null, null);
+            Signs.UpdateLoadoutSigns(null);
         });
     }
     internal static void ReloadFactions(CommandInteraction? ctx)

@@ -12,6 +12,7 @@ using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Quests;
 using UnityEngine;
+using Action = System.Action;
 
 namespace Uncreated.Warfare;
 
@@ -30,6 +31,7 @@ public class Translation
     private bool _init;
     public string Key;
     public int Id;
+    public static event Action? OnReload;
     public TranslationFlags Flags => _flags;
     protected string InvalidValue => "Translation Error - " + Key;
     internal TranslationDataAttribute? AttributeData { get => _attr; set => _attr = value; }
@@ -1082,7 +1084,7 @@ public class Translation
             }
             else
             {
-                foreach (LanguageAliasSet set in Data.LanguageAliases.Values)
+                foreach (LanguageAliasSet set in Data.LanguageAliases)
                 {
                     if (set.key.Equals(lang, StringComparison.OrdinalIgnoreCase))
                     {
@@ -1196,6 +1198,7 @@ public class Translation
         if (amt > 0 && defRead)
             L.Log("Added " + amt + " missing default translations for " + L.DEFAULT + ".", ConsoleColor.Yellow);
         L.Log("Loaded translations in " + (DateTime.Now - start).TotalMilliseconds.ToString("F1", Data.Locale) + "ms", ConsoleColor.Magenta);
+        OnReload?.Invoke();
     }
     private static void WriteDefaultTranslations()
     {

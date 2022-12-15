@@ -774,13 +774,8 @@ public class DebugCommand : AsyncCommand
 
         if (ctx.TryGetRange(0, out string text) && ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
         {
-            if (!RequestSigns.Loaded || !RequestSigns.SignExists(sign, out _))
-            {
-                BarricadeManager.ServerSetSignText(sign, text.Replace("\\n", "\n"));
-                Signs.BroadcastSignUpdate(drop);
-            }
-            else
-                ctx.ReplyString("Unable to set text on a request sign. Not supported.");
+            BarricadeManager.ServerSetSignText(sign, text.Replace("\\n", "\n"));
+            Signs.BroadcastSignUpdate(drop);
         }
     }
 #if DEBUG

@@ -15,6 +15,7 @@ using Uncreated.Networking;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
@@ -45,10 +46,29 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     public override Task PostLoad()
     {
         PlayerLife.OnPreDeath += OnPreDeath;
+        EventDispatcher.GroupChanged += OnGroupChanged;
+        EventDispatcher.PlayerJoined += OnPlayerJoined;
+        EventDispatcher.PlayerLeaving += OnPlayerLeaving;
+        OnItemsRefreshed += OnItemsRefreshedIntl;
         return base.PostLoad();
     }
+
+    private void OnItemsRefreshedIntl()
+    {
+        SqlItem<Kit>? kit = FindKitNoLock(TeamManager.Team1UnarmedKit);
+        if (!KitManager.KitExists(, out _))
+            L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
+        if (!KitManager.KitExists(TeamManager.Team2UnarmedKit, out _))
+            L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
+        if (!KitManager.KitExists(TeamManager.DefaultKit, out _))
+            L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
+    }
+
     public override Task PreUnload()
     {
+        EventDispatcher.PlayerLeaving -= OnPlayerLeaving;
+        EventDispatcher.PlayerJoined -= OnPlayerJoined;
+        EventDispatcher.GroupChanged -= OnGroupChanged;
         PlayerLife.OnPreDeath -= OnPreDeath;
         return base.PreUnload();
     }
@@ -675,7 +695,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         {
             Release();
         }
-        RequestSigns.UpdateAllSigns(player);
+        RequestSignsOld.UpdateAllSigns(player);
     }
     private void OnPreDeath(PlayerLife life)
     {
@@ -772,6 +792,38 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         if (UCWarfare.Config.EnableSync)
             KitSync.OnKitUpdated(kit);
     }
+    private void OnPlayerLeaving(PlayerEvent e) => OnTeamPlayerCountChanged();
+    private void OnPlayerJoined(PlayerJoined e) => OnTeamPlayerCountChanged();
+    private void OnGroupChanged(GroupChanged e) => OnTeamPlayerCountChanged(e.Player);
+    internal void OnTeamPlayerCountChanged(UCPlayer? allPlayer = null)
+    {
+        UCWarfare.RunTask(async () =>
+        {
+            await WaitAsync().ThenToUpdate();
+            try
+            {
+                for (int i = 0; i < Items.Count; i++)
+                {
+                    SqlItem<Kit> item = Items[i];
+                    if (item.Item == null)
+                        continue;
+                    if (item.Item.TeamLimit < 1f)
+                    {
+                        UpdateSigns();
+                        kn.InvokeUpdate();
+                    }
+                    else if (allPlayer is { IsOnline: true })
+                        kn.InvokeUpdate(allPlayer);
+                }
+            }
+            finally
+            {
+                Release();
+            }
+        });
+        // todo update all loadouts or request signs where team limit < 1
+    }
+
     /// <remarks>Thread Safe</remarks>
     public static void UpdateSigns()
     {
@@ -830,51 +882,17 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     }
     private static void UpdateSignsIntl(UCPlayer? player)
     {
-        if (RequestSigns.Loaded)
-        {
-            if (player is null)
-            {
-                for (int i = 0; i < RequestSigns.Singleton.Count; i++)
-                {
-                    RequestSigns.Singleton[i].InvokeUpdate();
-                }
-            }
-            else
-            {
-                for (int i = 0; i < RequestSigns.Singleton.Count; i++)
-                {
-                    RequestSigns.Singleton[i].InvokeUpdate(player);
-                }
-            }
-        }
+        Signs.UpdateKitSigns(player, null);
     }
     private static void UpdateSignsIntl(Kit kit, UCPlayer? player)
     {
-        if (RequestSigns.Loaded)
+        if (kit.Type == KitType.Loadout)
         {
-            if (kit.Type == KitType.Loadout)
-            {
-                if (player is null)
-                {
-                    for (int i = 0; i < RequestSigns.Singleton.Count; i++)
-                    {
-                        if (RequestSigns.Singleton[i].KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.OrdinalIgnoreCase))
-                            RequestSigns.Singleton[i].InvokeUpdate();
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < RequestSigns.Singleton.Count; i++)
-                    {
-                        if (RequestSigns.Singleton[i].KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.OrdinalIgnoreCase))
-                            RequestSigns.Singleton[i].InvokeUpdate(player);
-                    }
-                }
-            }
-            else
-            {
-                UpdateSignsIntl(kit.Id, player);
-            }
+            Signs.UpdateLoadoutSigns(player);
+        }
+        else
+        {
+            Signs.UpdateKitSigns(player, kit.Id);
         }
     }
     private static void UpdateSignsIntl(SqlItem<Kit> kit, UCPlayer? player)
@@ -885,25 +903,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     }
     private static void UpdateSignsIntl(string kitId, UCPlayer? player)
     {
-        if (RequestSigns.Loaded)
-        {
-            if (player is null)
-            {
-                for (int i = 0; i < RequestSigns.Singleton.Count; i++)
-                {
-                    if (RequestSigns.Singleton[i].KitName.Equals(kitId, StringComparison.Ordinal))
-                        RequestSigns.Singleton[i].InvokeUpdate();
-                }
-            }
-            else
-            {
-                for (int i = 0; i < RequestSigns.Singleton.Count; i++)
-                {
-                    if (RequestSigns.Singleton[i].KitName.Equals(kitId, StringComparison.Ordinal))
-                        RequestSigns.Singleton[i].InvokeUpdate(player);
-                }
-            }
-        }
+        Signs.UpdateKitSigns(player, kitId);
     }
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> GiveAccess(Kit kit, UCPlayer player, KitAccessType type, CancellationToken token = default)
@@ -917,6 +917,30 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     public async Task<bool> GiveAccess(Kit kit, ulong player, KitAccessType type, CancellationToken token = default)
     {
         SqlItem<Kit>? proxy = await FindProxy(kit.PrimaryKey, token).ConfigureAwait(false);
+        if (proxy?.Item == null)
+            return false;
+        return await GiveAccess(proxy, player, type, token).ConfigureAwait(false);
+    }
+    /// <remarks>Thread Safe</remarks>
+    public static async Task<bool> GiveAccess(string kit, UCPlayer player, KitAccessType type, CancellationToken token = default)
+    {
+        KitManager? manager = GetSingletonQuick();
+        if (manager == null)
+            return await AddAccessRow(kit, player.Steam64, type, token).ConfigureAwait(false);
+
+        SqlItem<Kit>? proxy = await manager.FindKit(kit, token).ConfigureAwait(false);
+        if (proxy?.Item == null)
+            return false;
+        return await GiveAccess(proxy, player, type, token).ConfigureAwait(false);
+    }
+    /// <remarks>Thread Safe</remarks>
+    public static async Task<bool> GiveAccess(string kit, ulong player, KitAccessType type, CancellationToken token = default)
+    {
+        KitManager? manager = GetSingletonQuick();
+        if (manager == null)
+            return await AddAccessRow(kit, player, type, token).ConfigureAwait(false);
+
+        SqlItem<Kit>? proxy = await manager.FindKit(kit, token).ConfigureAwait(false);
         if (proxy?.Item == null)
             return false;
         return await GiveAccess(proxy, player, type, token).ConfigureAwait(false);
@@ -971,9 +995,33 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         return await RemoveAccess(proxy, player, token).ConfigureAwait(false);
     }
     /// <remarks>Thread Safe</remarks>
+    public async Task<bool> RemoveAccess(string kit, UCPlayer player, CancellationToken token = default)
+    {
+        KitManager? manager = GetSingletonQuick();
+        if (manager == null)
+            return await RemoveAccessRow(kit, player.Steam64, token).ConfigureAwait(false);
+
+        SqlItem<Kit>? proxy = await manager.FindKit(kit, token).ConfigureAwait(false);
+        if (proxy?.Item == null)
+            return false;
+        return await RemoveAccess(proxy, player, token).ConfigureAwait(false);
+    }
+    /// <remarks>Thread Safe</remarks>
     public async Task<bool> RemoveAccess(Kit kit, ulong player, CancellationToken token = default)
     {
         SqlItem<Kit>? proxy = await FindProxy(kit.PrimaryKey, token).ConfigureAwait(false);
+        if (proxy?.Item == null)
+            return false;
+        return await RemoveAccess(proxy, player, token).ConfigureAwait(false);
+    }
+    /// <remarks>Thread Safe</remarks>
+    public static async Task<bool> RemoveAccess(string kit, ulong player, CancellationToken token = default)
+    {
+        KitManager? manager = GetSingletonQuick();
+        if (manager == null)
+            return await RemoveAccessRow(kit, player, token).ConfigureAwait(false);
+
+        SqlItem<Kit>? proxy = await manager.FindKit(kit, token).ConfigureAwait(false);
         if (proxy?.Item == null)
             return false;
         return await RemoveAccess(proxy, player, token).ConfigureAwait(false);
@@ -1029,11 +1077,37 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             $"INSERT INTO `{TABLE_ACCESS}` ({SqlTypes.ColumnList(COLUMN_EXT_PK, COLUMN_ACCESS_STEAM_64, COLUMN_ACCESS_TYPE)}) " +
              "VALUES (@0, @1, @2);", new object[] { kit.Key, player, type.ToString() }, token).ConfigureAwait(false) > 0;
     }
+    private static async Task<bool> AddAccessRow(string kit, ulong player, KitAccessType type, CancellationToken token = default)
+    {
+        PrimaryKey pk = PrimaryKey.NotAssigned;
+        await Data.AdminSql.QueryAsync($"SELECT `{COLUMN_PK}` FROM `{TABLE_MAIN}` WHERE `{COLUMN_KIT_ID}`=@0;",
+            new object[] { kit },
+            reader =>
+            {
+                pk = reader.GetInt32(0);
+            }, token).ConfigureAwait(false);
+        if (pk.IsValid)
+            return await AddAccessRow(pk, player, type, token).ConfigureAwait(false);
+        return false;
+    }
     private static async Task<bool> RemoveAccessRow(PrimaryKey kit, ulong player, CancellationToken token = default)
     {
         return await Data.AdminSql.NonQueryAsync(
             $"DELETE FROM `{TABLE_ACCESS}` WHERE `{COLUMN_EXT_PK}`=@0 AND `{COLUMN_ACCESS_STEAM_64}`=@1;",
             new object[] { kit.Key, player }, token).ConfigureAwait(false) > 0;
+    }
+    private static async Task<bool> RemoveAccessRow(string kit, ulong player, CancellationToken token = default)
+    {
+        PrimaryKey pk = PrimaryKey.NotAssigned;
+        await Data.AdminSql.QueryAsync($"SELECT `{COLUMN_PK}` FROM `{TABLE_MAIN}` WHERE `{COLUMN_KIT_ID}`=@0;",
+            new object[] { kit },
+            reader =>
+            {
+                pk = reader.GetInt32(0);
+            }, token).ConfigureAwait(false);
+        if (pk.IsValid)
+            return await RemoveAccessRow(pk, player, token).ConfigureAwait(false);
+        return false;
     }
     /// <remarks>Thread Safe</remarks>
     public static bool HasAccessQuick(SqlItem<Kit> kit, UCPlayer player) => HasAccessQuick(kit.PrimaryKey, player);
@@ -1420,6 +1494,30 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
 
         return true;
     }
+    private async Task SetupPlayer(UCPlayer player)
+    {
+        ulong team = player.GetTeam();
+        Kit? kit = player.ActiveKit?.Item;
+        if (kit == null || !kit.Requestable || (kit.Type != KitType.Loadout && kit.IsLimited(out _, out _, team)) || (kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out _, team)))
+            await TryGiveRiflemanKit(player).ThenToUpdate();
+        else if (UCWarfare.Config.ModifySkillLevels)
+            player.EnsureSkillsets(kit.Skillsets ?? Array.Empty<Skillset>());
+    }
+    public Task OnPostPlayerInit(UCPlayer player)
+    {
+        if (Data.Gamemode is not TeamGamemode tgm || !tgm.UseTeamSelector)
+        {
+            return SetupPlayer(player);
+        }
+        UCInventoryManager.ClearInventory(player);
+        player.EnsureSkillsets(Array.Empty<Skillset>());
+        return Task.CompletedTask;
+    }
+    public Task OnJoinTeamAsync(UCPlayer player, ulong team)
+    {
+        return TryGiveKitOnJoinTeam(player);
+    }
+
     #region Sql
     // ReSharper disable InconsistentNaming
     public const string TABLE_MAIN = "kits";
@@ -2093,30 +2191,6 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         return item;
     }
     #endregion
-    private async Task SetupPlayer(UCPlayer player)
-    {
-        ulong team = player.GetTeam();
-        Kit? kit = player.ActiveKit?.Item;
-        if (kit == null || !kit.Requestable || (kit.Type != KitType.Loadout && kit.IsLimited(out _, out _, team)) || (kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out _, team)))
-            await TryGiveRiflemanKit(player).ThenToUpdate();
-        else if (UCWarfare.Config.ModifySkillLevels)
-            player.EnsureSkillsets(kit.Skillsets ?? Array.Empty<Skillset>());
-    }
-    public Task OnPostPlayerInit(UCPlayer player)
-    {
-        if (Data.Gamemode is not TeamGamemode tgm || !tgm.UseTeamSelector)
-        {
-            return SetupPlayer(player);
-        }
-        UCInventoryManager.ClearInventory(player);
-        player.EnsureSkillsets(Array.Empty<Skillset>());
-        return Task.CompletedTask;
-    }
-
-    public Task OnJoinTeamAsync(UCPlayer player, ulong team)
-    {
-        return TryGiveKitOnJoinTeam(player);
-    }
 }
 
 public delegate void KitAccessCallback(SqlItem<Kit> kit, ulong player, bool newAccess, KitAccessType newType);

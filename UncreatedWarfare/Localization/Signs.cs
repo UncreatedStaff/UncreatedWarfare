@@ -1,199 +1,331 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using JetBrains.Annotations;
+using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
+using UnityEngine;
+using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare;
 public static class Signs
 {
-    public const string PREFIX = "sign_";
-    public const string VBS_PREFIX = "vbs_";
-    public const string TRAIT_PREFIX = "trait_";
-    public const string LOADOUT_PREFIX = "loadout_";
-    public static void BroadcastSignUpdate(InteractableSign sign)
+    public const string Prefix = "sign_";
+    public const string VBSPrefix = "vbs_";
+    public const string KitPrefix = "kit_";
+    public const string TraitPrefix = "trait_";
+    public const string LoadoutPrefix = "loadout_";
+    public const string LongTranslationPrefix = "l_";
+    private static readonly Dictionary<uint, CustomSignComponent> ActiveSigns = new Dictionary<uint, CustomSignComponent>(64);
+    private static CustomSignComponent? GetComponent(BarricadeDrop drop)
     {
-        if (sign == null) return;
-        if (Regions.tryGetCoordinate(sign.transform.position, out byte x, out byte y))
-            BroadcastSign(sign.text, sign, x, y);
-    }
-    public static void BroadcastSignUpdate(BarricadeDrop drop)
-    {
-        if (drop != null && drop.interactable is InteractableSign sign && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
-            BroadcastSign(sign.text, sign, x, y);
-    }
-    public static void SendSignUpdate(InteractableSign sign, UCPlayer player)
-    {
-        if (sign != null && player.IsOnline)
+        ThreadUtil.assertIsGameThread();
+        if (drop.interactable is not InteractableSign sign)
+            return null;
+        string text = sign.text;
+        if (!text.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
+            return null;
+        text = text.Substring(Prefix.Length);
+        if (ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp))
         {
-            Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, player.Connection, GetClientText(sign.text, player, sign));
+            if (comp.isActiveAndEnabled)
+                UnityEngine.Object.Destroy(comp);
+            ActiveSigns.Remove(drop.instanceID);
         }
-    }
-    public static void SendSignUpdate(BarricadeDrop drop, UCPlayer player)
-    {
-        if (drop != null && drop.interactable is InteractableSign sign && player.IsOnline)
+        if (drop.model.TryGetComponent(out comp))
+            UnityEngine.Object.Destroy(comp);
+
+        if (text.StartsWith(VBSPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, player.Connection, GetClientText(sign.text, player, sign));
+            comp = drop.model.gameObject.AddComponent<VehicleBaySignComponent>();
         }
-    }
-    public static void BroadcastSign(string serverText, InteractableSign sign, byte x, byte y)
-    {
-        if (serverText.Length <= PREFIX.Length || !serverText.StartsWith(PREFIX, StringComparison.OrdinalIgnoreCase))
+        else if (text.StartsWith(KitPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            BroadcastClientSign(serverText, sign, x, y);
-            return;
+            comp = drop.model.gameObject.AddComponent<KitSignComponent>();
         }
-        string key2 = serverText.Substring(PREFIX.Length);
-        if (key2.StartsWith(VBS_PREFIX, StringComparison.OrdinalIgnoreCase))
+        else if (text.StartsWith(LoadoutPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            BroadcastClientVBS(key2.Substring(VBS_PREFIX.Length), sign, x, y);
+            comp = drop.model.gameObject.AddComponent<KitSignComponent>();
+            ((KitSignComponent)comp).IsLoadout = true;
         }
-        else if (key2.StartsWith(TRAIT_PREFIX, StringComparison.OrdinalIgnoreCase))
+        else if (text.StartsWith(TraitPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            BroadcastClientTrait(key2.Substring(TRAIT_PREFIX.Length), sign, x, y);
+            comp = drop.model.gameObject.AddComponent<TraitSignComponent>();
+        }
+        else if (text.StartsWith(LongTranslationPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            comp = drop.model.gameObject.AddComponent<TranlationSignComponent>();
+            ((TranlationSignComponent)comp).IsLong = true;
         }
         else
         {
-            BroadcastClientKitSign(key2, sign, x, y);
+            comp = drop.model.gameObject.AddComponent<TranlationSignComponent>();
+        }
+
+        comp.Init(drop);
+        ActiveSigns.Add(drop.instanceID, comp);
+        return comp;
+    }
+    public static SqlItem<Kit>? GetKitFromSign(BarricadeDrop drop, out int loadoutId)
+    {
+        if (ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent kitsign)
+        {
+            loadoutId = kitsign.LoadoutIndex;
+            return kitsign.IsLoadout ? null : kitsign.Kit;
+        }
+
+        loadoutId = -1;
+        return null;
+    }
+    public static bool CheckSign(BarricadeDrop drop)
+    {
+        if (drop.model == null)
+            return false;
+        CustomSignComponent? comp = GetComponent(drop);
+        if (comp is not null)
+        {
+            BroadcastSignUpdate(drop, comp);
+            return true;
+        }
+        return false;
+    }
+    public static void CheckAllSigns()
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ThreadUtil.assertIsGameThread();
+        foreach (uint id in ActiveSigns.Keys.ToList())
+        {
+            BarricadeDrop? drop = UCBarricadeManager.FindBarricade(id);
+            if (drop == null && ActiveSigns.TryGetValue(id, out CustomSignComponent comp))
+            {
+                if (comp != null)
+                    UnityEngine.Object.Destroy(comp);
+                ActiveSigns.Remove(id);
+            }
+        }
+        for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
+        {
+            for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                BarricadeRegion region = BarricadeManager.regions[x, y];
+                for (int i = 0; i < region.drops.Count; ++i)
+                {
+                    if (region.drops[i].asset.build is EBuild.SIGN or EBuild.SIGN_WALL)
+                        CheckSign(region.drops[i]);
+                }
+            }
+        }
+        for (int v = 0; v < BarricadeManager.vehicleRegions.Count; ++v)
+        {
+            VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[v];
+            for (int i = 0; i < region.drops.Count; ++i)
+            {
+                if (region.drops[i].asset.build is EBuild.SIGN or EBuild.SIGN_WALL)
+                    CheckSign(region.drops[i]);
+            }
         }
     }
-    public static string GetClientText(string serverText, UCPlayer player, InteractableSign sign)
+    public static void UpdateAllSigns(bool updatePlainText = false)
     {
-        if (serverText.Length <= PREFIX.Length || !serverText.StartsWith(PREFIX, StringComparison.OrdinalIgnoreCase))
-            return GetClientTextSign(player, serverText);
-
-        string key2 = serverText.Substring(PREFIX.Length);
-        if (key2.StartsWith(VBS_PREFIX, StringComparison.OrdinalIgnoreCase))
-            return GetClientTextVBS(player, key2.Substring(VBS_PREFIX.Length), sign);
-        
-        if (key2.StartsWith(TRAIT_PREFIX, StringComparison.OrdinalIgnoreCase))
-            return GetClientTextTrait(player, key2.Substring(TRAIT_PREFIX.Length));
-
-        return GetClientTextKitSign(player, key2);
-    }
-
-    private static void BroadcastClientVBS(string vbKey, InteractableSign sign, byte x, byte y)
-    {
-        VehicleBay? vb = VehicleBay.GetSingletonQuick();
-        if (VehicleSigns.Loaded && VehicleSpawner.Loaded && vb != null &&
-            VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn)
-            && spawn.Data?.Item != null)
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ThreadUtil.assertIsGameThread();
+        for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
         {
+            for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                BarricadeRegion region = BarricadeManager.regions[x, y];
+                for (int i = 0; i < region.drops.Count; ++i)
+                {
+                    if (region.drops[i].asset.build is EBuild.SIGN or EBuild.SIGN_WALL)
+                        BroadcastSignUpdate(region.drops[i], updatePlainText);
+                }
+            }
+        }
+        for (int v = 0; v < BarricadeManager.vehicleRegions.Count; ++v)
+        {
+            VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[v];
+            for (int i = 0; i < region.drops.Count; ++i)
+            {
+                if (region.drops[i].asset.build is EBuild.SIGN or EBuild.SIGN_WALL)
+                    BroadcastSignUpdate(region.drops[i], updatePlainText);
+            }
+        }
+    }
+    public static void UpdateLoadoutSigns(UCPlayer? player)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ThreadUtil.assertIsGameThread();
+        bool b = player is null;
+        for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
+        {
+            for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                BarricadeRegion region = BarricadeManager.regions[x, y];
+                for (int i = 0; i < region.drops.Count; ++i)
+                {
+                    BarricadeDrop drop = region.drops[i];
+                    if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && comp2.IsLoadout)
+                    {
+                        if (b)
+                            BroadcastSignUpdate(drop, comp2);
+                        else
+                            SendSignUpdate(drop, player!, comp2);
+                    }
+                }
+            }
+        }
+        for (int v = 0; v < BarricadeManager.vehicleRegions.Count; ++v)
+        {
+            VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[v];
+            for (int i = 0; i < region.drops.Count; ++i)
+            {
+                BarricadeDrop drop = region.drops[i];
+                if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && comp2.IsLoadout)
+                {
+                    if (b)
+                        BroadcastSignUpdate(drop, comp2);
+                    else
+                        SendSignUpdate(drop, player!, comp2);
+                }
+            }
+        }
+    }
+    public static void UpdateKitSigns(UCPlayer? player, string? kitName)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ThreadUtil.assertIsGameThread();
+        bool b = player is null;
+        bool a = kitName is null;
+        for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
+        {
+            for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                BarricadeRegion region = BarricadeManager.regions[x, y];
+                for (int i = 0; i < region.drops.Count; ++i)
+                {
+                    BarricadeDrop drop = region.drops[i];
+                    if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && (a || kitName!.Equals(comp2.KitName)))
+                    {
+                        if (b)
+                            BroadcastSignUpdate(drop, comp2);
+                        else
+                            SendSignUpdate(drop, player!, comp2);
+                    }
+                }
+            }
+        }
+        for (int v = 0; v < BarricadeManager.vehicleRegions.Count; ++v)
+        {
+            VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[v];
+            for (int i = 0; i < region.drops.Count; ++i)
+            {
+                BarricadeDrop drop = region.drops[i];
+                if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && (a || kitName!.Equals(comp2.KitName)))
+                {
+                    if (b)
+                        BroadcastSignUpdate(drop, comp2);
+                    else
+                        SendSignUpdate(drop, player!, comp2);
+                }
+            }
+        }
+    }
+    public static void BroadcastSignUpdate(BarricadeDrop drop, bool updatePlainText = false)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (drop.interactable is InteractableSign sign)
+        {
+            if (ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp))
+            {
+                BroadcastSignUpdate(drop, comp);
+                return;
+            }
+
+            if (!updatePlainText) return;
             NetId id = sign.GetNetId();
-            VehicleData data = spawn.Data.Item;
-            foreach (LanguageSet set in LanguageSet.InRegions(x, y, BarricadeManager.BARRICADE_REGIONS))
+            bool r = Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y);
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
-                string fmt = Localization.TranslateVBS(spawn, data, set.Language, data.Team);
-                while (set.MoveNext())
-                    Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Connection, QuickFormat(fmt, data.GetCostLine(set.Next)));
+                UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                if (r && !Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
+                    continue;
+                Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, pl.Connection, sign.text);
             }
         }
-        else
-            BroadcastClientSign(vbKey, sign, x, y);
     }
-    private static string GetClientTextVBS(UCPlayer player, string vbKey, InteractableSign sign)
+    private static void BroadcastSignUpdate(BarricadeDrop drop, CustomSignComponent comp)
     {
-        VehicleBay? vb = VehicleBay.GetSingletonQuick();
-        if (VehicleSigns.Loaded && VehicleSpawner.Loaded && vb != null &&
-            VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn)
-            && spawn.Data?.Item != null)
+        NetId id = drop.interactable.GetNetId();
+        bool r = Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y);
+        if (comp.DropIsPlanted)
+            r = false;
+        if (comp.PerPlayer || !r)
         {
-            string lang = Localization.GetLang(player.Steam64);
-            return QuickFormat(Localization.TranslateVBS(spawn, spawn.Data.Item, lang, spawn.Data.Item.Team), spawn.Data.Item.GetCostLine(player));
-        }
-        
-        return GetClientTextSign(player, vbKey);
-    }
-
-    private static string GetClientTextSign(UCPlayer player, string key)
-    {
-        Translation? t = Translation.FromSignId(key);
-        return t == null ? key : t.Translate(player);
-    }
-    private static void BroadcastClientTrait(string typeName, InteractableSign sign, byte x, byte y)
-    {
-        TraitData? d;
-        if (!TraitManager.Loaded || (d = TraitManager.GetData(typeName)) == null)
-        {
-            BroadcastClientSign(typeName, sign, x, y);
-            return;
-        }
-        NetId id = sign.GetNetId();
-        bool t = d.Team is 1 or 2;
-        foreach (LanguageSet set in t
-                     ? LanguageSet.InRegions(x, y, BarricadeManager.BARRICADE_REGIONS)
-                     : LanguageSet.InRegionsByTeam(x, y, BarricadeManager.BARRICADE_REGIONS))
-        {
-            ulong team = t ? d.Team : set.Team;
-            string fmt = TraitSigns.TranslateTraitSign(d, set.Language, team, out bool shouldFormat);
-            while (set.MoveNext())
-                Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Connection, shouldFormat ? TraitSigns.FormatTraitSign(d, fmt, set.Next, team) : fmt);
-        }
-    }
-    private static string GetClientTextTrait(UCPlayer player, string typeName)
-    {
-        TraitData? d;
-        if (!TraitManager.Loaded || (d = TraitManager.GetData(typeName)) == null)
-            return GetClientTextSign(player, typeName);
-
-        ulong team = d.Team is 1 or 2 ? d.Team : player.GetTeam();
-        string txt = TraitSigns.TranslateTraitSign(d, Localization.GetLang(player.Steam64), team, out bool fmt);
-        return fmt ? TraitSigns.FormatTraitSign(d, txt, player, team) : txt;
-    }
-    private static void BroadcastClientKitSign(string kitname, InteractableSign sign, byte x, byte y)
-    {
-        bool ld = kitname.StartsWith(LOADOUT_PREFIX, StringComparison.OrdinalIgnoreCase);
-        KitOld kit = null!;
-        if (!KitManager.Loaded || (!ld && !KitManager.KitExists(kitname, out kit)))
-        {
-            BroadcastClientSign(kitname, sign, x, y);
-            return;
-        }
-        NetId id = sign.GetNetId();
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-        {
-            UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            if (!Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
-                continue;
-            string lang = Localization.GetLang(pl.Steam64);
-            Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, pl.Connection, ld ? Localization.TranslateLoadoutSign(kitname, lang, pl) : Localization.TranslateKitSign(lang, kit, pl));
-        }
-    }
-    private static string GetClientTextKitSign(UCPlayer player, string kitname)
-    {
-        bool ld = kitname.StartsWith(LOADOUT_PREFIX, StringComparison.OrdinalIgnoreCase);
-        KitOld kit = null!;
-        if (!KitManager.Loaded || (!ld && !KitManager.KitExists(kitname, out kit)))
-        {
-            return GetClientTextSign(player, kitname);
-        }
-
-        string lang = Localization.GetLang(player.Steam64);
-        return ld ? Localization.TranslateLoadoutSign(kitname, lang, player) : Localization.TranslateKitSign(lang, kit, player);
-    }
-    private static void BroadcastClientSign(string signKey, InteractableSign sign, byte x, byte y)
-    {
-        NetId id = sign.GetNetId();
-        Translation? t = Translation.FromSignId(signKey);
-        if (t == null)
-        {
-            foreach (ITransportConnection pl in BarricadeManager.EnumerateClients(x, y, ushort.MaxValue))
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
-                Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, pl, signKey);
+                UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                if (r && !Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
+                    continue;
+                Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, pl.Connection, comp.Translate(pl.Language, pl));
             }
         }
         else
         {
             foreach (LanguageSet set in LanguageSet.InRegions(x, y, BarricadeManager.BARRICADE_REGIONS))
             {
-                string fmt = t.Translate(set.Language);
+                string val = comp.Translate(set.Language, null!);
                 while (set.MoveNext())
-                    Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Connection, fmt);
+                    Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Connection, val);
             }
         }
     }
-    public static string QuickFormat(string input, string val)
+    public static void SendSignUpdate(BarricadeDrop drop, UCPlayer player, bool updatePlainText = false)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (drop.interactable is InteractableSign sign)
+        {
+            if (ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp))
+            {
+                SendSignUpdate(drop, player, comp);
+                return;
+            }
+            if (!updatePlainText ||
+                Regions.tryGetCoordinate(drop.model.position, out byte x2, out byte y2) &&
+                !Regions.checkArea(x2, y2, player.Player.movement.region_x, player.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
+                return;
+            Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, player.Connection, sign.text);
+        }
+    }
+
+    private static void SendSignUpdate(BarricadeDrop drop, UCPlayer player, CustomSignComponent comp)
+    {
+        if (!comp.DropIsPlanted && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y) && !Regions.checkArea(x, y, player.Player.movement.region_x, player.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
+            return;
+        Data.SendChangeText.Invoke(((InteractableSign)drop.interactable).GetNetId(), ENetReliability.Unreliable, player.Connection, comp.Translate(player.Language, player));
+    }
+    public static string GetClientText(BarricadeDrop drop, UCPlayer player)
+    {
+        if (drop.interactable is InteractableSign sign)
+        {
+            return ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) ? comp.Translate(player.Language, player) : sign.text;
+        }
+
+        return string.Empty;
+    }
+    public static string QuickFormat(string input, string? val)
     {
         int ind = input.IndexOf("{0}", StringComparison.Ordinal);
         if (ind != -1)
@@ -203,5 +335,283 @@ public static class Signs
             return input.Substring(0, ind) + val + input.Substring(ind + 3, input.Length - ind - 3);
         }
         return input;
+    }
+    public static void SetSignTextServerOnly(InteractableSign sign, string text)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        BarricadeDrop barricadeByRootFast = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
+        byte[] state = barricadeByRootFast.GetServersideData().barricade.state;
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(text);
+        if (bytes.Length > byte.MaxValue - 18)
+        {
+            L.LogWarning(text + " is too long to go on a sign! (SetSignTextServerOnly)");
+            return;
+        }
+        byte[] newState = new byte[17 + bytes.Length];
+        Buffer.BlockCopy(state, 0, newState, 0, 16);
+        newState[16] = (byte)bytes.Length;
+        if (bytes.Length != 0)
+            Buffer.BlockCopy(bytes, 0, newState, 17, bytes.Length);
+        BarricadeManager.updateState(barricadeByRootFast.model, newState, newState.Length);
+        sign.updateState(barricadeByRootFast.asset, newState);
+    }
+    private abstract class CustomSignComponent : MonoBehaviour
+    {
+        protected InteractableSign Sign;
+        public bool DropIsPlanted { get; private set; }
+        public abstract bool PerPlayer { get; }
+        public void Init(BarricadeDrop drop)
+        {
+            if (BarricadeManager.tryGetRegion(drop.model, out _, out _, out ushort plant, out _) && plant != ushort.MaxValue)
+                DropIsPlanted = true;
+            Sign = (InteractableSign)drop.interactable;
+            Init();
+        }
+        protected abstract void Init();
+        public abstract string Translate(string language, UCPlayer player);
+    }
+    private sealed class TranlationSignComponent : CustomSignComponent
+    {
+        private Translation? _translation;
+        private string _signId;
+        private string? _defCache;
+        private bool _warn;
+        public override bool PerPlayer => false;
+        public bool CanCache { get; set; } = true;
+        public bool IsLong { get; set; }
+        public string SignId
+        {
+            get => _signId;
+            set
+            {
+                _signId = value;
+                _defCache = null;
+                Init();
+            }
+        }
+        [UsedImplicitly]
+        void OnDisable()
+        {
+            Translation.OnReload -= OnReload;
+        }
+        protected override void Init()
+        {
+            if (Sign.text.Length > Prefix.Length + TraitPrefix.Length)
+            {
+                _signId = Sign.text.Substring(Prefix.Length);
+            }
+            else
+            {
+                _signId = Sign.text;
+                if (!_warn)
+                {
+                    L.LogWarning("Sign at " + gameObject.transform.position + " has an invalid trait id: \"" + Sign.text + "\".");
+                    _warn = true;
+                }
+            }
+            Translation.OnReload += OnReload;
+            if (!string.IsNullOrEmpty(SignId))
+                _translation = Translation.FromSignId(SignId);
+        }
+        private void OnReload() => _defCache = null;
+        public override string Translate(string language, UCPlayer player)
+        {
+            if (CanCache && language.Equals(L.DEFAULT, StringComparison.Ordinal))
+            {
+                return _defCache ??= _translation?.Translate(L.DEFAULT) ?? SignId ?? Sign.text.Substring(Prefix.Length);
+            }
+            return _translation?.Translate(language) ?? SignId ?? Sign.text.Substring(Prefix.Length);
+        }
+    }
+    private sealed class VehicleBaySignComponent : CustomSignComponent
+    {
+        private VehicleSpawn? _spawn;
+        private string? _defCache;
+        public override bool PerPlayer => true;
+        public VehicleSpawn? Spawn
+        {
+            get
+            {
+                if (_spawn != null || !VehicleSpawner.Loaded)
+                    return _spawn;
+                VehicleSpawner.TryGetSpawnFromSign(Sign, out _spawn);
+                return _spawn;
+            }
+        }
+        [UsedImplicitly]
+        void OnDisable()
+        {
+            Translation.OnReload -= OnReload;
+        }
+        private void OnReload() => _defCache = null;
+        protected override void Init() { }
+        public override string Translate(string language, UCPlayer player)
+        {
+            VehicleSpawn? spawn = Spawn;
+            VehicleData? data = spawn?.Data?.Item;
+            if (spawn != null && data != null)
+            {
+                if (language.Equals(L.DEFAULT, StringComparison.Ordinal))
+                {
+                    _defCache ??= Localization.TranslateVBS(spawn, data, language, data.Team);
+                    return QuickFormat(_defCache, data.GetCostLine(player));
+                }
+
+                return QuickFormat(Localization.TranslateVBS(spawn, data, language, data.Team), data.GetCostLine(player));
+            }
+            return Sign.text;
+        }
+    }
+    private sealed class TraitSignComponent : CustomSignComponent
+    {
+        private bool _warn;
+        private TraitData? _trait;
+        private string _traitName;
+        private string? _defCache;
+        private bool cacheFmt;
+        public override bool PerPlayer => true;
+        public string TraitName
+        {
+            get => _traitName;
+            set
+            {
+                _traitName = value;
+                _trait = null;
+            }
+        }
+        public TraitData? Trait
+        {
+            get
+            {
+                if (_trait != null || !TraitManager.Loaded)
+                    return _trait;
+                if (TraitName is null)
+                    return null;
+                return _trait = TraitManager.FindTrait(TraitName);
+            }
+        }
+        [UsedImplicitly]
+        void OnDisable()
+        {
+            Translation.OnReload -= OnReload;
+        }
+        private void OnReload() => _defCache = null;
+        protected override void Init()
+        {
+            Translation.OnReload += OnReload;
+            if (Sign.text.Length > Prefix.Length + TraitPrefix.Length)
+            {
+                TraitName = Sign.text.Substring(Prefix.Length + TraitPrefix.Length);
+                _ = Trait;
+            }
+            else
+            {
+                TraitName = null!;
+                if (!_warn)
+                {
+                    L.LogWarning("Sign at " + gameObject.transform.position + " has an invalid trait id: \"" + Sign.text + "\".");
+                    _warn = true;
+                }
+            }
+        }
+        public override string Translate(string language, UCPlayer player)
+        {
+            TraitData? trait = Trait;
+            if (trait != null)
+            {
+                ulong team = trait.Team is 1 or 2 ? trait.Team : player.GetTeam();
+                if (language.Equals(L.DEFAULT, StringComparison.Ordinal))
+                {
+                    _defCache ??= TraitSigns.TranslateTraitSign(trait, language, team, out cacheFmt);
+                    return cacheFmt ? TraitSigns.FormatTraitSign(trait, _defCache, player, team) : _defCache;
+                }
+
+                string txt = TraitSigns.TranslateTraitSign(trait, language, team, out bool fmt);
+                return fmt ? TraitSigns.FormatTraitSign(trait, txt, player, team) : txt;
+            }
+            return Sign.text;
+        }
+    }
+    private sealed class KitSignComponent : CustomSignComponent
+    {
+        private bool _warn;
+        private string _kitName;
+        public int LoadoutIndex { get; set; } = -1;
+        public bool IsLoadout { get; set; }
+        public override bool PerPlayer => true;
+        public string KitName
+        {
+            get => _kitName;
+            set
+            {
+                _kitName = value;
+                if (_kit is not null && (value is null || !_kitName.Equals(_kit?.Item?.Id)))
+                    _kit = null;
+            }
+        }
+
+        private SqlItem<Kit>? _kit;
+        public SqlItem<Kit>? Kit
+        {
+            get
+            {
+                if (KitName is null)
+                    return null;
+                if (_kit?.Item != null && _kit.Manager is KitManager m && m.IsLoaded)
+                    return _kit;
+                m = KitManager.GetSingletonQuick()!;
+                if (m == null)
+                    return _kit = null;
+                return _kit = m.FindKitNoLock(KitName, true);
+            }
+        }
+        protected override void Init()
+        {
+            if (IsLoadout)
+            {
+                if (Sign.text.Length > Prefix.Length + LoadoutPrefix.Length &&
+                    byte.TryParse(Sign.text.Substring(Prefix.Length + LoadoutPrefix.Length), NumberStyles.Number, Data.AdminLocale, out byte loadout))
+                {
+                    LoadoutIndex = loadout;
+                }
+                else if (!_warn)
+                {
+                    L.LogWarning("Sign at " + gameObject.transform.position + " has an invalid loadout id: \"" + Sign.text + "\".");
+                    _warn = true;
+                }
+            }
+            else
+            {
+                if (Sign.text.Length > Prefix.Length + KitPrefix.Length)
+                {
+                    KitName = Sign.text.Substring(Prefix.Length + KitPrefix.Length);
+                    _ = Kit;
+                }
+                else
+                {
+                    KitName = null!;
+                    if (!_warn)
+                    {
+                        L.LogWarning("Sign at " + gameObject.transform.position + " has an invalid kit id: \"" + Sign.text + "\".");
+                        _warn = true;
+                    }
+                }
+            }
+        }
+        public override string Translate(string language, UCPlayer player)
+        {
+            if (IsLoadout)
+            {
+                return LoadoutIndex > -1 ? Localization.TranslateLoadoutSign((byte)LoadoutIndex, language, player!) : Sign.text;
+            }
+            Kit? kit = Kit?.Item;
+            if (kit != null)
+            {
+                return Localization.TranslateKitSign(language, kit, player);
+            }
+            return Sign.text;
+        }
     }
 }

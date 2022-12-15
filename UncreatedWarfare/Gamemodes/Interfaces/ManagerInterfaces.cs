@@ -16,7 +16,6 @@ public interface IVehicles : IStructureSaving, IGamemode
 }
 public interface IKitRequests : IGamemode
 {
-    Kits.RequestSigns RequestSigns { get; }
     Kits.KitManager KitManager { get; }
 }
 public interface ISquads : ITeams

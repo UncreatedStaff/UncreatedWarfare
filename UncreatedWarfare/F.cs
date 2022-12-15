@@ -1120,7 +1120,7 @@ public static class F
                 oldSt = new byte[sizeof(ulong) * 2 + 1];
             Buffer.BlockCopy(BitConverter.GetBytes(o), 0, oldSt, 0, sizeof(ulong));
             Buffer.BlockCopy(BitConverter.GetBytes(g), 0, oldSt, sizeof(ulong), sizeof(ulong));
-            if (sign.text.StartsWith(Signs.PREFIX, StringComparison.Ordinal) && Data.SendUpdateBarricadeState != null && BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
+            if (sign.text.StartsWith(Signs.Prefix, StringComparison.Ordinal) && Data.SendUpdateBarricadeState != null && BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
             {
                 BarricadeManager.updateState(drop.model, oldSt, oldSt.Length);
                 drop.ReceiveUpdateState(oldSt);
