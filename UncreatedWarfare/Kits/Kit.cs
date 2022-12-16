@@ -185,7 +185,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
 
         return true;
     }
-    public string GetDisplayName(string language = L.DEFAULT)
+    public string GetDisplayName(string language = L.Default)
     {
         if (SignText is null) return Id;
         if (SignText.TryGetValue(language, out string val))
@@ -836,17 +836,14 @@ public interface IAssetRedirect
 {
     RedirectType RedirectType { get; set; }
 }
-public interface IClothing
+public interface IBaseItem
 {
     Guid Item { get; set; }
     [JsonConverter(typeof(Base64Converter))]
     byte[] State { get; set; }
 }
-public interface IItem
+public interface IItem : IBaseItem
 {
-    [JsonConverter(typeof(Base64Converter))]
-    byte[] State { get; set; }
-    Guid Item { get; set; }
     byte Amount { get; set; }
 }
 public class AssetRedirectItem : IItemJar, IAssetRedirect, IKitItem
@@ -899,8 +896,11 @@ public class AssetRedirectClothing : IClothingJar, IAssetRedirect, IKitItem
 public class PageItem : IItemJar, IItem, IKitItem
 {
     private Guid _item;
+#if DEBUG
     private bool _isLegacyRedirect;
     private RedirectType _legacyRedirect;
+    public RedirectType? LegacyRedirect => _isLegacyRedirect ? _legacyRedirect : null;
+#endif
 
     [JsonPropertyName("id")]
     public Guid Item
@@ -909,8 +909,12 @@ public class PageItem : IItemJar, IItem, IKitItem
         set
         {
             _item = value;
-            _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, false);
+#if DEBUG
+            TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+            if (_legacyRedirect == RedirectType.None)
+                _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, false);
             _isLegacyRedirect = _legacyRedirect != RedirectType.None;
+#endif
         }
     }
 
@@ -1004,9 +1008,10 @@ public class PageItem : IItemJar, IItem, IKitItem
 
     public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
+#if DEBUG
         if (_isLegacyRedirect)
             return TeamManager.GetRedirectInfo(_legacyRedirect, kit.Faction, targetTeam, out state, out amount);
-
+#endif
         if (Assets.find(Item) is ItemAsset item)
         {
             amount = Amount < 1 ? item.amount : Amount;
@@ -1019,11 +1024,14 @@ public class PageItem : IItemJar, IItem, IKitItem
         return null;
     }
 }
-public class ClothingItem : IClothingJar, IClothing, IKitItem
+public class ClothingItem : IClothingJar, IBaseItem, IKitItem
 {
     private Guid _item;
+#if DEBUG
     private bool _isLegacyRedirect;
     private RedirectType _legacyRedirect;
+    public RedirectType? LegacyRedirect => _isLegacyRedirect ? _legacyRedirect : null;
+#endif
 
     [JsonPropertyName("id")]
     public Guid Item
@@ -1032,8 +1040,12 @@ public class ClothingItem : IClothingJar, IClothing, IKitItem
         set
         {
             _item = value;
-            _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, true);
+#if DEBUG
+            TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+            if (_legacyRedirect == RedirectType.None)
+                _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, true);
             _isLegacyRedirect = _legacyRedirect != RedirectType.None;
+#endif
         }
     }
 
@@ -1064,9 +1076,10 @@ public class ClothingItem : IClothingJar, IClothing, IKitItem
     public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
         amount = 1;
+#if DEBUG
         if (_isLegacyRedirect)
             return TeamManager.GetRedirectInfo(_legacyRedirect, kit.Faction, targetTeam, out state, out amount);
-
+#endif
         if (Assets.find(Item) is ItemAsset item)
         {
             state = State.NullOrEmpty() ? item.getState(EItemOrigin.ADMIN) : Util.CloneBytes(State);
@@ -1151,7 +1164,8 @@ public enum RedirectType : byte
     AmmoCrateBuilt,
     BunkerBuilt,
     Cache,
-    RadioDamaged
+    RadioDamaged,
+    LaserDesignator
 }
 public enum Page : byte
 {
@@ -1268,7 +1282,7 @@ public enum Class : byte
 }
 public sealed class ClassConverter : JsonConverter<Class>
 {
-    private const Class MAX_CLASS = Class.SpecOps;
+    private const Class MaxClass = Class.SpecOps;
     public override Class Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         switch (reader.TokenType)
@@ -1281,7 +1295,7 @@ public sealed class ClassConverter : JsonConverter<Class>
                 throw new JsonException("Invalid Class value.");
             case JsonTokenType.String:
                 string val = reader.GetString()!;
-                if (!KitEx.TryParseClass(val, out Class @class))
+                if (KitEx.TryParseClass(val, out Class @class))
                     return @class;
                 throw new JsonException("Invalid Class value.");
             default:
@@ -1290,7 +1304,7 @@ public sealed class ClassConverter : JsonConverter<Class>
     }
     public override void Write(Utf8JsonWriter writer, Class value, JsonSerializerOptions options)
     {
-        if (value >= Class.None && value <= MAX_CLASS)
+        if (value >= Class.None && value <= MaxClass)
             writer.WriteStringValue(value.ToString());
         else
             writer.WriteNumberValue((byte)value);

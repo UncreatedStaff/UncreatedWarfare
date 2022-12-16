@@ -12,12 +12,12 @@ using Uncreated.Warfare.Point;
 namespace Uncreated.Warfare.Quests;
 public static class QuestRewards
 {
-    public static readonly Dictionary<EQuestRewardType, Type> QuestRewardTypes = new Dictionary<EQuestRewardType, Type>(8);
+    public static readonly Dictionary<QuestRewardType, Type> QuestRewardTypes = new Dictionary<QuestRewardType, Type>(8);
     internal static void LoadTypes(Type[] types)
     {
         foreach (Type type in types.Where(x => x != null && x.IsClass && typeof(IQuestReward).IsAssignableFrom(x)))
         {
-            if (Attribute.GetCustomAttribute(type, typeof(QuestRewardAttribute)) is QuestRewardAttribute attr && attr.Type != EQuestRewardType.NONE)
+            if (Attribute.GetCustomAttribute(type, typeof(QuestRewardAttribute)) is QuestRewardAttribute attr && attr.Type != QuestRewardType.None)
             {
                 if (QuestRewardTypes.TryGetValue(attr.Type, out Type first))
                 {
@@ -29,7 +29,7 @@ public static class QuestRewards
             }
         }
     }
-    public static IQuestReward? GetQuestReward(EQuestRewardType type)
+    public static IQuestReward? GetQuestReward(QuestRewardType type)
     {
         if (QuestRewardTypes.TryGetValue(type, out Type result))
         {
@@ -51,18 +51,18 @@ public static class QuestRewards
         return null;
     }
 }
-public enum EQuestRewardType
+public enum QuestRewardType
 {
-    NONE,
+    None,
     XP,
-    RANK,
-    CREDITS,
-    KIT_ACCESS
+    Rank,
+    Credits,
+    KitAccess
 }
-[QuestReward(EQuestRewardType.XP, typeof(int))]
+[QuestReward(QuestRewardType.XP, typeof(int))]
 public class XPReward : IQuestReward
 {
-    public EQuestRewardType Type { get; set; }
+    public QuestRewardType Type { get; set; }
     public int XP { get; private set; }
     public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
@@ -71,7 +71,7 @@ public class XPReward : IQuestReward
             Localization.TranslateEnum(tracker.QuestData.QuestType,
                 Data.Languages.TryGetValue(player.Steam64, out string lang)
                     ? lang
-                    : L.DEFAULT).ToUpper() + " REWARD", false);
+                    : L.Default).ToUpper() + " REWARD", false);
         return Points.AwardXPAsync(parameters, token);
     }
     public void Init(object value)
@@ -105,10 +105,10 @@ public class XPReward : IQuestReward
 
     public override string ToString() => "Reward: " + XP + " XP";
 }
-[QuestReward(EQuestRewardType.CREDITS, typeof(int))]
+[QuestReward(QuestRewardType.Credits, typeof(int))]
 public class CreditsReward : IQuestReward
 {
-    public EQuestRewardType Type { get; set; }
+    public QuestRewardType Type { get; set; }
     public int Credits { get; private set; }
     public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
@@ -117,7 +117,7 @@ public class CreditsReward : IQuestReward
             Localization.TranslateEnum(tracker.QuestData.QuestType,
                 Data.Languages.TryGetValue(player.Steam64, out string lang)
                     ? lang
-                    : L.DEFAULT).ToUpper() + " REWARD");
+                    : L.Default).ToUpper() + " REWARD");
         return Points.AwardCreditsAsync(parameters, token);
     }
     public void Init(object value)
@@ -151,10 +151,10 @@ public class CreditsReward : IQuestReward
 
     public override string ToString() => "Reward: C " + Credits;
 }
-[QuestReward(EQuestRewardType.RANK, typeof(int))]
+[QuestReward(QuestRewardType.Rank, typeof(int))]
 public class RankReward : IQuestReward
 {
-    public EQuestRewardType Type { get; set; }
+    public QuestRewardType Type { get; set; }
     public int RankOrder { get; private set; }
     public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
@@ -192,13 +192,13 @@ public class RankReward : IQuestReward
     public override string ToString()
     {
         ref Ranks.RankData d = ref Ranks.RankManager.GetRank(RankOrder, out bool success);
-        return "Reward: Unlock " + (success ? d.GetName(L.DEFAULT) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
+        return "Reward: Unlock " + (success ? d.GetName(L.Default) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
     }
 }
-[QuestReward(EQuestRewardType.KIT_ACCESS, typeof(string))]
+[QuestReward(QuestRewardType.KitAccess, typeof(string))]
 public class KitAccessReward : IQuestReward
 {
-    public EQuestRewardType Type { get; set; }
+    public QuestRewardType Type { get; set; }
     public string KitId { get; private set; }
     public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
@@ -236,7 +236,7 @@ public class KitAccessReward : IQuestReward
 
 public interface IQuestReward : IJsonReadWrite
 {
-    EQuestRewardType Type { get; set; }
+    QuestRewardType Type { get; set; }
     void Init(object value);
     Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default);
 }

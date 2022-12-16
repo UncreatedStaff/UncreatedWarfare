@@ -1230,7 +1230,7 @@ public sealed class PropertyValue : IReadWrite
         ConfigSync.ConfigSyncInst.Property? propData = ConfigSync.GetPropertyData(ParentSyncId, SyncId, out ConfigSync.ConfigSyncInst? parent);
         return
             $"Property: {parent?.Type.Name ?? "<unknown-type>"}.{propData?.PropertyInfo.Name ?? "<unknown-property>"}, Timestamp: {Timestamp:G} UTC, " +
-            $"Value: {(Value is null ? "{null}" : Translation.ToString(Value, L.DEFAULT, null, null, TranslationFlags.NoColorOptimization))}";
+            $"Value: {(Value is null ? "{null}" : Translation.ToString(Value, L.Default, null, null, TranslationFlags.NoColorOptimization))}";
     }
 }
 

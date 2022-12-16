@@ -64,7 +64,7 @@ public readonly struct TranslationData
             return UCWarfare.GetColor("default");
         }
     }
-    public override readonly string ToString() =>
+    public readonly override string ToString() =>
         $"Original: {Original}, Inner text: {Message}, {(UseColor ? $"Color: {Color} ({ColorUtility.ToHtmlStringRGBA(Color)}." : "Unable to find color.")}";
 }
 public struct Point3D
@@ -103,7 +103,7 @@ public struct SerializableVector3 : IJsonReadWrite
     public static bool operator ==(SerializableVector3 a, Vector3 b) => a.x == b.x && a.y == b.y && a.z == b.z;
     public static bool operator !=(SerializableVector3 a, SerializableVector3 b) => a.x != b.x || a.y != b.y || a.z != b.z;
     public static bool operator !=(SerializableVector3 a, Vector3 b) => a.x != b.x || a.y != b.y || a.z != b.z;
-    public override readonly bool Equals(object obj)
+    public readonly override bool Equals(object obj)
     {
         if (obj == default) return false;
         if (obj is SerializableVector3 v3)
@@ -112,7 +112,7 @@ public struct SerializableVector3 : IJsonReadWrite
             return x == uv3.x && y == uv3.y && z == uv3.z;
         else return false;
     }
-    public override readonly int GetHashCode()
+    public readonly override int GetHashCode()
     {
         int hashCode = 373119288;
         hashCode = hashCode * -1521134295 + x.GetHashCode();
@@ -120,7 +120,7 @@ public struct SerializableVector3 : IJsonReadWrite
         hashCode = hashCode * -1521134295 + z.GetHashCode();
         return hashCode;
     }
-    public override readonly string ToString() => $"({Mathf.RoundToInt(x).ToString(Data.Locale)}, {Mathf.RoundToInt(y).ToString(Data.Locale)}, {Mathf.RoundToInt(z).ToString(Data.Locale)})";
+    public readonly override string ToString() => $"({Mathf.RoundToInt(x).ToString(Data.LocalLocale)}, {Mathf.RoundToInt(y).ToString(Data.LocalLocale)}, {Mathf.RoundToInt(z).ToString(Data.LocalLocale)})";
     public SerializableVector3(Vector3 v)
     {
         x = v.x;
@@ -180,7 +180,7 @@ public struct SerializableTransform : IJsonReadWrite
     public static bool operator !=(SerializableTransform a, SerializableTransform b) => a.position != b.position || a.euler_angles != b.euler_angles;
     public static bool operator ==(SerializableTransform a, Transform b) => a.position == b.position && a.euler_angles == b.rotation.eulerAngles;
     public static bool operator !=(SerializableTransform a, Transform b) => a.position != b.position || a.euler_angles != b.rotation.eulerAngles;
-    public override readonly bool Equals(object obj)
+    public readonly override bool Equals(object obj)
     {
         if (obj == default) return false;
         if (obj is SerializableTransform t)
@@ -189,8 +189,8 @@ public struct SerializableTransform : IJsonReadWrite
             return position == ut.position && euler_angles == ut.eulerAngles;
         else return false;
     }
-    public override readonly string ToString() => position.ToString();
-    public override readonly int GetHashCode()
+    public readonly override string ToString() => position.ToString();
+    public readonly override int GetHashCode()
     {
         int hashCode = -1079335343;
         hashCode = hashCode * -1521134295 + position.GetHashCode();
@@ -261,16 +261,16 @@ public struct SerializableTransform : IJsonReadWrite
 [JsonConverter(typeof(TranslationListConverter))]
 public sealed class TranslationList : Dictionary<string, string>, ICloneable
 {
-    public const int DEFAULT_CHAR_LENGTH = 255;
+    public const int DefaultCharLength = 255;
     public TranslationList() { }
     public TranslationList(int capacity) : base(capacity) { }
     public TranslationList(string @default)
     {
-        Add(L.DEFAULT, @default);
+        Add(L.Default, @default);
     }
     public TranslationList(int capacity, string @default) : base(capacity)
     {
-        Add(L.DEFAULT, @default);
+        Add(L.Default, @default);
     }
     public TranslationList(TranslationList copy) : base(copy.Count)
     {
@@ -283,7 +283,7 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
     {
         if (!oneToOne)
             throw new NotSupportedException("One-to-one only rn");
-        return F.GetTranslationListSchema(tableName, fkColumn, mainTable, mainPkColumn, DEFAULT_CHAR_LENGTH);
+        return F.GetTranslationListSchema(tableName, fkColumn, mainTable, mainPkColumn, DefaultCharLength);
     }
 
     public object Clone() => new TranslationList(this);
@@ -322,7 +322,7 @@ public sealed class TranslationListConverter : JsonConverter<TranslationList>
     {
         if (value == null || value.Count == 0)
             writer.WriteNullValue();
-        else if (value.Count == 1 && value.TryGetValue(L.DEFAULT, out string v))
+        else if (value.Count == 1 && value.TryGetValue(L.Default, out string v))
             writer.WriteStringValue(v.Replace("\n", "\\n"));
         else
         {
@@ -442,12 +442,12 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
     }
 
     [FormatDisplay("Display Name")]
-    public const string DISPLAY_NAME_FORMAT = "d";
+    public const string FormatDisplayName = "d";
     [FormatDisplay("Key Code")]
-    public const string KEY_FORMAT = "k";
+    public const string FormatKey = "k";
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        if (format is not null && format.Equals(KEY_FORMAT, StringComparison.Ordinal))
+        if (format is not null && format.Equals(FormatKey, StringComparison.Ordinal))
             return key;
         return display_name;
     }
@@ -465,9 +465,10 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
         writer.WriteEndArray();
     }
 }
+// todo sqlify
 public static partial class JSONMethods
 {
-    public static Dictionary<string, Color> LoadColors(out Dictionary<string, string> HexValues)
+    public static Dictionary<string, Color> LoadColors(out Dictionary<string, string> hexValues)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -479,30 +480,28 @@ public static partial class JSONMethods
             if (!File.Exists(chatColors))
             {
                 Dictionary<string, Color> defaultColors2 = new Dictionary<string, Color>(DefaultColors.Count);
-                HexValues = new Dictionary<string, string>(DefaultColors.Count);
-                using (FileStream stream = new FileStream(chatColors, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                hexValues = new Dictionary<string, string>(DefaultColors.Count);
+                using FileStream stream = new FileStream(chatColors, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+                Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                writer.WriteStartObject();
+                foreach (KeyValuePair<string, string> color in DefaultColors)
                 {
-                    Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                    writer.WriteStartObject();
-                    foreach (KeyValuePair<string, string> color in DefaultColors)
-                    {
-                        string y = color.Value;
-                        if (y.Equals(T1_COLOR_PH, StringComparison.Ordinal))
-                            y = TeamManager.Team1ColorHex;
-                        else if (y.Equals(T2_COLOR_PH, StringComparison.Ordinal))
-                            y = TeamManager.Team2ColorHex;
-                        else if (y.Equals(T3_COLOR_PH, StringComparison.Ordinal))
-                            y = TeamManager.AdminColorHex;
-                        writer.WritePropertyName(color.Key);
-                        writer.WriteStringValue(color.Value);
-                        defaultColors2.Add(color.Key, y.Hex());
-                        HexValues.Add(color.Key, y);
-                    }
-                    writer.WriteEndObject();
-                    writer.Dispose();
-                    stream.Close();
-                    stream.Dispose();
+                    string y = color.Value;
+                    if (y.Equals(T1_COLOR_PH, StringComparison.Ordinal))
+                        y = TeamManager.Team1ColorHex;
+                    else if (y.Equals(T2_COLOR_PH, StringComparison.Ordinal))
+                        y = TeamManager.Team2ColorHex;
+                    else if (y.Equals(T3_COLOR_PH, StringComparison.Ordinal))
+                        y = TeamManager.AdminColorHex;
+                    writer.WritePropertyName(color.Key);
+                    writer.WriteStringValue(color.Value);
+                    defaultColors2.Add(color.Key, y.Hex());
+                    hexValues.Add(color.Key, y);
                 }
+                writer.WriteEndObject();
+                writer.Dispose();
+                stream.Close();
+                stream.Dispose();
                 return defaultColors2;
             }
             using (FileStream stream = new FileStream(chatColors, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -513,66 +512,61 @@ public static partial class JSONMethods
                     L.LogError("chat_colors.json is too long to read.");
                     goto def;
                 }
-                else
+                Dictionary<string, Color> converted = new Dictionary<string, Color>(DefaultColors.Count);
+                hexValues = new Dictionary<string, string>(DefaultColors.Count);
+                byte[] bytes = new byte[len];
+                stream.Read(bytes, 0, (int)len);
+                try
                 {
-                    Dictionary<string, Color> converted = new Dictionary<string, Color>(DefaultColors.Count);
-                    HexValues = new Dictionary<string, string>(DefaultColors.Count);
-                    byte[] bytes = new byte[len];
-                    stream.Read(bytes, 0, (int)len);
-                    try
+                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                    while (reader.Read())
                     {
-                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                        while (reader.Read())
+                        if (reader.TokenType == JsonTokenType.StartObject) continue;
+                        if (reader.TokenType == JsonTokenType.EndObject) break;
+                        if (reader.TokenType == JsonTokenType.PropertyName)
                         {
-                            if (reader.TokenType == JsonTokenType.StartObject) continue;
-                            else if (reader.TokenType == JsonTokenType.EndObject) break;
-                            else if (reader.TokenType == JsonTokenType.PropertyName)
+                            string key = reader.GetString()!;
+                            if (reader.Read() && reader.TokenType == JsonTokenType.String)
                             {
-                                string key = reader.GetString()!;
-                                if (reader.Read() && reader.TokenType == JsonTokenType.String)
+                                string color = reader.GetString()!;
+                                if (hexValues.ContainsKey(key))
+                                    L.LogWarning("Duplicate color key \"" + key + "\" in chat_colors.json");
+                                else
                                 {
-                                    string color = reader.GetString()!;
-                                    if (HexValues.ContainsKey(key))
-                                        L.LogWarning("Duplicate color key \"" + key + "\" in chat_colors.json");
-                                    else
-                                    {
-                                        if (color.Equals(T1_COLOR_PH, StringComparison.Ordinal))
-                                            color = TeamManager.Team1ColorHex;
-                                        else if (color.Equals(T2_COLOR_PH, StringComparison.Ordinal))
-                                            color = TeamManager.Team2ColorHex;
-                                        else if (color.Equals(T3_COLOR_PH, StringComparison.Ordinal))
-                                            color = TeamManager.AdminColorHex;
-                                        HexValues.Add(key, color);
-                                        converted.Add(key, color.Hex());
-                                    }
+                                    if (color.Equals(T1_COLOR_PH, StringComparison.Ordinal))
+                                        color = TeamManager.Team1ColorHex;
+                                    else if (color.Equals(T2_COLOR_PH, StringComparison.Ordinal))
+                                        color = TeamManager.Team2ColorHex;
+                                    else if (color.Equals(T3_COLOR_PH, StringComparison.Ordinal))
+                                        color = TeamManager.AdminColorHex;
+                                    hexValues.Add(key, color);
+                                    converted.Add(key, color.Hex());
                                 }
                             }
                         }
-                        return converted;
                     }
-                    catch (Exception e)
-                    {
-                        L.LogError("Failed to read chat_colors.json");
-                        L.LogError(e);
-                        goto def;
-                    }
+                    return converted;
+                }
+                catch (Exception e)
+                {
+                    L.LogError("Failed to read chat_colors.json");
+                    L.LogError(e);
                 }
             }
         }
         else
         {
             L.LogError("Failed to create chat_colors.json, read above.");
-            goto def;
         }
 
-    def:
-        Dictionary<string, Color> NewDefaults = new Dictionary<string, Color>(DefaultColors.Count);
+        def:
+        Dictionary<string, Color> newDefaults = new Dictionary<string, Color>(DefaultColors.Count);
         foreach (KeyValuePair<string, string> color in DefaultColors)
         {
-            NewDefaults.Add(color.Key, color.Value.Hex());
+            newDefaults.Add(color.Key, color.Value.Hex());
         }
-        HexValues = DefaultColors;
-        return NewDefaults;
+        hexValues = DefaultColors;
+        return newDefaults;
     }
     public static Dictionary<string, Vector3> LoadExtraPoints()
     {
@@ -586,26 +580,24 @@ public static partial class JSONMethods
             if (!File.Exists(xtraPts))
             {
                 Dictionary<string, Vector3> defaultXtraPoints2 = new Dictionary<string, Vector3>(DefaultExtraPoints.Count);
-                using (FileStream stream = new FileStream(xtraPts, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                using FileStream stream = new FileStream(xtraPts, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+                Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                writer.WriteStartObject();
+                for (int i = 0; i < DefaultExtraPoints.Count; i++)
                 {
-                    Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                    Point3D point = DefaultExtraPoints[i];
+                    writer.WritePropertyName(point.name);
                     writer.WriteStartObject();
-                    for (int i = 0; i < DefaultExtraPoints.Count; i++)
-                    {
-                        Point3D point = DefaultExtraPoints[i];
-                        writer.WritePropertyName(point.name);
-                        writer.WriteStartObject();
-                        writer.WriteProperty("x", point.x);
-                        writer.WriteProperty("y", point.y);
-                        writer.WriteProperty("z", point.z);
-                        writer.WriteEndObject();
-                        defaultXtraPoints2.Add(point.name, point.Vector3);
-                    }
+                    writer.WriteProperty("x", point.x);
+                    writer.WriteProperty("y", point.y);
+                    writer.WriteProperty("z", point.z);
                     writer.WriteEndObject();
-                    writer.Dispose();
-                    stream.Close();
-                    stream.Dispose();
+                    defaultXtraPoints2.Add(point.name, point.Vector3);
                 }
+                writer.WriteEndObject();
+                writer.Dispose();
+                stream.Close();
+                stream.Dispose();
                 return defaultXtraPoints2;
             }
             using (FileStream stream = new FileStream(xtraPts, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -616,73 +608,67 @@ public static partial class JSONMethods
                     L.LogError("extra_points.json is too long to read.");
                     goto def;
                 }
-                else
+                Dictionary<string, Vector3> xtraPoints = new Dictionary<string, Vector3>(DefaultExtraPoints.Count);
+                byte[] bytes = new byte[len];
+                stream.Read(bytes, 0, (int)len);
+                try
                 {
-                    Dictionary<string, Vector3> xtraPoints = new Dictionary<string, Vector3>(DefaultExtraPoints.Count);
-                    byte[] bytes = new byte[len];
-                    stream.Read(bytes, 0, (int)len);
-                    try
+                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                    while (reader.Read())
                     {
-                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                        while (reader.Read())
+                        if (reader.TokenType == JsonTokenType.StartObject) continue;
+                        if (reader.TokenType == JsonTokenType.EndObject) break;
+                        if (reader.TokenType == JsonTokenType.PropertyName)
                         {
-                            if (reader.TokenType == JsonTokenType.StartObject) continue;
-                            else if (reader.TokenType == JsonTokenType.EndObject) break;
-                            else if (reader.TokenType == JsonTokenType.PropertyName)
+                            string key = reader.GetString()!;
+                            if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
                             {
-                                string key = reader.GetString()!;
-                                if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
+                                float x = 0f;
+                                float y = 0f;
+                                float z = 0f;
+                                while (reader.Read())
                                 {
-                                    float x = 0f;
-                                    float y = 0f;
-                                    float z = 0f;
-                                    while (reader.Read())
+                                    if (reader.TokenType == JsonTokenType.EndObject) break;
+                                    else if (reader.TokenType == JsonTokenType.PropertyName)
                                     {
-                                        if (reader.TokenType == JsonTokenType.EndObject) break;
-                                        else if (reader.TokenType == JsonTokenType.PropertyName)
+                                        string prop = reader.GetString()!;
+                                        if (reader.Read())
                                         {
-                                            string prop = reader.GetString()!;
-                                            if (reader.Read())
+                                            switch (prop)
                                             {
-                                                switch (prop)
-                                                {
-                                                    case "x":
-                                                        x = (float)reader.GetDouble();
-                                                        break;
-                                                    case "y":
-                                                        y = (float)reader.GetDouble();
-                                                        break;
-                                                    case "z":
-                                                        z = (float)reader.GetDouble();
-                                                        break;
-                                                }
+                                                case "x":
+                                                    x = (float)reader.GetDouble();
+                                                    break;
+                                                case "y":
+                                                    y = (float)reader.GetDouble();
+                                                    break;
+                                                case "z":
+                                                    z = (float)reader.GetDouble();
+                                                    break;
                                             }
                                         }
                                     }
-                                    xtraPoints.Add(key, new Vector3(x, y, z));
                                 }
+                                xtraPoints.Add(key, new Vector3(x, y, z));
                             }
                         }
+                    }
 
-                        return xtraPoints;
-                    }
-                    catch (Exception e)
-                    {
-                        L.LogError("Failed to read " + xtraPts);
-                        L.LogError(e);
-                        goto def;
-                    }
+                    return xtraPoints;
+                }
+                catch (Exception e)
+                {
+                    L.LogError("Failed to read " + xtraPts);
+                    L.LogError(e);
                 }
             }
         }
         else
         {
             L.LogError("Failed to load extra points, see above. Loading default points.");
-            goto def;
         }
 
-
-    def:
+        def:
         Dictionary<string, Vector3> defaultXtraPoints = new Dictionary<string, Vector3>(DefaultExtraPoints.Count);
         for (int i = 0; i < DefaultExtraPoints.Count; i++)
         {
@@ -719,49 +705,43 @@ public static partial class JSONMethods
                     L.LogError("Language preferences at preferences.json is too long to read.");
                     return new Dictionary<ulong, string>();
                 }
-                else
+                Dictionary<ulong, string> prefs = new Dictionary<ulong, string>(48);
+                byte[] bytes = new byte[len];
+                stream.Read(bytes, 0, (int)len);
+                try
                 {
-                    Dictionary<ulong, string> prefs = new Dictionary<ulong, string>(48);
-                    byte[] bytes = new byte[len];
-                    stream.Read(bytes, 0, (int)len);
-                    try
+                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                    while (reader.Read())
                     {
-                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                        while (reader.Read())
+                        if (reader.TokenType == JsonTokenType.StartObject) continue;
+                        else if (reader.TokenType == JsonTokenType.EndObject) break;
+                        else if (reader.TokenType == JsonTokenType.PropertyName)
                         {
-                            if (reader.TokenType == JsonTokenType.StartObject) continue;
-                            else if (reader.TokenType == JsonTokenType.EndObject) break;
-                            else if (reader.TokenType == JsonTokenType.PropertyName)
+                            string input = reader.GetString()!;
+                            if (!ulong.TryParse(input, NumberStyles.Any, Data.AdminLocale, out ulong steam64))
                             {
-                                string input = reader.GetString()!;
-                                if (!ulong.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ulong steam64))
-                                {
-                                    L.LogWarning("Invalid Steam64 ID: \"" + input + "\" in Lang\\preferences.json");
-                                }
-                                else if (reader.Read() && reader.TokenType == JsonTokenType.String)
-                                {
-                                    string language = reader.GetString()!;
-                                    prefs.Add(steam64, language);
-                                }
+                                L.LogWarning("Invalid Steam64 ID: \"" + input + "\" in Lang\\preferences.json");
+                            }
+                            else if (reader.Read() && reader.TokenType == JsonTokenType.String)
+                            {
+                                string language = reader.GetString()!;
+                                prefs.Add(steam64, language);
                             }
                         }
+                    }
 
-                        return prefs;
-                    }
-                    catch (Exception ex)
-                    {
-                        L.LogError("Failed to read language preferences at " + langPrefs);
-                        L.LogError(ex);
-                        return new Dictionary<ulong, string>();
-                    }
+                    return prefs;
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Failed to read language preferences at " + langPrefs);
+                    L.LogError(ex);
+                    return new Dictionary<ulong, string>();
                 }
             }
         }
-        else
-        {
-            L.LogError("Failed to load language preferences, see above.");
-            return new Dictionary<ulong, string>();
-        }
+        L.LogError("Failed to load language preferences, see above.");
+        return new Dictionary<ulong, string>();
     }
     public static void SaveLangs(Dictionary<ulong, string> languages)
     {
@@ -772,20 +752,18 @@ public static partial class JSONMethods
         F.CheckDir(Data.Paths.LangStorage, out bool dirExists);
         if (dirExists)
         {
-            using (FileStream stream = new FileStream(Path.Combine(Data.Paths.LangStorage, "preferences.json"), FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+            using FileStream stream = new FileStream(Path.Combine(Data.Paths.LangStorage, "preferences.json"), FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+            Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+            writer.WriteStartObject();
+            foreach (KeyValuePair<ulong, string> languagePref in languages)
             {
-                Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                writer.WriteStartObject();
-                foreach (KeyValuePair<ulong, string> languagePref in languages)
-                {
-                    writer.WritePropertyName(languagePref.Key.ToString(Data.Locale));
-                    writer.WriteStringValue(languagePref.Value);
-                }
-                writer.WriteEndObject();
-                writer.Dispose();
-                stream.Close();
-                stream.Dispose();
+                writer.WritePropertyName(languagePref.Key.ToString(Data.AdminLocale));
+                writer.WriteStringValue(languagePref.Value);
             }
+            writer.WriteEndObject();
+            writer.Dispose();
+            stream.Close();
+            stream.Dispose();
         }
     }
     public static void SetLanguage(ulong player, string language)

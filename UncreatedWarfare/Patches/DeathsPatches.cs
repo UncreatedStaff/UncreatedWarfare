@@ -12,6 +12,10 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
+// ReSharper disable InconsistentNaming
+// ReSharper disable UnusedMember.Local
+// ReSharper disable UnusedParameter.Local
+
 namespace Uncreated.Warfare.Harmony;
 
 public static partial class Patches

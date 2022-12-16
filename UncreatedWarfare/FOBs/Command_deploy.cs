@@ -52,12 +52,12 @@ public class DeployCommand : Command
         bool shouldCancelOnMove = !IsInMain;
         bool shouldCancelOnDamage = !IsInMain;
 
-        if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.DEPLOY, out Cooldown cooldown))
+        if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.Deploy, out Cooldown cooldown))
             throw ctx.Reply(T.DeployCooldown, cooldown);
 
         if (!(IsInMain || IsInLobby))
         {
-            if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.COMBAT, out Cooldown combatlog))
+            if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.Combat, out Cooldown combatlog))
                 throw ctx.Reply(T.DeployInCombat, combatlog);
 
             if (!Gamemode.Config.BarricadeInsurgencyCache.ValidReference(out Guid guid) || !(ctx.Caller.IsOnFOB(out _) || UCBarricadeManager.CountNearbyBarricades(guid, 10, ctx.Caller.Position, team) != 0))

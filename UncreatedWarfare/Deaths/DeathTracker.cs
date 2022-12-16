@@ -46,7 +46,7 @@ public class DeathTracker : BaseReloadSingleton
             {
                 if (deadData.LastBleedingEvent is not null)
                 {
-                    deadData.LastBleedingArgs.Flags |= EDeathFlags.BLEEDING;
+                    deadData.LastBleedingArgs.Flags |= DeathFlags.Bleeding;
                     Localization.BroadcastDeath(deadData.LastBleedingEvent, deadData.LastBleedingArgs);
                     goto clear;
                 }
@@ -86,7 +86,7 @@ public class DeathTracker : BaseReloadSingleton
             {
                 if (deadData.LastBleedingEvent is not null)
                 {
-                    deadData.LastBleedingArgs.Flags |= EDeathFlags.BLEEDING;
+                    deadData.LastBleedingArgs.Flags |= DeathFlags.Bleeding;
                     _injuredPlayers.Add(pl.Steam64, new InjuredDeathCache(deadData.LastBleedingEvent, deadData.LastBleedingArgs));
                     return deadData.LastBleedingEvent;
                 }
@@ -96,6 +96,7 @@ public class DeathTracker : BaseReloadSingleton
         DeathMessageArgs args = new DeathMessageArgs();
         FillArgs(pl, parameters.cause, parameters.limb, parameters.killer, ref args, e);
         _injuredPlayers.Add(pl.Steam64, new InjuredDeathCache(e, args));
+        return e;
     }
     private static void FillArgs(UCPlayer dead, EDeathCause cause, ELimb limb, CSteamID instigator, ref DeathMessageArgs args, PlayerDied e)
     {
@@ -105,7 +106,7 @@ public class DeathTracker : BaseReloadSingleton
         e.DeadTeam = deadTeam;
         args.DeathCause = cause;
         args.Limb = limb;
-        args.Flags = EDeathFlags.NONE;
+        args.Flags = DeathFlags.None;
         e.WasTeamkill = false;
         e.Instigator = instigator;
         e.Limb = limb;
@@ -165,7 +166,7 @@ public class DeathTracker : BaseReloadSingleton
             }
             if (drop != null)
             {
-                args.Flags |= EDeathFlags.ITEM;
+                args.Flags |= DeathFlags.Item;
                 e.PrimaryAsset = drop.asset.GUID;
                 args.ItemName = drop.asset.itemName;
                 args.ItemGuid = drop.asset.GUID;
@@ -197,7 +198,7 @@ public class DeathTracker : BaseReloadSingleton
                         if (triggererData.TriggeringLandmine != null && (triggererData.TriggeringLandmine.model.position - dead.Position).sqrMagnitude < 225f)
                         {
                             drop = triggererData.TriggeringLandmine;
-                            args.Flags |= EDeathFlags.ITEM;
+                            args.Flags |= DeathFlags.Item;
                             e.PrimaryAsset = drop.asset.GUID;
                             args.ItemName = drop.asset.itemName;
                             args.ItemGuid = drop.asset.GUID;
@@ -214,35 +215,35 @@ public class DeathTracker : BaseReloadSingleton
                 if (isTriggerer && drop != null)
                 {
                     if (drop.GetServersideData().group.GetTeam() == deadTeam)
-                        args.Flags |= EDeathFlags.SUICIDE;
+                        args.Flags |= DeathFlags.Suicide;
                     else
-                        args.Flags &= ~EDeathFlags.KILLER; // removes the killer as it's them but from the other team
+                        args.Flags &= ~DeathFlags.Killer; // removes the killer as it's them but from the other team
                 }
                 else if (killer == null || triggerer.Steam64 != killer.Steam64)
                 {
                     args.Player3Name = triggerer.Name.CharacterName;
                     args.Player3Team = triggerer.GetTeam();
-                    args.Flags |= EDeathFlags.PLAYER3;
+                    args.Flags |= DeathFlags.Player3;
                     // if all 3 parties are on the same team count it as a teamkill on the triggerer, as it's likely intentional
                     if (triggerer.GetTeam() == deadTeam && killer != null && killer.GetTeam() == deadTeam)
-                        args.isTeamkill = true;
+                        args.IsTeamkill = true;
                 }
                 // if triggerer == placer, count it as a teamkill on the placer
                 else if (killer.GetTeam() == deadTeam)
                 {
-                    args.isTeamkill = true;
+                    args.IsTeamkill = true;
                 }
             }
             if (throwable != null && Assets.find(throwable.Throwable) is ItemThrowableAsset asset)
             {
-                args.Flags |= EDeathFlags.ITEM2;
+                args.Flags |= DeathFlags.Item2;
                 e.SecondaryItem = asset.GUID;
                 args.Item2Name = asset.itemName;
             }
         }
         else if (killer is not null && killer.Steam64 == dead.Steam64)
         {
-            args.Flags |= EDeathFlags.SUICIDE;
+            args.Flags |= DeathFlags.Suicide;
         }
         if (killer is not null)
         {
@@ -251,12 +252,12 @@ public class DeathTracker : BaseReloadSingleton
                 args.KillerName = killer.Name.CharacterName;
                 args.KillerTeam = killer.GetTeam();
                 e.KillerTeam = args.KillerTeam;
-                args.Flags |= EDeathFlags.KILLER;
+                args.Flags |= DeathFlags.Killer;
                 args.KillDistance = (killer.Position - dead.Position).magnitude;
                 e.KillDistance = args.KillDistance;
                 if (deadTeam == args.KillerTeam)
                 {
-                    args.isTeamkill = true;
+                    args.IsTeamkill = true;
                     e.WasTeamkill = true;
                 }
             }
@@ -274,7 +275,7 @@ public class DeathTracker : BaseReloadSingleton
                     args.ItemName = killer.Player.equipment.asset.itemName;
                     args.ItemGuid = killer.Player.equipment.asset.GUID;
                     e.PrimaryAsset = killer.Player.equipment.asset.GUID;
-                    args.Flags |= EDeathFlags.ITEM;
+                    args.Flags |= DeathFlags.Item;
                     if (cause != EDeathCause.MELEE)
                     {
                         InteractableVehicle? veh = killer.Player.movement.getVehicle();
@@ -287,14 +288,14 @@ public class DeathTracker : BaseReloadSingleton
                                     e.TurretVehicleOwner = veh.asset.GUID;
                                     args.Item2Guid = veh.asset.GUID;
                                     args.Item2Name = veh.asset.vehicleName;
-                                    args.Flags |= EDeathFlags.ITEM2;
+                                    args.Flags |= DeathFlags.Item2;
                                     SteamPlayer sp;
                                     if (veh.passengers.Length > 0 && (sp = veh.passengers[0].player) is not null && sp.player != null)
                                     {
                                         e.DriverAssist = UCPlayer.FromSteamPlayer(sp);
                                         args.Player3Name = e.DriverAssist?.Name.CharacterName ?? sp.playerID.characterName;
                                         args.Player3Team = sp.GetTeam();
-                                        args.Flags |= EDeathFlags.PLAYER3;
+                                        args.Flags |= DeathFlags.Player3;
                                     }
                                     break;
                                 }
@@ -312,7 +313,7 @@ public class DeathTracker : BaseReloadSingleton
                     {
                         args.ItemName = a.itemName;
                         e.PrimaryAsset = a.GUID;
-                        args.Flags |= EDeathFlags.ITEM;
+                        args.Flags |= DeathFlags.Item;
                         args.ItemGuid = a.GUID;
                     }
                 }
@@ -326,7 +327,7 @@ public class DeathTracker : BaseReloadSingleton
                         args.ItemName = a.vehicleName;
                         e.PrimaryAsset = a.GUID;
                         e.PrimaryAssetIsVehicle = true;
-                        args.Flags |= EDeathFlags.ITEM;
+                        args.Flags |= DeathFlags.Item;
                         args.ItemIsVehicle = true;
                         args.ItemGuid = a.GUID;
                     }
@@ -336,7 +337,7 @@ public class DeathTracker : BaseReloadSingleton
                 if (killerData != null && killerData.ExplodingVehicle != null && killerData.ExplodingVehicle.Vehicle != null)
                 {
                     args.ItemName = killerData.ExplodingVehicle.Vehicle.asset.vehicleName;
-                    args.Flags |= EDeathFlags.ITEM;
+                    args.Flags |= DeathFlags.Item;
                     e.PrimaryAsset = killerData.ExplodingVehicle.Vehicle.asset.GUID;
                     args.ItemIsVehicle = true;
                     args.ItemGuid = killerData.ExplodingVehicle.Vehicle.asset.GUID;
@@ -347,7 +348,7 @@ public class DeathTracker : BaseReloadSingleton
                             args.Item2Name = a.FriendlyName;
                             args.Item2Guid = a.GUID;
                             e.SecondaryItem = a.GUID;
-                            args.Flags |= EDeathFlags.ITEM2;
+                            args.Flags |= DeathFlags.Item2;
                         }
                     }
                     if (killer is not null)
@@ -359,7 +360,7 @@ public class DeathTracker : BaseReloadSingleton
                             if (veh.passengers.Length > 0 && veh.passengers[0].player is not null && veh.passengers[0].player.player != null)
                             {
                                 if (killer.Steam64 == veh.passengers[0].player.playerID.steamID.m_SteamID)
-                                    args.Flags |= EDeathFlags.NO_DISTANCE;
+                                    args.Flags |= DeathFlags.NoDistance;
                             }
                         }
                     }
@@ -374,7 +375,7 @@ public class DeathTracker : BaseReloadSingleton
                     if (a != null)
                     {
                         args.ItemName = a.itemName;
-                        args.Flags |= EDeathFlags.ITEM;
+                        args.Flags |= DeathFlags.Item;
                         e.PrimaryAsset = a.GUID;
                         args.ItemGuid = a.GUID;
                     }
@@ -387,12 +388,12 @@ public class DeathTracker : BaseReloadSingleton
                     if (a != null)
                     {
                         args.ItemName = a.FriendlyName;
-                        args.Flags |= EDeathFlags.ITEM;
+                        args.Flags |= DeathFlags.Item;
                         e.PrimaryAsset = a.GUID;
                         args.ItemGuid = a.GUID;
                     }
                 }
-                args.isTeamkill = false;
+                args.IsTeamkill = false;
                 e.WasTeamkill = false;
                 break;
             case EDeathCause.MISSILE:
@@ -403,7 +404,7 @@ public class DeathTracker : BaseReloadSingleton
                         args.ItemName = asset.itemName;
                         args.ItemGuid = asset.GUID;
                         e.PrimaryAsset = asset.GUID;
-                        args.Flags |= EDeathFlags.ITEM;
+                        args.Flags |= DeathFlags.Item;
                         e.TurretVehicleOwner = data.LastRocketShotVehicle;
                     }
                     else if (killer.Player!.equipment.asset is not null)
@@ -411,7 +412,7 @@ public class DeathTracker : BaseReloadSingleton
                         args.ItemName = killer.Player.equipment.asset.itemName;
                         args.ItemGuid = killer.Player.equipment.asset.GUID;
                         e.PrimaryAsset = killer.Player.equipment.asset.GUID;
-                        args.Flags |= EDeathFlags.ITEM;
+                        args.Flags |= DeathFlags.Item;
                         InteractableVehicle? veh = killer.Player.movement.getVehicle();
                         if (veh != null)
                         {
@@ -435,7 +436,7 @@ public class DeathTracker : BaseReloadSingleton
                     {
                         args.ItemName = a.FriendlyName;
                         e.PrimaryAsset = a.GUID;
-                        args.Flags |= EDeathFlags.ITEM;
+                        args.Flags |= DeathFlags.Item;
                         args.ItemGuid = a.GUID;
                     }/*
                     if (killer != null && killer.Player.equipment.asset != null && killer.Player.equipment.asset.useableType == typeof(UseableDetonator))
@@ -451,7 +452,7 @@ public class DeathTracker : BaseReloadSingleton
                     {
                         args.ItemName = a.FriendlyName;
                         e.PrimaryAsset = a.GUID;
-                        args.Flags = EDeathFlags.ITEM; // intentional
+                        args.Flags = DeathFlags.Item; // intentional
                         args.ItemGuid = a.GUID;
                         args.SpecialKey = "explosive-consumable";
                     }
@@ -473,7 +474,7 @@ public class DeathTracker : BaseReloadSingleton
                         InteractableSentry sentry = (InteractableSentry)drop.interactable;
                         args.ItemName = drop.asset.itemName;
                         args.ItemGuid = drop.asset.GUID;
-                        args.Flags |= EDeathFlags.ITEM;
+                        args.Flags |= DeathFlags.Item;
                         e.PrimaryAsset = drop.asset.GUID;
                         Item? item = sentry.items.items.FirstOrDefault()?.item;
                         if (item != null && Assets.find(EAssetType.ITEM, item.id) is ItemAsset a)
@@ -481,7 +482,7 @@ public class DeathTracker : BaseReloadSingleton
                             args.Item2Name = a.itemName;
                             args.Item2Guid = a.GUID;
                             e.SecondaryItem = a.GUID;
-                            args.Flags |= EDeathFlags.ITEM2;
+                            args.Flags |= DeathFlags.Item2;
                         }
                     }
                 }
@@ -493,7 +494,7 @@ public class DeathTracker : BaseReloadSingleton
                 {
                     args.ItemName = item1.FriendlyName;
                     args.ItemIsVehicle = item1 is VehicleAsset;
-                    args.Flags |= EDeathFlags.ITEM;
+                    args.Flags |= DeathFlags.Item;
                     e.PrimaryAsset = item1.GUID;
                     e.PrimaryAssetIsVehicle = args.ItemIsVehicle;
                     args.ItemGuid = item1.GUID;
@@ -503,7 +504,7 @@ public class DeathTracker : BaseReloadSingleton
                     args.Item2Name = item2.FriendlyName;
                     args.Item2Guid = item2.GUID;
                     e.SecondaryItem = item2.GUID;
-                    args.Flags |= EDeathFlags.ITEM2;
+                    args.Flags |= DeathFlags.Item2;
                 }
                 break;
         }

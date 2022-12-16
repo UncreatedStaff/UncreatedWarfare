@@ -8,17 +8,17 @@ using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 namespace Uncreated.Warfare.Commands.VanillaRework;
 public class KickCommand : Command
 {
-    private const string SYNTAX = "/kick <player> <reason>";
-    private const string HELP = "Kick players who are misbehaving.";
+    private const string Syntax = "/kick <player> <reason>";
+    private const string Help = "Kick players who are misbehaving.";
 
     public KickCommand() : base("kick", EAdminType.MODERATOR, 1) { }
 
     public override void Execute(CommandInteraction ctx)
     {
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 
         if (!ctx.HasArgs(2))
-            throw ctx.SendCorrectUsage(SYNTAX);
+            throw ctx.SendCorrectUsage(Syntax);
 
         if (!ctx.TryGet(0, out ulong targetId, out UCPlayer? target) || target is null)
             throw ctx.Reply(T.PlayerNotFound);
@@ -31,16 +31,16 @@ public class KickCommand : Command
 
         OffenseManager.LogKickPlayer(targetId, ctx.CallerID, reason!, DateTime.Now);
 
-        ctx.LogAction(EActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.Locale)} FOR \"{reason}\"");
+        ctx.LogAction(EActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\"");
         if (ctx.IsConsole)
         {
-            ctx.ReplyString($"{names.PlayerName} ({targetId.ToString(Data.Locale)}) was kicked by an operator because: {reason}.", ConsoleColor.Cyan);
+            ctx.ReplyString($"{names.PlayerName} ({targetId.ToString(Data.LocalLocale)}) was kicked by an operator because: {reason}.", ConsoleColor.Cyan);
             Chat.Broadcast(T.KickSuccessBroadcastOperator, names);
         }
         else
         {
             PlayerNames callerNames = ctx.Caller is null ? PlayerNames.Console : ctx.Caller.Name;
-            L.Log($"{names.PlayerName} ({targetId.ToString(Data.Locale)}) was kicked by {callerNames.PlayerName} ({ctx.CallerID.ToString(Data.Locale)}) because: {reason}.", ConsoleColor.Cyan);
+            L.Log($"{names.PlayerName} ({targetId.ToString(Data.AdminLocale)}) was kicked by {callerNames.PlayerName} ({ctx.CallerID.ToString(Data.AdminLocale)}) because: {reason}.", ConsoleColor.Cyan);
             Chat.Broadcast(LanguageSet.AllBut(ctx.CallerID), T.KickSuccessBroadcast, names, callerNames);
             ctx.Reply(T.KickSuccessFeedback, names);
         }

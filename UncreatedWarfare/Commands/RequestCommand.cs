@@ -1,7 +1,6 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -21,8 +20,8 @@ using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 namespace Uncreated.Warfare.Commands;
 public class RequestCommand : AsyncCommand
 {
-    private const string SYNTAX = "/request [save|remove]";
-    private const string HELP = "Request a kit by targeting a sign or request a vehicle by targeting the vehicle or it's sign while doing /request.";
+    private const string Syntax = "/request [save|remove]";
+    private const string Help = "Request a kit by targeting a sign or request a vehicle by targeting the vehicle or it's sign while doing /request.";
 
     public RequestCommand() : base("request", EAdminType.MEMBER)
     {
@@ -36,7 +35,7 @@ public class RequestCommand : AsyncCommand
 #endif
         ctx.AssertRanByPlayer();
 
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         
         if (ctx.HasArg(0))
         {
@@ -50,7 +49,7 @@ public class RequestCommand : AsyncCommand
                 ctx.AssertPermissions(EAdminType.STAFF);
                 throw ctx.ReplyString("Removing request signs should now be done using the structure command.");
             }
-            throw ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
+            throw ctx.SendCorrectUsage(Syntax + " - " + Help);
         }
         if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
         {
@@ -99,14 +98,14 @@ public class RequestCommand : AsyncCommand
                 }
                 throw ctx.Reply(T.RequestNoTarget);
             }
-            else if (TraitManager.Loaded && sign.text.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX, StringComparison.OrdinalIgnoreCase))
+            else if (TraitManager.Loaded && sign.text.StartsWith(Signs.Prefix + Signs.TraitPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 ctx.AssertGamemode<ITraits>();
 
                 if (!TraitManager.Loaded)
                     throw ctx.SendGamemodeError();
 
-                TraitData? d = TraitManager.GetData(sign.text.Substring(TraitSigns.TRAIT_SIGN_PREFIX.Length));
+                TraitData? d = TraitManager.GetData(sign.text.Substring(Signs.Prefix.Length + Signs.TraitPrefix.Length));
                 if (d == null)
                     throw ctx.Reply(T.RequestNoTarget);
 
@@ -170,7 +169,7 @@ public class RequestCommand : AsyncCommand
                 throw ctx.Reply(T.RequestVehicleWrongClass, data.RequiredClass);
             if (ctx.Caller.CachedCredits < data.CreditCost)
                 throw ctx.Reply(T.RequestVehicleCantAfford, data.CreditCost - ctx.Caller.CachedCredits, data.CreditCost);
-            if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
+            if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.RequestVehicle, out Cooldown cooldown, vehicle.id))
                 throw ctx.Reply(T.RequestVehicleCooldown, cooldown);
 
             if (VehicleSpawner.Loaded) // check if an owned vehicle is nearby
@@ -231,7 +230,7 @@ public class RequestCommand : AsyncCommand
                 Stats.StatsManager.ModifyStats(ctx.Caller.Steam64, x => x.VehiclesRequested++, false);
                 Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
                 Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
-                CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REQUEST_VEHICLE, CooldownManager.Config.RequestVehicleCooldown, vehicle.id);
+                CooldownManager.StartCooldown(ctx.Caller, CooldownType.RequestVehicle, CooldownManager.Config.RequestVehicleCooldown, vehicle.id);
             }
             else
             {

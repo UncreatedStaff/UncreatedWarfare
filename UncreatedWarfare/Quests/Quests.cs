@@ -46,7 +46,7 @@ public abstract class BaseQuestData : ITranslationArgument
             L.LogWarning("No translations for " + QuestType.ToString() + " quest.");
             return QuestType.ToString() + " - " + string.Join("|", formatting);
         }
-        if (Translations.TryGetValue(language, out string v) || (!language.Equals(L.DEFAULT, StringComparison.Ordinal) && Translations.TryGetValue(L.DEFAULT, out v)))
+        if (Translations.TryGetValue(language, out string v) || (!language.Equals(L.Default, StringComparison.Ordinal) && Translations.TryGetValue(L.Default, out v)))
         {
             try
             {
@@ -61,7 +61,7 @@ public abstract class BaseQuestData : ITranslationArgument
         return string.Join(", ", formatting);
     }
     public string Translate(bool forAsset, UCPlayer? player, params object[]? formatting) =>
-        Translate(forAsset, player is not null && Data.Languages.TryGetValue(player.Steam64, out string language) ? language : L.DEFAULT, formatting);
+        Translate(forAsset, player is not null && Data.Languages.TryGetValue(player.Steam64, out string language) ? language : L.Default, formatting);
     public abstract void OnPropertyRead(string propertyname, ref Utf8JsonReader reader);
     public abstract BaseQuestTracker? CreateTracker(UCPlayer player);
     public abstract IQuestState GetState();
@@ -235,13 +235,13 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                                 if (reader.TokenType == JsonTokenType.StartObject)
                                 {
                                     IQuestReward? reward = null;
-                                    EQuestRewardType type = EQuestRewardType.NONE;
+                                    QuestRewardType type = QuestRewardType.None;
                                     while (reader.Read())
                                     {
                                         if (reader.TokenType == JsonTokenType.PropertyName)
                                         {
                                             string prop2 = reader.GetString()!;
-                                            if (type == EQuestRewardType.NONE && prop2.Equals("type", StringComparison.OrdinalIgnoreCase))
+                                            if (type == QuestRewardType.None && prop2.Equals("type", StringComparison.OrdinalIgnoreCase))
                                             {
                                                 if (reader.Read())
                                                 {

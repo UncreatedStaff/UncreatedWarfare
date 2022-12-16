@@ -173,7 +173,7 @@ public class FOB : IFOB, IDeployable
         {
             return IsBleeding
                 ? string.Empty
-                : Build.ToString(Data.Locale).Colorize("d4c49d") + " " + Ammo.ToString(Data.Locale).Colorize("b56e6e");
+                : Build.ToString(Data.LocalLocale).Colorize("d4c49d") + " " + Ammo.ToString(Data.LocalLocale).Colorize("b56e6e");
         }
     }
     public BarricadeDrop? RepairStation

@@ -14,7 +14,7 @@ namespace Uncreated.Warfare.Traits.Buffs;
 /// </summary>
 public class AceArmor : Buff
 {
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(AceArmor),
         NameTranslations = new TranslationList("Ace Armor"),
@@ -38,20 +38,20 @@ public class AceArmor : Buff
     {
         if (onStart)
         {
-            string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(dataSplitChars, StringSplitOptions.RemoveEmptyEntries);
+            string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(DataSplitChars, StringSplitOptions.RemoveEmptyEntries);
             if (datas.Length > 0)
             {
-                float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.Locale, out _multiplier);
+                float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.AdminLocale, out _multiplier);
                 if (datas.Length > 1)
                 {
-                    float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.Locale, out _refundMultiplier);
+                    float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.AdminLocale, out _refundMultiplier);
                     if (datas.Length > 2)
                         _icon = datas[2];
                 }
             }
-            if (_multiplier == -1f)
+            if (_multiplier < 0f)
                 _multiplier = 0.45f;
-            if (_refundMultiplier == -1f)
+            if (_refundMultiplier < 0f)
                 _refundMultiplier = 0.1f;
             if (string.IsNullOrEmpty(_icon))
                 _icon = Data.Icon;
@@ -215,16 +215,16 @@ public class AceArmor : Buff
     }
     private sealed class AceBoost : NonTraitBuff, IXPBoostBuff
     {
-        private readonly float multiplier;
-        private readonly float refundMultiplier;
+        private readonly float _multiplier;
+        private readonly float _refundMultiplier;
         public AceArmor Trait;
         public AceBoost(string icon, float multiplier, float refundMultiplier, UCPlayer player, AceArmor owner) : base(icon, player)
         {
-            this.multiplier = multiplier;
-            this.refundMultiplier = refundMultiplier;
+            this._multiplier = multiplier;
+            this._refundMultiplier = refundMultiplier;
             Trait = owner;
         }
-        float IXPBoostBuff.Multiplier => Trait != null && Trait.IsActivated ? multiplier : 1f;
+        float IXPBoostBuff.Multiplier => Trait != null && Trait.IsActivated ? _multiplier : 1f;
         void IXPBoostBuff.OnXPBoostUsed(float amount, bool awardCredits)
         {
             if (Trait is null || !Trait.IsActivated) return;
@@ -234,7 +234,7 @@ public class AceArmor : Buff
             if (!pl.IsOnline)
                 pl = UCPlayer.FromID(pl.Steam64);
             if (pl is not null)
-                Point.Points.AwardXP(pl, Mathf.CeilToInt(amount * refundMultiplier), T.XPToastAceArmorRefund, true);
+                Point.Points.AwardXP(pl, Mathf.CeilToInt(amount * _refundMultiplier), T.XPToastAceArmorRefund, true);
         }
     }
 }

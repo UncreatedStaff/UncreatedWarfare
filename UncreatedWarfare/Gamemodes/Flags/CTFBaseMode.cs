@@ -64,8 +64,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     private bool _isScreenUp = false;
     public int ObjectiveT1Index => _objectiveT1Index;
     public int ObjectiveT2Index => _objectiveT2Index;
-    public Flag? ObjectiveTeam1 => _objectiveT1Index >= 0 && _objectiveT1Index < _rotation.Count ? _rotation[_objectiveT1Index] : null;
-    public Flag? ObjectiveTeam2 => _objectiveT2Index >= 0 && _objectiveT2Index < _rotation.Count ? _rotation[_objectiveT2Index] : null;
+    public Flag? ObjectiveTeam1 => _objectiveT1Index >= 0 && _objectiveT1Index < FlagRotation.Count ? FlagRotation[_objectiveT1Index] : null;
+    public Flag? ObjectiveTeam2 => _objectiveT2Index >= 0 && _objectiveT2Index < FlagRotation.Count ? FlagRotation[_objectiveT2Index] : null;
     public override bool EnableAMC => true;
     public override bool ShowOFPUI => true;
     public override bool ShowXPUI => true;
@@ -161,32 +161,32 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ResetFlags();
-        _onFlag.Clear();
+        OnFlagDict.Clear();
 
         do
         {
-            _rotation.Clear();
-            if (!ObjectivePathing.TryPath(_rotation))
+            FlagRotation.Clear();
+            if (!ObjectivePathing.TryPath(FlagRotation))
             {
                 L.LogError("Failed to path...");
                 throw new InvalidOperationException("Invalid pathing data entered.");
             }
         }
-        while (_rotation.Count > CTFUI.ListUI.Parents.Length);
+        while (FlagRotation.Count > CTFUI.ListUI.Parents.Length);
     }
     public override void LoadRotation()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (_allFlags == null || _allFlags.Count == 0) return;
+        if (AllFlags == null || AllFlags.Count == 0) return;
         LoadFlagsIntoRotation();
-        if (_rotation.Count < 1)
+        if (FlagRotation.Count < 1)
         {
             L.LogError("No flags were put into rotation!!");
         }
         _objectiveT1Index = 0;
-        _objectiveT2Index = _rotation.Count - 1;
+        _objectiveT2Index = FlagRotation.Count - 1;
         if (Config.AASDiscoveryForesight < 1)
         {
             L.LogWarning("Discovery Foresight is set to 0 in Flag Settings. The players can not see their next flags.");
@@ -195,16 +195,16 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         {
             for (int i = 0; i < Config.AASDiscoveryForesight; i++)
             {
-                if (i >= _rotation.Count || i < 0) break;
-                _rotation[i].Discover(1);
+                if (i >= FlagRotation.Count || i < 0) break;
+                FlagRotation[i].Discover(1);
             }
-            for (int i = _rotation.Count - 1; i > _rotation.Count - 1 - Config.AASDiscoveryForesight; i--)
+            for (int i = FlagRotation.Count - 1; i > FlagRotation.Count - 1 - Config.AASDiscoveryForesight; i--)
             {
-                if (i >= _rotation.Count || i < 0) break;
-                _rotation[i].Discover(2);
+                if (i >= FlagRotation.Count || i < 0) break;
+                FlagRotation[i].Discover(2);
             }
         }
-        foreach (Flag flag in _rotation)
+        foreach (Flag flag in FlagRotation)
         {
             InitFlag(flag); //subscribe to abstract events.
         }
@@ -237,24 +237,24 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 {
                     for (int i = NewFlagObj.index; i < NewFlagObj.index + Config.AASDiscoveryForesight; i++)
                     {
-                        if (i >= _rotation.Count || i < 0) break;
-                        _rotation[i].Discover(1);
+                        if (i >= FlagRotation.Count || i < 0) break;
+                        FlagRotation[i].Discover(1);
                         if (this is Invasion.Invasion)
-                            Invasion.InvasionUI.ReplicateFlagUpdate(_rotation[i]);
+                            Invasion.InvasionUI.ReplicateFlagUpdate(FlagRotation[i]);
                         else
-                            CTFUI.ReplicateFlagUpdate(_rotation[i]);
+                            CTFUI.ReplicateFlagUpdate(FlagRotation[i]);
                     }
                 }
                 else if (Team == 2)
                 {
                     for (int i = NewFlagObj.index; i > NewFlagObj.index - Config.AASDiscoveryForesight; i--)
                     {
-                        if (i >= _rotation.Count || i < 0) break;
-                        _rotation[i].Discover(2);
+                        if (i >= FlagRotation.Count || i < 0) break;
+                        FlagRotation[i].Discover(2);
                         if (this is Invasion.Invasion)
-                            Invasion.InvasionUI.ReplicateFlagUpdate(_rotation[i]);
+                            Invasion.InvasionUI.ReplicateFlagUpdate(FlagRotation[i]);
                         else
-                            CTFUI.ReplicateFlagUpdate(_rotation[i]);
+                            CTFUI.ReplicateFlagUpdate(FlagRotation[i]);
                     }
                 }
             }
@@ -266,9 +266,9 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 
         if (EveryXSeconds(20f))
         {
-            for (int i = 0; i < _rotation.Count; i++)
+            for (int i = 0; i < FlagRotation.Count; i++)
             {
-                Flag flag = _rotation[i];
+                Flag flag = FlagRotation[i];
                 if (flag.LastDeltaPoints > 0 && flag.Owner != 1)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
@@ -377,7 +377,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             }
         }
     }
-    protected override void FlagOwnerChanged(ulong lastOwner, ulong newOwner, Flag flag)
+    protected override void FlagOwnerChanged(ulong oldOwner, ulong newOwner, Flag flag)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -385,17 +385,17 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         if (newOwner == 1)
         {
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
-            if (_objectiveT1Index >= _rotation.Count - 1) // if t1 just capped the last flag
+            if (_objectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
             {
                 DeclareWin(1);
-                _objectiveT1Index = _rotation.Count - 1;
+                _objectiveT1Index = FlagRotation.Count - 1;
                 return;
             }
             else
             {
                 _objectiveT1Index = flag.index + 1;
-                InvokeOnObjectiveChanged(flag, _rotation[_objectiveT1Index], 1, flag.index, _objectiveT1Index);
-                InvokeOnFlagCaptured(flag, 1, lastOwner);
+                InvokeOnObjectiveChanged(flag, FlagRotation[_objectiveT1Index], 1, flag.index, _objectiveT1Index);
+                InvokeOnFlagCaptured(flag, 1, oldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                 {
                     if (flag.PlayersOnFlagTeam1[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
@@ -416,8 +416,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             {
 
                 _objectiveT2Index = flag.index - 1;
-                InvokeOnObjectiveChanged(flag, _rotation[_objectiveT2Index], 2, flag.index, _objectiveT2Index);
-                InvokeOnFlagCaptured(flag, 2, lastOwner);
+                InvokeOnObjectiveChanged(flag, FlagRotation[_objectiveT2Index], 2, flag.index, _objectiveT2Index);
+                InvokeOnFlagCaptured(flag, 2, oldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                 {
                     if (flag.PlayersOnFlagTeam2[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
@@ -427,23 +427,23 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         }
         else
         {
-            if (lastOwner == 1)
+            if (oldOwner == 1)
             {
                 int oldindex = _objectiveT1Index;
                 _objectiveT1Index = flag.index;
                 if (oldindex != flag.index)
                 {
-                    InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                    InvokeOnObjectiveChanged(FlagRotation[oldindex], flag, 0, oldindex, flag.index);
                 }
                 InvokeOnFlagNeutralized(flag, 2, 1);
             }
-            else if (lastOwner == 2)
+            else if (oldOwner == 2)
             {
                 int oldindex = _objectiveT2Index;
                 _objectiveT2Index = flag.index;
                 if (oldindex != flag.index)
                 {
-                    InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                    InvokeOnObjectiveChanged(FlagRotation[oldindex], flag, 0, oldindex, flag.index);
                 }
                 InvokeOnFlagNeutralized(flag, 1, 2);
             }
@@ -462,12 +462,12 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             Chat.Broadcast(LanguageSet.OnTeam(2), T.TeamCaptured, info!, flag);
         }
     }
-    protected override void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag)
+    protected override void FlagPointsChanged(float newPts, float oldPts, Flag flag)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (NewPoints == 0)
+        if (newPts == 0)
             flag.SetOwner(0);
         UpdateFlag(flag);
     }
@@ -476,13 +476,13 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (_onFlag.TryGetValue(player.Steam64, out int id))
+        if (OnFlagDict.TryGetValue(player.Steam64, out int id))
         {
-            for (int i = 0; i < _rotation.Count; i++)
+            for (int i = 0; i < FlagRotation.Count; i++)
             {
-                if (_rotation[i].ID == id)
+                if (FlagRotation[i].ID == id)
                 {
-                    _rotation[i].RecalcCappers();
+                    FlagRotation[i].RecalcCappers();
                     break;
                 }
             }

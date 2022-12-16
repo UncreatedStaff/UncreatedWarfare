@@ -1,14 +1,13 @@
-﻿using SDG.Unturned;
+﻿using HarmonyLib;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using HarmonyLib;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
@@ -723,21 +722,31 @@ public static class EventDispatcher
     }
     private static async Task InvokePrePlayerConnectAsync(PlayerPending args, CancellationToken token = default)
     {
-        foreach (AsyncEventDelegate<PlayerPending> inv in PlayerInjured.GetInvocationList()
+        if (PlayerPendingAsync == null) goto exit;
+        foreach (AsyncEventDelegate<PlayerPending> inv in PlayerPendingAsync.GetInvocationList()
                      .Cast<AsyncEventDelegate<PlayerPending>>())
         {
             if (!args.CanContinue) break;
             await TryInvoke(inv, args, nameof(PlayerPendingAsync), token).ConfigureAwait(true);
+            if (PlayerPendingAsync == null) goto exit;
         }
-
-        if (!UCWarfare.IsMainThread)
-            await UCWarfare.ToUpdate();
+        
+        await UCWarfare.ToUpdate();
         ThreadUtil.assertIsGameThread();
         if (args.CanContinue)
-            Provider.accept(args.PendingPlayer);
+        {
+            if (args.PendingPlayer.canAcceptYet)
+            {
+                EventPatches.Accept = args.Steam64;
+                Provider.accept(args.PendingPlayer);
+                EventPatches.Accept = 0ul;
+            }
+        }
         else
             Provider.reject(args.PendingPlayer.transportConnection, ESteamRejection.PLUGIN,
                 args.RejectReason ?? "An unknown error occured.");
+
+        exit: EventPatches.Accepted.Remove(args.Steam64);
     }
 }
 public delegate void EventDelegate<in TState>(TState e) where TState : EventState;

@@ -6,31 +6,25 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Framework;
 using Uncreated.Players;
-using Uncreated.Warfare;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Point;
 
 public static class Points
 {
-    private const string UPDATE_ALL_POINTS_QUERY = "SELECT `Steam64`, `Team`, `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` in (";
-    private const int XPUI_KEY = 26969;
-    private const int CREDITSUI_KEY = 26971;
+    private const string UpdateAllPointsQuery = "SELECT `Steam64`, `Team`, `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` in (";
+    private const int XPUIKey = 26969;
+    private const int CreditsUIKey = 26971;
     private static readonly Config<XPConfig> XPConfigObj = UCWarfare.IsLoaded ? new Config<XPConfig>(Data.Paths.PointsStorage, "xp.json") : null!;
     private static readonly Config<CreditsConfig> CreditsConfigObj = UCWarfare.IsLoaded ? new Config<CreditsConfig>(Data.Paths.PointsStorage, "credits.json") : null!;
     public static XPConfig XPConfig => XPConfigObj.Data;
@@ -411,7 +405,7 @@ public static class Points
                     VehicleSpawner.UpdateSigns(player);
 
                 if (TraitManager.Loaded)
-                    TraitSigns.SendAllTraitSigns(player);
+                    Signs.UpdateTraitSigns(player, null);
 
                 skipUpdates:
                 for (int i = 0; i < player.ActiveBuffs.Length; ++i)
@@ -446,20 +440,20 @@ public static class Points
         if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.IsScreenUp))
             return;
 
-        EffectManager.sendUIEffect(XPConfig.RankUI, XPUI_KEY, player.Connection, true);
-        EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,
+        EffectManager.sendUIEffect(XPConfig.RankUI, XPUIKey, player.Connection, true);
+        EffectManager.sendUIEffectText(XPUIKey, player.Connection, true,
             "Rank", player.Rank.Name
         );
         //EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
         //    "Level", player.Rank.Level == 0 ? string.Empty : Translation.Translate("ui_xp_level", player, player.Rank.Level.ToString(Data.Locale))
         //);
-        EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,
+        EffectManager.sendUIEffectText(XPUIKey, player.Connection, true,
             "XP", player.Rank.CurrentXP + "/" + player.Rank.RequiredXP
         );
-        EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,
+        EffectManager.sendUIEffectText(XPUIKey, player.Connection, true,
             "Next", player.Rank.NextAbbreviation
         );
-        EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,
+        EffectManager.sendUIEffectText(XPUIKey, player.Connection, true,
             "Progress", player.Rank.ProgressBar
         );
     }
@@ -472,8 +466,8 @@ public static class Points
         if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.IsScreenUp))
             return;
 
-        EffectManager.sendUIEffect(CreditsConfig.CreditsUI, CREDITSUI_KEY, player.Connection, true);
-        EffectManager.sendUIEffectText(CREDITSUI_KEY, player.Connection, true,
+        EffectManager.sendUIEffect(CreditsConfig.CreditsUI, CreditsUIKey, player.Connection, true);
+        EffectManager.sendUIEffectText(CreditsUIKey, player.Connection, true,
             "Credits", "<color=#b8ffc1>C</color>  " + player.CachedCredits
         );
     }
@@ -627,8 +621,8 @@ public static class Points
     {
         if (PlayerManager.OnlinePlayers.Count < 1)
             return;
-        StringBuilder builder = new StringBuilder(UPDATE_ALL_POINTS_QUERY.Length + PlayerManager.OnlinePlayers.Count * 18 + 1);
-        builder.Append(UPDATE_ALL_POINTS_QUERY);
+        StringBuilder builder = new StringBuilder(UpdateAllPointsQuery.Length + PlayerManager.OnlinePlayers.Count * 18 + 1);
+        builder.Append(UpdateAllPointsQuery);
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
             PlayerManager.OnlinePlayers[i].IsDownloadingXP = true;
@@ -800,7 +794,7 @@ public static class Points
         UpdateCreditsUI(caller);
 
         if (TraitManager.Loaded)
-            TraitSigns.SendAllTraitSigns(caller);
+            Signs.UpdateTraitSigns(caller, null);
         
         if (VehicleSpawner.Loaded && VehicleSigns.Loaded)
             VehicleSpawner.UpdateSigns(caller);
@@ -889,7 +883,7 @@ public static class Points
                     Chat.Broadcast(T.VehicleDestroyed, e.Instigator, e.Vehicle.asset, reason, distance);
 
                 ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
-                                                                 $" - Destroyed by {e.Instigator.Steam64.ToString(Data.Locale)}", e.OwnerId);
+                                                                 $" - Destroyed by {e.Instigator.Steam64.ToString(Data.AdminLocale)}", e.OwnerId);
 
                 QuestManager.OnVehicleDestroyed(e);
 

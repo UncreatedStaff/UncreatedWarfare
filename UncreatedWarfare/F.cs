@@ -84,7 +84,7 @@ public static class F
             rtn = color;
         else
             rtn = f2.Substring(7); // 7 is "color=#" length
-        return !int.TryParse(rtn, NumberStyles.HexNumber, Data.Locale, out _) ? UCWarfare.GetColorHex("default") : rtn;
+        return !int.TryParse(rtn, NumberStyles.HexNumber, Data.AdminLocale, out _) ? UCWarfare.GetColorHex("default") : rtn;
     }
     public static string MakeRemainder(this string[] array, int startIndex = 0, int length = -1, string deliminator = " ")
     {
@@ -496,21 +496,18 @@ public static class F
             success = pt != null;
             return pt;
         }
-        else if (player == null || player.transform == null)
+        if (player == null || player.transform == null)
         {
             success = false;
             return null;
         }
-        else if (player.transform.TryGetComponent(out UCPlayerData playtimeObj))
+        if (player.transform.TryGetComponent(out UCPlayerData playtimeObj))
         {
             success = true;
             return playtimeObj;
         }
-        else
-        {
-            success = false;
-            return null;
-        }
+        success = false;
+        return null;
     }
     public static UCPlayerData? GetPlayerData(this CSteamID player, out bool success)
     {
@@ -614,7 +611,7 @@ public static class F
         {
             if (!ex.Message.Equals("Not connected", StringComparison.Ordinal))
                 throw;
-            string tname = player.ToString(Data.Locale);
+            string tname = player.ToString(Data.AdminLocale);
             return new PlayerNames { Steam64 = player, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
         }
     }
@@ -681,7 +678,7 @@ public static class F
         if (!Data.Is<ITeams>(out _)) return innerText;
         return team switch
         {
-            TeamManager.ZOMBIE_TEAM_ID => $"<color=#{UCWarfare.GetColorHex("death_zombie_name_color")}>{innerText}</color>",
+            TeamManager.ZombieTeamID => $"<color=#{UCWarfare.GetColorHex("death_zombie_name_color")}>{innerText}</color>",
             TeamManager.Team1ID => $"<color=#{TeamManager.Team1ColorHex}>{innerText}</color>",
             TeamManager.Team2ID => $"<color=#{TeamManager.Team2ColorHex}>{innerText}</color>",
             TeamManager.AdminID => $"<color=#{TeamManager.AdminColorHex}>{innerText}</color>",
@@ -894,6 +891,18 @@ public static class F
             if (asset.id == id) return true;
         }
         return false;
+    }
+    public static TAsset? GetAsset<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference) where TAsset : Asset
+    {
+        if (reference.ValidReference(out TAsset asset))
+            return asset;
+        return null;
+    }
+    public static TAsset? GetAsset<TAsset>(this JsonAssetReference<TAsset>? reference) where TAsset : Asset
+    {
+        if (reference.ValidReference(out TAsset asset))
+            return asset;
+        return null;
     }
     public static bool ValidReference<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, out Guid guid) where TAsset : Asset
     {
@@ -1132,7 +1141,7 @@ public static class F
                     if (plant != ushort.MaxValue || Regions.checkArea(x, y, pl.Player.movement.region_x,
                             pl.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
                     {
-                        byte[] text = System.Text.Encoding.UTF8.GetBytes(Signs.GetClientText(sign.text, pl, sign));
+                        byte[] text = System.Text.Encoding.UTF8.GetBytes(Signs.GetClientText(drop, pl));
                         int txtLen = Math.Min(text.Length, byte.MaxValue - 17);
                         if (state == null || state.Length != txtLen + 17)
                         {
@@ -1568,6 +1577,19 @@ public static class F
         }
         builder.Append(')');
     }
+    internal static void AppendPropertyList(StringBuilder builder, int startIndex, int length, int i)
+    {
+        if (i != 0)
+            builder.Append(',');
+        builder.Append('(');
+        for (int j = startIndex; j < startIndex + length; ++j)
+        {
+            if (j != startIndex)
+                builder.Append(',');
+            builder.Append('@').Append(j);
+        }
+        builder.Append(')');
+    }
     public static bool NullOrEmpty<T>(this ICollection<T>? collection)
     {
         return collection == null || collection.Count == 0;
@@ -1664,5 +1686,17 @@ public static class F
         T[] result = new T[source.Length];
         Array.Copy(source, result, source.Length);
         return result;
+    }
+    public static bool ServerTrackQuest(this UCPlayer player, QuestAsset quest)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (player is not { IsOnline: true })
+            return false;
+        QuestAsset current = player.Player.quests.GetTrackedQuest();
+        if (current == quest)
+            return false;
+
+        player.Player.quests.ServerAddQuest(quest);
+        return true;
     }
 }

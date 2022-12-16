@@ -79,10 +79,10 @@ public class Action
 
         _component.Initialize(this);
             
-        if (!CooldownManager.HasCooldown(Caller, ECooldownType.ACTION_ANNOUNCE, out _, ViewerEffect.Guid))
+        if (!CooldownManager.HasCooldown(Caller, CooldownType.AnnounceAction, out _, ViewerEffect.Guid))
         {
             Announce();
-            CooldownManager.StartCooldown(Caller, ECooldownType.ACTION_ANNOUNCE, 5, ViewerEffect.Guid);
+            CooldownManager.StartCooldown(Caller, CooldownType.AnnounceAction, 5, ViewerEffect.Guid);
         }
            
     }

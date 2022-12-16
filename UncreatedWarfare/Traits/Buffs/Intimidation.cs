@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Traits.Buffs;
 public class Intimidation : Buff
 {
     private static TraitData? DATA;
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(Intimidation),
         NameTranslations = new TranslationList("Intimidation"),

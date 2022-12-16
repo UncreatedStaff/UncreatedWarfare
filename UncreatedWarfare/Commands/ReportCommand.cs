@@ -15,8 +15,8 @@ namespace Uncreated.Warfare.Commands;
 
 public class ReportCommand : AsyncCommand
 {
-    private const string SYNTAX = "/report <\"reasons\" | player> <reason> <custom message...>";
-    private const string HELP = "Use to report a player for specific actions. Use /report reasons for examples.";
+    private const string Syntax = "/report <\"reasons\" | player> <reason> <custom message...>";
+    private const string Help = "Use to report a player for specific actions. Use /report reasons for examples.";
     public ReportCommand() : base("report", EAdminType.MEMBER) { }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
@@ -32,8 +32,8 @@ public class ReportCommand : AsyncCommand
 
         ctx.AssertRanByPlayer();
 
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
-        ctx.AssertArgs(2, SYNTAX);
+        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
+        ctx.AssertArgs(2, Syntax);
 
         if (!UCWarfare.CanUseNetCall || !UCWarfare.Config.EnableReporter)
             throw ctx.Reply(T.ReportNotConnected);
@@ -59,7 +59,7 @@ public class ReportCommand : AsyncCommand
             type = GetReportType(ctx.Get(1)!);
             if (type == EReportType.CUSTOM)
                 goto Help;
-            if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, NumberStyles.Any, Data.Locale, out target)))
+            if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, NumberStyles.Number, Data.LocalLocale, out target)))
             {
                 UCPlayer.NameSearch search = GetNameType(type);
                 target = Data.Reporter.RecentPlayerNameCheck(inPlayer, search);
@@ -79,7 +79,7 @@ public class ReportCommand : AsyncCommand
             type = GetReportType(ctx.Get(1)!);
             message = type == EReportType.CUSTOM ? ctx.GetRange(1)! : ctx.GetRange(2)!;
 
-            if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out target)))
+            if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, NumberStyles.Number, Data.LocalLocale, out target)))
             {
                 UCPlayer.NameSearch search = GetNameType(type);
                 UCPlayer? temptarget = UCPlayer.FromName(inPlayer, search);
@@ -96,7 +96,7 @@ public class ReportCommand : AsyncCommand
         }
         PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(target, token).ThenToUpdate(token);
 
-        if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, ECooldownType.REPORT, out Cooldown cd) && cd.data.Length > 0 && cd.data[0] is ulong ul && ul == target)
+        if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, CooldownType.Report, out Cooldown cd) && cd.data.Length > 0 && cd.data[0] is ulong ul && ul == target)
         {
             ctx.Reply(T.ReportCooldown, targetNames);
             return;
@@ -116,7 +116,7 @@ public class ReportCommand : AsyncCommand
             ctx.Reply(T.ReportNotConnected);
             return;
         }
-        CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REPORT, 3600f, target);
+        CooldownManager.StartCooldown(ctx.Caller, CooldownType.Report, 3600f, target);
         Report? report = type switch
         {
             EReportType.CHAT_ABUSE => Data.Reporter.CreateChatAbuseReport(ctx.CallerID, target, message),
@@ -158,13 +158,13 @@ public class ReportCommand : AsyncCommand
         if (targetPl != null && targetPl.player != null)
         {
             if (!Data.Languages.TryGetValue(target, out string lang))
-                lang = L.DEFAULT;
+                lang = L.Default;
             ToastMessage.QueueMessage(targetPl, new ToastMessage(T.ReportNotifyViolatorToast.Translate(lang, typename, UCPlayer.FromID(target)), EToastMessageSeverity.SEVERE));
             targetPl.SendChat(T.ReportNotifyViolatorMessage1, typename, message);
             targetPl.SendChat(T.ReportNotifyViolatorMessage2);
         }
 
-        PlayerNames names = await F.GetPlayerOriginalNamesAsync(target);
+        PlayerNames names = await F.GetPlayerOriginalNamesAsync(target, token).ConfigureAwait(false);
 
         if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success &&
             success && res.Parameters[1] is string messageUrl)
@@ -172,12 +172,12 @@ public class ReportCommand : AsyncCommand
             //await UCWarfare.ToUpdate();
             //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
             L.Log($"Report against {names.PlayerName} ({target}) record: \"{messageUrl}\".", ConsoleColor.Cyan);
-            ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl, ctx.Caller);
+            ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report + ", Report URL: " + messageUrl, ctx.Caller);
         }
         else
         {
             L.Log($"Report against {names.PlayerName} ({target}) failed to send to UCHB.", ConsoleColor.Cyan);
-            ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
+            ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report + ", Report did not reach the discord bot.", ctx.Caller);
         }
         return;
     PlayerNotFound:
@@ -185,7 +185,7 @@ public class ReportCommand : AsyncCommand
     DiscordNotLinked:
         throw ctx.Reply(T.ReportDiscordNotLinked, ctx.Caller);
     Help:
-        ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
+        ctx.SendCorrectUsage(Syntax + " - " + Help);
     Types: // not returning here is intentional
         throw ctx.Reply(T.ReportReasons);
     }

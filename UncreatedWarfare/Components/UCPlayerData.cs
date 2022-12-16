@@ -472,6 +472,6 @@ public class UCPlayerData : MonoBehaviour
         }
 
         if (startCoolDown)
-            CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, RapidDeployment.GetDeployTime(player));
+            CooldownManager.StartCooldown(player, CooldownType.Deploy, RapidDeployment.GetDeployTime(player));
     }
 }

@@ -101,9 +101,11 @@ public class ICommand : Command
                 }
                 if (Guid.TryParse(ctx.Get(0)!, out Guid guid))
                 {
+#if DEBUG
 #pragma warning disable CS0612 // checks for legacy id
                     guid = TeamManager.CheckAssetRedirect(guid, ctx.Caller.GetTeam());
 #pragma warning restore CS0612
+#endif
                     asset = Assets.find<ItemAsset>(guid);
                     if (asset is not null)
                         goto foundItem;

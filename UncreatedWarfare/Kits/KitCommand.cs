@@ -251,7 +251,7 @@ public sealed class KitCommand : AsyncCommand
                             {
                                 proxy.Item.Faction = faction;
                                 await proxy.SaveItem(token).ThenToUpdate(token);
-                                ctx.Reply(T.KitPropertySet, "faction", proxy.Item, faction?.GetName(L.DEFAULT)!);
+                                ctx.Reply(T.KitPropertySet, "faction", proxy.Item, faction?.GetName(L.Default)!);
                                 ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": FACTION >> " +
                                                                                (faction?.Name.ToUpper() ?? Translation.Null(TranslationFlags.NoRichText)));
                                 KitManager.UpdateSigns(proxy.Item);

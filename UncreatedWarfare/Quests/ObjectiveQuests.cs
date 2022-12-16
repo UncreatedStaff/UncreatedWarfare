@@ -9,7 +9,7 @@ using Uncreated.Json;
 namespace Uncreated.Warfare.Quests.Types;
 
 
-[QuestData(QuestType.CAPTURE_OBJECTIVES)]
+[QuestData(QuestType.CaptureObjectives)]
 public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Tracker, CaptureObjectivesQuest.State, CaptureObjectivesQuest>
 {
     public DynamicIntegerValue ObjectiveCount;
@@ -86,7 +86,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
     }
 }
 
-[QuestData(QuestType.XP_IN_GAMEMODE)]
+[QuestData(QuestType.XPInGamemode)]
 public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGamemodeQuest.State, XPInGamemodeQuest>
 {
     public DynamicIntegerValue XPCount;
@@ -212,7 +212,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
         }
     }
 }
-[QuestData(QuestType.TEAMMATES_DEPLOY_ON_RALLY)]
+[QuestData(QuestType.TeammatesDeployOnRally)]
 public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.State, RallyUseQuest>
 {
     public DynamicIntegerValue UseCount;
@@ -285,7 +285,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
         }
     }
 }
-[QuestData(QuestType.WIN_GAMEMODE)]
+[QuestData(QuestType.WinGamemode)]
 public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamemodeQuest.State, WinGamemodeQuest>
 {
     private const GamemodeType MAX_GAMEMODE = GamemodeType.Insurgency;
@@ -400,7 +400,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
     }
 }
 
-[QuestData(QuestType.NEUTRALIZE_FLAGS)]
+[QuestData(QuestType.NeutralizeFlags)]
 public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, NeutralizeFlagsQuest.State, NeutralizeFlagsQuest>
 {
     public DynamicIntegerValue Neutralizations;

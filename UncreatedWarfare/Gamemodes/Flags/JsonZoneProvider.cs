@@ -105,7 +105,7 @@ public class JsonZoneProvider
     }
     public int NextFreeID()
     {
-        for (int i = 0; true; ++i)
+        for (int i = 0;; ++i)
         {
             for (int j = 0; j < _zones.Count; ++j)
             {
@@ -245,7 +245,7 @@ public class JsonZoneProvider
                                                 switch (mdl.ZoneType)
                                                 {
                                                     case EZoneType.CIRCLE:
-                                                        if (float.TryParse(data, System.Globalization.NumberStyles.Any, Data.Locale, out float rad))
+                                                        if (float.TryParse(data, System.Globalization.NumberStyles.Any, Data.AdminLocale, out float rad))
                                                         {
                                                             mdl.ZoneData.Radius = rad;
                                                         }
@@ -254,8 +254,8 @@ public class JsonZoneProvider
                                                         string[] nums = data.Split(',');
                                                         if (nums.Length == 2)
                                                         {
-                                                            if (float.TryParse(nums[0], System.Globalization.NumberStyles.Any, Data.Locale, out float sizeX) &&
-                                                                float.TryParse(nums[1], System.Globalization.NumberStyles.Any, Data.Locale, out float sizeZ))
+                                                            if (float.TryParse(nums[0], System.Globalization.NumberStyles.Any, Data.AdminLocale, out float sizeX) &&
+                                                                float.TryParse(nums[1], System.Globalization.NumberStyles.Any, Data.AdminLocale, out float sizeZ))
                                                             {
                                                                 mdl.ZoneData.SizeX = sizeX;
                                                                 mdl.ZoneData.SizeZ = sizeZ;
@@ -271,8 +271,8 @@ public class JsonZoneProvider
                                                             for (int i = 0; i < pts; ++i)
                                                             {
                                                                 int t = i * 2;
-                                                                if (float.TryParse(nums[t], System.Globalization.NumberStyles.Any, Data.Locale, out float posx) &&
-                                                                    float.TryParse(nums[t + 1], System.Globalization.NumberStyles.Any, Data.Locale, out float posz))
+                                                                if (float.TryParse(nums[t], System.Globalization.NumberStyles.Any, Data.AdminLocale, out float posx) &&
+                                                                    float.TryParse(nums[t + 1], System.Globalization.NumberStyles.Any, Data.AdminLocale, out float posz))
                                                                 {
                                                                     mdl.ZoneData.Points[i] = new Vector2(posx, posz);
                                                                 }

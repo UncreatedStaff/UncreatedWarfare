@@ -43,7 +43,7 @@ public class PermissionCommand : Command
                     {
                         PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, type);
                         ctx.Reply(T.PermissionGrantSuccess, type, name, steam64);
-                        ctx.LogAction(EActionLogType.PERMISSION_LEVEL_CHANGED, $"{steam64} {Localization.TranslateEnum(t, L.DEFAULT)} >> {Localization.TranslateEnum(type, ctx.CallerID)}");
+                        ctx.LogAction(EActionLogType.PERMISSION_LEVEL_CHANGED, $"{steam64} {Localization.TranslateEnum(t, L.Default)} >> {Localization.TranslateEnum(type, ctx.CallerID)}");
                     }
                 });
                 ctx.Defer();
@@ -63,7 +63,7 @@ public class PermissionCommand : Command
                 {
                     PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, EAdminType.MEMBER);
                     ctx.Reply(T.PermissionRevokeSuccess, name, steam64);
-                    ctx.LogAction(EActionLogType.PERMISSION_LEVEL_CHANGED, $"{steam64} {Localization.TranslateEnum(t, L.DEFAULT)} >> {Localization.TranslateEnum(EAdminType.MEMBER, L.DEFAULT)}");
+                    ctx.LogAction(EActionLogType.PERMISSION_LEVEL_CHANGED, $"{steam64} {Localization.TranslateEnum(t, L.Default)} >> {Localization.TranslateEnum(EAdminType.MEMBER, L.Default)}");
                 }
             });
             ctx.Defer();

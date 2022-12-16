@@ -27,7 +27,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static readonly SquadListUI ListUI = new SquadListUI();
     public static readonly UnturnedUI RallyUI = new UnturnedUI(12003, Gamemode.Config.UIRally, true, false, false);
     public static readonly SquadOrderUI OrderUI = new SquadOrderUI();
-    public static readonly string[] SQUAD_NAMES =
+    public static readonly string[] SquadNames =
     {
         "ALPHA",
         "BRAVO",
@@ -425,9 +425,9 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        for (int n = 0; n < SQUAD_NAMES.Length; n++)
+        for (int n = 0; n < SquadNames.Length; n++)
         {
-            string name = SQUAD_NAMES[n];
+            string name = SquadNames[n];
             for (int i = 0; i < Squads.Count; i++)
             {
                 if (Squads[i].Team == team)
@@ -439,10 +439,9 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 }
             }
             return name;
-        next:
-            continue;
+            next:;
         }
-        return SQUAD_NAMES[SQUAD_NAMES.Length - 1];
+        return SquadNames[SquadNames.Length - 1];
     }
 
     public static Squad CreateSquad(UCPlayer leader, ulong team)
@@ -454,7 +453,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         string name = FindUnusedSquadName(team);
         Squad squad = new Squad(name, leader, team, leader.Branch);
         Squads.Add(squad);
-        SortSquadListABC();
+        SortSquadNames();
         leader.Squad = squad;
         Traits.TraitManager.OnPlayerJoinSquad(leader, squad);
 
@@ -467,7 +466,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         return squad;
     }
-    private static void SortSquadListABC()
+    private static void SortSquadNames()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -513,11 +512,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
-        {
-            //int o = b.Medals.TotalTW.CompareTo(a.Medals.TotalTW); // sort players by their officer status
-            return b.CachedXP.CompareTo(a.CachedXP);
-        });
+        squad.Members.Sort((a, b) => b.CachedXP.CompareTo(a.CachedXP));
         if (squad.Leader != null)
         {
             squad.Members.RemoveAll(x => x.Steam64 == squad.Leader.Steam64);
@@ -571,7 +566,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             return;
         }
 
-        ActionLogger.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.Locale)), player);
+        ActionLogger.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.AdminLocale)), player);
 
         if (willNeedNewLeader)
         {
@@ -630,7 +625,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             if (Regions.tryGetCoordinate(rally.Drop.model.position, out byte x, out byte y))
                 BarricadeManager.destroyBarricade(rally.Drop, x, y, ushort.MaxValue);
 
-            RallyManager.TryDeleteRallyPoint(rally.Drop!.instanceID);
+            RallyManager.TryDeleteRallyPoint(rally.Drop.instanceID);
         }
 
     }
@@ -710,14 +705,14 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             {
                 name = let switch
                 {
-                    'a' => SQUAD_NAMES[0],
-                    'b' => SQUAD_NAMES[1],
-                    'c' => SQUAD_NAMES[2],
-                    'd' => SQUAD_NAMES[3],
-                    'e' => SQUAD_NAMES[4],
-                    'f' => SQUAD_NAMES[5],
-                    'g' => SQUAD_NAMES[6],
-                    'h' => SQUAD_NAMES[7],
+                    'a' => SquadNames[0],
+                    'b' => SquadNames[1],
+                    'c' => SquadNames[2],
+                    'd' => SquadNames[3],
+                    'e' => SquadNames[4],
+                    'f' => SquadNames[5],
+                    'g' => SquadNames[6],
+                    'h' => SquadNames[7],
                     _ => name
                 };
             }
@@ -785,12 +780,12 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
         players.Dispose();
     }
     [FormatDisplay("Colored Squad Name")]
-    public const string COLORED_NAME_FORMAT = "c";
+    public const string FormatColorName = "c";
     [FormatDisplay("Squad Name")]
-    public const string NAME_FORMAT = "n";
+    public const string FormatName = "n";
 
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) =>
-        COLORED_NAME_FORMAT.Equals(format, StringComparison.Ordinal)
+        FormatColorName.Equals(format, StringComparison.Ordinal)
             ? Localization.Colorize(Teams.TeamManager.GetTeamHexColor(Team), Name, flags)
             : Name;
 }

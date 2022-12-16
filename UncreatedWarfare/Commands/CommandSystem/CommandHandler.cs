@@ -1472,7 +1472,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, out Color color);
+            string message = translation.Translate(L.Default, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
@@ -1487,7 +1487,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg, out Color color);
+            string message = translation.Translate(L.Default, arg, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
@@ -1502,7 +1502,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
@@ -1517,7 +1517,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
@@ -1532,7 +1532,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
@@ -1547,7 +1547,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
@@ -1562,7 +1562,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
@@ -1577,7 +1577,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
@@ -1592,7 +1592,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
@@ -1607,7 +1607,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
@@ -1622,7 +1622,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);

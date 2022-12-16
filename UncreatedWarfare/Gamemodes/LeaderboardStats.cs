@@ -1,8 +1,7 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using JetBrains.Annotations;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -11,7 +10,6 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes;
@@ -43,9 +41,9 @@ public static class LeaderboardEx
             else
                 player.Player.life.ServerRespawn(false);
 
-            if (Data.Is<IKitRequests>())
+            if (Data.Is(out IKitRequests req))
             {
-                UCWarfare.RunTask(KitManager.ResupplyKit(player), ctx: "Resupplying " + player + "'s kit for leaderboard.");
+                UCWarfare.RunTask(req.KitManager.ResupplyKit(player), ctx: "Resupplying " + player + "'s kit for leaderboard.");
             }
             if (Data.Is<IFlagRotation>())
                 CTFUI.ClearFlagList(player.Connection);

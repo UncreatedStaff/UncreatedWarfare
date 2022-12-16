@@ -44,7 +44,7 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
         if (save is not null)
         {
             _save = save;
-            save.EnterSync();
+            save.Manager.WriteWait();
             try
             {
                 if (save.Item != null)
@@ -55,7 +55,7 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
             }
             finally
             {
-                save.Release();
+                save.Manager.WriteRelease();
             }
         }
     }

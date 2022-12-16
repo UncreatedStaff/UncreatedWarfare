@@ -9,8 +9,8 @@ using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 namespace Uncreated.Warfare.Commands;
 public class TraitCommand : Command
 {
-    private const string SYNTAX = "/trait <give|take|clear|set>";
-    private const string HELP = "Manage properties of traits";
+    private const string Syntax = "/trait <give|take|clear|set>";
+    private const string Help = "Manage properties of traits";
 
     public TraitCommand() : base("trait", EAdminType.ADMIN_ON_DUTY) { }
 
@@ -18,7 +18,7 @@ public class TraitCommand : Command
     {
         ctx.AssertOnDuty();
 
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 
         ctx.AssertGamemode<ITraits>();
 
@@ -59,31 +59,31 @@ public class TraitCommand : Command
                     if (ctx.Caller.ActiveTraits[i].Data.Type == data.Type)
                     {
                         Trait t = ctx.Caller.ActiveTraits[i];
-                        UnityEngine.Object.Destroy(t);
-                        ctx.LogAction(EActionLogType.REVOKE_TRAIT, data.TypeName + " - Active for " + Localization.GetTimeFromSeconds(Mathf.CeilToInt(Time.realtimeSinceStartup - t.StartTime), L.DEFAULT));
+                        Object.Destroy(t);
+                        ctx.LogAction(EActionLogType.REVOKE_TRAIT, data.TypeName + " - Active for " + Mathf.CeilToInt(Time.realtimeSinceStartup - t.StartTime).GetTimeFromSeconds(L.Default));
                         throw ctx.Reply(T.TraitRemoved, data);
                     }
                 }
                 throw ctx.Reply(T.TraitNotActive, data);
             }
-            else throw ctx.SendCorrectUsage("/trait <give|get> <trait...>");
+            throw ctx.SendCorrectUsage("/trait <give|get> <trait...>");
         }
         else if (ctx.MatchParameter(0, "clear"))
         {
-            ctx.AssertHelpCheck(1, "/trait clear - Removes all traits.");
+            ctx.AssertHelpCheck(1, "/trait clear - Removes all traits from the player.");
             ctx.AssertRanByPlayer();
 
             int ct = 0;
             for (int i = 0; i < ctx.Caller.ActiveTraits.Count; ++i)
             {
-                UnityEngine.Object.Destroy(ctx.Caller.ActiveTraits[i]);
+                Object.Destroy(ctx.Caller.ActiveTraits[i]);
                 ++ct;
             }
 
             if (ct == 0)
                 throw ctx.Reply(T.NoTraitsToClear);
             ctx.Caller.ActiveTraits.Clear();
-            ctx.LogAction(EActionLogType.CLEAR_TRAITS, ct.ToString(Data.Locale) + " trait(s) cleared.");
+            ctx.LogAction(EActionLogType.CLEAR_TRAITS, ct.ToString(Data.AdminLocale) + " trait(s) cleared.");
             ctx.Reply(T.TraitsCleared, ct);
         }
         else if (ctx.MatchParameter(0, "set"))
@@ -104,7 +104,7 @@ public class TraitCommand : Command
                         case ESetFieldResult.SUCCESS:
                             ctx.LogAction(EActionLogType.SET_TRAIT_PROPERTY, $"{data.TypeName} - SET " + property.ToUpper() + " >> " + value.ToUpper());
                             ctx.Reply(T.TraitSetProperty, data, property, value);
-                            TraitSigns.BroadcastAllTraitSigns(data);
+                            Signs.UpdateTraitSigns(null, data);
                             TraitManager.Singleton.Save();
                             return;
                         default:
@@ -122,6 +122,6 @@ public class TraitCommand : Command
             }
             throw ctx.SendCorrectUsage("/trait <set> <trait> <property> <value...>");
         }
-        else throw ctx.SendCorrectUsage(SYNTAX);
+        else throw ctx.SendCorrectUsage(Syntax);
     }
 }

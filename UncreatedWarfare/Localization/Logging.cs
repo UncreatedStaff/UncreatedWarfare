@@ -15,13 +15,11 @@ namespace Uncreated.Warfare;
 public static class L
 {
     /// <summary>Default Language (previously <see cref="JSONMethods"/>.DEFAULT_LANGUAGE)</summary>
-    public const string DEFAULT = LanguageAliasSet.ENGLISH;
-    //public const int MAX_LOGS = 1000;
-    //internal static List<LogMessage> Logs;
-    private static bool _init = false;
-    private static int indention = 0;
+    public const string Default = LanguageAliasSet.ENGLISH;
+    private static bool _init;
+    private static int _indention;
     private static FileStream _log;
-    private static bool inL = false;
+    private static bool _inL;
     private static void Init()
     {
         if (_init) return;
@@ -29,7 +27,7 @@ public static class L
         F.CheckDir(Data.Paths.Logs, out _, true);
         if (File.Exists(Data.Paths.CurrentLog))
         {
-            string n = Path.Combine(Data.Paths.Logs, File.GetCreationTime(Data.Paths.CurrentLog).ToString(ActionLogger.DATE_HEADER_FORMAT) + ".txt");
+            string n = Path.Combine(Data.Paths.Logs, File.GetCreationTime(Data.Paths.CurrentLog).ToString(ActionLogger.DateHeaderFormat) + ".txt");
             if (File.Exists(n))
                 File.Delete(n);
             File.Move(Data.Paths.CurrentLog, n);
@@ -41,7 +39,7 @@ public static class L
     }
     private static void PrintLinePatch(string message)
     {
-        if (!inL)
+        if (!_inL)
         {
             if (Data.OutputToConsoleMethod is not null)
                 AddLog(message);
@@ -52,52 +50,51 @@ public static class L
     /// <summary>Indents the log by <paramref name="amount"/> spaces until the returned <see cref="IDisposable"/> is disposed of. Doesn't apply to <see cref="LogError(Exception, ConsoleColor, string, string, int)"/></summary>
     /// <remarks><code>using LogIndent log = IndentLog(2);</code></remarks>
     public static IDisposable IndentLog(uint amount) => new LogIndent(amount);
-    private struct LogIndent : IDisposable
+    private readonly struct LogIndent : IDisposable
     {
-        public uint Indent;
+        public readonly uint Indent;
         public LogIndent(uint amount)
         {
             Indent = amount;
-            indention += (int)amount;
+            _indention += (int)amount;
         }
         public void Dispose()
         {
-            if (indention < Indent)
-                indention = 0;
+            if (_indention < Indent)
+                _indention = 0;
             else
-                indention -= (int)Indent;
+                _indention -= (int)Indent;
         }
     }
 
     private static void AddLine(string text, ConsoleColor color)
     {
         if (!_init) Init();
-        if (indention == 0)
+        if (_indention == 0)
         {
             Data.OutputToConsoleMethod!.Invoke(text, color);
             AddLog(text);
         }
         else if (text.IndexOf('\n') < 0)
         {
-            AddLog(text = new string(' ', indention) + text);
+            AddLog(text = new string(' ', _indention) + text);
             Data.OutputToConsoleMethod!.Invoke(text, color);
         }
         else
         {
-            string[] lines = text.Split(splitChars);
-            string ind = new string(' ', indention);
-            string l;
-            for (int i = 0; i < lines.Length; ++i)
+            string[] lines = text.Split(SplitChars);
+            string ind = new string(' ', _indention);
+            lock (_log)
             {
-                l = ind + lines[i].Trim(trimChars);
-                lock (_log)
+                for (int i = 0; i < lines.Length; ++i)
                 {
+                    string l = ind + lines[i].Trim(TrimChars);
                     byte[] bytes = System.Text.Encoding.UTF8.GetBytes(l + Environment.NewLine);
                     _log.Write(bytes, 0, bytes.Length);
+                    Data.OutputToConsoleMethod!.Invoke(l, color);
                 }
-                Data.OutputToConsoleMethod!.Invoke(l, color);
+                _log.Flush();
             }
-            _log.Flush();
         }
     }
     [Conditional("DEBUG")]
@@ -126,9 +123,9 @@ public static class L
         else
         {
             AddLine("[INFO]  " + info, color);
-            inL = true;
+            _inL = true;
             UnturnedLog.info($"[IN] {info}");
-            inL = false;
+            _inL = false;
         }
     }
     private static void LogAsLibrary(string message, ConsoleColor color)
@@ -154,9 +151,9 @@ public static class L
         else
         {
             AddLine("[WARN]  [" + method.ToUpper() + "] " + warning, color);
-            inL = true;
+            _inL = true;
             UnturnedLog.warn($"[WA] {warning}");
-            inL = false;
+            _inL = false;
         }
     }
     public static void LogError(string error, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "")
@@ -170,26 +167,26 @@ public static class L
         else
         {
             AddLine("[ERROR] [" + method.ToUpper() + "] " + error, color);
-            inL = true;
+            _inL = true;
             UnturnedLog.warn($"[ER] {error}");
-            inL = false;
+            _inL = false;
         }
     }
 
-    private static readonly char[] trimChars = new char[] { '\n', '\r' };
-    private static readonly char[] splitChars = new char[] { '\n' };
-    private static readonly List<string> stack = new List<string>(64);
-    private static readonly StringBuilder _errorBuilder = new StringBuilder(512);
+    private static readonly char[] TrimChars = { '\n', '\r' };
+    private static readonly char[] SplitChars = { '\n' };
+    private static readonly List<string> Stack = new List<string>(64);
+    private static readonly StringBuilder ErrorBuilder = new StringBuilder(512);
     private static void CleanStackTrace(string stackTrace)
     {
         if (string.IsNullOrEmpty(stackTrace)) return;
-        string[] stacks = stackTrace.Split(splitChars);
+        string[] stacks = stackTrace.Split(SplitChars);
         bool isAsync = false;
-        lock (stack)
+        lock (Stack)
         {
             for (int i = stacks.Length - 1; i >= 0; --i)
             {
-                string stack = stacks[i].Trim(trimChars);
+                string stack = stacks[i].Trim(TrimChars);
                 if (stack.StartsWith("  at System.Runtime.CompilerServices", StringComparison.Ordinal) ||
                     stack.StartsWith("  at System.Threading.Tasks.Task", StringComparison.Ordinal) ||
                     stack.StartsWith("  at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw ()", StringComparison.Ordinal))
@@ -206,7 +203,6 @@ public static class L
                     }
                     if (stack.StartsWith("  at "))
                     {
-                        int endingPartSt;
                         int endingPartEnd;
                         int nestedClassSt = stack.IndexOf('+');
                         if (nestedClassSt != -1 && stack.Length > nestedClassSt + 3)
@@ -216,7 +212,7 @@ public static class L
                             {
                                 int close = stack.IndexOf('>', nestedClassSt + 2);
                                 string methodName = stack.Substring(nestedClassSt + 2, close - nestedClassSt - 2);
-                                endingPartSt = stack.IndexOf('(', close);
+                                int endingPartSt = stack.IndexOf('(', close);
                                 if (endingPartSt != -1)
                                 {
                                     endingPartEnd = stack.IndexOf("[0x", endingPartSt, StringComparison.OrdinalIgnoreCase);
@@ -237,7 +233,7 @@ public static class L
                             stack = stack.Substring(0, endingPartEnd - 1);
                         }
                     }
-                repl:
+                    repl:
                     stack = stack
                         .Replace("System.Boolean", "bool")
                         .Replace("System.UInt32", "uint")
@@ -249,18 +245,18 @@ public static class L
                         .Replace("System.String", "string")
                         .Replace("System.Object", "object");
 
-                    L.stack.Add(stack);
+                    L.Stack.Add(stack);
                 }
             }
 
-            _errorBuilder.Append(Environment.NewLine);
-            for (int i = stack.Count - 1; i >= 0; --i)
-                _errorBuilder.AppendLine(stack[i]);
-            stack.Clear();
+            ErrorBuilder.Append(Environment.NewLine);
+            for (int i = Stack.Count - 1; i >= 0; --i)
+                ErrorBuilder.AppendLine(Stack[i]);
+            Stack.Clear();
 
         }
         if (isAsync)
-            _errorBuilder.AppendLine("== SOME LINES WERE HIDDEN FOR READABILITY ==");
+            ErrorBuilder.AppendLine("== SOME LINES WERE HIDDEN FOR READABILITY ==");
     }
     public static void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "", [CallerFilePath] string filepath = "", [CallerLineNumber] int ln = 0)
     {
@@ -271,8 +267,8 @@ public static class L
         do
         {
             if (i != 0)
-                _errorBuilder.Append(Environment.NewLine);
-            _errorBuilder
+                ErrorBuilder.Append(Environment.NewLine);
+            ErrorBuilder
                 .Append("EXCEPTION - ")
                 .Append(ex.GetType().Name)
                 .Append(Environment.NewLine)
@@ -281,19 +277,19 @@ public static class L
                 .Append("::")
                 .Append(method)
                 .Append("( ... ) LN# ")
-                .Append(ln.ToString(Data.Locale))
+                .Append(ln.ToString(Data.AdminLocale))
                 .Append(Environment.NewLine)
                 .Append(Environment.NewLine)
                 .Append(ex.Message);
             CleanStackTrace(ex.StackTrace);
-            _errorBuilder
+            ErrorBuilder
                 .Append(Environment.NewLine)
                 .Append(Environment.NewLine)
                 .Append("FINISHED")
                 .Append(Environment.NewLine);
             if (ex is TypeLoadException t)
             {
-                _errorBuilder.Append("Type: ").Append(t.TypeName);
+                ErrorBuilder.Append("Type: ").Append(t.TypeName);
             }
             else if (ex is ReflectionTypeLoadException t2)
             {
@@ -302,25 +298,25 @@ public static class L
             }
             else if (ex is AggregateException t3)
             {
-                _errorBuilder.Append(Environment.NewLine).Append("INNER EXCEPTIONS: ");
+                ErrorBuilder.Append(Environment.NewLine).Append("INNER EXCEPTIONS: ");
                 int j = 0;
                 foreach (Exception ex2 in t3.InnerExceptions)
                 {
-                    _errorBuilder.Append(" - INNER EXCEPTION #").Append((++j).ToString(Data.Locale));
+                    ErrorBuilder.Append(" - INNER EXCEPTION #").Append((++j).ToString(Data.AdminLocale));
                     LogError(ex2, color, method, filepath, ln);
                 }
                 break;
             }
             ++i;
-            ex = ex.InnerException;
+            ex = ex.InnerException!;
             if (ex != null)
-                _errorBuilder.Append(Environment.NewLine).Append("INNER EXCEPTION");
+                ErrorBuilder.Append(Environment.NewLine).Append("INNER EXCEPTION");
             else break;
         }
         while (i < 8);
 
-        string err = _errorBuilder.ToString();
-        _errorBuilder.Clear();
+        string err = ErrorBuilder.ToString();
+        ErrorBuilder.Clear();
         if (!UCWarfare.IsLoaded)
             LogAsLibrary(err, color);
         else if (Data.OutputToConsoleMethod is null)
@@ -359,7 +355,7 @@ public static class L
             return;
         L.LogError($"Unable to match \"{command}\" with any built-in commands");
     }
-    internal static bool isRequestingLog = false;
+    internal static bool IsRequestingLog = false;
     private static void AddLog(string log)
     {
         lock (_log)

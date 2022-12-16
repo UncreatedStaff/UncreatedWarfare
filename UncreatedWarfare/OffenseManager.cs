@@ -252,7 +252,7 @@ public static class OffenseManager
         6 => "teamkills",
         7 => "vehicle_teamkills",
         8 => "unmute",
-        _ => throw new ArgumentOutOfRangeException("#" + index.ToString(Data.Locale) + " doesn't match a pending type.")
+        _ => throw new ArgumentOutOfRangeException("#" + index.ToString(Data.AdminLocale) + " doesn't match a pending type.")
     } + ".json");
 
     private static readonly IList[] Pendings = new IList[]
@@ -362,7 +362,7 @@ public static class OffenseManager
                 return;
             }
 
-            L.Log("Sending past offenses, " + stamps.Length.ToString(Data.Locale) + " queued.", ConsoleColor.Magenta);
+            L.Log("Sending past offenses, " + stamps.Length.ToString(Data.AdminLocale) + " queued.", ConsoleColor.Magenta);
             int ct = Math.Max(1, stamps.Length / 10);
             try
             {
@@ -387,7 +387,7 @@ public static class OffenseManager
                             }
                             else
                             {
-                                L.LogWarning("  Failed to send ban #" + i.ToString(Data.Locale) + "!");
+                                L.LogWarning("  Failed to send ban #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
                             break;
@@ -400,7 +400,7 @@ public static class OffenseManager
                             }
                             else
                             {
-                                L.LogWarning("  Failed to send unban #" + i.ToString(Data.Locale) + "!");
+                                L.LogWarning("  Failed to send unban #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
                             break;
@@ -414,7 +414,7 @@ public static class OffenseManager
                             }
                             else
                             {
-                                L.LogWarning("  Failed to send kick #" + i.ToString(Data.Locale) + "!");
+                                L.LogWarning("  Failed to send kick #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
                             break;
@@ -428,7 +428,7 @@ public static class OffenseManager
                             }
                             else
                             {
-                                L.LogWarning("  Failed to send warn #" + i.ToString(Data.Locale) + "!");
+                                L.LogWarning("  Failed to send warn #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
                             break;
@@ -442,7 +442,7 @@ public static class OffenseManager
                             }
                             else
                             {
-                                L.LogWarning("  Failed to send mute #" + i.ToString(Data.Locale) + "!");
+                                L.LogWarning("  Failed to send mute #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
                             break;
@@ -457,7 +457,7 @@ public static class OffenseManager
                             }
                             else
                             {
-                                L.LogWarning("  Failed to send battleye kick #" + i.ToString(Data.Locale) + "!");
+                                L.LogWarning("  Failed to send battleye kick #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
                             break;
@@ -471,7 +471,7 @@ public static class OffenseManager
                             }
                             else
                             {
-                                L.LogWarning("  Failed to send teamkill #" + i.ToString(Data.Locale) + "!");
+                                L.LogWarning("  Failed to send teamkill #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
                             break;
@@ -486,7 +486,7 @@ public static class OffenseManager
                             }
                             else
                             {
-                                L.LogWarning("  Failed to send vehicle teamkill #" + i.ToString(Data.Locale) + "!");
+                                L.LogWarning("  Failed to send vehicle teamkill #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
                             break;
@@ -499,7 +499,7 @@ public static class OffenseManager
                             }
                             else
                             {
-                                L.LogWarning("  Failed to send unmute #" + i.ToString(Data.Locale) + "!");
+                                L.LogWarning("  Failed to send unmute #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
                             break;
@@ -507,8 +507,8 @@ public static class OffenseManager
                     if (brk)
                         break;
                     if (i % ct == 0)
-                        L.Log("  Sending past offenses: " + i.ToString(Data.Locale) + "/" +
-                              stamps.Length.ToString(Data.Locale), ConsoleColor.Magenta);
+                        L.Log("  Sending past offenses: " + i.ToString(Data.AdminLocale) + "/" +
+                              stamps.Length.ToString(Data.AdminLocale), ConsoleColor.Magenta);
                 }
             }
             catch (Exception ex)
@@ -713,8 +713,8 @@ public static class OffenseManager
             callerName = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
         else
             callerName = PlayerNames.Console;
-        ActionLogger.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
-            (duration == -1 ? "PERMANENT" : (duration.ToString(Data.Locale) + " SECONDS")), callerId);
+        ActionLogger.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\" DURATION: " +
+            (duration == -1 ? "PERMANENT" : (duration.ToString(Data.AdminLocale) + " SECONDS")), callerId);
 
         LogBanPlayer(targetId, callerId, reason, duration, timestamp);
 
@@ -734,14 +734,14 @@ public static class OffenseManager
         }
         else
         {
-            string time = duration.GetTimeFromSeconds(L.DEFAULT);
+            string time = duration.GetTimeFromSeconds(L.Default);
             if (callerId == 0)
             {
                 L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by an operator because {reason}.", ConsoleColor.Cyan);
                 bool f = false;
                 foreach (LanguageSet set in LanguageSet.All())
                 {
-                    if (f || !set.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
+                    if (f || !set.Language.Equals(L.Default, StringComparison.Ordinal))
                     {
                         time = duration.GetTimeFromSeconds(set.Language);
                         f = true;
@@ -755,7 +755,7 @@ public static class OffenseManager
                 bool f = false;
                 foreach (LanguageSet set in LanguageSet.AllBut(callerId))
                 {
-                    if (f || !set.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
+                    if (f || !set.Language.Equals(L.Default, StringComparison.Ordinal))
                     {
                         time = duration.GetTimeFromSeconds(set.Language);
                         f = true;
@@ -764,7 +764,7 @@ public static class OffenseManager
                 }
                 if (f)
                     time = duration.GetTimeFromSeconds(callerId);
-                else if (Data.Languages.TryGetValue(callerId, out string lang) && !lang.Equals(L.DEFAULT, StringComparison.Ordinal))
+                else if (Data.Languages.TryGetValue(callerId, out string lang) && !lang.Equals(L.Default, StringComparison.Ordinal))
                     time = duration.GetTimeFromSeconds(lang);
                 caller?.SendChat(T.BanSuccessFeedback, target as IPlayer ?? name, time);
             }
@@ -782,7 +782,7 @@ public static class OffenseManager
 
         LogKickPlayer(targetId, callerId, reason, DateTime.Now);
 
-        ActionLogger.Add(EActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.Locale)} FOR \"{reason}\"", callerId);
+        ActionLogger.Add(EActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\"", callerId);
         if (callerId == 0)
         {
             L.Log($"{names.PlayerName} ({targetId}) was kicked by an operator because {reason}.", ConsoleColor.Cyan);
@@ -814,7 +814,7 @@ public static class OffenseManager
 
         LogUnbanPlayer(targetId, callerId, DateTime.Now);
 
-        string tid = targetId.ToString(Data.Locale);
+        string tid = targetId.ToString(Data.AdminLocale);
         ActionLogger.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", callerId);
         if (callerId == 0)
         {
@@ -846,7 +846,7 @@ public static class OffenseManager
 
         LogWarnPlayer(targetId, callerId, reason, DateTime.Now);
 
-        string tid = targetId.ToString(Data.Locale);
+        string tid = targetId.ToString(Data.AdminLocale);
         ActionLogger.Add(EActionLogType.WARN_PLAYER, $"WARNED {tid} FOR \"{reason}\"", callerId);
         if (callerId == 0)
         {
@@ -976,7 +976,7 @@ public static class OffenseManager
                 if (caller is not null)
                     caller.SendChat(T.UnmuteNotMuted, names);
                 else if (callerId == 0)
-                    L.Log(Util.RemoveRichText(T.UnmuteNotMuted.Translate(L.DEFAULT, names, out Color color)), Util.GetClosestConsoleColor(color));
+                    L.Log(Util.RemoveRichText(T.UnmuteNotMuted.Translate(L.Default, names, out Color color)), Util.GetClosestConsoleColor(color));
                 return 2;
             }
             else
@@ -1013,7 +1013,7 @@ public static class OffenseManager
             if (caller is not null)
                 caller.SendChat(T.PlayerNotFound);
             else if (callerId == 0)
-                L.Log(Util.RemoveRichText(T.PlayerNotFound.Translate(L.DEFAULT, out Color color)), Util.GetClosestConsoleColor(color));
+                L.Log(Util.RemoveRichText(T.PlayerNotFound.Translate(L.Default, out Color color)), Util.GetClosestConsoleColor(color));
             return 2;
         }
     }

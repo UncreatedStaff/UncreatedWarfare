@@ -167,24 +167,42 @@ public static class Signs
 #endif
         ThreadUtil.assertIsGameThread();
         bool b = player is null;
-        for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
+        if (player is null)
         {
-            for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
+            for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
             {
-                BarricadeRegion region = BarricadeManager.regions[x, y];
-                for (int i = 0; i < region.drops.Count; ++i)
+                for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
                 {
-                    BarricadeDrop drop = region.drops[i];
-                    if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && comp2.IsLoadout)
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    for (int i = 0; i < region.drops.Count; ++i)
                     {
-                        if (b)
+                        BarricadeDrop drop = region.drops[i];
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && comp2.IsLoadout)
                             BroadcastSignUpdate(drop, comp2);
-                        else
-                            SendSignUpdate(drop, player!, comp2);
                     }
                 }
             }
         }
+        else if (!player.IsOnline) return;
+        else
+        {
+            int maxx = Math.Min(player.Player.movement.region_x + BarricadeManager.BARRICADE_REGIONS, Regions.WORLD_SIZE);
+            int maxy = Math.Min(player.Player.movement.region_y + BarricadeManager.BARRICADE_REGIONS, Regions.WORLD_SIZE);
+            for (int x = Math.Max(0, player.Player.movement.region_x - BarricadeManager.BARRICADE_REGIONS); x <= maxx; ++x)
+            {
+                for (int y = Math.Max(0, player.Player.movement.region_y - BarricadeManager.BARRICADE_REGIONS); y <= maxy; ++y)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    for (int i = 0; i < region.drops.Count; ++i)
+                    {
+                        BarricadeDrop drop = region.drops[i];
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && comp2.IsLoadout)
+                            SendSignUpdate(drop, player);
+                    }
+                }
+            }
+        }
+
         for (int v = 0; v < BarricadeManager.vehicleRegions.Count; ++v)
         {
             VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[v];
@@ -207,33 +225,52 @@ public static class Signs
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ThreadUtil.assertIsGameThread();
-        bool b = player is null;
         bool a = kitName is null;
-        for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
+        if (player is null)
         {
-            for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
+            for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
             {
-                BarricadeRegion region = BarricadeManager.regions[x, y];
-                for (int i = 0; i < region.drops.Count; ++i)
+                for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
                 {
-                    BarricadeDrop drop = region.drops[i];
-                    if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && (a || kitName!.Equals(comp2.KitName)))
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    for (int i = 0; i < region.drops.Count; ++i)
                     {
-                        if (b)
+                        BarricadeDrop drop = region.drops[i];
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && (a || kitName!.Equals(comp2.KitName, StringComparison.OrdinalIgnoreCase)))
                             BroadcastSignUpdate(drop, comp2);
-                        else
-                            SendSignUpdate(drop, player!, comp2);
                     }
                 }
             }
         }
+        else if (!player.IsOnline)
+            return;
+        else
+        {
+            int maxx = Math.Min(player.Player.movement.region_x + BarricadeManager.BARRICADE_REGIONS, Regions.WORLD_SIZE);
+            int maxy = Math.Min(player.Player.movement.region_y + BarricadeManager.BARRICADE_REGIONS, Regions.WORLD_SIZE);
+            for (int x = Math.Max(0, player.Player.movement.region_x - BarricadeManager.BARRICADE_REGIONS); x <= maxx; ++x)
+            {
+                for (int y = Math.Max(0, player.Player.movement.region_y - BarricadeManager.BARRICADE_REGIONS); y <= maxy; ++y)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    for (int i = 0; i < region.drops.Count; ++i)
+                    {
+                        BarricadeDrop drop = region.drops[i];
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && (a || kitName!.Equals(comp2.KitName, StringComparison.OrdinalIgnoreCase)))
+                            SendSignUpdate(drop, player, comp2);
+                    }
+                }
+            }
+        }
+
+        bool b = player is null;
         for (int v = 0; v < BarricadeManager.vehicleRegions.Count; ++v)
         {
             VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[v];
             for (int i = 0; i < region.drops.Count; ++i)
             {
                 BarricadeDrop drop = region.drops[i];
-                if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && (a || kitName!.Equals(comp2.KitName)))
+                if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is KitSignComponent comp2 && (a || kitName!.Equals(comp2.KitName, StringComparison.OrdinalIgnoreCase)))
                 {
                     if (b)
                         BroadcastSignUpdate(drop, comp2);
@@ -309,12 +346,90 @@ public static class Signs
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, player.Connection, sign.text);
         }
     }
-
     private static void SendSignUpdate(BarricadeDrop drop, UCPlayer player, CustomSignComponent comp)
     {
         if (!comp.DropIsPlanted && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y) && !Regions.checkArea(x, y, player.Player.movement.region_x, player.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
             return;
         Data.SendChangeText.Invoke(((InteractableSign)drop.interactable).GetNetId(), ENetReliability.Unreliable, player.Connection, comp.Translate(player.Language, player));
+    }
+    public static void UpdateTraitSigns(UCPlayer? player, TraitData? data)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ThreadUtil.assertIsGameThread();
+        string n = data?.TypeName!;
+        bool a = n is null;
+        if (player is null)
+        {
+            for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
+            {
+                for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    for (int i = 0; i < region.drops.Count; ++i)
+                    {
+                        BarricadeDrop drop = region.drops[i];
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is TraitSignComponent comp2 && (a || n!.Equals(comp2.TraitName, StringComparison.OrdinalIgnoreCase)))
+                            BroadcastSignUpdate(drop, comp2);
+                    }
+                }
+            }
+        }
+        else if (!player.IsOnline)
+            return;
+        else
+        {
+            int maxx = Math.Min(player.Player.movement.region_x + BarricadeManager.BARRICADE_REGIONS, Regions.WORLD_SIZE);
+            int maxy = Math.Min(player.Player.movement.region_y + BarricadeManager.BARRICADE_REGIONS, Regions.WORLD_SIZE);
+            for (int x = Math.Max(0, player.Player.movement.region_x - BarricadeManager.BARRICADE_REGIONS); x <= maxx; ++x)
+            {
+                for (int y = Math.Max(0, player.Player.movement.region_y - BarricadeManager.BARRICADE_REGIONS); y <= maxy; ++y)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    for (int i = 0; i < region.drops.Count; ++i)
+                    {
+                        BarricadeDrop drop = region.drops[i];
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is TraitSignComponent comp2 && (a || n!.Equals(comp2.TraitName, StringComparison.OrdinalIgnoreCase)))
+                            SendSignUpdate(drop, player, comp2);
+                    }
+                }
+            }
+        }
+
+        bool b = player is null;
+        for (int v = 0; v < BarricadeManager.vehicleRegions.Count; ++v)
+        {
+            VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[v];
+            for (int i = 0; i < region.drops.Count; ++i)
+            {
+                BarricadeDrop drop = region.drops[i];
+                if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is TraitSignComponent comp2 && (a || n!.Equals(comp2.TraitName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (b)
+                        BroadcastSignUpdate(drop, comp2);
+                    else
+                        SendSignUpdate(drop, player!, comp2);
+                }
+            }
+        }
+    }
+    public static string GetClientText(BarricadeDrop drop, UCPlayer player, out bool isLong)
+    {
+        if (drop.interactable is InteractableSign sign)
+        {
+            if (ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp))
+            {
+                isLong = comp is TranlationSignComponent t && t.IsLong;
+                return comp.Translate(player.Language, player);
+            }
+
+            isLong = false;
+            return sign.text;
+        }
+
+        isLong = false;
+        return string.Empty;
     }
     public static string GetClientText(BarricadeDrop drop, UCPlayer player)
     {
@@ -418,9 +533,9 @@ public static class Signs
         private void OnReload() => _defCache = null;
         public override string Translate(string language, UCPlayer player)
         {
-            if (CanCache && language.Equals(L.DEFAULT, StringComparison.Ordinal))
+            if (CanCache && language.Equals(L.Default, StringComparison.Ordinal))
             {
-                return _defCache ??= _translation?.Translate(L.DEFAULT) ?? SignId ?? Sign.text.Substring(Prefix.Length);
+                return _defCache ??= _translation?.Translate(L.Default) ?? SignId ?? Sign.text.Substring(Prefix.Length);
             }
             return _translation?.Translate(language) ?? SignId ?? Sign.text.Substring(Prefix.Length);
         }
@@ -453,7 +568,7 @@ public static class Signs
             VehicleData? data = spawn?.Data?.Item;
             if (spawn != null && data != null)
             {
-                if (language.Equals(L.DEFAULT, StringComparison.Ordinal))
+                if (language.Equals(L.Default, StringComparison.Ordinal))
                 {
                     _defCache ??= Localization.TranslateVBS(spawn, data, language, data.Team);
                     return QuickFormat(_defCache, data.GetCostLine(player));
@@ -522,7 +637,7 @@ public static class Signs
             if (trait != null)
             {
                 ulong team = trait.Team is 1 or 2 ? trait.Team : player.GetTeam();
-                if (language.Equals(L.DEFAULT, StringComparison.Ordinal))
+                if (language.Equals(L.Default, StringComparison.Ordinal))
                 {
                     _defCache ??= TraitSigns.TranslateTraitSign(trait, language, team, out cacheFmt);
                     return cacheFmt ? TraitSigns.FormatTraitSign(trait, _defCache, player, team) : _defCache;

@@ -47,7 +47,7 @@ public class WarfareSQL : MySqlDatabase
             });
         if (name.WasFound)
             return name;
-        string tname = s64.ToString(Data.Locale);
+        string tname = s64.ToString(Data.AdminLocale);
         return new PlayerNames { Steam64 = s64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
     }
     public async Task<PlayerNames> GetUsernamesAsync(ulong s64, CancellationToken token = default)
@@ -69,7 +69,7 @@ public class WarfareSQL : MySqlDatabase
         token.ThrowIfCancellationRequested();
         if (name.WasFound)
             return name;
-        string tname = s64.ToString(Data.Locale);
+        string tname = s64.ToString(Data.AdminLocale);
         return new PlayerNames { Steam64 = s64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
     }
     [Obsolete]

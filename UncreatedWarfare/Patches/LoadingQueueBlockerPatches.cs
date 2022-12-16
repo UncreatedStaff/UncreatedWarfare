@@ -2,16 +2,13 @@
 using JetBrains.Annotations;
 using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Harmony;
+
+// ReSharper disable InconsistentNaming
+// ReSharper disable UnusedMember.Local
+// ReSharper disable UnusedParameter.Local
 internal static class LoadingQueueBlockerPatches
 {
     public static void Patch()

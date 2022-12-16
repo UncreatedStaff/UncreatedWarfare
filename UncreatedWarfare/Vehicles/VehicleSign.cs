@@ -246,13 +246,13 @@ public class VehicleSign
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         if (saver != null)
         {
-            if (!saver.TryGetSave(this.InstanceId, EStructType.BARRICADE, out _structureSave))
+            if (!saver.TryGetSaveNoLock(this.InstanceId, EStructType.BARRICADE, out _structureSave))
             {
                 if (drop == null)
                 {
                     L.LogWarning("Failed to link sign to the correct instance id.");
                 }
-                else if (!saver.TryGetSave(drop, out _structureSave))
+                else if (!saver.TryGetSaveNoLock(drop, out _structureSave))
                 {
                     Task.Run(async () =>
                     {
@@ -306,14 +306,14 @@ public class VehicleSign
         this.BayInstanceId = bay.InstanceId;
         this.BayStructureType = bay.StructureType;
         Asset? asset = Assets.find(bay.VehicleGuid);
-        this.SignText = $"sign_vbs_" + (asset == null ? bay.VehicleGuid.ToString("N") : asset.id.ToString(Data.Locale));
+        this.SignText = "sign_vbs_" + (asset == null ? bay.VehicleGuid.ToString("N") : asset.id.ToString(Data.LocalLocale));
         this.SignInteractable = sign;
         this.SignDrop = drop;
         bay.LinkedSign = this;
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         if (saver != null)
         {
-            if (!saver.TryGetSave(bay.InstanceId, bay.StructureType, out SavedStructure _))
+            if (!saver.TryGetSaveNoLock(bay.InstanceId, bay.StructureType, out SavedStructure _))
             {
                 if (bay.StructureType == EStructType.BARRICADE)
                 {

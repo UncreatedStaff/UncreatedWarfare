@@ -9,15 +9,11 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Traits;
 using UnityEngine;
 
+// ReSharper disable InconsistentNaming
+// ReSharper disable UnusedMember.Local
+// ReSharper disable UnusedParameter.Local
+
 namespace Uncreated.Warfare.Harmony;
-
-internal static class RegionsPatches
-{
-    internal static void Patch()
-    {
-
-    }
-}
 
 public static partial class Patches
 {
@@ -28,6 +24,7 @@ public static partial class Patches
         /// <summary>
         /// Prefix of <see cref="BarricadeManager.ServerSetSignTextInternal(InteractableSign, BarricadeRegion, byte, byte, ushort, string)"/> to set translation data of signs.
         /// </summary>
+        
         [HarmonyPatch(typeof(BarricadeManager), "ServerSetSignTextInternal")]
         [HarmonyPrefix]
         static bool ServerSetSignTextInternalLang(InteractableSign sign, BarricadeRegion region, byte x, byte y, ushort plant, string trimmedText)
@@ -51,22 +48,22 @@ public static partial class Patches
                 sign.updateState(drop.asset, newState);
                 Signs.CheckSign(drop);
                 StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-                if (saver != null && saver.TryGetSave(drop, out SavedStructure structure))
+                if (saver != null && saver.TryGetSaveNoLock(drop, out SavedStructure structure))
                 {
                     structure.Metadata = Util.CloneBytes(newState);
                     Task.Run(() => Util.TryWrap(saver.AddOrUpdate(structure), "Error saving structure."));
                 }
 
-                if (TraitManager.Loaded && trimmedText.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX,
+                if (TraitManager.Loaded && trimmedText.StartsWith(Signs.Prefix + Signs.TraitPrefix,
                         StringComparison.OrdinalIgnoreCase))
                 {
-                    TraitData? d = TraitManager.GetData(trimmedText.Substring(TraitSigns.TRAIT_SIGN_PREFIX.Length));
+                    TraitData? d = TraitManager.GetData(trimmedText.Substring(Signs.Prefix.Length + Signs.TraitPrefix.Length));
                     if (d != null)
-                        TraitSigns.InitTraitSign(d, drop, sign);
+                        TraitSigns.InitTraitSign(d, drop);
                     else
-                        TraitSigns.TryRemoveComponent(drop, sign);
+                        TraitSigns.TryRemoveComponent(drop);
                 }
-                else TraitSigns.TryRemoveComponent(drop, sign);
+                else TraitSigns.TryRemoveComponent(drop);
                 return false;
             }
             else
@@ -74,7 +71,7 @@ public static partial class Patches
                 return true;
             }
         }
-
+        
         [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
         [HarmonyPrefix]
         static void OnItemDropRemovedPrefix(
@@ -155,7 +152,7 @@ public static partial class Patches
                     if (hasSign)
                     {
                         if (!Data.Languages.TryGetValue(client.playerID.steamID.m_SteamID, out lang))
-                            lang = L.DEFAULT;
+                            lang = L.Default;
                     }
                     else lang = null;
                     Data.SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, writer =>
@@ -201,12 +198,12 @@ public static partial class Patches
                                 writer.WriteBytes(bytes1);
                                 goto skip;
                             }
-                            else if (drop.interactable is InteractableSign sign)
+                            if (drop.interactable is InteractableSign sign)
                             {
                                 string newtext = sign.text;
                                 if (lang == null || !newtext.StartsWith(Signs.Prefix, StringComparison.OrdinalIgnoreCase))
                                     goto writeState;
-                                newtext = Signs.GetClientText(newtext, pl, sign);
+                                newtext = Signs.GetClientText(drop, pl);
                                 byte[] textbytes = System.Text.Encoding.UTF8.GetBytes(newtext);
                                 byte[] state = serversideData.barricade.state;
                                 if (textbytes.Length > byte.MaxValue - 17)

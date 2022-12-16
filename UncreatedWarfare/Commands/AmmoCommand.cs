@@ -10,7 +10,6 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
@@ -96,7 +95,7 @@ public class AmmoCommand : AsyncCommand
         }
         else if (ctx.TryGetTarget(out BarricadeDrop barricade))
         {
-            ctx.AssertGamemode<IKitRequests>();
+            ctx.AssertGamemode(out IKitRequests req);
 
             if (!ctx.Caller.IsOnTeam)
                 throw ctx.Reply(T.NotOnCaptureTeam);
@@ -108,7 +107,7 @@ public class AmmoCommand : AsyncCommand
 
             int ammoCost = KitManager.GetAmmoCost(kit2.Class);
 
-            if (Data.Gamemode.CanRefillAmmoAt(barricade))
+            if (Data.Gamemode.CanRefillAmmoAt(barricade.asset))
             {
                 if (TeamManager.Team1Faction.Ammo is null || !TeamManager.Team1Faction.Ammo.Exists || TeamManager.Team2Faction.Ammo is null || !TeamManager.Team2Faction.Ammo.Exists)
                 {
@@ -125,14 +124,14 @@ public class AmmoCommand : AsyncCommand
                     else
                         throw ctx.Reply(T.AmmoNotNearFOB);
                 }
-                if (isInMain && FOBManager.Config.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(ctx.Caller, ECooldownType.AMMO, out Cooldown cooldown))
+                if (isInMain && FOBManager.Config.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(ctx.Caller, CooldownType.Ammo, out Cooldown cooldown))
                     throw ctx.Reply(T.AmmoCooldown, cooldown);
 
                 if (!isInMain && fob.Ammo < ammoCost)
                     throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, ammoCost);
 
                 WipeDroppedItems(ctx.CallerID);
-                await KitManager.ResupplyKit(ctx.Caller, kit!, token: token).ThenToUpdate(token);
+                await req.KitManager.ResupplyKit(ctx.Caller, kit!, token: token).ThenToUpdate(token);
 
                 if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
                     F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);
@@ -143,7 +142,7 @@ public class AmmoCommand : AsyncCommand
                     ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR KIT IN MAIN");
 
                     if (FOBManager.Config.AmmoCommandCooldown > 0)
-                        CooldownManager.StartCooldown(ctx.Caller, ECooldownType.AMMO, FOBManager.Config.AmmoCommandCooldown);
+                        CooldownManager.StartCooldown(ctx.Caller, CooldownType.Ammo, FOBManager.Config.AmmoCommandCooldown);
                 }
                 else
                 {

@@ -151,17 +151,17 @@ public class RankDataOLD
         };
     }
 }
-public struct RankData : ITranslationArgument
+public readonly struct RankData : ITranslationArgument
 {
-    public int TotalXP { get; private set; }
-    public int CurrentXP { get; private set; }
-    public int RequiredXP { get; private set; }
-    public int Level { get; private set; }
-    public string Name { get; private set; }
-    public string Abbreviation { get; private set; }
-    public string NextName { get; private set; }
-    public string NextAbbreviation { get; private set; }
-    public string ProgressBar { get; private set; }
+    public int TotalXP { get; }
+    public int CurrentXP { get; }
+    public int RequiredXP { get; }
+    public int Level { get; }
+    public string Name { get; }
+    public string Abbreviation { get; }
+    public string NextName { get; }
+    public string NextAbbreviation { get; }
+    public string ProgressBar { get; }
     public RankData(int xp)
     {
         TotalXP = xp;
@@ -173,10 +173,7 @@ public struct RankData : ITranslationArgument
         Abbreviation = GetRankAbbreviation(Level);
         NextName = GetRankName(Level + 1);
         NextAbbreviation = GetRankAbbreviation(Level + 1);
-        if (UCWarfare.IsLoaded)
-            ProgressBar = Points.GetProgressBar(CurrentXP, RequiredXP);
-        else
-            ProgressBar = string.Empty;
+        ProgressBar = UCWarfare.IsLoaded ? Points.GetProgressBar(CurrentXP, RequiredXP) : string.Empty;
     }
     public static string GetRankName(int level)
     {
@@ -191,7 +188,7 @@ public struct RankData : ITranslationArgument
             6 => "Staff Sergeant",
             7 => "Sergeant Major",
             8 => "Warrant Officer",
-            _ => "Level " + level.ToString(Data.Locale),
+            _ => "Level " + level.ToString(Data.LocalLocale),
         };
     }
     public static string GetRankAbbreviation(int level)
@@ -207,23 +204,23 @@ public struct RankData : ITranslationArgument
             6 => "Ssg.",
             7 => "S.M.",
             8 => "W.O.",
-            _ => "L " + level.ToString(Data.Locale),
+            _ => "L " + level.ToString(Data.LocalLocale),
         };
     }
 
     [FormatDisplay("Numeric")]
-    public const string NUMERIC_FORMAT = "x";
+    public const string FormatNumeric = "x";
     [FormatDisplay("Abbreviation")]
-    public const string ABBREVIATION_FORMAT = "a";
+    public const string FormatAbbreviation = "a";
     [FormatDisplay("Name")]
-    public const string NAME_FORMAT = "n";
+    public const string FormatName = "n";
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is not null)
         {
-            if (format.Equals(NUMERIC_FORMAT, StringComparison.Ordinal))
-                return Level.ToString(Data.Locale);
-            else if (format.Equals(ABBREVIATION_FORMAT, StringComparison.Ordinal))
+            if (format.Equals(FormatNumeric, StringComparison.Ordinal))
+                return Level.ToString(Data.LocalLocale);
+            if (format.Equals(FormatAbbreviation, StringComparison.Ordinal))
                 return Abbreviation;
         }
 

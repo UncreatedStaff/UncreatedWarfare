@@ -10,15 +10,15 @@ namespace Uncreated.Warfare.Commands.VanillaRework;
 
 public class UnbanCommand : AsyncCommand
 {
-    private const string SYNTAX = "/unban <player>";
-    private const string HELP = "Unban players who have served their time.";
+    private const string Syntax = "/unban <player>";
+    private const string Help = "Unban players who have served their time.";
     public UnbanCommand() : base("unban", Framework.EAdminType.MODERATOR, 1) { }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 
         if (!ctx.HasArgs(1))
-            throw ctx.SendCorrectUsage(SYNTAX);
+            throw ctx.SendCorrectUsage(Syntax);
 
         if (!ctx.TryGet(0, out ulong targetId, out UCPlayer? target))
             throw ctx.Reply(T.PlayerNotFound);
@@ -32,16 +32,16 @@ public class UnbanCommand : AsyncCommand
 
         OffenseManager.LogUnbanPlayer(targetId, ctx.CallerID, DateTime.Now);
 
-        string tid = targetId.ToString(Data.Locale);
+        string tid = targetId.ToString(Data.AdminLocale);
         ActionLogger.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", ctx.CallerID);
         if (ctx.IsConsole)
         {
-            L.Log($"{targetNames.PlayerName} ({tid.ToString(Data.Locale)}) was successfully unbanned.", ConsoleColor.Cyan);
+            L.Log($"{targetNames.PlayerName} ({tid}) was successfully unbanned.", ConsoleColor.Cyan);
             Chat.Broadcast(T.UnbanSuccessBroadcastOperator, targetNames);
         }
         else
         {
-            L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {ctx.Caller.Name.PlayerName} ({ctx.CallerID.ToString(Data.Locale)}).", ConsoleColor.Cyan);
+            L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {ctx.Caller.Name.PlayerName} ({ctx.CallerID.ToString(Data.AdminLocale)}).", ConsoleColor.Cyan);
             ctx.Reply(T.UnbanSuccessFeedback, targetNames);
             Chat.Broadcast(LanguageSet.AllBut(ctx.CallerID), T.UnbanSuccessBroadcast, targetNames, ctx.Caller);
         }

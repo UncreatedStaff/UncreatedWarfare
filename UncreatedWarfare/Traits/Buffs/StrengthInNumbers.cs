@@ -13,7 +13,7 @@ namespace Uncreated.Warfare.Traits.Buffs;
 public class StrengthInNumbers : Buff
 {
     private static TraitData? DATA;
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(StrengthInNumbers),
         NameTranslations = new TranslationList("Strength in\nNumbers"),
@@ -125,7 +125,7 @@ public class StrengthInNumbers : Buff
     {
         if (onStart)
         {
-            string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(dataSplitChars, StringSplitOptions.RemoveEmptyEntries);
+            string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(DataSplitChars, StringSplitOptions.RemoveEmptyEntries);
             if (datas.Length > 0)
             {
                 float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.AdminLocale, out _distance);

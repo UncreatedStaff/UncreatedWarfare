@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using JetBrains.Annotations;
 using Uncreated.SQL;
 using UnityEngine;
 
@@ -13,7 +14,7 @@ internal class MapScheduler : MonoBehaviour
     internal static MapScheduler Instance;
 
     // todo
-    internal static readonly Schema MAPS_TABLE = new Schema("map_data", new Schema.Column[]
+    internal static readonly Schema MapsTable = new Schema("map_data", new Schema.Column[]
     {
         new Schema.Column("MapId", SqlTypes.INT)
         {
@@ -51,6 +52,7 @@ internal class MapScheduler : MonoBehaviour
     private static List<ulong> _originalMods;
     private static List<ulong> _originalIgnoreChildren;
 
+    [UsedImplicitly]
     void Awake()
     {
         if (Instance != null)
@@ -122,12 +124,12 @@ internal class MapScheduler : MonoBehaviour
             if (d.RemoveChildren is not null)
                 config.Ignore_Children_File_IDs.AddRange(d.RemoveChildren);
 
-            DirectoryInfo info = new DirectoryInfo(Path.Combine(Application.dataPath, "..", "Servers", Provider.serverID, "Workshop", "Steam", "content", Provider.APP_ID.m_AppId.ToString(Data.Locale)));
+            DirectoryInfo info = new DirectoryInfo(Path.Combine(Application.dataPath, "..", "Servers", Provider.serverID, "Workshop", "Steam", "content", Provider.APP_ID.m_AppId.ToString(Data.AdminLocale)));
             if (info.Exists)
             {
                 foreach (DirectoryInfo modFolder in info.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
                 {
-                    if (!ulong.TryParse(modFolder.Name, NumberStyles.Number, Data.Locale, out ulong mod))
+                    if (!ulong.TryParse(modFolder.Name, NumberStyles.Number, Data.AdminLocale, out ulong mod))
                         continue;
                     for (int i = 0; i < config.File_IDs.Count; ++i)
                     {

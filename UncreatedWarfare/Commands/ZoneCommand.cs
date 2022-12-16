@@ -164,29 +164,29 @@ public class ZoneCommand : Command
 
         Vector2[] points = zone.GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center);
         ITransportConnection channel = ctx.Caller.Player.channel.owner.transportConnection;
-        bool hasui = ZonePlayerComponent._airdrop != null;
+        bool hasui = ZonePlayerComponent.Airdrop != null;
         foreach (Vector2 point in points)
         {   // Border
             Vector3 pos = new Vector3(point.x, 0f, point.y);
             pos.y = F.GetHeight(pos, zone.MinHeight);
-            F.TriggerEffectReliable(ZonePlayerComponent._side, channel, pos);
+            F.TriggerEffectReliable(ZonePlayerComponent.Side, channel, pos);
             if (hasui)
-                F.TriggerEffectReliable(ZonePlayerComponent._airdrop!, channel, pos);
+                F.TriggerEffectReliable(ZonePlayerComponent.Airdrop!, channel, pos);
         }
         foreach (Vector2 point in corners)
         {   // Corners
             Vector3 pos = new Vector3(point.x, 0f, point.y);
             pos.y = F.GetHeight(pos, zone.MinHeight);
-            F.TriggerEffectReliable(ZonePlayerComponent._corner, channel, pos);
+            F.TriggerEffectReliable(ZonePlayerComponent.Corner, channel, pos);
             if (hasui)
-                F.TriggerEffectReliable(ZonePlayerComponent._airdrop!, channel, pos);
+                F.TriggerEffectReliable(ZonePlayerComponent.Airdrop!, channel, pos);
         }
         {   // Center
             Vector3 pos = new Vector3(center.x, 0f, center.y);
             pos.y = F.GetHeight(pos, zone.MinHeight);
-            F.TriggerEffectReliable(ZonePlayerComponent._center, channel, pos);
+            F.TriggerEffectReliable(ZonePlayerComponent.Center, channel, pos);
             if (hasui)
-                F.TriggerEffectReliable(ZonePlayerComponent._airdrop!, channel, pos);
+                F.TriggerEffectReliable(ZonePlayerComponent.Airdrop!, channel, pos);
         }
         ctx.Caller.Player.StartCoroutine(ClearPoints(ctx.Caller));
         ctx.Reply(T.ZoneVisualizeSuccess, points.Length + corners.Length + 1, zone);
@@ -196,11 +196,11 @@ public class ZoneCommand : Command
         yield return new WaitForSeconds(60f);
         if (player == null) yield break;
         ITransportConnection channel = player.Player.channel.owner.transportConnection;
-        if (ZonePlayerComponent._airdrop != null)
-            EffectManager.askEffectClearByID(ZonePlayerComponent._airdrop.id, channel);
-        EffectManager.askEffectClearByID(ZonePlayerComponent._side.id, channel);
-        EffectManager.askEffectClearByID(ZonePlayerComponent._corner.id, channel);
-        EffectManager.askEffectClearByID(ZonePlayerComponent._center.id, channel);
+        if (ZonePlayerComponent.Airdrop != null)
+            EffectManager.askEffectClearByID(ZonePlayerComponent.Airdrop.id, channel);
+        EffectManager.askEffectClearByID(ZonePlayerComponent.Side.id, channel);
+        EffectManager.askEffectClearByID(ZonePlayerComponent.Corner.id, channel);
+        EffectManager.askEffectClearByID(ZonePlayerComponent.Center.id, channel);
     }
     private void List(CommandInteraction ctx)
     {
@@ -251,7 +251,7 @@ public class ZoneCommand : Command
     }
     internal static Zone? GetZone(string nameInput)
     {
-        if (int.TryParse(nameInput, System.Globalization.NumberStyles.Any, Data.Locale, out int num))
+        if (int.TryParse(nameInput, System.Globalization.NumberStyles.Any, Data.LocalLocale, out int num))
         {
             for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
             {

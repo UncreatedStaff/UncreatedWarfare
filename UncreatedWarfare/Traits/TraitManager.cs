@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -26,16 +25,16 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
     public static readonly BuffUI BuffUI = new BuffUI();
     private static readonly TraitData[] DefaultTraits =
     {
-        Motivated.DEFAULT_DATA,
-        RapidDeployment.DEFAULT_DATA,
-        Intimidation.DEFAULT_DATA,
-        BadOmen.DEFAULT_DATA,
-        AceArmor.DEFAULT_DATA,
-        Ghost.DEFAULT_DATA,
-        GuidedByGod.DEFAULT_DATA,
-        SelfRevive.DEFAULT_DATA,
-        StrengthInNumbers.DEFAULT_DATA,
-        Superheated.DEFAULT_DATA
+        Motivated.DefaultData,
+        RapidDeployment.DefaultData,
+        Intimidation.DefaultData,
+        BadOmen.DefaultData,
+        AceArmor.DefaultData,
+        Ghost.DefaultData,
+        GuidedByGod.DefaultData,
+        SelfRevive.DefaultData,
+        StrengthInNumbers.DefaultData,
+        Superheated.DefaultData
     };
     public static bool Loaded => Singleton.IsLoaded<TraitManager, TraitData>();
     public TraitManager() : base("traits", Data.Paths.TraitDataStorage) { }
@@ -97,11 +96,11 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                 BarricadeRegion reg = BarricadeManager.regions[x, y];
                 for (int i = 0; i < reg.drops.Count; ++i)
                 {
-                    if (reg.drops[i].interactable is InteractableSign sign && sign.text.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX, StringComparison.OrdinalIgnoreCase))
+                    if (reg.drops[i].interactable is InteractableSign sign && sign.text.StartsWith(Signs.Prefix + Signs.TraitPrefix, StringComparison.OrdinalIgnoreCase))
                     {
-                        TraitData? d = GetData(sign.text.Substring(TraitSigns.TRAIT_SIGN_PREFIX.Length));
+                        TraitData? d = GetData(sign.text.Substring(Signs.Prefix.Length + Signs.TraitPrefix.Length));
                         if (d != null)
-                            TraitSigns.InitTraitSign(d, reg.drops[i], sign);
+                            TraitSigns.InitTraitSign(d, reg.drops[i]);
                     }
                 }
             }
@@ -123,13 +122,13 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
     }
     private void OnGroupChanged(GroupChanged e)
     {
-        TraitSigns.SendAllTraitSigns(e.Player);
+        Signs.UpdateTraitSigns(e.Player, null);
         if (e.NewGroup is 1 or 2)
             BuffUI.SendBuffs(e.Player);
     }
     private void OnKitChagned(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>? oldKit)
     {
-        TraitSigns.SendAllTraitSigns(player);
+        Signs.UpdateTraitSigns(player, null);
         Kit? kit2 = kit?.Item;
         for (int i = 0; i < player.ActiveTraits.Count; ++i)
         {
@@ -142,7 +141,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                         buff.IsActivated = false;
                         player.SendChat(T.TraitDisabledKitNotSupported, buff);
                         // unsure if this should stay in, but could possibly be nice if a player switches kit then has to watch their timer run out while waiting on a cooldown.
-                        CooldownManager.RemoveCooldown(player, ECooldownType.REQUEST_KIT);
+                        CooldownManager.RemoveCooldown(player, CooldownType.RequestKit);
                     }
                 }
                 else if (CheckReactivateValid(buff))
@@ -174,7 +173,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
     }
     void IGameStartListener.OnGameStarting(bool isOnLoad)
     {
-        TraitSigns.BroadcastAllTraitSigns();
+        Signs.UpdateTraitSigns(null, null);
     }
     public static bool TryCreate<T>(UCPlayer player, out T trait) where T : Trait
     {
@@ -251,7 +250,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                 buff.SquadLeaderPromoted();
             }
         }
-        TraitSigns.SendAllTraitSigns(player);
+        Signs.UpdateTraitSigns(player, null);
     }
     internal static void OnPlayerLeftSquad(UCPlayer player, Squad left)
     {
@@ -290,7 +289,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                     }
                 }
         }
-        TraitSigns.SendAllTraitSigns(player);
+        Signs.UpdateTraitSigns(player, null);
     }
     internal static void OnPlayerJoinSquad(UCPlayer player, Squad joined)
     {
@@ -329,7 +328,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                     }
                 }
         }
-        TraitSigns.SendAllTraitSigns(player);
+        Signs.UpdateTraitSigns(player, null);
     }
     /// <remarks>Run before <see cref="Squad.Members"/> is cleared.</remarks>
     internal static void OnSquadDisbanded(Squad squad)
@@ -359,7 +358,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                     }
                 }
             }
-            TraitSigns.SendAllTraitSigns(member);
+            Signs.UpdateTraitSigns(member, null);
         }
     }
     internal static void DeactivateTrait(Trait trait)
@@ -469,10 +468,10 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
 
         if (!ctx.Caller.OnDuty())
         {
-            if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, ECooldownType.REQUEST_TRAIT_GLOBAL, out Cooldown cooldown))
+            if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, CooldownType.GlobalRequestTrait, out Cooldown cooldown))
                 throw ctx.Reply(T.RequestTraitGlobalCooldown, cooldown);
 
-            if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_SINGLE, out cooldown, trait.TypeName))
+            if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.IndividualRequestTrait, out cooldown, trait.TypeName))
                 throw ctx.Reply(T.RequestTraitSingleCooldown, trait, cooldown);
         }
 
@@ -506,7 +505,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
 
 
 
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
             if (trait.CreditCost != 0)
             {
@@ -564,10 +563,10 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
 
             ctx.LogAction(EActionLogType.REQUEST_TRAIT, $"Trait {trait.TypeName}, Team {team}, Cost: {trait.CreditCost}");
             if (CooldownManager.Config.GlobalTraitCooldown != null && CooldownManager.Config.GlobalTraitCooldown.HasValue && CooldownManager.Config.GlobalTraitCooldown.Value >= 0)
-                CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_GLOBAL, CooldownManager.Config.GlobalTraitCooldown.Value);
+                CooldownManager.StartCooldown(ctx.Caller, CooldownType.GlobalRequestTrait, CooldownManager.Config.GlobalTraitCooldown.Value);
             if (trait.Cooldown is not null && trait.Cooldown.HasValue && trait.Cooldown.Value >= 0f)
-                CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_SINGLE, trait.Cooldown.Value, trait.TypeName);
-            TraitSigns.SendAllTraitSigns(ctx.Caller);
+                CooldownManager.StartCooldown(ctx.Caller, CooldownType.IndividualRequestTrait, trait.Cooldown.Value, trait.TypeName);
+            Signs.UpdateTraitSigns(ctx.Caller, null);
             GiveTrait(ctx.Caller, trait);
         });
         ctx.Defer();
@@ -604,7 +603,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
 
     public void OnPostPlayerInit(UCPlayer player)
     {
-        TraitSigns.SendAllTraitSigns(player);
+        Signs.UpdateTraitSigns(player, null);
     }
 
     internal static TraitData? FindTrait(string trait)
@@ -623,7 +622,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         }
         for (int i = 0; i < Singleton.Count; ++i)
         {
-            if (Singleton[i].NameTranslations.Translate(L.DEFAULT).IndexOf(trait, StringComparison.OrdinalIgnoreCase) != -1)
+            if (Singleton[i].NameTranslations.Translate(L.Default).IndexOf(trait, StringComparison.OrdinalIgnoreCase) != -1)
                 return Singleton[i];
         }
 

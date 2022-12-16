@@ -9,7 +9,7 @@ namespace Uncreated.Warfare.Traits.Buffs;
 /// </summary>
 public sealed class Motivated : Buff
 {
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(Motivated),
         ClassList = new Class[] { Class.CombatEngineer },
@@ -78,7 +78,7 @@ public sealed class Motivated : Buff
     {
         if (onStart)
         {
-            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
+            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.AdminLocale, out _multiplier))
                 _multiplier = 2f;
 
             _squadMultiplier = (_multiplier - 1) * (TargetPlayer.IsSquadLeader() ? Data.SquadLeaderDistributedMultiplier : Data.SquadDistributedMultiplier) + 1;

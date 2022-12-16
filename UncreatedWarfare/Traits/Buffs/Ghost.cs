@@ -9,7 +9,7 @@ namespace Uncreated.Warfare.Traits.Buffs;
 public class Ghost : Buff
 {
     private static TraitData? DATA;
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(Ghost),
         NameTranslations = new TranslationList("Ghost"),

@@ -52,18 +52,29 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         OnItemsRefreshed += OnItemsRefreshedIntl;
         return base.PostLoad();
     }
-
     private void OnItemsRefreshedIntl()
     {
-        SqlItem<Kit>? kit = FindKitNoLock(TeamManager.Team1UnarmedKit);
-        if (!KitManager.KitExists(, out _))
-            L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
-        if (!KitManager.KitExists(TeamManager.Team2UnarmedKit, out _))
-            L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
-        if (!KitManager.KitExists(TeamManager.DefaultKit, out _))
-            L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
+        UCWarfare.RunTask(async () =>
+        {
+            await WaitAsync().ConfigureAwait(false);
+            try
+            {
+                SqlItem<Kit>? kit = string.IsNullOrEmpty(TeamManager.Team1UnarmedKit) ? null : FindKitNoLock(TeamManager.Team1UnarmedKit!);
+                if (kit?.Item == null)
+                    L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to the " + TeamManager.Team1Faction.Name + " faction.");
+                kit = string.IsNullOrEmpty(TeamManager.Team2UnarmedKit) ? null : FindKitNoLock(TeamManager.Team2UnarmedKit!);
+                if (kit?.Item == null)
+                    L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to the " + TeamManager.Team2Faction.Name + " faction.");
+                kit = string.IsNullOrEmpty(TeamManager.DefaultKit) ? null : FindKitNoLock(TeamManager.DefaultKit!);
+                if (kit?.Item == null)
+                    L.LogError("The default kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to the team config.");
+            }
+            finally
+            {
+                Release();
+            }
+        });
     }
-
     public override Task PreUnload()
     {
         EventDispatcher.PlayerLeaving -= OnPlayerLeaving;
@@ -180,7 +191,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     /// <remarks>Thread Safe</remarks>
     public async Task<SqlItem<Kit>?> FindKit(string id, CancellationToken token = default, bool exactMatchOnly = true)
     {
-        await WaitAsync(token).ConfigureAwait(false);
+        await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
             int index = F.StringSearch(List, x => x.Item?.Id, id, exactMatchOnly);
@@ -188,7 +199,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         }
         finally
         {
-            Release();
+            WriteRelease();
         }
     }
 
@@ -227,30 +238,46 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     }
     public SqlItem<Kit>? FindKitNoLock(string id, bool exactMatchOnly = true)
     {
-        int index = F.StringSearch(List, x => x.Item?.Id, id, exactMatchOnly);
-        return index == -1 ? null : List[index];
+        WriteWait();
+        try
+        {
+            int index = F.StringSearch(List, x => x.Item?.Id, id, exactMatchOnly);
+            return index == -1 ? null : List[index];
+        }
+        finally
+        {
+            WriteRelease();
+        }
     }
     /// <remarks>Thread Safe</remarks>
     public async Task<List<SqlItem<Kit>>> FindKits(string id, CancellationToken token = default, bool exactMatchOnly = true)
     {
-        await WaitAsync(token).ConfigureAwait(false);
         List<SqlItem<Kit>> kits = new List<SqlItem<Kit>>(4);
+        await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
             F.StringSearch(List, kits, x => x.Item?.Id, id, exactMatchOnly);
         }
         finally
         {
-            Release();
+            WriteRelease();
         }
 
         return kits;
     }
     public List<SqlItem<Kit>> FindKitsNoLock(string id, bool exactMatchOnly = true)
     {
-        List<SqlItem<Kit>> kits = new List<SqlItem<Kit>>(4);
-        F.StringSearch(List, kits, x => x.Item?.Id, id, exactMatchOnly);
-        return kits;
+        WriteWait();
+        try
+        {
+            List<SqlItem<Kit>> kits = new List<SqlItem<Kit>>(4);
+            F.StringSearch(List, kits, x => x.Item?.Id, id, exactMatchOnly);
+            return kits;
+        }
+        finally
+        {
+            WriteRelease();
+        }
     }
     /// <remarks>Thread Safe</remarks>
     public async Task GiveKit(UCPlayer player, SqlItem<Kit>? kit, CancellationToken token = default)
@@ -265,7 +292,17 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         await kit.Enter(token).ConfigureAwait(false);
         try
         {
-            if (kit.Item == null)
+            await WriteWaitAsync(token).ConfigureAwait(false);
+            Kit? kitItem;
+            try
+            {
+                kitItem = kit.Item;
+            }
+            finally
+            {
+                WriteRelease();
+            }
+            if (kitItem == null)
             {
                 await RemoveKit(player, token).ConfigureAwait(false);
                 return;
@@ -278,11 +315,19 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                if (player.HasKit)
-                    oldKit = player.ActiveKit;
-                GrantKit(player, kit);
-                if (oldKit?.Item != null)
-                    UpdateSigns(oldKit);
+                WriteWait();
+                try
+                {
+                    if (player.HasKit)
+                        oldKit = player.ActiveKit;
+                    GrantKit(player, kit);
+                    if (oldKit?.Item != null)
+                        UpdateSigns(oldKit);
+                }
+                finally
+                {
+                    WriteRelease();
+                }
             }
             finally
             {
@@ -296,11 +341,21 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         if (OnKitChanged != null)
             UCWarfare.RunOnMainThread(() => OnKitChanged?.Invoke(player, kit, oldKit), default);
     }
-    internal static async Task GiveKitNoLock(UCPlayer player, SqlItem<Kit>? kit, CancellationToken token = default, bool psLock = true)
+    internal async Task GiveKitNoLock(UCPlayer player, SqlItem<Kit>? kit, CancellationToken token = default, bool psLock = true)
     {
         if (player == null) throw new ArgumentNullException(nameof(player));
         SqlItem<Kit>? oldKit = null;
-        if (kit?.Item == null)
+        Kit? kitItem;
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            kitItem = kit?.Item;
+        }
+        finally
+        {
+            WriteRelease();
+        }
+        if (kitItem == null)
         {
             await RemoveKit(player, token, psLock).ConfigureAwait(false);
             return;
@@ -309,17 +364,25 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (kit.Item == null)
+            if (kitItem == null)
             {
                 await RemoveKit(player, token, psLock).ConfigureAwait(false);
                 return;
             }
             await UCWarfare.ToUpdate(token);
-            if (player.HasKit)
-                oldKit = player.ActiveKit;
-            GrantKit(player, kit);
-            if (oldKit?.Item != null)
-                UpdateSigns(oldKit);
+            WriteWait();
+            try
+            {
+                if (player.HasKit)
+                    oldKit = player.ActiveKit;
+                GrantKit(player, kit);
+                if (oldKit?.Item != null)
+                    UpdateSigns(oldKit);
+            }
+            finally
+            {
+                WriteRelease();
+            }
         }
         finally
         {
@@ -331,7 +394,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             UCWarfare.RunOnMainThread(() => OnKitChanged?.Invoke(player, kit, oldKit), default);
     }
     /// <remarks>Thread Safe</remarks>
-    private static async Task RemoveKit(UCPlayer player, CancellationToken token = default, bool psLock = true)
+    private async Task RemoveKit(UCPlayer player, CancellationToken token = default, bool psLock = true)
     {
         if (psLock)
             await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
@@ -341,9 +404,17 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             if (player.HasKit)
                 oldKit = player.ActiveKit;
             await UCWarfare.ToUpdate(token);
-            GrantKit(player, null);
-            if (oldKit?.Item != null)
-                UpdateSigns(oldKit);
+            WriteWait();
+            try
+            {
+                GrantKit(player, null);
+                if (oldKit?.Item != null)
+                    UpdateSigns(oldKit);
+            }
+            finally
+            {
+                WriteRelease();
+            }
             if (OnKitChanged != null)
                 UCWarfare.RunOnMainThread(() => OnKitChanged?.Invoke(player, null, oldKit), default);
         }
@@ -370,14 +441,14 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         else
             UCInventoryManager.ClearInventory(player, true);
     }
-    public static async Task ResupplyKit(UCPlayer player, bool ignoreAmmoBags = false, CancellationToken token = default)
+    public async Task ResupplyKit(UCPlayer player, bool ignoreAmmoBags = false, CancellationToken token = default)
     {
         if (player.HasKit)
         {
             await ResupplyKit(player, player.ActiveKit!, ignoreAmmoBags, token).ConfigureAwait(false);
         }
     }
-    public static async Task ResupplyKit(UCPlayer player, SqlItem<Kit> kit, bool ignoreAmmoBags = false, CancellationToken token = default)
+    public async Task ResupplyKit(UCPlayer player, SqlItem<Kit> kit, bool ignoreAmmoBags = false, CancellationToken token = default)
     {
         if (kit is null) throw new ArgumentNullException(nameof(kit));
         await kit.Enter(token).ConfigureAwait(false);
@@ -388,7 +459,17 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             List<KeyValuePair<ItemJar, Page>> nonKitItems = new List<KeyValuePair<ItemJar, Page>>(16);
-            Kit? k = kit.Item;
+            Kit? k;
+            WriteWait();
+            try
+            {
+                k = kit.Item;
+            }
+            finally
+            {
+                WriteRelease();
+            }
+            
             for (byte page = 0; page < PlayerInventory.PAGES - 2; ++page)
             {
                 byte count = player.Player.inventory.getItemCount(page);
@@ -603,7 +684,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                          item switch
                          {
                              IItem i2 => i2.Item.ToString("N"),
-                             IClothing i2 => i2.Item.ToString("N"),
+                             IBaseItem i2 => i2.Item.ToString("N"),
                              _ => item.ToString()
                          } + "}.");
         }
@@ -622,28 +703,39 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     }
     public async Task OnQuestCompleted(QuestCompleted e)
     {
-        await WaitAsync().ConfigureAwait(false);
+        await WaitAsync(e.Player.DisconnectToken).ConfigureAwait(false);
         try
         {
-            foreach (SqlItem<Kit> kit in Items)
+            await UCWarfare.ToUpdate(e.Player.DisconnectToken);
+            if (!e.Player.IsOnline)
+                return;
+            WriteWait();
+            try
             {
-                if (kit.Item != null && kit.Item.Type != KitType.Loadout && kit.Item.UnlockRequirements != null)
+                foreach (SqlItem<Kit> kit in Items)
                 {
-                    for (int j = 0; j < kit.Item.UnlockRequirements.Length; j++)
+                    if (kit.Item != null && kit.Item.Type != KitType.Loadout && kit.Item.UnlockRequirements != null)
                     {
-                        if (kit.Item.UnlockRequirements[j] is QuestUnlockRequirement { UnlockPresets.Length: > 0 } req && !req.CanAccess(e.Player))
+                        for (int j = 0; j < kit.Item.UnlockRequirements.Length; j++)
                         {
-                            for (int r = 0; r < req.UnlockPresets.Length; r++)
+                            if (kit.Item.UnlockRequirements[j] is QuestUnlockRequirement { UnlockPresets.Length: > 0 } req && !req.CanAccess(e.Player))
                             {
-                                if (req.UnlockPresets[r] == e.PresetKey)
+                                for (int r = 0; r < req.UnlockPresets.Length; r++)
                                 {
-                                    e.Break();
-                                    return;
+                                    if (req.UnlockPresets[r] == e.PresetKey)
+                                    {
+                                        e.Break();
+                                        return;
+                                    }
                                 }
                             }
                         }
                     }
                 }
+            }
+            finally
+            {
+                WriteRelease();
             }
         }
         finally
@@ -656,46 +748,54 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        await WaitAsync().ConfigureAwait(false);
+        await WaitAsync(player.DisconnectToken).ConfigureAwait(false);
         try
         {
-            await UCWarfare.ToUpdate();
+            await UCWarfare.ToUpdate(player.DisconnectToken);
             if (!player.IsOnline)
                 return;
-            foreach (SqlItem<Kit> kit in Items)
+            WriteWait();
+            try
             {
-                if (kit.Item != null && kit.Item.Type != KitType.Loadout && kit.Item.UnlockRequirements != null)
+                foreach (SqlItem<Kit> kit in Items)
                 {
-                    for (int j = 0; j < kit.Item.UnlockRequirements.Length; j++)
+                    if (kit.Item != null && kit.Item.Type != KitType.Loadout && kit.Item.UnlockRequirements != null)
                     {
-                        if (kit.Item.UnlockRequirements[j] is QuestUnlockRequirement { UnlockPresets.Length: > 0 } req && !req.CanAccess(player))
+                        for (int j = 0; j < kit.Item.UnlockRequirements.Length; j++)
                         {
-                            if (Assets.find(req.QuestID) is QuestAsset quest)
+                            if (kit.Item.UnlockRequirements[j] is QuestUnlockRequirement { UnlockPresets.Length: > 0 } req && !req.CanAccess(player))
                             {
-                                player.Player.quests.ServerAddQuest(quest);
-                            }
-                            else
-                            {
-                                L.LogWarning("Unknown quest id " + req.QuestID + " in kit requirement for " + kit.Item.Id);
-                            }
-                            for (int r = 0; r < req.UnlockPresets.Length; r++)
-                            {
-                                BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
-                                if (tracker == null)
+                                if (Assets.find(req.QuestID) is QuestAsset quest)
                                 {
-                                    L.LogWarning("Failed to create tracker for kit " + kit.Item.Id + ", player " + player.Name.PlayerName);
+                                    player.Player.quests.ServerAddQuest(quest);
+                                }
+                                else
+                                {
+                                    L.LogWarning("Unknown quest id " + req.QuestID + " in kit requirement for " + kit.Item.Id);
+                                }
+                                for (int r = 0; r < req.UnlockPresets.Length; r++)
+                                {
+                                    BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
+                                    if (tracker == null)
+                                    {
+                                        L.LogWarning("Failed to create tracker for kit " + kit.Item.Id + ", player " + player.Name.PlayerName);
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            finally
+            {
+                WriteRelease();
+            }
         }
         finally
         {
             Release();
         }
-        RequestSignsOld.UpdateAllSigns(player);
+        Signs.UpdateKitSigns(player, null);
     }
     private void OnPreDeath(PlayerLife life)
     {
@@ -703,7 +803,17 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer? player = UCPlayer.FromPlayer(life.player);
-        if (player?.ActiveKit?.Item != null)
+        Kit? active;
+        WriteWait();
+        try
+        {
+            active = player?.ActiveKit?.Item;
+        }
+        finally
+        {
+            WriteRelease();
+        }
+        if (active != null)
         {
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
             {
@@ -717,7 +827,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     if (Assets.find(EAssetType.ITEM, jar.item.id) is not ItemAsset asset) continue;
                     float percentage = (float)jar.item.amount / asset.amount;
 
-                    bool notInKit = !player.ActiveKit.Item.ContainsItem(asset.GUID) && Whitelister.IsWhitelisted(asset.GUID, out _);
+                    bool notInKit = !active.ContainsItem(asset.GUID) && Whitelister.IsWhitelisted(asset.GUID, out _);
                     if (notInKit || (percentage < 0.3 && asset.type != EItemType.GUN))
                     {
                         if (notInKit)
@@ -802,18 +912,26 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             await WaitAsync().ThenToUpdate();
             try
             {
-                for (int i = 0; i < Items.Count; i++)
+                await UCWarfare.ToUpdate();
+                WriteWait();
+                try
                 {
-                    SqlItem<Kit> item = Items[i];
-                    if (item.Item == null)
-                        continue;
-                    if (item.Item.TeamLimit < 1f)
+                    for (int i = 0; i < Items.Count; i++)
                     {
-                        UpdateSigns();
-                        kn.InvokeUpdate();
+                        SqlItem<Kit> item = Items[i];
+                        if (item.Item == null)
+                            continue;
+                        if (item.Item.TeamLimit < 1f)
+                        {
+                            Signs.UpdateKitSigns(null, item.Item.Id);
+                        }
+                        else if (allPlayer is { IsOnline: true })
+                            Signs.UpdateKitSigns(allPlayer, item.Item.Id);
                     }
-                    else if (allPlayer is { IsOnline: true })
-                        kn.InvokeUpdate(allPlayer);
+                }
+                finally
+                {
+                    WriteRelease();
                 }
             }
             finally
@@ -823,7 +941,6 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         });
         // todo update all loadouts or request signs where team limit < 1
     }
-
     /// <remarks>Thread Safe</remarks>
     public static void UpdateSigns()
     {
@@ -1064,7 +1181,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         if (!kit.PrimaryKey.IsValid)
             return false;
         UCPlayer? online = UCPlayer.FromID(player);
-        if (online != null && online.IsOnline)
+        if (online is { IsOnline: true })
             return await RemoveAccess(kit, online, token).ConfigureAwait(false);
         bool res = await RemoveAccessRow(kit.PrimaryKey, player, token).ConfigureAwait(false);
         if (OnKitAccessChanged != null)
@@ -1172,7 +1289,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         return new ValueTask<bool>(HasAccess(kit, player, token));
     }
     /// <summary>Will not update signs.</summary>
-    public static void SetTextNoLock(Kit kit, string? text, string language = L.DEFAULT)
+    public static void SetTextNoLock(Kit kit, string? text, string language = L.Default)
     {
         if (kit is null) throw new ArgumentNullException(nameof(kit));
         kit.SignText.Remove(language);
@@ -1180,10 +1297,10 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             kit.SignText.Add(language, text!);
     }
     /// <remarks>Thread Safe</remarks>
-    public static async Task SetText(SqlItem<Kit> kit, string? text, string language = L.DEFAULT, bool updateSigns = true, CancellationToken token = default)
+    public static async Task SetText(SqlItem<Kit> kit, string? text, string language = L.Default, bool updateSigns = true, CancellationToken token = default)
     {
         if (kit is null) throw new ArgumentNullException(nameof(kit));
-        language ??= L.DEFAULT;
+        language ??= L.Default;
         await kit.Enter(token).ConfigureAwait(false);
         try
         {
@@ -1309,7 +1426,16 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         try
         {
             ulong team = ctx.Caller.GetTeam();
-            Kit? kit = proxy.Item;
+            Kit? kit;
+            await WriteWaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                kit = proxy.Item;
+            }
+            finally
+            {
+                WriteRelease();
+            }
             if (kit == null)
                 throw ctx.Reply(T.KitNotFound, proxy.LastPrimaryKey.ToString());
             if (ctx.Caller.HasKit && ctx.Caller.ActiveKit!.PrimaryKey.Key == kit.PrimaryKey.Key)
@@ -1340,13 +1466,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             // cooldowns
             if (
                 Data.Gamemode.State == State.Active &&
-                CooldownManager.HasCooldown(ctx.Caller, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) &&
+                CooldownManager.HasCooldown(ctx.Caller, CooldownType.RequestKit, out Cooldown requestCooldown) &&
                 !ctx.Caller.OnDutyOrAdmin() &&
                 !UCWarfare.Config.OverrideKitRequirements &&
                 kit.Class is not Class.Crewman and not Class.Pilot)
                 throw ctx.Reply(T.KitOnGlobalCooldown, requestCooldown);
             if (kit.IsPaid && kit.RequestCooldown > 0f &&
-                CooldownManager.HasCooldown(ctx.Caller, ECooldownType.PREMIUM_KIT, out Cooldown premiumCooldown, kit.Id) &&
+                CooldownManager.HasCooldown(ctx.Caller, CooldownType.PremiumKit, out Cooldown premiumCooldown, kit.Id) &&
                 !ctx.Caller.OnDutyOrAdmin() &&
                 !UCWarfare.Config.OverrideKitRequirements)
                 throw ctx.Reply(T.KitOnCooldown, premiumCooldown);
@@ -1361,7 +1487,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             bool hasAccess = kit.CreditCost == 0 && kit.IsPublicKit || UCWarfare.Config.OverrideKitRequirements;
             if (!hasAccess)
             {
-                hasAccess = await KitManager.HasAccess(kit, ctx.Caller.Steam64, token).ThenToUpdate(token);
+                hasAccess = await HasAccess(kit, ctx.Caller.Steam64, token).ThenToUpdate(token);
                 if (!hasAccess)
                 {
                     if (kit.IsPaid)
@@ -1409,7 +1535,15 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         Kit? kit;
         try
         {
-            kit = proxy.Item;
+            await WriteWaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                kit = proxy.Item;
+            }
+            finally
+            {
+                WriteRelease();
+            }
             if (kit == null)
                 throw ctx.Reply(T.KitNotFound, proxy.LastPrimaryKey.ToString());
             if (!kit.IsPublicKit)
@@ -1461,18 +1595,25 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
 
         ctx.Reply(T.RequestKitBought, kit.CreditCost);
     }
-    private async Task<bool> GrantKitRequest(CommandInteraction ctx, SqlItem<Kit> kit, CancellationToken token = default)
+    private async Task<bool> GrantKitRequest(CommandInteraction ctx, SqlItem<Kit> proxy, CancellationToken token = default)
     {
-        if (kit?.Item == null)
-            return false;
         await UCWarfare.ToUpdate(token);
         ulong team = ctx.Caller.GetTeam();
         AmmoCommand.WipeDroppedItems(ctx.CallerID);
-        await GiveKitNoLock(ctx.Caller, kit, token).ConfigureAwait(false);
-        Kit? kit2 = kit.Item;
-        if (kit2 == null)
+        await GiveKitNoLock(ctx.Caller, proxy, token).ConfigureAwait(false);
+        Kit? kit;
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            kit = proxy?.Item;
+        }
+        finally
+        {
+            WriteRelease();
+        }
+        if (kit == null)
             return true;
-        string id = kit2.Id;
+        string id = kit.Id;
         Stats.StatsManager.ModifyKit(id, k => k.TimesRequested++);
         Stats.StatsManager.ModifyStats(ctx.CallerID, s =>
         {
@@ -1486,11 +1627,11 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 kitData.TimesRequested++;
         }, false);
 
-        ctx.Reply(T.RequestSignGiven, kit2.Class);
+        ctx.Reply(T.RequestSignGiven, kit.Class);
 
-        if (kit2.IsPaid && kit2.RequestCooldown > 0)
-            CooldownManager.StartCooldown(ctx.Caller, ECooldownType.PREMIUM_KIT, kit2.RequestCooldown, kit2.Id);
-        CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REQUEST_KIT, CooldownManager.Config.RequestKitCooldown);
+        if (kit.IsPaid && kit.RequestCooldown > 0)
+            CooldownManager.StartCooldown(ctx.Caller, CooldownType.PremiumKit, kit.RequestCooldown, kit.Id);
+        CooldownManager.StartCooldown(ctx.Caller, CooldownType.RequestKit, CooldownManager.Config.RequestKitCooldown);
 
         return true;
     }
@@ -1610,12 +1751,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             new Schema.Column(COLUMN_ITEM_PAGE, SqlTypes.Enum<Page>()) { Nullable = true },
             new Schema.Column(COLUMN_ITEM_CLOTHING, SqlTypes.Enum<ClothingType>()) { Nullable = true },
             new Schema.Column(COLUMN_ITEM_REDIRECT, SqlTypes.Enum<RedirectType>()) { Nullable = true },
-            new Schema.Column(COLUMN_ITEM_AMOUNT, SqlTypes.BYTE) { Default = "0" },
+            new Schema.Column(COLUMN_ITEM_AMOUNT, SqlTypes.BYTE) { Nullable = true },
             new Schema.Column(COLUMN_ITEM_METADATA, SqlTypes.Binary(KitEx.MaxStateArrayLimit)) { Nullable = true },
         }, false, typeof(IKitItem)),
         UnlockRequirement.GetDefaultSchema(TABLE_UNLOCK_REQUIREMENTS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK),
         Skillset.GetDefaultSchema(TABLE_SKILLSETS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK),
         F.GetForeignKeyListSchema(TABLE_FACTION_FILTER, COLUMN_EXT_PK, COLUMN_FILTER_FACTION, TABLE_MAIN, COLUMN_PK, FactionInfo.TABLE_MAIN, FactionInfo.COLUMN_PK),
+        F.GetForeignKeyListSchema(TABLE_MAP_FILTER, COLUMN_EXT_PK, COLUMN_FILTER_MAP, TABLE_MAIN, COLUMN_PK, FactionInfo.TABLE_MAIN, FactionInfo.COLUMN_PK),
         F.GetTranslationListSchema(TABLE_SIGN_TEXT, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, KitEx.SignTextMaxCharLimit),
         new Schema(TABLE_ACCESS, new Schema.Column[]
         {
@@ -1666,7 +1808,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             COLUMN_SQUAD_LEVEL, COLUMN_COST_CREDITS, COLUMN_COST_PREMIUM, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST)}" +
             (hasPk ? $",`{COLUMN_PK}`" : string.Empty) +
             ") VALUES (@0,@1,@2,@3,@4,@5,@6,@7,@8,@9,@10,@11,@12,@13,@14" +
-            (hasPk ? ",@15" : string.Empty) +
+            (hasPk ? ",LAST_INSERT_ID(@15)" : string.Empty) +
             ") ON DUPLICATE KEY UPDATE " +
             $"{SqlTypes.ColumnUpdateList(0, COLUMN_KIT_ID, COLUMN_FACTION, COLUMN_CLASS, COLUMN_BRANCH,
                 COLUMN_TYPE, COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT, COLUMN_SEASON, COLUMN_DISABLED, COLUMN_WEAPONS,
@@ -1677,7 +1819,8 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             {
                 pk2 = reader.GetInt32(0);
             }, token).ConfigureAwait(false);
-
+        if (pk2 >= 0)
+            item.PrimaryKey = pk2;
         StringBuilder builder = new StringBuilder(128);
         if (item.Items is { Length: > 0 })
         {
@@ -1689,37 +1832,33 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             for (int i = 0; i < item.Items.Length; ++i)
             {
                 IKitItem item2 = item.Items[i];
-                if (item2 is not IItem && item2 is not IClothing && item2 is not IAssetRedirect || item2 is not IItemJar && item2 is not IClothingJar)
+                if (item2 is not IBaseItem && item2 is not IAssetRedirect || item2 is not IItemJar && item2 is not IClothingJar)
                 {
                     L.LogWarning("Item in kit \"" + item.Id + "\" (" + item2 + ") not a valid type: " + item2.GetType().Name + ".");
                     continue;
                 }
 
                 one = true;
-                int index = i * 10;
+                int index2 = i * 10;
                 IItem? itemObj = item2 as IItem;
-                IClothing? clothingObj = item2 as IClothing;
-                objs[index] = pk2;
-                objs[index + 1] = itemObj != null ? itemObj.Item.ToString("N") : DBNull.Value;
+                IBaseItem? baseObj = item2 as IBaseItem;
+                objs[index2] = pk2;
+                objs[index2 + 1] = baseObj != null ? baseObj.Item.ToString("N") : DBNull.Value;
                 if (item2 is IItemJar jarObj)
                 {
-                    objs[index + 2] = jarObj.X;
-                    objs[index + 3] = jarObj.Y;
-                    objs[index + 4] = jarObj.Rotation % 4;
-                    objs[index + 5] = jarObj.Page.ToString();
+                    objs[index2 + 2] = jarObj.X;
+                    objs[index2 + 3] = jarObj.Y;
+                    objs[index2 + 4] = jarObj.Rotation % 4;
+                    objs[index2 + 5] = jarObj.Page.ToString();
                 }
                 else
-                    objs[index + 2] = objs[index + 3] = objs[index + 4] = objs[index + 5] = DBNull.Value;
+                    objs[index2 + 2] = objs[index2 + 3] = objs[index2 + 4] = objs[index2 + 5] = DBNull.Value;
 
-                objs[index + 6] = clothingObj != null ? clothingObj.Item.ToString("N") : DBNull.Value;
-                objs[index + 7] = item2 is IAssetRedirect redirObj ? redirObj.RedirectType.ToString() : DBNull.Value;
-                objs[index + 8] = itemObj != null ? itemObj.Amount : DBNull.Value;
-                objs[index + 9] = itemObj != null
-                    ? itemObj.State
-                    : clothingObj != null
-                        ? clothingObj.State
-                        : DBNull.Value;
-                F.AppendPropertyList(builder, index, 10);
+                objs[index2 + 6] = item2 is IClothingJar jar ? jar.Type.ToString() : DBNull.Value;
+                objs[index2 + 7] = item2 is IAssetRedirect redirObj ? redirObj.RedirectType.ToString() : DBNull.Value;
+                objs[index2 + 8] = itemObj != null ? itemObj.Amount : DBNull.Value;
+                objs[index2 + 9] = baseObj != null ? baseObj.State : DBNull.Value;
+                F.AppendPropertyList(builder, index2, 10);
             }
             builder.Append(';');
             if (one)
@@ -1727,11 +1866,18 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             builder.Clear();
         }
 
+        objs = new object[
+            (item.UnlockRequirements != null ? item.UnlockRequirements.Length * 2 : 0) +
+            (item.Skillsets != null ? item.Skillsets.Length * 3 : 0) +
+            (item.FactionFilter != null ? item.FactionFilter.Length * 2 : 0) +
+            (item.MapFilter != null ? item.MapFilter.Length * 2 : 0) +
+            (item.RequestSigns != null ? item.RequestSigns.Length * 2 : 0) +
+            (item.SignText != null ? item.SignText.Count * 3 : 0)];
+        int index = 0;
         if (item.UnlockRequirements is { Length: > 0 })
         {
             builder.Append($"INSERT INTO `{TABLE_UNLOCK_REQUIREMENTS}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, UnlockRequirement.COLUMN_JSON)}) VALUES ");
-            objs = new object[item.UnlockRequirements.Length * 2];
             using MemoryStream str = new MemoryStream(48);
             for (int i = 0; i < item.UnlockRequirements.Length; ++i)
             {
@@ -1742,10 +1888,10 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 UnlockRequirement.Write(writer, req);
                 writer.Dispose();
                 string json = System.Text.Encoding.UTF8.GetString(str.GetBuffer(), 0, checked((int)str.Position));
-                int index = i * 2;
                 objs[index] = pk2;
                 objs[index + 1] = json;
-                F.AppendPropertyList(builder, index, 2);
+                F.AppendPropertyList(builder, index, 2, i);
+                index += 2;
             }
             builder.Append("; ");
         }
@@ -1754,18 +1900,17 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         {
             builder.Append($"INSERT INTO `{TABLE_SKILLSETS}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, Skillset.COLUMN_SKILL, Skillset.COLUMN_LEVEL)}) VALUES ");
-            objs = new object[item.Skillsets.Length * 3];
             for (int i = 0; i < item.Skillsets.Length; ++i)
             {
                 Skillset set = item.Skillsets[i];
                 if (set.Speciality is not EPlayerSpeciality.DEFENSE and not EPlayerSpeciality.OFFENSE and not EPlayerSpeciality.SUPPORT)
                     continue;
-                int index = i * 3;
                 objs[index] = pk2;
                 objs[index + 1] = set.Speciality switch
                     { EPlayerSpeciality.DEFENSE => set.Defense.ToString(), EPlayerSpeciality.OFFENSE => set.Offense.ToString(), _ => set.Support.ToString() };
                 objs[index + 2] = set.Level;
-                F.AppendPropertyList(builder, index, 3);
+                F.AppendPropertyList(builder, index, 3, i);
+                index += 3;
             }
             builder.Append("; ");
         }
@@ -1773,16 +1918,15 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         {
             builder.Append($"INSERT INTO `{TABLE_FACTION_FILTER}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_FILTER_FACTION)}) VALUES ");
-            objs = new object[item.FactionFilter.Length * 2];
             for (int i = 0; i < item.FactionFilter.Length; ++i)
             {
                 PrimaryKey f = item.FactionFilter[i];
                 if (!f.IsValid)
                     continue;
-                int index = i * 2;
                 objs[index] = pk2;
                 objs[index + 1] = f.Key;
-                F.AppendPropertyList(builder, index, 2);
+                F.AppendPropertyList(builder, index, 2, i);
+                index += 2;
             }
             builder.Append("; ");
         }
@@ -1790,16 +1934,15 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         {
             builder.Append($"INSERT INTO `{TABLE_MAP_FILTER}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_FILTER_MAP)}) VALUES ");
-            objs = new object[item.MapFilter.Length * 2];
             for (int i = 0; i < item.MapFilter.Length; ++i)
             {
                 PrimaryKey f = item.MapFilter[i];
                 if (!f.IsValid)
                     continue;
-                int index = i * 2;
                 objs[index] = pk2;
                 objs[index + 1] = f.Key;
-                F.AppendPropertyList(builder, index, 2);
+                F.AppendPropertyList(builder, index, 2, i);
+                index += 2;
             }
             builder.Append("; ");
         }
@@ -1807,16 +1950,15 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         {
             builder.Append($"INSERT INTO `{TABLE_REQUEST_SIGNS}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_REQUEST_SIGN)}) VALUES ");
-            objs = new object[item.RequestSigns.Length * 2];
             for (int i = 0; i < item.RequestSigns.Length; ++i)
             {
                 PrimaryKey f = item.RequestSigns[i];
                 if (!f.IsValid)
                     continue;
-                int index = i * 2;
                 objs[index] = pk2;
                 objs[index + 1] = f.Key;
-                F.AppendPropertyList(builder, index, 2);
+                F.AppendPropertyList(builder, index, 2, i);
+                index += 2;
             }
             builder.Append("; ");
         }
@@ -1824,16 +1966,14 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         {
             builder.Append($"INSERT INTO `{TABLE_SIGN_TEXT}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, F.COLUMN_LANGUAGE, F.COLUMN_VALUE)}) VALUES ");
-            objs = new object[item.SignText.Count * 3];
             int i = 0;
             foreach (KeyValuePair<string, string> pair in item.SignText)
             {
-                int index = i * 3;
                 objs[index] = pk2;
                 objs[index + 1] = pair.Key;
                 objs[index + 2] = pair.Value;
-                F.AppendPropertyList(builder, index, 3);
-                ++i;
+                F.AppendPropertyList(builder, index, 3, i++);
+                index += 3;
             }
             builder.Append(';');
         }
@@ -2191,6 +2331,393 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         return item;
     }
     #endregion
+
+#if DEBUG // Migrating old kits
+    public async Task MigrateOldKits(CancellationToken token = default)
+    {
+        Dictionary<int, OldKit> kits = new Dictionary<int, OldKit>(256);
+        int rows = 0;
+        await Sql.QueryAsync("SELECT * FROM `kit_data`;", null, reader =>
+        {
+            OldKit kit = new OldKit
+            {
+                PrimaryKey = reader.GetInt32(0),
+                Name = reader.GetString(1),
+                Class = (Class)reader.GetInt32(2),
+                Branch = (Branch)reader.GetInt32(3),
+                Team = reader.GetUInt64(4),
+                CreditCost = reader.GetUInt16(5),
+                UnlockLevel = reader.GetUInt16(6),
+                IsPremium = reader.GetBoolean(7),
+                PremiumCost = reader.GetFloat(8),
+                IsLoadout = reader.GetBoolean(9),
+                TeamLimit = reader.GetFloat(10),
+                Cooldown = reader.GetInt32(11),
+                Disabled = reader.GetBoolean(12),
+                Weapons = reader.GetString(13),
+                SquadLevel = (SquadLevel)reader.GetByte(14)
+            };
+            kits.Add(kit.PrimaryKey.Key, kit);
+            ++rows;
+        }, token).ConfigureAwait(false);
+        L.Log($"kit_data: Read {rows} row(s).");
+        rows = 0;
+        await Sql.QueryAsync("SELECT * FROM `kit_items`;", Array.Empty<object>(), reader =>
+        {
+            int kitPk = reader.GetInt32(1);
+            if (kits.TryGetValue(kitPk, out OldKit kit))
+            {
+                PageItem item = new PageItem
+                {
+                    Item = reader.ReadGuid(2),
+                    X = reader.GetByte(3),
+                    Y = reader.GetByte(4),
+                    Rotation = reader.GetByte(5),
+                    Page = (Page)reader.GetByte(6),
+                    Amount = reader.GetByte(7),
+                    State = reader.ReadByteArray(8)
+                };
+                (kit.Items ??= new List<PageItem>(32)).Add(item);
+                ++rows;
+            }
+        }, token).ConfigureAwait(false);
+        L.Log($"kit_items: Read {rows} row(s).");
+        rows = 0;
+        await Sql.QueryAsync("SELECT * FROM `kit_clothes`;", Array.Empty<object>(), reader =>
+        {
+            int kitPk = reader.GetInt32(1);
+            if (kits.TryGetValue(kitPk, out OldKit kit))
+            {
+                ClothingItem clothing = new ClothingItem()
+                {
+                    Item = reader.ReadGuid(2),
+                    Type = (ClothingType)reader.GetByte(3)
+                };
+                (kit.Clothes ??= new List<ClothingItem>(7)).Add(clothing);
+                ++rows;
+            }
+        }, token).ConfigureAwait(false);
+        L.Log($"kit_clothes: Read {rows} row(s).");
+        rows = 0;
+        await Sql.QueryAsync("SELECT * FROM `kit_skillsets`;", Array.Empty<object>(), reader =>
+        {
+            int kitPk = reader.GetInt32(1);
+            if (kits.TryGetValue(kitPk, out OldKit kit))
+            {
+                EPlayerSpeciality type = (EPlayerSpeciality)reader.GetByte(2);
+                Skillset set;
+                byte v = reader.GetByte(3);
+                byte lvl = reader.GetByte(4);
+                bool def = false;
+                switch (type)
+                {
+                    case EPlayerSpeciality.OFFENSE:
+                        set = new Skillset((EPlayerOffense)v, lvl);
+                        break;
+                    case EPlayerSpeciality.DEFENSE:
+                        set = new Skillset((EPlayerDefense)v, lvl);
+                        break;
+                    case EPlayerSpeciality.SUPPORT:
+                        set = new Skillset((EPlayerSupport)v, lvl);
+                        break;
+                    default:
+                        set = default;
+                        def = true;
+                        break;
+                }
+                if (!def)
+                {
+                    (kit.Skillsets ??= new List<Skillset>(1)).Add(set);
+                    ++rows;
+                }
+                else
+                    L.LogWarning("Invalid skillset for kit " + kitPk.ToString(Data.AdminLocale) + ".");
+            }
+        }, token).ConfigureAwait(false);
+        L.Log($"kit_skillsets: Read {rows} row(s).");
+        rows = 0;
+        await Sql.QueryAsync("SELECT `Kit`, `Language`, `Text` FROM `kit_lang`;", Array.Empty<object>(), reader =>
+        {
+            int kitPk = reader.GetInt32(0);
+            if (kits.TryGetValue(kitPk, out OldKit kit))
+            {
+                string lang = reader.GetString(1);
+                kit.SignText ??= new TranslationList(1);
+                if (!kit.SignText.ContainsKey(lang))
+                {
+                    kit.SignText.Add(lang, reader.GetString(2));
+                    ++rows;
+                }
+                else
+                    L.LogWarning("Duplicate translation for kit " + kit.Name + " (" + kit.PrimaryKey + ") for language " + lang);
+            }
+        }, token).ConfigureAwait(false);
+        L.Log($"kit_lang: Read {rows} row(s).");
+        rows = 0;
+        await Sql.QueryAsync("SELECT `Kit`, `JSON` FROM `kit_unlock_requirements`;", Array.Empty<object>(), reader =>
+        {
+            int kitPk = reader.GetInt32(0);
+            if (kits.TryGetValue(kitPk, out OldKit kit))
+            {
+                Utf8JsonReader jsonReader = new Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(reader.GetString(1)));
+                UnlockRequirement? req = UnlockRequirement.Read(ref jsonReader);
+                if (req != null)
+                {
+                    (kit.UnlockRequirements ??= new List<UnlockRequirement>(1)).Add(req);
+                    ++rows;
+                }
+            }
+        }, token);
+        L.Log($"kit_unlock_requirements: Read {rows} row(s).");
+        rows = 0;
+        await Sql.QueryAsync("SELECT `Kit`, `Steam64`, `AccessType` FROM `kit_access`;", Array.Empty<object>(), reader =>
+        {
+            int kitPk = reader.GetInt32(0);
+            if (kits.TryGetValue(kitPk, out OldKit kit))
+            {
+                string type = reader.GetString(2);
+                if (!Enum.TryParse(type, true, out KitAccessType etype))
+                {
+                    etype = type.Equals("QUEST_REWARD", StringComparison.OrdinalIgnoreCase) ? KitAccessType.QuestReward : KitAccessType.Unknown;
+                }
+                ulong s64 = reader.GetUInt64(1);
+                (kit.Access ??= new List<AccessRow>(1)).Add(new AccessRow(s64, etype));
+                ++rows;
+            }
+        }, token);
+        L.Log($"kit_access: Read {rows} row(s).");
+        rows = 0;
+        List<KeyValuePair<Kit, List<AccessRow>?>> newKits = new List<KeyValuePair<Kit, List<AccessRow>?>>(kits.Count);
+        foreach (OldKit kit in kits.Values)
+        {
+            string id = kit.Name!;
+            FactionInfo? faction = null;
+            if (!kit.IsLoadout)
+            {
+                if (id.StartsWith("prem_"))
+                    id = id.Substring(5);
+                if (id.StartsWith("me", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.MEC);
+                else if (id.StartsWith("us", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.USA);
+                else if (id.StartsWith("ru", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.Russia);
+                else if (id.StartsWith("ge", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.Germany);
+                else if (id.StartsWith("usmc", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.USMC);
+                else if (id.StartsWith("sov", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.Soviet);
+                else if (id.StartsWith("pl", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.Poland);
+                else if (id.StartsWith("mi", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.Militia);
+                else if (id.StartsWith("idf", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.Israel);
+                else if (id.StartsWith("fr", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.France);
+                else if (id.StartsWith("caf", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.Canada);
+                else if (id.StartsWith("sa", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.SouthAfrica);
+                else if (id.StartsWith("mz", StringComparison.OrdinalIgnoreCase))
+                    faction = TeamManager.FindFactionInfo(FactionInfo.Mozambique);
+            }
+
+            Kit newKit = new Kit(kit.Name!, kit.Class == Class.None ? Class.Unarmed : kit.Class, kit.Branch == Branch.Default ? GetDefaultBranch(kit.Class) : kit.Branch,
+                kit.IsPremium
+                    ? (kit.PremiumCost < 0
+                        ? KitType.Special
+                        : KitType.Elite)
+                    : (kit.IsLoadout
+                        ? KitType.Loadout
+                        : KitType.Public),
+                kit.SquadLevel, faction)
+            {
+                PrimaryKey = kit.PrimaryKey,
+                CreditCost = kit.CreditCost,
+                Disabled = kit.Disabled,
+                Season = kit.Disabled ? 1 : 2,
+                WeaponText = kit.Weapons,
+                TeamLimit = kit.TeamLimit,
+                PremiumCost = kit.PremiumCost < 0 ? 0m : decimal.Round((decimal)kit.PremiumCost, 2),
+                RequestCooldown = kit.Cooldown
+            };
+            if (!kit.IsLoadout && faction != null)
+            {
+                if (newKit.Type == KitType.Public)
+                {
+                    newKit.FactionFilter = new PrimaryKey[]
+                    {
+                        faction.PrimaryKey
+                    };
+                    newKit.FactionFilterIsWhitelist = true;
+                }
+                else if (faction.FactionId.Equals(FactionInfo.USA, StringComparison.OrdinalIgnoreCase))
+                {
+                    newKit.FactionFilter = new PrimaryKey[]
+                    {
+                        TeamManager.FindFactionInfo(FactionInfo.Russia)!.PrimaryKey,
+                        TeamManager.FindFactionInfo(FactionInfo.MEC)!.PrimaryKey
+                    };
+                    newKit.FactionFilterIsWhitelist = false;
+                }
+                else if (faction.FactionId.Equals(FactionInfo.Russia, StringComparison.OrdinalIgnoreCase) || faction.FactionId.Equals(FactionInfo.MEC, StringComparison.OrdinalIgnoreCase))
+                {
+                    newKit.FactionFilter = new PrimaryKey[]
+                    {
+                        TeamManager.FindFactionInfo(FactionInfo.USA)!.PrimaryKey
+                    };
+                    newKit.FactionFilterIsWhitelist = false;
+                }
+            }
+            if (kit.Skillsets != null)
+                newKit.Skillsets = kit.Skillsets.ToArray();
+            if (kit.UnlockRequirements != null)
+                newKit.UnlockRequirements = kit.UnlockRequirements.ToArray();
+            List<IKitItem> items = new List<IKitItem>((kit.Items != null ? kit.Items.Count : 0) + (kit.Clothes != null ? kit.Clothes.Count : 0));
+            if (kit.Items != null)
+            {
+                foreach (PageItem item in kit.Items)
+                {
+                    RedirectType? t = item.LegacyRedirect;
+                    if (t.HasValue)
+                    {
+                        items.Add(new AssetRedirectItem(t.Value, item.X, item.Y, item.Rotation, item.Page));
+                    }
+                    else
+                    {
+                        items.Add(item);
+                    }
+                }
+            }
+            if (kit.Clothes != null)
+            {
+                foreach (ClothingItem item in kit.Clothes)
+                {
+                    RedirectType? t = item.LegacyRedirect;
+                    if (t.HasValue)
+                    {
+                        items.Add(new AssetRedirectClothing(t.Value, item.Type));
+                    }
+                    else
+                    {
+                        items.Add(item);
+                    }
+                }
+            }
+            newKit.Items = items.ToArray();
+            if (kit.UnlockLevel > 0)
+            {
+                LevelUnlockRequirement req = new LevelUnlockRequirement { UnlockLevel = kit.UnlockLevel };
+                UnlockRequirement[] reqs = newKit.UnlockRequirements;
+                Util.AddToArray(ref reqs!, req);
+                newKit.UnlockRequirements = reqs;
+            }
+            if (kit.SignText != null)
+            {
+                newKit.SignText = kit.SignText;
+            }
+            newKits.Add(new KeyValuePair<Kit, List<AccessRow>?>(newKit, kit.Access));
+        }
+        await WaitAsync(token).ConfigureAwait(false);
+        string @base =
+            $"INSERT INTO `{TABLE_ACCESS}` ({SqlTypes.ColumnList(COLUMN_EXT_PK, COLUMN_ACCESS_STEAM_64, COLUMN_ACCESS_TYPE)}) " +
+            "VALUES ";
+        StringBuilder builder = new StringBuilder(@base, 256);
+        try
+        {
+            foreach (KeyValuePair<Kit, List<AccessRow>?> kvp in newKits)
+            {
+                SqlItem<Kit> res = await AddOrUpdateNoLock(kvp.Key, token).ConfigureAwait(false);
+                Kit kit = res.Item!;
+                L.Log($"Created kit: " + kit.Id + ".");
+                if (kvp.Value is { Count: > 0 } list)
+                {
+                    int pk = kit.PrimaryKey.Key;
+                    if (list.Count == 1)
+                    {
+                        AccessRow row = list[0];
+                        if (await AddAccessRow(pk, row.Steam64, row.Type == KitAccessType.Unknown
+                                ? (kit.Type switch
+                                {
+                                    KitType.Public => KitAccessType.Credits,
+                                    KitType.Loadout or KitType.Elite => KitAccessType.Purchase,
+                                    _ => KitAccessType.Event
+                                })
+                                : row.Type, token).ConfigureAwait(false))
+                            L.Log($"Added 1 row to {kit.Id}'s access list.");
+                    }
+                    else
+                    {
+                        object[] objs = new object[list.Count * 3];
+                        for (int i = 0; i < list.Count; ++i)
+                        {
+                            AccessRow row = list[i];
+                            int index = i * 3;
+                            objs[index] = pk;
+                            objs[index + 1] = row.Steam64;
+                            objs[index + 2] = row.Type == KitAccessType.Unknown
+                                ? (kit.Type switch
+                                {
+                                    KitType.Public => KitAccessType.Credits,
+                                    KitType.Loadout or KitType.Elite => KitAccessType.Purchase,
+                                    _ => KitAccessType.Event
+                                })
+                                : row.Type;
+                            F.AppendPropertyList(builder, index, 3);
+                        }
+                        builder.Append("; ");
+                        rows = await Data.AdminSql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
+                        builder.Clear();
+                        builder.Append(@base);
+                        L.Log($"Added {rows} rows to {kit.Id}'s access list.");
+                    }
+                }
+            }
+        }
+        finally
+        {
+            Release();
+        }
+    }
+
+    private class OldKit
+    {
+        public PrimaryKey PrimaryKey = PrimaryKey.NotAssigned;
+        public string? Name;
+        public Class Class;
+        public Branch Branch;
+        public ulong Team;
+        public List<UnlockRequirement>? UnlockRequirements;
+        public List<Skillset>? Skillsets;
+        public ushort CreditCost;
+        public ushort UnlockLevel;
+        public bool IsPremium;
+        public float PremiumCost;
+        public bool IsLoadout;
+        public float TeamLimit;
+        public float Cooldown;
+        public bool Disabled;
+        public SquadLevel SquadLevel;
+        public List<PageItem>? Items;
+        public List<ClothingItem>? Clothes;
+        public List<AccessRow>? Access;
+        public TranslationList? SignText;
+        public string Weapons;
+    }
+
+    private readonly struct AccessRow
+    {
+        public readonly ulong Steam64;
+        public readonly KitAccessType Type;
+        public AccessRow(ulong steam64, KitAccessType type)
+        {
+            Steam64 = steam64;
+            Type = type;
+        }
+    }
+#endif
 }
 
 public delegate void KitAccessCallback(SqlItem<Kit> kit, ulong player, bool newAccess, KitAccessType newType);
@@ -2202,7 +2729,7 @@ public static class KitEx
     public const int ClothingMaxCharLimit = 16;
     public const int ClassMaxCharLimit = 20;
     public const int TypeMaxCharLimit = 16;
-    public const int RedirectTypeCharLimit = 16;
+    public const int RedirectTypeCharLimit = 20;
     public const int SquadLevelMaxCharLimit = 16;
     public const int KitNameMaxCharLimit = 25;
     public const int WeaponTextMaxCharLimit = 50;
@@ -2217,7 +2744,7 @@ public static class KitEx
                 if (item.Item == guid)
                     return true;
             }
-            else if (checkClothes && kit.Items[i] is IClothing clothing)
+            else if (checkClothes && kit.Items[i] is IBaseItem clothing)
             {
                 if (clothing.Item == guid)
                     return true;

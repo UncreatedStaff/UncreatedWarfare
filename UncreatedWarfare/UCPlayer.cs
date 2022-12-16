@@ -734,7 +734,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             }
         }
     }
-    public override string ToString() => Name.PlayerName + " [" + Steam64.ToString("G17", Data.Locale) + "]";
+    public override string ToString() => Name.PlayerName + " [" + Steam64.ToString("G17", Data.AdminLocale) + "]";
     internal void ResetPermissionLevel() => _pLvl = null;
     internal void Update()
     {
@@ -813,7 +813,7 @@ public struct OfflinePlayer : IPlayer
         if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal))
             return (_names ??= F.GetPlayerName(_s64)).PlayerName;
         if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
-            return _s64.ToString(Data.Locale);
+            return _s64.ToString(Data.AdminLocale);
         UCPlayer? pl = UCPlayer.FromID(Steam64);
         string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (PlayerSave.TryReadSaveFile(_s64, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
         if (format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
@@ -823,7 +823,7 @@ public struct OfflinePlayer : IPlayer
         if (format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
             return Localization.Colorize(hex, (_names ??= F.GetPlayerName(_s64)).PlayerName, flags);
         if (format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(hex, _s64.ToString(Data.Locale), flags);
+            return Localization.Colorize(hex, _s64.ToString(Data.AdminLocale), flags);
         end:
         return (_names ??= Data.DatabaseManager.GetUsernames(_s64)).CharacterName;
     }
@@ -842,7 +842,7 @@ public class UCPlayerLocale // todo implement
             this.Language = langName;
         }
     }
-    public UCPlayerLocale(UCPlayer player) : this(player, L.DEFAULT) { }
+    public UCPlayerLocale(UCPlayer player) : this(player, L.Default) { }
     internal void Update(string language)
     {
         if (Localization.TryGetLangData(language, out string langName, out IFormatProvider format))
@@ -908,7 +908,7 @@ public class PlayerSave
 
     /// <summary>Players / 76561198267927009_0 / Uncreated_S2 / PlayerSave.dat</summary>
     private static string GetPath(ulong steam64) => Path.DirectorySeparatorChar + Path.Combine("Players",
-        steam64.ToString(Data.Locale) + "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale),
+        steam64.ToString(Data.AdminLocale) + "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale),
         "PlayerSave.dat");
     public static void WriteToSaveFile(PlayerSave save)
     {

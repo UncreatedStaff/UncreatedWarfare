@@ -11,7 +11,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Quests.Types;
 
 // Attribute links the kit to the Type
-[QuestData(QuestType.KILL_ENEMIES)]
+[QuestData(QuestType.KillEnemies)]
 public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnemiesQuest.State, KillEnemiesQuest>
 {
     // dynamic int allows for constants, ranges, or sets
@@ -100,7 +100,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
     }
 }
 
-[QuestData(QuestType.KILL_FROM_RANGE)]
+[QuestData(QuestType.KillFromRange)]
 public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker, KillEnemiesRangeQuest.State, KillEnemiesRangeQuest>
 {
     public DynamicIntegerValue KillCount;
@@ -189,7 +189,7 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
         }
     }
 }
-[QuestData(QuestType.KILL_ENEMIES_WITH_WEAPON)]
+[QuestData(QuestType.KillEnemiesWithWeapon)]
 public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Tracker, KillEnemiesQuestWeapon.State, KillEnemiesQuestWeapon>
 {
     public DynamicIntegerValue KillCount;
@@ -282,7 +282,7 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
         }
     }
 }
-[QuestData(QuestType.KILL_FROM_RANGE_WITH_WEAPON)]
+[QuestData(QuestType.KillFromRangeWithWeapon)]
 public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWeapon.Tracker, KillEnemiesRangeQuestWeapon.State, KillEnemiesRangeQuestWeapon>
 {
     public DynamicIntegerValue KillCount;
@@ -382,7 +382,7 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
                 }
             }
         }
-        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _range.ToString(Data.Locale), _translationCache1, _translationCache2);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _range.ToString(Data.LocalLocale), _translationCache1, _translationCache2);
         public override void ManualComplete()
         {
             _kills = _killThreshold;
@@ -390,7 +390,7 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
         }
     }
 }
-[QuestData(QuestType.KILL_ENEMIES_WITH_KIT)]
+[QuestData(QuestType.KillEnemiesWithKit)]
 public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, KillEnemiesQuestKit.State, KillEnemiesQuestKit>
 {
     public DynamicIntegerValue KillCount;
@@ -478,7 +478,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         }
     }
 }
-[QuestData(QuestType.KILL_FROM_RANGE_WITH_KIT)]
+[QuestData(QuestType.KillFromRangeWithKit)]
 public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.Tracker, KillEnemiesQuestKitRange.State, KillEnemiesQuestKitRange>
 {
     public DynamicIntegerValue KillCount;
@@ -574,7 +574,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _range.ToString(Data.Locale), _translationCache1);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _range.ToString(Data.LocalLocale), _translationCache1);
         public override void ManualComplete()
         {
             _kills = _killThreshold;
@@ -582,7 +582,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
         }
     }
 }
-[QuestData(QuestType.KILL_ENEMIES_WITH_KIT_CLASS)]
+[QuestData(QuestType.KillEnemiesWithKitClass)]
 public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.Tracker, KillEnemiesQuestKitClass.State, KillEnemiesQuestKitClass>
 {
     public DynamicIntegerValue KillCount;
@@ -673,7 +673,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
         }
     }
 }
-[QuestData(QuestType.KILL_FROM_RANGE_WITH_CLASS)]
+[QuestData(QuestType.KillFromRangeWithClass)]
 public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitClassRange.Tracker, KillEnemiesQuestKitClassRange.State, KillEnemiesQuestKitClassRange>
 {
     public DynamicIntegerValue KillCount;
@@ -772,7 +772,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _range.ToString(Data.Locale), _translationCache1);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _range.ToString(Data.LocalLocale), _translationCache1);
         public override void ManualComplete()
         {
             _kills = _killThreshold;
@@ -780,7 +780,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
         }
     }
 }
-[QuestData(QuestType.KILL_ENEMIES_WITH_WEAPON_CLASS)]
+[QuestData(QuestType.KillEnemiesWithWeaponClass)]
 public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponClass.Tracker, KillEnemiesQuestWeaponClass.State, KillEnemiesQuestWeaponClass>
 {
     public DynamicIntegerValue KillCount;
@@ -871,7 +871,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
         }
     }
 }
-[QuestData(QuestType.KILL_ENEMIES_WITH_BRANCH)]
+[QuestData(QuestType.KillEnemiesWithBranch)]
 public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Tracker, KillEnemiesQuestBranch.State, KillEnemiesQuestBranch>
 {
     public DynamicIntegerValue KillCount;
@@ -962,7 +962,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
         }
     }
 }
-[QuestData(QuestType.KILL_ENEMIES_WITH_TURRET)]
+[QuestData(QuestType.KillEnemiesWithTurret)]
 public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Tracker, KillEnemiesQuestTurret.State, KillEnemiesQuestTurret>
 {
     public DynamicIntegerValue KillCount;
@@ -1063,7 +1063,7 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
         }
     }
 }
-[QuestData(QuestType.KILL_ENEMIES_IN_SQUAD)]
+[QuestData(QuestType.KillEnemiesInSquad)]
 public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker, KillEnemiesQuestSquad.State, KillEnemiesQuestSquad>
 {
     public DynamicIntegerValue KillCount;
@@ -1136,7 +1136,7 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
         }
     }
 }
-[QuestData(QuestType.KILL_ENEMIES_IN_FULL_SQUAD)]
+[QuestData(QuestType.KillEnemiesInFullSquad)]
 public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad.Tracker, KillEnemiesQuestFullSquad.State, KillEnemiesQuestFullSquad>
 {
     public DynamicIntegerValue KillCount;
@@ -1209,7 +1209,7 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
         }
     }
 }
-[QuestData(QuestType.KILL_ENEMIES_ON_POINT_DEFENSE)]
+[QuestData(QuestType.KillEnemiesOnPointDefense)]
 public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tracker, KillEnemiesQuestDefense.State, KillEnemiesQuestDefense>
 {
     public DynamicIntegerValue KillCount;
@@ -1327,7 +1327,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
         }
     }
 }
-[QuestData(QuestType.KILL_ENEMIES_ON_POINT_ATTACK)]
+[QuestData(QuestType.KillEnemiesOnPointAttack)]
 public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Tracker, KillEnemiesQuestAttack.State, KillEnemiesQuestAttack>
 {
     public DynamicIntegerValue KillCount;
@@ -1445,7 +1445,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
         }
     }
 }
-[QuestData(QuestType.KING_SLAYER)]
+[QuestData(QuestType.KingSlayer)]
 public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayerQuest.State, KingSlayerQuest>
 {
     public DynamicIntegerValue KillCount;
@@ -1550,7 +1550,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
         }
     }
 }
-[QuestData(QuestType.KILL_STREAK)]
+[QuestData(QuestType.KillStreak)]
 public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreakQuest.State, KillStreakQuest>
 {
     public DynamicIntegerValue StreakCount;

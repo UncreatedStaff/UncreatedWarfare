@@ -7,7 +7,7 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Quests.Types;
 
-[QuestData(Quests.QuestType.DESTROY_VEHICLES)]
+[QuestData(Quests.QuestType.DestroyVehicles)]
 public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, DestroyVehiclesQuest.State, DestroyVehiclesQuest>
 {
     public DynamicIntegerValue VehicleCount;
@@ -140,7 +140,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
     }
 }
 
-[QuestData(Quests.QuestType.DRIVE_DISTANCE)]
+[QuestData(Quests.QuestType.DriveDistance)]
 public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, DriveDistanceQuest.State, DriveDistanceQuest>
 {
     public DynamicIntegerValue Amount;
@@ -263,7 +263,7 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
         }
     }
 }
-[QuestData(Quests.QuestType.TRANSPORT_PLAYERS)]
+[QuestData(Quests.QuestType.TransportPlayers)]
 public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker, TransportPlayersQuest.State, TransportPlayersQuest>
 {
     public DynamicIntegerValue Amount;

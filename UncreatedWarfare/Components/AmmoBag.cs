@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.SQL;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using UnityEngine;
@@ -26,8 +27,13 @@ public class AmmoBagComponent : MonoBehaviour
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Ammo -= ammoCost;
-
-        await KitManager.ResupplyKit(player, kit, true, token).ThenToUpdate(token);
+        if (Data.Is(out IKitRequests req))
+            await req.KitManager.ResupplyKit(player, kit, true, token).ThenToUpdate(token);
+        else
+        {
+            await UCWarfare.ToUpdate(token);
+            L.LogWarning("Failed to resupply " + player + ", KitManager is not loaded.");
+        }
 
         UCPlayer? owner = UCPlayer.FromID(Drop.GetServersideData().owner);
         if (owner != null && owner.Steam64 != player.Steam64)

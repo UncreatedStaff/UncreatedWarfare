@@ -3,7 +3,10 @@ using HarmonyLib;
 using JetBrains.Annotations;
 using SDG.Unturned;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+
 // ReSharper disable InconsistentNaming
+// ReSharper disable UnusedMember.Local
+// ReSharper disable UnusedParameter.Local
 
 namespace Uncreated.Warfare.Harmony;
 

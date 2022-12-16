@@ -80,7 +80,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
         {
             int itemCount = UCInventoryManager.CountItems(player.Player, a.GUID);
 
-            int allowedItems = kit.Items.Count(k => k is IItem i && i.Item == a.GUID || k is IClothing c && c.Item == a.GUID);
+            int allowedItems = kit.Items.Count(k => k is IItem i && i.Item == a.GUID || k is IBaseItem c && c.Item == a.GUID);
 
             int max = isWhitelisted ? Math.Max(allowedItems, whitelistedItem.Amount) : allowedItems;
 

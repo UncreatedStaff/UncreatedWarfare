@@ -666,11 +666,12 @@ public class ConventionalLeaderboardUI : UnturnedUI
             Team2Player13VC,
         };
     }
-    public void SendCTFLeaderboard<Stats, StatTracker>(LanguageSet set, in LongestShot info, List<Stats>? t1Stats, List<Stats>? t2Stats, StatTracker tracker, string? shutdownReason, ulong winner) where Stats : BaseCTFStats where StatTracker : BaseCTFTracker<Stats>
+    public void SendCTFLeaderboard<TStats, TStatTracker>(LanguageSet set, in LongestShot info, List<TStats>? t1Stats, List<TStats>? t2Stats, TStatTracker tracker, string? shutdownReason, ulong winner) where TStats : BaseCTFStats where TStatTracker : BaseCTFTracker<TStats>
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        IFormatProvider locale = Localization.GetLocale(set.Language);
         FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
         string lang = set.Language;
         int len = 47;
@@ -686,7 +687,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             T.StartingSoon.Translate(lang) :
             T.NextGameShutdown.Translate(lang, shutdownReason);
 
-        values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("mm\\:ss", Data.Locale);
+        values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("mm\\:ss", locale);
         values[3] = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[0], 1);
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
@@ -725,17 +726,17 @@ public class ConventionalLeaderboardUI : UnturnedUI
 
         if (tracker is not null)
         {
-            values[29] = tracker.Duration.ToString(STAT_TIME_FORMAT, Data.Locale);
-            values[30] = tracker.casualtiesT1.ToString(Data.Locale);
-            values[31] = tracker.casualtiesT2.ToString(Data.Locale);
-            values[32] = tracker.flagOwnerChanges.ToString(Data.Locale);
-            values[33] = tracker.AverageTeam1Size.ToString(STAT_FLOAT_FORMAT, Data.Locale);
-            values[34] = tracker.AverageTeam2Size.ToString(STAT_FLOAT_FORMAT, Data.Locale);
-            values[35] = tracker.fobsPlacedT1.ToString(Data.Locale);
-            values[36] = tracker.fobsPlacedT2.ToString(Data.Locale);
-            values[37] = tracker.fobsDestroyedT1.ToString(Data.Locale);
-            values[38] = tracker.fobsDestroyedT2.ToString(Data.Locale);
-            values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(Data.Locale);
+            values[29] = tracker.Duration.ToString(STAT_TIME_FORMAT, locale);
+            values[30] = tracker.casualtiesT1.ToString(locale);
+            values[31] = tracker.casualtiesT2.ToString(locale);
+            values[32] = tracker.flagOwnerChanges.ToString(locale);
+            values[33] = tracker.AverageTeam1Size.ToString(STAT_FLOAT_FORMAT, locale);
+            values[34] = tracker.AverageTeam2Size.ToString(STAT_FLOAT_FORMAT, locale);
+            values[35] = tracker.fobsPlacedT1.ToString(locale);
+            values[36] = tracker.fobsPlacedT2.ToString(locale);
+            values[37] = tracker.fobsDestroyedT1.ToString(locale);
+            values[38] = tracker.fobsDestroyedT2.ToString(locale);
+            values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(locale);
             values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
                 T.LongestShot.Translate(lang, info.Distance,
                     Assets.find<ItemAsset>(info.Gun),
@@ -753,18 +754,18 @@ public class ConventionalLeaderboardUI : UnturnedUI
             int num = Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1);
             for (int i = 0; i < num; ++i)
             {
-                Stats stats = t1Stats[i];
+                TStats stats = t1Stats[i];
                 PlayerNames names = stats.Player == null
                     ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
                     : stats.Player.Name;
                 values[++index] = i == 0 ?
                     TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : names.CharacterName;
-                values[++index] = stats.kills.ToString(Data.Locale);
-                values[++index] = stats.deaths.ToString(Data.Locale);
-                values[++index] = stats.XPGained.ToString(Data.Locale);
-                values[++index] = stats.Credits.ToString(Data.Locale);
-                values[++index] = stats.Captures.ToString(Data.Locale);
-                values[++index] = stats.DamageDone.ToString(Data.Locale);
+                values[++index] = stats.kills.ToString(locale);
+                values[++index] = stats.deaths.ToString(locale);
+                values[++index] = stats.XPGained.ToString(locale);
+                values[++index] = stats.Credits.ToString(locale);
+                values[++index] = stats.Captures.ToString(locale);
+                values[++index] = stats.DamageDone.ToString(locale);
             }
         }
 
@@ -773,18 +774,18 @@ public class ConventionalLeaderboardUI : UnturnedUI
             int num = Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1);
             for (int i = 0; i < num; ++i)
             {
-                Stats stats = t2Stats[i];
+                TStats stats = t2Stats[i];
                 PlayerNames names = stats.Player == null
                     ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
                     : stats.Player.Name;
                 values[++index] = i == 0 ?
                     TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : names.CharacterName;
-                values[++index] = stats.kills.ToString(Data.Locale);
-                values[++index] = stats.deaths.ToString(Data.Locale);
-                values[++index] = stats.XPGained.ToString(Data.Locale);
-                values[++index] = stats.Credits.ToString(Data.Locale);
-                values[++index] = stats.Captures.ToString(Data.Locale);
-                values[++index] = stats.DamageDone.ToString(Data.Locale);
+                values[++index] = stats.kills.ToString(locale);
+                values[++index] = stats.deaths.ToString(locale);
+                values[++index] = stats.XPGained.ToString(locale);
+                values[++index] = stats.Credits.ToString(locale);
+                values[++index] = stats.Captures.ToString(locale);
+                values[++index] = stats.DamageDone.ToString(locale);
             }
         }
 
@@ -792,7 +793,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
         {
             UCPlayer pl = set.Next;
             ulong team = pl.GetTeam();
-            Stats? stats = team switch
+            TStats? stats = team switch
             {
                 1 => t1Stats?.Find(x => x.Steam64 == pl.Steam64),
                 2 => t2Stats?.Find(x => x.Steam64 == pl.Steam64),
@@ -842,18 +843,18 @@ public class ConventionalLeaderboardUI : UnturnedUI
             if (stats is not null)
             {
                 PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, tracker is not null ? tracker.GetPresence(stats) : 0f));
-                PersonalStats0.SetText(c, stats.Kills.ToString(Data.Locale));
-                PersonalStats1.SetText(c, stats.Deaths.ToString(Data.Locale));
-                PersonalStats2.SetText(c, stats.KDR.ToString(STAT_PRECISION_FLOAT_FORMAT, Data.Locale));
-                PersonalStats3.SetText(c, stats.KillsOnPoint.ToString(Data.Locale));
-                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, Data.Locale));
-                PersonalStats5.SetText(c, stats.XPGained.ToString(Data.Locale));
-                PersonalStats6.SetText(c, TimeSpan.FromSeconds(stats.timeonpoint).ToString(STAT_TIME_FORMAT, Data.Locale));
-                PersonalStats7.SetText(c, stats.Captures.ToString(Data.Locale));
-                PersonalStats8.SetText(c, stats.DamageDone.ToString(Data.Locale));
-                PersonalStats9.SetText(c, stats.Teamkills.ToString(Data.Locale));
-                PersonalStats10.SetText(c, stats.FOBsDestroyed.ToString(Data.Locale));
-                PersonalStats11.SetText(c, stats.Credits.ToString(Data.Locale));
+                PersonalStats0.SetText(c, stats.Kills.ToString(locale));
+                PersonalStats1.SetText(c, stats.Deaths.ToString(locale));
+                PersonalStats2.SetText(c, stats.KDR.ToString(STAT_PRECISION_FLOAT_FORMAT, locale));
+                PersonalStats3.SetText(c, stats.KillsOnPoint.ToString(locale));
+                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, locale));
+                PersonalStats5.SetText(c, stats.XPGained.ToString(locale));
+                PersonalStats6.SetText(c, TimeSpan.FromSeconds(stats.timeonpoint).ToString(STAT_TIME_FORMAT, locale));
+                PersonalStats7.SetText(c, stats.Captures.ToString(locale));
+                PersonalStats8.SetText(c, stats.DamageDone.ToString(locale));
+                PersonalStats9.SetText(c, stats.Teamkills.ToString(locale));
+                PersonalStats10.SetText(c, stats.FOBsDestroyed.ToString(locale));
+                PersonalStats11.SetText(c, stats.Credits.ToString(locale));
             }
             else
             {
@@ -992,6 +993,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        IFormatProvider locale = Localization.GetLocale(set.Language);
         FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
         string lang = set.Language;
         int len = 47;
@@ -1007,7 +1009,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             T.StartingSoon.Translate(lang) :
             T.NextGameShutdown.Translate(lang, shutdownReason);
 
-        values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("mm\\:ss", Data.Locale);
+        values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("mm\\:ss", locale);
         values[3] = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[0], 1);
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
@@ -1046,17 +1048,17 @@ public class ConventionalLeaderboardUI : UnturnedUI
 
         if (tracker is not null)
         {
-            values[29] = tracker.Duration.ToString(STAT_TIME_FORMAT, Data.Locale);
-            values[30] = tracker.casualtiesT1.ToString(Data.Locale);
-            values[31] = tracker.casualtiesT2.ToString(Data.Locale);
-            values[32] = tracker.intelligenceGathered.ToString(Data.Locale);
-            values[33] = tracker.AverageTeam1Size.ToString(STAT_FLOAT_FORMAT, Data.Locale);
-            values[34] = tracker.AverageTeam2Size.ToString(STAT_FLOAT_FORMAT, Data.Locale);
-            values[35] = tracker.fobsPlacedT1.ToString(Data.Locale);
-            values[36] = tracker.fobsPlacedT2.ToString(Data.Locale);
-            values[37] = tracker.fobsDestroyedT1.ToString(Data.Locale);
-            values[38] = tracker.fobsDestroyedT2.ToString(Data.Locale);
-            values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(Data.Locale);
+            values[29] = tracker.Duration.ToString(STAT_TIME_FORMAT, locale);
+            values[30] = tracker.casualtiesT1.ToString(locale);
+            values[31] = tracker.casualtiesT2.ToString(locale);
+            values[32] = tracker.intelligenceGathered.ToString(locale);
+            values[33] = tracker.AverageTeam1Size.ToString(STAT_FLOAT_FORMAT, locale);
+            values[34] = tracker.AverageTeam2Size.ToString(STAT_FLOAT_FORMAT, locale);
+            values[35] = tracker.fobsPlacedT1.ToString(locale);
+            values[36] = tracker.fobsPlacedT2.ToString(locale);
+            values[37] = tracker.fobsDestroyedT1.ToString(locale);
+            values[38] = tracker.fobsDestroyedT2.ToString(locale);
+            values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(locale);
             ulong pl = info.Player;
             InsurgencyPlayerStats? s;
             values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
@@ -1084,12 +1086,12 @@ public class ConventionalLeaderboardUI : UnturnedUI
                     : stats.Player.Name;
                 values[++index] = i == 0 ?
                     TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : names.CharacterName;
-                values[++index] = stats.kills.ToString(Data.Locale);
-                values[++index] = stats.deaths.ToString(Data.Locale);
-                values[++index] = stats.XPGained.ToString(Data.Locale);
-                values[++index] = stats.Credits.ToString(Data.Locale);
-                values[++index] = stats.KDR.ToString(Data.Locale);
-                values[++index] = stats.DamageDone.ToString(Data.Locale);
+                values[++index] = stats.kills.ToString(locale);
+                values[++index] = stats.deaths.ToString(locale);
+                values[++index] = stats.XPGained.ToString(locale);
+                values[++index] = stats.Credits.ToString(locale);
+                values[++index] = stats.KDR.ToString(locale);
+                values[++index] = stats.DamageDone.ToString(locale);
             }
         }
 
@@ -1104,12 +1106,12 @@ public class ConventionalLeaderboardUI : UnturnedUI
                     : stats.Player.Name;
                 values[++index] = i == 0 ?
                     TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : names.CharacterName;
-                values[++index] = stats.kills.ToString(Data.Locale);
-                values[++index] = stats.deaths.ToString(Data.Locale);
-                values[++index] = stats.XPGained.ToString(Data.Locale);
-                values[++index] = stats.Credits.ToString(Data.Locale);
-                values[++index] = stats.KDR.ToString(Data.Locale);
-                values[++index] = stats.DamageDone.ToString(Data.Locale);
+                values[++index] = stats.kills.ToString(locale);
+                values[++index] = stats.deaths.ToString(locale);
+                values[++index] = stats.XPGained.ToString(locale);
+                values[++index] = stats.Credits.ToString(locale);
+                values[++index] = stats.KDR.ToString(locale);
+                values[++index] = stats.DamageDone.ToString(locale);
             }
         }
 
@@ -1128,10 +1130,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             SendToPlayer(c);
 
             Title.SetText(c, values[0]);
-            if (Data.Gamemode is not null)
-                Gamemode.SetText(c, Data.Gamemode.DisplayName);
-            else
-                Gamemode.SetText(c, string.Empty);
+            Gamemode.SetText(c, Data.Gamemode is not null ? Data.Gamemode.DisplayName : string.Empty);
 
             NextGameStartLabel.SetText(c, values[1]);
             NextGameSeconds.SetText(c, values[2]);
@@ -1167,21 +1166,21 @@ public class ConventionalLeaderboardUI : UnturnedUI
             if (stats is not null)
             {
                 PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, tracker is not null ? tracker.GetPresence(stats) : 0f));
-                PersonalStats0.SetText(c, stats.Kills.ToString(Data.Locale));
-                PersonalStats1.SetText(c, stats.Deaths.ToString(Data.Locale));
-                PersonalStats2.SetText(c, stats.DamageDone.ToString(STAT_FLOAT_FORMAT, Data.Locale));
+                PersonalStats0.SetText(c, stats.Kills.ToString(locale));
+                PersonalStats1.SetText(c, stats.Deaths.ToString(locale));
+                PersonalStats2.SetText(c, stats.DamageDone.ToString(STAT_FLOAT_FORMAT, locale));
                 if (Data.Gamemode is IAttackDefense iad)
-                    PersonalStats3.SetText(c, (team == iad.AttackingTeam ? stats.KillsAttack : stats.KillsDefense).ToString(Data.Locale));
+                    PersonalStats3.SetText(c, (team == iad.AttackingTeam ? stats.KillsAttack : stats.KillsDefense).ToString(locale));
                 else
                     PersonalStats3.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, Data.Locale));
-                PersonalStats5.SetText(c, stats.XPGained.ToString(Data.Locale));
-                PersonalStats6.SetText(c, stats._intelligencePointsCollected.ToString(Data.Locale));
+                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, locale));
+                PersonalStats5.SetText(c, stats.XPGained.ToString(locale));
+                PersonalStats6.SetText(c, stats._intelligencePointsCollected.ToString(locale));
                 PersonalStats7.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER /* todo */);
-                PersonalStats8.SetText(c, stats._cachesDestroyed.ToString(Data.Locale));
-                PersonalStats9.SetText(c, stats.Teamkills.ToString(Data.Locale));
-                PersonalStats10.SetText(c, stats.FOBsDestroyed.ToString(Data.Locale));
-                PersonalStats11.SetText(c, stats.Credits.ToString(Data.Locale));
+                PersonalStats8.SetText(c, stats._cachesDestroyed.ToString(locale));
+                PersonalStats9.SetText(c, stats.Teamkills.ToString(locale));
+                PersonalStats10.SetText(c, stats.FOBsDestroyed.ToString(locale));
+                PersonalStats11.SetText(c, stats.Credits.ToString(locale));
             }
             else
             {
@@ -1321,6 +1320,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        IFormatProvider locale = Localization.GetLocale(set.Language);
         FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
         string lang = set.Language;
         int len = 47;
@@ -1336,7 +1336,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             T.StartingSoon.Translate(lang) :
             T.NextGameShutdown.Translate(lang, shutdownReason);
 
-        values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss", Data.Locale);
+        values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss", locale);
         values[3] = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[0], 1);
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
@@ -1376,17 +1376,17 @@ public class ConventionalLeaderboardUI : UnturnedUI
 
         if (tracker is not null)
         {
-            values[29] = tracker.Duration.ToString(STAT_TIME_FORMAT, Data.Locale);
-            values[30] = tracker.casualtiesT1.ToString(Data.Locale);
-            values[31] = tracker.casualtiesT2.ToString(Data.Locale);
-            values[32] = tracker.flagOwnerChanges.ToString(Data.Locale);
-            values[33] = tracker.AverageTeam1Size.ToString(STAT_FLOAT_FORMAT, Data.Locale);
-            values[34] = tracker.AverageTeam2Size.ToString(STAT_FLOAT_FORMAT, Data.Locale);
-            values[35] = tracker.fobsPlacedT1.ToString(Data.Locale);
-            values[36] = tracker.fobsPlacedT2.ToString(Data.Locale);
-            values[37] = tracker.fobsDestroyedT1.ToString(Data.Locale);
-            values[38] = tracker.fobsDestroyedT2.ToString(Data.Locale);
-            values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(Data.Locale);
+            values[29] = tracker.Duration.ToString(STAT_TIME_FORMAT, locale);
+            values[30] = tracker.casualtiesT1.ToString(locale);
+            values[31] = tracker.casualtiesT2.ToString(locale);
+            values[32] = tracker.flagOwnerChanges.ToString(locale);
+            values[33] = tracker.AverageTeam1Size.ToString(STAT_FLOAT_FORMAT, locale);
+            values[34] = tracker.AverageTeam2Size.ToString(STAT_FLOAT_FORMAT, locale);
+            values[35] = tracker.fobsPlacedT1.ToString(locale);
+            values[36] = tracker.fobsPlacedT2.ToString(locale);
+            values[37] = tracker.fobsDestroyedT1.ToString(locale);
+            values[38] = tracker.fobsDestroyedT2.ToString(locale);
+            values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(locale);
             ulong pl = info.Player;
             ConquestStats? s;
             values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
@@ -1414,12 +1414,12 @@ public class ConventionalLeaderboardUI : UnturnedUI
                     : stats.Player.Name;
                 values[++index] = i == 0 ?
                     TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : names.CharacterName;
-                values[++index] = stats.kills.ToString(Data.Locale);
-                values[++index] = stats.deaths.ToString(Data.Locale);
-                values[++index] = stats.XPGained.ToString(Data.Locale);
-                values[++index] = stats.Credits.ToString(Data.Locale);
-                values[++index] = stats.KDR.ToString(Data.Locale);
-                values[++index] = stats.DamageDone.ToString(Data.Locale);
+                values[++index] = stats.kills.ToString(locale);
+                values[++index] = stats.deaths.ToString(locale);
+                values[++index] = stats.XPGained.ToString(locale);
+                values[++index] = stats.Credits.ToString(locale);
+                values[++index] = stats.KDR.ToString(locale);
+                values[++index] = stats.DamageDone.ToString(locale);
             }
         }
 
@@ -1434,12 +1434,12 @@ public class ConventionalLeaderboardUI : UnturnedUI
                     : stats.Player.Name;
                 values[++index] = i == 0 ?
                     TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : names.CharacterName;
-                values[++index] = stats.kills.ToString(Data.Locale);
-                values[++index] = stats.deaths.ToString(Data.Locale);
-                values[++index] = stats.XPGained.ToString(Data.Locale);
-                values[++index] = stats.Credits.ToString(Data.Locale);
-                values[++index] = stats.KDR.ToString(Data.Locale);
-                values[++index] = stats.DamageDone.ToString(Data.Locale);
+                values[++index] = stats.kills.ToString(locale);
+                values[++index] = stats.deaths.ToString(locale);
+                values[++index] = stats.XPGained.ToString(locale);
+                values[++index] = stats.Credits.ToString(locale);
+                values[++index] = stats.KDR.ToString(locale);
+                values[++index] = stats.DamageDone.ToString(locale);
             }
         }
 
@@ -1459,10 +1459,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             SendToPlayer(c);
 
             Title.SetText(c, values[0]);
-            if (Data.Gamemode is not null)
-                Gamemode.SetText(c, Data.Gamemode.DisplayName);
-            else
-                Gamemode.SetText(c, string.Empty);
+            Gamemode.SetText(c, Data.Gamemode is not null ? Data.Gamemode.DisplayName : string.Empty);
 
             NextGameStartLabel.SetText(c, values[1]);
             NextGameSeconds.SetText(c, values[2]);
@@ -1498,18 +1495,18 @@ public class ConventionalLeaderboardUI : UnturnedUI
             if (stats is not null)
             {
                 PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, tracker is not null ? tracker.GetPresence(stats) : 0f));
-                PersonalStats0.SetText(c, stats.Kills.ToString(Data.Locale));
-                PersonalStats1.SetText(c, stats.Deaths.ToString(Data.Locale));
-                PersonalStats2.SetText(c, stats.DamageDone.ToString(STAT_FLOAT_FORMAT, Data.Locale));
-                PersonalStats3.SetText(c, stats.KillsOnPoint.ToString(Data.Locale));
-                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, Data.Locale));
-                PersonalStats5.SetText(c, stats.XPGained.ToString(Data.Locale));
-                PersonalStats6.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, Data.Locale));
-                PersonalStats7.SetText(c, stats.Captures.ToString(Data.Locale));
-                PersonalStats8.SetText(c, TimeSpan.FromSeconds(stats.timeonpoint).ToString(STAT_TIME_FORMAT, Data.Locale));
-                PersonalStats9.SetText(c, stats.Teamkills.ToString(Data.Locale));
-                PersonalStats10.SetText(c, stats.FOBsDestroyed.ToString(Data.Locale));
-                PersonalStats11.SetText(c, stats.Credits.ToString(Data.Locale));
+                PersonalStats0.SetText(c, stats.Kills.ToString(locale));
+                PersonalStats1.SetText(c, stats.Deaths.ToString(locale));
+                PersonalStats2.SetText(c, stats.DamageDone.ToString(STAT_FLOAT_FORMAT, locale));
+                PersonalStats3.SetText(c, stats.KillsOnPoint.ToString(locale));
+                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, locale));
+                PersonalStats5.SetText(c, stats.XPGained.ToString(locale));
+                PersonalStats6.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, locale));
+                PersonalStats7.SetText(c, stats.Captures.ToString(locale));
+                PersonalStats8.SetText(c, TimeSpan.FromSeconds(stats.timeonpoint).ToString(STAT_TIME_FORMAT, locale));
+                PersonalStats9.SetText(c, stats.Teamkills.ToString(locale));
+                PersonalStats10.SetText(c, stats.FOBsDestroyed.ToString(locale));
+                PersonalStats11.SetText(c, stats.Credits.ToString(locale));
             }
             else
             {
@@ -1652,7 +1649,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public void UpdateTime(LanguageSet set, int secondsLeft)
     {
         int time = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralLeaderboardTime);
-        string l1 = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss");
+        string l1 = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss", Localization.GetLocale(set.Language));
         string l2 = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[CTFUI.FromMax(Mathf.RoundToInt(time - secondsLeft), time)], 1);
         while (set.MoveNext())
         {

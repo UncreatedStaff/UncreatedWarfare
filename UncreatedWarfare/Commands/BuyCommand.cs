@@ -26,23 +26,21 @@ public class BuyCommand : AsyncCommand
 
         if (ctx.MatchParameter(0, "help"))
             throw ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
-        if (!RequestSignsOld.Loaded)
-            throw ctx.SendGamemodeError();
         ctx.AssertGamemode(out IKitRequests gm);
         KitManager manager = gm.KitManager;
         if ((Data.Gamemode.State != State.Active && Data.Gamemode.State != State.Staging) || ctx.Caller is null)
             throw ctx.SendUnknownError();
         if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
         {
-            if (!RequestSignsOld.SignExists(sign, out RequestSign requestsign))
-                throw ctx.Reply(T.RequestKitNotRegistered);
-            if (requestsign.KitName.StartsWith(Signs.LoadoutPrefix))
+            if (Signs.GetKitFromSign(drop, out int ld) is { Item: { } } sign2)
+            {
+                await manager.BuyKit(ctx, sign2, drop.model.position, token).ConfigureAwait(false);
+                return;
+            }
+            if (ld > -1)
                 throw ctx.Reply(T.RequestNotBuyable);
-            SqlItem<Kit>? proxy = await manager.FindKit(requestsign.KitName, token).ConfigureAwait(false);
-            if (proxy?.Item == null)
-                throw ctx.Reply(T.KitNotFound, requestsign.KitName);
-            await manager.BuyKit(ctx, proxy, drop.model.position, token).ConfigureAwait(false);
+            throw ctx.Reply(T.RequestKitNotRegistered);
         }
-        else throw ctx.Reply(T.RequestNoTarget);
+        throw ctx.Reply(T.RequestNoTarget);
     }
 }

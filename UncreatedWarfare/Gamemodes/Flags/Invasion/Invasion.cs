@@ -76,9 +76,9 @@ public class Invasion :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (_allFlags == null || _allFlags.Count == 0) return;
+        if (AllFlags == null || AllFlags.Count == 0) return;
         LoadFlagsIntoRotation();
-        if (_rotation.Count < 1)
+        if (FlagRotation.Count < 1)
         {
             L.LogError("No flags were put into rotation!!");
         }
@@ -90,7 +90,7 @@ public class Invasion :
         else
         {
             _objectiveT1Index = -1;
-            _objectiveT2Index = _rotation.Count - 1;
+            _objectiveT2Index = FlagRotation.Count - 1;
         }
         if (Config.InvasionDiscoveryForesight < 1)
         {
@@ -98,30 +98,30 @@ public class Invasion :
         }
         else
         {
-            for (int i = 0; i < _rotation.Count; i++)
+            for (int i = 0; i < FlagRotation.Count; i++)
             {
-                _rotation[i].Discover(_defenseTeam);
+                FlagRotation[i].Discover(_defenseTeam);
             }
             if (_attackTeam == 1)
             {
                 for (int i = 0; i < Config.InvasionDiscoveryForesight; i++)
                 {
-                    if (i >= _rotation.Count || i < 0) break;
-                    _rotation[i].Discover(1);
+                    if (i >= FlagRotation.Count || i < 0) break;
+                    FlagRotation[i].Discover(1);
                 }
             }
             else if (_attackTeam == 2)
             {
-                for (int i = _rotation.Count - 1; i > _rotation.Count - 1 - Config.InvasionDiscoveryForesight; i--)
+                for (int i = FlagRotation.Count - 1; i > FlagRotation.Count - 1 - Config.InvasionDiscoveryForesight; i--)
                 {
-                    if (i >= _rotation.Count || i < 0) break;
-                    _rotation[i].Discover(2);
+                    if (i >= FlagRotation.Count || i < 0) break;
+                    FlagRotation[i].Discover(2);
                 }
             }
         }
-        for (int i = 0; i < _rotation.Count; i++)
+        for (int i = 0; i < FlagRotation.Count; i++)
         {
-            InitFlag(_rotation[i]); //subscribe to abstract events.
+            InitFlag(FlagRotation[i]); //subscribe to abstract events.
         }
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
@@ -268,15 +268,15 @@ public class Invasion :
         CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
         UpdateFlag(flag);
     }
-    protected override void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)
+    protected override void FlagOwnerChanged(ulong oldOwner, ulong newOwner, Flag flag)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (NewOwner == 1)
+        if (newOwner == 1)
         {
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0) + (_attackTeam == 1 ? " ATTACK" : " DEFENSE"));
-            if (_attackTeam == 1 && _objectiveT1Index >= _rotation.Count - 1) // if t1 just capped the last flag
+            if (_attackTeam == 1 && _objectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
             {
                 DeclareWin(1);
                 _objectiveT1Index = 0;
@@ -285,8 +285,8 @@ public class Invasion :
             else if (_attackTeam == 1)
             {
                 _objectiveT1Index = flag.index + 1;
-                InvokeOnObjectiveChanged(flag, _rotation[ObjectiveT1Index], NewOwner, flag.index, ObjectiveT1Index);
-                InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
+                InvokeOnObjectiveChanged(flag, FlagRotation[ObjectiveT1Index], newOwner, flag.index, ObjectiveT1Index);
+                InvokeOnFlagCaptured(flag, newOwner, oldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                 {
                     if (flag.PlayersOnFlagTeam1[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
@@ -295,23 +295,23 @@ public class Invasion :
             }
             else if (DefendingTeam == 1)
             {
-                InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
+                InvokeOnFlagCaptured(flag, newOwner, oldOwner);
             }
         }
-        else if (NewOwner == 2)
+        else if (newOwner == 2)
         {
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0) + (_attackTeam == 2 ? " ATTACK" : " DEFENSE"));
             if (_attackTeam == 2 && ObjectiveT2Index < 1) // if t2 just capped the last flag
             {
                 DeclareWin(2);
-                _objectiveT2Index = _rotation.Count - 1;
+                _objectiveT2Index = FlagRotation.Count - 1;
                 return;
             }
             else if (_attackTeam == 2)
             {
                 _objectiveT2Index = flag.index - 1;
-                InvokeOnObjectiveChanged(flag, _rotation[ObjectiveT2Index], NewOwner, flag.index, ObjectiveT2Index);
-                InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
+                InvokeOnObjectiveChanged(flag, FlagRotation[ObjectiveT2Index], newOwner, flag.index, ObjectiveT2Index);
+                InvokeOnFlagCaptured(flag, newOwner, oldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                 {
                     if (flag.PlayersOnFlagTeam2[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
@@ -320,42 +320,42 @@ public class Invasion :
             }
             else if (DefendingTeam == 2)
             {
-                InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
+                InvokeOnFlagCaptured(flag, newOwner, oldOwner);
             }
         }
         else
         {
-            if (OldOwner == DefendingTeam)
+            if (oldOwner == DefendingTeam)
             {
-                if (OldOwner == 1)
+                if (oldOwner == 1)
                 {
                     InvokeOnFlagNeutralized(flag, 2, 1);
                 }
-                else if (OldOwner == 2)
+                else if (oldOwner == 2)
                 {
                     InvokeOnFlagNeutralized(flag, 1, 2);
                 }
             }
         }
         UpdateFlag(flag);
-        if (NewOwner == 0)
+        if (newOwner == 0)
         {
             Chat.Broadcast(LanguageSet.OnTeam(1), T.FlagNeutralized, flag);
             Chat.Broadcast(LanguageSet.OnTeam(2), T.FlagNeutralized, flag);
         }
         else
         {
-            FactionInfo info = TeamManager.GetFaction(NewOwner);
+            FactionInfo info = TeamManager.GetFaction(newOwner);
             Chat.Broadcast(LanguageSet.OnTeam(1), T.TeamCaptured, info, flag);
             Chat.Broadcast(LanguageSet.OnTeam(2), T.TeamCaptured, info, flag);
         }
     }
-    protected override void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag)
+    protected override void FlagPointsChanged(float newPts, float oldPts, Flag flag)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (NewPoints == 0)
+        if (newPts == 0)
             flag.SetOwner(0);
         UpdateFlag(flag);
     }
@@ -375,10 +375,10 @@ public class Invasion :
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         CTFUI.ClearFlagList(e.Player);
-        if (_onFlag.TryGetValue(e.Player.Steam64, out int id))
+        if (OnFlagDict.TryGetValue(e.Player.Steam64, out int id))
         {
-            CaptureUIParameters p = InvasionUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
-                                                                          ?? _rotation[0], e.Player.Player.movement.getVehicle() != null, AttackingTeam);
+            CaptureUIParameters p = InvasionUI.RefreshStaticUI(e.NewTeam, FlagRotation.FirstOrDefault(x => x.ID == id)
+                                                                          ?? FlagRotation[0], e.Player.Player.movement.getVehicle() != null, AttackingTeam);
             CTFUI.CaptureUI.Send(e.Player, in p);
         }
 

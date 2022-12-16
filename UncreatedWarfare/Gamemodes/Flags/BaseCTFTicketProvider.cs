@@ -7,11 +7,11 @@ public abstract class BaseCTFTicketProvider : BaseTicketProvider
     public override void GetDisplayInfo(ulong team, out string message, out string tickets, out string bleed)
     {
         int intlBld = GetTeamBleed(team);
-        tickets = (team switch { 1 => Manager.Team1Tickets, 2 => Manager.Team2Tickets, _ => 0 }).ToString(Data.Locale);
+        tickets = (team switch { 1 => Manager.Team1Tickets, 2 => Manager.Team2Tickets, _ => 0 }).ToString(Data.LocalLocale);
         if (intlBld < 0)
         {
             message = $"{intlBld} per minute".Colorize("eb9898");
-            bleed = intlBld.ToString(Data.Locale);
+            bleed = intlBld.ToString(Data.LocalLocale);
         }
         else
             bleed = message = string.Empty;
@@ -27,13 +27,13 @@ public abstract class BaseCTFTicketProvider : BaseTicketProvider
         {
             if (Data.Gamemode.EveryMinute)
             {
-                int t1b = GetTeamBleed(1);
-                int t2b = GetTeamBleed(2);
+                int t1B = GetTeamBleed(1);
+                int t2B = GetTeamBleed(2);
 
-                if (t1b < 0)
-                    Manager.Team1Tickets += t1b;
-                if (t2b < 0)
-                    Manager.Team2Tickets += t2b;
+                if (t1B < 0)
+                    Manager.Team1Tickets += t1B;
+                if (t2B < 0)
+                    Manager.Team2Tickets += t2B;
             }
         }
     }

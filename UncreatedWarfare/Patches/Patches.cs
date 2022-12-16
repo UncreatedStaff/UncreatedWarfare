@@ -13,7 +13,10 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Squads;
 using UnityEngine;
+
 // ReSharper disable InconsistentNaming
+// ReSharper disable UnusedMember.Local
+// ReSharper disable UnusedParameter.Local
 
 namespace Uncreated.Warfare.Harmony;
 

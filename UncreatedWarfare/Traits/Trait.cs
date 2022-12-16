@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -18,11 +19,11 @@ using UnityEngine;
 namespace Uncreated.Warfare.Traits;
 public abstract class Trait : MonoBehaviour, ITranslationArgument
 {
-    protected static readonly char[] dataSplitChars = new char[] { ',' };
+    protected static readonly char[] DataSplitChars = { ',' };
     private TraitData _data;
     private UCPlayer _targetPlayer;
-    private bool _inited = false;
-    protected Coroutine? _coroutine;
+    private bool _inited;
+    protected Coroutine? Coroutine;
     public float ActiveTime { get; private set; }
     public float StartTime { get; private set; }
 
@@ -34,7 +35,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
     public UCPlayer TargetPlayer => _targetPlayer;
     public bool Inited => _inited;
     public bool IsAwaitingStagingPhase { get; private set; }
-    public bool _hasStarted = false;
+    public bool HasStarted = false;
     public virtual void Init(TraitData data, UCPlayer target)
     {
         _data = data;
@@ -42,6 +43,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         _inited = true;
     }
 
+    [UsedImplicitly]
     [SuppressMessage(Warfare.Data.SUPPRESS_CATEGORY, Warfare.Data.SUPPRESS_ID)]
     private void Start()
     {
@@ -54,7 +56,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
             IsAwaitingStagingPhase = true;
             TargetPlayer.SendChat(T.TraitAwaitingStagingPhase, Data);
             StartTime = Time.realtimeSinceStartup + Warfare.Data.Gamemode.StagingSeconds;
-            TraitSigns.SendAllTraitSigns(TargetPlayer, Data);
+            Signs.UpdateTraitSigns(TargetPlayer, Data);
         }
         else
         {
@@ -74,7 +76,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         if (Data.LastsUntilDeath)
             TargetPlayer.SendChat(T.RequestTraitGivenUntilDeath, Data);
         else if (Data.EffectDuration > 0)
-            TargetPlayer.SendChat(T.RequestTraitGivenTimer, Data, Localization.GetTimeFromSeconds(Mathf.CeilToInt(Data.EffectDuration), TargetPlayer));
+            TargetPlayer.SendChat(T.RequestTraitGivenTimer, Data, Mathf.CeilToInt(Data.EffectDuration).GetTimeFromSeconds(TargetPlayer));
         else
             TargetPlayer.SendChat(T.RequestTraitGiven, Data);
         OnActivate();
@@ -83,10 +85,10 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         {
             EventDispatcher.PlayerDied += OnPlayerDied;
             if (Data.TickSpeed > 0f)
-                _coroutine = StartCoroutine(EffectCoroutine());
+                Coroutine = StartCoroutine(EffectCoroutine());
         }
         else if (Data.EffectDuration > 0f)
-            _coroutine = StartCoroutine(EffectCoroutine());
+            Coroutine = StartCoroutine(EffectCoroutine());
         else
             Destroy(this);
     }
@@ -98,15 +100,16 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
 
         EventDispatcher.PlayerDied -= OnPlayerDied;
         ActiveTime = Time.realtimeSinceStartup - StartTime;
-        if (_coroutine != null)
+        if (Coroutine != null)
         {
-            StopCoroutine(_coroutine);
-            _coroutine = null;
+            StopCoroutine(Coroutine);
+            Coroutine = null;
         }
         TargetPlayer.SendChat(T.TraitExpiredDeath, Data);
         Destroy(this);
     }
 
+    [UsedImplicitly]
     [SuppressMessage(Warfare.Data.SUPPRESS_CATEGORY, Warfare.Data.SUPPRESS_ID)]
     private void OnDestroy()
     {
@@ -115,12 +118,12 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
 
         TraitManager.DeactivateTrait(this);
         OnDeactivate();
-        TraitSigns.SendAllTraitSigns(TargetPlayer, Data);
+        Signs.UpdateTraitSigns(TargetPlayer, Data);
     }
     protected virtual void OnActivate()
     {
         GiveItems();
-        TraitSigns.SendAllTraitSigns(TargetPlayer, Data);
+        Signs.UpdateTraitSigns(TargetPlayer, Data);
     }
     protected virtual void OnDeactivate() { }
     /// <summary>Only called if <see cref="TraitData.TickSpeed"/> is > 0.</summary>
@@ -194,7 +197,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         yield return null;
         if (!Data.LastsUntilDeath)
             TargetPlayer.SendChat(T.TraitExpiredTime, Data);
-        _coroutine = null;
+        Coroutine = null;
         Destroy(this);
     }
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => Data is null
@@ -322,39 +325,39 @@ public class TraitData : ITranslationArgument
 
     [FormatDisplay(typeof(Trait), "Name")]
     [FormatDisplay("Name")]
-    public const string NAME = "n";
+    public const string FormatName = "n";
     [FormatDisplay(typeof(Trait), "Type Name")]
     [FormatDisplay("Type Name")]
-    public const string TYPE_NAME = "t";
+    public const string FormatTypeName = "t";
     [FormatDisplay(typeof(Trait), "Colored Type Name")]
     [FormatDisplay("Colored Type Name")]
-    public const string COLOR_TYPE_NAME = "ct";
+    public const string FormatColorTypeName = "ct";
     [FormatDisplay(typeof(Trait), "Description")]
     [FormatDisplay("Description")]
-    public const string DESCRIPTION = "d";
+    public const string FormatDescription = "d";
     [FormatDisplay(typeof(Trait), "Colored Name")]
     [FormatDisplay("Colored Name")]
-    public const string COLOR_NAME = "cn";
+    public const string FormatColorName = "cn";
     [FormatDisplay(typeof(Trait), "Colored Description")]
     [FormatDisplay("Colored Description")]
-    public const string COLOR_DESCRIPTION = "cd";
+    public const string FormatColorDescription = "cd";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        if (format is not null && !format.Equals(NAME, StringComparison.Ordinal))
+        if (format is not null && !format.Equals(FormatName, StringComparison.Ordinal))
         {
-            if (format.Equals(TYPE_NAME, StringComparison.Ordinal))
+            if (format.Equals(FormatTypeName, StringComparison.Ordinal))
                 return TypeName;
-            if (format.Equals(DESCRIPTION, StringComparison.Ordinal))
+            if (format.Equals(FormatDescription, StringComparison.Ordinal))
                 return DescriptionTranslations != null
                     ? DescriptionTranslations.Translate(language).Replace('\n', ' ')
                     : Translation.Null(flags & TranslationFlags.NoRichText);
-            if (format.Equals(COLOR_TYPE_NAME, StringComparison.Ordinal))
+            if (format.Equals(FormatColorTypeName, StringComparison.Ordinal))
                 return Localization.Colorize(TeamManager.GetTeamHexColor(Team), TypeName, flags);
-            if (format.Equals(COLOR_NAME, StringComparison.Ordinal))
+            if (format.Equals(FormatColorName, StringComparison.Ordinal))
                 return Localization.Colorize(TeamManager.GetTeamHexColor(Team), NameTranslations != null
                     ? NameTranslations.Translate(language).Replace('\n', ' ')
                     : TypeName, flags);
-            if (format.Equals(COLOR_DESCRIPTION, StringComparison.Ordinal))
+            if (format.Equals(FormatColorDescription, StringComparison.Ordinal))
                 return Localization.Colorize(TeamManager.GetTeamHexColor(Team), DescriptionTranslations != null
                     ? DescriptionTranslations.Translate(language).Replace('\n', ' ')
                     : Translation.Null(flags & TranslationFlags.NoRichText), flags);

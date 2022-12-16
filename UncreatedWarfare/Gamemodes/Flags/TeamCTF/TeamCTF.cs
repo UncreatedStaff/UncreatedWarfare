@@ -55,10 +55,10 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
     public override void OnGroupChanged(GroupChanged e)
     {
         CTFUI.ClearFlagList(e.Player);
-        if (_onFlag.TryGetValue(e.Player.Steam64, out int id))
+        if (OnFlagDict.TryGetValue(e.Player.Steam64, out int id))
         {
-            CaptureUIParameters p = CTFUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
-                                                                          ?? _rotation[0], e.Player.Player.movement.getVehicle() != null);
+            CaptureUIParameters p = CTFUI.RefreshStaticUI(e.NewTeam, FlagRotation.FirstOrDefault(x => x.ID == id)
+                                                                          ?? FlagRotation[0], e.Player.Player.movement.getVehicle() != null);
             CTFUI.CaptureUI.Send(e.Player, in p);
         }
         CTFUI.SendFlagList(e.Player);

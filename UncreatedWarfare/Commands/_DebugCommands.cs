@@ -13,7 +13,6 @@ using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -263,8 +262,8 @@ public class DebugCommand : AsyncCommand
             zones.Clear();
             ReloadCommand.ReloadFlags();
             fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
-            ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, true, true, false, false, true, Path.Combine(directory, "zonearea_" + i.ToString(Data.Locale)));
-            L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+            ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, true, true, false, false, true, Path.Combine(directory, "zonearea_" + i.ToString(Data.AdminLocale)));
+            L.Log("Done with " + (i + 1).ToString(Data.LocalLocale) + '/' + times.ToString(Data.LocalLocale));
         }
     }
     private void savemanygraphs(CommandInteraction ctx)
@@ -282,8 +281,8 @@ public class DebugCommand : AsyncCommand
         for (int i = 0; i < times; i++)
         {
             ObjectivePathing.TryPath(rot);
-            ZoneDrawing.DrawZoneMap(fg.LoadedFlags, rot, Path.Combine(directory, "zonegraph_" + i.ToString(Data.Locale)));
-            L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+            ZoneDrawing.DrawZoneMap(fg.LoadedFlags, rot, Path.Combine(directory, "zonegraph_" + i.ToString(Data.AdminLocale)));
+            L.Log("Done with " + (i + 1).ToString(Data.LocalLocale) + '/' + times.ToString(Data.LocalLocale));
             rot.Clear();
         }
     }
@@ -296,8 +295,8 @@ public class DebugCommand : AsyncCommand
         Vector3 pos = ctx.Caller.Position;
         if (pos == Vector3.zero) return;
         Flag? flag = Data.Is(out IFlagRotation fg) ? fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos)) : null;
-        string txt = $"Position: <#ff9999>({pos.x.ToString("0.##", Data.Locale)}, {pos.y.ToString("0.##", Data.Locale)}, {pos.z.ToString("0.##", Data.Locale)}) @ {new GridLocation(ctx.Caller.Position)}</color>. " +
-                     $"Yaw: <#ff9999>{ctx.Caller.Player.transform.eulerAngles.y.ToString("0.##", Data.Locale)}°</color>.";
+        string txt = $"Position: <#ff9999>({pos.x.ToString("0.##", Data.LocalLocale)}, {pos.y.ToString("0.##", Data.LocalLocale)}, {pos.z.ToString("0.##", Data.LocalLocale)}) @ {new GridLocation(ctx.Caller.Position)}</color>. " +
+                     $"Yaw: <#ff9999>{ctx.Caller.Player.transform.eulerAngles.y.ToString("0.##", Data.LocalLocale)}°</color>.";
         if (flag is null)
             ctx.ReplyString(txt);
         else
@@ -310,7 +309,7 @@ public class DebugCommand : AsyncCommand
         ctx.AssertRanByPlayer();
 
         InteractableSign? sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(ctx.Caller.Player.look);
-        if (sign == null) ctx.ReplyString($"You're not looking at a sign");
+        if (sign == null) ctx.ReplyString("You're not looking at a sign");
         else
         {
             if (!ctx.IsConsole)
@@ -431,7 +430,6 @@ public class DebugCommand : AsyncCommand
             ctx.AssertPermissions(EAdminType.STAFF);
             player = ctx.Caller;
         }
-        bool shouldAllow = true;
         DamagePlayerParameters p = new DamagePlayerParameters(player.Player)
         {
             cause = EDeathCause.KILL,
@@ -443,7 +441,7 @@ public class DebugCommand : AsyncCommand
             killer = player == ctx.Caller ? Steamworks.CSteamID.Nil : player.CSteamID,
             times = 1f
         };
-        revive.ReviveManager.InjurePlayer(ref shouldAllow, ref p, player == ctx.Caller ? null : player.SteamPlayer);
+        revive.ReviveManager.InjurePlayer(in p, player == ctx.Caller ? null : player.SteamPlayer);
         ctx.ReplyString($"Injured {(player == ctx.Caller ? "you" : player.CharacterName)}.");
     }
     private void clearui(CommandInteraction ctx)
@@ -485,23 +483,25 @@ public class DebugCommand : AsyncCommand
             {
                 if (ctx.TryGet(2, out string value) && ctx.TryGet(1, out string property))
                 {
-                    ESetFieldResult result = PlayerManager.SetProperty(save, ref property, value);
+                    SetPropertyResult result = SettableUtil<PlayerSave>.SetProperty(save, property, value, out MemberInfo? info);
+                    if (info?.Name != null)
+                        property = info.Name;
                     switch (result)
                     {
-                        case ESetFieldResult.SUCCESS:
+                        case SetPropertyResult.Success:
                             PlayerNames names = onlinePlayer is not null ? onlinePlayer.Name :
                                 await F.GetPlayerOriginalNamesAsync(player, token).ThenToUpdate(token);
                             ctx.ReplyString($"Set {property} in {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}'s playersave to {value}.");
                             break;
-                        case ESetFieldResult.FIELD_NOT_FOUND:
-                            ctx.ReplyString($"Couldn't find a field by the name {property.ToProperCase()} in PlayerSave.");
+                        case SetPropertyResult.PropertyNotFound:
+                            ctx.ReplyString($"Couldn't find a field by the name {property} in PlayerSave.");
                             break;
-                        case ESetFieldResult.FIELD_PROTECTED:
+                        case SetPropertyResult.PropertyProtected:
                             ctx.ReplyString($"Unable to set {property}, it's missing the JsonSettable attribute.");
                             break;
-                        case ESetFieldResult.FIELD_NOT_SERIALIZABLE:
-                        case ESetFieldResult.INVALID_INPUT:
-                            ctx.ReplyString($"Couldn't parse {value} as a valid value for {property}.");
+                        case SetPropertyResult.TypeNotSettable:
+                        case SetPropertyResult.ParseFailure:
+                            ctx.ReplyString($"Couldn't parse {value} as a valid value for {property} (" + (info?.GetMemberType() is { } type ? type.Name : "String") + ").");
                             break;
                         default:
                             ctx.SendUnknownError();
@@ -534,7 +534,7 @@ public class DebugCommand : AsyncCommand
             {
                 if (Data.Is(out IStagingPhase gm) && gm.State == State.Staging)
                 {
-                    ctx.ReplyString($"Skipped staging phase.");
+                    ctx.ReplyString("Skipped staging phase.");
                     gm.SkipStagingPhase();
                 }
                 else
@@ -571,10 +571,7 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         Data.TrackStats = !Data.TrackStats;
-        if (Data.TrackStats)
-            ctx.ReplyString($"Re-enabled stat tracking.");
-        else
-            ctx.ReplyString("Disabled stat tracking.");
+        ctx.ReplyString(Data.TrackStats ? "Re-enabled stat tracking." : "Disabled stat tracking.");
     }
     private void destroyblocker(CommandInteraction ctx)
     {
@@ -596,10 +593,8 @@ public class DebugCommand : AsyncCommand
                 }
             }
         }
-        if (ct == 0)
-            ctx.ReplyString("Couldn't find any zone blockers.");
-        else
-            ctx.ReplyString($"Destroyed {ct} zone blocked{ct.S()}");
+
+        ctx.ReplyString(ct == 0 ? "Couldn't find any zone blockers." : $"Destroyed {ct} zone blocked{ct.S()}");
     }
     private void skipstaging(CommandInteraction ctx)
     {
@@ -614,7 +609,7 @@ public class DebugCommand : AsyncCommand
         }
         else
         {
-            ctx.ReplyString($"Staging phase is not active.");
+            ctx.ReplyString("Staging phase is not active.");
         }
     }
     private void resetlobby(CommandInteraction ctx)
@@ -664,20 +659,20 @@ public class DebugCommand : AsyncCommand
             BarricadeDrop? bd = BarricadeManager.FindBarricadeByRootTransform(t);
             if (bd != null)
             {
-                ctx.ReplyString($"Barricade {bd.asset.itemName}: #{bd.instanceID.ToString(Data.Locale)}");
+                ctx.ReplyString($"Barricade {bd.asset.itemName}: #{bd.instanceID.ToString(Data.LocalLocale)}");
                 return;
             }
             StructureDrop? dp = StructureManager.FindStructureByRootTransform(t);
             if (dp != null)
             {
-                ctx.ReplyString($"Structure {dp.asset.itemName}: #{dp.instanceID.ToString(Data.Locale)}");
+                ctx.ReplyString($"Structure {dp.asset.itemName}: #{dp.instanceID.ToString(Data.LocalLocale)}");
                 return;
             }
             for (int i = 0; i < VehicleManager.vehicles.Count; i++)
             {
                 if (VehicleManager.vehicles[i].transform == t)
                 {
-                    ctx.ReplyString($"Vehicle {VehicleManager.vehicles[i].asset.vehicleName}: #{VehicleManager.vehicles[i].instanceID.ToString(Data.Locale)}");
+                    ctx.ReplyString($"Vehicle {VehicleManager.vehicles[i].asset.vehicleName}: #{VehicleManager.vehicles[i].instanceID.ToString(Data.LocalLocale)}");
                     return;
                 }
             }
@@ -690,14 +685,14 @@ public class DebugCommand : AsyncCommand
                         LevelObject obj = LevelObjects.objects[b, b2][i];
                         if (obj.transform == t)
                         {
-                            ctx.ReplyString($"Vehicle {VehicleManager.vehicles[i].asset.vehicleName}: #{VehicleManager.vehicles[i].instanceID.ToString(Data.Locale)}");
+                            ctx.ReplyString($"Vehicle {VehicleManager.vehicles[i].asset.vehicleName}: #{VehicleManager.vehicles[i].instanceID.ToString(Data.LocalLocale)}");
                             return;
                         }
                     }
                 }
             }
         }
-        ctx.ReplyString($"You must be looking at a barricade, structure, vehicle, or object.");
+        ctx.ReplyString("You must be looking at a barricade, structure, vehicle, or object.");
     }
     private void fakereport(CommandInteraction ctx)
     {
@@ -804,7 +799,6 @@ public class DebugCommand : AsyncCommand
             }
         }
     }
-
     private void gettime(CommandInteraction ctx)
     {
         ctx.AssertArgs(1, "/test gettime <timestr>");
@@ -858,7 +852,7 @@ public class DebugCommand : AsyncCommand
         RaycastHit[] results = new RaycastHit[16];
         yield return new WaitForSeconds(5f);
         //Array.ForEach(veh.transform.gameObject.GetComponentsInChildren<Collider>(), x => UnityEngine.Object.Destroy(x));
-        while (veh != null)
+        while (veh.isActiveAndEnabled)
         {
             const float TIME = 0.1f;
             yield return new WaitForSeconds(TIME);
@@ -927,13 +921,11 @@ public class DebugCommand : AsyncCommand
         }
         else throw ctx.ReplyString("Debugger is not active.");
     }
-
     private void translationtest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
-        ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.ActiveKit?.Item);
+        ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.ActiveKit?.Item!);
     }
-
     private void quest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
@@ -942,7 +934,7 @@ public class DebugCommand : AsyncCommand
         {
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
-                ctx.Caller.Player.quests.sendAddQuest(asset.id);
+                ctx.Caller.Player.quests.ServerAddQuest(asset);
                 ctx.ReplyString("Added quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
             else ctx.ReplyString("Quest not found.");
@@ -951,7 +943,7 @@ public class DebugCommand : AsyncCommand
         {
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
-                ctx.Caller.Player.quests.sendTrackQuest(asset.id);
+                ctx.Caller.ServerTrackQuest(asset);
                 ctx.ReplyString("Tracked quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
             else ctx.ReplyString("Quest not found.");
@@ -960,14 +952,13 @@ public class DebugCommand : AsyncCommand
         {
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
-                ctx.Caller.Player.quests.sendRemoveQuest(asset.id);
+                ctx.Caller.Player.quests.ServerRemoveQuest(asset);
                 ctx.ReplyString("Removed quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
             else ctx.ReplyString("Quest not found.");
         }
         else ctx.ReplyString("Syntax: /test quest <add|track|remove> <id>");
     }
-
     private void flag(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
@@ -1009,7 +1000,6 @@ public class DebugCommand : AsyncCommand
         }
         ctx.ReplyString("Syntax: /test flag <set|get|remove> <flag> [value]");
     }
-
     private void findasset(CommandInteraction ctx)
     {
         if (ctx.TryGet(0, out Guid guid))
@@ -1025,7 +1015,6 @@ public class DebugCommand : AsyncCommand
             ctx.ReplyString("Please use a <GUID> or <uhort, type>");
         }
     }
-
     private void traits(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1052,7 +1041,6 @@ public class DebugCommand : AsyncCommand
               ", " + (ctx.Caller.ActiveBuffs[4]?.GetType().Name ?? "null") +
               ", " + (ctx.Caller.ActiveBuffs[5]?.GetType().Name ?? "null") + " ]");
     }
-
     private void sendui(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1075,7 +1063,6 @@ public class DebugCommand : AsyncCommand
             ctx.ReplyString("Syntax: /test sendui <id> [key]");
         }
     }
-
     private void advancedelays(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1083,35 +1070,32 @@ public class DebugCommand : AsyncCommand
         if (ctx.TryGet(0, out float seconds))
         {
             Data.Gamemode.AdvanceDelays(seconds);
-            ctx.ReplyString("Advanced delays by " + seconds.ToString("0.##", Data.Locale) + " seconds.");
+            ctx.ReplyString("Advanced delays by " + seconds.ToString("0.##", Data.LocalLocale) + " seconds.");
         }
         else
             ctx.SendCorrectUsage("/test advancedelays <seconds>.");
     }
-
     private void listcooldowns(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
         L.Log("Cooldowns for " + ctx.Caller.Name.PlayerName + ":");
         using IDisposable d = L.IndentLog(1);
-        foreach (Cooldown cooldown in CooldownManager.Singleton.cooldowns.Where(x => x.player.Steam64 == ctx.Caller.Steam64))
+        foreach (Cooldown cooldown in CooldownManager.Singleton.Cooldowns.Where(x => x.player.Steam64 == ctx.Caller.Steam64))
         {
             L.Log($"{cooldown.type}: {cooldown.Timeleft:hh\\:mm\\:ss}, {(cooldown.data is null || cooldown.data.Length == 0 ? "NO DATA" : string.Join(";", cooldown.data))}");
         }
     }
-
     private void giveuav(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
         bool isMarker = ctx.Caller.Player.quests.isMarkerPlaced;
         Vector3 pos = isMarker ? ctx.Caller.Player.quests.markerPosition : ctx.Caller.Player.transform.position;
-        pos = pos with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(pos, 0f) + UAV.GROUND_HEIGHT_OFFSET) };
+        pos = pos with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(pos, 0f) + UAV.GroundHeightOffset) };
         UAV.GiveUAV(ctx.Caller.GetTeam(), ctx.Caller, ctx.Caller, isMarker, pos);
         ctx.Defer();
     }
-
     private void requestuav(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1120,7 +1104,6 @@ public class DebugCommand : AsyncCommand
         UAV.RequestUAV(ctx.Caller);
         ctx.Defer();
     }
-
     private async Task squad(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1195,4 +1178,41 @@ public class DebugCommand : AsyncCommand
             Data.Gamemode.SkipStagingPhase();
         }
     }
+    private void watchdogtest(CommandInteraction ctx)
+    {
+        ctx.AssertRanByConsole();
+        ctx.ReplyString("Starting...");
+        UCWarfare.RunTask(async () =>
+        {
+            ctx.ReplyString("0 sec / 240 sec");
+            for (int i = 0; i < 24; ++i)
+            {
+                await Task.Delay(10000);
+                ctx.ReplyString(((i + 1) * 10).ToString(Data.AdminLocale) + " sec / 240 sec");
+            }
+        });
+    }
+#if DEBUG
+    private void migrateoldkits(CommandInteraction ctx)
+    {
+        ctx.AssertRanByConsole();
+
+        KitManager? manager = Data.Singletons.GetSingleton<KitManager>();
+        if (manager is not { IsLoaded: true })
+            throw ctx.SendGamemodeError();
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await manager.MigrateOldKits().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                L.LogError(ex);
+            }
+        });
+        ctx.Defer();
+    }
+#endif
 }

@@ -9,9 +9,12 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Harmony;
 
+// ReSharper disable InconsistentNaming
+// ReSharper disable UnusedMember.Local
+// ReSharper disable UnusedParameter.Local
+
 public static partial class Patches
 {
-    // ReSharper disable InconsistentNaming
     [HarmonyPatch]
     public class VehiclePatches
     {

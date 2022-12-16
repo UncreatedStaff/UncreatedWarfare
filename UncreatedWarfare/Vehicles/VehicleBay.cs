@@ -95,19 +95,10 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
-    private void StartDualLock()
-    {
-        Monitor.Enter(this);
-        Monitor.Enter(Items);
-    }
-    private void EndDualLock()
-    {
-        Monitor.Exit(this);
-        Monitor.Exit(Items);
-    }
     private void WhitelistItems()
     {
-        lock (Items)
+        WriteWait();
+        try
         {
             for (int i = 0; i < Count; i++)
             {
@@ -122,8 +113,12 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     }
                 }
             }
+            _hasWhitelisted = true;
         }
-        _hasWhitelisted = true;
+        finally
+        {
+            WriteRelease();
+        }
     }
     async Task ILevelStartListenerAsync.OnLevelReady()
     {
@@ -157,9 +152,9 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             Release();
         }
     }
-    async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player)
+    Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player)
     {
-        await SendQuests(player).ConfigureAwait(false);
+        return SendQuests(player);
     }
     private async Task SendQuests(UCPlayer player, CancellationToken token = default)
     {
@@ -168,39 +163,46 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         await WaitAsync(token).ConfigureAwait(false);
-        if (!UCWarfare.IsMainThread)
-            await UCWarfare.ToUpdate(token);
         try
         {
-            for (int i = 0; i < Items.Count; i++)
+            await UCWarfare.ToUpdate(token);
+            WriteWait();
+            try
             {
-                SqlItem<VehicleData> item = Items[i];
-                if (item.Item?.UnlockRequirements != null && item.Item.UnlockRequirements.Length > 0)
+                for (int i = 0; i < Items.Count; i++)
                 {
-                    VehicleData data = item.Item;
-                    for (int j = 0; j < data.UnlockRequirements.Length; j++)
+                    SqlItem<VehicleData> item = Items[i];
+                    if (item.Item?.UnlockRequirements != null && item.Item.UnlockRequirements.Length > 0)
                     {
-                        if (data.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets is { Length: > 0 } && !req.CanAccess(player))
+                        VehicleData data = item.Item;
+                        for (int j = 0; j < data.UnlockRequirements.Length; j++)
                         {
-                            if (Assets.find(req.QuestID) is QuestAsset quest)
+                            if (data.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets is { Length: > 0 } && !req.CanAccess(player))
                             {
-                                player.Player.quests.sendAddQuest(quest.id);
-                            }
-                            else
-                            {
-                                L.LogWarning("Unknown quest id " + req.QuestID + " in vehicle requirement for " + data.VehicleID.ToString("N"));
-                            }
-                            for (int r = 0; r < req.UnlockPresets.Length; r++)
-                            {
-                                BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
-                                if (tracker == null)
-                                    L.LogWarning("Failed to create tracker for vehicle " + data.VehicleID.ToString("N") + ", player " + player.Name.PlayerName);
+                                if (Assets.find(req.QuestID) is QuestAsset quest)
+                                {
+                                    player.Player.quests.ServerAddQuest(quest);
+                                }
                                 else
-                                    L.LogDebug("Created tracker for vehicle unlock quest: " + tracker.QuestData.QuestType + ".");
+                                {
+                                    L.LogWarning("Unknown quest id " + req.QuestID + " in vehicle requirement for " + data.VehicleID.ToString("N"));
+                                }
+                                for (int r = 0; r < req.UnlockPresets.Length; r++)
+                                {
+                                    BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
+                                    if (tracker == null)
+                                        L.LogWarning("Failed to create tracker for vehicle " + data.VehicleID.ToString("N") + ", player " + player.Name.PlayerName);
+                                    else
+                                        L.LogDebug("Created tracker for vehicle unlock quest: " + tracker.QuestData.QuestType + ".");
+                                }
                             }
                         }
                     }
                 }
+            }
+            finally
+            {
+                WriteRelease();
             }
         }
         finally
@@ -223,7 +225,6 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         };
         data.SaveMetaData(vehicle);
         ThreadUtil.assertIsGameThread();
-        StartDualLock();
         await AddOrUpdate(data, token).ConfigureAwait(false);
     }
     /// <remarks>Thread Safe</remarks>
@@ -247,7 +248,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     /// <remarks>Thread Safe</remarks>
     public async Task<VehicleData?> GetData(Guid guid, CancellationToken token = default)
     {
-        await WaitAsync(token).ConfigureAwait(false);
+        await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
             for (int i = 0; i < List.Count; ++i)
@@ -259,14 +260,15 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         }
         finally
         {
-            Release();
+            WriteRelease();
         }
 
         return null;
     }
     public VehicleData? GetDataSync(Guid guid)
     {
-        lock (Items)
+        WriteWait();
+        try
         {
             int map = MapScheduler.Current;
             for (int i = 0; i < Items.Count; i++)
@@ -281,13 +283,18 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
                     return item.Item;
             }
-        }
 
-        return null;
+            return null;
+        }
+        finally
+        {
+            WriteRelease();
+        }
     }
     public SqlItem<VehicleData>? GetDataProxySync(Guid guid)
     {
-        lock (Items)
+        WriteWait();
+        try
         {
             int map = MapScheduler.Current;
             for (int i = 0; i < Items.Count; i++)
@@ -302,36 +309,37 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
                     return item;
             }
-        }
 
-        return null;
+            return null;
+        }
+        finally
+        {
+            WriteRelease();
+        }
     }
     /// <remarks>Thread Safe</remarks>
     public async Task<SqlItem<VehicleData>?> GetDataProxy(Guid guid, CancellationToken token = default)
     {
-        await WaitAsync(token).ConfigureAwait(false);
-        int map = MapScheduler.Current;
+        await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
-            lock (Items)
+            int map = MapScheduler.Current;
+            for (int i = 0; i < List.Count; ++i)
             {
-                for (int i = 0; i < List.Count; ++i)
-                {
-                    SqlItem<VehicleData> item = List[i];
-                    if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
-                        return item;
-                }
-                for (int i = 0; i < List.Count; ++i)
-                {
-                    SqlItem<VehicleData> item = List[i];
-                    if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
-                        return item;
-                }
+                SqlItem<VehicleData> item = List[i];
+                if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
+                    return item;
+            }
+            for (int i = 0; i < List.Count; ++i)
+            {
+                SqlItem<VehicleData> item = List[i];
+                if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
+                    return item;
             }
         }
         finally
         {
-            Release();
+            WriteRelease();
         }
 
         return null;
@@ -340,28 +348,18 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     public async Task<(SetPropertyResult, MemberInfo?)> SetProperty(VehicleData data, string property, string value, CancellationToken token = default)
     {
         AssertLoadedIntl();
-        await WaitAsync(token).ConfigureAwait(false);
-        StartDualLock();
-        try
+        SqlItem<VehicleData>? item = FindProxyNoLock(data);
+        if (item is null || item.Item == null)
         {
-            SqlItem<VehicleData>? item = FindProxyNoLock(data);
+            if (data.PrimaryKey.IsValid)
+                item = await DownloadNoLock(data.PrimaryKey, token).ConfigureAwait(false);
             if (item is null || item.Item == null)
-            {
-                if (data.PrimaryKey.IsValid)
-                    item = await DownloadNoLock(data.PrimaryKey, token).ConfigureAwait(false);
-                if (item is null || item.Item == null)
-                    return (SetPropertyResult.ObjectNotFound, null);
-            }
+                return (SetPropertyResult.ObjectNotFound, null);
+        }
 
-            if (!UCWarfare.IsMainThread)
-                await UCWarfare.ToUpdate();
-            return await SetPropertyNoLock(item, property, value, true, token).ConfigureAwait(false);
-        }
-        finally
-        {
-            EndDualLock();
-            Release();
-        }
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate();
+        return await SetPropertyNoLock(item, property, value, true, token).ConfigureAwait(false);
     }
     /// <remarks>Thread Safe</remarks>
     public async Task<InteractableVehicle?> SpawnLockedVehicle(Guid vehicleID, Vector3 position, Quaternion rotation, ulong owner = 0ul, ulong groupOwner = 0ul, CancellationToken token = default)
@@ -382,6 +380,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (!UCWarfare.IsMainThread)
                 await UCWarfare.ToUpdate();
+            VehicleData data = proxy.Item;
 
             if (Assets.find(vehicleID) is not VehicleAsset asset)
             {
@@ -407,7 +406,6 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 return null;
             }
 
-            VehicleData data = proxy.Item;
             if (data.Metadata != null)
             {
                 if (data.Metadata.TrunkItems is { Count: > 0 })
@@ -609,6 +607,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        ThreadUtil.assertIsGameThread();
         vehicle.forceRemoveAllPlayers();
         BarricadeRegion reg = BarricadeManager.getRegionFromVehicle(vehicle);
         if (reg != null)
@@ -626,6 +625,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     public static void DeleteAllVehiclesFromWorld()
     {
+        ThreadUtil.assertIsGameThread();
         for (int i = 0; i < VehicleManager.vehicles.Count; i++)
         {
             DeleteVehicle(VehicleManager.vehicles[i]);
@@ -633,6 +633,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     public static bool IsVehicleFull(InteractableVehicle vehicle, bool excludeDriver = false)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -652,6 +653,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     public static bool TryGetFirstNonCrewSeat(InteractableVehicle vehicle, VehicleData data, out byte seat)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -669,6 +671,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     public static bool TryGetFirstNonDriverSeat(InteractableVehicle vehicle, out byte seat)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -682,6 +685,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     public static bool IsOwnerInVehicle(InteractableVehicle vehicle, UCPlayer owner)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -698,6 +702,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     public static int CountCrewmen(InteractableVehicle vehicle, VehicleData data)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -715,10 +720,12 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     private static void OnVehicleSpawned(VehicleSpawned e)
     {
+        ThreadUtil.assertIsGameThread();
         e.Vehicle.gameObject.AddComponent<VehicleComponent>().Initialize(e.Vehicle);
     }
     private static void OnVehicleExit(ExitVehicle e)
     {
+        ThreadUtil.assertIsGameThread();
         if (e.OldPassengerIndex == 0 && e.Vehicle.transform.TryGetComponent(out VehicleComponent comp))
             comp.LastDriverTime = Time.realtimeSinceStartup;
         if (KitManager.ShouldDequipOnExitVehicle(e.Player.KitClass))
@@ -726,6 +733,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     private static void OnVehicleExitRequested(ExitVehicleRequested e)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -740,6 +748,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     private void OnVehicleEnterRequested(EnterVehicleRequested e)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -770,6 +779,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     private void OnVehicleSwapSeatRequested(VehicleSwapSeatRequested e)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif

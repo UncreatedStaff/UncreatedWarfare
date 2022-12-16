@@ -227,7 +227,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 if (ucmedic != null)
                 {
                     if (CooldownManager.Config.ReviveXPCooldown <= 0 || (uctarget != null &&
-                      !(CooldownManager.HasCooldown(ucmedic, ECooldownType.REVIVE, out Cooldown cooldown) &&
+                      !(CooldownManager.HasCooldown(ucmedic, CooldownType.Revive, out Cooldown cooldown) &&
                         cooldown.data.Length > 0 &&
                         cooldown.data[0] is ulong id &&
                         id == uctarget.Steam64)))
@@ -236,7 +236,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                         if (uctarget != null)
                         {
                             QuestManager.OnRevive(ucmedic, uctarget);
-                            CooldownManager.StartCooldown(ucmedic, ECooldownType.REVIVE, CooldownManager.Config.ReviveXPCooldown, uctarget.Steam64);
+                            CooldownManager.StartCooldown(ucmedic, CooldownType.Revive, CooldownManager.Config.ReviveXPCooldown, uctarget.Steam64);
                         }
                     }
                     else

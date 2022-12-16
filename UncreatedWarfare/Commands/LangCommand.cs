@@ -51,11 +51,11 @@ public class LangCommand : Command
             {
                 LanguageAliasSet oldSet = Localization.FindLanguageSet(oldLang) ?? new LanguageAliasSet(oldLang, oldLang, Array.Empty<string>());
 
-                if (oldSet.key.Equals(L.DEFAULT, StringComparison.Ordinal))
+                if (oldSet.key.Equals(L.Default, StringComparison.Ordinal))
                     throw ctx.Reply(T.LangAlreadySet, set);
 
-                JSONMethods.SetLanguage(ctx.CallerID, L.DEFAULT);
-                ctx.LogAction(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + L.DEFAULT);
+                JSONMethods.SetLanguage(ctx.CallerID, L.Default);
+                ctx.LogAction(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + L.Default);
                 OnPlayerChangedLanguage?.Invoke(ctx.Caller, set, oldSet);
                 ctx.Reply(T.ResetLanguage, set);
             }

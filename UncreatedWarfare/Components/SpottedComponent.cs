@@ -30,7 +30,6 @@ public class SpottedComponent : MonoBehaviour
     private float _frequency;
     private float _defaultTimer;
     private Coroutine? _coroutine;
-    public static readonly Guid LaserDesignatorGUID = new Guid("3879d9014aca4a17b3ed749cf7a9283e");
     public float toBeUnspottedNonUAV = 0f;
     public float endTime = 0f;
     public bool UAVMode = false;
@@ -200,7 +199,7 @@ public class SpottedComponent : MonoBehaviour
             if (transform.TryGetComponent(out InteractableVehicle vehicle) && vehicle.lockedGroup.m_SteamID != spotter.GetTeam())
             {
                 if (vehicle.transform.TryGetComponent(out VehicleComponent vc) && vc.Data?.Item != null)
-                    spotted.TryAnnounce(spotter, Localization.TranslateEnum(vc.Data.Item.Type, L.DEFAULT));
+                    spotted.TryAnnounce(spotter, Localization.TranslateEnum(vc.Data.Item.Type, L.Default));
                 else
                     spotted.TryAnnounce(spotter, vehicle.asset.vehicleName);
 
@@ -209,14 +208,14 @@ public class SpottedComponent : MonoBehaviour
             }
             else if (transform.TryGetComponent(out Player player) && player.GetTeam() != spotter.GetTeam() && !Ghost.IsHidden(UCPlayer.FromPlayer(player)!))
             {
-                spotted.TryAnnounce(spotter, T.SpottedTargetPlayer.Translate(L.DEFAULT));
+                spotted.TryAnnounce(spotter, T.SpottedTargetPlayer.Translate(L.Default));
                 L.LogDebug("Spotting player " + player.name);
 
                 spotted.Activate(spotter, isUav);
             }
             else if (transform.TryGetComponent(out Cache cache) && cache.Team != spotter.GetTeam())
             {
-                spotted.TryAnnounce(spotter, T.SpottedTargetCache.Translate(L.DEFAULT));
+                spotted.TryAnnounce(spotter, T.SpottedTargetCache.Translate(L.Default));
                 L.LogDebug("Spotting cache " + cache.Name);
 
                 spotted.Activate(spotter, isUav);
@@ -226,7 +225,7 @@ public class SpottedComponent : MonoBehaviour
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(transform);
                 if (drop != null && drop.GetServersideData().group != spotter.GetTeam())
                 {
-                    spotted.TryAnnounce(spotter, T.SpottedTargetFOB.Translate(L.DEFAULT));
+                    spotted.TryAnnounce(spotter, T.SpottedTargetFOB.Translate(L.Default));
                     L.LogDebug("Spotting barricade " + drop.asset.itemName);
                     spotted.Activate(spotter, isUav);
                 }

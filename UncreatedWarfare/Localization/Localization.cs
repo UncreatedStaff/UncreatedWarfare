@@ -29,7 +29,7 @@ public static class Localization
     public const string TMPRO_RICH_TEXT_COLOR_BASE = "<#";
     public const string RICH_TEXT_COLOR_CLOSE = "</color>";
     private static LanguageAliasSet? _defaultSet;
-    public static LanguageAliasSet DefaultSet => _defaultSet ??= FindLanguageSet(L.DEFAULT, true, true) ?? throw new Exception("Unknown default language alias set (" + L.DEFAULT + ").");
+    public static LanguageAliasSet DefaultSet => _defaultSet ??= FindLanguageSet(L.Default, true, true) ?? throw new Exception("Unknown default language alias set (" + L.Default + ").");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string Colorize(string hex, string inner, TranslationFlags flags)
@@ -43,91 +43,91 @@ public static class Localization
     public static string Translate(Translation translation, ulong player)
     {
         if (player == 0 || !Data.Languages.TryGetValue(player, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang);
     }
     public static string Translate(Translation translation, ulong player, out Color color)
     {
         if (player == 0 || !Data.Languages.TryGetValue(player, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang, out color);
     }
     public static string Translate<T>(Translation<T> translation, UCPlayer? player, T arg)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang, arg, player, player is null ? 0 : player.GetTeam());
     }
     public static string Translate<T1, T2>(Translation<T1, T2> translation, UCPlayer? player, T1 arg1, T2 arg2)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang, arg1, arg2, player, player is null ? 0 : player.GetTeam());
     }
     public static string Translate<T1, T2, T3>(Translation<T1, T2, T3> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang, arg1, arg2, arg3, player, player is null ? 0 : player.GetTeam());
     }
     public static string Translate<T1, T2, T3, T4>(Translation<T1, T2, T3, T4> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang, arg1, arg2, arg3, arg4, player, player is null ? 0 : player.GetTeam());
     }
     public static string Translate<T1, T2, T3, T4, T5>(Translation<T1, T2, T3, T4, T5> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, player, player is null ? 0 : player.GetTeam());
     }
     public static string Translate<T1, T2, T3, T4, T5, T6>(Translation<T1, T2, T3, T4, T5, T6> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, arg6, player, player is null ? 0 : player.GetTeam());
     }
     public static string Translate<T1, T2, T3, T4, T5, T6, T7>(Translation<T1, T2, T3, T4, T5, T6, T7> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, player is null ? 0 : player.GetTeam());
     }
     public static string Translate<T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, player is null ? 0 : player.GetTeam());
     }
     public static string Translate<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, player is null ? 0 : player.GetTeam());
     }
     public static string Translate<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player, player is null ? 0 : player.GetTeam());
     }
     public static string TranslateUnsafe(Translation translation, UCPlayer? player, object[] formatting)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.TranslateUnsafe(lang, formatting, player, player is null ? 0 : player.GetTeam());
     }
     public static string TranslateUnsafe(Translation translation, ulong player, object[] formatting)
     {
         if (player == 0 || !Data.Languages.TryGetValue(player, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.TranslateUnsafe(lang, formatting, null, 0);
     }
     public static string TranslateUnsafe(Translation translation, ulong player, out Color color, object[] formatting)
     {
         if (player == 0 || !Data.Languages.TryGetValue(player, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return translation.TranslateUnsafe(lang, out color, formatting, null, 0);
     }
     public static string GetTimeFromSeconds(this int seconds, ulong player)
@@ -455,7 +455,7 @@ public static class Localization
     {
         if (player == null) return string.Empty;
         if (!Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
         return TranslateSign(key, lang, player, important);
     }
 
@@ -528,8 +528,8 @@ public static class Localization
         if (enumTranslations.TryGetValue(typeof(TEnum), out Dictionary<string, Dictionary<string, string>> t))
         {
             if (!t.TryGetValue(language, out Dictionary<string, string>? v) &&
-                (L.DEFAULT.Equals(language, StringComparison.Ordinal) ||
-                 !t.TryGetValue(L.DEFAULT, out v)))
+                (L.Default.Equals(language, StringComparison.Ordinal) ||
+                 !t.TryGetValue(L.Default, out v)))
                 v = t.Values.FirstOrDefault();
             string strRep = value!.ToString();
             if (v == null || !v.TryGetValue(strRep, out string v2))
@@ -542,7 +542,7 @@ public static class Localization
     {
         if (player != 0 && Data.Languages.TryGetValue(player, out string language))
             return TranslateEnum(value, language);
-        return TranslateEnum(value, L.DEFAULT);
+        return TranslateEnum(value, L.Default);
     }
     private const string ENUM_NAME_PLACEHOLDER = "%NAME%";
     public static string TranslateEnumName(Type type, string language)
@@ -550,8 +550,8 @@ public static class Localization
         if (enumTranslations.TryGetValue(type, out Dictionary<string, Dictionary<string, string>> t))
         {
             if (!t.TryGetValue(language, out Dictionary<string, string>? v) &&
-                (L.DEFAULT.Equals(language, StringComparison.Ordinal) ||
-                 !t.TryGetValue(L.DEFAULT, out v)))
+                (L.Default.Equals(language, StringComparison.Ordinal) ||
+                 !t.TryGetValue(L.Default, out v)))
                 v = t.Values.FirstOrDefault();
             if (v == null || !v.TryGetValue(ENUM_NAME_PLACEHOLDER, out string v2))
                 return ENUM_NAME_PLACEHOLDER.ToProperCase();
@@ -567,20 +567,20 @@ public static class Localization
     {
         if (player != 0 && Data.Languages.TryGetValue(player, out string language))
             return TranslateEnumName<TEnum>(language);
-        return TranslateEnumName<TEnum>(L.DEFAULT);
+        return TranslateEnumName<TEnum>(L.Default);
     }
     public static string TranslateEnumName(Type type, ulong player)
     {
         if (player != 0 && Data.Languages.TryGetValue(player, out string language))
             return TranslateEnumName(type, language);
-        return TranslateEnumName(type, L.DEFAULT);
+        return TranslateEnumName(type, L.Default);
     }
     private static readonly Dictionary<Type, Dictionary<string, Dictionary<string, string>>> enumTranslations = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>();
     private static readonly string ENUM_TRANSLATION_FILE_NAME = "Enums" + Path.DirectorySeparatorChar;
     public static void ReadEnumTranslations(List<KeyValuePair<Type, string?>> extEnumTypes)
     {
         enumTranslations.Clear();
-        string def = Path.Combine(Data.Paths.LangStorage, L.DEFAULT) + Path.DirectorySeparatorChar;
+        string def = Path.Combine(Data.Paths.LangStorage, L.Default) + Path.DirectorySeparatorChar;
         if (!Directory.Exists(def))
             Directory.CreateDirectory(def);
         List<KeyValuePair<Type, List<string>>> defaultLangs = new List<KeyValuePair<Type, List<string>>>(32);
@@ -589,7 +589,7 @@ public static class Localization
         DirectoryInfo[] langDirs = info.GetDirectories("*", SearchOption.TopDirectoryOnly);
         for (int i = 0; i < langDirs.Length; ++i)
         {
-            if (langDirs[i].Name.Equals(L.DEFAULT, StringComparison.Ordinal))
+            if (langDirs[i].Name.Equals(L.Default, StringComparison.Ordinal))
             {
                 string p = Path.Combine(langDirs[i].FullName, ENUM_TRANSLATION_FILE_NAME);
                 if (!Directory.Exists(p))
@@ -613,8 +613,8 @@ public static class Localization
             if (!File.Exists(fn))
             {
                 Dictionary<string, string> k2 = new Dictionary<string, string>(fields.Length + 1);
-                WriteEnums(L.DEFAULT, fields, enumType.Key, enumType.Value, fn, k2, defaultLangs);
-                k.Add(L.DEFAULT, k2);
+                WriteEnums(L.Default, fields, enumType.Key, enumType.Value, fn, k2, defaultLangs);
+                k.Add(L.Default, k2);
             }
             else
             {
@@ -669,7 +669,7 @@ public static class Localization
                 for (int j = 0; j < v.Value.Count; ++j)
                 {
                     string lang = v.Value[j];
-                    if (lang.Equals(L.DEFAULT, StringComparison.Ordinal))
+                    if (lang.Equals(L.Default, StringComparison.Ordinal))
                         continue;
 
                     string p = Path.Combine(Data.Paths.LangStorage, lang, ENUM_TRANSLATION_FILE_NAME) + Path.DirectorySeparatorChar;
@@ -705,7 +705,7 @@ public static class Localization
             for (int j = 0; j < tas.Length; ++j)
             {
                 TranslatableAttribute t = tas[j];
-                if (t.Language is null || t.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
+                if (t.Language is null || t.Language.Equals(L.Default, StringComparison.Ordinal))
                     continue;
                 for (int k = 0; k < otherlangs.Count; ++k)
                 {
@@ -720,7 +720,7 @@ public static class Localization
     }
     private static void WriteEnums(string language, FieldInfo[] fields, Type type, TranslatableAttribute? attr1, string fn, Dictionary<string, string> k2, List<KeyValuePair<Type, List<string>>>? otherlangs)
     {
-        bool isDeafult = L.DEFAULT.Equals(language, StringComparison.Ordinal);
+        bool isDeafult = L.Default.Equals(language, StringComparison.Ordinal);
         using (FileStream stream = new FileStream(fn, FileMode.Create, FileAccess.Write, FileShare.Read))
         {
             Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
@@ -797,14 +797,14 @@ public static class Localization
             writer.Dispose();
         }
     }
-    internal static string GetLang(ulong player) => Data.Languages.TryGetValue(player, out string lang) ? lang : L.DEFAULT;
+    internal static string GetLang(ulong player) => Data.Languages.TryGetValue(player, out string lang) ? lang : L.Default;
     internal static IFormatProvider GetLocale(string language)
     {
         return LanguageAliasSet.GetCultureInfo(language);
     }
     internal static LanguageAliasSet? FindLanguageSet(string language, bool keyOnly = false, bool exact = false)
     {
-        if (language.Equals(L.DEFAULT, StringComparison.OrdinalIgnoreCase) && _defaultSet != null)
+        if (language.Equals(L.Default, StringComparison.OrdinalIgnoreCase) && _defaultSet != null)
             return _defaultSet;
         LanguageAliasSet? set = null;
         for (int i = 0; i < Data.LanguageAliases.Count; ++i)
@@ -1189,7 +1189,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     public readonly string Language;
     public ulong Team = 0;
     public readonly List<UCPlayer> Players;
-    private int index;
+    private int _index;
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
     public UCPlayer Next;
     UCPlayer IEnumerator<UCPlayer>.Current => Next;
@@ -1197,33 +1197,33 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     public LanguageSet(UCPlayer player)
     {
         if (!Data.Languages.TryGetValue(player.Steam64, out Language))
-            Language = L.DEFAULT;
+            Language = L.Default;
         Players = new List<UCPlayer>(1) { player };
-        index = -1;
+        _index = -1;
         Next = null!;
         Team = player.GetTeam();
     }
     public LanguageSet(string lang)
     {
         this.Language = lang;
-        this.Players = new List<UCPlayer>(lang == L.DEFAULT ? Provider.clients.Count : 2);
-        this.index = -1;
+        this.Players = new List<UCPlayer>(lang == L.Default ? Provider.clients.Count : 2);
+        this._index = -1;
         this.Next = null!;
     }
     public LanguageSet(string lang, UCPlayer first)
     {
         this.Language = lang;
-        this.Players = new List<UCPlayer>(lang == L.DEFAULT ? Provider.clients.Count : 2) { first };
-        this.index = -1;
+        this.Players = new List<UCPlayer>(lang == L.Default ? Provider.clients.Count : 2) { first };
+        this._index = -1;
         this.Next = null!;
     }
     public void Add(UCPlayer pl) => this.Players.Add(pl);
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
     public bool MoveNext()
     {
-        if (index < this.Players.Count - 1 && index > -2)
+        if (_index < this.Players.Count - 1 && _index > -2)
         {
-            Next = this.Players[++index];
+            Next = this.Players[++_index];
             return true;
         }
         else
@@ -1233,12 +1233,12 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     public void Reset()
     {
         Next = null!;
-        index = -1;
+        _index = -1;
     }
     public void Dispose() => Reset();
     public override string ToString()
     {
-        return index.ToString(Data.Locale) + "   " + string.Join(", ", Players.Select(x => x == null ? "null" : x.CharacterName)) + "   Current: " + (Next == null ? "null" : Next.CharacterName);
+        return _index.ToString(Data.AdminLocale) + "   " + string.Join(", ", Players.Select(x => x == null ? "null" : x.CharacterName)) + "   Current: " + (Next == null ? "null" : Next.CharacterName);
     }
     private class LanguageSetEnumerator : IEnumerable<LanguageSet>
     {
@@ -1251,63 +1251,63 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         IEnumerator IEnumerable.GetEnumerator() => Sets.GetEnumerator();
     }
 
-    private static readonly List<LanguageSet> languages = new List<LanguageSet>(JSONMethods.DefaultLanguageAliasSets.Count);
+    private static readonly List<LanguageSet> Languages = new List<LanguageSet>(JSONMethods.DefaultLanguageAliasSets.Count);
     public static IEnumerable<LanguageSet> All()
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    Languages.Add(new LanguageSet(lang, pl));
             }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
     public static IEnumerable<LanguageSet> InRegions(byte x, byte y, byte regionDistance)
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 if (!Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, regionDistance)) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    Languages.Add(new LanguageSet(lang, pl));
             }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
@@ -1315,51 +1315,51 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     {
         if (plant != ushort.MaxValue)
             return All();
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 if (!Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, regionDistance)) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    Languages.Add(new LanguageSet(lang, pl));
             }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
     public static IEnumerable<LanguageSet> InRegionsByTeam(byte x, byte y, byte regionDistance)
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 if (!Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, regionDistance)) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 ulong team = pl.GetTeam();
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    LanguageSet l = languages[i2];
+                    LanguageSet l = Languages[i2];
                     if (l.Team == team && l.Language.Equals(lang, StringComparison.Ordinal))
                     {
                         l.Add(pl);
@@ -1368,284 +1368,284 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl) { Team = team });
+                    Languages.Add(new LanguageSet(lang, pl) { Team = team });
             }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
     public static IEnumerable<LanguageSet> All(IEnumerator<SteamPlayer> players)
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             while (players.MoveNext())
             {
                 UCPlayer? pl = UCPlayer.FromSteamPlayer(players.Current);
                 if (pl == null) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    Languages.Add(new LanguageSet(lang, pl));
             }
             players.Dispose();
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
     public static IEnumerable<LanguageSet> AllBut(params ulong[] exclude)
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 for (int j = 0; j < exclude.Length; j++)
                     if (pl.Steam64 == exclude[j]) goto next;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    Languages.Add(new LanguageSet(lang, pl));
                 next:;
             }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
     public static IEnumerable<LanguageSet> AllBut(ulong exclude)
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 if (pl.Steam64 == exclude) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    Languages.Add(new LanguageSet(lang, pl));
             }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
     public static IEnumerable<LanguageSet> All(IEnumerator<Player> players)
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             while (players.MoveNext())
             {
                 UCPlayer? pl = UCPlayer.FromPlayer(players.Current);
                 if (pl == null) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    Languages.Add(new LanguageSet(lang, pl));
             }
             players.Dispose();
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
     public static IEnumerable<LanguageSet> OfPermission(EAdminType type, PermissionComparison comparison = PermissionComparison.AtLeast)
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 if (!pl.PermissionLevel.IsOfPermission(type, comparison)) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    Languages.Add(new LanguageSet(lang, pl));
             }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
     public static IEnumerable<LanguageSet> All(IEnumerator<UCPlayer> players)
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             while (players.MoveNext())
             {
                 UCPlayer pl = players.Current;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    Languages.Add(new LanguageSet(lang, pl));
             }
             players.Dispose();
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
     public static IEnumerable<LanguageSet> OnTeam(ulong team)
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 if (pl.GetTeam() != team) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl) { Team = team });
+                    Languages.Add(new LanguageSet(lang, pl) { Team = team });
             }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
     public static IEnumerable<LanguageSet> InSquad(Squads.Squad squad)
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 if (pl.Squad != squad) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl) { Team = squad.Team });
+                    Languages.Add(new LanguageSet(lang, pl) { Team = squad.Team });
             }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
     public static IEnumerable<LanguageSet> Where(Predicate<UCPlayer> selector)
     {
-        lock (languages)
+        lock (Languages)
         {
-            if (languages.Count > 0)
-                languages.Clear();
+            if (Languages.Count > 0)
+                Languages.Clear();
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 if (!selector(pl)) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
+                    lang = L.Default;
                 bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
+                for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
-                        languages[i2].Add(pl);
+                        Languages[i2].Add(pl);
                         found = true;
                         break;
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    Languages.Add(new LanguageSet(lang, pl));
             }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(Languages.ToArray());
+            Languages.Clear();
             return rtn;
         }
     }
@@ -1660,12 +1660,12 @@ public sealed class TranslatableAttribute : Attribute
     public TranslatableAttribute()
     {
         _default = null;
-        _language = L.DEFAULT;
+        _language = L.Default;
     }
     public TranslatableAttribute(string? @default)
     {
         _default = @default;
-        _language = L.DEFAULT;
+        _language = L.Default;
     }
     public TranslatableAttribute(string language, string value)
     {

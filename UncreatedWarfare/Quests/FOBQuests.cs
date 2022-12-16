@@ -9,7 +9,7 @@ using Uncreated.Framework;
 
 namespace Uncreated.Warfare.Quests.Types;
 
-[QuestData(QuestType.BUILD_FOBS)]
+[QuestData(QuestType.BuildFOBs)]
 public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQuest.State, BuildFOBsQuest>
 {
     public DynamicIntegerValue BuildCount;
@@ -82,7 +82,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
         }
     }
 }
-[QuestData(QuestType.BUILD_FOBS_NEAR_OBJECTIVES)]
+[QuestData(QuestType.BuildFOBsNearObjectives)]
 public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker, BuildFOBsNearObjQuest.State, BuildFOBsNearObjQuest>
 {
     public DynamicIntegerValue BuildCount;
@@ -196,7 +196,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
         }
     }
 }
-[QuestData(QuestType.BUILD_FOB_ON_ACTIVE_OBJECTIVE)]
+[QuestData(QuestType.BuildFOBOnActiveObjective)]
 public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, BuildFOBsOnObjQuest.State, BuildFOBsOnObjQuest>
 {
     public DynamicIntegerValue BuildCount;
@@ -296,7 +296,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
         }
     }
 }
-[QuestData(QuestType.DELIVER_SUPPLIES)]
+[QuestData(QuestType.DeliverSupplies)]
 public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, DeliverSuppliesQuest.State, DeliverSuppliesQuest>
 {
     public DynamicIntegerValue SupplyCount;
@@ -369,7 +369,7 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
     }
     public enum ESupplyType : byte { AMMO, BUILD }
 }
-[QuestData(QuestType.SHOVEL_BUILDABLES)]
+[QuestData(QuestType.ShovelBuildables)]
 public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQuest.State, HelpBuildQuest>
 {
     public DynamicIntegerValue Amount;
@@ -470,7 +470,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         }
     }
 }
-[QuestData(QuestType.TEAMMATES_DEPLOY_ON_FOB)]
+[QuestData(QuestType.TeammatesDeployOnFOB)]
 public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State, FOBUseQuest>
 {
     public DynamicIntegerValue UseCount;

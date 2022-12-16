@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
@@ -45,7 +46,7 @@ internal static class EventPatches
                 new Action<StructureDrop, byte, byte, Vector3, bool>(StructureManager.destroyStructure)),
             postfix: PatchUtil.GetMethodInfo(OnStructureDestroyed));
 
-        PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(new Action<SteamPending>(Provider.accept)), postfix: PatchUtil.GetMethodInfo(OnAcceptingPlayer));
+        PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(new Action<SteamPending>(Provider.accept)), prefix: PatchUtil.GetMethodInfo(OnAcceptingPlayer));
     }
     // SDG.Unturned.BarricadeManager
     /// <summary>
@@ -426,8 +427,18 @@ internal static class EventPatches
     /// <summary>
     /// Allows us to defer accepting a player to check stuff with async calls.
     /// </summary>
-    private static bool OnAcceptingPlayer(SteamPending pending)
+    internal static readonly List<ulong> Accepted = new List<ulong>(8);
+
+    internal static ulong Accept = 0ul;
+    private static bool OnAcceptingPlayer(SteamPending player)
     {
-        return !EventDispatcher.InvokeOnAsyncPrePlayerConnect(pending);
+        if (Accept == player.playerID.steamID.m_SteamID)
+            return true;
+        if (Accepted.Contains(player.playerID.steamID.m_SteamID))
+            return false;
+        if (!EventDispatcher.InvokeOnAsyncPrePlayerConnect(player))
+            return true;
+        Accepted.Add(player.playerID.steamID.m_SteamID);
+        return false;
     }
 }

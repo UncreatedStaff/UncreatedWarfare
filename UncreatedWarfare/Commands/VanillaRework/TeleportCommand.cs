@@ -11,8 +11,8 @@ using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 namespace Uncreated.Warfare.Commands.VanillaRework;
 public class TeleportCommand : Command
 {
-    private const string SYNTAX = "/tp <x y z|player|location> - or - /tp <player> <x y z|player|location>";
-    private const string HELP = "Teleport you or another player to a location.";
+    private const string Syntax = "/tp <x y z|player|location> - or - /tp <player> <x y z|player|location>";
+    private const string Help = "Teleport you or another player to a location.";
 
     public TeleportCommand() : base("teleport", EAdminType.TRIAL_ADMIN_ON_DUTY, 1)
     {
@@ -21,9 +21,9 @@ public class TeleportCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 
-        ctx.AssertArgs(1, SYNTAX);
+        ctx.AssertArgs(1, Syntax);
         Vector3 pos;
         switch (ctx.ArgumentCount)
         {
@@ -188,7 +188,7 @@ public class TeleportCommand : Command
                 throw ctx.Reply(ctx.Caller.Player.teleportToLocation(pos, ctx.Caller.Player.look.aim.transform.rotation.y)
                         ? T.TeleportSelfLocationSuccess
                         : T.TeleportSelfLocationObstructed,
-                    $"({x.ToString("0.##", Data.Locale)}, {y.ToString("0.##", Data.Locale)}, {z.ToString("0.##", Data.Locale)})");
+                    $"({x.ToString("0.##", Data.LocalLocale)}, {y.ToString("0.##", Data.LocalLocale)}, {z.ToString("0.##", Data.LocalLocale)})");
             case 4:
                 if (ctx.TryGet(0, out _, out target) && target is not null)
                 {
@@ -226,7 +226,7 @@ public class TeleportCommand : Command
                     if (float.IsNaN(y))
                         y = F.GetHeightAt2DPoint(x, z, pos.y, 2f);
                     pos = new Vector3(x, y, z);
-                    string loc = $"({x.ToString("0.##", Data.Locale)}, {y.ToString("0.##", Data.Locale)}, {z.ToString("0.##", Data.Locale)})";
+                    string loc = $"({x.ToString("0.##", Data.LocalLocale)}, {y.ToString("0.##", Data.LocalLocale)}, {z.ToString("0.##", Data.LocalLocale)})";
                     if (target.Player.teleportToLocation(pos, target.Player.look.aim.transform.rotation.y))
                     {
                         target.SendChat(T.TeleportSelfLocationSuccess, loc);
@@ -236,13 +236,13 @@ public class TeleportCommand : Command
                 }
                 throw ctx.Reply(T.TeleportTargetNotFound, ctx.Get(0)!);
             default:
-                throw ctx.SendCorrectUsage(SYNTAX);
+                throw ctx.SendCorrectUsage(Syntax);
         }
     }
     private static float GetOffset(string arg)
     {
         if (arg.Length < 2) return 0f;
-        if (float.TryParse(arg.Substring(1), NumberStyles.Number, Data.Locale, out float offset))
+        if (float.TryParse(arg.Substring(1), NumberStyles.Number, Data.AdminLocale, out float offset) || float.TryParse(arg.Substring(1), NumberStyles.Number, Data.LocalLocale, out offset))
             return offset;
         return 0;
     }

@@ -5,7 +5,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Uncreated.Framework;
+using JetBrains.Annotations;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
@@ -109,7 +109,6 @@ public static class UCInventoryManager
 
         return items.ToArray();
     }
-
     public static void ClearInventory(UCPlayer player, bool clothes = true)
     {
         ThreadUtil.assertIsGameThread();
@@ -205,57 +204,6 @@ public static class UCInventoryManager
             }
         }
     }
-    public static void LoadClothes(UCPlayer player, List<ClothingItem> clothes)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        player.Player.equipment.dequip();
-        ulong team = player.GetTeam();
-        byte[] blank = Array.Empty<byte>();
-        NetId id = player.Player.clothing.GetNetId();
-        byte flag = 0;
-        bool hasPlayedEffect = false;
-        for (int i = 0; i < clothes.Count; ++i)
-        {
-            ClothingItem clothing = clothes[i];
-            flag |= (byte)(1 << (int)clothing.Type);
-            ClientInstanceMethod<Guid, byte, byte[], bool>? inv =
-                clothing.Type switch
-                {
-                    ClothingType.Shirt => Data.SendWearShirt,
-                    ClothingType.Pants => Data.SendWearPants,
-                    ClothingType.Hat => Data.SendWearHat,
-                    ClothingType.Backpack => Data.SendWearBackpack,
-                    ClothingType.Vest => Data.SendWearVest,
-                    ClothingType.Mask => Data.SendWearMask,
-                    ClothingType.Glasses => Data.SendWearGlasses,
-                    _ => null
-                };
-            if (inv != null)
-            {
-                inv.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), TeamManager.CheckClothingAssetRedirect(clothing.Item, team), 100, blank, !hasPlayedEffect);
-                hasPlayedEffect = true;
-            }
-        }
-        for (int i = 0; i < 7; ++i)
-        {
-            if (((flag >> i) & 1) != 1)
-            {
-                ((ClothingType)i switch
-                {
-                    ClothingType.Shirt => Data.SendWearShirt,
-                    ClothingType.Pants => Data.SendWearPants,
-                    ClothingType.Hat => Data.SendWearHat,
-                    ClothingType.Backpack => Data.SendWearBackpack,
-                    ClothingType.Vest => Data.SendWearVest,
-                    ClothingType.Mask => Data.SendWearMask,
-                    ClothingType.Glasses => Data.SendWearGlasses,
-                    _ => null
-                })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
-            }
-        }
-    }
     public static void SendPages(UCPlayer player)
     {
         Items[] il = player.Player.inventory.items;
@@ -332,7 +280,6 @@ public static class UCInventoryManager
         return Assets.find(item) is not ItemAsset asset ? 0 : CountItems(player, asset.id);
 #pragma warning restore CS0612
     }
-
     public static void RemoveSingleItem(UCPlayer player, ushort itemID)
     {
 #if DEBUG
@@ -352,7 +299,7 @@ public static class UCInventoryManager
             }
         }
     }
-
+    [UsedImplicitly]
     private static void GlassesFix(PlayerEquipment __instance)
     {
         ItemGlassesAsset? ga = __instance.player.clothing.glassesAsset;

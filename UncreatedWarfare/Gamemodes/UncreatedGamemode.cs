@@ -120,8 +120,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public void AdvanceDelays(float seconds)
     {
         _startTime -= seconds;
-        VehicleSpawner.UpdateSigns();
-        TraitSigns.BroadcastAllTraitSigns();
+        Signs.UpdateAllSigns();
         TimeSync();
     }
     protected virtual void OnAdvanceDelays(float seconds) { }
@@ -159,10 +158,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await UCWarfare.ToUpdate();
             ThreadUtil.assertIsGameThread();
         }
-        if (this is IKitRequests)
-        {
-            Commands.ReloadCommand.ReloadKits();
-        }
         Type[] interfaces = this.GetType().GetInterfaces();
         for (int i = 0; i < interfaces.Length; i++)
         {
@@ -181,18 +176,25 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             {
                 IUncreatedSingleton singleton = _singletons[i];
                 if (singleton is ILevelStartListener l1)
+                {
+                    L.LogDebug("Running " + singleton.GetType().Name + " OnLevelReady...");
                     l1.OnLevelReady();
+                    L.LogDebug(" ... Done");
+                }
                 if (singleton is ILevelStartListenerAsync l2)
                 {
+                    L.LogDebug("Running " + singleton.GetType().Name + " OnLevelReady...");
                     task = l2.OnLevelReady();
                     if (!task.IsCompleted)
                     {
                         await task.ConfigureAwait(false);
                         await UCWarfare.ToUpdate();
                     }
+                    L.LogDebug(" ... Done");
                 }
             }
             ThreadUtil.assertIsGameThread();
+            L.LogDebug("Running internal OnReady...");
             InternalOnReady();
             task = OnReady();
             if (!task.IsCompleted)
@@ -201,8 +203,11 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 await UCWarfare.ToUpdate();
                 ThreadUtil.assertIsGameThread();
             }
+            L.LogDebug(" ... Done");
+            L.LogDebug("Running internal PostOnReady...");
             await PostOnReady().ConfigureAwait(false);
             await UCWarfare.ToUpdate();
+            L.LogDebug(" ... Done");
             _hasOnReadyRan = true;
         }
     }
@@ -310,9 +315,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             IUncreatedSingleton singleton = _singletons[i];
             if (singleton is IPlayerPreInitListener l1)
                 l1.OnPrePlayerInit(player, wasAlreadyOnline);
-            if (singleton is ILevelStartListenerAsync l2)
+            if (singleton is IPlayerPreInitListenerAsync l2)
             {
-                task = l2.OnLevelReady();
+                task = l2.OnPrePlayerInit(player, wasAlreadyOnline);
                 if (!task.IsCompleted)
                 {
                     await task.ConfigureAwait(false);
@@ -1021,6 +1026,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        L.Log("Destroying unknown barricades and structures...", ConsoleColor.Magenta);
         if (StructureManager.regions is null)
             L.LogWarning("Structure regions have not been initialized.");
         if (BarricadeManager.regions is null)
@@ -1039,16 +1045,16 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                         if (BarricadeManager.regions is not null)
                         {
                             BarricadeRegion barricadeRegion = BarricadeManager.regions[x, y];
-                            for (int i = barricadeRegion.drops.Count - 1; i >= 0; i--)
+                            for (int i = barricadeRegion.drops.Count - 1; i >= 0; --i)
                             {
                                 BarricadeDrop drop = barricadeRegion.drops[i];
-                                if (!((saver != null && saver.IsLoaded && saver.TryGetSave(drop, out SavedStructure _)) || (RequestSignsOld.Loaded && RequestSignsOld.SignExists(drop.instanceID, out _))))
+                                if (!(saver != null && saver.IsLoaded && saver.TryGetSaveNoLock(drop, out SavedStructure _)))
                                 {
                                     if (drop.model.TryGetComponent(out FOBComponent fob))
                                     {
                                         fob.Parent.IsWipedByAuthority = true;
                                     }
-                                    if (drop.model.transform.TryGetComponent(out InteractableStorage storage))
+                                    if (drop.interactable is InteractableStorage storage)
                                         storage.despawnWhenDestroyed = true;
                                     BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
                                 }
@@ -1058,11 +1064,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                         if (StructureManager.regions is not null)
                         {
                             StructureRegion structureRegion = StructureManager.regions[x, y];
-                            for (int i = structureRegion.drops.Count - 1; i >= 0; i--)
+                            for (int i = structureRegion.drops.Count - 1; i >= 0; --i)
                             {
                                 StructureDrop drop = structureRegion.drops[i];
-                                if (!(saver != null && saver.IsLoaded && saver.TryGetSave(drop, out SavedStructure _)))
+                                if (!(saver != null && saver.IsLoaded && saver.TryGetSaveNoLock(drop, out SavedStructure _)))
+                                {
                                     StructureManager.destroyStructure(drop, x, y, Vector3.zero);
+                                }
                             }
                         }
                     }

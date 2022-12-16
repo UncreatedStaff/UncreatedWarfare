@@ -21,17 +21,895 @@ namespace Uncreated.Warfare.Structures;
 [SingletonDependency(typeof(MapScheduler))]
 public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelStartListenerAsync
 {
-    private static readonly MethodInfo? _onStateUpdatedInteractableStorageMethod =
+    private static readonly MethodInfo? OnStateUpdatedInteractableStorageMethod =
         typeof(InteractableStorage).GetMethod("onStateUpdated", BindingFlags.NonPublic | BindingFlags.Instance);
-    private static readonly MethodInfo? _updateDisplayMethod =
+    private static readonly MethodInfo? UpdateDisplayMethod =
         typeof(InteractableStorage).GetMethod("updateDisplay", BindingFlags.NonPublic | BindingFlags.Instance);
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
     public StructureSaver() : base("structures", SCHEMAS) { }
+    async Task ILevelStartListenerAsync.OnLevelReady()
+    {
+        // await ImportFromJson(Path.Combine(Data.Paths.StructureStorage, "structures.json"), true, (x, y) => x.InstanceID.CompareTo(y.InstanceID)).ConfigureAwait(false);
+        L.Log("Checking structures: " + Items.Count + " item(s) pending...", ConsoleColor.Magenta);
+        await WaitAsync(F.DebugTimeout).ConfigureAwait(false);
+        try
+        {
+            List<SavedStructure>? toSave = null;
+            await UCWarfare.ToUpdate();
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SqlItem<SavedStructure> item = Items[i];
+                if (item.Item != null)
+                {
+                    int err = CheckExisting(item.Item);
+                    switch (err)
+                    {
+                        case 2:
+                            L.LogWarning("Error, GUID not found: " + item);
+                            break;
+                        case 3:
+                            L.LogWarning("Error, GUID not barricade or barricade: " + item);
+                            break;
+                        case 12:
+                        case 6:
+                            L.LogWarning("Error, Failed to replace: " + item);
+                            break;
+                        case 5:
+                        case 7:
+                        case 8:
+                        case 9:
+                        case 10:
+                        case 11:
+                            (toSave ??= new List<SavedStructure>(4)).Add(item.Item);
+                            goto case 0;
+                        case 0:
+                            L.LogDebug("Confirmed validity of barricade {" + err.ToString("X2") + "}: " + item);
+                            continue;
+                        default:
+                            L.LogWarning("Error, {" + err.ToString("X2") + "}: " + item);
+                            break;
+                    }
+                }
+            }
+            if (toSave != null)
+            {
+                L.LogDebug("Resaving " + toSave.Count + " item(s)...");
+                await AddOrUpdateNoLock(toSave).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            Release();
+        }
+    }
     public override Task PostReload()
     {
         return Level.isLoaded ? (this as ILevelStartListenerAsync).OnLevelReady() : Task.CompletedTask;
     }
+    private int CheckExisting(SavedStructure structure)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (Assets.find(structure.ItemGuid) is not ItemAsset item)
+            return 2;
+        if (item is ItemStructureAsset)
+            goto structure;
+        else if (item is not ItemBarricadeAsset)
+             return 3;
+
+        ItemBarricadeAsset brAsset = (ItemBarricadeAsset)item;
+        BarricadeDrop? bdrop = structure.InstanceID > 0 ? UCBarricadeManager.FindBarricade(structure.InstanceID, structure.Position) : null;
+        if (bdrop == null)
+        {
+            bdrop = UCBarricadeManager.GetBarricadeFromPosition(structure.Position);
+            if (bdrop == null || bdrop.asset.GUID != structure.ItemGuid)
+            {
+                return Replace(structure, brAsset) ? 5 : 6;
+            }
+            structure.InstanceID = bdrop.instanceID;
+            structure.Position = bdrop.model.position;
+            structure.Rotation = bdrop.model.rotation.eulerAngles;
+            structure.Buildable = new UCBarricade(bdrop);
+            FillHp(bdrop);
+            BarricadeManager.changeOwnerAndGroup(bdrop.model, structure.Owner, structure.Group);
+            return 7;
+        }
+        if (!structure.Position.AlmostEquals(bdrop.model.position) || !structure.Rotation.AlmostEquals(bdrop.model.rotation.eulerAngles))
+        {
+            structure.Position = bdrop.model.position;
+            structure.Rotation = bdrop.model.rotation.eulerAngles;
+            structure.Buildable = new UCBarricade(bdrop);
+            FillHp(bdrop);
+            BarricadeManager.changeOwnerAndGroup(bdrop.model, structure.Owner, structure.Group);
+            return 8;
+        }
+        FillHp(bdrop);
+        BarricadeManager.changeOwnerAndGroup(bdrop.model, structure.Owner, structure.Group);
+        structure.Buildable = new UCBarricade(bdrop);
+
+        return 0;
+        structure:
+        ItemStructureAsset stAsset = (ItemStructureAsset)item;
+        StructureDrop? sdrop = UCBarricadeManager.FindStructure(structure.InstanceID, structure.Position);
+        if (sdrop == null)
+        {
+            sdrop = UCBarricadeManager.GetStructureFromPosition(structure.Position);
+            if (sdrop == null || sdrop.asset.GUID != structure.ItemGuid)
+            {
+                return Replace(structure, stAsset) ? 11 : 12;
+            }
+            structure.InstanceID = sdrop.instanceID;
+            structure.Position = sdrop.model.position;
+            structure.Rotation = sdrop.model.rotation.eulerAngles;
+            structure.Buildable = new UCStructure(sdrop);
+            FillHp(sdrop);
+            StructureManager.changeOwnerAndGroup(sdrop.model, structure.Owner, structure.Group);
+            return 9;
+        }
+        if (!structure.Position.AlmostEquals(sdrop.model.position) || !structure.Rotation.AlmostEquals(sdrop.model.rotation.eulerAngles))
+        {
+            structure.Position = sdrop.model.position;
+            structure.Rotation = sdrop.model.rotation.eulerAngles;
+            structure.Buildable = new UCStructure(sdrop);
+            FillHp(sdrop);
+            StructureManager.changeOwnerAndGroup(sdrop.model, structure.Owner, structure.Group);
+            return 10;
+        }
+        FillHp(sdrop);
+        StructureManager.changeOwnerAndGroup(sdrop.model, structure.Owner, structure.Group);
+        structure.Buildable = new UCStructure(sdrop);
+
+        return 0;
+    }
+    private static void FillHp(BarricadeDrop drop)
+    {
+        ThreadUtil.assertIsGameThread();
+        ushort hp = drop.GetServersideData().barricade.health;
+        if (drop.asset.health > hp)
+        {
+            BarricadeManager.repair(drop.model, drop.asset.health, 1f, Provider.server);
+        }
+    }
+    private static void FillHp(StructureDrop drop)
+    {
+        ThreadUtil.assertIsGameThread();
+        ushort hp = drop.GetServersideData().structure.health;
+        if (drop.asset.health > hp)
+        {
+            StructureManager.repair(drop.model, drop.asset.health, 1f, Provider.server);
+        }
+    }
+    private static bool Replace(SavedStructure structure, ItemBarricadeAsset asset)
+    {
+        ThreadUtil.assertIsGameThread();
+        byte[] state = GetBarricadeState(null, asset, structure);
+        Transform t = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset, asset.health, state),
+            structure.Position, Quaternion.Euler(structure.Rotation), structure.Owner, structure.Group);
+        BarricadeDrop? drop = BarricadeManager.FindBarricadeByRootTransform(t);
+        if (drop == null)
+            return false;
+        structure.Buildable = new UCBarricade(drop);
+        if (asset is ItemStorageAsset storage && drop.interactable is InteractableStorage intx)
+        {
+            bool a = false;
+            if (structure.Items != null && Data.SetStorageInventory != null)
+            {
+                Items inv = new Items(PlayerInventory.STORAGE);
+                inv.resize(storage.storage_x, storage.storage_y);
+                for (int i = 0; i < structure.Items.Length; ++i)
+                {
+                    ref ItemJarData data = ref structure.Items[i];
+                    if (Assets.find(data.Item) is ItemAsset item)
+                        inv.loadItem(data.X, data.Y, data.Rotation,
+                            new Item(item.id, data.Amount, data.Quality, data.Metadata));
+                }
+
+                if (OnStateUpdatedInteractableStorageMethod != null)
+                {
+                    inv.onStateUpdated = (StateUpdated)Delegate.Combine(inv.onStateUpdated,
+                        OnStateUpdatedInteractableStorageMethod.CreateDelegate(typeof(StateUpdated), intx));
+                }
+                else L.LogWarning("Unknown method: void onStateUpdated() in InteractableStorage.");
+                Data.SetStorageInventory(intx, inv);
+                a = true;
+            }
+
+            if (storage.isDisplay && structure.DisplayData.HasValue)
+            {
+                ItemDisplayData data = structure.DisplayData.Value;
+                intx.displaySkin = data.Skin;
+                intx.displayMythic = data.Mythic;
+                intx.displayTags = data.Tags ?? string.Empty;
+                intx.displayDynamicProps = data.DynamicProps ?? string.Empty;
+                intx.applyRotation(data.Rotation);
+                UpdateDisplayMethod?.Invoke(intx, Array.Empty<object>());
+                intx.refreshDisplay();
+                a = true;
+            }
+
+            if (a)
+            {
+                intx.rebuildState();
+                structure.Metadata = drop.GetServersideData().barricade.state;
+            }
+        }
+
+        return true;
+    }
+    private static bool Replace(SavedStructure structure, ItemStructureAsset asset)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (Regions.tryGetCoordinate(structure.Position, out byte x, out byte y))
+        {
+            Quaternion rotation = Quaternion.Euler(-90f, structure.Rotation.y, 0f);
+            StructureRegion region = StructureManager.regions[x, y];
+            Structure str = new Structure(asset, asset.health);
+            bool success = StructureManager.dropReplicatedStructure(str,
+                structure.Position, rotation, structure.Owner, structure.Group);
+            if (!success) return false;
+            StructureDrop? drop = region.drops.TailOrDefault();
+            if (drop == null || drop.GetServersideData().structure != str)
+            {
+                for (int i = 0; i < region.drops.Count; ++i)
+                {
+                    if (region.drops[i].GetServersideData().structure == str)
+                    {
+                        drop = region.drops[i];
+                        break;
+                    }
+                }
+                if (drop == null)
+                {
+                    L.LogWarning("Structure spawn reported successful but couldn't be found in region {"
+                                 + x + ", " + y + "}.");
+                    return false;
+                }
+            }
+            structure.Buildable = new UCStructure(drop);
+            structure.Position = drop.model.position;
+            structure.Rotation = drop.model.rotation.eulerAngles;
+            return true;
+        }
+        return false;
+    }
+    private static byte[] GetBarricadeState(BarricadeDrop? drop, ItemBarricadeAsset asset, SavedStructure structure)
+    {
+        ThreadUtil.assertIsGameThread();
+        byte[] st2 = drop != null ? drop.GetServersideData().barricade.state : (structure.Metadata is null || structure.Metadata.Length == 0 ? Array.Empty<byte>() : structure.Metadata);
+        byte[] owner = BitConverter.GetBytes(structure.Owner);
+        byte[] group = BitConverter.GetBytes(structure.Group);
+        byte[] state;
+        switch (asset.build)
+        {
+            case EBuild.DOOR:
+            case EBuild.GATE:
+            case EBuild.SHUTTER:
+            case EBuild.HATCH:
+                state = new byte[17];
+                Buffer.BlockCopy(owner, 0, state, 0, sizeof(ulong));
+                Buffer.BlockCopy(group, 0, state, sizeof(ulong), sizeof(ulong));
+                state[16] = (byte)(st2[16] > 0 ? 1 : 0);
+                break;
+            case EBuild.BED:
+                state = owner;
+                break;
+            case EBuild.STORAGE:
+            case EBuild.SENTRY:
+            case EBuild.SENTRY_FREEFORM:
+            case EBuild.SIGN:
+            case EBuild.SIGN_WALL:
+            case EBuild.NOTE:
+            case EBuild.LIBRARY:
+            case EBuild.MANNEQUIN:
+                state = Util.CloneBytes(st2);
+                if (state.Length > 15)
+                {
+                    Buffer.BlockCopy(owner, 0, state, 0, sizeof(ulong));
+                    Buffer.BlockCopy(group, 0, state, sizeof(ulong), sizeof(ulong));
+                }
+                break;
+            case EBuild.SPIKE:
+            case EBuild.WIRE:
+            case EBuild.CHARGE:
+            case EBuild.BEACON:
+            case EBuild.CLAIM:
+                state = Array.Empty<byte>();
+                if (drop != null)
+                {
+                    if (drop.interactable is InteractableCharge charge)
+                    {
+                        charge.owner = structure.Owner;
+                        charge.group = structure.Group;
+                    }
+                    else if (drop.interactable is InteractableClaim claim)
+                    {
+                        claim.owner = structure.Owner;
+                        claim.group = structure.Group;
+                    }
+                }
+                break;
+            default:
+                state = Util.CloneBytes(st2);
+                break;
+        }
+
+        return state;
+    }
+    public async Task<(SqlItem<SavedStructure>, bool)> AddStructure(StructureDrop drop, CancellationToken token = default)
+    {
+        if (drop == null || drop.model == null)
+            throw new ArgumentNullException(nameof(drop));
+        this.AssertLoadedIntl();
+
+        uint id = drop.instanceID;
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            for (int i = 0; i < this.Items.Count; ++i)
+            {
+                SqlItem<SavedStructure> str = Items[i];
+                if (str.Item != null && str.Item.InstanceID == id && str.Item.ItemGuid == drop.asset.GUID)
+                    return (str, false);
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+
+        await UCWarfare.ToUpdate(token);
+
+        StructureData data = drop.GetServersideData();
+        SavedStructure structure = new SavedStructure()
+        {
+            InstanceID = drop.instanceID,
+            Group = data.group,
+            Owner = data.owner,
+            ItemGuid = drop.asset.GUID,
+            Position = drop.model.position,
+            Rotation = drop.model.rotation.eulerAngles with { x = 0f, z = 0f },
+            PrimaryKey = PrimaryKey.NotAssigned,
+            Metadata = Array.Empty<byte>(),
+            Buildable = new UCStructure(drop),
+            DisplayData = null,
+            Items = null
+        };
+        return (await AddOrUpdate(structure, token).ConfigureAwait(false), true);
+    }
+    public async Task<(SqlItem<SavedStructure>, bool)> AddBarricade(BarricadeDrop drop, CancellationToken token = default)
+    {
+        if (drop == null || drop.model == null)
+            throw new ArgumentNullException(nameof(drop));
+        this.AssertLoadedIntl();
+
+        uint id = drop.instanceID;
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            for (int i = 0; i < this.Items.Count; ++i)
+            {
+                SqlItem<SavedStructure> str = Items[i];
+                if (str.Item != null && str.Item.InstanceID == id && str.Item.ItemGuid == drop.asset.GUID)
+                    return (str, false);
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+
+        await UCWarfare.ToUpdate(token);
+
+        BarricadeData data = drop.GetServersideData();
+        SavedStructure structure = new SavedStructure()
+        {
+            InstanceID = drop.instanceID,
+            Group = data.group,
+            Owner = data.owner,
+            ItemGuid = drop.asset.GUID,
+            Position = drop.model.position,
+            Rotation = drop.model.rotation.eulerAngles,
+            PrimaryKey = PrimaryKey.NotAssigned,
+            Buildable = new UCBarricade(drop),
+            DisplayData = null,
+            Items = null
+        };
+        if (drop.asset is ItemStorageAsset asset && drop.interactable is InteractableStorage storage)
+        {
+            Items inv = storage.items;
+            int ic = inv.getItemCount();
+            structure.Items = new ItemJarData[ic];
+            for (int i = 0; i < ic; ++i)
+            {
+                ItemJar jar = inv.items[i];
+                Guid guid;
+                if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset iasset)
+                    guid = iasset.GUID;
+                else
+                {
+                    L.LogWarning("Unknown item #" + jar.item.id + " in storage " + drop.asset.itemName + ".");
+                    guid = new Guid(jar.item.id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                }
+
+                structure.Items[i] = new ItemJarData(PrimaryKey.NotAssigned, PrimaryKey.NotAssigned,
+                    guid, jar.x, jar.y, jar.rot, jar.item.amount, jar.item.quality, Util.CloneBytes(jar.item.state));
+            }
+
+            if (asset.isDisplay)
+            {
+                structure.DisplayData = new ItemDisplayData(PrimaryKey.NotAssigned, storage.displaySkin,
+                    storage.displayMythic, storage.rot_comp,
+                    string.IsNullOrEmpty(storage.displayTags) ? null : storage.displayTags,
+                    string.IsNullOrEmpty(storage.displayDynamicProps) ? null : storage.displayDynamicProps);
+            }
+
+            structure.Metadata = new byte[sizeof(ulong) * 2];
+            byte[] owner = BitConverter.GetBytes(structure.Owner);
+            byte[] group = BitConverter.GetBytes(structure.Group);
+            Buffer.BlockCopy(owner, 0, structure.Metadata, 0, sizeof(ulong));
+            Buffer.BlockCopy(group, 0, structure.Metadata, sizeof(ulong), sizeof(ulong));
+        }
+        else
+            structure.Metadata = Util.CloneBytes(data.barricade.state);
+        return (await AddOrUpdate(structure, token).ConfigureAwait(false), true);
+    }
+    public Task RemoveItem(SavedStructure structure, CancellationToken token = default)
+    {
+        return Delete(structure, token);
+    }
+    public bool TryGetSaveNoLock(StructureDrop structure, out SavedStructure value)
+    {
+        WriteWait();
+        try
+        {
+            uint id = structure.instanceID;
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable is UCStructure)
+                {
+                    value = item;
+                    return true;
+                }
+            }
+
+            value = null!;
+            return false;
+        }
+        finally
+        {
+            WriteRelease();
+        }
+    }
+    public bool TryGetSaveNoLock(BarricadeDrop barricade, out SavedStructure value)
+    {
+        WriteWait();
+        try
+        {
+            uint id = barricade.instanceID;
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable is UCBarricade)
+                {
+                    value = item;
+                    return true;
+                }
+            }
+
+            value = null!;
+            return false;
+        }
+        finally
+        {
+            WriteRelease();
+        }
+    }
+    public bool TryGetSaveNoLock(uint id, EStructType type, out SavedStructure value)
+    {
+        WriteWait();
+        try
+        {
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable != null && item.Buildable.Type == type)
+                {
+                    value = item;
+                    return true;
+                }
+            }
+
+            value = null!;
+            return false;
+        }
+        finally
+        {
+            WriteRelease();
+        }
+    }
+    public bool TryGetSaveNoLock(StructureDrop structure, out SqlItem<SavedStructure> value)
+    {
+        WriteWait();
+        try
+        {
+            uint id = structure.instanceID;
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable is UCStructure)
+                {
+                    value = Items[i];
+                    return true;
+                }
+            }
+
+            value = null!;
+            return false;
+        }
+        finally
+        {
+            WriteRelease();
+        }
+    }
+    public bool TryGetSaveNoLock(BarricadeDrop barricade, out SqlItem<SavedStructure> value)
+    {
+        WriteWait();
+        try
+        {
+            uint id = barricade.instanceID;
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable is UCBarricade)
+                {
+                    value = Items[i];
+                    return true;
+                }
+            }
+
+            value = null!;
+            return false;
+        }
+        finally
+        {
+            WriteRelease();
+        }
+    }
+    public bool TryGetSaveNoLock(uint id, EStructType type, out SqlItem<SavedStructure> value)
+    {
+        WriteWait();
+        try
+        {
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable != null && item.Buildable.Type == type)
+                {
+                    value = Items[i];
+                    return true;
+                }
+            }
+
+            value = null!;
+            return false;
+        }
+        finally
+        {
+            WriteRelease();
+        }
+    }
+    public async Task<SavedStructure?> GetSave(StructureDrop structure, CancellationToken token = default)
+    {
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            uint id = structure.instanceID;
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable is UCStructure)
+                {
+                    return item;
+                }
+            }
+
+            return null;
+        }
+        finally
+        {
+            WriteRelease();
+        }
+    }
+    public async Task<SavedStructure?> GetSave(BarricadeDrop barricade, CancellationToken token = default)
+    {
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            uint id = barricade.instanceID;
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable is UCBarricade)
+                {
+                    return item;
+                }
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+
+        return null;
+    }
+    public async Task<SavedStructure?> GetSave(uint id, EStructType type, CancellationToken token = default)
+    {
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable != null && item.Buildable.Type == type)
+                {
+                    return item;
+                }
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+
+        return null;
+    }
+    public async Task<SqlItem<SavedStructure>?> GetSaveItem(StructureDrop structure, CancellationToken token = default)
+    {
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            uint id = structure.instanceID;
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable is UCStructure)
+                {
+                    return Items[i];
+                }
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+
+        return null;
+    }
+    public async Task<SqlItem<SavedStructure>?> GetSaveItem(BarricadeDrop barricade, CancellationToken token = default)
+    {
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            uint id = barricade.instanceID;
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable is UCBarricade)
+                {
+                    return Items[i];
+                }
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+
+        return null;
+    }
+    public async Task<SqlItem<SavedStructure>?> GetSaveItem(uint id, EStructType type, CancellationToken token = default)
+    {
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                SavedStructure? item = Items[i].Item;
+                if (item != null && item.InstanceID == id && item.Buildable != null && item.Buildable.Type == type)
+                {
+                    return Items[i];
+                }
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+
+        return null;
+    }
+    public SqlItem<SavedStructure>? GetSaveItemSync(uint instanceId, EStructType type)
+    {
+        WriteWait();
+        try
+        {
+            for (int i = 0; i < List.Count; ++i)
+            {
+                SavedStructure? item = List[i].Item;
+                if (item != null && item.InstanceID == instanceId && item.Buildable != null && item.Buildable.Type == type)
+                {
+                    return List[i];
+                }
+            }
+            return null;
+        }
+        finally
+        {
+            WriteRelease();
+        }
+    }
+    public void BeginAddStructure(StructureDrop drop)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                if (drop.GetServersideData().structure.isDead)
+                    return;
+                await AddStructure(drop, F.DebugTimeout).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error adding structure to structure saver.");
+                L.LogError(ex);
+            }
+        });
+    }
+    public void BeginAddBarricade(BarricadeDrop drop)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                if (drop.GetServersideData().barricade.isDead)
+                    return;
+                await AddBarricade(drop, F.DebugTimeout).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error adding barricade to structure saver.");
+                L.LogError(ex);
+            }
+        });
+    }
+    public void BeginRemoveItem(SavedStructure structure)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                await RemoveItem(structure, F.DebugTimeout).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error removing save from structure saver.");
+                L.LogError(ex);
+            }
+        });
+    }
+
+    // ReSharper disable InconsistentNaming
+    #region Sql
+    public const string TABLE_MAIN = "structures";
+    public const string TABLE_DISPLAY_DATA = "structures_display_data";
+    public const string TABLE_STRUCTURE_ITEMS = "structures_storage_items";
+    public const string TABLE_INSTANCES = "structures_instance_ids";
+    public const string COLUMN_PK = "pk";
+    public const string COLUMN_MAP = "Map";
+    public const string COLUMN_GUID = "Guid";
+    public const string COLUMN_POS_X = "Pos_X";
+    public const string COLUMN_POS_Y = "Pos_Y";
+    public const string COLUMN_POS_Z = "Pos_Z";
+    public const string COLUMN_ROT_X = "Rot_X";
+    public const string COLUMN_ROT_Y = "Rot_Y";
+    public const string COLUMN_ROT_Z = "Rot_Z";
+    public const string COLUMN_OWNER = "Owner";
+    public const string COLUMN_GROUP = "Group";
+    public const string COLUMN_METADATA = "Metadata";
+    public const string COLUMN_ITEM_PK = "pk";
+    public const string COLUMN_ITEM_STRUCTURE_PK = "Structure";
+    public const string COLUMN_ITEM_GUID = "Guid";
+    public const string COLUMN_ITEM_POS_X = "Pos_X";
+    public const string COLUMN_ITEM_POS_Y = "Pos_Y";
+    public const string COLUMN_ITEM_ROT = "Rotation";
+    public const string COLUMN_ITEM_AMOUNT = "Amount";
+    public const string COLUMN_ITEM_QUALITY = "Quality";
+    public const string COLUMN_ITEM_METADATA = "Metadata";
+    public const string COLUMN_DISPLAY_SKIN = "Skin";
+    public const string COLUMN_DISPLAY_MYTHIC = "Mythic";
+    public const string COLUMN_DISPLAY_TAGS = "Tags";
+    public const string COLUMN_DISPLAY_DYNAMIC_PROPS = "DynamicProps";
+    public const string COLUMN_DISPLAY_ROT = "Rotation";
+    public const string COLUMN_INSTANCES_INSTANCE_ID = "InstanceId";
+    public const string COLUMN_INSTANCES_REGION_KEY = "Region";
+    private static readonly Schema[] SCHEMAS =
+    {
+        new Schema(TABLE_MAIN, new Schema.Column[]
+        {
+            new Schema.Column(COLUMN_PK,       SqlTypes.INCREMENT_KEY)
+            {
+                AutoIncrement = true,
+                PrimaryKey = true
+            },
+            new Schema.Column(COLUMN_MAP,      SqlTypes.MAP_ID),
+            new Schema.Column(COLUMN_GUID,     SqlTypes.GUID),
+            new Schema.Column(COLUMN_POS_X,    SqlTypes.FLOAT),
+            new Schema.Column(COLUMN_POS_Y,    SqlTypes.FLOAT),
+            new Schema.Column(COLUMN_POS_Z,    SqlTypes.FLOAT),
+            new Schema.Column(COLUMN_ROT_X,    SqlTypes.FLOAT),
+            new Schema.Column(COLUMN_ROT_Y,    SqlTypes.FLOAT),
+            new Schema.Column(COLUMN_ROT_Z,    SqlTypes.FLOAT),
+            new Schema.Column(COLUMN_OWNER,    SqlTypes.STEAM_64),
+            new Schema.Column(COLUMN_GROUP,    SqlTypes.STEAM_64),
+            new Schema.Column(COLUMN_METADATA, SqlTypes.BYTES_255)
+        }, true, typeof(SavedStructure)),
+        new Schema(TABLE_DISPLAY_DATA, new Schema.Column[]
+        {
+            new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
+            {
+                AutoIncrement = true,
+                PrimaryKey = true,
+                ForeignKey = true,
+                ForeignKeyColumn = COLUMN_PK,
+                ForeignKeyTable = TABLE_MAIN
+            },
+            new Schema.Column(COLUMN_DISPLAY_SKIN,   SqlTypes.USHORT),
+            new Schema.Column(COLUMN_DISPLAY_MYTHIC, SqlTypes.USHORT),
+            new Schema.Column(COLUMN_DISPLAY_ROT,    SqlTypes.BYTE),
+            new Schema.Column(COLUMN_DISPLAY_TAGS,   SqlTypes.STRING_255)
+            {
+                Nullable = true
+            },
+            new Schema.Column(COLUMN_DISPLAY_DYNAMIC_PROPS, SqlTypes.STRING_255)
+            {
+                Nullable = true
+            }
+        }, false, typeof(ItemDisplayData)),
+        new Schema(TABLE_STRUCTURE_ITEMS, new Schema.Column[]
+        {
+            new Schema.Column(COLUMN_ITEM_PK, SqlTypes.INCREMENT_KEY)
+            {
+                AutoIncrement = true,
+                PrimaryKey = true,
+            },
+            new Schema.Column(COLUMN_ITEM_STRUCTURE_PK, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = COLUMN_PK,
+                ForeignKeyTable = TABLE_MAIN
+            },
+            new Schema.Column(COLUMN_ITEM_GUID,     SqlTypes.GUID),
+            new Schema.Column(COLUMN_ITEM_AMOUNT,   SqlTypes.BYTE),
+            new Schema.Column(COLUMN_ITEM_QUALITY,  SqlTypes.BYTE),
+            new Schema.Column(COLUMN_ITEM_POS_X,    SqlTypes.BYTE),
+            new Schema.Column(COLUMN_ITEM_POS_Y,    SqlTypes.BYTE),
+            new Schema.Column(COLUMN_ITEM_ROT,      SqlTypes.BYTE),
+            new Schema.Column(COLUMN_ITEM_METADATA, SqlTypes.BYTES_255),
+        }, false, typeof(ItemJarData)),
+        new Schema(TABLE_INSTANCES, new Schema.Column[]
+        {
+            new Schema.Column(COLUMN_INSTANCES_REGION_KEY, SqlTypes.REGION_KEY),
+            new Schema.Column(COLUMN_ITEM_STRUCTURE_PK,    SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = COLUMN_PK,
+                ForeignKeyTable = TABLE_MAIN
+            },
+            new Schema.Column(COLUMN_INSTANCES_INSTANCE_ID, SqlTypes.INSTANCE_ID)
+        }, false, null)
+    };
+    // ReSharper restore InconsistentNaming
     [Obsolete]
     protected override async Task AddOrUpdateItem(SavedStructure? item, PrimaryKey pk, CancellationToken token = default)
     {
@@ -207,22 +1085,21 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         await Sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_DISPLAY_SKIN}`,`{COLUMN_DISPLAY_MYTHIC}`," +
                              $"`{COLUMN_DISPLAY_ROT}`,`{COLUMN_DISPLAY_DYNAMIC_PROPS}`,`{COLUMN_DISPLAY_TAGS}`" +
                              $" FROM `{TABLE_DISPLAY_DATA}`;", null, reader =>
-        {
-            PrimaryKey pk = reader.GetInt32(0);
-            for (int i = 0; i < str.Count; ++i)
-            {
-                if (str[i].PrimaryKey.Key == pk.Key)
-                {
-                    str[i].DisplayData = new ItemDisplayData(
-                        pk, reader.GetUInt16(1), reader.GetUInt16(2),
-                        reader.GetByte(3), reader.IsDBNull(5) ? null : reader.GetString(5),
-                        reader.IsDBNull(4) ? null : reader.GetString(4));
-                    return;
-                }
-            }
-
-            (del ??= new List<PrimaryKey>(2)).Add(pk);
-        }, token).ConfigureAwait(false);
+         {
+             PrimaryKey pk = reader.GetInt32(0);
+             for (int i = 0; i < str.Count; ++i)
+             {
+                 if (str[i].PrimaryKey.Key == pk.Key)
+                 {
+                     str[i].DisplayData = new ItemDisplayData(
+                         pk, reader.GetUInt16(1), reader.GetUInt16(2),
+                         reader.GetByte(3), reader.IsDBNull(5) ? null : reader.GetString(5),
+                         reader.IsDBNull(4) ? null : reader.GetString(4));
+                     return;
+                 }
+             } 
+             (del ??= new List<PrimaryKey>(2)).Add(pk);
+         }, token).ConfigureAwait(false);
         if (del != null)
         {
             StringBuilder sb = new StringBuilder($"DELETE FROM `{TABLE_DISPLAY_DATA}` WHERE `{COLUMN_PK}` IN (", 48);
@@ -327,871 +1204,6 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
 
         return str;
     }
-    async Task ILevelStartListenerAsync.OnLevelReady()
-    {
-        // await ImportFromJson(Path.Combine(Data.Paths.StructureStorage, "structures.json"), true, (x, y) => x.InstanceID.CompareTo(y.InstanceID)).ConfigureAwait(false);
-        L.Log("Checking structures: " + Items.Count + " item(s) pending...", ConsoleColor.Magenta);
-        await WaitAsync(F.DebugTimeout).ConfigureAwait(false);
-        try
-        {
-            List<SavedStructure>? toSave = null;
-            await UCWarfare.ToUpdate();
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SqlItem<SavedStructure> item = Items[i];
-                if (item.Item != null)
-                {
-                    int err = CheckExisting(item.Item);
-                    switch (err)
-                    {
-                        case 2:
-                            L.LogWarning("Error, GUID not found: " + item);
-                            break;
-                        case 3:
-                            L.LogWarning("Error, GUID not barricade or barricade: " + item);
-                            break;
-                        case 12:
-                        case 6:
-                            L.LogWarning("Error, Failed to replace: " + item);
-                            break;
-                        case 5:
-                        case 7:
-                        case 8:
-                        case 9:
-                        case 10:
-                        case 11:
-                            (toSave ??= new List<SavedStructure>(4)).Add(item.Item);
-                            goto case 0;
-                        case 0:
-                            L.LogDebug("Confirmed validity of barricade {" + err.ToString("X2") + "}: " + item);
-                            continue;
-                        default:
-                            L.LogWarning("Error, {" + err.ToString("X2") + "}: " + item);
-                            break;
-                    }
-                }
-            }
-            if (toSave != null)
-            {
-                L.LogDebug("Resaving " + toSave.Count + " item(s)...");
-                await AddOrUpdateNoLock(toSave).ConfigureAwait(false);
-            }
-        }
-        finally
-        {
-            Release();
-        }
-    }
-    private int CheckExisting(SavedStructure structure)
-    {
-        if (Assets.find(structure.ItemGuid) is not ItemAsset item)
-            return 2;
-        if (item is ItemStructureAsset)
-            goto structure;
-        else if (item is not ItemBarricadeAsset)
-             return 3;
-
-        ItemBarricadeAsset brAsset = (ItemBarricadeAsset)item;
-        BarricadeDrop? bdrop = structure.InstanceID > 0 ? UCBarricadeManager.FindBarricade(structure.InstanceID, structure.Position) : null;
-        if (bdrop == null)
-        {
-            bdrop = UCBarricadeManager.GetBarricadeFromPosition(structure.Position);
-            if (bdrop == null || bdrop.asset.GUID != structure.ItemGuid)
-            {
-                return Replace(structure, brAsset) ? 5 : 6;
-            }
-            structure.InstanceID = bdrop.instanceID;
-            structure.Position = bdrop.model.position;
-            structure.Rotation = bdrop.model.rotation.eulerAngles;
-            structure.Buildable = new UCBarricade(bdrop);
-            FillHp(bdrop);
-            BarricadeManager.changeOwnerAndGroup(bdrop.model, structure.Owner, structure.Group);
-            return 7;
-        }
-        if (!structure.Position.AlmostEquals(bdrop.model.position) || !structure.Rotation.AlmostEquals(bdrop.model.rotation.eulerAngles))
-        {
-            structure.Position = bdrop.model.position;
-            structure.Rotation = bdrop.model.rotation.eulerAngles;
-            structure.Buildable = new UCBarricade(bdrop);
-            FillHp(bdrop);
-            BarricadeManager.changeOwnerAndGroup(bdrop.model, structure.Owner, structure.Group);
-            return 8;
-        }
-        FillHp(bdrop);
-        BarricadeManager.changeOwnerAndGroup(bdrop.model, structure.Owner, structure.Group);
-        structure.Buildable = new UCBarricade(bdrop);
-
-        return 0;
-        structure:
-        ItemStructureAsset stAsset = (ItemStructureAsset)item;
-        StructureDrop? sdrop = UCBarricadeManager.FindStructure(structure.InstanceID, structure.Position);
-        if (sdrop == null)
-        {
-            sdrop = UCBarricadeManager.GetStructureFromPosition(structure.Position);
-            if (sdrop == null || sdrop.asset.GUID != structure.ItemGuid)
-            {
-                return Replace(structure, stAsset) ? 11 : 12;
-            }
-            structure.InstanceID = sdrop.instanceID;
-            structure.Position = sdrop.model.position;
-            structure.Rotation = sdrop.model.rotation.eulerAngles;
-            structure.Buildable = new UCStructure(sdrop);
-            FillHp(sdrop);
-            StructureManager.changeOwnerAndGroup(sdrop.model, structure.Owner, structure.Group);
-            return 9;
-        }
-        if (!structure.Position.AlmostEquals(sdrop.model.position) || !structure.Rotation.AlmostEquals(sdrop.model.rotation.eulerAngles))
-        {
-            structure.Position = sdrop.model.position;
-            structure.Rotation = sdrop.model.rotation.eulerAngles;
-            structure.Buildable = new UCStructure(sdrop);
-            FillHp(sdrop);
-            StructureManager.changeOwnerAndGroup(sdrop.model, structure.Owner, structure.Group);
-            return 10;
-        }
-        FillHp(sdrop);
-        StructureManager.changeOwnerAndGroup(sdrop.model, structure.Owner, structure.Group);
-        structure.Buildable = new UCStructure(sdrop);
-
-        return 0;
-    }
-    private static void FillHp(BarricadeDrop drop)
-    {
-        ushort hp = drop.GetServersideData().barricade.health;
-        if (drop.asset.health > hp)
-        {
-            BarricadeManager.repair(drop.model, drop.asset.health, 1f, Provider.server);
-        }
-    }
-    private static void FillHp(StructureDrop drop)
-    {
-        ushort hp = drop.GetServersideData().structure.health;
-        if (drop.asset.health > hp)
-        {
-            StructureManager.repair(drop.model, drop.asset.health, 1f, Provider.server);
-        }
-    }
-    private static bool Replace(SavedStructure structure, ItemBarricadeAsset asset)
-    {
-        byte[] state = GetBarricadeState(null, asset, structure);
-        Transform t = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset, asset.health, state),
-            structure.Position, Quaternion.Euler(structure.Rotation), structure.Owner, structure.Group);
-        BarricadeDrop? drop = BarricadeManager.FindBarricadeByRootTransform(t);
-        if (drop == null)
-            return false;
-        structure.Buildable = new UCBarricade(drop);
-        if (asset is ItemStorageAsset storage && drop.interactable is InteractableStorage intx)
-        {
-            bool a = false;
-            if (structure.Items != null && Data.SetStorageInventory != null)
-            {
-                Items inv = new Items(PlayerInventory.STORAGE);
-                inv.resize(storage.storage_x, storage.storage_y);
-                for (int i = 0; i < structure.Items.Length; ++i)
-                {
-                    ref ItemJarData data = ref structure.Items[i];
-                    if (Assets.find(data.Item) is ItemAsset item)
-                        inv.loadItem(data.X, data.Y, data.Rotation,
-                            new Item(item.id, data.Amount, data.Quality, data.Metadata));
-                }
-
-                if (_onStateUpdatedInteractableStorageMethod != null)
-                {
-                    inv.onStateUpdated = (StateUpdated)Delegate.Combine(inv.onStateUpdated,
-                        _onStateUpdatedInteractableStorageMethod.CreateDelegate(typeof(StateUpdated), intx));
-                }
-                else L.LogWarning("Unknown method: void onStateUpdated() in InteractableStorage.");
-                Data.SetStorageInventory(intx, inv);
-                a = true;
-            }
-
-            if (storage.isDisplay && structure.DisplayData.HasValue)
-            {
-                ItemDisplayData data = structure.DisplayData.Value;
-                intx.displaySkin = data.Skin;
-                intx.displayMythic = data.Mythic;
-                intx.displayTags = data.Tags ?? string.Empty;
-                intx.displayDynamicProps = data.DynamicProps ?? string.Empty;
-                intx.applyRotation(data.Rotation);
-                _updateDisplayMethod?.Invoke(intx, Array.Empty<object>());
-                intx.refreshDisplay();
-                a = true;
-            }
-
-            if (a)
-            {
-                intx.rebuildState();
-                structure.Metadata = drop.GetServersideData().barricade.state;
-            }
-        }
-
-        return true;
-    }
-    private static bool Replace(SavedStructure structure, ItemStructureAsset asset)
-    {
-        if (Regions.tryGetCoordinate(structure.Position, out byte x, out byte y))
-        {
-            Quaternion rotation = Quaternion.Euler(-90f, structure.Rotation.y, 0f);
-            StructureRegion region = StructureManager.regions[x, y];
-            Structure str = new Structure(asset, asset.health);
-            bool success = StructureManager.dropReplicatedStructure(str,
-                structure.Position, rotation, structure.Owner, structure.Group);
-            if (!success) return false;
-            StructureDrop? drop = region.drops.TailOrDefault();
-            if (drop == null || drop.GetServersideData().structure != str)
-            {
-                for (int i = 0; i < region.drops.Count; ++i)
-                {
-                    if (region.drops[i].GetServersideData().structure == str)
-                    {
-                        drop = region.drops[i];
-                        break;
-                    }
-                }
-                if (drop == null)
-                {
-                    L.LogWarning("Structure spawn reported successful but couldn't be found in region {"
-                                 + x + ", " + y + "}.");
-                    return false;
-                }
-            }
-            structure.Buildable = new UCStructure(drop);
-            structure.Position = drop.model.position;
-            structure.Rotation = drop.model.rotation.eulerAngles;
-            return true;
-        }
-        return false;
-    }
-    private static byte[] GetBarricadeState(BarricadeDrop? drop, ItemBarricadeAsset asset, SavedStructure structure)
-    {
-        byte[] st2 = drop != null ? drop.GetServersideData().barricade.state : (structure.Metadata is null || structure.Metadata.Length == 0 ? Array.Empty<byte>() : structure.Metadata);
-        byte[] owner = BitConverter.GetBytes(structure.Owner);
-        byte[] group = BitConverter.GetBytes(structure.Group);
-        byte[] state;
-        switch (asset.build)
-        {
-            case EBuild.DOOR:
-            case EBuild.GATE:
-            case EBuild.SHUTTER:
-            case EBuild.HATCH:
-                state = new byte[17];
-                Buffer.BlockCopy(owner, 0, state, 0, sizeof(ulong));
-                Buffer.BlockCopy(group, 0, state, sizeof(ulong), sizeof(ulong));
-                state[16] = (byte)(st2[16] > 0 ? 1 : 0);
-                break;
-            case EBuild.BED:
-                state = owner;
-                break;
-            case EBuild.STORAGE:
-            case EBuild.SENTRY:
-            case EBuild.SENTRY_FREEFORM:
-            case EBuild.SIGN:
-            case EBuild.SIGN_WALL:
-            case EBuild.NOTE:
-            case EBuild.LIBRARY:
-            case EBuild.MANNEQUIN:
-                state = Util.CloneBytes(st2);
-                if (state.Length > 15)
-                {
-                    Buffer.BlockCopy(owner, 0, state, 0, sizeof(ulong));
-                    Buffer.BlockCopy(group, 0, state, sizeof(ulong), sizeof(ulong));
-                }
-                break;
-            case EBuild.SPIKE:
-            case EBuild.WIRE:
-            case EBuild.CHARGE:
-            case EBuild.BEACON:
-            case EBuild.CLAIM:
-                state = Array.Empty<byte>();
-                if (drop != null)
-                {
-                    if (drop.interactable is InteractableCharge charge)
-                    {
-                        charge.owner = structure.Owner;
-                        charge.group = structure.Group;
-                    }
-                    else if (drop.interactable is InteractableClaim claim)
-                    {
-                        claim.owner = structure.Owner;
-                        claim.group = structure.Group;
-                    }
-                }
-                break;
-            default:
-                state = Util.CloneBytes(st2);
-                break;
-        }
-
-        return state;
-    }
-    public async Task<(SqlItem<SavedStructure>, bool)> AddStructure(StructureDrop drop, CancellationToken token = default)
-    {
-        if (drop == null || drop.model == null)
-            throw new ArgumentNullException(nameof(drop));
-        this.AssertLoadedIntl();
-
-        uint id = drop.instanceID;
-        for (int i = 0; i < this.Items.Count; ++i)
-        {
-            SqlItem<SavedStructure> str = Items[i];
-            await str.Enter(token).ConfigureAwait(false);
-            try
-            {
-                if (str.Item != null && str.Item.InstanceID == id && str.Item.ItemGuid == drop.asset.GUID)
-                    return (str, false);
-            }
-            finally
-            {
-                str.Release();
-            }
-        }
-
-        StructureData data = drop.GetServersideData();
-        SavedStructure structure = new SavedStructure()
-        {
-            InstanceID = drop.instanceID,
-            Group = data.group,
-            Owner = data.owner,
-            ItemGuid = drop.asset.GUID,
-            Position = drop.model.position,
-            Rotation = drop.model.rotation.eulerAngles with { x = 0f, z = 0f },
-            PrimaryKey = PrimaryKey.NotAssigned,
-            Metadata = Array.Empty<byte>(),
-            Buildable = new UCStructure(drop),
-            DisplayData = null,
-            Items = null
-        };
-        return (await AddOrUpdate(structure, token).ConfigureAwait(false), true);
-    }
-    public async Task<(SqlItem<SavedStructure>, bool)> AddBarricade(BarricadeDrop drop, CancellationToken token = default)
-    {
-        if (drop == null || drop.model == null)
-            throw new ArgumentNullException(nameof(drop));
-        this.AssertLoadedIntl();
-
-        uint id = drop.instanceID;
-        for (int i = 0; i < this.Items.Count; ++i)
-        {
-            SqlItem<SavedStructure> str = Items[i];
-            await str.Enter(token).ConfigureAwait(false);
-            try
-            {
-                if (str.Item != null && str.Item.InstanceID == id && str.Item.ItemGuid == drop.asset.GUID)
-                    return (str, false);
-            }
-            finally
-            {
-                str.Release();
-            }
-        }
-
-        BarricadeData data = drop.GetServersideData();
-        SavedStructure structure = new SavedStructure()
-        {
-            InstanceID = drop.instanceID,
-            Group = data.group,
-            Owner = data.owner,
-            ItemGuid = drop.asset.GUID,
-            Position = drop.model.position,
-            Rotation = drop.model.rotation.eulerAngles,
-            PrimaryKey = PrimaryKey.NotAssigned,
-            Buildable = new UCBarricade(drop),
-            DisplayData = null,
-            Items = null
-        };
-        if (drop.asset is ItemStorageAsset asset && drop.interactable is InteractableStorage storage)
-        {
-            Items inv = storage.items;
-            int ic = inv.getItemCount();
-            structure.Items = new ItemJarData[ic];
-            for (int i = 0; i < ic; ++i)
-            {
-                ItemJar jar = inv.items[i];
-                Guid guid;
-                if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset iasset)
-                    guid = iasset.GUID;
-                else
-                {
-                    L.LogWarning("Unknown item #" + jar.item.id + " in storage " + drop.asset.itemName + ".");
-                    guid = new Guid(jar.item.id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-                }
-
-                structure.Items[i] = new ItemJarData(PrimaryKey.NotAssigned, PrimaryKey.NotAssigned,
-                    guid, jar.x, jar.y, jar.rot, jar.item.amount, jar.item.quality, Util.CloneBytes(jar.item.state));
-            }
-
-            if (asset.isDisplay)
-            {
-                structure.DisplayData = new ItemDisplayData(PrimaryKey.NotAssigned, storage.displaySkin,
-                    storage.displayMythic, storage.rot_comp,
-                    string.IsNullOrEmpty(storage.displayTags) ? null : storage.displayTags,
-                    string.IsNullOrEmpty(storage.displayDynamicProps) ? null : storage.displayDynamicProps);
-            }
-
-            structure.Metadata = new byte[sizeof(ulong) * 2];
-            byte[] owner = BitConverter.GetBytes(structure.Owner);
-            byte[] group = BitConverter.GetBytes(structure.Group);
-            Buffer.BlockCopy(owner, 0, structure.Metadata, 0, sizeof(ulong));
-            Buffer.BlockCopy(group, 0, structure.Metadata, sizeof(ulong), sizeof(ulong));
-        }
-        else
-            structure.Metadata = Util.CloneBytes(data.barricade.state);
-        return (await AddOrUpdate(structure, token).ConfigureAwait(false), true);
-    }
-    public Task RemoveItem(SavedStructure structure, CancellationToken token = default)
-    {
-        return Delete(structure, token);
-    }
-    public bool TryGetSave(StructureDrop structure, out SavedStructure value)
-    {
-        Wait();
-        try
-        {
-            uint id = structure.instanceID;
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable is UCStructure)
-                {
-                    value = item;
-                    return true;
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        value = null!;
-        return false;
-    }
-    public bool TryGetSave(BarricadeDrop barricade, out SavedStructure value)
-    {
-        Wait();
-        try
-        {
-            uint id = barricade.instanceID;
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable is UCBarricade)
-                {
-                    value = item;
-                    return true;
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        value = null!;
-        return false;
-    }
-    public bool TryGetSave(uint id, EStructType type, out SavedStructure value)
-    {
-        Wait();
-        try
-        {
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable != null && item.Buildable.Type == type)
-                {
-                    value = item;
-                    return true;
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        value = null!;
-        return false;
-    }
-    public bool TryGetSave(StructureDrop structure, out SqlItem<SavedStructure> value)
-    {
-        Wait();
-        try
-        {
-            uint id = structure.instanceID;
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable is UCStructure)
-                {
-                    value = Items[i];
-                    return true;
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        value = null!;
-        return false;
-    }
-    public bool TryGetSave(BarricadeDrop barricade, out SqlItem<SavedStructure> value)
-    {
-        Wait();
-        try
-        {
-            uint id = barricade.instanceID;
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable is UCBarricade)
-                {
-                    value = Items[i];
-                    return true;
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        value = null!;
-        return false;
-    }
-    public bool TryGetSave(uint id, EStructType type, out SqlItem<SavedStructure> value)
-    {
-        Wait();
-        try
-        {
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable != null && item.Buildable.Type == type)
-                {
-                    value = Items[i];
-                    return true;
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        value = null!;
-        return false;
-    }
-    public async Task<SavedStructure?> GetSave(StructureDrop structure, CancellationToken token = default)
-    {
-        await WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            uint id = structure.instanceID;
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable is UCStructure)
-                {
-                    return item;
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        return null;
-    }
-    public async Task<SavedStructure?> GetSave(BarricadeDrop barricade, CancellationToken token = default)
-    {
-        await WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            uint id = barricade.instanceID;
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable is UCBarricade)
-                {
-                    return item;
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        return null;
-    }
-    public async Task<SavedStructure?> GetSave(uint id, EStructType type, CancellationToken token = default)
-    {
-        await WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable != null && item.Buildable.Type == type)
-                {
-                    return item;
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        return null;
-    }
-    public async Task<SqlItem<SavedStructure>?> GetSaveItem(StructureDrop structure, CancellationToken token = default)
-    {
-        await WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            uint id = structure.instanceID;
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable is UCStructure)
-                {
-                    return Items[i];
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        return null;
-    }
-    public async Task<SqlItem<SavedStructure>?> GetSaveItem(BarricadeDrop barricade, CancellationToken token = default)
-    {
-        await WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            uint id = barricade.instanceID;
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable is UCBarricade)
-                {
-                    return Items[i];
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        return null;
-    }
-    public async Task<SqlItem<SavedStructure>?> GetSaveItem(uint id, EStructType type, CancellationToken token = default)
-    {
-        await WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? item = Items[i].Item;
-                if (item != null && item.InstanceID == id && item.Buildable != null && item.Buildable.Type == type)
-                {
-                    return Items[i];
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-
-        return null;
-    }
-    public SqlItem<SavedStructure>? GetSaveItemSync(uint instanceId, EStructType type)
-    {
-        Wait();
-        try
-        {
-            for (int i = 0; i < List.Count; ++i)
-            {
-                SavedStructure? item = List[i].Item;
-                if (item != null && item.InstanceID == instanceId && item.Buildable != null && item.Buildable.Type == type)
-                {
-                    return List[i];
-                }
-            }
-        }
-        finally
-        {
-            Release();
-        }
-        return null;
-    }
-    public void BeginAddStructure(StructureDrop drop)
-    {
-        Task.Run(async () =>
-        {
-            try
-            {
-                if (drop.GetServersideData().structure.isDead)
-                    return;
-                await AddStructure(drop, F.DebugTimeout).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                L.LogError("Error adding structure to structure saver.");
-                L.LogError(ex);
-            }
-        });
-    }
-    public void BeginAddBarricade(BarricadeDrop drop)
-    {
-        Task.Run(async () =>
-        {
-            try
-            {
-                if (drop.GetServersideData().barricade.isDead)
-                    return;
-                await AddBarricade(drop, F.DebugTimeout).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                L.LogError("Error adding barricade to structure saver.");
-                L.LogError(ex);
-            }
-        });
-    }
-    public void BeginRemoveItem(SavedStructure structure)
-    {
-        Task.Run(async () =>
-        {
-            try
-            {
-                await RemoveItem(structure, F.DebugTimeout).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                L.LogError("Error removing save from structure saver.");
-                L.LogError(ex);
-            }
-        });
-    }
-    #region Schemas
-    public const string TABLE_MAIN = "structures";
-    public const string TABLE_DISPLAY_DATA = "structures_display_data";
-    public const string TABLE_STRUCTURE_ITEMS = "structures_storage_items";
-    public const string TABLE_INSTANCES = "structures_instance_ids";
-    public const string COLUMN_PK = "pk";
-    public const string COLUMN_MAP = "Map";
-    public const string COLUMN_GUID = "Guid";
-    public const string COLUMN_POS_X = "Pos_X";
-    public const string COLUMN_POS_Y = "Pos_Y";
-    public const string COLUMN_POS_Z = "Pos_Z";
-    public const string COLUMN_ROT_X = "Rot_X";
-    public const string COLUMN_ROT_Y = "Rot_Y";
-    public const string COLUMN_ROT_Z = "Rot_Z";
-    public const string COLUMN_OWNER = "Owner";
-    public const string COLUMN_GROUP = "Group";
-    public const string COLUMN_METADATA = "Metadata";
-    public const string COLUMN_ITEM_PK = "pk";
-    public const string COLUMN_ITEM_STRUCTURE_PK = "Structure";
-    public const string COLUMN_ITEM_GUID = "Guid";
-    public const string COLUMN_ITEM_POS_X = "Pos_X";
-    public const string COLUMN_ITEM_POS_Y = "Pos_Y";
-    public const string COLUMN_ITEM_ROT = "Rotation";
-    public const string COLUMN_ITEM_AMOUNT = "Amount";
-    public const string COLUMN_ITEM_QUALITY = "Quality";
-    public const string COLUMN_ITEM_METADATA = "Metadata";
-    public const string COLUMN_DISPLAY_SKIN = "Skin";
-    public const string COLUMN_DISPLAY_MYTHIC = "Mythic";
-    public const string COLUMN_DISPLAY_TAGS = "Tags";
-    public const string COLUMN_DISPLAY_DYNAMIC_PROPS = "DynamicProps";
-    public const string COLUMN_DISPLAY_ROT = "Rotation";
-    public const string COLUMN_INSTANCES_INSTANCE_ID = "InstanceId";
-    public const string COLUMN_INSTANCES_REGION_KEY = "Region";
-    private static readonly Schema[] SCHEMAS =
-    {
-        new Schema(TABLE_MAIN, new Schema.Column[]
-        {
-            new Schema.Column(COLUMN_PK,       SqlTypes.INCREMENT_KEY)
-            {
-                AutoIncrement = true,
-                PrimaryKey = true
-            },
-            new Schema.Column(COLUMN_MAP,      SqlTypes.MAP_ID),
-            new Schema.Column(COLUMN_GUID,     SqlTypes.GUID),
-            new Schema.Column(COLUMN_POS_X,    SqlTypes.FLOAT),
-            new Schema.Column(COLUMN_POS_Y,    SqlTypes.FLOAT),
-            new Schema.Column(COLUMN_POS_Z,    SqlTypes.FLOAT),
-            new Schema.Column(COLUMN_ROT_X,    SqlTypes.FLOAT),
-            new Schema.Column(COLUMN_ROT_Y,    SqlTypes.FLOAT),
-            new Schema.Column(COLUMN_ROT_Z,    SqlTypes.FLOAT),
-            new Schema.Column(COLUMN_OWNER,    SqlTypes.STEAM_64),
-            new Schema.Column(COLUMN_GROUP,    SqlTypes.STEAM_64),
-            new Schema.Column(COLUMN_METADATA, SqlTypes.BYTES_255)
-        }, true, typeof(SavedStructure)),
-        new Schema(TABLE_DISPLAY_DATA, new Schema.Column[]
-        {
-            new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
-            {
-                AutoIncrement = true,
-                PrimaryKey = true,
-                ForeignKey = true,
-                ForeignKeyColumn = COLUMN_PK,
-                ForeignKeyTable = TABLE_MAIN
-            },
-            new Schema.Column(COLUMN_DISPLAY_SKIN,   SqlTypes.USHORT),
-            new Schema.Column(COLUMN_DISPLAY_MYTHIC, SqlTypes.USHORT),
-            new Schema.Column(COLUMN_DISPLAY_ROT,    SqlTypes.BYTE),
-            new Schema.Column(COLUMN_DISPLAY_TAGS,   SqlTypes.STRING_255)
-            {
-                Nullable = true
-            },
-            new Schema.Column(COLUMN_DISPLAY_DYNAMIC_PROPS, SqlTypes.STRING_255)
-            {
-                Nullable = true
-            }
-        }, false, typeof(ItemDisplayData)),
-        new Schema(TABLE_STRUCTURE_ITEMS, new Schema.Column[]
-        {
-            new Schema.Column(COLUMN_ITEM_PK, SqlTypes.INCREMENT_KEY)
-            {
-                AutoIncrement = true,
-                PrimaryKey = true,
-            },
-            new Schema.Column(COLUMN_ITEM_STRUCTURE_PK, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = COLUMN_PK,
-                ForeignKeyTable = TABLE_MAIN
-            },
-            new Schema.Column(COLUMN_ITEM_GUID,     SqlTypes.GUID),
-            new Schema.Column(COLUMN_ITEM_AMOUNT,   SqlTypes.BYTE),
-            new Schema.Column(COLUMN_ITEM_QUALITY,  SqlTypes.BYTE),
-            new Schema.Column(COLUMN_ITEM_POS_X,    SqlTypes.BYTE),
-            new Schema.Column(COLUMN_ITEM_POS_Y,    SqlTypes.BYTE),
-            new Schema.Column(COLUMN_ITEM_ROT,      SqlTypes.BYTE),
-            new Schema.Column(COLUMN_ITEM_METADATA, SqlTypes.BYTES_255),
-        }, false, typeof(ItemJarData)),
-        new Schema(TABLE_INSTANCES, new Schema.Column[]
-        {
-            new Schema.Column(COLUMN_INSTANCES_REGION_KEY, SqlTypes.REGION_KEY),
-            new Schema.Column(COLUMN_ITEM_STRUCTURE_PK,    SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = COLUMN_PK,
-                ForeignKeyTable = TABLE_MAIN
-            },
-            new Schema.Column(COLUMN_INSTANCES_INSTANCE_ID, SqlTypes.INSTANCE_ID)
-        }, false, null)
-    };
     #endregion
 }
 public record struct ItemJarData(PrimaryKey Key, PrimaryKey Structure, Guid Item, byte X, byte Y, byte Rotation, byte Amount, byte Quality,

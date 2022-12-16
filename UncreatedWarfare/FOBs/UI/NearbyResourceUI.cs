@@ -14,7 +14,7 @@ public class NearbyResourceUI : UnturnedUI
 
     public void SetValues(ITransportConnection c, int build, int ammo)
     {
-        BuildLabel.SetText(c, build.ToString(Data.Locale));
-        AmmoLabel.SetText(c, ammo.ToString(Data.Locale));
+        BuildLabel.SetText(c, build.ToString(Data.LocalLocale));
+        AmmoLabel.SetText(c, ammo.ToString(Data.LocalLocale));
     }
 }

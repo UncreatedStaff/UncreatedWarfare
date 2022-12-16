@@ -353,7 +353,7 @@ public static class QuestManager
         foreach (Type type in types.Where(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {
             QuestDataAttribute? attribute = type.GetCustomAttributes().OfType<QuestDataAttribute>().FirstOrDefault();
-            if (attribute != null && attribute.Type != QuestType.INVALID && !QuestTypes.ContainsKey(attribute.Type))
+            if (attribute != null && attribute.Type != QuestType.Invalid && !QuestTypes.ContainsKey(attribute.Type))
                 QuestTypes.Add(attribute.Type, type);
         }
 
@@ -517,8 +517,8 @@ public static class QuestManager
             }
         }
     }
-    private static string GetSavePath(ulong steam64, Guid key, ulong team) => Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", steam64.ToString(Data.Locale) +
-                                                                              "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale), "Quests", team + "_" + key.ToString("N") + ".json");
+    private static string GetSavePath(ulong steam64, Guid key, ulong team) => Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", steam64.ToString(Data.AdminLocale) +
+                                                                              "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale), "Quests", team + "_" + key.ToString("N") + ".json");
     public static void SaveProgress(BaseQuestTracker t, ulong team)
     {
         if (t.PresetKey == default) return;
@@ -604,8 +604,8 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        string folder = Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", player.Steam64.ToString(Data.Locale) +
-                        "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale), "Quests") + Path.DirectorySeparatorChar;
+        string folder = Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", player.Steam64.ToString(Data.AdminLocale) +
+                        "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale), "Quests") + Path.DirectorySeparatorChar;
         if (!Directory.Exists(folder))
         {
             Directory.CreateDirectory(folder);

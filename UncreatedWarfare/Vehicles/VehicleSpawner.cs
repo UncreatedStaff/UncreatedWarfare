@@ -193,7 +193,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListenerAs
         }
         Singleton.RemoveWhere(s => s.InstanceId == barricadeInstanceID && s.StructureType == type);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        if (saver != null && saver.TryGetSave(barricadeInstanceID, type, out SavedStructure structure))
+        if (saver != null && saver.TryGetSaveNoLock(barricadeInstanceID, type, out SavedStructure structure))
             saver.BeginRemoveItem(structure);
     }
     public static bool IsRegistered(uint barricadeInstanceID, out VehicleSpawn spawn, EStructType type)
@@ -432,7 +432,7 @@ public class VehicleSpawn
                 {
                     StructureSaver? saver = Warfare.Data.Singletons.GetSingleton<StructureSaver>();
                     L.LogWarning("VEHICLE SPAWNER ERROR: corresponding BarricadeDrop could not be found, attempting to replace the barricade.");
-                    if (saver == null || !saver.TryGetSave(InstanceId, EStructType.BARRICADE, out SavedStructure structure))
+                    if (saver == null || !saver.TryGetSaveNoLock(InstanceId, EStructType.BARRICADE, out SavedStructure structure))
                     {
                         L.LogError("VEHICLE SPAWNER ERROR: barricade save not found.");
                         Initialized = false;
@@ -492,7 +492,7 @@ public class VehicleSpawn
                 {
                     StructureSaver? saver = Warfare.Data.Singletons.GetSingleton<StructureSaver>();
                     L.LogWarning("VEHICLE SPAWNER ERROR: corresponding StructureDrop could not be found, attempting to replace the structure.");
-                    if (saver == null || !saver.TryGetSave(InstanceId, EStructType.STRUCTURE, out SavedStructure structure))
+                    if (saver == null || !saver.TryGetSaveNoLock(InstanceId, EStructType.STRUCTURE, out SavedStructure structure))
                     {
                         L.LogError("VEHICLE SPAWNER ERROR: structure save not found.");
                         Initialized = false;
@@ -762,7 +762,7 @@ public class VehicleSpawn
             if (Data?.Item == null)
                 return;
             if (!Warfare.Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang))
-                lang = L.DEFAULT;
+                lang = L.Default;
             string val = Localization.TranslateVBS(spawn, Data.Item, lang, player.GetTeam());
             try
             {

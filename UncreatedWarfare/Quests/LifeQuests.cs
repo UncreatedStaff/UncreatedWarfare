@@ -5,7 +5,7 @@ using Uncreated.Json;
 
 namespace Uncreated.Warfare.Quests.Types;
 
-[QuestData(Quests.QuestType.REVIVE_PLAYERS)]
+[QuestData(Quests.QuestType.RevivePlayers)]
 public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, RevivePlayersQuest.State, RevivePlayersQuest>
 {
     public DynamicIntegerValue ReviveCount;

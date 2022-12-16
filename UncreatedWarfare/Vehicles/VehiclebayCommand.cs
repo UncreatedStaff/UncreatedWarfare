@@ -202,7 +202,7 @@ public class VehicleBayCommand : AsyncCommand
                                 if (svc != null) svc.UpdateTimeDelay();
                             }
                             await data.SaveItem(token).ThenToUpdate(token);
-                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "REMOVED " + rem.ToString(Data.Locale) + " DELAY(S) " + type + " VALUE: " + val.ToString(Data.AdminLocale)
+                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "REMOVED " + rem.ToString(Data.AdminLocale) + " DELAY(S) " + type + " VALUE: " + val.ToString(Data.AdminLocale)
                                 + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
                         }
                         ctx.Reply(T.VehicleBayRemovedDelay, rem);
@@ -323,7 +323,7 @@ public class VehicleBayCommand : AsyncCommand
 
                         VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
                         ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY,
-                            $"{asset?.vehicleName ?? "null"} / {(asset == null ? "0" : asset.id.ToString(Data.Locale))} / {data.Item.VehicleID:N} - SET ITEMS");
+                            $"{asset?.vehicleName ?? "null"} / {(asset == null ? "0" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - SET ITEMS");
                         data.Item.Items = items.ToArray();
                         await data.SaveItem(token).ThenToUpdate(token);
                         if (items.Count == 0)
@@ -391,7 +391,7 @@ public class VehicleBayCommand : AsyncCommand
                         if (!data.Item.CrewSeats.Contains(seat))
                         {
                             ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} /" +
-                                $" {(asset == null ? "null" : asset.id.ToString(Data.Locale))} / {data.Item.VehicleID:N} - ADDED CREW SEAT {seat}.");
+                                $" {(asset == null ? "null" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - ADDED CREW SEAT {seat}.");
                             await bay.AddCrewSeat(data, seat, token).ThenToUpdate(token);
                             ctx.Reply(T.VehicleBaySeatAdded, seat, asset!);
                         }
@@ -415,7 +415,7 @@ public class VehicleBayCommand : AsyncCommand
                         if (data.Item.CrewSeats.Contains(seat))
                         {
                             ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} /" +
-                                $" {(asset == null ? "null" : asset.id.ToString(Data.Locale))} / {data.Item.VehicleID:N} - REMOVED CREW SEAT {seat}.");
+                                $" {(asset == null ? "null" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - REMOVED CREW SEAT {seat}.");
                             await bay.RemoveCrewSeat(data, seat, token).ThenToUpdate(token);
                             ctx.Reply(T.VehicleBaySeatRemoved, seat, asset!);
                         }

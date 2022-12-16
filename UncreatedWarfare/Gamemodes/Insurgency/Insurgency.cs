@@ -47,25 +47,25 @@ public class Insurgency :
     IGameStats,
     ITraits
 {
-    protected VehicleSpawner _vehicleSpawner;
-    protected VehicleBay _vehicleBay;
-    protected VehicleSigns _vehicleSigns;
-    protected FOBManager _FOBManager;
-    protected KitManager _kitManager;
-    protected ReviveManager _reviveManager;
-    protected SquadManager _squadManager;
-    protected StructureSaver _structureSaver;
-    protected InsurgencyTracker _gameStats;
-    protected InsurgencyLeaderboard _endScreen;
-    protected TraitManager _traitManager;
-    protected ActionManager _actionManager;
-    protected ulong _attackTeam;
-    protected ulong _defendTeam;
+    private VehicleSpawner _vehicleSpawner;
+    private VehicleBay _vehicleBay;
+    private VehicleSigns _vehicleSigns;
+    private FOBManager _fobManager;
+    private KitManager _kitManager;
+    private ReviveManager _reviveManager;
+    private SquadManager _squadManager;
+    private StructureSaver _structureSaver;
+    private InsurgencyTracker _gameStats;
+    private InsurgencyLeaderboard _endScreen;
+    private TraitManager _traitManager;
+    private ActionManager _actionManager;
+    private ulong _attackTeam;
+    private ulong _defendTeam;
     public int IntelligencePoints;
     public List<CacheData> Caches;
     public List<SerializableTransform> CacheSpawns;
-    private List<Vector3> SeenCaches;
-    public bool _isScreenUp;
+    private List<Vector3> _seenCaches;
+    private bool _isScreenUp;
     public override string DisplayName => "Insurgency";
     public override GamemodeType GamemodeType => GamemodeType.Invasion;
     public override bool EnableAMC => true;
@@ -78,7 +78,7 @@ public class Insurgency :
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
     public VehicleSigns VehicleSigns => _vehicleSigns;
-    public FOBManager FOBManager => _FOBManager;
+    public FOBManager FOBManager => _fobManager;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
@@ -104,7 +104,7 @@ public class Insurgency :
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _reviveManager);
         AddSingletonRequirement(ref _vehicleBay);
-        AddSingletonRequirement(ref _FOBManager);
+        AddSingletonRequirement(ref _fobManager);
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _vehicleSigns);
         AddSingletonRequirement(ref _traitManager);
@@ -201,7 +201,7 @@ public class Insurgency :
 
         CachesDestroyed = 0;
         Caches = new List<CacheData>();
-        SeenCaches = new List<Vector3>();
+        _seenCaches = new List<Vector3>();
 
         CachesLeft = UnityEngine.Random.Range(Config.InsurgencyMinStartingCaches, Config.InsurgencyMaxStartingCaches + 1);
         for (int i = 0; i < CachesLeft; i++)
@@ -396,8 +396,8 @@ public class Insurgency :
 #endif
         SerializableTransform[] viableSpawns = CacheSpawns
             .Where(c1 =>
-                !SeenCaches.Contains(c1.Position) &&
-                SeenCaches
+                !_seenCaches.Contains(c1.Position) &&
+                _seenCaches
                     .All(c => (c1.Position - c).sqrMagnitude > Math.Pow(300, 2)
                     )
                 )
@@ -434,7 +434,7 @@ public class Insurgency :
             d2.Activate(cache);
 
 
-        SeenCaches.Add(transform.Position);
+        _seenCaches.Add(transform.Position);
 
         if (message)
         {
@@ -613,25 +613,25 @@ public class Insurgency :
         string img2 = TeamManager.Team2Faction.FlagImageURL;
         foreach (LanguageSet set in LanguageSet.All())
         {
-            string t1tickets;
-            string t2tickets;
+            string t1Tickets;
+            string t2Tickets;
             if (AttackingTeam == 1)
             {
-                t1tickets = T.WinUIValueTickets.Translate(set.Language, TicketManager.Team1Tickets);
+                t1Tickets = T.WinUIValueTickets.Translate(set.Language, TicketManager.Team1Tickets);
                 if (TicketManager.Team1Tickets <= 0)
-                    t1tickets = t1tickets.Colorize("969696");
-                t2tickets = T.WinUIValueCaches.Translate(set.Language, CachesLeft);
+                    t1Tickets = t1Tickets.Colorize("969696");
+                t2Tickets = T.WinUIValueCaches.Translate(set.Language, CachesLeft);
                 if (CachesLeft <= 0)
-                    t2tickets = t2tickets.Colorize("969696");
+                    t2Tickets = t2Tickets.Colorize("969696");
             }
             else
             {
-                t1tickets = T.WinUIValueCaches.Translate(set.Language, CachesLeft);
+                t1Tickets = T.WinUIValueCaches.Translate(set.Language, CachesLeft);
                 if (CachesLeft <= 0)
-                    t1tickets = t1tickets.Colorize("969696");
-                t2tickets = T.WinUIValueTickets.Translate(set.Language, TicketManager.Team2Tickets);
+                    t1Tickets = t1Tickets.Colorize("969696");
+                t2Tickets = T.WinUIValueTickets.Translate(set.Language, TicketManager.Team2Tickets);
                 if (TicketManager.Team2Tickets <= 0)
-                    t2tickets = t2tickets.Colorize("969696");
+                    t2Tickets = t2Tickets.Colorize("969696");
             }
             string header = T.WinUIHeaderWinner.Translate(set.Language, TeamManager.GetFactionSafe(winner)!);
             while (set.MoveNext())
@@ -640,8 +640,8 @@ public class Insurgency :
                 ITransportConnection c = set.Next.Connection;
                 WinToastUI.Team1Flag.SetImage(c, img1);
                 WinToastUI.Team2Flag.SetImage(c, img2);
-                WinToastUI.Team1Tickets.SetText(c, t1tickets);
-                WinToastUI.Team2Tickets.SetText(c, t2tickets);
+                WinToastUI.Team1Tickets.SetText(c, t1Tickets);
+                WinToastUI.Team2Tickets.SetText(c, t2Tickets);
                 WinToastUI.Header.SetText(c, header);
             }
         }
@@ -843,7 +843,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     public override void GetDisplayInfo(ulong team, out string message, out string tickets, out string bleed)
     {
         int b = GetTeamBleed(team);
-        bleed = b == 0 ? string.Empty : b.ToString(Data.Locale);
+        bleed = b == 0 ? string.Empty : b.ToString(Data.LocalLocale);
         // todo translations
         if (Data.Is(out Insurgency ins))
         {

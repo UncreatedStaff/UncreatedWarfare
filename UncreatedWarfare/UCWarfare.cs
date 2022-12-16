@@ -156,7 +156,6 @@ public class UCWarfare : MonoBehaviour
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
 
-
         if (Config.EnableSync)
             ConfigSync.Reflect();
 
@@ -167,7 +166,7 @@ public class UCWarfare : MonoBehaviour
         if (!Config.DisableDailyQuests)
             Quests.DailyQuests.EarlyLoad();
 
-        ActionLogger.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.Locale)}");
+        ActionLogger.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
     }
 
     internal void InitNetClient()
@@ -452,6 +451,7 @@ public class UCWarfare : MonoBehaviour
         Task t;
         try
         {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1, arg2, arg3, token);
             RunTask(t, ctx, member, fp);
         }
@@ -471,6 +471,7 @@ public class UCWarfare : MonoBehaviour
         Task t;
         try
         {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1, arg2, arg3);
             RunTask(t, ctx, member, fp);
         }
@@ -490,6 +491,7 @@ public class UCWarfare : MonoBehaviour
         Task t;
         try
         {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1, arg2, token);
             RunTask(t, ctx, member, fp);
         }
@@ -509,6 +511,7 @@ public class UCWarfare : MonoBehaviour
         Task t;
         try
         {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1, arg2);
             RunTask(t, ctx, member, fp);
         }
@@ -528,6 +531,7 @@ public class UCWarfare : MonoBehaviour
         Task t;
         try
         {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1, token);
             RunTask(t, ctx, member, fp);
         }
@@ -547,6 +551,7 @@ public class UCWarfare : MonoBehaviour
         Task t;
         try
         {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1);
             RunTask(t, ctx, member, fp);
         }
@@ -566,6 +571,7 @@ public class UCWarfare : MonoBehaviour
         Task t;
         try
         {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(default);
             RunTask(t, ctx, member, fp);
         }
@@ -585,6 +591,7 @@ public class UCWarfare : MonoBehaviour
         Task t;
         try
         {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task();
             RunTask(t, ctx, member, fp);
         }
@@ -619,6 +626,7 @@ public class UCWarfare : MonoBehaviour
         }
         if (task.IsCompleted)
             return;
+        L.LogDebug("Adding task " + ctx + ".");
         I._tasks.Add(new UCTask(task, ctx));
     }
     private static void RegisterErroredTask(Task task, string? ctx)
@@ -848,7 +856,7 @@ public class UCWarfare : MonoBehaviour
             }
             for (int i = 0; i < StatsManager.OnlinePlayers.Count; i++)
             {
-                WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.Locale) + ".dat");
+                WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.AdminLocale) + ".dat");
             }
         }
         catch (Exception ex)

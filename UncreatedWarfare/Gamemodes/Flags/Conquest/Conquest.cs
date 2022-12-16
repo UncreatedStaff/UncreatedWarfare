@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Uncreated.SQL;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -40,7 +39,7 @@ public sealed partial class Conquest :
     private VehicleSpawner _vehicleSpawner;
     private VehicleBay _vehicleBay;
     private VehicleSigns _vehicleSigns;
-    private FOBManager _FOBManager;
+    private FOBManager _fobManager;
     private KitManager _kitManager;
     private ReviveManager _reviveManager;
     private SquadManager _squadManager;
@@ -49,7 +48,7 @@ public sealed partial class Conquest :
     private ConquestStatTracker _gameStats;
     private TraitManager _traitManager;
     private ActionManager _actionManager;
-    private bool _isScreenUp = false;
+    private bool _isScreenUp;
     public override bool EnableAMC => true;
     public override bool ShowOFPUI => true;
     public override bool ShowXPUI => true;
@@ -61,7 +60,7 @@ public sealed partial class Conquest :
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
     public VehicleSigns VehicleSigns => _vehicleSigns;
-    public FOBManager FOBManager => _FOBManager;
+    public FOBManager FOBManager => _fobManager;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
@@ -80,7 +79,7 @@ public sealed partial class Conquest :
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
         AddSingletonRequirement(ref _vehicleSigns);
-        AddSingletonRequirement(ref _FOBManager);
+        AddSingletonRequirement(ref _fobManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _reviveManager);
         AddSingletonRequirement(ref _squadManager);
@@ -154,9 +153,9 @@ public sealed partial class Conquest :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (_allFlags == null || _allFlags.Count == 0) throw new InvalidOperationException("Flags have not yet been loaded!");
+        if (AllFlags == null || AllFlags.Count == 0) throw new InvalidOperationException("Flags have not yet been loaded!");
         IntlLoadRotation();
-        if (_rotation.Count < 1)
+        if (FlagRotation.Count < 1)
         {
             L.LogError("No flags were put into rotation!!");
             throw new Exception("Error loading Conquest: No flags were loaded.");
@@ -179,7 +178,7 @@ public sealed partial class Conquest :
     }
     private void EvaluatePoints(Flag flag, bool overrideInactiveCheck)
     {
-        if (State == Warfare.Gamemodes.State.Active || overrideInactiveCheck)
+        if (State == State.Active || overrideInactiveCheck)
         {
             if (!flag.IsContested(out ulong winner))
             {
@@ -247,7 +246,6 @@ public sealed partial class Conquest :
         L.Log("Team " + capturedTeam + " captured " + flag.Name + ".", ConsoleColor.Green);
         if (_gameStats != null)
             _gameStats.flagOwnerChanges++;
-        string c2 = TeamManager.GetTeamHexColor(capturedTeam);
         Chat.Broadcast(T.TeamCaptured, TeamManager.GetFactionSafe(capturedTeam)!, flag);
         StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         VehicleSigns.OnFlagCaptured();
@@ -276,12 +274,12 @@ public sealed partial class Conquest :
                 CTFUI.CaptureUI.Send(capper, in t2);
         }
     }
-    protected override void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag)
+    protected override void FlagPointsChanged(float newPts, float oldPts, Flag flag)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (NewPoints == 0)
+        if (newPts == 0)
             flag.SetOwner(0);
         UpdateFlag(flag);
     }
@@ -290,7 +288,6 @@ public sealed partial class Conquest :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
@@ -300,7 +297,6 @@ public sealed partial class Conquest :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.LeftCaptureRadius, flag);
         CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
@@ -332,11 +328,11 @@ public class ConquestTicketProvider : BaseTicketProvider, IFlagCapturedListener,
     public override void GetDisplayInfo(ulong team, out string message, out string tickets, out string bleed)
     {
         int intlBld = GetTeamBleed(team);
-        tickets = (team switch { 1 => Manager.Team1Tickets, 2 => Manager.Team2Tickets, _ => 0 }).ToString(Data.Locale);
+        tickets = (team switch { 1 => Manager.Team1Tickets, 2 => Manager.Team2Tickets, _ => 0 }).ToString(Data.LocalLocale);
         if (intlBld < 0)
         {
             message = $"{intlBld} per minute".Colorize("eb9898");
-            bleed = intlBld.ToString(Data.Locale);
+            bleed = intlBld.ToString(Data.LocalLocale);
         }
         else
             bleed = message = string.Empty;

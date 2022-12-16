@@ -249,7 +249,6 @@ public static class Data
             L.LogWarning("Unable to gather all the RPCs needed for Fast Kits, kits will not work as quick.");
             UseFastKits = false;
         }
-
         GetItemManagerInstanceCount = Util.GenerateStaticGetter<ItemManager, uint>("instanceCount", BindingFlags.NonPublic);
         SetPrivateStance = Util.GenerateInstanceSetter<PlayerStance, EPlayerStance>("_stance", BindingFlags.NonPublic);
         SetStorageInventory = Util.GenerateInstanceSetter<InteractableStorage, Items>("_items", BindingFlags.NonPublic);

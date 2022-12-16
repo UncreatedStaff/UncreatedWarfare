@@ -1,9 +1,10 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using JetBrains.Annotations;
+using System.Linq;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
@@ -18,7 +19,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Squads.Commander;
 public class UAV : MonoBehaviour, IBuff
 {
-    public const float GROUND_HEIGHT_OFFSET = 75f;
+    public const float GroundHeightOffset = 75f;
     private bool _inited;
     private UCPlayer _requester;
     private UCPlayer _approver;
@@ -91,7 +92,7 @@ public class UAV : MonoBehaviour, IBuff
         {
             bool isMarker = requester.Player.quests.isMarkerPlaced;
             Vector3 pos = isMarker ? requester.Player.quests.markerPosition : requester.Player.transform.position;
-            pos = pos with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(pos, 0f) + GROUND_HEIGHT_OFFSET) };
+            pos = pos with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(pos, 0f) + GroundHeightOffset) };
             if (activeCommander.Steam64 != requester.Steam64)
             {
                 if (team == 1) _isRequestActiveT1 = true;
@@ -281,8 +282,8 @@ public class UAV : MonoBehaviour, IBuff
     }
 
     // speed gap parameters
-    private const float BASE_START = 0.2f;
-    private const float RAMP_MULTIPLIER = 0.004656f;
+    private const float BaseStart = 0.2f;
+    private const float RampMultiplier = 0.004656f;
 
     [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
     [UsedImplicitly]
@@ -345,7 +346,7 @@ public class UAV : MonoBehaviour, IBuff
             _lastScan = time;
             KeyValuePair<float, SpottedComponent> c = _scanOutput[--_activeIndex];
             float dist = c.Key;
-            _currentDelay = dist <= 1f ? BASE_START : (RAMP_MULTIPLIER / _radius * dist /* dist is already squared */ + BASE_START);
+            _currentDelay = dist <= 1f ? BaseStart : (RampMultiplier / _radius * dist /* dist is already squared */ + BaseStart);
             SpottedComponent spot = c.Value;
 
             if (spot.UAVMode && spot.CurrentSpotter != null)
@@ -372,8 +373,12 @@ public class UAV : MonoBehaviour, IBuff
             _lastPing = time;
             if (_modelAnimTransform != null)
             {
-                EffectManager.ClearEffectByID_AllPlayers(36112);
-                EffectManager.sendEffect(36112, Level.size * 2, _modelAnimTransform.position);
+                ClassConfig config = SquadManager.Config.Classes.FirstOrDefault(x => x.Class == Class.Sniper);
+                if (config.MarkerEffect.ValidReference(out EffectAsset asset))
+                {
+                    EffectManager.ClearEffectByGuid_AllPlayers(asset.GUID);
+                    F.TriggerEffectReliable(asset, Level.size * 2, _modelAnimTransform.position);
+                }
             }
         }
 #endif
@@ -386,11 +391,14 @@ public class UAV : MonoBehaviour, IBuff
             TraitManager.BuffUI.UpdateBuffTimeState(this);
 #if DEBUG
         CircleZone.CalculateParticleSpawnPoints(out Vector2[] pts, _radius, new Vector2(_deployPosition.x, _deployPosition.z));
-        EffectManager.sendEffectReliable(120, Level.size, _deployPosition);
-        for (int i = 0; i < pts.Length; ++i)
+        if (ZonePlayerComponent.Airdrop != null)
         {
-            ref Vector2 pt = ref pts[i];
-            EffectManager.sendEffectReliable(120, Level.size, new Vector3(pt.x, F.GetHeight(pt, 0f), pt.y));
+            F.TriggerEffectReliable(ZonePlayerComponent.Airdrop, Level.size, _deployPosition);
+            for (int i = 0; i < pts.Length; ++i)
+            {
+                ref Vector2 pt = ref pts[i];
+                F.TriggerEffectReliable(ZonePlayerComponent.Airdrop, Level.size, new Vector3(pt.x, F.GetHeight(pt, 0f), pt.y));
+            }
         }
 #endif
         if (_drop == null && Gamemode.Config.BarricadeUAV.ValidReference(out ItemBarricadeAsset asset))
@@ -425,11 +433,11 @@ public class UAV : MonoBehaviour, IBuff
         _scanOutput.Sort((a, b) => a.Key.CompareTo(b.Key));
 #if DEBUG
         profiler.Dispose();
-        L.LogDebug(Time.realtimeSinceStartup.ToString("0.#") + " Scan output: ");
+        L.LogDebug(Time.realtimeSinceStartup.ToString("0.#", Data.AdminLocale) + " Scan output: ");
         using IDisposable d = L.IndentLog(1);
         for (int i = 0; i < _scanOutput.Count; ++i)
         {
-            L.LogDebug(Mathf.Sqrt(_scanOutput[i].Key).ToString("0.#") + "m: " + _scanOutput[i].Value.ToString());
+            L.LogDebug(Mathf.Sqrt(_scanOutput[i].Key).ToString("0.#", Data.AdminLocale) + "m: " + _scanOutput[i].Value);
         }
 #endif
     }

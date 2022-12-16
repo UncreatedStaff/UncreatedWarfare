@@ -36,90 +36,90 @@ public enum WeaponClass : byte
 [Translatable("Quest Type")]
 public enum QuestType : byte
 {
-    INVALID,
+    Invalid,
     /// <summary><see cref="KillEnemiesQuest"/></summary>
-    KILL_ENEMIES,
+    KillEnemies,
     /// <summary><see cref="KillEnemiesQuestWeapon"/></summary>
-    KILL_ENEMIES_WITH_WEAPON,
+    KillEnemiesWithWeapon,
     /// <summary><see cref="KillEnemiesQuestKit"/></summary>
-    KILL_ENEMIES_WITH_KIT,
+    KillEnemiesWithKit,
     /// <summary><see cref="KillEnemiesQuestKitClass"/></summary>
-    KILL_ENEMIES_WITH_KIT_CLASS,
+    KillEnemiesWithKitClass,
     /// <summary><see cref="KillEnemiesQuestWeaponClass"/></summary>
-    KILL_ENEMIES_WITH_WEAPON_CLASS,
+    KillEnemiesWithWeaponClass,
     /// <summary><see cref="KillEnemiesQuestBranch"/></summary>
-    KILL_ENEMIES_WITH_BRANCH,
+    KillEnemiesWithBranch,
     /// <summary><see cref="KillEnemiesQuestTurret"/></summary>
-    KILL_ENEMIES_WITH_TURRET,
+    KillEnemiesWithTurret,
     /// <summary><see cref="KillEnemiesQuestSquad"/></summary>
-    KILL_ENEMIES_IN_SQUAD,
+    KillEnemiesInSquad,
     /// <summary><see cref="KillEnemiesQuestFullSquad"/></summary>
-    KILL_ENEMIES_IN_FULL_SQUAD,
+    KillEnemiesInFullSquad,
     /// <summary><see cref="KillEnemiesQuestDefense"/></summary>
     [Translatable("Kill Enemies While Defending Point")]
-    KILL_ENEMIES_ON_POINT_DEFENSE,
+    KillEnemiesOnPointDefense,
     /// <summary><see cref="KillEnemiesQuestAttack"/></summary>
     [Translatable("Kill Enemies While Attacking Point")]
-    KILL_ENEMIES_ON_POINT_ATTACK,
+    KillEnemiesOnPointAttack,
     /// <summary><see cref="HelpBuildQuest"/></summary>
-    SHOVEL_BUILDABLES,
+    ShovelBuildables,
     /// <summary><see cref="BuildFOBsQuest"/></summary>
     [Translatable("Build FOBs")]
-    BUILD_FOBS,
+    BuildFOBs,
     /// <summary><see cref="BuildFOBsNearObjQuest"/></summary>
     [Translatable("Build FOBs Near Objectives")]
-    BUILD_FOBS_NEAR_OBJECTIVES,
+    BuildFOBsNearObjectives,
     /// <summary><see cref="BuildFOBsOnObjQuest"/></summary>
     [Translatable("Build FOBs Near Current Objective")]
-    BUILD_FOB_ON_ACTIVE_OBJECTIVE,
+    BuildFOBOnActiveObjective,
     /// <summary><see cref="DeliverSuppliesQuest"/></summary>
-    DELIVER_SUPPLIES,
+    DeliverSupplies,
     /// <summary><see cref="CaptureObjectivesQuest"/></summary>
-    CAPTURE_OBJECTIVES,
+    CaptureObjectives,
     /// <summary><see cref="DestroyVehiclesQuest"/></summary>
-    DESTROY_VEHICLES,
+    DestroyVehicles,
     /// <summary><see cref="DriveDistanceQuest"/></summary>
-    DRIVE_DISTANCE,
+    DriveDistance,
     /// <summary><see cref="TransportPlayersQuest"/></summary>
-    TRANSPORT_PLAYERS,
+    TransportPlayers,
     /// <summary><see cref="RevivePlayersQuest"/></summary>
-    REVIVE_PLAYERS,
+    RevivePlayers,
     /// <summary><see cref="KingSlayerQuest"/></summary>
     [Translatable("King-slayer")]
-    KING_SLAYER,
+    KingSlayer,
     /// <summary><see cref="KillStreakQuest"/></summary>
     [Translatable("Killstreak")]
-    KILL_STREAK,
+    KillStreak,
     /// <summary><see cref="XPInGamemodeQuest"/></summary>
     [Translatable("Earn XP From Gamemode")]
-    XP_IN_GAMEMODE,
+    XPInGamemode,
     /// <summary><see cref="KillEnemiesRangeQuest"/></summary>
     [Translatable("Kill From Distance")]
-    KILL_FROM_RANGE,
+    KillFromRange,
     /// <summary><see cref="KillEnemiesRangeQuestWeapon"/></summary>
     [Translatable("Kill From Distance With Weapon")]
-    KILL_FROM_RANGE_WITH_WEAPON,
+    KillFromRangeWithWeapon,
     /// <summary><see cref="KillEnemiesQuestKitClassRange"/></summary>
     [Translatable("Kill From Distance With Class")]
-    KILL_FROM_RANGE_WITH_CLASS,
+    KillFromRangeWithClass,
     /// <summary><see cref="KillEnemiesQuestKitRange"/></summary>
     [Translatable("Kill From Distance With Kit")]
-    KILL_FROM_RANGE_WITH_KIT,
+    KillFromRangeWithKit,
     /// <summary><see cref="RallyUseQuest"/></summary>
     [Translatable("Teammates Use Rallypoint")]
-    TEAMMATES_DEPLOY_ON_RALLY,
+    TeammatesDeployOnRally,
     /// <summary><see cref="FOBUseQuest"/></summary>
     [Translatable("Teammates Use FOB")]
-    TEAMMATES_DEPLOY_ON_FOB,
+    TeammatesDeployOnFOB,
     /// <summary><see cref="NeutralizeFlagsQuest"/></summary>
-    NEUTRALIZE_FLAGS,
+    NeutralizeFlags,
     /// <summary><see cref="WinGamemodeQuest"/></summary>
-    WIN_GAMEMODE,
+    WinGamemode,
     /// <summary><see cref="DiscordKeySetQuest"/></summary>
     [Translatable("Custom Key")]
-    DISCORD_KEY_SET_BOOL,
+    DiscordKeyBinary,
     /// <summary><see cref="PlaceholderQuest"/></summary>
-    PLACEHOLDER
+    Placeholder
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
@@ -134,9 +134,9 @@ public sealed class QuestDataAttribute : Attribute
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
 public sealed class QuestRewardAttribute : Attribute
 {
-    public EQuestRewardType Type { get; }
+    public QuestRewardType Type { get; }
     public Type ReturnType { get; }
-    public QuestRewardAttribute(EQuestRewardType type, Type returnType)
+    public QuestRewardAttribute(QuestRewardType type, Type returnType)
     {
         Type = type;
         ReturnType = returnType;
@@ -205,7 +205,7 @@ public static class QuestJsonEx
                 {
                     value = new DynamicIntegerValue(DynamicValueType.Wildcard, str![0] == '$' ? ChoiceBehavior.Selective : ChoiceBehavior.Inclusive);
                 }
-                else if (int.TryParse(str, NumberStyles.Any, Data.Locale, out int v1))
+                else if (int.TryParse(str, NumberStyles.Any, Data.AdminLocale, out int v1))
                 {
                     value = new DynamicIntegerValue(v1);
                 }
@@ -292,7 +292,7 @@ public static class QuestJsonEx
                         if (hasRnd)
                         {
                             int.TryParse(str.Substring(stRndInd + 1, str.Length - 1 - stRndInd),
-                                NumberStyles.Number, Data.Locale, out round);
+                                NumberStyles.Number, Data.AdminLocale, out round);
                         }
                         value = new DynamicIntegerValue(new IntegralRange(v1, v2, round, m1, m2), isInclusive ? ChoiceBehavior.Inclusive : ChoiceBehavior.Selective);
                         return true;
@@ -346,7 +346,7 @@ public static class QuestJsonEx
                 return false;
             }
 
-            if (int.TryParse(str, NumberStyles.Any, Data.Locale, out int v))
+            if (int.TryParse(str, NumberStyles.Any, Data.AdminLocale, out int v))
             {
                 value = new DynamicIntegerValue(v);
                 return true;
@@ -374,7 +374,7 @@ public static class QuestJsonEx
                 {
                     value = new DynamicFloatValue(DynamicValueType.Wildcard, str![0] == '$' ? ChoiceBehavior.Selective : ChoiceBehavior.Inclusive);
                 }
-                else if (float.TryParse(str, NumberStyles.Any, Data.Locale, out float v1))
+                else if (float.TryParse(str, NumberStyles.Any, Data.AdminLocale, out float v1))
                 {
                     value = new DynamicFloatValue(v1);
                 }
@@ -474,7 +474,7 @@ public static class QuestJsonEx
                         if (hasRnd)
                         {
                             int.TryParse(str.Substring(stRndInd + 1, str.Length - 1 - stRndInd),
-                                NumberStyles.Number, Data.Locale, out round);
+                                NumberStyles.Number, Data.AdminLocale, out round);
                         }
 
                         value = new DynamicFloatValue(new FloatRange(v1F, v2F, round, m1, m2),
@@ -499,12 +499,13 @@ public static class QuestJsonEx
                         res = new float[arrLen];
                         int ptrpos = str.Length - 1;
                         int index = arrLen;
+                        int num = 0;
+                        int m = 1;
+                        int decPlace = 1;
+                        bool neg = false;
                         while (ptrpos > 1)
                         {
                             ptrpos--;
-                            int num = 0;
-                            int m = 1;
-                            int decPlace = 1;
                             char c = *(p + ptrpos);
                             if (c >= '0' && c <= '9')
                             {
@@ -513,8 +514,7 @@ public static class QuestJsonEx
                             }
                             else if (c == '-')
                             {
-                                num = -num;
-                                break;
+                                neg = true;
                             }
                             else if (c == '.')
                             {
@@ -523,7 +523,7 @@ public static class QuestJsonEx
                             else if (c == ',' || c == '[')
                             {
                                 index--;
-                                res[index] = (float)num / decPlace;
+                                res[index] = (float)num / decPlace * (neg ? -1f : 1f);
                             }
                         }
                     }
@@ -535,7 +535,7 @@ public static class QuestJsonEx
                 return false;
             }
 
-            if (float.TryParse(str, NumberStyles.Any, Data.Locale, out float v))
+            if (float.TryParse(str, NumberStyles.Any, Data.AdminLocale, out float v))
             {
                 value = new DynamicFloatValue(v);
                 return true;
@@ -960,10 +960,10 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
     internal readonly IntegralRange range;
     internal readonly IntegralSet set;
     public readonly DynamicValueType type;
-    private readonly ChoiceBehavior _choiceBehavior = Quests.ChoiceBehavior.Selective;
-    public static readonly IDynamicValue<int>.IChoice Zero = new Choice(new DynamicIntegerValue(0, Quests.ChoiceBehavior.Selective));
-    public static readonly IDynamicValue<int>.IChoice One = new Choice(new DynamicIntegerValue(1, Quests.ChoiceBehavior.Selective));
-    public static readonly IDynamicValue<int>.IChoice Any = new Choice(new DynamicIntegerValue(DynamicValueType.Wildcard, Quests.ChoiceBehavior.Inclusive));
+    private readonly ChoiceBehavior _choiceBehavior = ChoiceBehavior.Selective;
+    public static readonly IDynamicValue<int>.IChoice Zero = new Choice(new DynamicIntegerValue(0, ChoiceBehavior.Selective));
+    public static readonly IDynamicValue<int>.IChoice One = new Choice(new DynamicIntegerValue(1, ChoiceBehavior.Selective));
+    public static readonly IDynamicValue<int>.IChoice Any = new Choice(new DynamicIntegerValue(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive));
     public int Constant => constant;
     public IDynamicValue<int>.IRange Range => range;
     public IDynamicValue<int>.ISet Set => set;
@@ -1032,10 +1032,10 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
     public override string ToString()
     {
         if (type == DynamicValueType.Constant)
-            return constant.ToString(Data.Locale);
+            return constant.ToString(Data.AdminLocale);
         if (type == DynamicValueType.Range)
-            return (_choiceBehavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + range.Minimum.ToString(Data.Locale) +
-                   ":" + range.Maximum.ToString(Data.Locale) + ")";
+            return (_choiceBehavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + range.Minimum.ToString(Data.AdminLocale) +
+                   ":" + range.Maximum.ToString(Data.AdminLocale) + ")";
         if (type == DynamicValueType.Wildcard)
             return _choiceBehavior == ChoiceBehavior.Selective ? "$*" : "#*";
         if (type == DynamicValueType.Set)
@@ -1045,12 +1045,12 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
             for (int i = 0; i < set.Length; i++)
             {
                 if (i != 0) sb.Append(',');
-                sb.Append(set.Set[i].ToString(Data.Locale));
+                sb.Append(set.Set[i].ToString(Data.AdminLocale));
             }
             sb.Append(']');
             return sb.ToString();
         }
-        return constant.ToString(Data.Locale);
+        return constant.ToString(Data.AdminLocale);
     }
     public void Write(Utf8JsonWriter writer)
     {
@@ -1060,8 +1060,8 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
         }
         else if (type == DynamicValueType.Range)
         {
-            writer.WriteStringValue((_choiceBehavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + range.Minimum.ToString(Data.Locale) +
-                                    ":" + range.Maximum.ToString(Data.Locale) + ")");
+            writer.WriteStringValue((_choiceBehavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + range.Minimum.ToString(Data.AdminLocale) +
+                                    ":" + range.Maximum.ToString(Data.AdminLocale) + ")");
         }
         else if (type == DynamicValueType.Wildcard)
         {
@@ -1074,7 +1074,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
             for (int i = 0; i < set.Length; i++)
             {
                 if (i != 0) sb.Append(',');
-                sb.Append(set.Set[i].ToString(Data.Locale));
+                sb.Append(set.Set[i].ToString(Data.AdminLocale));
             }
             sb.Append(']');
             writer.WriteStringValue(sb.ToString());
@@ -1187,7 +1187,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
                         return true;
                     }
                 }
-                else if (int.TryParse(str, NumberStyles.Any, Data.Locale, out _value))
+                else if (int.TryParse(str, NumberStyles.Any, Data.AdminLocale, out _value))
                 {
                     _type = DynamicValueType.Constant;
                     _behavior = ChoiceBehavior.Selective;
@@ -1212,7 +1212,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
             }
             else if (_type == DynamicValueType.Range)
             {
-                writer.WriteStringValue((_behavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _minVal.ToString(Data.Locale) + ":" + _maxVal.ToString(Data.Locale) + ")");
+                writer.WriteStringValue((_behavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _minVal.ToString(Data.AdminLocale) + ":" + _maxVal.ToString(Data.AdminLocale) + ")");
             }
             else if (_type == DynamicValueType.Wildcard)
             {
@@ -1225,7 +1225,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
                 for (int i = 0; i < _values.Length; i++)
                 {
                     if (i != 0) sb.Append(',');
-                    sb.Append(_values[i].ToString(Data.Locale));
+                    sb.Append(_values[i].ToString(Data.AdminLocale));
                 }
                 sb.Append(']');
                 writer.WriteStringValue(sb.ToString());
@@ -1238,10 +1238,10 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
         public override string ToString()
         {
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
-                return _value.ToString(Data.Locale);
+                return _value.ToString(Data.AdminLocale);
             if (_type == DynamicValueType.Range)
-                return (_behavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _minVal.ToString(Data.Locale) +
-                       ":" + _maxVal.ToString(Data.Locale) + ")";
+                return (_behavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _minVal.ToString(Data.AdminLocale) +
+                       ":" + _maxVal.ToString(Data.AdminLocale) + ")";
             if (_type == DynamicValueType.Wildcard)
                 return _behavior == ChoiceBehavior.Selective ? "$*" : "#*";
             if (_type == DynamicValueType.Set)
@@ -1251,12 +1251,12 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
                 for (int i = 0; i < _values.Length; i++)
                 {
                     if (i != 0) sb.Append(',');
-                    sb.Append(_values[i].ToString(Data.Locale));
+                    sb.Append(_values[i].ToString(Data.AdminLocale));
                 }
                 sb.Append(']');
                 return sb.ToString();
             }
-            return _value.ToString(Data.Locale);
+            return _value.ToString(Data.AdminLocale);
         }
     }
 }
@@ -1270,7 +1270,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
     private readonly FloatRange _range;
     public IDynamicValue<float>.IRange Range => _range;
 
-    private readonly ChoiceBehavior _choiceBehavior = Quests.ChoiceBehavior.Selective;
+    private readonly ChoiceBehavior _choiceBehavior = ChoiceBehavior.Selective;
     public ChoiceBehavior SelectionBehavior { get => _choiceBehavior; }
 
     private readonly FloatSet _set;
@@ -1341,10 +1341,10 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
     public override string ToString()
     {
         if (_type == DynamicValueType.Constant)
-            return _constant.ToString(Data.Locale);
+            return _constant.ToString(Data.AdminLocale);
         if (_type == DynamicValueType.Range)
-            return (_choiceBehavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _range.Minimum.ToString(Data.Locale) +
-                   ":" + _range.Maximum.ToString(Data.Locale) + ")";
+            return (_choiceBehavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _range.Minimum.ToString(Data.AdminLocale) +
+                   ":" + _range.Maximum.ToString(Data.AdminLocale) + ")";
         if (_type == DynamicValueType.Wildcard)
             return _choiceBehavior == ChoiceBehavior.Selective ? "$*" : "#*";
         if (_type == DynamicValueType.Set)
@@ -1354,12 +1354,12 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
             for (int i = 0; i < _set.Length; i++)
             {
                 if (i != 0) sb.Append(',');
-                sb.Append(_set.Set[i].ToString(Data.Locale));
+                sb.Append(_set.Set[i].ToString(Data.AdminLocale));
             }
             sb.Append(']');
             return sb.ToString();
         }
-        return _constant.ToString(Data.Locale);
+        return _constant.ToString(Data.AdminLocale);
     }
     public void Write(Utf8JsonWriter writer)
     {
@@ -1369,8 +1369,8 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         }
         else if (_type == DynamicValueType.Range)
         {
-            writer.WriteStringValue((_choiceBehavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _range.Minimum.ToString(Data.Locale) +
-                                    ":" + _range.Maximum.ToString(Data.Locale) + ")");
+            writer.WriteStringValue((_choiceBehavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _range.Minimum.ToString(Data.AdminLocale) +
+                                    ":" + _range.Maximum.ToString(Data.AdminLocale) + ")");
         }
         else if (_type == DynamicValueType.Wildcard)
         {
@@ -1383,7 +1383,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
             for (int i = 0; i < _set.Length; i++)
             {
                 if (i != 0) sb.Append(',');
-                sb.Append(_set.Set[i].ToString(Data.Locale));
+                sb.Append(_set.Set[i].ToString(Data.AdminLocale));
             }
             sb.Append(']');
             writer.WriteStringValue(sb.ToString());
@@ -1496,7 +1496,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
                         return true;
                     }
                 }
-                else if (float.TryParse(str, NumberStyles.Any, Data.Locale, out _value))
+                else if (float.TryParse(str, NumberStyles.Any, Data.AdminLocale, out _value))
                 {
                     _type = DynamicValueType.Constant;
                     _behavior = ChoiceBehavior.Selective;
@@ -1521,7 +1521,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
             }
             else if (_type == DynamicValueType.Range)
             {
-                writer.WriteStringValue((_behavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _minVal.ToString(Data.Locale) + ":" + _maxVal.ToString(Data.Locale) + ")");
+                writer.WriteStringValue((_behavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _minVal.ToString(Data.AdminLocale) + ":" + _maxVal.ToString(Data.AdminLocale) + ")");
             }
             else if (_type == DynamicValueType.Wildcard)
             {
@@ -1534,7 +1534,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
                 for (int i = 0; i < _values!.Length; i++)
                 {
                     if (i != 0) sb.Append(',');
-                    sb.Append(_values[i].ToString(Data.Locale));
+                    sb.Append(_values[i].ToString(Data.AdminLocale));
                 }
                 sb.Append(']');
                 writer.WriteStringValue(sb.ToString());
@@ -1547,10 +1547,10 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         public override string ToString()
         {
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
-                return _value.ToString(Data.Locale);
+                return _value.ToString(Data.AdminLocale);
             if (_type == DynamicValueType.Range)
-                return (_behavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _minVal.ToString(Data.Locale) +
-                       ":" + _maxVal.ToString(Data.Locale) + ")";
+                return (_behavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _minVal.ToString(Data.AdminLocale) +
+                       ":" + _maxVal.ToString(Data.AdminLocale) + ")";
             if (_type == DynamicValueType.Wildcard)
                 return _behavior == ChoiceBehavior.Selective ? "$*" : "#*";
             if (_type == DynamicValueType.Set)
@@ -1560,12 +1560,12 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
                 for (int i = 0; i < _values!.Length; i++)
                 {
                     if (i != 0) sb.Append(',');
-                    sb.Append(_values[i].ToString(Data.Locale));
+                    sb.Append(_values[i].ToString(Data.AdminLocale));
                 }
                 sb.Append(']');
                 return sb.ToString();
             }
-            return _value.ToString(Data.Locale);
+            return _value.ToString(Data.AdminLocale);
         }
     }
 }
@@ -1900,7 +1900,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
         private static string GetKitName(Kit kit, ulong player)
         {
             if (player == 0 || !Data.Languages.TryGetValue(player, out string language))
-                language = L.DEFAULT;
+                language = L.Default;
             return kit.GetDisplayName(language);
         }
     }
@@ -1915,7 +1915,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
     internal readonly GuidSet set;
     public readonly DynamicValueType type;
     public readonly EAssetType assetType;
-    public readonly ChoiceBehavior _choiceBehavior = Quests.ChoiceBehavior.Selective;
+    public readonly ChoiceBehavior _choiceBehavior = ChoiceBehavior.Selective;
     public Guid Constant => constant;
     public IDynamicValue<Guid>.IRange? Range => null;
 
@@ -2332,7 +2332,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
     internal readonly EnumSet<TEnum> set;
     internal readonly EnumRange<TEnum> range;
     public readonly DynamicValueType type;
-    private readonly ChoiceBehavior _choiceBehavior = Quests.ChoiceBehavior.Selective;
+    private readonly ChoiceBehavior _choiceBehavior = ChoiceBehavior.Selective;
     public ChoiceBehavior SelectionBehavior => _choiceBehavior;
     public TEnum Constant => constant;
     public IDynamicValue<TEnum>.IRange Range => range;
@@ -2514,16 +2514,16 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
                 if (_behavior == ChoiceBehavior.Selective)
                 {
 
-                    int r1 = ((IConvertible)value.Range.Minimum).ToInt32(Data.Locale);
-                    int r2 = ((IConvertible)value.Range.Maximum).ToInt32(Data.Locale);
+                    int r1 = ((IConvertible)value.Range.Minimum).ToInt32(Data.AdminLocale);
+                    int r2 = ((IConvertible)value.Range.Maximum).ToInt32(Data.AdminLocale);
                     int r3 = UnityEngine.Random.Range(r1, r2 + 1);
                     _value = (TEnum)Enum.ToObject(typeof(TEnum), r3);
                 }
                 else
                 {
-                    _minValUnderlying = ((IConvertible)value.Range.Minimum).ToInt32(Data.Locale);
+                    _minValUnderlying = ((IConvertible)value.Range.Minimum).ToInt32(Data.AdminLocale);
                     _minVal = value.Range.Minimum;
-                    _maxValUnderlying = ((IConvertible)value.Range.Maximum).ToInt32(Data.Locale);
+                    _maxValUnderlying = ((IConvertible)value.Range.Maximum).ToInt32(Data.AdminLocale);
                     _maxVal = value.Range.Maximum;
                 }
             }
@@ -2677,7 +2677,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
 
                 return builder.ToString();
             }
-            return Localization.TranslateEnum(_value!, player);
+            return Localization.TranslateEnum(_value, player);
         }
     }
 }
@@ -2837,13 +2837,13 @@ public readonly struct IntegralSet : IEnumerable<int>, IDynamicValue<int>.ISet
     }
     public IEnumerator<int> GetEnumerator() => ((IEnumerable<int>)_set).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => _set.GetEnumerator();
-    public override readonly string ToString()
+    public override string ToString()
     {
         StringBuilder sb = new StringBuilder("$[");
         for (int i = 0; i < _length; i++)
         {
             if (i != 0) sb.Append(',');
-            sb.Append(_set[i].ToString(Data.Locale));
+            sb.Append(_set[i].ToString(Data.AdminLocale));
         }
         sb.Append(']');
         return sb.ToString();
@@ -2870,7 +2870,7 @@ public readonly struct FloatSet : IEnumerable<float>, IDynamicValue<float>.ISet
         for (int i = 0; i < _length; i++)
         {
             if (i != 0) sb.Append(',');
-            sb.Append(_set[i].ToString(Data.Locale));
+            sb.Append(_set[i].ToString(Data.AdminLocale));
         }
         sb.Append(']');
         return sb.ToString();
@@ -3045,7 +3045,7 @@ public interface IQuestState
 /// <inheritdoc/>
 /// <typeparam name="TTracker">Class deriving from <see cref="BaseQuestTracker"/> used to track progress.</typeparam>
 /// <typeparam name="TDataNew">Class deriving from <see cref="BaseQuestData"/> used as a template for random variations to be created.</typeparam>
-public interface IQuestState<TTracker, TDataNew> : IQuestState where TTracker : BaseQuestTracker where TDataNew : BaseQuestData
+public interface IQuestState<TTracker, in TDataNew> : IQuestState where TTracker : BaseQuestTracker where TDataNew : BaseQuestData
 {
     public void Init(TDataNew data);
     public bool IsEligable(UCPlayer player);

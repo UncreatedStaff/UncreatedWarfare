@@ -18,12 +18,14 @@ namespace Uncreated.Warfare;
 
 public class Translation
 {
+    private const string NullColorTMPro = "<#569cd6><b>null</b></color>";
+    private const string NullColorUnity = "<color=#569cd6><b>null</b></color>";
+    private const string NullNoColor = "null";
+    private const string LocalFileName = "translations.properties";
+
     private static readonly Dictionary<string, List<KeyValuePair<Type, FormatDisplayAttribute>>> FormatDisplays
         = new Dictionary<string, List<KeyValuePair<Type, FormatDisplayAttribute>>>(32);
-    private const string NULL_CLR_1 = "<#569cd6><b>null</b></color>";
-    private const string NULL_CLR_2 = "<color=#569cd6><b>null</b></color>";
-    private const string NULL_NO_CLR = "null";
-    private const string LOCAL_FILE_NAME = "translations.properties";
+
     private readonly TranslationFlags _flags;
     private TranslationValue _defaultData;
     private TranslationValue[]? _data;
@@ -43,7 +45,7 @@ public class Translation
     {
         string def2 = @default;
         Color clr = ProcessValue(ref def2, out string inner, Flags);
-        _defaultData = new TranslationValue(L.DEFAULT, @default, inner, def2, clr);
+        _defaultData = new TranslationValue(L.Default, @default, inner, def2, clr);
     }
     public void RefreshColors()
     {
@@ -117,10 +119,10 @@ public class Translation
 
             TranslationValue[] old = _data;
             _data = new TranslationValue[old.Length + 1];
-            if (language.Equals(L.DEFAULT, StringComparison.OrdinalIgnoreCase))
+            if (language.Equals(L.Default, StringComparison.OrdinalIgnoreCase))
             {
                 Array.Copy(old, 0, _data, 1, old.Length);
-                _data[0] = new TranslationValue(L.DEFAULT, value, Flags);
+                _data[0] = new TranslationValue(L.Default, value, Flags);
             }
             else
             {
@@ -393,7 +395,7 @@ public class Translation
             if (player is null)
                 return Null(flags);
             if (!player.isActiveAndEnabled)
-                return player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale);
+                return player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.AdminLocale);
             UCPlayer? pl = UCPlayer.FromPlayer(player);
             PlayerNames names = pl is null ? new PlayerNames(player) : pl.Name;
             if (format is not null)
@@ -411,9 +413,9 @@ public class Translation
                 if (format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                     return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), names.PlayerName, flags);
                 if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
-                    return player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale);
+                    return player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.AdminLocale);
                 if (format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
-                    return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), flags);
+                    return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.AdminLocale), flags);
             }
             return names.CharacterName;
         }
@@ -427,12 +429,12 @@ public class Translation
             {
                 if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
                     return player.characterName;
-                else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
                     return player.nickName;
-                else if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                     return player.playerName;
-                else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
-                    return player.steamID.m_SteamID.ToString(Data.Locale);
+                if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
+                    return player.steamID.m_SteamID.ToString(Data.AdminLocale);
             }
             return player.characterName;
         }
@@ -917,21 +919,21 @@ public class Translation
     };
     internal static string Null(TranslationFlags flags) =>
         ((flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText)
-            ? NULL_NO_CLR
+            ? NullNoColor
             : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
-                ? NULL_CLR_2
-                : NULL_CLR_1);
+                ? NullColorUnity
+                : NullColorTMPro);
     public string Translate(string? language)
     {
         if (language is null)
             return _defaultData.Processed;
         if (language.Length == 0 || language.Equals("0", StringComparison.Ordinal))
-            language = L.DEFAULT;
+            language = L.Default;
 
         ref TranslationValue data = ref this[language];
         return data.Processed;
     }
-    public string Translate(IPlayer? player) => player is null ? Translate(L.DEFAULT) : Translate(Localization.GetLang(player.Steam64));
+    public string Translate(IPlayer? player) => player is null ? Translate(L.Default) : Translate(Localization.GetLang(player.Steam64));
     public string Translate(ulong player) => Translate(Localization.GetLang(player));
     public string Translate(ulong player, out Color color) => Translate(Localization.GetLang(player), out color);
     public string Translate(string? language, out Color color)
@@ -942,7 +944,7 @@ public class Translation
             return _defaultData.ProcessedInner;
         }
         if (language.Length == 0 || language.Equals("0", StringComparison.Ordinal))
-            language = L.DEFAULT;
+            language = L.Default;
 
         ref TranslationValue data = ref this[language];
         color = data.Color;
@@ -961,7 +963,8 @@ public class Translation
                 {
                     formatting[i] = typeof(ToStringHelperClass<>).MakeGenericType(v.GetType())
                         .GetMethod("ToString", BindingFlags.Static | BindingFlags.Public)!
-                        .Invoke(null, new object[] { language, (t.GetField("_arg" + i + "Fmt", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(this) as string)!, target!, Data.Locale, this.Flags });
+                        .Invoke(null, new object[] { language, (t.GetField("_arg" + i.ToString(Data.AdminLocale) + "Fmt",
+                            BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(this) as string)!, target!, Localization.GetLocale(language), this.Flags });
                     continue;
                 }
                 throw new ArgumentException("Formatting argument at index " + i + " is not a type compatable with it's generic type!", nameof(formatting) + "[" + i + "]");
@@ -1074,12 +1077,12 @@ public class Translation
         {
             DirectoryInfo langFolder = dirs[i];
 
-            FileInfo info = new FileInfo(Path.Combine(langFolder.FullName, LOCAL_FILE_NAME));
+            FileInfo info = new FileInfo(Path.Combine(langFolder.FullName, LocalFileName));
             if (!info.Exists) continue;
             string lang = langFolder.Name;
-            if (lang.Equals(L.DEFAULT, StringComparison.OrdinalIgnoreCase))
+            if (lang.Equals(L.Default, StringComparison.OrdinalIgnoreCase))
             {
-                lang = L.DEFAULT;
+                lang = L.Default;
                 defRead = true;
             }
             else
@@ -1187,25 +1190,25 @@ public class Translation
                 for (int i = 0; i < t._data.Length; ++i)
                 {
                     ref TranslationValue v = ref t._data[i];
-                    if (v.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
+                    if (v.Language.Equals(L.Default, StringComparison.Ordinal))
                         goto c;
                 }
             }
             ++amt;
-            t.AddTranslation(L.DEFAULT, t._defaultData.Original);
+            t.AddTranslation(L.Default, t._defaultData.Original);
         c:;
         }
         if (amt > 0 && defRead)
-            L.Log("Added " + amt + " missing default translations for " + L.DEFAULT + ".", ConsoleColor.Yellow);
-        L.Log("Loaded translations in " + (DateTime.Now - start).TotalMilliseconds.ToString("F1", Data.Locale) + "ms", ConsoleColor.Magenta);
+            L.Log("Added " + amt + " missing default translations for " + L.Default + ".", ConsoleColor.Yellow);
+        L.Log("Loaded translations in " + (DateTime.Now - start).TotalMilliseconds.ToString("F1", Data.AdminLocale) + "ms", ConsoleColor.Magenta);
         OnReload?.Invoke();
     }
     private static void WriteDefaultTranslations()
     {
-        DirectoryInfo dir = new DirectoryInfo(Path.Combine(Data.Paths.LangStorage, L.DEFAULT));
+        DirectoryInfo dir = new DirectoryInfo(Path.Combine(Data.Paths.LangStorage, L.Default));
         if (!dir.Exists)
             dir.Create();
-        FileInfo info = new FileInfo(Path.Combine(dir.FullName, LOCAL_FILE_NAME));
+        FileInfo info = new FileInfo(Path.Combine(dir.FullName, LocalFileName));
         using FileStream str = new FileStream(info.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
         using StreamWriter writer = new StreamWriter(str);
         string? lastSection = null;
@@ -1221,7 +1224,7 @@ public class Translation
         DirectoryInfo dir = new DirectoryInfo(Path.Combine(Data.Paths.LangStorage, language));
         if (!dir.Exists)
             dir.Create();
-        FileInfo info = new FileInfo(Path.Combine(dir.FullName, LOCAL_FILE_NAME));
+        FileInfo info = new FileInfo(Path.Combine(dir.FullName, LocalFileName));
         using FileStream str = new FileStream(info.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
         using StreamWriter writer = new StreamWriter(str);
         string? lastSection = null;
@@ -1267,8 +1270,8 @@ public class Translation
         for (int i = 0; i < gen.Length; ++i)
         {
             Type type = gen[i];
-            string vi = i.ToString(Data.Locale);
-            string fmt = "#  " + "{" + vi + "} - [" + ToString(type, L.DEFAULT, null, null, TranslationFlags.NoColorOptimization) + "]";
+            string vi = i.ToString(Data.AdminLocale);
+            string fmt = "#  " + "{" + vi + "} - [" + ToString(type, L.Default, null, null, TranslationFlags.NoColorOptimization) + "]";
 
             FieldInfo? info = tt.GetField("_arg" + vi + "Fmt", BindingFlags.NonPublic | BindingFlags.Instance);
             FieldInfo? info2 = tt.GetField("_arg" + vi + "PluralExp", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -1362,7 +1365,7 @@ public class Translation
                         val = short.MaxValue;
                         return;
                     }
-                    if (int.TryParse(fmt.Substring(ind2 + 1, ind2 + 4 - fmt.Length), NumberStyles.Number, Data.Locale, out int num))
+                    if (int.TryParse(fmt.Substring(ind2 + 1, ind2 + 4 - fmt.Length), NumberStyles.Number, Data.AdminLocale, out int num))
                     {
                         fmt = fmt.Substring(0, ind1);
                         val = (short)num;
@@ -1387,7 +1390,7 @@ public enum TranslationFlags
     None = 0,
 
     /// <summary>Tells the translator not to search for translations in other languages if not found in the current language, and instead just return the field name.
-    /// <para>If the current language isn't <see cref="L.DEFAULT"/>, a default will not be chosen.</para></summary>
+    /// <para>If the current language isn't <see cref="L.Default"/>, a default will not be chosen.</para></summary>
     DontDefaultToOtherLanguage = 1,
 
     /// <summary>Tells the translator to an <see cref="ArgumentException"/> if the translation isn't found.
@@ -1501,7 +1504,7 @@ public sealed class Translation<T> : Translation
         Translate(Translate(language, out color), language, arg, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(UCPlayer player, T arg)
     {
-        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
         return Translate(Translate(lang), lang, arg, player, player is null ? 0 : player.GetTeam(), Flags);
     }
     public string Translate(ulong player, T arg)
@@ -1565,7 +1568,7 @@ public sealed class Translation<T1, T2> : Translation
         Translate(Translate(language, out color), language, arg1, arg2, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(UCPlayer player, T1 arg1, T2 arg2)
     {
-        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
         return Translate(Translate(lang), lang, arg1, arg2, player, player is null ? 0 : player.GetTeam(), Flags);
     }
     public string Translate(ulong player, T1 arg1, T2 arg2)
@@ -1635,7 +1638,7 @@ public sealed class Translation<T1, T2, T3> : Translation
         Translate(Translate(language, out color), language, arg1, arg2, arg3, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3)
     {
-        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
         return Translate(Translate(lang), lang, arg1, arg2, arg3, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
     }
     public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3)
@@ -1711,7 +1714,7 @@ public sealed class Translation<T1, T2, T3, T4> : Translation
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
-        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
         return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
     }
     public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
@@ -1793,7 +1796,7 @@ public sealed class Translation<T1, T2, T3, T4, T5> : Translation
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
-        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
         return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
     }
     public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
@@ -1881,7 +1884,7 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
-        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
         return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
     }
     public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
@@ -1975,7 +1978,7 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
-        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
         return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
     }
     public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
@@ -2075,7 +2078,7 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
-        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
         return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
     }
     public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
@@ -2180,7 +2183,7 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translatio
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
-        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
         return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
     }
     public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
@@ -2292,7 +2295,7 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
     {
-        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
         return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
     }
     public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)

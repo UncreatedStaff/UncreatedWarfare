@@ -88,6 +88,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(201)]
     [JsonPropertyName("item_entrenching_tool")]
     public RotatableConfig<JsonAssetReference<ItemMeleeAsset>> ItemEntrenchingTool { get; set; }
+
+    [Sync(202)]
+    [JsonPropertyName("item_laser_designator")]
+    public RotatableConfig<JsonAssetReference<ItemMeleeAsset>> ItemLaserDesignator { get; set; }
     #endregion
 
     #region UI and Effects (401 to 600)
@@ -685,6 +689,7 @@ public sealed class GamemodeConfigData : JSONConfigData
 
         #region Items
         ItemEntrenchingTool = new JsonAssetReference<ItemMeleeAsset>("6cee2662e8884d7bad3a5d743f8222da");
+        ItemLaserDesignator = new JsonAssetReference<ItemMeleeAsset>("3879d9014aca4a17b3ed749cf7a9283e");
         #endregion
 
         #region UI and Effects
