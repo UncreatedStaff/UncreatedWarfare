@@ -19,7 +19,7 @@ public abstract class BaseCTFTicketProvider : BaseTicketProvider
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
     {
         if (oldValue > 0 && newValue <= 0)
-            _ = Data.Gamemode.DeclareWin(TeamManager.Other(team));
+            UCWarfare.RunTask(Data.Gamemode.DeclareWin, TeamManager.Other(team), default, ctx: "Lose game, tickets reached 0.");
     }
     public override void Tick()
     {

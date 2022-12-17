@@ -8,7 +8,7 @@ public interface IRevives : IGamemode
 {
     Revives.ReviveManager ReviveManager { get; }
 }
-public interface IVehicles : IStructureSaving, IGamemode
+public interface IVehicles : IStructureSaving
 {
     Vehicles.VehicleBay VehicleBay { get; }
     Vehicles.VehicleSpawner VehicleSpawner { get; }

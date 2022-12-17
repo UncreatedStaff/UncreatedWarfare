@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -14,22 +15,24 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
     public override string DisplayName => "Advance and Secure";
     public override GamemodeType GamemodeType => GamemodeType.TeamCTF;
     public TeamCTF() : base(nameof(TeamCTF), Config.AASEvaluateTime) { }
-    protected override Task PostDispose()
+    protected override Task PostDispose(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         foreach (SteamPlayer player in Provider.clients)
         {
             CTFUI.ClearFlagList(player.transportConnection);
         }
         CTFUI.CaptureUI.ClearFromAllPlayers();
-        return base.PostDispose();
+        return base.PostDispose(token);
     }
-    protected override Task PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         SpawnBlockers();
         StartStagingPhase(Config.AASStagingTime);
-        return base.PostGameStarting(isOnLoad);
+        return base.PostGameStarting(isOnLoad, token);
     }
     protected override void EndStagingPhase()
     {

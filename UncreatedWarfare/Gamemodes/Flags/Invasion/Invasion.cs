@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -28,24 +29,27 @@ public class Invasion :
     public ulong DefendingTeam => _defenseTeam;
     public SpecialFOB? FirstPointFOB => _vcp;
     public Invasion() : base(nameof(Invasion), Config.AASEvaluateTime) { }
-    protected override Task PostDispose()
+    protected override Task PostDispose(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         foreach (SteamPlayer player in Provider.clients)
         {
             CTFUI.ClearFlagList(player.transportConnection);
         }
         CTFUI.CaptureUI.ClearFromAllPlayers();
-        return base.PostDispose();
+        return base.PostDispose(token);
     }
-    protected override Task PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         PickTeams();
-        return base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad, token);
     }
-    protected override Task PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         Flag? firstFlag = null;
         if (DefendingTeam == 1)
@@ -60,7 +64,7 @@ public class Invasion :
         if (firstFlag != null)
             _vcp = FOBManager.RegisterNewSpecialFOB(Config.InvasionSpecialFOBName, new Vector3(firstFlag.ZoneData.Center.x, F.GetHeight(firstFlag.ZoneData.Center, firstFlag.ZoneData.MinHeight) + 2f, firstFlag.ZoneData.Center.y), _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
         StartStagingPhase(Config.InvasionStagingTime);
-        return base.PostGameStarting(isOnLoad);
+        return base.PostGameStarting(isOnLoad, token);
     }
     protected void PickTeams()
     {
@@ -278,7 +282,7 @@ public class Invasion :
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0) + (_attackTeam == 1 ? " ATTACK" : " DEFENSE"));
             if (_attackTeam == 1 && _objectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
             {
-                DeclareWin(1);
+                UCWarfare.RunTask(Data.Gamemode.DeclareWin, 1ul, default, ctx: "Lose game, flags fully captured by team 1.");
                 _objectiveT1Index = 0;
                 return;
             }
@@ -303,7 +307,7 @@ public class Invasion :
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0) + (_attackTeam == 2 ? " ATTACK" : " DEFENSE"));
             if (_attackTeam == 2 && ObjectiveT2Index < 1) // if t2 just capped the last flag
             {
-                DeclareWin(2);
+                UCWarfare.RunTask(Data.Gamemode.DeclareWin, 2ul, default, ctx: "Lose game, flags fully captured by team 2.");
                 _objectiveT2Index = FlagRotation.Count - 1;
                 return;
             }

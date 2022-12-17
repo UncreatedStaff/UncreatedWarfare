@@ -89,7 +89,6 @@ public static class QuestManager
             {
                 if (preset.Key == key && preset.Team == 0)
                 {
-                    IQuestState state = preset.State;
                     BaseQuestTracker? tr = Quests[i].GetTracker(player, preset);
                     if (tr == null)
                     {
@@ -267,7 +266,7 @@ public static class QuestManager
         else
         {
             QuestCompleted args = new QuestCompleted(tracker);
-            Task.Run(async () =>
+            UCWarfare.RunTask(async () =>
             {
                 await UCWarfare.ToUpdate();
                 if (tracker.PresetKey != default)
@@ -275,13 +274,17 @@ public static class QuestManager
                     if (tracker.Player!.CompletedQuests == null)
                         GetCompletedQuests(tracker.Player);
                     tracker.Player.CompletedQuests!.Add(tracker.PresetKey);
-                    await Data.Gamemode.HandleQuestCompleted(args);
+                    await Data.Gamemode.HandleQuestCompleted(args, default);
                 }
 
                 if (args.GiveRewards)
                     tracker.TryGiveRewards();
-                await Data.Gamemode.OnQuestCompleted(args);
-            });
+                await Data.Gamemode.OnQuestCompleted(args, default);
+#if DEBUG
+            }, ctx: "Calling quest completed for " + tracker + "."); // translation takes a bit of time for these so only do this on debug
+#else
+            }, ctx: "Calling quest completed.");
+#endif
         }
     }
     public static void OnQuestUpdated(BaseQuestTracker tracker, bool skipFlagUpdate = false)

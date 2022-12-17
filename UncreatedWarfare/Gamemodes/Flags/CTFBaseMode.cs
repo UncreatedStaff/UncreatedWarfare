@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.FOBs;
@@ -91,7 +92,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     {
 
     }
-    protected override Task PreInit()
+    protected override Task PreInit(CancellationToken token)
     {
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
@@ -104,17 +105,17 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
-        return base.PreInit();
+        return base.PreInit(token);
     }
     protected override bool TimeToEvaluatePoints() => EveryXSeconds(Config.AASFlagTickSeconds);
-    public override Task DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner, CancellationToken token)
     {
         ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         StartCoroutine(EndGameCoroutine(winner));
-        return base.DeclareWin(winner);
+        return base.DeclareWin(winner, token);
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
@@ -129,7 +130,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 
         _endScreen = UCWarfare.I.gameObject.AddComponent<Leaderboard>();
         _endScreen.OnLeaderboardExpired = OnShouldStartNewGame;
-        _endScreen.SetShutdownConfig(shutdownAfterGame, shutdownMessage);
+        _endScreen.SetShutdownConfig(ShouldShutdownAfterGame, ShutdownMessage);
         _isScreenUp = true;
         _endScreen.StartLeaderboard(winner, _gameStats);
     }
@@ -145,15 +146,16 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             _endScreen = null!;
         }
         _isScreenUp = false;
-        Task.Run(EndGame);
+        UCWarfare.RunTask(EndGame, UCWarfare.UnloadCancel, ctx: "Starting next gamemode.");
     }
-    protected override Task PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         _gameStats.Reset();
         CTFUI.ClearCaptureUI();
         RallyManager.WipeAllRallies();
-        return base.PostGameStarting(isOnLoad);
+        return base.PostGameStarting(isOnLoad, token);
     }
     protected void LoadFlagsIntoRotation()
     {
@@ -387,7 +389,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
             if (_objectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
             {
-                DeclareWin(1);
+                UCWarfare.RunTask(Data.Gamemode.DeclareWin, 1ul, default, ctx: "Lose game, flags fully captured by team 1.");
                 _objectiveT1Index = FlagRotation.Count - 1;
                 return;
             }
@@ -408,7 +410,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
             if (_objectiveT2Index < 1) // if t2 just capped the last flag
             {
-                DeclareWin(2);
+                UCWarfare.RunTask(Data.Gamemode.DeclareWin, 2ul, default, ctx: "Lose game, flags fully captured by team 2.");
                 _objectiveT2Index = 0;
                 return;
             }

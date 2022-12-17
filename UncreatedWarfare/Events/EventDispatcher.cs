@@ -272,7 +272,7 @@ public static class EventDispatcher
         if (BarricadeDestroyed == null) return;
         UCPlayer? instigator = barricade.model.TryGetComponent(out BarricadeComponent component) ? UCPlayer.FromID(component.LastDamager) : null;
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? barricadeSave = saver?.GetSaveItemSync(barricade.instanceID, EStructType.BARRICADE);
+        SqlItem<SavedStructure>? barricadeSave = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
 
         BarricadeDestroyed args = new BarricadeDestroyed(instigator, barricade, barricadeData, region, x, y, plant, barricadeSave);
         foreach (EventDelegate<BarricadeDestroyed> inv in BarricadeDestroyed.GetInvocationList().Cast<EventDelegate<BarricadeDestroyed>>())
@@ -622,7 +622,7 @@ public static class EventDispatcher
         UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
         if (player == null) return;
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(structure.instanceID, EStructType.STRUCTURE);
+        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(structure.instanceID, StructType.Structure);
         StructureRegion? region = null;
         if (Regions.tryGetCoordinate(structure.model.position, out byte x, out byte y))
             StructureManager.tryGetRegion(x, y, out region);
@@ -647,7 +647,7 @@ public static class EventDispatcher
         if (drop == null) return;
         UCPlayer? player = UCPlayer.FromCSteamID(instigatorSteamID);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, EStructType.STRUCTURE);
+        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
         StructureRegion? region = null;
         if (Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
             StructureManager.tryGetRegion(x, y, out region);
@@ -668,7 +668,7 @@ public static class EventDispatcher
         if (StructureDestroyed == null) return;
         UCPlayer? player = UCPlayer.FromID(instigator);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, EStructType.STRUCTURE);
+        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
         StructureRegion? region = null;
         if (Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
             StructureManager.tryGetRegion(x, y, out region);

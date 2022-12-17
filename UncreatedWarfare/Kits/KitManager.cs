@@ -43,14 +43,14 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         OnItemAdded   += OnKitUpdated;
         OnKitAccessChanged += OnKitAccessChangedIntl;
     }
-    public override Task PostLoad()
+    public override Task PostLoad(CancellationToken token)
     {
         PlayerLife.OnPreDeath += OnPreDeath;
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.PlayerJoined += OnPlayerJoined;
         EventDispatcher.PlayerLeaving += OnPlayerLeaving;
         OnItemsRefreshed += OnItemsRefreshedIntl;
-        return base.PostLoad();
+        return base.PostLoad(token);
     }
     private void OnItemsRefreshedIntl()
     {
@@ -75,13 +75,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
         });
     }
-    public override Task PreUnload()
+    public override Task PreUnload(CancellationToken token)
     {
         EventDispatcher.PlayerLeaving -= OnPlayerLeaving;
         EventDispatcher.PlayerJoined -= OnPlayerJoined;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         PlayerLife.OnPreDeath -= OnPreDeath;
-        return base.PreUnload();
+        return base.PreUnload(token);
     }
     public static KitManager? GetSingletonQuick()
     {
@@ -701,12 +701,12 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                          " {" + asset.GUID.ToString("N") + "}.");
         }
     }
-    public async Task OnQuestCompleted(QuestCompleted e)
+    async Task IQuestCompletedHandlerAsync.OnQuestCompleted(QuestCompleted e, CancellationToken token)
     {
-        await WaitAsync(e.Player.DisconnectToken).ConfigureAwait(false);
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await UCWarfare.ToUpdate(e.Player.DisconnectToken);
+            await UCWarfare.ToUpdate(token);
             if (!e.Player.IsOnline)
                 return;
             WriteWait();
@@ -743,15 +743,15 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             Release();
         }
     }
-    public async Task OnPlayerConnecting(UCPlayer player)
+    async Task IPlayerConnectListenerAsync.OnPlayerConnecting(UCPlayer player, CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        await WaitAsync(player.DisconnectToken).ConfigureAwait(false);
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await UCWarfare.ToUpdate(player.DisconnectToken);
+            await UCWarfare.ToUpdate(token);
             if (!player.IsOnline)
                 return;
             WriteWait();
@@ -905,8 +905,11 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     private void OnPlayerLeaving(PlayerEvent e) => OnTeamPlayerCountChanged();
     private void OnPlayerJoined(PlayerJoined e) => OnTeamPlayerCountChanged();
     private void OnGroupChanged(GroupChanged e) => OnTeamPlayerCountChanged(e.Player);
+    private readonly List<Kit> _kitListTemp = new List<Kit>(64);
     internal void OnTeamPlayerCountChanged(UCPlayer? allPlayer = null)
     {
+        if (allPlayer != null)
+            Signs.UpdateKitSigns(allPlayer, null);
         UCWarfare.RunTask(async () =>
         {
             await WaitAsync().ThenToUpdate();
@@ -923,22 +926,23 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                             continue;
                         if (item.Item.TeamLimit < 1f)
                         {
-                            Signs.UpdateKitSigns(null, item.Item.Id);
+                            _kitListTemp.Add(item.Item);
                         }
-                        else if (allPlayer is { IsOnline: true })
-                            Signs.UpdateKitSigns(allPlayer, item.Item.Id);
                     }
                 }
                 finally
                 {
                     WriteRelease();
                 }
+                for (int i = 0; i < _kitListTemp.Count; ++i)
+                    Signs.UpdateKitSigns(null, _kitListTemp[i].Id);
+                _kitListTemp.Clear();
             }
             finally
             {
                 Release();
             }
-        });
+        }, "Updating all kit signs after team player count update");
         // todo update all loadouts or request signs where team limit < 1
     }
     /// <remarks>Thread Safe</remarks>
@@ -1635,28 +1639,28 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
 
         return true;
     }
-    private async Task SetupPlayer(UCPlayer player)
+    private async Task SetupPlayer(UCPlayer player, CancellationToken token = default)
     {
         ulong team = player.GetTeam();
         Kit? kit = player.ActiveKit?.Item;
         if (kit == null || !kit.Requestable || (kit.Type != KitType.Loadout && kit.IsLimited(out _, out _, team)) || (kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out _, team)))
-            await TryGiveRiflemanKit(player).ThenToUpdate();
+            await TryGiveRiflemanKit(player, token).ThenToUpdate(token);
         else if (UCWarfare.Config.ModifySkillLevels)
             player.EnsureSkillsets(kit.Skillsets ?? Array.Empty<Skillset>());
     }
-    public Task OnPostPlayerInit(UCPlayer player)
+    Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player, CancellationToken token)
     {
         if (Data.Gamemode is not TeamGamemode tgm || !tgm.UseTeamSelector)
         {
-            return SetupPlayer(player);
+            return SetupPlayer(player, token);
         }
         UCInventoryManager.ClearInventory(player);
         player.EnsureSkillsets(Array.Empty<Skillset>());
         return Task.CompletedTask;
     }
-    public Task OnJoinTeamAsync(UCPlayer player, ulong team)
+    Task IJoinedTeamListenerAsync.OnJoinTeamAsync(UCPlayer player, ulong team, CancellationToken token)
     {
-        return TryGiveKitOnJoinTeam(player);
+        return TryGiveKitOnJoinTeam(player, token);
     }
 
     #region Sql
@@ -1720,7 +1724,8 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 ForeignKey = true,
                 ForeignKeyColumn = FactionInfo.COLUMN_PK,
                 ForeignKeyTable = FactionInfo.TABLE_MAIN,
-                Nullable = true
+                Nullable = true,
+                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull
             },
             new Schema.Column(COLUMN_CLASS, SqlTypes.Enum(Class.None)),
             new Schema.Column(COLUMN_BRANCH, SqlTypes.Enum(Branch.Default)),

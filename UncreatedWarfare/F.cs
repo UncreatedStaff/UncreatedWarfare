@@ -702,8 +702,8 @@ public static class F
                 success = false;
                 if (unloadIfFail)
                 {
-                    _ = Gamemode.FailToLoadGame(ex);
-                    throw new SingletonLoadException(ESingletonLoadType.LOAD, null, ex);
+                    UCWarfare.RunTask(Gamemode.FailToLoadGame, ex, ctx: "Checking directory \"" + path + "\" failed, unloading game.");
+                    throw new SingletonLoadException(SingletonLoadType.Load, null, ex);
                 }
             }
         }
@@ -1698,5 +1698,61 @@ public static class F
 
         player.Player.quests.ServerAddQuest(quest);
         return true;
+    }
+    public static void CombineIfNeeded(this ref CancellationToken token, CancellationToken other)
+    {
+        if (token == other)
+            return;
+        token = token.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(token, other).Token : token;
+    }
+    public static void CombineIfNeeded(this ref CancellationToken token, CancellationToken other1, CancellationToken other2)
+    {
+        if (token.CanBeCanceled)
+        {
+            if (other1.CanBeCanceled)
+            {
+                if (other1 == other2)
+                {
+                    if (token == other1)
+                        return;
+
+                    token = other2.CanBeCanceled
+                        ? CancellationTokenSource.CreateLinkedTokenSource(token).Token : token;
+                    return;
+                }
+                token = other2.CanBeCanceled
+                    ? CancellationTokenSource.CreateLinkedTokenSource(token, other1, other2).Token
+                    : CancellationTokenSource.CreateLinkedTokenSource(token, other1).Token;
+            }
+            else
+            {
+                if (token == other2)
+                    return;
+
+                token = other2.CanBeCanceled
+                    ? CancellationTokenSource.CreateLinkedTokenSource(token, other2).Token : token;
+            }
+        }
+        else
+        {
+            if (other1.CanBeCanceled)
+            {
+                if (other1 == other2)
+                {
+                    token = other1;
+                }
+                else
+                {
+                    token = other2.CanBeCanceled
+                        ? CancellationTokenSource.CreateLinkedTokenSource(other1, other2).Token : other1;
+                }
+            }
+            else if (other2.CanBeCanceled)
+            {
+                if (token == other2)
+                    return;
+                token = other2;
+            }
+        }
     }
 }

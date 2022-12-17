@@ -82,6 +82,7 @@ public static class Signs
         loadoutId = -1;
         return null;
     }
+    /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static bool CheckSign(BarricadeDrop drop)
     {
         if (drop.model == null)
@@ -94,6 +95,7 @@ public static class Signs
         }
         return false;
     }
+    /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static void CheckAllSigns()
     {
 #if DEBUG
@@ -132,6 +134,7 @@ public static class Signs
             }
         }
     }
+    /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static void UpdateAllSigns(bool updatePlainText = false)
     {
 #if DEBUG
@@ -219,6 +222,7 @@ public static class Signs
             }
         }
     }
+    /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static void UpdateKitSigns(UCPlayer? player, string? kitName)
     {
 #if DEBUG
@@ -280,6 +284,7 @@ public static class Signs
             }
         }
     }
+    /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static void BroadcastSignUpdate(BarricadeDrop drop, bool updatePlainText = false)
     {
         ThreadUtil.assertIsGameThread();
@@ -303,6 +308,7 @@ public static class Signs
             }
         }
     }
+    /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     private static void BroadcastSignUpdate(BarricadeDrop drop, CustomSignComponent comp)
     {
         NetId id = drop.interactable.GetNetId();
@@ -329,6 +335,7 @@ public static class Signs
             }
         }
     }
+    /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static void SendSignUpdate(BarricadeDrop drop, UCPlayer player, bool updatePlainText = false)
     {
         ThreadUtil.assertIsGameThread();
@@ -346,6 +353,7 @@ public static class Signs
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, player.Connection, sign.text);
         }
     }
+    /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     private static void SendSignUpdate(BarricadeDrop drop, UCPlayer player, CustomSignComponent comp)
     {
         if (!comp.DropIsPlanted && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y) && !Regions.checkArea(x, y, player.Player.movement.region_x, player.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
@@ -414,6 +422,7 @@ public static class Signs
             }
         }
     }
+    /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static string GetClientText(BarricadeDrop drop, UCPlayer player, out bool isLong)
     {
         if (drop.interactable is InteractableSign sign)
@@ -431,6 +440,7 @@ public static class Signs
         isLong = false;
         return string.Empty;
     }
+    /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static string GetClientText(BarricadeDrop drop, UCPlayer player)
     {
         if (drop.interactable is InteractableSign sign)

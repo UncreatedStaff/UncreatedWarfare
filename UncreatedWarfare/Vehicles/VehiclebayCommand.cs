@@ -460,7 +460,7 @@ public class VehicleBayCommand : AsyncCommand
                 {
                     if (Gamemode.Config.StructureVehicleBay.MatchGuid(barricade.asset.GUID))
                     {
-                        if (!VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
+                        if (!VehicleSpawner.IsRegistered(barricade.instanceID, out _, StructType.Barricade))
                         {
                             ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
                                 $"REGISTERED BARRICADE SPAWN AT {barricade.model.transform.position:N2} ID: {barricade.instanceID}");
@@ -479,7 +479,7 @@ public class VehicleBayCommand : AsyncCommand
                 {
                     if (Gamemode.Config.StructureVehicleBay.MatchGuid(structure.asset.GUID))
                     {
-                        if (!VehicleSpawner.IsRegistered(structure.instanceID, out _, EStructType.STRUCTURE))
+                        if (!VehicleSpawner.IsRegistered(structure.instanceID, out _, StructType.Structure))
                         {
                             ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
                                 $"REGISTERED STRUCTURE SPAWN AT {structure.model.transform.position:N2} ID: {structure.instanceID}");
@@ -676,14 +676,14 @@ public class VehicleBayCommand : AsyncCommand
                     }
                 }
             }
-            if (VehicleSpawner.SpawnExists(drop.instanceID, EStructType.BARRICADE, out spawn))
+            if (VehicleSpawner.SpawnExists(drop.instanceID, StructType.Barricade, out spawn))
             {
                 SqlItem<VehicleData>? item = await bay.GetDataProxy(spawn.VehicleGuid, token).ConfigureAwait(false);
                 if (item?.Item != null)
                     return item;
             }
         }
-        if (ctx.TryGetTarget(out StructureDrop drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn))
+        if (ctx.TryGetTarget(out StructureDrop drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, StructType.Structure, out spawn))
         {
             SqlItem<VehicleData>? item = await bay.GetDataProxy(spawn.VehicleGuid, token).ConfigureAwait(false);
             if (item?.Item != null)
@@ -712,13 +712,13 @@ public class VehicleBayCommand : AsyncCommand
                     }
                 }
             }
-            if (VehicleSpawner.SpawnExists(drop.instanceID, EStructType.BARRICADE, out spawn) || (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn)))
+            if (VehicleSpawner.SpawnExists(drop.instanceID, StructType.Barricade, out spawn) || (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, StructType.Structure, out spawn)))
                 return spawn;
             else return null;
         }
         if (ctx.TryGetTarget(out drop2))
         {
-            return VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) ? spawn : null;
+            return VehicleSpawner.SpawnExists(drop2.instanceID, StructType.Structure, out spawn) ? spawn : null;
         }
         return null;
     }
@@ -737,7 +737,7 @@ public class VehicleBayCommand : AsyncCommand
                     return sign2;
                 }
             }
-            if (VehicleSpawner.SpawnExists(drop.instanceID, EStructType.BARRICADE, out spawn) || (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn)))
+            if (VehicleSpawner.SpawnExists(drop.instanceID, StructType.Barricade, out spawn) || (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, StructType.Structure, out spawn)))
             {
                 VehicleSign[] signs = VehicleSigns.GetLinkedSigns(spawn).ToArray();
                 if (signs.Length == 1)
@@ -745,7 +745,7 @@ public class VehicleBayCommand : AsyncCommand
             }
             return null;
         }
-        if (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) || (ctx.TryGetTarget(out InteractableVehicle vehicle) && VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out spawn)))
+        if (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, StructType.Structure, out spawn) || (ctx.TryGetTarget(out InteractableVehicle vehicle) && VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out spawn)))
         {
             VehicleSign[] signs = VehicleSigns.GetLinkedSigns(spawn).ToArray();
             if (signs.Length == 1)

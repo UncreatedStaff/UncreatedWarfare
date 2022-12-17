@@ -7,6 +7,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Homebase.Unturned.Warfare;
@@ -171,21 +172,21 @@ public static class Data
             OutputToConsoleMethod = null;
         }
     }
-    internal static async Task LoadSQL()
+    internal static async Task LoadSQL(CancellationToken token)
     {
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
-        bool status = await DatabaseManager.OpenAsync();
+        bool status = await DatabaseManager.OpenAsync(token);
         L.Log("Local MySql database status: " + status + ".", ConsoleColor.Magenta);
         if (UCWarfare.Config.RemoteSQL != null)
         {
             RemoteSQL = new WarfareSQL(UCWarfare.Config.RemoteSQL);
-            status = await RemoteSQL.OpenAsync();
+            status = await RemoteSQL.OpenAsync(token);
             L.Log("Remote MySql database status: " + status + ".", ConsoleColor.Magenta);
         }
         else
             L.Log("Using local as remote MySql database.", ConsoleColor.Magenta);
     }
-    internal static async Task LoadVariables()
+    internal static async Task LoadVariables(CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -214,17 +215,16 @@ public static class Data
         //L.Log("Connection string: " + UCWarfare.Config.SQL.GetConnectionString(), ConsoleColor.DarkGray);
 #endif
 
-        await UCWarfare.ToUpdate();
+        await UCWarfare.ToUpdate(token);
         Points.Initialize();
         Gamemode.ReadGamemodes();
-
-        await UCWarfare.ToUpdate();
+        
         if (UCWarfare.Config.EnableReporter)
             Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
 
 
-        DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(false);
-        await UCWarfare.ToUpdate();
+        DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(false, token: token);
+        await UCWarfare.ToUpdate(token);
 
         /* REFLECT PRIVATE VARIABLES */
         L.Log("Getting RPCs...", ConsoleColor.Magenta);
@@ -283,8 +283,8 @@ public static class Data
             StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
 
         L.Log("Loading first gamemode...", ConsoleColor.Magenta);
-        if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF)))
-            throw new SingletonLoadException(ESingletonLoadType.LOAD, null, new Exception("Failed to load gamemode"));
+        if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF), token))
+            throw new SingletonLoadException(SingletonLoadType.Load, null, new Exception("Failed to load gamemode"));
     }
     internal static void RegisterInitialSyncs()
     {
@@ -350,9 +350,9 @@ public static class Data
         ActionLogger.OnConnected();
         if (!UCWarfare.Config.DisableDailyQuests)
             Quests.DailyQuests.OnConnectedToServer();
-        if (Gamemode != null && Gamemode.shutdownAfterGame)
-            ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.shutdownPlayer, Gamemode.shutdownMessage);
-        Task.Run(OffenseManager.OnConnected).ConfigureAwait(false);
+        if (Gamemode != null && Gamemode.ShouldShutdownAfterGame)
+            ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.ShutdownPlayer, Gamemode.ShutdownMessage);
+        UCWarfare.RunTask(OffenseManager.OnConnected, ctx: "Offense syncing (may take a while if it's been a long time since the bot was connected).");
         ConfigSync.OnConnected(connection);
     }
     public class NetCalls

@@ -226,7 +226,7 @@ public class VehicleSign
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     [JsonPropertyName("bay_type")]
-    public EStructType BayStructureType { get; set; }
+    public StructType BayStructureType { get; set; }
 
     [JsonPropertyName("sign_text")]
     public string SignText { get; set; }
@@ -235,7 +235,7 @@ public class VehicleSign
     public VehicleSign()
     {
         this.SignText = string.Empty;
-        this.BayStructureType = EStructType.UNKNOWN;
+        this.BayStructureType = StructType.Unknown;
     }
     public void InitVars()
     {
@@ -246,7 +246,7 @@ public class VehicleSign
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         if (saver != null)
         {
-            if (!saver.TryGetSaveNoLock(this.InstanceId, EStructType.BARRICADE, out _structureSave))
+            if (!saver.TryGetSaveNoLock(this.InstanceId, StructType.Barricade, out _structureSave))
             {
                 if (drop == null)
                 {
@@ -315,13 +315,13 @@ public class VehicleSign
         {
             if (!saver.TryGetSaveNoLock(bay.InstanceId, bay.StructureType, out SavedStructure _))
             {
-                if (bay.StructureType == EStructType.BARRICADE)
+                if (bay.StructureType == StructType.Barricade)
                 {
                     BarricadeDrop? paddrop = UCBarricadeManager.FindBarricade(bay.InstanceId);
                     if (paddrop != null)
                         saver.BeginAddBarricade(paddrop);
                 }
-                else if (bay.StructureType == EStructType.STRUCTURE)
+                else if (bay.StructureType == StructType.Structure)
                 {
                     StructureDrop? paddrop = UCBarricadeManager.FindStructure(bay.InstanceId);
                     if (paddrop != null)

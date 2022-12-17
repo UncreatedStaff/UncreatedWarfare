@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Events;
@@ -56,8 +57,9 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public int Team2Score => _t2score;
     protected int _t1score = 0;
     protected int _t2score = 0;
-    protected override Task PreInit()
+    protected override Task PreInit(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _vehicleSpawner);
@@ -69,7 +71,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
-        return base.PreInit();
+        return base.PreInit(token);
     }
     public override void Subscribe()
     {
@@ -81,11 +83,12 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         EventDispatcher.PlayerDied -= OnDeath;
         base.Unsubscribe();
     }
-    public override Task DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         StartCoroutine(EndGameCoroutine());
-        return base.DeclareWin(winner);
+        return base.DeclareWin(winner, token);
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine()
     {
@@ -96,7 +99,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
-        Task.Run(EndGame);
+        UCWarfare.RunTask(EndGame, UCWarfare.UnloadCancel, ctx: "Starting next gamemode.");
     }
 
     protected override void InitUI(UCPlayer player)
@@ -106,13 +109,13 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
 
     private void OnScoreUpdated()
     {
-        // todo update ui?
+        // todo make this use a ticket provider instead
     }
-    protected override Task PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {
         _t1score = 0;
         _t2score = 0;
-        return base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad, token);
     }
     
     private void OnDeath(PlayerDied e)

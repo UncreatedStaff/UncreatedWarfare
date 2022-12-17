@@ -458,4 +458,6 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
             Rewards[i].GiveReward(_player, this);
         }
     }
+
+    public override string ToString() => GetDisplayString(false);
 }

@@ -79,7 +79,7 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
     }
     void IGameTickListener.Tick()
     {
-        if (Data.Gamemode.State == State.Active && Provider != null)
+        if (Data.Gamemode != null && Data.Gamemode.State == State.Active && Provider != null)
         {
             Provider.Tick();
         }

@@ -530,7 +530,7 @@ public static class EventFunctions
             
             if (Data.PlaytimeComponents.ContainsKey(ucplayer.Steam64))
             {
-                UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[ucplayer.Steam64]);
+                UnityEngine.Object.Destroy(Data.PlaytimeComponents[ucplayer.Steam64]);
                 Data.PlaytimeComponents.Remove(ucplayer.Steam64);
             }
             ucplayer.Player.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.INFANTRY, team);
@@ -545,7 +545,7 @@ public static class EventFunctions
                 await UCWarfare.ToUpdate();
                 try
                 {
-                    await Data.Gamemode.OnPlayerJoined(ucplayer).ConfigureAwait(false);
+                    await Data.Gamemode.OnPlayerJoined(ucplayer, default).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -1234,7 +1234,7 @@ public static class EventFunctions
 #endif
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         Vector3 pt = point, rt = F.BytesToEuler(angleX, angleY, angleZ);
-        if (saver != null && saver.TryGetSaveNoLock(instanceID, EStructType.STRUCTURE, out SqlItem<SavedStructure> item) && item.Item != null)
+        if (saver != null && saver.TryGetSaveNoLock(instanceID, StructType.Structure, out SqlItem<SavedStructure> item) && item.Item != null)
         {
             Task.Run(async () =>
             {
@@ -1264,7 +1264,7 @@ public static class EventFunctions
 #endif
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         Vector3 pt = point, rt = F.BytesToEuler(angleX, angleY, angleZ);
-        if (saver != null && saver.TryGetSaveNoLock(instanceID, EStructType.BARRICADE, out SqlItem<SavedStructure> item) && item.Item != null)
+        if (saver != null && saver.TryGetSaveNoLock(instanceID, StructType.Barricade, out SqlItem<SavedStructure> item) && item.Item != null)
         {
             Task.Run(async () =>
             {

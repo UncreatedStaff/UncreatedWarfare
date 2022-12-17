@@ -10,6 +10,7 @@ using System.Text.Json;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
@@ -466,7 +467,7 @@ public static class Localization
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         VehicleBayComponent comp;
-        if (spawn.StructureType == Structures.EStructType.STRUCTURE)
+        if (spawn.StructureType == Structures.StructType.Structure)
             if (spawn.StructureDrop != null)
                 comp = spawn.StructureDrop.model.gameObject.GetComponent<VehicleBayComponent>();
             else
@@ -498,16 +499,16 @@ public static class Localization
         if (team is not 1 and not 2)
             return finalformat;
         finalformat += "\n";
-        if (comp.State == EVehicleBayState.DEAD) // vehicle is dead
+        if (comp.State == VehicleBayState.Dead) // vehicle is dead
         {
             float rem = data.RespawnTime - comp.DeadTime;
             return finalformat + T.VBSStateDead.Translate(language, Mathf.FloorToInt(rem / 60f), Mathf.FloorToInt(rem) % 60, null, team);
         }
-        else if (comp.State == EVehicleBayState.IN_USE)
+        else if (comp.State == VehicleBayState.InUse)
         {
             return finalformat + T.VBSStateActive.Translate(language, comp.CurrentLocation);
         }
-        else if (comp.State == EVehicleBayState.IDLE)
+        else if (comp.State == VehicleBayState.Idle)
         {
             float rem = data.RespawnTime - comp.IdleTime;
             return finalformat + T.VBSStateIdle.Translate(language, Mathf.FloorToInt(rem / 60f), Mathf.FloorToInt(rem) % 60, null, team);
@@ -798,6 +799,9 @@ public static class Localization
         }
     }
     internal static string GetLang(ulong player) => Data.Languages.TryGetValue(player, out string lang) ? lang : L.Default;
+    internal static IFormatProvider GetLocale(CommandInteraction ctx) => ctx.IsConsole ? Data.AdminLocale : GetLocale(GetLang(ctx.CallerID));
+    internal static IFormatProvider GetLocale(IPlayer player) => GetLocale(GetLang(player.Steam64));
+    internal static IFormatProvider GetLocale(ulong player) => GetLocale(GetLang(player));
     internal static IFormatProvider GetLocale(string language)
     {
         return LanguageAliasSet.GetCultureInfo(language);

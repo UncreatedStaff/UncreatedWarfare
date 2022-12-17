@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Deaths;
@@ -27,36 +28,38 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
 
     }
-    protected override Task PreInit()
+    protected override Task PreInit(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         if (UseTeamSelector)
             AddSingletonRequirement(ref _teamSelector);
-        return TeamManager.ReloadFactions();
+        return TeamManager.ReloadFactions(token);
     }
-    protected override Task PreDispose()
+    protected override Task PreDispose(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         if (HasOnReadyRan)
             DestroyBlockers();
 
         return Task.CompletedTask;
     }
-    protected override async Task PostInit()
+    protected override async Task PostInit(CancellationToken token)
     {
-        ThreadUtil.assertIsGameThread();
-        await TeamManager.ReloadFactions().ThenToUpdate();
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         if (UseTeamSelector)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 TeamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
         }
-        Task task = base.PostInit();
+        Task task = base.PostInit(token);
         if (!task.IsCompleted)
             await task.ThenToUpdate();
     }
-    protected override Task PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         if (UseTeamSelector)
         {
@@ -64,18 +67,19 @@ public abstract class TeamGamemode : Gamemode, ITeams
                 _teamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
         }
 
-        return base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad, token);
     }
     protected override void EventLoopAction()
     {
         if (EveryXSeconds(Config.GeneralMainCheckSeconds))
             TeamManager.EvaluateBases();
     }
-    protected override Task OnReady()
+    protected override Task OnReady(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         TeamManager.CheckGroups();
-        return Task.CompletedTask;
+        return base.OnReady(token);
     }
     protected void CheckMainCampZones()
     {
@@ -269,11 +273,12 @@ public abstract class TeamGamemode : Gamemode, ITeams
         mainCampers.Remove(e.Player.Steam64);
         EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
-    protected override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    protected override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline, CancellationToken token)
     {
+        // token.CombineIfNeeded(UnloadToken, player.DisconnectToken);
         if (!UseTeamSelector)
             InitUI(player);
-        return base.PlayerInit(player, wasAlreadyOnline);
+        return base.PlayerInit(player, wasAlreadyOnline, token);
     }
     protected abstract void InitUI(UCPlayer player);
     public virtual void OnJoinTeam(UCPlayer player, ulong team)
@@ -292,30 +297,33 @@ public abstract class TeamGamemode : Gamemode, ITeams
             tickets.TicketManager.SendUI(player);
             InitUI(player);
         }
-        UCWarfare.RunTask(async () =>
+
+        CancellationToken token = player.DisconnectToken;
+        token.CombineIfNeeded(UnloadToken);
+        UCWarfare.RunTask(async tkn =>
         {
-            await UCWarfare.ToUpdate();
+            await UCWarfare.ToUpdate(tkn);
             if (this is IJoinedTeamListenerAsync jas)
             {
-                await jas.OnJoinTeamAsync(player, team).ConfigureAwait(false);
-                await UCWarfare.ToUpdate();
+                await jas.OnJoinTeamAsync(player, team, tkn).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(tkn);
             }
             for (int i = 0; i < this.Singletons.Count; ++i)
             {
                 IUncreatedSingleton singleton = Singletons[i];
-                if (singleton is ILevelStartListener l1)
-                    l1.OnLevelReady();
-                if (singleton is ILevelStartListenerAsync l2)
+                if (singleton is IJoinedTeamListener l1)
+                    l1.OnJoinTeam(player, team);
+                if (singleton is IJoinedTeamListenerAsync l2)
                 {
-                    Task task = l2.OnLevelReady();
+                    Task task = l2.OnJoinTeamAsync(player, team, tkn);
                     if (!task.IsCompleted)
                     {
                         await task.ConfigureAwait(false);
-                        await UCWarfare.ToUpdate();
+                        await UCWarfare.ToUpdate(tkn);
                     }
                 }
             }
-        });
+        }, token, "Joining team: " + player.Steam64 + ".");
     }
     public override void PlayerLeave(UCPlayer player)
     {

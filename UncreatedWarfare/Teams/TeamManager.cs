@@ -34,7 +34,8 @@ public static class TeamManager
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.RUSSIAN, "Администрация" }
-            }
+            },
+            TMProSpriteIndex = 0
         },
         new FactionInfo(FactionInfo.USA, "United States", "USA", "USA", "78b2ff", "usunarmed", @"https://i.imgur.com/P4JgkHB.png")
         {
@@ -43,6 +44,13 @@ public static class TeamManager
             Ammo = "51e1e372bf5341e1b4b16a0eacce37eb",
             FOBRadio = "7715ad81f1e24f60bb8f196dd09bd4ef",
             RallyPoint = "5e1db525179341d3b0c7576876212a81",
+            DefaultHat = "0cd25f11b5864c0e99c1ad7ca4f8ad7d",
+            DefaultShirt = "ee5ecff41ebd4ee082bea183db01193c",
+            DefaultBackpack = "83075cc3512f4f209a0b32d309c22f56",
+            DefaultVest = "b5c9c2284ac547b59bad4bf7ad23b602",
+            DefaultPants = "ad3740ed150040edafef80594b89357d",
+            DefaultGlasses = "588933b9da0043d6896d3f6d3f2105b4",
+            DefaultMask = "3a7ff1898393450187e970abfc3efbf1",
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.RUSSIAN, "США" }
@@ -50,7 +58,8 @@ public static class TeamManager
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.RUSSIAN, "США" }
-            }
+            },
+            TMProSpriteIndex = 1
         },
         new FactionInfo(FactionInfo.Russia, "Russia", "RU", "Russia", "f53b3b", "ruunarmed", @"https://i.imgur.com/YMWSUZC.png")
         {
@@ -59,6 +68,12 @@ public static class TeamManager
             Ammo = "8dd66da5affa480ba324e270e52a46d7",
             FOBRadio = "fb910102ad954169abd4b0cb06a112c8",
             RallyPoint = "0d7895360c80440fbe4a45eba28b2007",
+            DefaultHat = "e495734ebe274a0085d8b299b5897cb4",
+            DefaultShirt = "f5c88106d5324175815e730b3b1b897e",
+            DefaultBackpack = "21f6dd73c756470d9be43aaf694a3632",
+            DefaultVest = "8bcb7b352fe841d88cf421f2d7aa760e",
+            DefaultPants = "cede4da725eb4749b66b9d138b0e557d",
+            DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.RUSSIAN, "РОССИЯ" }
@@ -66,7 +81,8 @@ public static class TeamManager
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.RUSSIAN, "РФ" }
-            }
+            },
+            TMProSpriteIndex = 2
         },
         new FactionInfo(FactionInfo.MEC, "Middle Eastern Coalition", "MEC", "MEC", "ffcd8c", "meunarmed", @"https://i.imgur.com/rPmpNzz.png")
         {
@@ -74,52 +90,120 @@ public static class TeamManager
             Build = "9c7122f7e70e4a4da26a49b871087f9f",
             Ammo = "bfc9aed75a3245acbfd01bc78fcfc875",
             FOBRadio = "c7754ac78083421da73006b12a56811a",
-            RallyPoint = "c03352d9e6bb4e2993917924b604ee76"
+            RallyPoint = "c03352d9e6bb4e2993917924b604ee76",
+            DefaultHat = "f10b4420b7c74fa49e09c69ec27709f6",
+            DefaultShirt = "16d972440c704ad284155369cd5f1e13",
+            DefaultBackpack = "2f077bfd25074bad9d8e24d5af29fab4",
+            DefaultVest = "b9b61f2d8b1d472d8430991e08e9450e",
+            DefaultPants = "3c0e787a6f034545800023ac3aa589e4",
+            TMProSpriteIndex = 3
         },
         new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "deunarmed", @"https://i.imgur.com/lgrkCdY.png")
         {
             PrimaryKey = 4,
+            DefaultHat = "835dc9e72f46431a9bed591bcbbfb081",
+            DefaultShirt = "fc4a2a49f335489a84e294ca03031a82",
+            DefaultBackpack = "9addb6f54920495cb4826cb5c000ed4b",
+            DefaultVest = "2499cebdfc6646c59103a48f06c4838a",
+            DefaultPants = "31ed5cd8918e4693bc7431483b130e05",
+            TMProSpriteIndex = 4
         },
         new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "cnunarmed", @"https://i.imgur.com/Yns89Yk.png")
         {
             PrimaryKey = 5,
+            TMProSpriteIndex = 5
         },
         new FactionInfo(FactionInfo.USMC, "US Marine Corps", "USMC", "U.S.M.C.", "004481", null, @"https://i.imgur.com/MO9nPmf.png")
         {
             PrimaryKey = 6,
+            DefaultHat = "9b14747d30c94b168898b14b3b03cbdd",
+            DefaultShirt = "1d8c612e186b4f1588099c663d9d7a44",
+            DefaultBackpack = "7971e03a140149f5bbad7d1c51bc7731",
+            DefaultVest = "5a7753b4801948c6b875d6589a2c4398",
+            DefaultPants = "1a1c1a0065f64543b069e3784f58d5a7",
+            DefaultGlasses = "588933b9da0043d6896d3f6d3f2105b4",
+            DefaultMask = "3a7ff1898393450187e970abfc3efbf1",
+            TMProSpriteIndex = 6
         },
         new FactionInfo(FactionInfo.Soviet, "Soviet", "SOV", "Soviet", "cc0000", null, @"https://i.imgur.com/vk8gBBm.png")
         {
             PrimaryKey = 7,
+            DefaultHat = "d8c9b02f6ad74216ae25ddd4a98d721c",
+            DefaultShirt = "157148a3ebfb447e948b04cdd83d9335",
+            DefaultBackpack = "118c5783814847e7bfe6eac1caa11568",
+            DefaultVest = "b9b61f2d8b1d472d8430991e08e9450e",
+            DefaultPants = "ef9852b99d9e4591904fb42ab9f46134",
+            TMProSpriteIndex = 7
         },
         new FactionInfo(FactionInfo.Poland, "Poland", "PL", "Poland", "dc143c", null, @"https://i.imgur.com/fu3nCS3.png")
         {
             PrimaryKey = 8,
+            DefaultHat = "ece14052a9d64994a3ef2ab1dc27a073",
+            DefaultShirt = "71d35bb681f34b7196bb0e6685106ec4",
+            DefaultBackpack = "90f7aa3817834edd82c6458fffbc2780",
+            DefaultVest = "44bc4c4333564c61a2e86bd4c2809203",
+            DefaultPants = "bf302a8dda994fc08897ed372d8c8cd7",
+            DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
+            TMProSpriteIndex = 8
         },
         new FactionInfo(FactionInfo.Militia, "Militia", "MIL", "Militia", "526257", null)
         {
             PrimaryKey = 9,
+            TMProSpriteIndex = 9
         },
         new FactionInfo(FactionInfo.Israel, "Israel Defense Forces", "IDF", "IDF", "005eb8", null, @"https://i.imgur.com/Wzdspd3.png")
         {
             PrimaryKey = 10,
+            DefaultHat = "6fa1828a5db147bca1c598e5b41fa319",
+            DefaultShirt = "77dc77768d8f4d6b921bbe9a876432d0",
+            DefaultBackpack = "67e14c9892b4459bb0d5b7f394f7f91d",
+            DefaultVest = "5fbd2fdc5b454606993afff708244e20",
+            DefaultPants = "bc16600f78d248c7b108c912ee6a759f",
+            DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
+            TMProSpriteIndex = 10
         },
         new FactionInfo(FactionInfo.France, "France", "FR", "France", "002654", null, @"https://i.imgur.com/TYY0kwp.png")
         {
             PrimaryKey = 11,
+            DefaultHat = "b53b694277184045a01ce82c55f81029",
+            DefaultShirt = "e301b323c52d4feba57fe31e8dea2bca",
+            DefaultBackpack = "a5d911ba6c464f89a9913cf198316c53",
+            DefaultVest = "5ead83aa50984bc085e1dcf34afc606c",
+            DefaultPants = "af4625a9a5e04aa8b9105e08c869998f",
+            TMProSpriteIndex = 11
         },
         new FactionInfo(FactionInfo.Canada, "Canadian Armed Forces", "CAF", "Canada", "d80621", null, @"https://i.imgur.com/zs81UMe.png")
         {
             PrimaryKey = 12,
+            DefaultHat = "6e25bcbc24f047698a26d1da3831068f",
+            DefaultShirt = "ae976b9a82ba48a488ae71e4ca3cee55",
+            DefaultBackpack = "efb51b45aca34676a5d45ce8f28b7ed7",
+            DefaultVest = "4626fb373ab648d0b2a67d3fe58017cc",
+            DefaultPants = "573275f5925c452c96805e9fc5e52d37",
+            DefaultGlasses = "588933b9da0043d6896d3f6d3f2105b4",
+            TMProSpriteIndex = 12
         },
         new FactionInfo(FactionInfo.SouthAfrica, "South Africa", "ZA", "S. Africa", "007749", null, @"https://i.imgur.com/2orfzTh.png")
         {
             PrimaryKey = 13,
+            DefaultHat = "1fb9ad79c8d14168bdbcdcb33ed50064",
+            DefaultShirt = "760f1e854d904bcf902b42c22015aa2a",
+            DefaultBackpack = "0cd247d2c01643e49945ab37b16a6a0a",
+            DefaultVest = "060cc097e5a642ff85bedaca7a46c188",
+            DefaultPants = "b1ca137776964c1f9bb2cd4f19b4d7b5",
+            DefaultMask = "9c2b4e15517e434fac0cf0f4bdf0c278",
+            TMProSpriteIndex = 13
         },
         new FactionInfo(FactionInfo.Mozambique, "Mozambique", "MZ", "Mozambique", "ffd100", null, @"https://i.imgur.com/9nXhlMH.png")
         {
             PrimaryKey = 14,
-        },
+            DefaultHat = "8f30d92410f94318912b8a09f3ccdb9d",
+            DefaultShirt = "b9d5f63ed6f84a5c8c339a86828e0642",
+            DefaultBackpack = "68170172cf2a4dff8ecbd83964a0c13f",
+            DefaultVest = "5ead83aa50984bc085e1dcf34afc606c",
+            DefaultPants = "3f0ad0fd305f4deea96a84d4c9ebaae0",
+            TMProSpriteIndex = 14
+        }
     };
     public static ushort Team1Tickets;
     public static ushort Team2Tickets;
@@ -604,7 +688,6 @@ public static class TeamManager
     public static string TranslateName(ulong team, Player player, bool colorize = false) => TranslateName(team, player.channel.owner.playerID.steamID.m_SteamID, colorize);
     public static string TranslateName(ulong team, CSteamID player, bool colorize = false) => TranslateName(team, player.m_SteamID, colorize);
     public static string TranslateName(ulong team, UCPlayer player, bool colorize = false) => TranslateName(team, player.Steam64, colorize);
-
     public static string TranslateName(ulong team, ulong player, bool colorize = false) => TranslateName(team, Localization.GetLang(player), colorize);
     public static string TranslateName(ulong team, IPlayer player, bool colorize = false) => TranslateName(team, player.Steam64, colorize);
     public static string TranslateName(ulong team, string language, bool colorize = false)
@@ -1095,19 +1178,19 @@ public static class TeamManager
     [Obsolete]
     private static readonly Guid VestRedirect               = new Guid("2b22ac1b5de74755a24c2f05219c5e1f");
 #endif
-    public static Task ReloadFactions()
+    public static Task ReloadFactions(CancellationToken token)
     {
         if (_factions == null)
         {
             _factions = new List<FactionInfo>(DefaultFactions.Length);
             _factionsReadonly = _factions.AsReadOnly();
         }
-        return FactionInfo.DownloadFactions(Data.AdminSql, _factions, CancellationToken.None);
+        return FactionInfo.DownloadFactions(Data.AdminSql, _factions, token);
     }
 }
 public class FactionInfo : ITranslationArgument, IListItem, ICloneable
 {
-    public const string UnknownTeamImgURL = @"https://i.imgur.com/cs0cImN.png";
+    public const string UnknownTeamImgURL = @"https://i.imgur.com/z0HE5P3.png";
     public const int FactionIDMaxCharLimit = 16;
     public const int FactionNameMaxCharLimit = 32;
     public const int FactionShortNameMaxCharLimit = 24;
@@ -1175,6 +1258,8 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     public JsonAssetReference<ItemGlassesAsset>? DefaultGlasses;
     [JsonPropertyName("defaultMask")]
     public JsonAssetReference<ItemMaskAsset>? DefaultMask;
+    [JsonPropertyName("tmProSpriteIndex")]
+    public uint? TMProSpriteIndex;
     [JsonIgnore]
     public PrimaryKey PrimaryKey { get; set; }
     [JsonPropertyName("factionId")]
@@ -1287,6 +1372,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     public const string COLUMN_HEX_COLOR = "HexColor";
     public const string COLUMN_UNARMED_KIT = "UnarmedKit";
     public const string COLUMN_FLAG_IMAGE_URL = "FlagImageUrl";
+    public const string COLUMN_SPRITE_INDEX = "SpriteIndex";
     public const string COLUMN_EXT_PK = "Faction";
     public const string COLUMN_ASSETS_SUPPLY_AMMO = "AmmoSupply";
     public const string COLUMN_ASSETS_SUPPLY_BUILD = "BuildSupply";
@@ -1324,6 +1410,10 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                 Nullable = true
             },
             new Schema.Column(COLUMN_FLAG_IMAGE_URL, "varchar(" + FactionImageLinkMaxCharLimit.ToString(CultureInfo.InvariantCulture) + ")")
+            {
+                Nullable = true
+            },
+            new Schema.Column(COLUMN_SPRITE_INDEX, SqlTypes.UINT)
             {
                 Nullable = true
             }
@@ -1392,31 +1482,23 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     private static async Task AddDefaults(MySqlDatabase sql, CancellationToken token = default)
     {
         StringBuilder builder = new StringBuilder($"INSERT INTO `{TABLE_MAIN}` (`{COLUMN_PK}`,`{COLUMN_ID}`,`{COLUMN_NAME}`,`{COLUMN_SHORT_NAME}`,`{COLUMN_ABBREVIATION}`," +
-                                                  $"`{COLUMN_HEX_COLOR}`,`{COLUMN_UNARMED_KIT}`,`{COLUMN_FLAG_IMAGE_URL}`) VALUES ", 256);
-        object[] objs = new object[TeamManager.DefaultFactions.Length * 8];
+                                                  $"`{COLUMN_HEX_COLOR}`,`{COLUMN_UNARMED_KIT}`,`{COLUMN_FLAG_IMAGE_URL}`,`{COLUMN_SPRITE_INDEX}`) VALUES ", 256);
+        object[] objs = new object[TeamManager.DefaultFactions.Length * 9];
         for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
         {
             FactionInfo def = TeamManager.DefaultFactions[i];   
             def.PrimaryKey = i + 1;
-            if (i != 0)
-                builder.Append(',');
-            builder.Append('(');
-            int st = i * 8;
-            for (int j = 0; j < 8; ++j)
-            {
-                if (j != 0)
-                    builder.Append(',');
-                builder.Append('@').Append(st + j);
-            }
-            builder.Append(')');
-            objs[st] = def.PrimaryKey.Key;
-            objs[st + 1] = def.FactionId;
-            objs[st + 2] = def.Name;
-            objs[st + 3] = def.ShortName;
-            objs[st + 4] = (object?)def.Abbreviation ?? DBNull.Value;
-            objs[st + 5] = (object?)def.HexColor ?? DBNull.Value;
-            objs[st + 6] = (object?)def.UnarmedKit ?? DBNull.Value;
-            objs[st + 7] = (object?)def.FlagImageURL ?? DBNull.Value;
+            int index = i * 9;
+            F.AppendPropertyList(builder, index, 9);
+            objs[index] = def.PrimaryKey.Key;
+            objs[index + 1] = def.FactionId;
+            objs[index + 2] = def.Name;
+            objs[index + 3] = def.ShortName;
+            objs[index + 4] = (object?)def.Abbreviation ?? DBNull.Value;
+            objs[index + 5] = (object?)def.HexColor ?? DBNull.Value;
+            objs[index + 6] = (object?)def.UnarmedKit ?? DBNull.Value;
+            objs[index + 7] = (object?)def.FlagImageURL ?? DBNull.Value;
+            objs[index + 8] = def.TMProSpriteIndex.HasValue ? def.TMProSpriteIndex.Value : DBNull.Value;
         }
 
         builder.Append(';');
@@ -1579,6 +1661,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         faction.HexColor = def.HexColor;
                         faction.UnarmedKit = def.UnarmedKit;
                         faction.FlagImageURL = def.FlagImageURL;
+                        faction.TMProSpriteIndex = def.TMProSpriteIndex;
                         faction.Ammo = def.Ammo?.Clone() as JsonAssetReference<ItemAsset>;
                         faction.Build = def.Build?.Clone() as JsonAssetReference<ItemAsset>;
                         faction.RallyPoint = def.RallyPoint?.Clone() as JsonAssetReference<ItemBarricadeAsset>;
@@ -1603,37 +1686,46 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         }
         await sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_ID}`,`{COLUMN_NAME}`," +
                              $"`{COLUMN_SHORT_NAME}`,`{COLUMN_ABBREVIATION}`,`{COLUMN_HEX_COLOR}`,`{COLUMN_UNARMED_KIT}`," +
-                             $"`{COLUMN_FLAG_IMAGE_URL}` FROM `{TABLE_MAIN}`;", null,
+                             $"`{COLUMN_FLAG_IMAGE_URL}`,`{COLUMN_SPRITE_INDEX}` FROM `{TABLE_MAIN}`;", null,
             reader =>
             {
                 int pk = reader.GetInt32(0);
                 string name = reader.GetString(2);
+                string id = reader.GetString(1);
+                string shortName = reader.IsDBNull(3) ? name : reader.GetString(3);
+                string abbreviation = reader.IsDBNull(4) ? shortName.ToUpperInvariant() : reader.GetString(4);
+                string hexColor = reader.IsDBNull(5) ? UCWarfare.GetColorHex("default") : reader.GetString(5);
+                string? unarmedKit = reader.IsDBNull(6) ? null : reader.GetString(6);
+                string flag = reader.IsDBNull(7) ? UnknownTeamImgURL : reader.GetString(7);
+                uint? spriteIndex = reader.IsDBNull(8) ? null : reader.GetUInt32(8);
                 for (int i = 0; i < list.Count; ++i)
                 {
                     if (list[i].PrimaryKey.Key == pk)
                     {
                         FactionInfo faction = list[i];
-                        faction.FactionId = reader.GetString(1);
+                        faction.FactionId = id;
                         faction.Name = name;
-                        faction.ShortName = reader.IsDBNull(3) ? name : reader.GetString(3);
-                        faction.Abbreviation = reader.IsDBNull(4) ? faction.ShortName.ToUpperInvariant() : reader.GetString(4);
-                        faction.HexColor = reader.IsDBNull(5) ? UCWarfare.GetColorHex("default") : reader.GetString(5);
-                        faction.UnarmedKit = reader.IsDBNull(6) ? null : reader.GetString(6);
-                        faction.FlagImageURL = reader.IsDBNull(7) ? UnknownTeamImgURL : reader.GetString(7);
+                        faction.ShortName = shortName;
+                        faction.Abbreviation = abbreviation;
+                        faction.HexColor = hexColor;
+                        faction.UnarmedKit = unarmedKit;
+                        faction.FlagImageURL = flag;
+                        faction.TMProSpriteIndex = spriteIndex;
                         return;
                     }
                 }
                 list.Add(
                     new FactionInfo(
-                        reader.GetString(1),
+                        id,
                         name,
-                        reader.GetString(4),
-                        reader.IsDBNull(3) ? name : reader.GetString(3),
-                        reader.IsDBNull(5) ? UCWarfare.GetColorHex("default") : reader.GetString(5),
-                        reader.IsDBNull(6) ? null : reader.GetString(6),
-                        reader.IsDBNull(7) ? UnknownTeamImgURL : reader.GetString(7))
+                        abbreviation,
+                        shortName,
+                        hexColor,
+                        unarmedKit,
+                        flag)
                     {
-                        PrimaryKey = pk
+                        PrimaryKey = pk,
+                        TMProSpriteIndex = spriteIndex
                     });
         }, token).ConfigureAwait(false);
         await sql.QueryAsync(

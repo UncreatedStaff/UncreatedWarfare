@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -243,7 +244,7 @@ public class DebugCommand : AsyncCommand
             ctx.Reply(T.NotOnCaptureTeam);
             return;
         }
-        _ = Data.Gamemode.DeclareWin(team);
+        UCWarfare.RunTask(Data.Gamemode.DeclareWin, team, ctx: "/test quickwin executed for " + team + ".");
     }
     private void savemanyzones(CommandInteraction ctx)
     {
@@ -539,7 +540,7 @@ public class DebugCommand : AsyncCommand
                 }
                 else
                     ctx.Defer();
-                Task.Run(async () =>
+                UCWarfare.RunTask(async () =>
                 {
                     await UCWarfare.ToUpdate();
                     if (newGamemode == Data.Gamemode?.GetType())
@@ -548,7 +549,7 @@ public class DebugCommand : AsyncCommand
                         await UCWarfare.ToUpdate();
                         ctx.ReplyString($"Successfully reloaded {newGamemode.Name}.");
                     }
-                    else if (await Gamemode.TryLoadGamemode(newGamemode))
+                    else if (await Gamemode.TryLoadGamemode(newGamemode, default))
                     {
                         await UCWarfare.ToUpdate();
                         ctx.ReplyString($"Successfully loaded {newGamemode.Name}.");
@@ -558,7 +559,7 @@ public class DebugCommand : AsyncCommand
                         await UCWarfare.ToUpdate();
                         ctx.ReplyString($"Failed to load {newGamemode.Name}.");
                     }
-                });
+                }, ctx: "/test gamemode executed for type " + newGamemode.Name + ".");
             }
             else
                 ctx.ReplyString($"Gamemode not found: {gamemodeName}.");
@@ -935,29 +936,29 @@ public class DebugCommand : AsyncCommand
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
                 ctx.Caller.Player.quests.ServerAddQuest(asset);
-                ctx.ReplyString("Added quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+                ctx.ReplyString("<#9fa1a6>Added quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
-            else ctx.ReplyString("Quest not found.");
+            else ctx.ReplyString("<#ff8c69>Quest not found.");
         }
         else if (ctx.MatchParameter(0, "track"))
         {
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
                 ctx.Caller.ServerTrackQuest(asset);
-                ctx.ReplyString("Tracked quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+                ctx.ReplyString("<#9fa1a6>Tracked quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
-            else ctx.ReplyString("Quest not found.");
+            else ctx.ReplyString("<#ff8c69>Quest not found.");
         }
         else if (ctx.MatchParameter(0, "remove"))
         {
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
                 ctx.Caller.Player.quests.ServerRemoveQuest(asset);
-                ctx.ReplyString("Removed quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+                ctx.ReplyString("<#9fa1a6>Removed quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
-            else ctx.ReplyString("Quest not found.");
+            else ctx.ReplyString("<#ff8c69>Quest not found.");
         }
-        else ctx.ReplyString("Syntax: /test quest <add|track|remove> <id>");
+        else ctx.SendCorrectUsage("/test quest <add|track|remove> <id>");
     }
     private void flag(CommandInteraction ctx)
     {
@@ -1004,15 +1005,15 @@ public class DebugCommand : AsyncCommand
     {
         if (ctx.TryGet(0, out Guid guid))
         {
-            ctx.ReplyString("Asset: " + (Assets.find(guid)?.FriendlyName ?? "null"));
+            ctx.ReplyString("<#9fa1a6>Asset: " + (Assets.find(guid)?.FriendlyName ?? "null"));
         }
         else if (ctx.TryGet(0, out ushort us) && ctx.TryGet(1, out EAssetType type))
         {
-            ctx.ReplyString("Asset: " + (Assets.find(type, us)?.FriendlyName ?? "null"));
+            ctx.ReplyString("<#9fa1a6>Asset: " + (Assets.find(type, us)?.FriendlyName ?? "null"));
         }
         else
         {
-            ctx.ReplyString("Please use a <GUID> or <uhort, type>");
+            ctx.ReplyString("<#ff8c69>Please use a <GUID> or <uhort, type>");
         }
     }
     private void traits(CommandInteraction ctx)
@@ -1177,6 +1178,62 @@ public class DebugCommand : AsyncCommand
         {
             Data.Gamemode.SkipStagingPhase();
         }
+    }
+    private void effect(CommandInteraction ctx)
+    {
+        ctx.AssertRanByPlayer();
+        ctx.AssertPermissions(EAdminType.MODERATOR);
+        const string usage = "/test effect [clear] <name/id/guid> (for UI only - [key : int16] [arg0 : str] [arg1 : str] [arg2 : str] [arg3 : str] )";
+        ctx.AssertHelpCheck(0, usage);
+        ctx.AssertArgs(0, usage);
+        EffectAsset asset;
+        if (ctx.MatchParameter(0, "clear", "remove", "delete"))
+        {
+            ctx.AssertArgs(1, usage);
+            if (ctx.MatchParameter(1, "all", "*", "any"))
+                asset = null!;
+            else if (!ctx.TryGet(1, out asset, out _, allowMultipleResults: true))
+                throw ctx.ReplyString($"<#ff8c69>Can't find an effect with the term: <#ddd>{ctx.Get(1)}</color>.");
+            if (asset == null)
+            {
+                Data.SendEffectClearAll.Invoke(ENetReliability.Reliable, ctx.Caller.Connection);
+                throw ctx.ReplyString("<#9fa1a6>Cleared all effects.");
+            }
+            EffectManager.ClearEffectByGuid(asset.GUID, ctx.Caller.Connection);
+            throw ctx.ReplyString($"<#9fa1a6>Cleared all {asset.name} effects.");
+        }
+        if (!ctx.TryGet(0, out asset, out _, allowMultipleResults: true))
+            throw ctx.ReplyString($"<#ff8c69>Can't find an effect with the term: <#ddd>{ctx.Get(0)}</color>.");
+        short key = ctx.MatchParameter(1, "-", "_") || !ctx.TryGet(1, out short s) ? (short)0 : s;
+        if (asset.effect != null)
+        {
+            if (asset.effect.CompareTag("UI"))
+            {
+                switch (ctx.ArgumentCount)
+                {
+                    case 3:
+                        EffectManager.sendUIEffect(asset.id, key, ctx.Caller.Connection, true, ctx.Get(2));
+                        throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{ctx.Get(2)}\".");
+                    case 4:
+                        EffectManager.sendUIEffect(asset.id, key, ctx.Caller.Connection, true, ctx.Get(2), ctx.Get(3));
+                        throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{ctx.Get(2)}\", {{1}} = \"{ctx.Get(3)}\".");
+                    case 5:
+                        EffectManager.sendUIEffect(asset.id, key, ctx.Caller.Connection, true, ctx.Get(2), ctx.Get(3), ctx.Get(4));
+                        throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{ctx.Get(2)}\", {{1}} = \"{ctx.Get(3)}\", {{2}} = \"{ctx.Get(4)}\".");
+                    default:
+                        if (ctx.ArgumentCount < 3)
+                        {
+                            EffectManager.sendUIEffect(asset.id, key, ctx.Caller.Connection, true);
+                            throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you with no arguments.");
+                        }
+                        EffectManager.sendUIEffect(asset.id, key, ctx.Caller.Connection, true, ctx.Get(2), ctx.Get(3), ctx.Get(4), ctx.Get(5));
+                        throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{ctx.Get(2)}\", {{1}} = \"{ctx.Get(3)}\", {{2}} = \"{ctx.Get(4)}\", {{3}} = \"{ctx.Get(5)}\".");
+                }
+            }
+            F.TriggerEffectReliable(asset, ctx.Caller.Connection, ctx.Caller.Position);
+            throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you at {ctx.Caller.Position.ToString("0.##", Localization.GetLocale(ctx))}." + (ctx.HasArg(1) ? " To spawn as UI instead, the effect must have the \"UI\" tag in unity." : string.Empty));
+        }
+        throw ctx.ReplyString($"<#ff8c69>{asset.name}'s effect property hasn't been set. Possibly the effect was set up incorrectly.");
     }
     private void watchdogtest(CommandInteraction ctx)
     {

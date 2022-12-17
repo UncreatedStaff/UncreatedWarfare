@@ -697,8 +697,8 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     public string? GetRange(int start, int length = -1)
     {
-        start += _offset;
         if (length == 1) return Get(start);
+        start += _offset;
         if (start < 0 || start >= _ctx.ArgumentCount)
             return null;
         if (start == _ctx.ArgumentCount - 1)
@@ -1111,13 +1111,13 @@ public sealed class CommandInteraction : BaseCommandInteraction
     /// <returns><see langword="true"/> If a <typeparamref name="TAsset"/> is found or multiple are found and <paramref name="allowMultipleResults"/> is <see langword="true"/>.</returns>
     public bool TryGet<TAsset>(int parameter, out TAsset asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Func<TAsset, bool>? selector = null) where TAsset : Asset
     {
-        if (!TryGetRange(parameter, out string p, remainder ? -1 : len))
+        if (!TryGetRange(parameter, out string p, remainder ? -1 : len) || p.Length == 0)
         {
             multipleResultsFound = false;
             asset = null!;
             return false;
         }
-        if ((remainder || parameter == ArgumentCount - 1) && p.EndsWith("\\"))
+        if ((remainder || parameter == ArgumentCount - 1) && p[p.Length - 1] == '\\')
             p = p.Substring(0, p.Length - 1);
         if (Guid.TryParse(p, out Guid guid))
         {

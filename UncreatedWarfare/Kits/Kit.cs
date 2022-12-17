@@ -156,23 +156,27 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public Kit() { }
     public bool IsFactionAllowed(FactionInfo? faction)
     {
-        if (FactionFilter.NullOrEmpty() || faction is null || !faction.PrimaryKey.IsValid) return false;
+        if (FactionFilter.NullOrEmpty() || faction is null || !faction.PrimaryKey.IsValid)
+            return !FactionFilterIsWhitelist;
         int pk = faction.PrimaryKey.Key;
         for (int i = 0; i < FactionFilter.Length; ++i)
             if (FactionFilter[i].Key == pk)
-                return true;
+                return FactionFilterIsWhitelist;
 
-        return false;
+        return !FactionFilterIsWhitelist;
     }
     public bool IsCurrentMapAllowed()
     {
+        if (MapFilter.NullOrEmpty())
+            return !MapFilterIsWhitelist;
         PrimaryKey map = MapScheduler.Current;
         for (int i = 0; i < MapFilter.Length; ++i)
         {
-            if (MapFilter[i].Key == map.Key) return true;
+            if (MapFilter[i].Key == map.Key)
+                return MapFilterIsWhitelist;
         }
 
-        return false;
+        return !MapFilterIsWhitelist;
     }
     public bool MeetsUnlockRequirements(UCPlayer player)
     {
@@ -910,7 +914,9 @@ public class PageItem : IItemJar, IItem, IKitItem
         {
             _item = value;
 #if DEBUG
+#pragma warning disable CS0612
             TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+#pragma warning restore CS0612
             if (_legacyRedirect == RedirectType.None)
                 _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, false);
             _isLegacyRedirect = _legacyRedirect != RedirectType.None;
@@ -1041,7 +1047,9 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
         {
             _item = value;
 #if DEBUG
+#pragma warning disable CS0612
             TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+#pragma warning restore CS0612
             if (_legacyRedirect == RedirectType.None)
                 _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, true);
             _isLegacyRedirect = _legacyRedirect != RedirectType.None;

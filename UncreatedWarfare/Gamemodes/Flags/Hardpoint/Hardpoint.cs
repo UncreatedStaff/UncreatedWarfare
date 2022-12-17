@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.FOBs;
@@ -85,8 +86,9 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     public TraitManager TraitManager => _traitManager;
     public ActionManager ActionManager => _actionManager;
     public Hardpoint() : base(nameof(Hardpoint), 0.25f) { }
-    protected override Task PreInit()
+    protected override Task PreInit(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         _objIndex = -1;
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _kitManager);
@@ -99,7 +101,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
-        return base.PreInit();
+        return base.PreInit(token);
     }
     public override void LoadRotation()
     {
@@ -152,7 +154,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         {
             L.LogError("Failed to pick a valid objective!!! (picked " + newobj + " out of " + FlagRotation.Count + " loaded flags).");
             if (first)
-                throw new SingletonLoadException(ESingletonLoadType.LOAD, this, "Failed to pick a valid objective.");
+                throw new SingletonLoadException(SingletonLoadType.Load, this, "Failed to pick a valid objective.");
             else
             {
                 _nextObjectivePickTime = oldTime;
@@ -236,11 +238,12 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     {
         SendListUI(player);
     }
-    public override Task DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         _objIndex = -1;
         StartCoroutine(EndGameCoroutine(winner));
-        return base.DeclareWin(winner);
+        return base.DeclareWin(winner, token);
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
@@ -255,7 +258,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
 
         _endScreen = gameObject.AddComponent<HardpointLeaderboard>();
         _endScreen.OnLeaderboardExpired = OnShouldStartNewGame;
-        _endScreen.SetShutdownConfig(shutdownAfterGame, shutdownMessage);
+        _endScreen.SetShutdownConfig(ShouldShutdownAfterGame, ShutdownMessage);
         _isScreenUp = true;
         _endScreen.StartLeaderboard(winner, _gameStats);
     }
@@ -271,12 +274,13 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             _endScreen = null!;
         }
         _isScreenUp = false;
-        Task.Run(EndGame);
+        UCWarfare.RunTask(EndGame, UCWarfare.UnloadCancel, ctx: "Starting next gamemode.");
     }
     private static void EvaluatePointsOverride(Flag flag, bool overrideInactiveCheck) { }
     protected override void PlayerEnteredFlagRadius(Flag flag, Player player) { }
-    protected override Task PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         _gameStats.Reset();
         CTFUI.ClearCaptureUI();
         RallyManager.WipeAllRallies();
@@ -285,7 +289,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             SpawnBlockers();
             StartStagingPhase(Config.HardpointStagingPhaseSeconds);
         }
-        return base.PostGameStarting(isOnLoad);
+        return base.PostGameStarting(isOnLoad, token);
     }
     protected override void EndStagingPhase()
     {
@@ -414,7 +418,7 @@ public class HardpointTicketProvider : BaseTicketProvider
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
     {
         if (oldValue > 0 && newValue <= 0)
-            _ = Data.Gamemode.DeclareWin(TeamManager.Other(team));
+            UCWarfare.RunTask(Data.Gamemode.DeclareWin, TeamManager.Other(team), default, ctx: "Lose game, tickets reached 0.");
     }
     public override void Tick()
     {

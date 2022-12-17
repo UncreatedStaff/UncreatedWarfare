@@ -18,7 +18,9 @@ public interface ITicketProvider
 }
 public abstract class BaseTicketProvider : ITicketProvider, IPlayerDeathListener
 {
-    public TicketManager Manager { get; set; }
+    public TicketManager Manager => ((ITicketProvider)this).Manager;
+    TicketManager ITicketProvider.Manager { get; set; }
+
     public abstract int GetTeamBleed(ulong team);
     public virtual void Load()
     {

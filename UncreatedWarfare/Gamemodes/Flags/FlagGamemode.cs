@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
@@ -22,25 +23,28 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     protected FlagGamemode(string name, float eventLoopSpeed) : base(name, eventLoopSpeed)
     { }
     protected abstract bool TimeToEvaluatePoints();
-    protected override Task PostDispose()
+    protected override Task PostDispose(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         ResetFlags();
         OnFlagDict.Clear();
         FlagRotation.Clear();
-        return base.PostDispose();
+        return base.PostDispose(token);
     }
-    protected override Task OnReady()
+    protected override Task OnReady(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         LoadAllFlags();
-        return base.OnReady();
+        return base.OnReady(token);
     }
-    protected override Task PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         LoadRotation();
-        return base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad, token);
     }
     protected override void EventLoopAction()
     {

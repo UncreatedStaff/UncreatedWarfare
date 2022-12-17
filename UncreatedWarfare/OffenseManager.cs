@@ -65,13 +65,13 @@ public static class OffenseManager
                 l.Clear();
         }
     }
-    private static async Task OnPlayerPending(PlayerPending e, CancellationToken token)
+    private static async Task OnPlayerPending(PlayerPending e, CancellationToken token = default)
     {
         List<uint> packs = new List<uint>(4);
         await Data.DatabaseManager.QueryAsync("SELECT `Packed` FROM `ip_addresses` WHERE `Steam64` = @0;", new object[] { e.Steam64 }, reader =>
         {
             packs.Add(reader.GetUInt32(0));
-        });
+        }, token);
         for (int i = 0; i < SteamBlacklist.list.Count; ++i)
         {
             uint ip = SteamBlacklist.list[i].ip;
@@ -184,7 +184,7 @@ public static class OffenseManager
             }
         }).ConfigureAwait(false);
     }
-    public static async Task<List<byte[]>> GetAllHWIDs(ulong s64)
+    public static async Task<List<byte[]>> GetAllHWIDs(ulong s64, CancellationToken token = default)
     {
         List<byte[]> bytes = new List<byte[]>(8);
         await Data.DatabaseManager.QueryAsync("SELECT `Id`, `Index`, `HWID` FROM `hwids` WHERE `Steam64` = @0 ORDER BY `Index` ASC, `LastLogin` DESC;",
@@ -194,10 +194,10 @@ public static class OffenseManager
                 byte[] buffer = new byte[20];
                 reader.GetBytes(2, 0, buffer, 0, 20);
                 bytes.Add(buffer);
-            }).ConfigureAwait(false);
+            }, token).ConfigureAwait(false);
         return bytes;
     }
-    public static async Task ApplyMuteSettings(UCPlayer joining)
+    public static async Task ApplyMuteSettings(UCPlayer joining, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -210,7 +210,7 @@ public static class OffenseManager
         await Data.DatabaseManager.QueryAsync(
             "SELECT `Reason`, `Duration`, `Timestamp`, `Type` FROM `muted` WHERE `Steam64` = @0 AND `Deactivated` = 0 AND " +
             "(`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) * -1 < `Duration`) ORDER BY (TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) * -1) - `Duration` LIMIT 1;",
-            new object[1] { joining.Steam64 },
+            new object[] { joining.Steam64 },
             reader =>
             {
                 int dir = reader.GetInt32(1);
@@ -224,10 +224,9 @@ public static class OffenseManager
                 else if (reason is null)
                     reason = reader.GetString(0);
                 type |= (EMuteType)reader.GetByte(3);
-            }
+            }, token
         );
         if (type == EMuteType.NONE) return;
-        DateTime now = DateTime.Now;
         DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : timestamp + TimeSpan.FromSeconds(duration);
         joining.TimeUnmuted = unmutedTime;
         joining.MuteReason = reason;
@@ -255,7 +254,7 @@ public static class OffenseManager
         _ => throw new ArgumentOutOfRangeException("#" + index.ToString(Data.AdminLocale) + " doesn't match a pending type.")
     } + ".json");
 
-    private static readonly IList[] Pendings = new IList[]
+    private static readonly IList[] Pendings =
     {
         PendingBans,
         PendingUnbans,
@@ -349,7 +348,7 @@ public static class OffenseManager
                 .ToArray();
         }
     }
-    internal static async Task OnConnected()
+    internal static async Task OnConnected(CancellationToken token)
     {
         int v = Interlocked.Increment(ref _version);
         try
@@ -692,7 +691,7 @@ public static class OffenseManager
         PlayerNames name;
         PlayerNames callerName;
         uint ipv4;
-        List<byte[]> hwids = target is not null ? target.SteamPlayer.playerID.GetHwids().ToList() : (await GetAllHWIDs(targetId).ConfigureAwait(false));
+        List<byte[]> hwids = target is not null ? target.SteamPlayer.playerID.GetHwids().ToList() : (await GetAllHWIDs(targetId, token).ConfigureAwait(false));
         if (target is not null) // player is online
         {
             CSteamID id = target.Player.channel.owner.playerID.steamID;
@@ -780,7 +779,7 @@ public static class OffenseManager
         PlayerNames names = target.Name;
         Provider.kick(target.Player.channel.owner.playerID.steamID, reason);
 
-        LogKickPlayer(targetId, callerId, reason, DateTime.Now);
+        LogKickPlayer(targetId, callerId, reason, timestamp);
 
         ActionLogger.Add(EActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\"", callerId);
         if (callerId == 0)

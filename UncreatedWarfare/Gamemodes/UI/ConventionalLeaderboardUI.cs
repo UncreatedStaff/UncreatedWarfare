@@ -1445,7 +1445,6 @@ public class ConventionalLeaderboardUI : UnturnedUI
 
         while (set.MoveNext())
         {
-            L.LogWarning(set.ToString());
             UCPlayer pl = set.Next;
             ulong team = pl.GetTeam();
             ConquestStats? stats = team switch

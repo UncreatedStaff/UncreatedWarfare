@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Structures;
 public sealed class SavedStructure : IListItem, ITranslationArgument
 {
-    public PrimaryKey PrimaryKey { get; set; }
+    public PrimaryKey PrimaryKey { get; set; } = PrimaryKey.NotAssigned;
     [JsonPropertyName("guid")]
     public Guid ItemGuid;
     [JsonPropertyName("instance_id")]

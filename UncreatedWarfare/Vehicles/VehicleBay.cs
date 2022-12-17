@@ -50,39 +50,24 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     public VehicleBay() : base("vehiclebay", SCHEMAS)
     {
     }
-    public override Task PreLoad()
+    public override Task PreLoad(CancellationToken token)
     {
         if (_config == null)
             _config = new VehicleBayConfig();
         else _config.Reload();
-        return Task.CompletedTask;
+        return base.PreLoad(token);
     }
-    public override async Task PostLoad()
+    public override Task PostLoad(CancellationToken token)
     {
         EventDispatcher.EnterVehicleRequested += OnVehicleEnterRequested;
         EventDispatcher.VehicleSwapSeatRequested += OnVehicleSwapSeatRequested;
         EventDispatcher.ExitVehicleRequested += OnVehicleExitRequested;
         EventDispatcher.ExitVehicle += OnVehicleExit;
         EventDispatcher.VehicleSpawned += OnVehicleSpawned;
-//#if DEBUG
-//        await ImportFromJson(Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json")).ConfigureAwait(false);
-//#endif
-        await WaitAsync();
-        try
-        {
-            if (Whitelister.Loaded && !_hasWhitelisted) // whitelist all vehicle bay items
-            {
-                if (!UCWarfare.IsMainThread)
-                    await UCWarfare.ToUpdate();
-                WhitelistItems();
-            }
-        }
-        finally
-        {
-            Release();
-        }
+        // await ImportFromJson(Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json")).ConfigureAwait(false);
+        return base.PostLoad(token);
     }
-    public override Task PostUnload()
+    public override Task PostUnload(CancellationToken token)
     {
         EventDispatcher.VehicleSpawned -= OnVehicleSpawned;
         EventDispatcher.ExitVehicle -= OnVehicleExit;
@@ -120,15 +105,15 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             WriteRelease();
         }
     }
-    async Task ILevelStartListenerAsync.OnLevelReady()
+    async Task ILevelStartListenerAsync.OnLevelReady(CancellationToken token)
     {
-        await WaitAsync();
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
             if (Whitelister.Loaded && !_hasWhitelisted) // whitelist all vehicle bay items
             {
                 if (!UCWarfare.IsMainThread)
-                    await UCWarfare.ToUpdate();
+                    await UCWarfare.ToUpdate(token);
                 WhitelistItems();
             }
         }
@@ -137,14 +122,14 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             Release();
         }
     }
-    async Task IDeclareWinListenerAsync.OnWinnerDeclared(ulong winner)
+    async Task IDeclareWinListenerAsync.OnWinnerDeclared(ulong winner, CancellationToken token)
     {
         ThreadUtil.assertIsGameThread();
-        await WaitAsync().ConfigureAwait(false);
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
             if (!UCWarfare.IsMainThread)
-                await UCWarfare.ToUpdate();
+                await UCWarfare.ToUpdate(token);
             AbandonAllVehicles();
         }
         finally
@@ -152,9 +137,9 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             Release();
         }
     }
-    Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player)
+    Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player, CancellationToken token)
     {
-        return SendQuests(player);
+        return SendQuests(player, token);
     }
     private async Task SendQuests(UCPlayer player, CancellationToken token = default)
     {
@@ -917,7 +902,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 Nullable = true,
                 ForeignKey = true,
                 ForeignKeyColumn = FactionInfo.COLUMN_PK,
-                ForeignKeyTable = FactionInfo.TABLE_MAIN
+                ForeignKeyTable = FactionInfo.TABLE_MAIN,
+                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull
             },
             new Schema.Column(COLUMN_VEHICLE_GUID, SqlTypes.GUID_STRING),
             new Schema.Column(COLUMN_RESPAWN_TIME, SqlTypes.FLOAT)

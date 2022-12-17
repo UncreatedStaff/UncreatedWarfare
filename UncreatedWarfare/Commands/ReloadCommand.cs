@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices.ComTypes;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -18,14 +19,12 @@ using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
-public class ReloadCommand : Command
+public class ReloadCommand : AsyncCommand
 {
-    public const string SYNTAX = "/reload [help|module]";
-    public const string HELP = "Reload certain parts of UCWarfare.";
+    public const string Syntax = "/reload [help|module]";
+    public const string Help = "Reload certain parts of UCWarfare.";
     public static event VoidDelegate OnTranslationsReloaded;
     public static event VoidDelegate OnFlagsReloaded;
-
-    public const string RELOAD_ALL_PERMISSION = "uc.reload.all";
 
     public static Dictionary<string, IConfiguration> ReloadableConfigs = new Dictionary<string, IConfiguration>();
 
@@ -33,13 +32,13 @@ public class ReloadCommand : Command
     {
 
     }
-    public override void Execute(CommandInteraction ctx)
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
         if (!ctx.IsConsole && !ctx.Caller.IsAdmin)
             ctx.AssertOnDuty();
 
         if (!ctx.TryGet(0, out string module))
-            throw ctx.SendCorrectUsage(SYNTAX);
+            throw ctx.SendCorrectUsage(Syntax);
 
         if (module.Equals("help", StringComparison.OrdinalIgnoreCase))
             throw ctx.SendNotImplemented();
@@ -66,12 +65,6 @@ public class ReloadCommand : Command
             ctx.Reply(T.ReloadedPermissions);
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "PERMISSIONS");
         }
-        else if (module.Equals("factions", StringComparison.OrdinalIgnoreCase))
-        {
-            ReloadFactions(ctx);
-            ctx.Defer();
-            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "FACTIONS");
-        }
         else if (module.Equals("colors", StringComparison.OrdinalIgnoreCase))
         {
             ReloadColors();
@@ -89,10 +82,10 @@ public class ReloadCommand : Command
             ReloadSQLServer(ctx);
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "MYSQL CONNECTION");
         }
-        else if (module.Equals("teams", StringComparison.OrdinalIgnoreCase))
+        else if (module.Equals("teams", StringComparison.OrdinalIgnoreCase) || module.Equals("factions", StringComparison.OrdinalIgnoreCase))
         {
-            TeamManager.ReloadFactions();
-            //TeamManager.SetupConfig();
+            await TeamManager.ReloadFactions(token).ConfigureAwait(false);
+            TeamManager.SetupConfig();
             ctx.Reply(T.ReloadedGeneric, "teams and factions");
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "TEAMS & FACTIONS");
         }
@@ -126,7 +119,7 @@ public class ReloadCommand : Command
                     IReloadableSingleton? reloadable = await Data.Singletons.ReloadSingletonAsync(module);
                     await UCWarfare.ToUpdate();
                     if (reloadable is null)
-                        ctx.SendCorrectUsage(SYNTAX);
+                        ctx.SendCorrectUsage(Syntax);
                     else
                     {
                         ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
@@ -238,21 +231,6 @@ public class ReloadCommand : Command
             await UCWarfare.ToUpdate();
             Signs.UpdateKitSigns(null, null);
             Signs.UpdateLoadoutSigns(null);
-        });
-    }
-    internal static void ReloadFactions(CommandInteraction? ctx)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        Task.Run(async () =>
-        {
-            await TeamManager.ReloadFactions().ConfigureAwait(false);
-            if (ctx != null)
-            {
-                await UCWarfare.ToUpdate();
-                ctx.Reply(T.ReloadedGeneric, "factions");
-            }
         });
     }
     internal static void ReloadAllConfigFiles()

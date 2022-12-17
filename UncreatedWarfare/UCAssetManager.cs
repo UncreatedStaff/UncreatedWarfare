@@ -41,8 +41,7 @@ public static class UCAssetManager
         List<ItemAsset> selection = Assets.find(EAssetType.ITEM).Cast<ItemAsset>()
             .Where(k => k?.name != null && k.itemName != null && (
             itemName.Equals(k.id.ToString(Data.AdminLocale), StringComparison.OrdinalIgnoreCase) ||
-            insplits.All(l => k.itemName.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1) ||
-            insplits.All(l => k.name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+            insplits.All(l => k.itemName.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
             ).OrderBy(k => k.itemName.Length).ToList();
 
         numberOfSimilarNames = selection.Count;
@@ -56,8 +55,7 @@ public static class UCAssetManager
             selection = Assets.find(EAssetType.ITEM).Cast<ItemAsset>()
                 .Where(k => k?.name != null && k.itemName != null && (
                     itemName.Equals(k.id.ToString(Data.AdminLocale), StringComparison.OrdinalIgnoreCase) ||
-                    insplits.All(l => k.itemName.RemoveMany(false, Ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1) ||
-                    insplits.All(l => k.name.RemoveMany(false, Ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                    insplits.All(l => k.itemName.RemoveMany(false, Ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
                 ).OrderBy(k => k.itemName.Length).ToList();
 
             numberOfSimilarNames = selection.Count;

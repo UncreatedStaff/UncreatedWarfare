@@ -1,6 +1,12 @@
-﻿using SDG.Unturned;
+﻿//#define IMPORT
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+#if IMPORT
+using System.IO;
+using System.Text.Json;
+using Uncreated.Json;
+#endif
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -12,7 +18,6 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Sync;
 using UnityEngine;
-using Action = System.Action;
 
 namespace Uncreated.Warfare.Structures;
 
@@ -28,11 +33,69 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
     public StructureSaver() : base("structures", SCHEMAS) { }
-    async Task ILevelStartListenerAsync.OnLevelReady()
+    async Task ILevelStartListenerAsync.OnLevelReady(CancellationToken token)
     {
-        // await ImportFromJson(Path.Combine(Data.Paths.StructureStorage, "structures.json"), true, (x, y) => x.InstanceID.CompareTo(y.InstanceID)).ConfigureAwait(false);
+#if IMPORT
+        await ImportFromJson(Path.Combine(Data.Paths.StructureStorage, "structures.json"), true, (x, y) => x.InstanceID.CompareTo(y.InstanceID)).ConfigureAwait(false);
+        Guid kitSign = new Guid("275dd81d60ae443e91f0655b8b7aa920");
+        await ImportFromJson(Path.Combine(Data.Paths.StructureStorage, "request_signs.json"), true, (x, y) => x.InstanceID.CompareTo(y.InstanceID), deserializer:
+            (ref Utf8JsonReader reader) =>
+            {
+                SavedStructure save = new SavedStructure
+                {
+                    Group = 3,
+                    Owner = 76561198267927009ul,
+                    ItemGuid = kitSign
+                };
+                string? kitname = null;
+                while (reader.Read())
+                {
+                    if (reader.TokenType == JsonTokenType.PropertyName)
+                    {
+                        string val = reader.GetString()!;
+                        if (reader.Read())
+                        {
+                            switch (val)
+                            {
+                                case "position":
+                                    Vector3 pos =
+                                        JsonSerializer.Deserialize<Vector3>(ref reader, JsonEx.serializerSettings);
+                                    save.Position = pos;
+                                    break;
+                                case "rotation":
+                                    Vector3 rot =
+                                        JsonSerializer.Deserialize<Vector3>(ref reader, JsonEx.serializerSettings);
+                                    save.Rotation = rot;
+                                    break;
+                                case "kit_name":
+                                    kitname = reader.GetString();
+                                    break;
+                                case "instance_id":
+                                    save.InstanceID = reader.GetUInt32();
+                                    break;
+                            }
+                        }
+                    }
+                    else if (reader.TokenType == JsonTokenType.EndObject)
+                        break;
+                }
+
+                if (kitname != null)
+                {
+                    byte[] st = System.Text.Encoding.UTF8.GetBytes("sign_kit_" + kitname);
+                    save.Metadata = new byte[st.Length + 17];
+                    Buffer.BlockCopy(st, 0, save.Metadata, 17, st.Length);
+                    save.Metadata[16] = (byte)st.Length;
+                    Buffer.BlockCopy(BitConverter.GetBytes(76561198267927009ul), 0, save.Metadata, 0, sizeof(ulong));
+                    Buffer.BlockCopy(BitConverter.GetBytes(3ul), 0, save.Metadata, sizeof(ulong), sizeof(ulong));
+                }
+
+
+                return save;
+            }).ConfigureAwait(false);
+#endif
         L.Log("Checking structures: " + Items.Count + " item(s) pending...", ConsoleColor.Magenta);
-        await WaitAsync(F.DebugTimeout).ConfigureAwait(false);
+        await WaitAsync(token).ConfigureAwait(false);
         try
         {
             List<SavedStructure>? toSave = null;
@@ -75,7 +138,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             if (toSave != null)
             {
                 L.LogDebug("Resaving " + toSave.Count + " item(s)...");
-                await AddOrUpdateNoLock(toSave).ConfigureAwait(false);
+                await AddOrUpdateNoLock(toSave, token).ConfigureAwait(false);
             }
         }
         finally
@@ -83,9 +146,9 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             Release();
         }
     }
-    public override Task PostReload()
+    public override Task PostReload(CancellationToken token)
     {
-        return Level.isLoaded ? (this as ILevelStartListenerAsync).OnLevelReady() : Task.CompletedTask;
+        return Level.isLoaded ? (this as ILevelStartListenerAsync).OnLevelReady(token) : Task.CompletedTask;
     }
     private int CheckExisting(SavedStructure structure)
     {
@@ -505,7 +568,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             WriteRelease();
         }
     }
-    public bool TryGetSaveNoLock(uint id, EStructType type, out SavedStructure value)
+    public bool TryGetSaveNoLock(uint id, StructType type, out SavedStructure value)
     {
         WriteWait();
         try
@@ -576,7 +639,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             WriteRelease();
         }
     }
-    public bool TryGetSaveNoLock(uint id, EStructType type, out SqlItem<SavedStructure> value)
+    public bool TryGetSaveNoLock(uint id, StructType type, out SqlItem<SavedStructure> value)
     {
         WriteWait();
         try
@@ -643,7 +706,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
 
         return null;
     }
-    public async Task<SavedStructure?> GetSave(uint id, EStructType type, CancellationToken token = default)
+    public async Task<SavedStructure?> GetSave(uint id, StructType type, CancellationToken token = default)
     {
         await WriteWaitAsync(token).ConfigureAwait(false);
         try
@@ -708,7 +771,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
 
         return null;
     }
-    public async Task<SqlItem<SavedStructure>?> GetSaveItem(uint id, EStructType type, CancellationToken token = default)
+    public async Task<SqlItem<SavedStructure>?> GetSaveItem(uint id, StructType type, CancellationToken token = default)
     {
         await WriteWaitAsync(token).ConfigureAwait(false);
         try
@@ -729,7 +792,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
 
         return null;
     }
-    public SqlItem<SavedStructure>? GetSaveItemSync(uint instanceId, EStructType type)
+    public SqlItem<SavedStructure>? GetSaveItemSync(uint instanceId, StructType type)
     {
         WriteWait();
         try
@@ -843,7 +906,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                 PrimaryKey = true
             },
             new Schema.Column(COLUMN_MAP,      SqlTypes.MAP_ID),
-            new Schema.Column(COLUMN_GUID,     SqlTypes.GUID),
+            new Schema.Column(COLUMN_GUID,     SqlTypes.GUID_STRING),
             new Schema.Column(COLUMN_POS_X,    SqlTypes.FLOAT),
             new Schema.Column(COLUMN_POS_Y,    SqlTypes.FLOAT),
             new Schema.Column(COLUMN_POS_Z,    SqlTypes.FLOAT),
@@ -889,7 +952,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                 ForeignKeyColumn = COLUMN_PK,
                 ForeignKeyTable = TABLE_MAIN
             },
-            new Schema.Column(COLUMN_ITEM_GUID,     SqlTypes.GUID),
+            new Schema.Column(COLUMN_ITEM_GUID,     SqlTypes.GUID_STRING),
             new Schema.Column(COLUMN_ITEM_AMOUNT,   SqlTypes.BYTE),
             new Schema.Column(COLUMN_ITEM_QUALITY,  SqlTypes.BYTE),
             new Schema.Column(COLUMN_ITEM_POS_X,    SqlTypes.BYTE),
@@ -922,7 +985,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             bool hasPk = pk.IsValid;
             object[] p = new object[hasPk ? 12 : 11];
             p[0] = MapScheduler.Current;
-            p[1] = item.ItemGuid.ToSqlParameter();
+            p[1] = item.ItemGuid.ToString("N");
             p[2] = item.Position.x;
             p[3] = item.Position.y;
             p[4] = item.Position.z;
@@ -967,7 +1030,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             }, token).ConfigureAwait(false);
             PrimaryKey structKey = pk2;
             item.PrimaryKey = structKey;
-            if (item.InstanceID > 0 && ServerRegion.Key != byte.MaxValue)
+            if (item.InstanceID > 0)
             {
                 await Sql.NonQueryAsync($"INSERT INTO `{TABLE_INSTANCES}` " +
                                         $"(`{COLUMN_INSTANCES_REGION_KEY}`,`{COLUMN_ITEM_STRUCTURE_PK}`,`{COLUMN_INSTANCES_INSTANCE_ID}`)" +
@@ -1003,7 +1066,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                         builder.Append(')');
 
                         objs[ind] = structKey.Key;
-                        objs[++ind] = dataPt.Item.ToSqlParameter();
+                        objs[++ind] = dataPt.Item.ToString("N");
                         objs[++ind] = dataPt.Amount;
                         objs[++ind] = dataPt.Quality;
                         objs[++ind] = dataPt.X;
@@ -1053,16 +1116,20 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                              $"WHERE `{COLUMN_MAP}`=@0;", new object[] { MapScheduler.Current },
             reader =>
             {
-                str.Add(new SavedStructure()
-                {
-                    PrimaryKey = reader.GetInt32(0),
-                    ItemGuid = reader.ReadGuid(1),
-                    Position = new Vector3(reader.GetFloat(2), reader.GetFloat(3), reader.GetFloat(4)),
-                    Rotation = new Vector3(reader.GetFloat(5), reader.GetFloat(6), reader.GetFloat(7)),
-                    Owner = reader.GetUInt64(8),
-                    Group = reader.GetUInt64(9),
-                    Metadata = reader.ReadByteArray(10)
-                });
+                int pk = reader.GetInt32(0);
+                Guid? guid = reader.ReadGuidString(1);
+                if (!guid.HasValue)
+                    L.LogWarning("Invalid item GUID at structure " + pk + ": \"" + reader.GetString(1) + "\".");
+                else str.Add(new SavedStructure()
+                    {
+                        PrimaryKey = pk,
+                        ItemGuid = guid.Value,
+                        Position = new Vector3(reader.GetFloat(2), reader.GetFloat(3), reader.GetFloat(4)),
+                        Rotation = new Vector3(reader.GetFloat(5), reader.GetFloat(6), reader.GetFloat(7)),
+                        Owner = reader.GetUInt64(8),
+                        Group = reader.GetUInt64(9),
+                        Metadata = reader.ReadByteArray(10)
+                    });
             }, token).ConfigureAwait(false);
         List<PrimaryKey>? del = null;
         if (ServerRegion.Key != byte.MaxValue)
@@ -1120,9 +1187,14 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                              $"`{COLUMN_ITEM_POS_Y}`,`{COLUMN_ITEM_ROT}`,`{COLUMN_ITEM_METADATA}` FROM `{TABLE_STRUCTURE_ITEMS}`;",
             null, reader =>
             {
-                (itemData ??= new List<ItemJarData>(8)).Add(new ItemJarData(reader.GetInt32(0), reader.GetInt32(1),
-                    reader.ReadGuid(2), reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
-                    reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(8)));
+                int pk = reader.GetInt32(0);
+                Guid? guid = reader.ReadGuidString(2);
+                if (!guid.HasValue)
+                    L.LogWarning("Invalid item GUID at structure item " + pk + ": \"" + reader.GetString(1) + "\".");
+                else
+                    (itemData ??= new List<ItemJarData>(8)).Add(new ItemJarData(pk, reader.GetInt32(1),
+                        guid.Value, reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
+                        reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(8)));
             }, token).ConfigureAwait(false);
         if (itemData != null)
         {
@@ -1149,16 +1221,23 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                              $"FROM `{TABLE_MAIN}` WHERE `{COLUMN_PK}`=@0 LIMIT 1;", arr,
             reader =>
             {
-                str = new SavedStructure()
+                int lpk = reader.GetInt32(0);
+                Guid? guid = reader.ReadGuidString(1);
+                if (!guid.HasValue)
+                    L.LogWarning("Invalid item GUID at structure " + lpk + ": \"" + reader.GetString(1) + "\".");
+                else
                 {
-                    PrimaryKey = reader.GetInt32(0),
-                    ItemGuid = reader.ReadGuid(1),
-                    Position = new Vector3(reader.GetFloat(2), reader.GetFloat(3), reader.GetFloat(4)),
-                    Rotation = new Vector3(reader.GetFloat(5), reader.GetFloat(6), reader.GetFloat(7)),
-                    Owner = reader.GetUInt64(8),
-                    Group = reader.GetUInt64(9),
-                    Metadata = reader.ReadByteArray(10)
-                };
+                    str = new SavedStructure()
+                    {
+                        PrimaryKey = lpk,
+                        ItemGuid = guid.Value,
+                        Position = new Vector3(reader.GetFloat(2), reader.GetFloat(3), reader.GetFloat(4)),
+                        Rotation = new Vector3(reader.GetFloat(5), reader.GetFloat(6), reader.GetFloat(7)),
+                        Owner = reader.GetUInt64(8),
+                        Group = reader.GetUInt64(9),
+                        Metadata = reader.ReadByteArray(10)
+                    };
+                }
                 return true;
             }, token).ConfigureAwait(false);
         if (str == null)
@@ -1191,9 +1270,14 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                              $"FROM `{TABLE_STRUCTURE_ITEMS}` WHERE `{COLUMN_PK}`=@0;",
             arr, reader =>
             {
-                (itemData ??= new List<ItemJarData>(8)).Add(new ItemJarData(reader.GetInt32(0), reader.GetInt32(1),
-                    reader.ReadGuid(2), reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
-                    reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(8)));
+                int lpk = reader.GetInt32(0);
+                Guid? guid = reader.ReadGuidString(2);
+                if (!guid.HasValue)
+                    L.LogWarning("Invalid item GUID at structure " + lpk + ": \"" + reader.GetString(1) + "\".");
+                else
+                    (itemData ??= new List<ItemJarData>(8)).Add(new ItemJarData(lpk, reader.GetInt32(1),
+                        guid.Value, reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
+                        reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(8)));
             }, token).ConfigureAwait(false);
         if (itemData != null)
         {
@@ -1220,7 +1304,7 @@ public record struct ItemDisplayData(PrimaryKey Key, ushort Skin, ushort Mythic,
 public class UCBarricade : IBuildable
 {
     public uint InstanceId => Drop.instanceID;
-    public EStructType Type => EStructType.BARRICADE;
+    public StructType Type => StructType.Barricade;
     public ItemAsset Asset => Drop.asset;
     public Transform Model => Drop.model;
     public ulong Owner => Data.owner;
@@ -1240,7 +1324,7 @@ public class UCBarricade : IBuildable
 public class UCStructure : IBuildable
 {
     public uint InstanceId => Drop.instanceID;
-    public EStructType Type => EStructType.BARRICADE;
+    public StructType Type => StructType.Structure;
     public ItemAsset Asset => Drop.asset;
     public Transform Model => Drop.model;
     public ulong Owner => Data.owner;
@@ -1260,7 +1344,7 @@ public class UCStructure : IBuildable
 public interface IBuildable
 {
     uint InstanceId { get; }
-    EStructType Type { get; }
+    StructType Type { get; }
     ItemAsset Asset { get; }
     Transform Model { get; }
     ulong Owner { get; }
@@ -1269,9 +1353,9 @@ public interface IBuildable
     object Data { get; }
     NetId NetId { get; }
 }
-public enum EStructType : byte
+public enum StructType : byte
 {
-    UNKNOWN = 0,
-    STRUCTURE = 1,
-    BARRICADE = 2
+    Unknown = 0,
+    Structure = 1,
+    Barricade = 2
 }

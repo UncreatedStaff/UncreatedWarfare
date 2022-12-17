@@ -31,6 +31,7 @@ public static class Points
     public static CreditsConfig CreditsConfig => CreditsConfigObj.Data;
 
     public static OfficerStorage Officers;
+    public static List<Task> Transactions = new List<Task>(16);
 
     public static void Initialize()
     {
@@ -147,6 +148,8 @@ public static class Points
         AwardCreditsAsync(player, amount, Localization.Translate(message, player), redmessage, isPurchase, @lock, token);
     public static async Task AwardCreditsAsync(CreditsParameters parameters, CancellationToken token = default, bool @lock = true)
     {
+        if (!token.CanBeCanceled)
+            token = UCWarfare.UnloadCancel;
         UCPlayer? player = parameters.Player;
         Task? remote = null;
         try
@@ -154,7 +157,7 @@ public static class Points
             ulong team = parameters.Team;
             if (team is < 1 or > 2)
             {
-                if (player == null)
+                if (player == null || !player.IsOnline)
                 {
                     PlayerSave? save = PlayerManager.GetSave(parameters.Steam64);
                     if (save != null)
@@ -179,14 +182,14 @@ public static class Points
                 remote = Data.RemoteSQL.AddCredits(parameters.Steam64, team, amount, token);
             }
             int oldamt = currentAmount - amount;
-            await UCWarfare.ToUpdate();
+            await UCWarfare.ToUpdate(token);
 
             if (player != null)
                 player.CachedCredits = currentAmount;
 
             ActionLogger.Add(EActionLogType.CREDITS_CHANGED, oldamt + " >> " + currentAmount, parameters.Steam64);
 
-            if (player != null && !player.HasUIHidden && !Data.Gamemode.EndScreenUp)
+            if (player != null && player.IsOnline && !player.HasUIHidden && !Data.Gamemode.EndScreenUp)
             {
                 Translation<int> key = T.XPToastGainCredits;
                 if (amount < 0)
@@ -232,7 +235,11 @@ public static class Points
         {
             IsPurchase = isPurchase
         };
-        Task.Run(() => AwardCreditsAsync(parameters, CancellationToken.None, false));
+        AwardCredits(in parameters, @lock);
+    }
+    public static void AwardCredits(in CreditsParameters parameters, bool @lock = true)
+    {
+        UCWarfare.RunTask(AwardCreditsAsync, parameters, UCWarfare.UnloadCancel, @lock, ctx: "Award " + parameters.Amount + " credits to " + parameters.Steam64 + ".");
     }
     public static Task AwardCreditsAsync(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default)
     {
@@ -255,16 +262,18 @@ public static class Points
         if (team is < 1 or > 2)
             return;
         XPParameters parameters = new XPParameters(player, team, amount, message, awardCredits);
-        Task.Run(parameters.Award);
+        AwardXP(in parameters);
     }
-    public static void AwardXP(XPParameters parameters)
+    public static void AwardXP(in XPParameters parameters)
     {
-        Task.Run(parameters.Award);
+        UCWarfare.RunTask(AwardXPAsync, parameters, UCWarfare.UnloadCancel, ctx: "Award " + parameters.Amount + " xp to " + parameters.Steam64 + ".");
     }
     public static async Task AwardXPAsync(XPParameters parameters, CancellationToken token = default)
     {
         try
         {
+            if (!token.CanBeCanceled)
+                token = UCWarfare.UnloadCancel;
             Task? remote = null;
             await UCWarfare.ToUpdate(token);
             if (!Data.TrackStats || parameters.Amount == 0 || XPConfigObj.Data.XPMultiplier == 0f) return;
@@ -332,7 +341,7 @@ public static class Points
                                 new CreditsParameters(player, team, credits, null, isPunishment: true), token, false)
                             .ConfigureAwait(false);
                     }
-                    await UCWarfare.ToUpdate();
+                    await UCWarfare.ToUpdate(token);
 
                     player.CachedXP = currentAmount;
 
@@ -342,7 +351,7 @@ public static class Points
                             kd.AddXP(amount);
                     }
 
-                    if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.IsScreenUp))
+                    if (player.IsOnline && !player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.IsScreenUp))
                     {
                         string number = Localization.Translate(amount >= 0 ? T.XPToastGainXP : T.XPToastLoseXP, player,
                             Math.Abs(amount));
@@ -382,7 +391,7 @@ public static class Points
             {
                 player?.PurchaseSync.Release();
             }
-            if (player != null)
+            if (player != null && player.IsOnline)
             {
                 if (player.Rank.Level > oldRank.Level)
                 {
@@ -654,15 +663,17 @@ public static class Points
             return;
         }
         
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        foreach (UCPlayer player in PlayerManager.OnlinePlayers.ToList())
         {
-            ulong id = PlayerManager.OnlinePlayers[i].Steam64;
+            if (!player.IsOnline) continue;
+            ulong id = player.Steam64;
             for (int j = 0; j < data.Count; ++j)
             {
                 if (data[j].Steam64 == id)
                     goto c;
             }
-            await UpdatePointsAsync(PlayerManager.OnlinePlayers[i], true, token).ConfigureAwait(false);
+            
+            await UpdatePointsAsync(player, true, token.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(player.DisconnectToken, token).Token : player.DisconnectToken).ConfigureAwait(false);
             c:;
         }
 
@@ -672,7 +683,7 @@ public static class Points
             UCPlayer? pl = UCPlayer.FromID(levels.Steam64);
             if (pl is null || pl.GetTeam() != levels.Team)
                 continue;
-            await pl.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            await pl.PurchaseSync.WaitAsync(token.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(pl.DisconnectToken, token).Token : pl.DisconnectToken).ConfigureAwait(false);
             try
             {
                 pl.UpdatePoints(levels.XP, levels.Credits);
