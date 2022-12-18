@@ -42,7 +42,7 @@ public class VehicleData : ITranslationArgument, IListItem
     [CommandSettable]
     public int RearmCost;
     [CommandSettable]
-    public EVehicleType Type;
+    public VehicleType Type;
     [CommandSettable]
     public bool RequiresSL;
     [CommandSettable]
@@ -62,7 +62,7 @@ public class VehicleData : ITranslationArgument, IListItem
     [JsonIgnore]
     public PrimaryKey PrimaryKey { get; set; }
     [JsonIgnore]
-    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleGuid == VehicleID);
+    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawnerOld.Spawners.Where(x => x.VehicleGuid == VehicleID);
     // for JSON backwards compatability
     public ulong Team
     {
@@ -105,7 +105,7 @@ public class VehicleData : ITranslationArgument, IListItem
         RequiredClass = Class.None;
         UnlockRequirements = Array.Empty<UnlockRequirement>();
         RearmCost = 3;
-        Type = EVehicleType.NONE;
+        Type = VehicleType.None;
         RequiresSL = false;
         UnlockLevel = 0;
         Items = Array.Empty<Guid>();
@@ -126,7 +126,7 @@ public class VehicleData : ITranslationArgument, IListItem
         Branch = Branch.Default;
         RequiredClass = Class.None;
         RearmCost = 3;
-        Type = EVehicleType.NONE;
+        Type = VehicleType.None;
         RequiresSL = false;
         UnlockLevel = 0;
         Items = Array.Empty<Guid>();
@@ -138,12 +138,12 @@ public class VehicleData : ITranslationArgument, IListItem
                                                                                       // intentional is null check
     public static bool CanTransport(VehicleData data, InteractableVehicle vehicle) => vehicle is not null && CanTransport(data, vehicle.passengers.Length);
     public static bool CanTransport(VehicleData data, int passengerCt) => !IsEmplacement(data.Type) && data.CrewSeats.Length < passengerCt;
-    public static bool IsGroundVehicle(EVehicleType type) => !IsAircraft(type);
-    public static bool IsArmor(EVehicleType type) => type is EVehicleType.APC or EVehicleType.IFV or EVehicleType.MBT or EVehicleType.SCOUT_CAR;
-    public static bool IsLogistics(EVehicleType type) => type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT;
-    public static bool IsAircraft(EVehicleType type) => type is EVehicleType.HELI_TRANSPORT or EVehicleType.HELI_ATTACK or EVehicleType.JET;
-    public static bool IsAssaultAircraft(EVehicleType type) => type is EVehicleType.HELI_ATTACK or EVehicleType.JET;
-    public static bool IsEmplacement(EVehicleType type) => type is EVehicleType.HMG or EVehicleType.ATGM or EVehicleType.AA or EVehicleType.MORTAR;
+    public static bool IsGroundVehicle(VehicleType type) => !IsAircraft(type);
+    public static bool IsArmor(VehicleType type) => type is VehicleType.APC or VehicleType.IFV or VehicleType.MBT or VehicleType.ScoutCar;
+    public static bool IsLogistics(VehicleType type) => type is VehicleType.LogisticsGround or VehicleType.TransportAir;
+    public static bool IsAircraft(VehicleType type) => type is VehicleType.TransportAir or VehicleType.AttackHeli or VehicleType.Jet;
+    public static bool IsAssaultAircraft(VehicleType type) => type is VehicleType.AttackHeli or VehicleType.Jet;
+    public static bool IsEmplacement(VehicleType type) => type is VehicleType.HMG or VehicleType.ATGM or VehicleType.AA or VehicleType.Mortar;
     public bool HasDelayType(DelayType type) => Delay.HasDelayType(Delays, type);
     public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
     public bool IsCrewSeat(byte seat)
@@ -289,6 +289,8 @@ public class VBarricade : IListSubItem
         Metadata = state;
     }
 
+    // ReSharper disable InconsistentNaming
+
     public const string COLUMN_PK = "pk";
     public const string COLUMN_GUID = "Item";
     public const string COLUMN_HEALTH = "Health";
@@ -313,6 +315,8 @@ public class VBarricade : IListSubItem
     public const string COLUMN_DISPLAY_TAGS = "Tags";
     public const string COLUMN_DISPLAY_DYNAMIC_PROPS = "DynamicProps";
     public const string COLUMN_DISPLAY_ROT = "Rotation";
+
+    // ReSharper restore InconsistentNaming
     public static Schema[] GetDefaultSchemas(string tableName, string tableItemsName, string tableDisplayDataName, string fkColumn, string mainTable, string mainPkColumn, bool includeHealth = true, bool oneToOne = false)
     {
         if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
@@ -341,7 +345,7 @@ public class VBarricade : IListSubItem
             ForeignKeyColumn = mainPkColumn,
             ForeignKeyTable = mainTable
         };
-        columns[++index] = new Schema.Column(COLUMN_GUID, SqlTypes.GUID);
+        columns[++index] = new Schema.Column(COLUMN_GUID, SqlTypes.GUID_STRING);
         if (includeHealth)
         {
             columns[++index] = new Schema.Column(COLUMN_HEALTH, SqlTypes.USHORT)
@@ -393,7 +397,7 @@ public class VBarricade : IListSubItem
                 ForeignKeyColumn = oneToOne ? fkColumn : COLUMN_PK,
                 ForeignKeyTable = tableName
             },
-            new Schema.Column(COLUMN_ITEM_GUID, SqlTypes.GUID),
+            new Schema.Column(COLUMN_ITEM_GUID, SqlTypes.GUID_STRING),
             new Schema.Column(COLUMN_ITEM_AMOUNT, SqlTypes.BYTE),
             new Schema.Column(COLUMN_ITEM_QUALITY, SqlTypes.BYTE),
             new Schema.Column(COLUMN_ITEM_POS_X, SqlTypes.BYTE),
@@ -405,33 +409,32 @@ public class VBarricade : IListSubItem
     }
 }
 
-/// <summary>Max field character limit: <see cref="VehicleData.VEHICLE_TYPE_MAX_CHAR_LIMIT"/>.</summary>
 [Translatable("Vehicle Type")]
-public enum EVehicleType
+public enum VehicleType
 {
     [Translatable("Unknown")]
-    NONE,
+    None,
     [Translatable(LanguageAliasSet.RUSSIAN, "Хамви")]
     [Translatable(LanguageAliasSet.SPANISH, "Humvee")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Humvee")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Humvee")]
     [Translatable(LanguageAliasSet.POLISH, "Humvee")]
-    HUMVEE,
+    Humvee,
     [Translatable(LanguageAliasSet.RUSSIAN, "Транспорт")]
     [Translatable(LanguageAliasSet.SPANISH, "Transporte")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Transport")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Transporte")]
     [Translatable(LanguageAliasSet.POLISH, "Humvee")]
     [Translatable("Transport Truck")]
-    TRANSPORT,
-    SCOUT_CAR,
+    TransportGround,
+    ScoutCar,
     [Translatable(LanguageAliasSet.RUSSIAN, "Логистический")]
     [Translatable(LanguageAliasSet.SPANISH, "Logistico")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Camion")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Logística")]
     [Translatable(LanguageAliasSet.POLISH, "Transport Logistyczny")]
     [Translatable("Logistics Truck")]
-    LOGISTICS,
+    LogisticsGround,
     [Translatable(LanguageAliasSet.RUSSIAN, "БТР")]
     [Translatable(LanguageAliasSet.SPANISH, "APC")]
     [Translatable(LanguageAliasSet.ROMANIAN, "TAB")]
@@ -457,52 +460,37 @@ public enum EVehicleType
     [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
     [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
     [Translatable("Transport Heli")]
-    HELI_TRANSPORT,
+    TransportAir,
     [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
     [Translatable(LanguageAliasSet.SPANISH, "Helicoptero")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
     [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
     [Translatable("Attack Heli")]
-    HELI_ATTACK,
+    AttackHeli,
     [Translatable(LanguageAliasSet.RUSSIAN, "реактивный")]
     [Translatable("Jet")]
-    JET,
+    Jet,
     [Translatable(LanguageAliasSet.RUSSIAN, "Размещение")]
     [Translatable(LanguageAliasSet.SPANISH, "Emplazamiento")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Amplasament")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Emplacamento")]
     [Translatable(LanguageAliasSet.POLISH, "Fortyfikacja")]
     [Obsolete("Use the individual emplacement types instead.", true)]
-    EMPLACEMENT,
+    Emplacement,
     [Translatable(LanguageAliasSet.RUSSIAN, "зенитный")]
-    [Translatable(LanguageAliasSet.SPANISH, "")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
     [Translatable("Anti-Aircraft")]
     AA,
     [Translatable(LanguageAliasSet.RUSSIAN, "Тяжелый пулемет")]
-    [Translatable(LanguageAliasSet.SPANISH, "")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
     [Translatable("Heavy Machine Gun")]
     HMG,
     [Translatable(LanguageAliasSet.RUSSIAN, "противотанковая ракета")]
-    [Translatable(LanguageAliasSet.SPANISH, "")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
     [Translatable("ATGM")]
     ATGM,
     [Translatable(LanguageAliasSet.RUSSIAN, "Миномет")]
     [Translatable(LanguageAliasSet.SPANISH, "Mortero")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
     [Translatable("Mortar")]
-    MORTAR
+    Mortar
 }
 
 /// <summary>Max field character limit: <see cref="Delay.DELAY_TYPE_MAX_CHAR_LIMIT"/>.</summary>
@@ -847,7 +835,7 @@ public struct Delay : IJsonReadWrite
             ForeignKeyColumn = mainPkColumn,
             ForeignKeyTable = mainTable
         };
-        columns[++index] = new Schema.Column(COLUMN_TYPE, "varchar(" + DELAY_TYPE_MAX_CHAR_LIMIT + ")");
+        columns[++index] = new Schema.Column(COLUMN_TYPE, SqlTypes.Enum(DelayType.None));
         columns[++index] = new Schema.Column(COLUMN_VALUE, SqlTypes.FLOAT)
         {
             Nullable = true

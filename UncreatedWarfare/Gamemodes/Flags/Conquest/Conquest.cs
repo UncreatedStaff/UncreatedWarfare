@@ -37,7 +37,7 @@ public sealed partial class Conquest :
     IGameStats,
     ITraits
 {
-    private VehicleSpawner _vehicleSpawner;
+    private VehicleSpawnerOld _vehicleSpawner;
     private VehicleBay _vehicleBay;
     private VehicleSigns _vehicleSigns;
     private FOBManager _fobManager;
@@ -58,7 +58,7 @@ public sealed partial class Conquest :
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
     public override bool AllowPassengersToCapture => true;
-    public VehicleSpawner VehicleSpawner => _vehicleSpawner;
+    public VehicleSpawnerOld VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
     public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _fobManager;

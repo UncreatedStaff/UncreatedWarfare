@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 #if IMPORT
 using System.IO;
 using System.Text.Json;
@@ -12,12 +13,14 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Sync;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Uncreated.Warfare.Structures;
 
@@ -30,110 +33,328 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         typeof(InteractableStorage).GetMethod("onStateUpdated", BindingFlags.NonPublic | BindingFlags.Instance);
     private static readonly MethodInfo? UpdateDisplayMethod =
         typeof(InteractableStorage).GetMethod("updateDisplay", BindingFlags.NonPublic | BindingFlags.Instance);
+#if IMPORT
+    private bool _hasImported;
+#endif
+    private static StructureSaver? _ss;
+
+    public static StructureSaver? GetSingletonQuick()
+    {
+        if (_ss == null || !_ss.IsLoaded)
+            return _ss = Data.Singletons.GetSingleton<StructureSaver>();
+        return _ss;
+    }
+
+    [OperationTest("Display State Methods Check")]
+    [Conditional("DEBUG")]
+    [UsedImplicitly]
+    private static void TestDisplayStateMethods()
+    {
+        Assert.IsNotNull(OnStateUpdatedInteractableStorageMethod);
+        Assert.IsNotNull(UpdateDisplayMethod);
+    }
+
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
     public StructureSaver() : base("structures", SCHEMAS) { }
     async Task ILevelStartListenerAsync.OnLevelReady(CancellationToken token)
     {
 #if IMPORT
-        await ImportFromJson(Path.Combine(Data.Paths.StructureStorage, "structures.json"), true, (x, y) => x.InstanceID.CompareTo(y.InstanceID)).ConfigureAwait(false);
-        Guid kitSign = new Guid("275dd81d60ae443e91f0655b8b7aa920");
-        await ImportFromJson(Path.Combine(Data.Paths.StructureStorage, "request_signs.json"), true, (x, y) => x.InstanceID.CompareTo(y.InstanceID), deserializer:
-            (ref Utf8JsonReader reader) =>
-            {
-                SavedStructure save = new SavedStructure
+        if (!_hasImported)
+        {
+            await ImportFromJson(Path.Combine(Data.Paths.StructureStorage, "structures.json"), true, (x, y) => x.ItemGuid == y.ItemGuid ? x.InstanceID.CompareTo(y.InstanceID) : x.ItemGuid.CompareTo(y.ItemGuid), token, deserializer:
+                (ref Utf8JsonReader reader) =>
                 {
-                    Group = 3,
-                    Owner = 76561198267927009ul,
-                    ItemGuid = kitSign
-                };
-                string? kitname = null;
-                while (reader.Read())
-                {
-                    if (reader.TokenType == JsonTokenType.PropertyName)
+                    SavedStructure save = new SavedStructure();
+                    while (reader.Read())
                     {
-                        string val = reader.GetString()!;
-                        if (reader.Read())
+                        if (reader.TokenType == JsonTokenType.PropertyName)
                         {
-                            switch (val)
+                            string val = reader.GetString()!;
+                            if (reader.Read())
                             {
-                                case "position":
-                                    Vector3 pos =
-                                        JsonSerializer.Deserialize<Vector3>(ref reader, JsonEx.serializerSettings);
-                                    save.Position = pos;
-                                    break;
-                                case "rotation":
-                                    Vector3 rot =
-                                        JsonSerializer.Deserialize<Vector3>(ref reader, JsonEx.serializerSettings);
-                                    save.Rotation = rot;
-                                    break;
-                                case "kit_name":
-                                    kitname = reader.GetString();
-                                    break;
-                                case "instance_id":
-                                    save.InstanceID = reader.GetUInt32();
-                                    break;
+                                switch (val)
+                                {
+                                    case "position":
+                                        Vector3 pos = JsonSerializer.Deserialize<Vector3>(ref reader, JsonEx.serializerSettings);
+                                        save.Position = pos;
+                                        break;
+                                    case "rotation":
+                                        Vector3 rot = JsonSerializer.Deserialize<Vector3>(ref reader, JsonEx.serializerSettings);
+                                        save.Rotation = rot;
+                                        break;
+                                    case "state":
+                                        save.StateString = reader.GetString()!;
+                                        break;
+                                    case "instance_id":
+                                        save.InstanceID = reader.GetUInt32();
+                                        break;
+                                    case "owner":
+                                        save.Owner = reader.GetUInt64();
+                                        break;
+                                    case "group":
+                                        save.Group = reader.GetUInt64();
+                                        break;
+                                    case "guid":
+                                        save.ItemGuid = reader.GetGuid();
+                                        break;
+                                }
                             }
                         }
+                        else if (reader.TokenType == JsonTokenType.EndObject)
+                            break;
                     }
-                    else if (reader.TokenType == JsonTokenType.EndObject)
-                        break;
-                }
+                    if (Assets.find(save.ItemGuid) is ItemStorageAsset storage)
+                    {
+                        save.Items = F.GetItemsFromStorageState(storage, save.Metadata, out ItemDisplayData? displayData, save.PrimaryKey);
+                        save.DisplayData = displayData;
+                    }
 
-                if (kitname != null)
+                    return save;
+                }).ConfigureAwait(false);
+            Guid kitSign = new Guid("275dd81d60ae443e91f0655b8b7aa920");
+            await ImportFromJson(Path.Combine(Data.Paths.StructureStorage, "request_signs.json"), true, (x, y) => x.ItemGuid == y.ItemGuid ? x.InstanceID.CompareTo(y.InstanceID) : x.ItemGuid.CompareTo(y.ItemGuid), token, deserializer:
+                (ref Utf8JsonReader reader) =>
                 {
-                    byte[] st = System.Text.Encoding.UTF8.GetBytes("sign_kit_" + kitname);
-                    save.Metadata = new byte[st.Length + 17];
-                    Buffer.BlockCopy(st, 0, save.Metadata, 17, st.Length);
-                    save.Metadata[16] = (byte)st.Length;
-                    Buffer.BlockCopy(BitConverter.GetBytes(76561198267927009ul), 0, save.Metadata, 0, sizeof(ulong));
-                    Buffer.BlockCopy(BitConverter.GetBytes(3ul), 0, save.Metadata, sizeof(ulong), sizeof(ulong));
-                }
+                    SavedStructure save = new SavedStructure
+                    {
+                        Group = 3,
+                        Owner = 76561198267927009ul,
+                        ItemGuid = kitSign
+                    };
+                    string? kitname = null;
+                    while (reader.Read())
+                    {
+                        if (reader.TokenType == JsonTokenType.PropertyName)
+                        {
+                            string val = reader.GetString()!;
+                            if (reader.Read())
+                            {
+                                switch (val)
+                                {
+                                    case "position":
+                                        Vector3 pos =
+                                            JsonSerializer.Deserialize<Vector3>(ref reader, JsonEx.serializerSettings);
+                                        save.Position = pos;
+                                        break;
+                                    case "rotation":
+                                        Vector3 rot =
+                                            JsonSerializer.Deserialize<Vector3>(ref reader, JsonEx.serializerSettings);
+                                        save.Rotation = rot;
+                                        break;
+                                    case "kit_name":
+                                        kitname = reader.GetString();
+                                        break;
+                                    case "instance_id":
+                                        save.InstanceID = reader.GetUInt32();
+                                        break;
+                                }
+                            }
+                        }
+                        else if (reader.TokenType == JsonTokenType.EndObject)
+                            break;
+                    }
+
+                    if (kitname != null)
+                    {
+                        byte[] st = System.Text.Encoding.UTF8.GetBytes("sign_kit_" + kitname);
+                        save.Metadata = new byte[st.Length + 17];
+                        Buffer.BlockCopy(st, 0, save.Metadata, 17, st.Length);
+                        save.Metadata[16] = (byte)st.Length;
+                        Buffer.BlockCopy(BitConverter.GetBytes(76561198267927009ul), 0, save.Metadata, 0, sizeof(ulong));
+                        Buffer.BlockCopy(BitConverter.GetBytes(3ul), 0, save.Metadata, sizeof(ulong), sizeof(ulong));
+                    }
 
 
-                return save;
-            }).ConfigureAwait(false);
+                    return save;
+                }).ConfigureAwait(false);
+        }
+        _hasImported = true;
 #endif
         L.Log("Checking structures: " + Items.Count + " item(s) pending...", ConsoleColor.Magenta);
         await WaitAsync(token).ConfigureAwait(false);
         try
         {
             List<SavedStructure>? toSave = null;
-            await UCWarfare.ToUpdate();
-            for (int i = 0; i < Items.Count; ++i)
+            await UCWarfare.ToUpdate(token);
+            WriteWait();
+            try
             {
-                SqlItem<SavedStructure> item = Items[i];
-                if (item.Item != null)
+                List<uint> bmatched = new List<uint>(Items.Count);
+                List<uint> smatched = new List<uint>(Items.Count / 10);
+                for (int i = 0; i < Items.Count; ++i)
                 {
-                    int err = CheckExisting(item.Item);
-                    switch (err)
+                    SqlItem<SavedStructure> item = Items[i];
+                    SavedStructure? structure = item.Item;
+                    if (structure != null)
                     {
-                        case 2:
-                            L.LogWarning("Error, GUID not found: " + item);
-                            break;
-                        case 3:
-                            L.LogWarning("Error, GUID not barricade or barricade: " + item);
-                            break;
-                        case 12:
-                        case 6:
-                            L.LogWarning("Error, Failed to replace: " + item);
-                            break;
-                        case 5:
-                        case 7:
-                        case 8:
-                        case 9:
-                        case 10:
-                        case 11:
-                            (toSave ??= new List<SavedStructure>(4)).Add(item.Item);
-                            goto case 0;
-                        case 0:
-                            L.LogDebug("Confirmed validity of barricade {" + err.ToString("X2") + "}: " + item);
+                        if (Assets.find(structure.ItemGuid) is not ItemAsset itemAsset)
+                        {
+                            ReportError(structure, "Item not found: " + structure.ItemGuid);
                             continue;
-                        default:
-                            L.LogWarning("Error, {" + err.ToString("X2") + "}: " + item);
-                            break;
+                        }
+                        if (itemAsset is ItemStructureAsset)
+                            goto structure;
+                        if (itemAsset is not ItemBarricadeAsset brAsset)
+                        {
+                            ReportError(structure, "Item " + itemAsset.itemName + " (" + structure.ItemGuid + ") is not a barricade or structure.");
+                            continue;
+                        }
+
+                        if (bmatched.Contains(structure.InstanceID))
+                        {
+                            ReportInfo(structure, "Barricade's instance ID already used: " + structure.InstanceID + ".");
+                            structure.InstanceID = 0;
+                        }
+                        bredo:
+                        BarricadeDrop? bdrop = structure.InstanceID > 0 ? UCBarricadeManager.FindBarricade(structure.InstanceID, structure.Position) : null;
+                        BarricadeData bdata;
+                        if (bdrop == null || bdrop.asset.GUID != structure.ItemGuid) // barricade of that instance id not found
+                        {
+                            bdrop = UCBarricadeManager.GetBarricadeFromPosition(structure.ItemGuid, structure.Position, 0.1f);
+                            if (bdrop == null) // barricade at that position not found
+                            {
+                                if (Replace(structure, brAsset))
+                                {
+                                    bmatched.Add(structure.InstanceID);
+                                    ReportInfo(structure, "Barricade not found via instance ID or position, replaced successfully.");
+                                    goto save;
+                                }
+                                ReportError(structure, "Barricade not found via instance ID or position, unable to replace.");
+                                continue;
+                            }
+                            ReportInfo(structure, "Barricade not found via instance ID, found with position, instance ID replaced successfully.");
+                            structure.InstanceID = bdrop.instanceID;
+                            bmatched.Add(structure.InstanceID);
+                            structure.Position = bdrop.model.position;
+                            structure.Rotation = bdrop.model.rotation.eulerAngles;
+                            structure.Buildable = new UCBarricade(bdrop);
+                            structure.Metadata = GetBarricadeState(null, brAsset, structure);
+                            FillHp(bdrop);
+                            bdata = bdrop.GetServersideData();
+                            if (bdata.barricade.asset is not ItemStorageAsset && !structure.Metadata.CompareBytes(bdata.barricade.state))
+                            {
+                                bdata.barricade.state = Util.CloneBytes(structure.Metadata);
+                                F.SetOwnerOrGroup(bdrop, structure.Owner, structure.Group);
+                                ReportInfo(structure, "Found barricade metadata was incorrect, successfully corrected to saved values.");
+                            }
+                            else if (bdata.owner != structure.Owner || bdata.group != structure.Group)
+                            {
+                                F.SetOwnerOrGroup(bdrop, structure.Owner, structure.Group);
+                                ReportInfo(structure, "Found barricade owner or group was incorrect, successfully corrected to saved values.");
+                            }
+                            goto save;
+                        }
+                        // barricade found from instance id, update positions if needed.
+                        if (!structure.Position.AlmostEquals(bdrop.model.position, 0.1f) || !structure.Rotation.AlmostEquals(bdrop.model.rotation.eulerAngles, 3f))
+                        {
+                            for (int j = i + 1; j < Items.Count; ++j)
+                            {
+                                SavedStructure? st = Items[j].Item;
+                                if (st != null &&
+                                    st.ItemGuid == structure.ItemGuid &&
+                                    st.Position.AlmostEquals(bdrop.model.position, 0.1f) &&
+                                    st.Rotation.AlmostEquals(bdrop.model.rotation.eulerAngles, 3f))
+                                {
+                                    structure.InstanceID = 0;
+                                    ReportInfo(structure, "Found another matching barricade instance later on.");
+                                    goto bredo;
+                                }
+                            }
+                            BarricadeManager.ServerSetBarricadeTransform(bdrop.model, structure.Position, Quaternion.Euler(structure.Rotation));
+                            ReportInfo(structure, "Barricade position or rotation was incorrect, successfully corrected to saved values.");
+                        }
+                        bmatched.Add(structure.InstanceID);
+                        FillHp(bdrop);
+                        bdata = bdrop.GetServersideData();
+                        if (!structure.Metadata.CompareBytes(bdata.barricade.state))
+                        {
+                            ReportInfo(structure, "Barricade metadata was incorrect, successfully corrected to saved values.");
+                            bdata.barricade.state = Util.CloneBytes(structure.Metadata);
+                            F.SetOwnerOrGroup(bdrop, structure.Owner, structure.Group);
+                        }
+                        else if (bdata.owner != structure.Owner || bdata.group != structure.Group)
+                        {
+                            F.SetOwnerOrGroup(bdrop, structure.Owner, structure.Group);
+                            ReportInfo(structure, "Barricade owner or group was incorrect, successfully corrected to saved values.");
+                        }
+                        structure.Buildable = new UCBarricade(bdrop);
+                        continue;
+                        structure:
+                        ItemStructureAsset stAsset = (ItemStructureAsset)itemAsset;
+                        if (smatched.Contains(structure.InstanceID))
+                        {
+                            ReportInfo(structure, "Structure's instance ID already used: " + structure.InstanceID + ".");
+                            structure.InstanceID = 0;
+                        }
+                        sredo:
+                        StructureDrop? sdrop = structure.InstanceID != 0 ? UCBarricadeManager.FindStructure(structure.InstanceID, structure.Position) : null;
+                        StructureData sdata;
+                        if (sdrop == null || sdrop.asset.GUID != structure.ItemGuid)  // structure of that instance id not found
+                        {
+                            sdrop = UCBarricadeManager.GetStructureFromPosition(structure.ItemGuid, structure.Position, 0.1f);
+                            if (sdrop == null) // structure at that position not found
+                            {
+                                if (Replace(structure, stAsset))
+                                {
+                                    smatched.Add(structure.InstanceID);
+                                    ReportInfo(structure, "Structure not found via instance ID or position, replaced successfully.");
+                                    goto save;
+                                }
+                                ReportError(structure, "Structure not found via instance ID or position, unable to replace.");
+                                continue;
+                            }
+                            structure.InstanceID = sdrop.instanceID;
+                            smatched.Add(structure.InstanceID);
+                            structure.Position = sdrop.model.position;
+                            structure.Rotation = sdrop.model.rotation.eulerAngles;
+                            structure.Buildable = new UCStructure(sdrop);
+                            FillHp(sdrop);
+                            sdata = sdrop.GetServersideData();
+                            if (sdata.owner != structure.Owner || sdata.group != structure.Group)
+                                StructureManager.changeOwnerAndGroup(sdrop.model, structure.Owner, structure.Group);
+                            goto save;
+                        }
+                        smatched.Add(structure.InstanceID);
+                        // structure found from instance id, update positions if needed.
+                        if (!structure.Position.AlmostEquals(sdrop.model.position, 0.1f) || !structure.Rotation.AlmostEquals(sdrop.model.rotation.eulerAngles, 3f))
+                        {
+                            for (int j = i + 1; j < Items.Count; ++j)
+                            {
+                                SavedStructure? st = Items[j].Item;
+                                if (st != null &&
+                                    st.ItemGuid == structure.ItemGuid &&
+                                    st.Position.AlmostEquals(sdrop.model.position, 0.1f) &&
+                                    st.Rotation.AlmostEquals(sdrop.model.rotation.eulerAngles, 3f))
+                                {
+                                    structure.InstanceID = 0;
+                                    ReportInfo(structure, "Found another matching structure instance later on.");
+                                    goto sredo;
+                                }
+                            }
+                            StructureManager.ServerSetStructureTransform(sdrop.model, structure.Position, Quaternion.Euler(structure.Rotation));
+                            ReportInfo(structure, "Structure position or rotation was incorrect, successfully corrected to saved values.");
+                        }
+                        FillHp(sdrop);
+                        sdata = sdrop.GetServersideData();
+                        if (sdata.owner != structure.Owner || sdata.group != structure.Group)
+                        {
+                            StructureManager.changeOwnerAndGroup(sdrop.model, structure.Owner, structure.Group);
+                            ReportInfo(structure, "Barricade owner or group was incorrect, successfully corrected to saved values.");
+                        }
+                        structure.Buildable = new UCStructure(sdrop);
+                        continue;
+
+                        save:
+                        (toSave ??= new List<SavedStructure>(4)).Add(structure);
                     }
                 }
+                BarricadeManager.save();
+                StructureManager.save();
+            }
+            finally
+            {
+                WriteRelease();
             }
             if (toSave != null)
             {
@@ -146,89 +367,22 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             Release();
         }
     }
+    private static void ReportError(SavedStructure structure, string message)
+    {
+        L.LogError("[STR SAVER] Error initializing " + structure + ": \"" + message + "\".");
+    }
+    private static void ReportInfo(SavedStructure structure, string message)
+    {
+        L.Log("[STR SAVER]  Info initializing " + structure + ": \"" + message + "\".");
+    }
     public override Task PostReload(CancellationToken token)
     {
         return Level.isLoaded ? (this as ILevelStartListenerAsync).OnLevelReady(token) : Task.CompletedTask;
     }
-    private int CheckExisting(SavedStructure structure)
-    {
-        ThreadUtil.assertIsGameThread();
-        if (Assets.find(structure.ItemGuid) is not ItemAsset item)
-            return 2;
-        if (item is ItemStructureAsset)
-            goto structure;
-        else if (item is not ItemBarricadeAsset)
-             return 3;
-
-        ItemBarricadeAsset brAsset = (ItemBarricadeAsset)item;
-        BarricadeDrop? bdrop = structure.InstanceID > 0 ? UCBarricadeManager.FindBarricade(structure.InstanceID, structure.Position) : null;
-        if (bdrop == null)
-        {
-            bdrop = UCBarricadeManager.GetBarricadeFromPosition(structure.Position);
-            if (bdrop == null || bdrop.asset.GUID != structure.ItemGuid)
-            {
-                return Replace(structure, brAsset) ? 5 : 6;
-            }
-            structure.InstanceID = bdrop.instanceID;
-            structure.Position = bdrop.model.position;
-            structure.Rotation = bdrop.model.rotation.eulerAngles;
-            structure.Buildable = new UCBarricade(bdrop);
-            FillHp(bdrop);
-            BarricadeManager.changeOwnerAndGroup(bdrop.model, structure.Owner, structure.Group);
-            return 7;
-        }
-        if (!structure.Position.AlmostEquals(bdrop.model.position) || !structure.Rotation.AlmostEquals(bdrop.model.rotation.eulerAngles))
-        {
-            structure.Position = bdrop.model.position;
-            structure.Rotation = bdrop.model.rotation.eulerAngles;
-            structure.Buildable = new UCBarricade(bdrop);
-            FillHp(bdrop);
-            BarricadeManager.changeOwnerAndGroup(bdrop.model, structure.Owner, structure.Group);
-            return 8;
-        }
-        FillHp(bdrop);
-        BarricadeManager.changeOwnerAndGroup(bdrop.model, structure.Owner, structure.Group);
-        structure.Buildable = new UCBarricade(bdrop);
-
-        return 0;
-        structure:
-        ItemStructureAsset stAsset = (ItemStructureAsset)item;
-        StructureDrop? sdrop = UCBarricadeManager.FindStructure(structure.InstanceID, structure.Position);
-        if (sdrop == null)
-        {
-            sdrop = UCBarricadeManager.GetStructureFromPosition(structure.Position);
-            if (sdrop == null || sdrop.asset.GUID != structure.ItemGuid)
-            {
-                return Replace(structure, stAsset) ? 11 : 12;
-            }
-            structure.InstanceID = sdrop.instanceID;
-            structure.Position = sdrop.model.position;
-            structure.Rotation = sdrop.model.rotation.eulerAngles;
-            structure.Buildable = new UCStructure(sdrop);
-            FillHp(sdrop);
-            StructureManager.changeOwnerAndGroup(sdrop.model, structure.Owner, structure.Group);
-            return 9;
-        }
-        if (!structure.Position.AlmostEquals(sdrop.model.position) || !structure.Rotation.AlmostEquals(sdrop.model.rotation.eulerAngles))
-        {
-            structure.Position = sdrop.model.position;
-            structure.Rotation = sdrop.model.rotation.eulerAngles;
-            structure.Buildable = new UCStructure(sdrop);
-            FillHp(sdrop);
-            StructureManager.changeOwnerAndGroup(sdrop.model, structure.Owner, structure.Group);
-            return 10;
-        }
-        FillHp(sdrop);
-        StructureManager.changeOwnerAndGroup(sdrop.model, structure.Owner, structure.Group);
-        structure.Buildable = new UCStructure(sdrop);
-
-        return 0;
-    }
     private static void FillHp(BarricadeDrop drop)
     {
         ThreadUtil.assertIsGameThread();
-        ushort hp = drop.GetServersideData().barricade.health;
-        if (drop.asset.health > hp)
+        if (drop.asset.health > drop.GetServersideData().barricade.health)
         {
             BarricadeManager.repair(drop.model, drop.asset.health, 1f, Provider.server);
         }
@@ -236,8 +390,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
     private static void FillHp(StructureDrop drop)
     {
         ThreadUtil.assertIsGameThread();
-        ushort hp = drop.GetServersideData().structure.health;
-        if (drop.asset.health > hp)
+        if (drop.asset.health > drop.GetServersideData().structure.health)
         {
             StructureManager.repair(drop.model, drop.asset.health, 1f, Provider.server);
         }
@@ -293,9 +446,12 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             if (a)
             {
                 intx.rebuildState();
-                structure.Metadata = drop.GetServersideData().barricade.state;
             }
         }
+        structure.Metadata = drop.GetServersideData().barricade.state;
+        structure.Position = drop.model.position;
+        structure.Rotation = drop.model.rotation.eulerAngles;
+        structure.InstanceID = drop.instanceID;
 
         return true;
     }
@@ -328,9 +484,11 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                     return false;
                 }
             }
-            structure.Buildable = new UCStructure(drop);
             structure.Position = drop.model.position;
             structure.Rotation = drop.model.rotation.eulerAngles;
+            structure.Metadata = Array.Empty<byte>();
+            structure.InstanceID = drop.instanceID;
+            structure.Buildable = new UCStructure(drop);
             return true;
         }
         return false;
@@ -338,7 +496,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
     private static byte[] GetBarricadeState(BarricadeDrop? drop, ItemBarricadeAsset asset, SavedStructure structure)
     {
         ThreadUtil.assertIsGameThread();
-        byte[] st2 = drop != null ? drop.GetServersideData().barricade.state : (structure.Metadata is null || structure.Metadata.Length == 0 ? Array.Empty<byte>() : structure.Metadata);
+        byte[] st2 = drop != null ? drop.GetServersideData().barricade.state : (structure.Metadata is null || structure.Metadata.Length == 0 ? asset.getState(EItemOrigin.ADMIN) : structure.Metadata);
         byte[] owner = BitConverter.GetBytes(structure.Owner);
         byte[] group = BitConverter.GetBytes(structure.Group);
         byte[] state;
@@ -983,46 +1141,44 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             ItemAsset? asset = Assets.find(item.ItemGuid) as ItemAsset;
             ItemStorageAsset? storage = asset as ItemStorageAsset;
             bool hasPk = pk.IsValid;
-            object[] p = new object[hasPk ? 12 : 11];
-            p[0] = MapScheduler.Current;
-            p[1] = item.ItemGuid.ToString("N");
-            p[2] = item.Position.x;
-            p[3] = item.Position.y;
-            p[4] = item.Position.z;
-            p[5] = item.Rotation.x;
-            p[6] = item.Rotation.y;
-            p[7] = item.Rotation.z;
-            p[8] = item.Owner;
-            p[9] = item.Group;
+            object[] p = new object[hasPk ? 13 : 12];
+            p[0] = ServerRegion.Key;
+            p[1] = MapScheduler.Current;
+            p[2] = item.ItemGuid.ToString("N");
+            p[3] = item.Position.x;
+            p[4] = item.Position.y;
+            p[5] = item.Position.z;
+            p[6] = item.Rotation.x;
+            p[7] = item.Rotation.y;
+            p[8] = item.Rotation.z;
+            p[9] = item.Owner;
+            p[10] = item.Group;
             if (storage != null && item.Metadata != null)
             {
                 byte[] newState = new byte[sizeof(ulong) * 2];
                 Buffer.BlockCopy(item.Metadata, 0, newState, 0, Math.Min(item.Metadata.Length, newState.Length));
-                p[10] = newState;
+                p[11] = newState;
             }
-            else p[10] = item.Metadata ?? Array.Empty<byte>();
+            else p[11] = item.Metadata ?? Array.Empty<byte>();
 
             if (hasPk)
-                p[11] = item.PrimaryKey.Key;
+                p[12] = item.PrimaryKey.Key;
 
             int pk2 = PrimaryKey.NotAssigned;
-            await Sql.QueryAsync($"INSERT INTO `{TABLE_MAIN}` (`{COLUMN_MAP}`,`{COLUMN_GUID}`," +
-                           $"`{COLUMN_POS_X}`,`{COLUMN_POS_Y}`,`{COLUMN_POS_Z}`," +
-                           $"`{COLUMN_ROT_X}`,`{COLUMN_ROT_Y}`,`{COLUMN_ROT_Z}`," +
-                           $"`{COLUMN_OWNER}`,`{COLUMN_GROUP}`,`{COLUMN_METADATA}`"
+            await Sql.QueryAsync($"INSERT INTO `{TABLE_MAIN}` ({SqlTypes.ColumnList(COLUMN_MAP, COLUMN_GUID,
+                           COLUMN_POS_X, COLUMN_POS_Y, COLUMN_POS_Z,
+                           COLUMN_ROT_X, COLUMN_ROT_Y, COLUMN_ROT_Z,
+                           COLUMN_OWNER, COLUMN_GROUP, COLUMN_METADATA)}"
                            + (hasPk ? $",`{COLUMN_PK}`" : string.Empty) +
                            ") VALUES (" +
-                           "@0,@1,@2,@3,@4,@5,@6,@7,@8,@9,@10" + (hasPk ? ",@11" : string.Empty) +
+                           "@1,@2,@3,@4,@5,@6,@7,@8,@9,@10,@11" + (hasPk ? ",LAST_INSERT_ID(@12)" : string.Empty) +
                            ") ON DUPLICATE KEY UPDATE " +
-                           $"`{COLUMN_GUID}`=@1," +
-                           $"`{COLUMN_POS_X}`=@2,`{COLUMN_POS_Y}`=@3,`{COLUMN_POS_Z}`=@4," +
-                           $"`{COLUMN_ROT_X}`=@5,`{COLUMN_ROT_Y}`=@6,`{COLUMN_ROT_Z}`=@7," +
-                           $"`{COLUMN_OWNER}`=@8,`{COLUMN_GROUP}`=@9,`{COLUMN_METADATA}`=@10," +
+                           $"{SqlTypes.ColumnUpdateList(1, COLUMN_MAP, COLUMN_GUID, COLUMN_POS_X, COLUMN_POS_Y, COLUMN_POS_Z,
+                               COLUMN_ROT_X, COLUMN_ROT_Y, COLUMN_ROT_Z, COLUMN_OWNER, COLUMN_GROUP, COLUMN_METADATA)}," +
                            $"`{COLUMN_PK}`=LAST_INSERT_ID(`{COLUMN_PK}`); " +
                            "SET @pk := (SELECT LAST_INSERT_ID() as `pk`); " +
-                           $"DELETE FROM `{TABLE_DISPLAY_DATA}` WHERE `{COLUMN_PK}`=@pk; " +
                            $"DELETE FROM `{TABLE_STRUCTURE_ITEMS}` WHERE `{COLUMN_ITEM_STRUCTURE_PK}`=@pk; " +
-                           $"DELETE FROM `{TABLE_INSTANCES}` WHERE `{COLUMN_ITEM_STRUCTURE_PK}`=@pk; " +
+                           $"DELETE FROM `{TABLE_INSTANCES}` WHERE `{COLUMN_ITEM_STRUCTURE_PK}`=@pk AND `{COLUMN_INSTANCES_REGION_KEY}`=@0; " +
                            "SELECT @pk;",
             p, reader =>
             {
@@ -1030,11 +1186,11 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             }, token).ConfigureAwait(false);
             PrimaryKey structKey = pk2;
             item.PrimaryKey = structKey;
-            if (item.InstanceID > 0)
+            if (item.InstanceID > 0 && item.InstanceID != uint.MaxValue)
             {
                 await Sql.NonQueryAsync($"INSERT INTO `{TABLE_INSTANCES}` " +
-                                        $"(`{COLUMN_INSTANCES_REGION_KEY}`,`{COLUMN_ITEM_STRUCTURE_PK}`,`{COLUMN_INSTANCES_INSTANCE_ID}`)" +
-                                        " VALUES (@0,@1,@2);",
+                                        $"({SqlTypes.ColumnList(COLUMN_INSTANCES_REGION_KEY, COLUMN_ITEM_STRUCTURE_PK, COLUMN_INSTANCES_INSTANCE_ID)})" +
+                                         " VALUES (@0,@1,@2);",
                         new object[] { ServerRegion.Key, pk2, item.InstanceID }, token)
                     .ConfigureAwait(false);
             }
@@ -1043,11 +1199,10 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                 ItemJarData[] data = item.Items ?? Array.Empty<ItemJarData>();
                 if (data.Length > 0)
                 {
-                    StringBuilder builder = new StringBuilder($"INSERT INTO `{TABLE_STRUCTURE_ITEMS}` (" +
-                                                              $"`{COLUMN_ITEM_STRUCTURE_PK}`,`{COLUMN_ITEM_GUID}`," +
-                                                              $"`{COLUMN_ITEM_AMOUNT}`,`{COLUMN_ITEM_QUALITY}`," +
-                                                              $"`{COLUMN_ITEM_POS_X}`,`{COLUMN_ITEM_POS_Y}`," +
-                                                              $"`{COLUMN_ITEM_ROT}`,`{COLUMN_ITEM_METADATA}`) VALUES ", 256);
+                    StringBuilder builder = new StringBuilder($"INSERT INTO `{TABLE_STRUCTURE_ITEMS}` ({SqlTypes.ColumnList(
+                                                              COLUMN_ITEM_STRUCTURE_PK, COLUMN_ITEM_GUID,
+                                                              COLUMN_ITEM_AMOUNT, COLUMN_ITEM_QUALITY, COLUMN_ITEM_POS_X, COLUMN_ITEM_POS_Y,
+                                                              COLUMN_ITEM_ROT, COLUMN_ITEM_METADATA)}) VALUES ", 256);
                     object[] objs = new object[data.Length * 8];
                     for (int i = 0; i < data.Length; ++i)
                     {
@@ -1065,14 +1220,14 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
 
                         builder.Append(')');
 
-                        objs[ind] = structKey.Key;
-                        objs[++ind] = dataPt.Item.ToString("N");
-                        objs[++ind] = dataPt.Amount;
-                        objs[++ind] = dataPt.Quality;
-                        objs[++ind] = dataPt.X;
-                        objs[++ind] = dataPt.Y;
-                        objs[++ind] = dataPt.Rotation;
-                        objs[++ind] = dataPt.Metadata ?? Array.Empty<byte>();
+                        objs[ind] = pk2;
+                        objs[ind + 1] = dataPt.Item.ToString("N");
+                        objs[ind + 2] = dataPt.Amount;
+                        objs[ind + 3] = dataPt.Quality;
+                        objs[ind + 4] = dataPt.X;
+                        objs[ind + 5] = dataPt.Y;
+                        objs[ind + 6] = dataPt.Rotation;
+                        objs[ind + 7] = dataPt.Metadata ?? Array.Empty<byte>();
                     }
                     builder.Append(';');
                     await Sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
@@ -1080,10 +1235,10 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                 if (storage.isDisplay && item.DisplayData.HasValue)
                 {
                     ItemDisplayData disp = item.DisplayData.Value;
-                    await Sql.NonQueryAsync($"INSERT INTO `{TABLE_DISPLAY_DATA}` (" +
-                                            $"`{COLUMN_PK}`," +
-                                            $"`{COLUMN_DISPLAY_SKIN}`,`{COLUMN_DISPLAY_MYTHIC}`,`{COLUMN_DISPLAY_ROT}`," +
-                                            $"`{COLUMN_DISPLAY_TAGS}`,`{COLUMN_DISPLAY_DYNAMIC_PROPS}`) VALUES (@0, @1, @2, @3, @4, @5);",
+                    await Sql.NonQueryAsync($"INSERT INTO `{TABLE_DISPLAY_DATA}` ({SqlTypes.ColumnList(COLUMN_PK, COLUMN_DISPLAY_SKIN, COLUMN_DISPLAY_MYTHIC, COLUMN_DISPLAY_ROT,
+                                            COLUMN_DISPLAY_TAGS, COLUMN_DISPLAY_DYNAMIC_PROPS)}) VALUES (@0, @1, @2, @3, @4, @5) ON DUPLICATE KEY UPDATE " +
+                                            $"{SqlTypes.ColumnUpdateList(1, COLUMN_DISPLAY_SKIN, COLUMN_DISPLAY_MYTHIC, COLUMN_DISPLAY_ROT,
+                                            COLUMN_DISPLAY_TAGS, COLUMN_DISPLAY_DYNAMIC_PROPS)};",
                         new object[]
                         {
                             pk2, disp.Skin, disp.Mythic, disp.Rotation,
@@ -1095,10 +1250,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         }
         else if (pk.IsValid)
         {
-            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_MAIN}` WHERE `{COLUMN_PK}`=@0; " +
-                                    $"DELETE FROM `{TABLE_INSTANCES}` WHERE `{COLUMN_ITEM_STRUCTURE_PK}`=@0;" +
-                                    $"DELETE FROM `{TABLE_STRUCTURE_ITEMS}` WHERE `{COLUMN_ITEM_STRUCTURE_PK}`=@0;" +
-                                    $"DELETE FROM `{TABLE_DISPLAY_DATA}` WHERE `{COLUMN_PK}`=@0;",
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_MAIN}` WHERE `{COLUMN_PK}`=@0;",
                 new object[] { pk.Key }, token).ConfigureAwait(false);
         }
         else throw new ArgumentException("If item is null, pk must have a value to delete the item.", nameof(pk));
@@ -1109,10 +1261,10 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         if (MapScheduler.Current == -1)
             throw new InvalidOperationException("MapScheduler not loaded.");
         List<SavedStructure> str = new List<SavedStructure>(32);
-        await Sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_GUID}`," +
-                             $"`{COLUMN_POS_X}`,`{COLUMN_POS_Y}`,`{COLUMN_POS_Z}`," +
-                             $"`{COLUMN_ROT_X}`,`{COLUMN_ROT_Y}`,`{COLUMN_ROT_Z}`," +
-                             $"`{COLUMN_OWNER}`,`{COLUMN_GROUP}`,`{COLUMN_METADATA}` FROM `{TABLE_MAIN}` " +
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_PK, COLUMN_GUID,
+                             COLUMN_POS_X, COLUMN_POS_Y, COLUMN_POS_Z,
+                             COLUMN_ROT_X, COLUMN_ROT_Y, COLUMN_ROT_Z,
+                             COLUMN_OWNER, COLUMN_GROUP, COLUMN_METADATA)} FROM `{TABLE_MAIN}` " +
                              $"WHERE `{COLUMN_MAP}`=@0;", new object[] { MapScheduler.Current },
             reader =>
             {
@@ -1128,13 +1280,13 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                         Rotation = new Vector3(reader.GetFloat(5), reader.GetFloat(6), reader.GetFloat(7)),
                         Owner = reader.GetUInt64(8),
                         Group = reader.GetUInt64(9),
-                        Metadata = reader.ReadByteArray(10)
+                        Metadata = reader.ReadByteArray(10),
+                        InstanceID = uint.MaxValue
                     });
             }, token).ConfigureAwait(false);
-        List<PrimaryKey>? del = null;
         if (ServerRegion.Key != byte.MaxValue)
         {
-            await Sql.QueryAsync($"SELECT `{COLUMN_ITEM_STRUCTURE_PK}`,`{COLUMN_INSTANCES_INSTANCE_ID}` FROM " +
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_ITEM_STRUCTURE_PK, COLUMN_INSTANCES_INSTANCE_ID)} FROM " +
                                  $"`{TABLE_INSTANCES}` WHERE `{COLUMN_INSTANCES_REGION_KEY}`=@0;",
                 new object[] { ServerRegion.Key }, reader =>
                 {
@@ -1149,9 +1301,8 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                     }
                 }, token).ConfigureAwait(false);
         }
-        await Sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_DISPLAY_SKIN}`,`{COLUMN_DISPLAY_MYTHIC}`," +
-                             $"`{COLUMN_DISPLAY_ROT}`,`{COLUMN_DISPLAY_DYNAMIC_PROPS}`,`{COLUMN_DISPLAY_TAGS}`" +
-                             $" FROM `{TABLE_DISPLAY_DATA}`;", null, reader =>
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_PK, COLUMN_DISPLAY_SKIN, COLUMN_DISPLAY_MYTHIC,
+                             COLUMN_DISPLAY_ROT, COLUMN_DISPLAY_DYNAMIC_PROPS, COLUMN_DISPLAY_TAGS)} FROM `{TABLE_DISPLAY_DATA}`;", null, reader =>
          {
              PrimaryKey pk = reader.GetInt32(0);
              for (int i = 0; i < str.Count; ++i)
@@ -1165,26 +1316,11 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                      return;
                  }
              } 
-             (del ??= new List<PrimaryKey>(2)).Add(pk);
          }, token).ConfigureAwait(false);
-        if (del != null)
-        {
-            StringBuilder sb = new StringBuilder($"DELETE FROM `{TABLE_DISPLAY_DATA}` WHERE `{COLUMN_PK}` IN (", 48);
-            for (int i = 0; i < del.Count; ++i)
-            {
-                if (i != 0)
-                    sb.Append(',');
-                sb.Append(del[i]);
-            }
-
-            sb.Append(");");
-
-            await Sql.NonQueryAsync(sb.ToString(), null, token).ConfigureAwait(false);
-        }
         List<ItemJarData>? itemData = null;
-        await Sql.QueryAsync($"SELECT `{COLUMN_ITEM_PK}`,`{COLUMN_ITEM_STRUCTURE_PK}`,`{COLUMN_ITEM_GUID}`," +
-                             $"`{COLUMN_ITEM_AMOUNT}`,`{COLUMN_ITEM_QUALITY}`,`{COLUMN_ITEM_POS_X}`," +
-                             $"`{COLUMN_ITEM_POS_Y}`,`{COLUMN_ITEM_ROT}`,`{COLUMN_ITEM_METADATA}` FROM `{TABLE_STRUCTURE_ITEMS}`;",
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_ITEM_PK, COLUMN_ITEM_STRUCTURE_PK, COLUMN_ITEM_GUID,
+                             COLUMN_ITEM_AMOUNT, COLUMN_ITEM_QUALITY, COLUMN_ITEM_POS_X,
+                             COLUMN_ITEM_POS_Y, COLUMN_ITEM_ROT, COLUMN_ITEM_METADATA)} FROM `{TABLE_STRUCTURE_ITEMS}`;",
             null, reader =>
             {
                 int pk = reader.GetInt32(0);
@@ -1192,7 +1328,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                 if (!guid.HasValue)
                     L.LogWarning("Invalid item GUID at structure item " + pk + ": \"" + reader.GetString(1) + "\".");
                 else
-                    (itemData ??= new List<ItemJarData>(8)).Add(new ItemJarData(pk, reader.GetInt32(1),
+                    (itemData ??= new List<ItemJarData>(64)).Add(new ItemJarData(pk, reader.GetInt32(1),
                         guid.Value, reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
                         reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(8)));
             }, token).ConfigureAwait(false);
@@ -1212,12 +1348,12 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
     [Obsolete]
     protected override async Task<SavedStructure?> DownloadItem(PrimaryKey pk, CancellationToken token = default)
     {
-        object[] arr = new object[] { pk.Key };
+        object[] arr = { pk.Key };
         SavedStructure? str = null;
-        await Sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_GUID}`," +
-                             $"`{COLUMN_POS_X}`,`{COLUMN_POS_Y}`,`{COLUMN_POS_Z}`," +
-                             $"`{COLUMN_ROT_X}`,`{COLUMN_ROT_Y}`,`{COLUMN_ROT_Z}`," +
-                             $"`{COLUMN_OWNER}`,`{COLUMN_GROUP}`,`{COLUMN_METADATA}`,`{COLUMN_MAP}` " +
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_PK, COLUMN_GUID,
+                             COLUMN_POS_X, COLUMN_POS_Y, COLUMN_POS_Z,
+                             COLUMN_ROT_X, COLUMN_ROT_Y, COLUMN_ROT_Z,
+                             COLUMN_OWNER, COLUMN_GROUP, COLUMN_METADATA)} " +
                              $"FROM `{TABLE_MAIN}` WHERE `{COLUMN_PK}`=@0 LIMIT 1;", arr,
             reader =>
             {
@@ -1227,7 +1363,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                     L.LogWarning("Invalid item GUID at structure " + lpk + ": \"" + reader.GetString(1) + "\".");
                 else
                 {
-                    str = new SavedStructure()
+                    str = new SavedStructure
                     {
                         PrimaryKey = lpk,
                         ItemGuid = guid.Value,
@@ -1244,7 +1380,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             return null;
         if (ServerRegion.Key != byte.MaxValue)
         {
-            await Sql.QueryAsync($"SELECT `{COLUMN_INSTANCES_INSTANCE_ID}` FROM " +
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_INSTANCES_INSTANCE_ID)} FROM " +
                                  $"`{TABLE_INSTANCES}` WHERE `{COLUMN_INSTANCES_REGION_KEY}`=@0 " +
                                  $"AND `{COLUMN_ITEM_STRUCTURE_PK}=@1 LIMIT 1;",
                 new object[] { ServerRegion.Key, arr[0] }, reader =>
@@ -1253,31 +1389,31 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                     str.InstanceID = id;
                 }, token).ConfigureAwait(false);
         }
-        await Sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_DISPLAY_SKIN}`,`{COLUMN_DISPLAY_MYTHIC}`," +
-                             $"`{COLUMN_DISPLAY_ROT}`,`{COLUMN_DISPLAY_DYNAMIC_PROPS}`,`{COLUMN_DISPLAY_TAGS}`" +
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_DISPLAY_SKIN, COLUMN_DISPLAY_MYTHIC,
+                             COLUMN_DISPLAY_ROT, COLUMN_DISPLAY_DYNAMIC_PROPS, COLUMN_DISPLAY_TAGS)}" +
                              $" FROM `{TABLE_DISPLAY_DATA}` WHERE `{COLUMN_PK}`=@0 LIMIT 1;", arr, reader =>
                              {
                                  str.DisplayData = new ItemDisplayData(
-                                     reader.GetInt32(0), reader.GetUInt16(1), reader.GetUInt16(2),
-                                     reader.GetByte(3), reader.IsDBNull(5) ? null : reader.GetString(5),
-                                     reader.IsDBNull(4) ? null : reader.GetString(4));
+                                     pk, reader.GetUInt16(0), reader.GetUInt16(1),
+                                     reader.GetByte(2), reader.IsDBNull(4) ? null : reader.GetString(4),
+                                     reader.IsDBNull(3) ? null : reader.GetString(3));
                                  return true;
                              }, token).ConfigureAwait(false);
         List<ItemJarData>? itemData = null;
-        await Sql.QueryAsync($"SELECT `{COLUMN_ITEM_PK}`,`{COLUMN_ITEM_STRUCTURE_PK}`,`{COLUMN_ITEM_GUID}`," +
-                             $"`{COLUMN_ITEM_AMOUNT}`,`{COLUMN_ITEM_QUALITY}`,`{COLUMN_ITEM_POS_X}`," +
-                             $"`{COLUMN_ITEM_POS_Y}`,`{COLUMN_ITEM_ROT}`,`{COLUMN_ITEM_METADATA}` " +
-                             $"FROM `{TABLE_STRUCTURE_ITEMS}` WHERE `{COLUMN_PK}`=@0;",
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_ITEM_PK, COLUMN_ITEM_GUID,
+                             COLUMN_ITEM_AMOUNT, COLUMN_ITEM_QUALITY, COLUMN_ITEM_POS_X,
+                             COLUMN_ITEM_POS_Y, COLUMN_ITEM_ROT, COLUMN_ITEM_METADATA)} " +
+                             $"FROM `{TABLE_STRUCTURE_ITEMS}` WHERE `{COLUMN_ITEM_STRUCTURE_PK}`=@0;",
             arr, reader =>
             {
                 int lpk = reader.GetInt32(0);
-                Guid? guid = reader.ReadGuidString(2);
+                Guid? guid = reader.ReadGuidString(1);
                 if (!guid.HasValue)
-                    L.LogWarning("Invalid item GUID at structure " + lpk + ": \"" + reader.GetString(1) + "\".");
+                    L.LogWarning("Invalid item GUID at structure " + lpk + ": \"" + pk + "\".");
                 else
-                    (itemData ??= new List<ItemJarData>(8)).Add(new ItemJarData(lpk, reader.GetInt32(1),
-                        guid.Value, reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
-                        reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(8)));
+                    (itemData ??= new List<ItemJarData>(8)).Add(new ItemJarData(lpk, pk,
+                        guid.Value, reader.GetByte(4), reader.GetByte(5), reader.GetByte(6),
+                        reader.GetByte(2), reader.GetByte(3), reader.ReadByteArray(7)));
             }, token).ConfigureAwait(false);
         if (itemData != null)
         {

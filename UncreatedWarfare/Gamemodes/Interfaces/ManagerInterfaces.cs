@@ -11,7 +11,7 @@ public interface IRevives : IGamemode
 public interface IVehicles : IStructureSaving
 {
     Vehicles.VehicleBay VehicleBay { get; }
-    Vehicles.VehicleSpawner VehicleSpawner { get; }
+    Vehicles.VehicleSpawnerOld VehicleSpawner { get; }
     Vehicles.VehicleSigns VehicleSigns { get; }
 }
 public interface IKitRequests : IGamemode

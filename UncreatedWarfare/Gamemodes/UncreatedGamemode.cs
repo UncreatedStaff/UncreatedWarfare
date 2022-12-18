@@ -406,6 +406,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
         ReplaceBarricadesAndStructures();
         Signs.CheckAllSigns();
+        Data.ZoneProvider.Reload();
 
         _hasTimeSynced = false;
         if (_useEventLoop)

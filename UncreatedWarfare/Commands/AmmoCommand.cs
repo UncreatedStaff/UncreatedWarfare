@@ -43,7 +43,7 @@ public class AmmoCommand : AsyncCommand
             {
                 await UCWarfare.ToUpdate();
                 VehicleData vehicleData = data.Item;
-                if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && vehicleData.Items.Length == 0 && (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT))
+                if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && vehicleData.Items.Length == 0 && (vehicleData.Type == VehicleType.LogisticsGround || vehicleData.Type == VehicleType.TransportAir))
                     throw ctx.Reply(T.AmmoAutoSupply);
 
                 bool isInMain = F.IsInMain(vehicle.transform.position);

@@ -11,7 +11,7 @@ using Uncreated.Warfare.Structures;
 
 namespace Uncreated.Warfare.Vehicles;
 
-[SingletonDependency(typeof(VehicleSpawner))]
+[SingletonDependency(typeof(VehicleSpawnerOld))]
 [SingletonDependency(typeof(VehicleBay))]
 [SingletonDependency(typeof(StructureSaver))]
 [SingletonDependency(typeof(Level))]
@@ -96,9 +96,9 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
                     VehicleSign vs = Singleton[i];
                     Data.Singletons.GetSingleton<StructureSaver>()?.RemoveItem(vs.StructureSave);
                     Singleton.Remove(Singleton[i]);
-                    if (VehicleSpawner.Loaded)
+                    if (VehicleSpawnerOld.Loaded)
                     {
-                        foreach (VehicleSpawn spawn in VehicleSpawner.Spawners)
+                        foreach (VehicleSpawn spawn in VehicleSpawnerOld.Spawners)
                         {
                             if (spawn.LinkedSign == Singleton[i])
                             {
@@ -119,9 +119,9 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (VehicleSpawner.Loaded)
+        if (VehicleSpawnerOld.Loaded)
         {
-            foreach (VehicleSpawn spawn in VehicleSpawner.Spawners)
+            foreach (VehicleSpawn spawn in VehicleSpawnerOld.Spawners)
             {
                 if (spawn.Data?.Item != null && (spawn.Data.Item.HasDelayType(DelayType.Flag) || spawn.Data.Item.HasDelayType(DelayType.FlagPercentage)))
                 {
@@ -186,11 +186,11 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
 #pragma warning disable IDE0031
     internal static void TimeSync()
     {
-        if (VehicleSpawner.Loaded)
+        if (VehicleSpawnerOld.Loaded)
         {
-            for (int i = 0; i < VehicleSpawner.Singleton.Count; ++i)
+            for (int i = 0; i < VehicleSpawnerOld.Singleton.Count; ++i)
             {
-                VehicleSpawn spawn = VehicleSpawner.Singleton[i];
+                VehicleSpawn spawn = VehicleSpawnerOld.Singleton[i];
                 if (spawn.Component != null)
                     spawn.Component.TimeSync();
             }
@@ -287,7 +287,7 @@ public class VehicleSign
         else if (SignInteractable == null)
             L.LogWarning("Unable to get interactable of sign " + InstanceId);
 
-        if (!VehicleSpawner.IsRegistered(this.BayInstanceId, out _vehicleBay, this.BayStructureType))
+        if (!VehicleSpawnerOld.IsRegistered(this.BayInstanceId, out _vehicleBay, this.BayStructureType))
         {
             L.LogWarning("Sign not linked: " + this.InstanceId);
         }

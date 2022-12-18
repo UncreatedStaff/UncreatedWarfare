@@ -47,7 +47,7 @@ public static partial class Patches
                                 return;
                             }
                         }
-                        else if (data.Type == EVehicleType.JET)
+                        else if (data.Type == VehicleType.Jet)
                         {
                             if (VehicleBay.CountCrewmen(__instance, data) >= 2)
                             {
@@ -98,7 +98,7 @@ public static partial class Patches
                                     enterer == owner ||
                                     (owner.Squad != null && owner.Squad.Members.Contains(enterer)) ||
                                     (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2) ||
-                                    (data.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(__instance.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, __instance.lockedGroup.m_SteamID) != null);
+                                    (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(__instance.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, __instance.lockedGroup.m_SteamID) != null);
 
                                 if (!canEnterDriverSeat)
                                 {

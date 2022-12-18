@@ -5,6 +5,7 @@ using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -386,7 +387,7 @@ public class UCWarfare : MonoBehaviour
             {
                 if (drop.interactable is InteractableSign sign)
                 {
-                    if (VehicleSpawner.Loaded && VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn))
+                    if (VehicleSpawnerOld.Loaded && VehicleSpawnerOld.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn))
                         spawn.UpdateSign(player);
                     else if (sign.text.StartsWith(Signs.Prefix))
                         Signs.BroadcastSignUpdate(drop);
@@ -1137,4 +1138,42 @@ public class UCWarfareNexus : IModuleNexus
         if (!UCWarfare.IsLoaded) return;
         Unload().Wait();
     }
+}
+
+[Conditional("DEBUG")]
+[AttributeUsage(AttributeTargets.Method, Inherited = true, AllowMultiple = true)]
+internal sealed class OperationTestAttribute : Attribute
+{
+    public string? DisplayName { get; set; }
+    public float? ArgumentSingle { get; }
+    public double? ArgumentDouble { get; }
+    public decimal? ArgumentDecimal { get; }
+    public long? ArgumentInt64 { get; }
+    public ulong? ArgumentUInt64 { get; }
+    public int? ArgumentInt32 { get; }
+    public uint? ArgumentUInt32 { get; }
+    public short? ArgumentInt16 { get; }
+    public ushort? ArgumentUInt16 { get; }
+    public sbyte? ArgumentInt8 { get; }
+    public byte? ArgumentUInt8 { get; }
+    public bool? ArgumentBoolean { get; }
+    public string? ArgumentString { get; }
+    public Type? ArgumentType { get; }
+    public Type[]? IgnoreExceptions { get; set; }
+    /// <summary>Just run it, check exceptions only.</summary>
+    public OperationTestAttribute() { }
+    public OperationTestAttribute(long arg) { ArgumentInt64 = arg; }
+    public OperationTestAttribute(ulong arg) { ArgumentUInt64 = arg; }
+    public OperationTestAttribute(int arg) { ArgumentInt32 = arg; }
+    public OperationTestAttribute(uint arg) { ArgumentUInt32 = arg; }
+    public OperationTestAttribute(short arg) { ArgumentInt16 = arg; }
+    public OperationTestAttribute(ushort arg) { ArgumentUInt16 = arg; }
+    public OperationTestAttribute(sbyte arg) { ArgumentInt8 = arg; }
+    public OperationTestAttribute(byte arg) { ArgumentUInt8 = arg; }
+    public OperationTestAttribute(bool arg) { ArgumentBoolean = arg; }
+    public OperationTestAttribute(float arg) { ArgumentSingle = arg; }
+    public OperationTestAttribute(double arg) { ArgumentDouble = arg; }
+    public OperationTestAttribute(decimal arg) { ArgumentDecimal = arg; }
+    public OperationTestAttribute(string arg) { ArgumentString = arg; }
+    public OperationTestAttribute(Type arg) { ArgumentType = arg; }
 }

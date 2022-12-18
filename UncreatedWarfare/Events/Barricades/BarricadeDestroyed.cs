@@ -40,9 +40,9 @@ public class BarricadeDestroyed : EventState, IBuildableDestroyedEvent
         this.x = x;
         this.y = y;
         this.plant = plant;
-        if (save is not null)
+        _save = save;
+        if (save?.Manager is not null)
         {
-            _save = save;
             save.Manager.WriteWait();
             try
             {

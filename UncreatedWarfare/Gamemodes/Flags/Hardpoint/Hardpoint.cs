@@ -36,7 +36,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     IGameStats,
     ITraits
 {
-    private VehicleSpawner _vehicleSpawner;
+    private VehicleSpawnerOld _vehicleSpawner;
     private VehicleBay _vehicleBay;
     private VehicleSigns _vehicleSigns;
     private FOBManager _fobManager;
@@ -75,7 +75,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     Flag IFlagTeamObjectiveGamemode.ObjectiveTeam2 => Objective;
     int IFlagTeamObjectiveGamemode.ObjectiveT1Index => _objIndex;
     int IFlagTeamObjectiveGamemode.ObjectiveT2Index => _objIndex;
-    public VehicleSpawner VehicleSpawner => _vehicleSpawner;
+    public VehicleSpawnerOld VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
     public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _fobManager;

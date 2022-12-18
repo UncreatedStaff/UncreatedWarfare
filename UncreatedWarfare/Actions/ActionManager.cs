@@ -222,7 +222,7 @@ public class ActionManager : BaseSingleton
         {
             CheckValid = () =>
             {
-                if (!(caller.IsInVehicle && caller.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.HELI_TRANSPORT)))
+                if (!(caller.IsInVehicle && caller.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.TransportAir)))
                 {
                     Tips.TryGiveTip(caller, 0, T.ActionErrorNotInHeli);
                     return false;
@@ -246,11 +246,11 @@ public class ActionManager : BaseSingleton
             return;
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
-            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS)))) ||
+            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.LogisticsGround)))) ||
             p.IsInSameSquadAs(caller));
 
         IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
-            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS))) &&
+            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.LogisticsGround))) &&
             p.Player != caller);
 
         Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesBuild.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, EActionOrigin.CALLER_POSITION, T.SuppliesBuildChat, T.SuppliesBuildToast, squadWide: true)
@@ -289,11 +289,11 @@ public class ActionManager : BaseSingleton
             return;
         IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
-            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS)))) ||
+            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.LogisticsGround)))) ||
             p.IsInSameSquadAs(caller));
 
         IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
-            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS))) &&
+            (p.KitClass == Class.Pilot || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(VehicleType.LogisticsGround))) &&
             p.Player != caller);
 
         Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesAmmo.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_POSITION, T.SuppliesAmmoChat, T.SuppliesAmmoToast, squadWide: true)

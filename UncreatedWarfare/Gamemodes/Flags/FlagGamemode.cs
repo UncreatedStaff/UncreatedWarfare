@@ -76,7 +76,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Data.ZoneProvider.Reload();
         TeamManager.OnReloadFlags();
         AllFlags.Clear();
         AllFlags.Capacity = Data.ZoneProvider.Zones.Count;

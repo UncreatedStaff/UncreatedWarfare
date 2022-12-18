@@ -64,7 +64,7 @@ public class VehicleDestroyed : EventState
             _lastDriver = _instigator = UCPlayer.FromPlayer(vehicle.passengers[0].player.player);
             _lastDriverId = _lastDriver is null ? 0 : _lastDriver.Steam64;
         }
-        if (VehicleSpawner.Loaded && VehicleSpawner.HasLinkedSpawn(_vehicle.instanceID, out _vehicleSpawn))
+        if (VehicleSpawnerOld.Loaded && VehicleSpawnerOld.HasLinkedSpawn(_vehicle.instanceID, out _vehicleSpawn))
             _vehicleSpawnComponent = _vehicleSpawn.Component;
     }
 }

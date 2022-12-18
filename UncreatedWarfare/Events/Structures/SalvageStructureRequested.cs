@@ -33,9 +33,9 @@ public class SalvageStructureRequested : BreakablePlayerEvent, IBuildableDestroy
         this._region = region;
         this._x = x;
         this._y = y;
-        if (save is not null)
+        _save = save;
+        if (save?.Manager is not null)
         {
-            _save = save;
             save.Manager.WriteWait();
             try
             {

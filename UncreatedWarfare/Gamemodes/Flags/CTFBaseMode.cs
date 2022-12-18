@@ -48,7 +48,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     // vars
     protected int _objectiveT1Index;
     protected int _objectiveT2Index;
-    protected VehicleSpawner _vehicleSpawner;
+    protected VehicleSpawnerOld _vehicleSpawner;
     protected VehicleBay _vehicleBay;
     protected VehicleSigns _vehicleSigns;
     protected FOBManager _FOBManager;
@@ -74,7 +74,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     public override bool UseTeamSelector => true;
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
-    public VehicleSpawner VehicleSpawner => _vehicleSpawner;
+    public VehicleSpawnerOld VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
     public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _FOBManager;

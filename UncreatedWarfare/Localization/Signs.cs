@@ -559,9 +559,9 @@ public static class Signs
         {
             get
             {
-                if (_spawn != null || !VehicleSpawner.Loaded)
+                if (_spawn != null || !VehicleSpawnerOld.Loaded)
                     return _spawn;
-                VehicleSpawner.TryGetSpawnFromSign(Sign, out _spawn);
+                VehicleSpawnerOld.TryGetSpawnFromSign(Sign, out _spawn);
                 return _spawn;
             }
         }

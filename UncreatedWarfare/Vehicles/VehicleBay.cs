@@ -10,7 +10,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
@@ -57,14 +56,15 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         else _config.Reload();
         return base.PreLoad(token);
     }
-    public override Task PostLoad(CancellationToken token)
+    public override /*async*/ Task PostLoad(CancellationToken token)
     {
         EventDispatcher.EnterVehicleRequested += OnVehicleEnterRequested;
         EventDispatcher.VehicleSwapSeatRequested += OnVehicleSwapSeatRequested;
         EventDispatcher.ExitVehicleRequested += OnVehicleExitRequested;
         EventDispatcher.ExitVehicle += OnVehicleExit;
         EventDispatcher.VehicleSpawned += OnVehicleSpawned;
-        // await ImportFromJson(Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json")).ConfigureAwait(false);
+        //await ImportFromJson(Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json"), token: token).ConfigureAwait(false);
+        //await base.PostLoad(token);
         return base.PostLoad(token);
     }
     public override Task PostUnload(CancellationToken token)
@@ -550,9 +550,9 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     public void AbandonAllVehicles()
     {
         ThreadUtil.assertIsGameThread();
-        for (int i = 0; i < VehicleSpawner.Singleton.Count; ++i)
+        for (int i = 0; i < VehicleSpawnerOld.Singleton.Count; ++i)
         {
-            VehicleSpawn v = VehicleSpawner.Singleton[i];
+            VehicleSpawn v = VehicleSpawnerOld.Singleton[i];
             if (v.HasLinkedVehicle(out InteractableVehicle veh))
             {
                 ulong t = veh.lockedGroup.m_SteamID.GetTeam();
@@ -569,7 +569,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         ThreadUtil.assertIsGameThread();
         if ((data ??= GetDataSync(vehicle.asset.GUID)) is null)
             return;
-        if (spawn is null && !VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out spawn))
+        if (spawn is null && !VehicleSpawnerOld.HasLinkedSpawn(vehicle.instanceID, out spawn))
             return;
 
         UCPlayer? pl = UCPlayer.FromID(vehicle.lockedOwner.m_SteamID);
@@ -799,7 +799,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                             IsOwnerInVehicle(e.Vehicle, owner) ||
                             (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) ||
                             (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
-                            (data.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(e.Vehicle.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
+                            (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(e.Vehicle.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
 
                         if (!canEnterDriverSeat)
                         {
@@ -855,33 +855,35 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     // TODO
     void IQuestCompletedHandler.OnQuestCompleted(QuestCompleted e) { }
     #region Sql
-    private const string TABLE_MAIN = "vehicle_data";
-    private const string TABLE_UNLOCK_REQUIREMENTS = "vehicle_data_unlock_requirements";
-    private const string TABLE_DELAYS = "vehicle_data_delays";
-    private const string TABLE_ITEMS = "vehicle_data_request_items";
-    private const string TABLE_CREW_SEATS = "vehicle_data_crew_seats";
-    private const string TABLE_BARRICADES = "vehicle_data_barricades";
-    private const string TABLE_BARRICADE_ITEMS = "vehicle_data_barricade_items";
-    private const string TABLE_BARRICADE_DISPLAY_DATA = "vehicle_data_barricade_display_data";
-    private const string TABLE_TRUNK_ITEMS = "vehicle_data_trunk_items";
-    private const string COLUMN_PK = "pk";
-    private const string COLUMN_EXT_PK = "VehicleData";
-    private const string COLUMN_MAP = "Map";
-    private const string COLUMN_FACTION = "Faction";
-    private const string COLUMN_VEHICLE_GUID = "VehicleId";
-    private const string COLUMN_RESPAWN_TIME = "RespawnTime";
-    private const string COLUMN_TICKET_COST = "TicketCost";
-    private const string COLUMN_CREDIT_COST = "CreditCost";
-    private const string COLUMN_REARM_COST = "RearmCost";
-    private const string COLUMN_COOLDOWN = "Cooldown";
-    private const string COLUMN_VEHICLE_TYPE = "VehicleType";
-    private const string COLUMN_BRANCH = "Branch";
-    private const string COLUMN_REQUIRED_CLASS = "RequiredClass";
-    private const string COLUMN_REQUIRES_SQUADLEADER = "RequiresSquadleader";
-    private const string COLUMN_ABANDON_BLACKLISTED = "AbandonBlacklisted";
-    private const string COLUMN_ABANDON_VALUE_LOSS_SPEED = "AbandonValueLossSpeed";
-    private const string COLUMN_ITEM_GUID = "Item";
-    private const string COLUMN_CREW_SEATS_SEAT = "Index";
+    // ReSharper disable InconsistentNaming
+    public const string TABLE_MAIN = "vehicle_data";
+    public const string TABLE_UNLOCK_REQUIREMENTS = "vehicle_data_unlock_requirements";
+    public const string TABLE_DELAYS = "vehicle_data_delays";
+    public const string TABLE_ITEMS = "vehicle_data_request_items";
+    public const string TABLE_CREW_SEATS = "vehicle_data_crew_seats";
+    public const string TABLE_BARRICADES = "vehicle_data_barricades";
+    public const string TABLE_BARRICADE_ITEMS = "vehicle_data_barricade_items";
+    public const string TABLE_BARRICADE_DISPLAY_DATA = "vehicle_data_barricade_display_data";
+    public const string TABLE_TRUNK_ITEMS = "vehicle_data_trunk_items";
+
+    public const string COLUMN_PK = "pk";
+    public const string COLUMN_EXT_PK = "VehicleData";
+    public const string COLUMN_MAP = "Map";
+    public const string COLUMN_FACTION = "Faction";
+    public const string COLUMN_VEHICLE_GUID = "VehicleId";
+    public const string COLUMN_RESPAWN_TIME = "RespawnTime";
+    public const string COLUMN_TICKET_COST = "TicketCost";
+    public const string COLUMN_CREDIT_COST = "CreditCost";
+    public const string COLUMN_REARM_COST = "RearmCost";
+    public const string COLUMN_COOLDOWN = "Cooldown";
+    public const string COLUMN_VEHICLE_TYPE = "VehicleType";
+    public const string COLUMN_BRANCH = "Branch";
+    public const string COLUMN_REQUIRED_CLASS = "RequiredClass";
+    public const string COLUMN_REQUIRES_SQUADLEADER = "RequiresSquadleader";
+    public const string COLUMN_ABANDON_BLACKLISTED = "AbandonBlacklisted";
+    public const string COLUMN_ABANDON_VALUE_LOSS_SPEED = "AbandonValueLossSpeed";
+    public const string COLUMN_ITEM_GUID = "Item";
+    public const string COLUMN_CREW_SEATS_SEAT = "Index";
     private static readonly Schema[] SCHEMAS;
     static VehicleBay()
     {
@@ -926,15 +928,15 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             {
                 Default = "0"
             },
-            new Schema.Column(COLUMN_VEHICLE_TYPE, "varchar(" + VehicleData.VEHICLE_TYPE_MAX_CHAR_LIMIT + ")")
+            new Schema.Column(COLUMN_VEHICLE_TYPE, SqlTypes.Enum<VehicleType>())
             {
-                Default = nameof(EVehicleType.NONE)
+                Default = nameof(VehicleType.None)
             },
-            new Schema.Column(COLUMN_BRANCH, "varchar(" + KitEx.BranchMaxCharLimit + ")")
+            new Schema.Column(COLUMN_BRANCH, SqlTypes.Enum<Branch>())
             {
                 Default = nameof(Branch.Default)
             },
-            new Schema.Column(COLUMN_REQUIRED_CLASS, "varchar(" + KitEx.ClassMaxCharLimit + ")")
+            new Schema.Column(COLUMN_REQUIRED_CLASS, SqlTypes.Enum<Class>())
             {
                 Default = nameof(Class.None)
             },
@@ -958,10 +960,11 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             new Schema.Column(COLUMN_ITEM_GUID, SqlTypes.GUID_STRING)
         }, false, typeof(Guid));
         SCHEMAS[4] = F.GetListSchema<byte>(TABLE_CREW_SEATS, COLUMN_EXT_PK, COLUMN_CREW_SEATS_SEAT, TABLE_MAIN, COLUMN_PK);
-        SCHEMAS[5] = PageItem.GetDefaultSchema(TABLE_TRUNK_ITEMS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, includePage: false);
+        SCHEMAS[5] = PageItem.GetDefaultSchema(TABLE_TRUNK_ITEMS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, true, includePage: false);
         Schema[] vbarrs = VBarricade.GetDefaultSchemas(TABLE_BARRICADES, TABLE_BARRICADE_ITEMS, TABLE_BARRICADE_DISPLAY_DATA, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, includeHealth: false);
         Array.Copy(vbarrs, 0, SCHEMAS, 6, vbarrs.Length);
     }
+    // ReSharper restore InconsistentNaming
 
     [Obsolete]
     protected override async Task AddOrUpdateItem(VehicleData? item, PrimaryKey pk, CancellationToken token = default)
@@ -993,26 +996,12 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         objs[13] = item.AbandonValueLossSpeed;
         if (hasPk)
             objs[14] = pk.Key;
-        await Sql.QueryAsync($"INSERT INTO `{TABLE_MAIN}` (`{COLUMN_MAP}`,`{COLUMN_FACTION}`,`{COLUMN_VEHICLE_GUID}`,`{COLUMN_RESPAWN_TIME}`," +
-                             $"`{COLUMN_TICKET_COST}`,`{COLUMN_CREDIT_COST}`,`{COLUMN_REARM_COST}`,`{COLUMN_COOLDOWN}`," +
-                             $"`{COLUMN_BRANCH}`,`{COLUMN_REQUIRED_CLASS}`,`{COLUMN_VEHICLE_TYPE}`,`{COLUMN_REQUIRES_SQUADLEADER}`," +
-                             $"`{COLUMN_ABANDON_BLACKLISTED}`,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}`" +
-                             (hasPk ? $",`{COLUMN_PK}`" : string.Empty) +
-                             ") VALUES (@0,@1,@2,@3,@4,@5,@6,@7,@8,@9,@10,@11,@12,@13" +
-                             (hasPk ? ",@14" : string.Empty) +
-                             ") ON DUPLICATE KEY UPDATE " +
-                             $"`{COLUMN_MAP}`=@0,`{COLUMN_FACTION}`=@1,`{COLUMN_VEHICLE_GUID}`=@2,`{COLUMN_RESPAWN_TIME}`=@3,`{COLUMN_TICKET_COST}`=@4," +
-                             $"`{COLUMN_CREDIT_COST}`=@5,`{COLUMN_REARM_COST}`=@6,`{COLUMN_COOLDOWN}`=@7,`{COLUMN_BRANCH}`=@8,`{COLUMN_REQUIRED_CLASS}`=@9," +
-                             $"`{COLUMN_VEHICLE_TYPE}`=@10,`{COLUMN_REQUIRES_SQUADLEADER}`=@11,`{COLUMN_ABANDON_BLACKLISTED}`=@12,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}`=@13," +
-                             $"`{COLUMN_PK}`=LAST_INSERT_ID(`{COLUMN_PK}`);" +
-                             "SET @pk := (SELECT LAST_INSERT_ID() as `pk`);" +
-                             $"DELETE FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
-                             $"DELETE FROM `{TABLE_DELAYS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
-                             $"DELETE FROM `{TABLE_ITEMS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
-                             $"DELETE FROM `{TABLE_CREW_SEATS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
-                             $"DELETE FROM `{TABLE_BARRICADES}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
-                             $"DELETE FROM `{TABLE_TRUNK_ITEMS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
-                             "SELECT @pk;",
+        await Sql.QueryAsync(
+            F.BuildInitialInsertQuery(TABLE_MAIN, COLUMN_PK, hasPk,
+                COLUMN_MAP, COLUMN_FACTION, COLUMN_VEHICLE_GUID, COLUMN_RESPAWN_TIME,
+                COLUMN_TICKET_COST, COLUMN_CREDIT_COST, COLUMN_REARM_COST, COLUMN_COOLDOWN,
+                COLUMN_BRANCH, COLUMN_REQUIRED_CLASS, COLUMN_VEHICLE_TYPE, COLUMN_REQUIRES_SQUADLEADER,
+                COLUMN_ABANDON_BLACKLISTED, COLUMN_ABANDON_VALUE_LOSS_SPEED),
             objs, reader =>
             {
                 pk2 = reader.GetInt32(0);
@@ -1024,7 +1013,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         StringBuilder builder = new StringBuilder(128);
         if (item.Delays is { Length: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_DELAYS}` (`{COLUMN_EXT_PK}`,`{Delay.COLUMN_TYPE}`,`{Delay.COLUMN_VALUE}`,`{Delay.COLUMN_GAMEMODE}`) VALUES ");
+            builder.Append(F.StartBuildOtherInsertQueryNoUpdate(TABLE_DELAYS, COLUMN_EXT_PK, Delay.COLUMN_TYPE, Delay.COLUMN_VALUE, Delay.COLUMN_GAMEMODE));
             objs = new object[item.Delays.Length * 4];
             for (int i = 0; i < item.Delays.Length; ++i)
             {
@@ -1043,7 +1032,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
 
         if (item.Items is { Length: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_ITEMS}` (`{COLUMN_EXT_PK}`,`{COLUMN_ITEM_GUID}`) VALUES ");
+            builder.Append(F.StartBuildOtherInsertQueryNoUpdate(TABLE_ITEMS, COLUMN_EXT_PK, COLUMN_ITEM_GUID));
             objs = new object[item.Items.Length * 2];
             for (int i = 0; i < item.Items.Length; ++i)
             {
@@ -1059,7 +1048,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
 
         if (item.CrewSeats is { Length: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_CREW_SEATS}` (`{COLUMN_EXT_PK}`,`{COLUMN_CREW_SEATS_SEAT}`) VALUES ");
+            builder.Append(F.StartBuildOtherInsertQueryNoUpdate(TABLE_CREW_SEATS, COLUMN_EXT_PK, COLUMN_CREW_SEATS_SEAT));
             objs = new object[item.CrewSeats.Length * 2];
             for (int i = 0; i < item.CrewSeats.Length; ++i)
             {
@@ -1075,7 +1064,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
 
         if (item.UnlockRequirements is { Length: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_UNLOCK_REQUIREMENTS}` (`{COLUMN_EXT_PK}`,`{UnlockRequirement.COLUMN_JSON}`) VALUES ");
+            builder.Append(F.StartBuildOtherInsertQueryNoUpdate(TABLE_UNLOCK_REQUIREMENTS, COLUMN_EXT_PK, UnlockRequirement.COLUMN_JSON));
             objs = new object[item.UnlockRequirements.Length * 2];
             using MemoryStream str = new MemoryStream(48);
             for (int i = 0; i < item.UnlockRequirements.Length; ++i)
@@ -1101,9 +1090,9 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (item.Metadata.Barricades != null && item.Metadata.Barricades.Count > 0)
             {
-                builder.Append($"INSERT INTO `{TABLE_BARRICADES}` (`{COLUMN_EXT_PK}`,`{VBarricade.COLUMN_GUID}`," +
-                               $"`{VBarricade.COLUMN_POS_X}`,`{VBarricade.COLUMN_POS_Y}`,`{VBarricade.COLUMN_POS_Z}`," +
-                               $"`{VBarricade.COLUMN_ROT_X}`,`{VBarricade.COLUMN_ROT_Y}`,`{VBarricade.COLUMN_ROT_Z}`,`{VBarricade.COLUMN_METADATA}`) VALUES ");
+                builder.Append(F.StartBuildOtherInsertQueryNoUpdate(TABLE_BARRICADES, COLUMN_EXT_PK, VBarricade.COLUMN_GUID,
+                    VBarricade.COLUMN_POS_X, VBarricade.COLUMN_POS_Y, VBarricade.COLUMN_POS_Z,
+                    VBarricade.COLUMN_ROT_X, VBarricade.COLUMN_ROT_Y, VBarricade.COLUMN_ROT_Z, VBarricade.COLUMN_METADATA));
                 objs = new object[item.Metadata.Barricades.Count * 9 + 1];
                 List<VBarricade>? storages = null;
                 for (int i = 0; i < item.Metadata.Barricades.Count; ++i)
@@ -1112,7 +1101,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     barricade.LinkedKey = pk2;
                     int index = i * 9;
                     objs[index] = pk2;
-                    objs[index + 1] = barricade.BarricadeID.ToByteArray();
+                    objs[index + 1] = barricade.BarricadeID.ToString("N");
                     objs[index + 2] = barricade.PosX;
                     objs[index + 3] = barricade.PosY;
                     objs[index + 4] = barricade.PosZ;
@@ -1142,23 +1131,25 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 objs[objs.Length - 1] = pk2;
                 builder.Append(';');
                 int ind2 = -1;
-                builder.Append($"SELECT `{VBarricade.COLUMN_PK}`,`{VBarricade.COLUMN_GUID}`," +
-                               $"`{VBarricade.COLUMN_POS_X}`,`{VBarricade.COLUMN_POS_Y}`,`{VBarricade.COLUMN_POS_Z}`" +
-                               $" FROM `{TABLE_BARRICADES}` WHERE `{COLUMN_EXT_PK}`=@" + (objs.Length - 1) + ";");
+                builder.Append(F.BuildSelectWhere(TABLE_BARRICADES, COLUMN_EXT_PK, objs.Length - 1,
+                    VBarricade.COLUMN_PK, VBarricade.COLUMN_GUID,
+                    VBarricade.COLUMN_POS_X, VBarricade.COLUMN_POS_Y, VBarricade.COLUMN_POS_Z));
                 await Sql.QueryAsync(builder.ToString(), objs, reader =>
                 {
                     ++ind2;
                     int pk3 = reader.GetInt32(0);
-                    Guid guid = reader.ReadGuid(1);
+                    Guid? guid = reader.ReadGuidString(1);
+                    if (!guid.HasValue)
+                        return;
                     float posx = reader.GetFloat(2);
                     float posy = reader.GetFloat(3);
                     float posz = reader.GetFloat(4);
                     for (int i = ind2; i < item.Metadata.Barricades.Count; ++i)
                     {
                         VBarricade b = item.Metadata.Barricades[i];
-                        if (b.BarricadeID == guid && Mathf.Abs(b.PosX - posx) < 0.05
-                                                  && Mathf.Abs(b.PosY - posy) < 0.05
-                                                  && Mathf.Abs(b.PosZ - posz) < 0.05)
+                        if (b.BarricadeID == guid && Mathf.Abs(b.PosX - posx) < 0.05f
+                                                  && Mathf.Abs(b.PosY - posy) < 0.05f
+                                                  && Mathf.Abs(b.PosZ - posz) < 0.05f)
                         {
                             b.PrimaryKey = pk3;
                             return;
@@ -1167,9 +1158,9 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     for (int i = 0; i < ind2; ++i)
                     {
                         VBarricade b = item.Metadata.Barricades[i];
-                        if (b.BarricadeID == guid && Mathf.Abs(b.PosX - posx) < 0.05
-                                                  && Mathf.Abs(b.PosY - posy) < 0.05
-                                                  && Mathf.Abs(b.PosZ - posz) < 0.05)
+                        if (b.BarricadeID == guid && Mathf.Abs(b.PosX - posx) < 0.05f
+                                                  && Mathf.Abs(b.PosY - posy) < 0.05f
+                                                  && Mathf.Abs(b.PosZ - posz) < 0.05f)
                         {
                             b.PrimaryKey = pk3;
                             return;
@@ -1192,18 +1183,19 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     }
                     if (jars.Count > 0)
                     {
-                        builder.Append($"INSERT INTO `{TABLE_BARRICADE_ITEMS}` (" +
-                                       $"`{VBarricade.COLUMN_ITEM_BARRICADE_PK}`," +
-                                       $"`{VBarricade.COLUMN_ITEM_GUID}`,`{VBarricade.COLUMN_ITEM_AMOUNT}`,`{VBarricade.COLUMN_ITEM_QUALITY}`," +
-                                       $"`{VBarricade.COLUMN_ITEM_POS_X}`,`{VBarricade.COLUMN_ITEM_POS_Y}`,`{VBarricade.COLUMN_ITEM_ROT}`," +
-                                       $"`{VBarricade.COLUMN_ITEM_METADATA}`) VALUES ");
+                        builder.Append(F.StartBuildOtherInsertQueryNoUpdate(TABLE_BARRICADE_ITEMS,
+                            VBarricade.COLUMN_ITEM_BARRICADE_PK,
+                            VBarricade.COLUMN_ITEM_GUID, VBarricade.COLUMN_ITEM_AMOUNT, VBarricade.COLUMN_ITEM_QUALITY,
+                            VBarricade.COLUMN_ITEM_POS_X, VBarricade.COLUMN_ITEM_POS_Y, VBarricade.COLUMN_ITEM_ROT,
+                            VBarricade.COLUMN_ITEM_METADATA
+                        ));
                         objs = new object[jars.Count * 8];
                         for (int i = 0; i < jars.Count; ++i)
                         {
                             ItemJarData data = jars[i];
                             int index = i * 8;
                             objs[index] = data.Structure.Key;
-                            objs[index + 1] = data.Item.ToByteArray();
+                            objs[index + 1] = data.Item.ToString("N");
                             objs[index + 2] = data.Amount;
                             objs[index + 3] = data.Quality;
                             objs[index + 4] = data.X;
@@ -1217,21 +1209,45 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                         await Sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
                         builder.Clear();
                     }
+
+                    if (disp is { Count: > 0 })
+                    {
+                        string[] columns =
+                        {
+                            VBarricade.COLUMN_ITEM_BARRICADE_PK,
+                            VBarricade.COLUMN_DISPLAY_SKIN, VBarricade.COLUMN_DISPLAY_MYTHIC, VBarricade.COLUMN_DISPLAY_ROT,
+                            VBarricade.COLUMN_DISPLAY_TAGS, VBarricade.COLUMN_DISPLAY_DYNAMIC_PROPS
+                        };
+                        builder.Append(F.StartBuildOtherInsertQueryNoUpdate(TABLE_BARRICADE_DISPLAY_DATA, columns));
+                        objs = new object[disp.Count * 6];
+                        for (int i = 0; i < disp.Count; ++i)
+                        {
+                            ItemDisplayData data = disp[i];
+                            int index = i * 6;
+                            objs[index] = data.Key.Key;
+                            objs[index + 1] = data.Skin;
+                            objs[index + 2] = data.Mythic;
+                            objs[index + 3] = data.Rotation;
+                            objs[index + 4] = (object?)data.Tags ?? DBNull.Value;
+                            objs[index + 5] = (object?)data.DynamicProps ?? DBNull.Value;
+                            F.AppendPropertyList(builder, index, 6);
+                        }
+                        builder.Append(F.EndBuildOtherInsertQueryUpdate(columns));
+                        await Sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
+                    }
                 }
             }
             if (item.Metadata.TrunkItems != null && item.Metadata.TrunkItems.Count > 0)
             {
-                builder.Append($"INSERT INTO `{TABLE_TRUNK_ITEMS}` (" +
-                               $"`{COLUMN_EXT_PK}`," +
-                               $"`{PageItem.COLUMN_GUID}`,`{PageItem.COLUMN_X}`,`{PageItem.COLUMN_Y}`," +
-                               $"`{PageItem.COLUMN_ROTATION}`,`{PageItem.COLUMN_AMOUNT}`,`{PageItem.COLUMN_METADATA}`) VALUES ");
+                builder.Append(F.StartBuildOtherInsertQueryNoUpdate(TABLE_TRUNK_ITEMS, COLUMN_EXT_PK,
+                    PageItem.COLUMN_GUID, PageItem.COLUMN_X, PageItem.COLUMN_Y, PageItem.COLUMN_ROTATION, PageItem.COLUMN_AMOUNT, PageItem.COLUMN_METADATA));
                 objs = new object[item.Metadata.TrunkItems.Count * 7];
                 for (int i = 0; i < item.Metadata.TrunkItems.Count; ++i)
                 {
                     PageItem item2 = item.Metadata.TrunkItems[i];
                     int index = i * 7;
                     objs[index] = pk2;
-                    objs[index + 1] = item2.Item.ToSqlParameter();
+                    objs[index + 1] = item2.Item.ToString("N");
                     objs[index + 2] = item2.X;
                     objs[index + 3] = item2.Y;
                     objs[index + 4] = item2.Rotation;
@@ -1278,7 +1294,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     Cooldown = reader.GetFloat(8),
                     Branch = reader.ReadStringEnum(9, Branch.Default),
                     RequiredClass = reader.ReadStringEnum(10, Class.None),
-                    Type = reader.ReadStringEnum(11, EVehicleType.NONE),
+                    Type = reader.ReadStringEnum(11, VehicleType.None),
                     RequiresSL = reader.GetBoolean(12),
                     DisallowAbandons = reader.GetBoolean(13),
                     AbandonValueLossSpeed = reader.GetFloat(14)
@@ -1366,6 +1382,12 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                              $"FROM `{TABLE_TRUNK_ITEMS}` WHERE `{COLUMN_EXT_PK}` " + pkeys, pkeyObjs, reader =>
                              {
                                  int pk = reader.GetInt32(0);
+                                 Guid? guid = reader.ReadGuidString(1);
+                                 if (!guid.HasValue)
+                                 {
+                                     L.LogWarning("Invalid GUID in vbay trunk item " + pk + ": " + reader.GetString(1) + ".");
+                                     return;
+                                 }
                                  for (int i = 0; i < list.Count; ++i)
                                  {
                                      if (list[i].PrimaryKey.Key == pk)
@@ -1373,7 +1395,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                          VehicleData data = list[i];
                                          data.Metadata ??= new MetaSave();
                                          data.Metadata.TrunkItems ??= new List<PageItem>(8);
-                                         PageItem item = new PageItem(reader.ReadGuid(1), reader.GetByte(2), reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(6), reader.GetByte(5), (Page)PlayerInventory.STORAGE);
+                                         PageItem item = new PageItem(guid.Value, reader.GetByte(2), reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(6), reader.GetByte(5), (Page)PlayerInventory.STORAGE);
                                          data.Metadata.TrunkItems.Add(item);
                                          break;
                                      }
@@ -1391,6 +1413,12 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                              {
                                  int pk = reader.GetInt32(0);
                                  int bpk = reader.GetInt32(1);
+                                 Guid? guid = reader.ReadGuidString(2);
+                                 if (!guid.HasValue)
+                                 {
+                                     L.LogWarning("Invalid GUID in vbarricade " + pk + "." + bpk + ": " + reader.GetString(2) + ".");
+                                     return;
+                                 }
                                  for (int i = 0; i < list.Count; ++i)
                                  {
                                      if (list[i].PrimaryKey.Key == pk)
@@ -1398,7 +1426,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                                          VehicleData data = list[i];
                                          data.Metadata ??= new MetaSave();
                                          data.Metadata.Barricades ??= new List<VBarricade>(4);
-                                         VBarricade barricade = new VBarricade(reader.ReadGuid(2), ushort.MaxValue,
+                                         VBarricade barricade = new VBarricade(guid.Value, ushort.MaxValue,
                                              reader.GetFloat(3), reader.GetFloat(4), reader.GetFloat(5),
                                              reader.GetFloat(6), reader.GetFloat(7), reader.GetFloat(8),
                                              reader.ReadByteArray(9))
@@ -1432,7 +1460,15 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 pkeys, pkeyObjs,
                 reader =>
                 {
-                    items.Add(new ItemJarData(reader.GetInt32(0), reader.GetInt32(1), reader.ReadGuid(2),
+                    int pk = reader.GetInt32(0);
+                    int bpk = reader.GetInt32(1);
+                    Guid? guid = reader.ReadGuidString(2);
+                    if (!guid.HasValue)
+                    {
+                        L.LogWarning("Invalid GUID in vbarricade item " + pk + "." + bpk + ": " + reader.GetString(2) + ".");
+                        return;
+                    }
+                    items.Add(new ItemJarData(pk, bpk, guid.Value,
                         reader.GetByte(3),
                         reader.GetByte(4), reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
                         reader.ReadByteArray(8)));
@@ -1497,7 +1533,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     }
 
                     byte[] state = new byte[ct];
-                    int index = 16;
+                    int index = 15;
                     state[++index] = (byte)current.Count;
                     for (int j = 0; j < current.Count; ++j)
                     {
@@ -1585,7 +1621,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     Cooldown = reader.GetFloat(8),
                     Branch = reader.ReadStringEnum(9, Branch.Default),
                     RequiredClass = reader.ReadStringEnum(10, Class.None),
-                    Type = reader.ReadStringEnum(11, EVehicleType.NONE),
+                    Type = reader.ReadStringEnum(11, VehicleType.None),
                     RequiresSL = reader.GetBoolean(12),
                     DisallowAbandons = reader.GetBoolean(13),
                     AbandonValueLossSpeed = reader.GetFloat(14)
@@ -1634,7 +1670,13 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                              {
                                  obj.Metadata ??= new MetaSave();
                                  obj.Metadata.TrunkItems ??= new List<PageItem>(8);
-                                 PageItem item = new PageItem(reader.ReadGuid(1), reader.GetByte(2), reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(6), reader.GetByte(5), (Page)PlayerInventory.STORAGE);
+                                 Guid? guid = reader.ReadGuidString(1);
+                                 if (!guid.HasValue)
+                                 {
+                                     L.LogWarning("Invalid GUID in vbay trunk item " + pk + ": " + reader.GetString(1) + ".");
+                                     return;
+                                 }
+                                 PageItem item = new PageItem(guid.Value, reader.GetByte(2), reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(6), reader.GetByte(5), (Page)PlayerInventory.STORAGE);
                                  obj.Metadata.TrunkItems.Add(item);
                              }, token).ConfigureAwait(false);
         List<object> objs2 = new List<object>(4);
@@ -1647,9 +1689,15 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                              $"FROM `{TABLE_BARRICADES}` WHERE `{COLUMN_EXT_PK}`=@0;", pkeyObj, reader =>
                              {
                                  int bpk = reader.GetInt32(0);
+                                 Guid? guid = reader.ReadGuidString(2);
+                                 if (!guid.HasValue)
+                                 {
+                                     L.LogWarning("Invalid GUID in vbarricade item " + pk.Key + "." + bpk + ": " + reader.GetString(1) + ".");
+                                     return;
+                                 }
                                  obj.Metadata ??= new MetaSave();
                                  obj.Metadata.Barricades ??= new List<VBarricade>(4);
-                                 VBarricade barricade = new VBarricade(reader.ReadGuid(1), reader.GetUInt16(2),
+                                 VBarricade barricade = new VBarricade(guid.Value, reader.GetUInt16(2),
                                      reader.GetFloat(3), reader.GetFloat(4), reader.GetFloat(5),
                                      reader.GetFloat(6), reader.GetFloat(7), reader.GetFloat(8),
                                      reader.ReadByteArray(9))
@@ -1681,7 +1729,15 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             pkeys, pkeyObj,
             reader =>
             {
-                (items ??= new List<ItemJarData>(16)).Add(new ItemJarData(reader.GetInt32(0), reader.GetInt32(1), reader.ReadGuid(2), reader.GetByte(3),
+                int ipk = reader.GetInt32(0);
+                int bpk = reader.GetInt32(1);
+                Guid? guid = reader.ReadGuidString(2);
+                if (!guid.HasValue)
+                {
+                    L.LogWarning("Invalid GUID in vbarricade item " + pk.Key + "." + bpk + "." + ipk + ": " + reader.GetString(1) + ".");
+                    return;
+                }
+                (items ??= new List<ItemJarData>(16)).Add(new ItemJarData(ipk, bpk, guid.Value, reader.GetByte(3),
                     reader.GetByte(4), reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
                     reader.ReadByteArray(8)));
             }, token);

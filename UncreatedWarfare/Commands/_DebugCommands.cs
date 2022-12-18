@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using HarmonyLib;
 using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
@@ -23,6 +24,7 @@ using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Squads.Commander;
 using Uncreated.Warfare.Vehicles;
@@ -1127,7 +1129,7 @@ public class DebugCommand : AsyncCommand
         }
 
         VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
-        if (bay != null && bay.IsLoaded && VehicleSpawner.Loaded)
+        if (bay != null && bay.IsLoaded && VehicleSpawnerOld.Loaded)
         {
             Vehicles.VehicleSpawn? logi;
             await bay.WaitAsync(token).ConfigureAwait(false);
@@ -1136,8 +1138,8 @@ public class DebugCommand : AsyncCommand
                 await UCWarfare.ToUpdate();
                 Vector3 pos = ctx.Caller.Position;
                 logi = bay.Items
-                    .Where(x => x.Item != null && (x.Item.Team == team || x.Item.Team == 0) && x.Item.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT)
-                    .SelectMany(x => VehicleSpawner.Spawners
+                    .Where(x => x.Item != null && (x.Item.Team == team || x.Item.Team == 0) && x.Item.Type is VehicleType.LogisticsGround or VehicleType.TransportAir)
+                    .SelectMany(x => VehicleSpawnerOld.Spawners
                         .Where(y => y.VehicleGuid == x.Item!.VehicleID && y.HasLinkedVehicle(out _) && y.LinkedSign?.SignInteractable != null))
                     .OrderBy(x => (pos - x.LinkedSign!.SignInteractable!.transform.position).sqrMagnitude)
                     .FirstOrDefault();
@@ -1270,6 +1272,176 @@ public class DebugCommand : AsyncCommand
             }
         });
         ctx.Defer();
+    }
+#endif
+
+#if DEBUG
+    private void runtests(CommandInteraction ctx)
+    {
+        ctx.AssertRanByConsole();
+
+        string? typeName = ctx.Get(0);
+        string? methodName = ctx.Get(1);
+        ctx.AssertHelpCheck(0, "/test [type : str] [method : str]");
+        ctx.ReplyString("<#9fa1a6>Running tests (type: " + (typeName ?? "[any]") + ", method: " + (methodName ?? "[any]") + ").");
+        Task.Run(async () =>
+        {
+            try
+            {
+                Type[] types = typeof(UCWarfare).Assembly.GetTypes();
+                for (int i = 0; i < types.Length; ++i)
+                {
+                    Type type = types[i];
+                    if (!string.IsNullOrEmpty(typeName) && !type.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    MethodInfo[] methods = type.GetMethods(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (methods.Length < 0) continue;
+                    bool one = false;
+                    bool isSingleton = false;
+                    foreach (MethodInfo method in methods)
+                    {
+                        if (!string.IsNullOrEmpty(methodName) && !method.Name.Equals(methodName, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        OperationTestAttribute[] attrs = Attribute.GetCustomAttributes(method, typeof(OperationTestAttribute)).Cast<OperationTestAttribute>().ToArray();
+                        if (attrs.Length < 1) continue;
+                        object? target = null;
+                        if (!method.IsStatic)
+                        {
+                            if (!one)
+                            {
+                                isSingleton = typeof(IUncreatedSingleton).IsAssignableFrom(type);
+                                one = true;
+                            }
+                            if (!isSingleton)
+                            {
+                                L.LogWarning("Can't run an instance method on a non-singleton object: " + method.FullDescription() + ".");
+                                continue;
+                            }
+
+                            IUncreatedSingleton? singleton = Data.Singletons.GetSingleton(type);
+                            if (singleton is null)
+                            {
+                                L.LogWarning("Can't find a singleton of type " + type.Name + " to run an instance method on: " + method.FullDescription() + ".");
+                                continue;
+                            }
+
+                            target = singleton;
+                        }
+                        string? disp2 = null;
+                        ParameterInfo[] parameters = method.GetParameters();
+                        for (int a = 0; a < attrs.Length; ++a)
+                        {
+                            OperationTestAttribute attr = attrs[a];
+                            string? disp = attr.DisplayName;
+                            if (disp is null)
+                            {
+                                disp = disp2 ?? method.Name;
+                                if (disp2 is null)
+                                    L.LogDebug("\n[INFO]  " + disp, ConsoleColor.DarkCyan);
+                            }
+                            else if (disp2 is null)
+                            {
+                                L.LogDebug("\n[INFO]  " + disp, ConsoleColor.DarkCyan);
+                                disp2 = disp;
+                            }
+                            object[] @params;
+                            bool cancel = false;
+                            if (parameters.Length != 1)
+                            {
+                                if (parameters.Length == 0)
+                                {
+                                    @params = Array.Empty<object>();
+                                    goto exe;
+                                }
+                                if (parameters.Length == 2)
+                                    cancel = parameters[1].ParameterType == typeof(CancellationToken);
+                                if (!cancel)
+                                {
+                                    L.LogWarning(" 🗴 Test method " + disp + " \"" + method.FullDescription() + "\" does not have a valid signature for test #" + a + ".");
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                cancel = parameters[0].ParameterType == typeof(CancellationToken);
+                            }
+                            if (attr.ArgumentInt64.HasValue) @params = new object[] { attr.ArgumentInt64.Value };
+                            else if (attr.ArgumentUInt64.HasValue) @params = new object[] { attr.ArgumentUInt64.Value };
+                            else if (attr.ArgumentInt32.HasValue) @params = new object[] { attr.ArgumentInt32.Value };
+                            else if (attr.ArgumentUInt32.HasValue) @params = new object[] { attr.ArgumentUInt32.Value };
+                            else if (attr.ArgumentInt16.HasValue) @params = new object[] { attr.ArgumentInt16.Value };
+                            else if (attr.ArgumentUInt16.HasValue) @params = new object[] { attr.ArgumentUInt16.Value };
+                            else if (attr.ArgumentInt8.HasValue) @params = new object[] { attr.ArgumentInt8.Value };
+                            else if (attr.ArgumentUInt8.HasValue) @params = new object[] { attr.ArgumentUInt8.Value };
+                            else if (attr.ArgumentSingle.HasValue) @params = new object[] { attr.ArgumentSingle.Value };
+                            else if (attr.ArgumentDouble.HasValue) @params = new object[] { attr.ArgumentDouble.Value };
+                            else if (attr.ArgumentDecimal.HasValue) @params = new object[] { attr.ArgumentDecimal.Value };
+                            else if (attr.ArgumentBoolean.HasValue) @params = new object[] { attr.ArgumentBoolean.Value };
+                            else if (attr.ArgumentString != null) @params = new object[] { attr.ArgumentString };
+                            else if (attr.ArgumentType != null) @params = new object[] { attr.ArgumentType };
+                            else
+                            {
+                                @params = Array.Empty<object>();
+                                goto exe;
+                            }
+
+                            if (cancel)
+                                Util.AddToArray(ref @params!, CancellationToken.None);
+
+                            Type type1 = @params[0].GetType();
+                            if (!type1.IsAssignableFrom(parameters[0].ParameterType))
+                            {
+                                L.LogWarning(" 🗴 Test method " + disp + " \"" + method.FullDescription() + "\" does not have a valid signature for test #" + a +
+                                             ": " + method.ReturnType.Name + " (" + type1.Name + ").");
+                                continue;
+                            }
+                            exe:
+                            try
+                            {
+                                object? result = method.Invoke(target, @params);
+                                if (result is Task task && !task.IsCompleted)
+                                {
+                                    await task.ConfigureAwait(false);
+                                    Type taskType = task.GetType();
+                                    if (taskType.IsGenericType)
+                                    {
+                                        result = taskType.GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(task);
+                                    }
+                                    if (result != null)
+                                        L.Log(" ✓ " + disp + " test " + a + " completed async with result \"" + result + "\".", ConsoleColor.Green);
+                                    else
+                                        L.Log(" ✓ " + disp + " test " + a + " completed async.", ConsoleColor.Green);
+                                }
+                                else if (result != null)
+                                {
+                                    L.Log(" ✓ " + disp + " test " + a + " completed with result \"" + result + "\".", ConsoleColor.Green);
+                                }
+                                else
+                                {
+                                    L.Log(" ✓ " + disp + " test " + a + " completed.", ConsoleColor.Green);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                if (ex is OperationCanceledException)
+                                    L.LogWarning(" " + disp + " " + method.FullDescription() + " test " + a + " was cancelled.");
+                                else
+                                {
+                                    L.LogError(" " + disp + " " + method.FullDescription() + " test " + a + " failed with exception:");
+                                    L.LogError(ex);
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error running tests:");
+                L.LogError(ex);
+            }
+        });
     }
 #endif
 }

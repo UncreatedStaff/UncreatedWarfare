@@ -40,9 +40,9 @@ public class DamageStructureRequested : BreakableEvent, IBuildableDestroyedEvent
         this._x = x;
         this._y = y;
         PendingDamage = pendingTotalDamage;
-        if (save is not null)
+        _save = save;
+        if (save?.Manager is not null)
         {
-            _save = save;
             save.Manager.WriteWait();
             try
             {

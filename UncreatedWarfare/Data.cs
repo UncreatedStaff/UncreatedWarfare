@@ -2,6 +2,7 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -9,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.Homebase.Unturned.Warfare;
 using Uncreated.Networking;
@@ -26,6 +28,7 @@ using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Uncreated.Warfare;
 
@@ -138,6 +141,42 @@ public static class Data
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
     internal static StaticGetter<uint> GetItemManagerInstanceCount;
+    [OperationTest(DisplayName = "Fast Kits Check")]
+    [Conditional("DEBUG")]
+    [UsedImplicitly]
+    private static void TestFastKits()
+    {
+        Assert.IsTrue(UseFastKits);
+    }
+    [OperationTest(DisplayName = "Colored Console Check")]
+    [Conditional("DEBUG")]
+    [UsedImplicitly]
+    private static void TestColoredConsole()
+    {
+        Assert.IsNotNull(OutputToConsoleMethod);
+    }
+    [OperationTest(DisplayName = "RPC Check")]
+    [Conditional("DEBUG")]
+    [UsedImplicitly]
+    private static void TestRPCs()
+    {
+        Assert.IsNotNull(SendUpdateBarricadeState);
+        Assert.IsNotNull(SendDestroyItem);
+        Assert.IsNotNull(SendChangeText);
+        Assert.IsNotNull(SendMultipleBarricades);
+        Assert.IsNotNull(SendEffectClearAll);
+        Assert.IsNotNull(SendChatIndividual);
+    }
+    [OperationTest(DisplayName = "Generated Getters and Setters Check")]
+    [Conditional("DEBUG")]
+    [UsedImplicitly]
+    private static void TestGettersAndSetters()
+    {
+        Assert.IsNotNull(SetPrivateStance);
+        Assert.IsNotNull(SetOwnerHasInventory);
+        Assert.IsNotNull(GetItemManagerInstanceCount);
+        Assert.IsNotNull(ReplicateStance);
+    }
     public static bool IsInitialSyncRegistering { get; private set; } = true;
     public static WarfareSQL AdminSql => RemoteSQL ?? DatabaseManager;
 
@@ -234,6 +273,7 @@ public static class Data
         SendChatIndividual       = Util.GetRPC<ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>, ChatManager>("SendChatEntry", true)!;
         SendEffectClearAll       = Util.GetRPC<ClientStaticMethod, EffectManager>("SendEffectClearAll", true)!;
         SendDestroyItem          = Util.GetRPC<ClientStaticMethod<byte, byte, uint, bool>, ItemManager>("SendDestroyItem", true)!;
+        SendUpdateBarricadeState = Util.GetRPC<ClientInstanceMethod<byte[]>, BarricadeDrop>("SendUpdateState");
         SendInventory            = Util.GetRPC<ClientInstanceMethod, PlayerInventory>("SendInventory");
         SendWearShirt            = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearShirt");
         SendWearPants            = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearPants");
@@ -242,7 +282,6 @@ public static class Data
         SendWearVest             = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearVest");
         SendWearMask             = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearMask");
         SendWearGlasses          = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearGlasses");
-        SendUpdateBarricadeState = Util.GetRPC<ClientInstanceMethod<byte[]>, BarricadeDrop>("SendUpdateState");
         UseFastKits = true;
         if (SendWearShirt is null || SendWearPants is null || SendWearHat is null || SendWearBackpack is null || SendWearVest is null || SendWearMask is null || SendWearGlasses is null || SendInventory is null)
         {

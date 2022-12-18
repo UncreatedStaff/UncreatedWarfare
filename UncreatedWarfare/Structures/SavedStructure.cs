@@ -39,7 +39,7 @@ public sealed class SavedStructure : IListItem, ITranslationArgument
     public IBuildable? Buildable { get; internal set; }
     public override string ToString()
     {
-        return $"{ItemGuid:N} ({Assets.find(ItemGuid)?.FriendlyName ?? "null"}): Instance ID: {InstanceID}; Position: {Position:F0}; Rotation: {Rotation:F0}; Owner: {Owner}; Group: {Group}; State: \"{StateString}\".";
+        return $"{ItemGuid:N} ({Assets.find(ItemGuid)?.FriendlyName ?? "null"}): InstID: {InstanceID}; Pos: {Position:F0}; Rot: {Rotation:F0}; Owner: {Owner}; Group: {Group}.";
     }
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {

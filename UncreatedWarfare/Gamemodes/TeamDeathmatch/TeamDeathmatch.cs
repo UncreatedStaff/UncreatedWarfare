@@ -23,7 +23,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
 {
     protected TraitManager _traitManager;
     protected ActionManager _actionManager;
-    protected VehicleSpawner _vehicleSpawner;
+    protected VehicleSpawnerOld _vehicleSpawner;
     protected VehicleBay _vehicleBay;
     protected VehicleSigns _vehicleSigns;
     protected FOBManager _FOBManager;
@@ -43,7 +43,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public override bool EnableAMC => true;
     public override bool ShowXPUI => true;
     public override bool ShowOFPUI => true;
-    public VehicleSpawner VehicleSpawner => _vehicleSpawner;
+    public VehicleSpawnerOld VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
     public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _FOBManager;

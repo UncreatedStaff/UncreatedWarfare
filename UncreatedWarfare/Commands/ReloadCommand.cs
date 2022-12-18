@@ -51,13 +51,9 @@ public class ReloadCommand : AsyncCommand
         }
         else if (module.Equals("flags", StringComparison.OrdinalIgnoreCase))
         {
-            if (Data.Is<IFlagRotation>())
-            {
-                ReloadFlags();
-                ctx.Reply(T.ReloadedFlags);
-                ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "FLAGS");
-            }
-            else ctx.Reply(T.ReloadFlagsInvalidGamemode);
+            ReloadFlags();
+            ctx.Reply(T.ReloadedFlags);
+            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "FLAGS");
         }
         else if (module.Equals("permissions", StringComparison.OrdinalIgnoreCase))
         {

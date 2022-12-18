@@ -48,7 +48,7 @@ public class Insurgency :
     IGameStats,
     ITraits
 {
-    private VehicleSpawner _vehicleSpawner;
+    private VehicleSpawnerOld _vehicleSpawner;
     private VehicleBay _vehicleBay;
     private VehicleSigns _vehicleSigns;
     private FOBManager _fobManager;
@@ -76,7 +76,7 @@ public class Insurgency :
     public override bool UseTeamSelector => true;
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
-    public VehicleSpawner VehicleSpawner => _vehicleSpawner;
+    public VehicleSpawnerOld VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
     public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _fobManager;

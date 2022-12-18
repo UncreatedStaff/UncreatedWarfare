@@ -41,9 +41,9 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
         this.y = y;
         this._ragdoll = ragoll;
         this._wasPickedUp = wasPickedUp;
-        if (save is not null)
+        _save = save;
+        if (save?.Manager is not null)
         {
-            _save = save;
             save.Manager.WriteWait();
             try
             {

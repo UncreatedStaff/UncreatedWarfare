@@ -28,7 +28,7 @@ public class AbandonCommand : AsyncCommand
 
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
         VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
-        if (bay == null || !bay.IsLoaded || !VehicleSpawner.Loaded)
+        if (bay == null || !bay.IsLoaded || !VehicleSpawnerOld.Loaded)
             throw ctx.SendGamemodeError();
 
         if (!TeamManager.IsInMain(ctx.Caller))
@@ -55,7 +55,7 @@ public class AbandonCommand : AsyncCommand
                 if ((float)vehicle.fuel / vehicle.asset.fuel < 0.9f)
                     throw ctx.Reply(T.AbandonNeedsFuel, vehicle);
 
-                if (!VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
+                if (!VehicleSpawnerOld.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
                     throw ctx.Reply(T.AbandonNoSpace, vehicle);
 
                 bay.AbandonVehicle(vehicle, vehicleData.Item, spawn, true);

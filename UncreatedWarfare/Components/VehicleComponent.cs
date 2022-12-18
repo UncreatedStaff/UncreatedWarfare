@@ -72,7 +72,7 @@ public class VehicleComponent : MonoBehaviour
 
         _countermeasures = new List<Transform>();
     }
-    public bool IsType(EVehicleType type) => Data?.Item != null && Data.Item.Type == type;
+    public bool IsType(VehicleType type) => Data?.Item != null && Data.Item.Type == type;
 
     [UsedImplicitly]
     private void OnDestroy()

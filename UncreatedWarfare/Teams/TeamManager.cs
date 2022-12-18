@@ -20,7 +20,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Teams;
 
-public delegate void PlayerTeamDelegate(SteamPlayer player, ulong team);
+public delegate void PlayerTeamDelegate(UCPlayer player, ulong team);
 public static class TeamManager
 {
     private static TeamConfig _data;
@@ -111,6 +111,11 @@ public static class TeamManager
         new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "cnunarmed", @"https://i.imgur.com/Yns89Yk.png")
         {
             PrimaryKey = 5,
+            DefaultShirt = "2c1a9c62b30a49e7bda2ef6a2727eb8c",
+            DefaultBackpack = "5ac771b71bb7496bb2042d3e8cc2015c",
+            DefaultVest = "b74265e7af1c4d52866907e489206f86",
+            DefaultPants = "f3a1a4f1f333486480716c42cd5471e9",
+            DefaultMask = "5df6ed112bb7430e86f19c30403ebacb",
             TMProSpriteIndex = 5
         },
         new FactionInfo(FactionInfo.USMC, "US Marine Corps", "USMC", "U.S.M.C.", "004481", null, @"https://i.imgur.com/MO9nPmf.png")
@@ -220,8 +225,8 @@ public static class TeamManager
     private static FactionInfo? _t3Faction;
     private static Vector3 _lobbySpawn;
     internal static readonly Dictionary<ulong, byte> PlayerBaseStatus = new Dictionary<ulong, byte>();
-    public static event PlayerTeamDelegate OnPlayerEnteredMainBase;
-    public static event PlayerTeamDelegate OnPlayerLeftMainBase;
+    public static event PlayerTeamDelegate? OnPlayerEnteredMainBase;
+    public static event PlayerTeamDelegate? OnPlayerLeftMainBase;
     public const ulong Team1ID = 1;
     public const ulong Team2ID = 2;
     public const ulong AdminID = 3;
@@ -785,49 +790,60 @@ public static class TeamManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        for (int i = 0; i < Provider.clients.Count; i++)
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            SteamPlayer pl = Provider.clients[i];
-            if (Team1Main.IsInside(pl.player.transform.position))
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            Vector3 pos = pl.Position;
+            if (Team1Main.IsInside(pos))
             {
-                if (PlayerBaseStatus.TryGetValue(pl.playerID.steamID.m_SteamID, out byte x))
+                if (PlayerBaseStatus.TryGetValue(pl.Steam64, out byte x))
                 {
                     if (x != 1)
                     {
-                        PlayerBaseStatus[pl.playerID.steamID.m_SteamID] = 1;
-                        OnPlayerLeftMainBase?.Invoke(pl, x);
-                        OnPlayerEnteredMainBase?.Invoke(pl, 1);
+                        PlayerBaseStatus[pl.Steam64] = 1;
+                        InvokeOnLeftMain(pl, x);
+                        InvokeOnEnterMain(pl, 1ul);
                     }
                 }
                 else
                 {
-                    PlayerBaseStatus.Add(pl.playerID.steamID.m_SteamID, 1);
-                    OnPlayerEnteredMainBase?.Invoke(pl, 1);
+                    PlayerBaseStatus.Add(pl.Steam64, 1);
+                    InvokeOnEnterMain(pl, 1ul);
                 }
             }
-            else if (Team2Main.IsInside(pl.player.transform.position))
+            else if (Team2Main.IsInside(pos))
             {
-                if (PlayerBaseStatus.TryGetValue(pl.playerID.steamID.m_SteamID, out byte x))
+                if (PlayerBaseStatus.TryGetValue(pl.Steam64, out byte x))
                 {
                     if (x != 2)
                     {
-                        PlayerBaseStatus[pl.playerID.steamID.m_SteamID] = 2;
-                        OnPlayerLeftMainBase?.Invoke(pl, x);
-                        OnPlayerEnteredMainBase?.Invoke(pl, 2);
+                        PlayerBaseStatus[pl.Steam64] = 2;
+                        InvokeOnLeftMain(pl, x);
+                        InvokeOnEnterMain(pl, 2ul);
                     }
                 }
                 else
                 {
-                    PlayerBaseStatus.Add(pl.playerID.steamID.m_SteamID, 2);
-                    OnPlayerEnteredMainBase?.Invoke(pl, 2);
+                    PlayerBaseStatus.Add(pl.Steam64, 2);
+                    InvokeOnEnterMain(pl, 2ul);
                 }
             }
-            else if (PlayerBaseStatus.TryGetValue(pl.playerID.steamID.m_SteamID, out byte x))
+            else if (PlayerBaseStatus.TryGetValue(pl.Steam64, out byte x))
             {
-                PlayerBaseStatus.Remove(pl.playerID.steamID.m_SteamID);
-                OnPlayerLeftMainBase?.Invoke(pl, x);
+                PlayerBaseStatus.Remove(pl.Steam64);
+                InvokeOnLeftMain(pl, x);
             }
         }
+    }
+    private static void InvokeOnLeftMain(UCPlayer player, ulong team)
+    {
+        player.SendChat(T.LeftMain, GetFaction(team));
+        OnPlayerLeftMainBase?.Invoke(player, team);
+    }
+    private static void InvokeOnEnterMain(UCPlayer player, ulong team)
+    {
+        player.SendChat(T.EnteredMain, GetFaction(team));
+        OnPlayerEnteredMainBase?.Invoke(player, team);
     }
     internal static void OnConfigReload()
     {
@@ -1262,6 +1278,8 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     public uint? TMProSpriteIndex;
     [JsonIgnore]
     public PrimaryKey PrimaryKey { get; set; }
+    [JsonIgnore]
+    public string Sprite => "<sprite index=" + (TMProSpriteIndex.HasValue ? TMProSpriteIndex.Value.ToString(Data.AdminLocale) : "0") + ">";
     [JsonPropertyName("factionId")]
     public string FactionId
     {

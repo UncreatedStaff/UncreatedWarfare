@@ -410,8 +410,8 @@ public static class Points
                 Signs.UpdateKitSigns(player, null);
                 Signs.UpdateLoadoutSigns(player);
 
-                if (VehicleSpawner.Loaded)
-                    VehicleSpawner.UpdateSigns(player);
+                if (VehicleSpawnerOld.Loaded)
+                    VehicleSpawnerOld.UpdateSigns(player);
 
                 if (TraitManager.Loaded)
                     Signs.UpdateTraitSigns(player, null);
@@ -807,8 +807,8 @@ public static class Points
         if (TraitManager.Loaded)
             Signs.UpdateTraitSigns(caller, null);
         
-        if (VehicleSpawner.Loaded && VehicleSigns.Loaded)
-            VehicleSpawner.UpdateSigns(caller);
+        if (VehicleSpawnerOld.Loaded && VehicleSigns.Loaded)
+            VehicleSpawnerOld.UpdateSigns(caller);
 
         Signs.UpdateKitSigns(caller, null);
         Signs.UpdateLoadoutSigns(caller);
@@ -874,7 +874,7 @@ public static class Points
 
             if (vehicleWasEnemy)
             {
-                Translation<EVehicleType> message = e.Component.IsAircraft ? T.XPToastAircraftDestroyed : T.XPToastVehicleDestroyed;
+                Translation<VehicleType> message = e.Component.IsAircraft ? T.XPToastAircraftDestroyed : T.XPToastVehicleDestroyed;
 
                 Asset asset = Assets.find(e.Component.LastItem);
                 string reason = string.Empty;
@@ -948,7 +948,7 @@ public static class Points
             }
             else if (vehicleWasFriendly)
             {
-                Translation<EVehicleType> message = e.Component.IsAircraft ? T.XPToastFriendlyAircraftDestroyed : T.XPToastFriendlyVehicleDestroyed;
+                Translation<VehicleType> message = e.Component.IsAircraft ? T.XPToastFriendlyAircraftDestroyed : T.XPToastFriendlyVehicleDestroyed;
                 Chat.Broadcast(T.VehicleTeamkilled, e.Instigator, e.Vehicle.asset);
 
                 ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
@@ -992,7 +992,7 @@ public static class Points
             */
 
             Data.Reporter?.OnVehicleDied(e.OwnerId,
-                    VehicleSpawner.HasLinkedSpawn(e.Vehicle.instanceID, out Vehicles.VehicleSpawn spawn)
+                    VehicleSpawnerOld.HasLinkedSpawn(e.Vehicle.instanceID, out Vehicles.VehicleSpawn spawn)
                         ? spawn.InstanceId
                         : uint.MaxValue, e.InstigatorId, e.Vehicle.asset.GUID, e.Component.LastItem,
                     e.Component.LastDamageOrigin, vehicleWasFriendly);
@@ -1023,7 +1023,7 @@ public class XPConfig : JSONConfigData
     public int ResupplyFriendlyXP;
     public int RepairVehicleXP;
     public int UnloadSuppliesXP;
-    public Dictionary<EVehicleType, int> VehicleDestroyedXP;
+    public Dictionary<VehicleType, int> VehicleDestroyedXP;
 
     public float XPMultiplier;
 
@@ -1054,22 +1054,22 @@ public class XPConfig : JSONConfigData
         UnloadSuppliesXP = 20;
 
 
-        VehicleDestroyedXP = new Dictionary<EVehicleType, int>()
+        VehicleDestroyedXP = new Dictionary<VehicleType, int>()
         {
-            {EVehicleType.HUMVEE, 25},
-            {EVehicleType.TRANSPORT, 20},
-            {EVehicleType.LOGISTICS, 25},
-            {EVehicleType.SCOUT_CAR, 30},
-            {EVehicleType.APC, 60},
-            {EVehicleType.IFV, 70},
-            {EVehicleType.MBT, 100},
-            {EVehicleType.HELI_TRANSPORT, 30},
-            {EVehicleType.AA, 20},
-            {EVehicleType.HMG, 20},
-            {EVehicleType.ATGM, 20},
-            {EVehicleType.MORTAR, 20},
-            {EVehicleType.HELI_ATTACK, 150},
-            {EVehicleType.JET, 200},
+            {VehicleType.Humvee, 25},
+            {VehicleType.TransportGround, 20},
+            {VehicleType.LogisticsGround, 25},
+            {VehicleType.ScoutCar, 30},
+            {VehicleType.APC, 60},
+            {VehicleType.IFV, 70},
+            {VehicleType.MBT, 100},
+            {VehicleType.TransportAir, 30},
+            {VehicleType.AA, 20},
+            {VehicleType.HMG, 20},
+            {VehicleType.ATGM, 20},
+            {VehicleType.Mortar, 20},
+            {VehicleType.AttackHeli, 150},
+            {VehicleType.Jet, 200},
         };
 
         XPMultiplier = 1f;

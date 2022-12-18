@@ -1211,19 +1211,7 @@ public static class F
                     state = oldSt;
                     break;
             }
-            bool diff = state.Length != oldSt.Length;
-            if (!diff && state != oldSt)
-            {
-                for (int i = 0; i < state.Length; ++i)
-                {
-                    if (state[i] != oldSt[i])
-                    {
-                        diff = true;
-                        break;
-                    }
-                }
-            }
-            if (diff)
+            if (!state.CompareBytes(oldSt))
             {
                 BarricadeManager.updateReplicatedState(drop.model, state, state.Length);
             }
@@ -1754,5 +1742,63 @@ public static class F
                 token = other2;
             }
         }
+    }
+
+    /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>[,`<paramref name="columnPk"/>`]) VALUES (parameters[,LAST_INSERT_ID(@pk)]) ON DUPLICATE KEY UPDATE (<paramref name="columns"/>,`<paramref name="columnPk"/>`=LAST_INSERT_ID(`<paramref name="columnPk"/>`);<br/>SET @pk := (SELECT LAST_INSERT_ID() as `pk`);<br/>SELECT @pk</summary>
+    public static string BuildInitialInsertQuery(string table, string columnPk, bool hasPk, params string[] columns)
+    {
+        return "INSERT INTO `" + table + "` (" + SqlTypes.ColumnList(columns) +
+            (hasPk ? $",`{columnPk}`" : string.Empty) +
+            ") VALUES (" + SqlTypes.ParameterList(0, columns.Length) +
+            (hasPk ? ",LAST_INSERT_ID(@" + columns.Length.ToString(Data.AdminLocale) + ")" : string.Empty) +
+            ") ON DUPLICATE KEY UPDATE " +
+            SqlTypes.ColumnUpdateList(0, columns) +
+            $",`{columnPk}`=LAST_INSERT_ID(`{columnPk}`);" +
+            "SET @pk := (SELECT LAST_INSERT_ID() as `pk`);" +
+            "SELECT @pk;";
+    }
+    /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>) VALUES (parameters);</summary>
+    public static string BuildOtherInsertQueryNoUpdate(string table, params string[] columns)
+    {
+        return $"INSERT INTO `{table}` (" +
+               SqlTypes.ColumnList(columns) +
+               ") VALUES (" + SqlTypes.ParameterList(0, columns.Length) + ");";
+    }
+    /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>) VALUES </summary>
+    public static string StartBuildOtherInsertQueryNoUpdate(string table, params string[] columns)
+    {
+        return $"INSERT INTO `{table}` (" + SqlTypes.ColumnList(columns) + ") VALUES ";
+    }
+    /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>) VALUES (parameters) ON DUPLICATE KEY UPDATE (<paramref name="columns"/> without first column);</summary>
+    /// <remarks>Assumes pk is first column.</remarks>
+    public static string BuildOtherInsertQueryUpdate(string table, params string[] columns)
+    {
+        return $"INSERT INTO `{table}` (" +
+               SqlTypes.ColumnList(columns) +
+               ") VALUES (" + SqlTypes.ParameterList(0, columns.Length) + ") ON DUPLICATE KEY UPDATE " + 
+               SqlTypes.ColumnUpdateList(1, 1, columns) + ";";
+    }
+    /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>) VALUES (parameters) ON DUPLICATE KEY UPDATE (<paramref name="columns"/> without first column);</summary>
+    /// <remarks>Assumes pk is first column.</remarks>
+    public static string EndBuildOtherInsertQueryUpdate(params string[] columns)
+    {
+        return " ON DUPLICATE KEY UPDATE " + SqlTypes.ColumnUpdateList(1, 1, columns) + ";";
+    }
+    /// <summary>SELECT <paramref name="columns"/> FROM `<paramref name="table"/>` WHERE `<paramref name="checkColumnEquals"/>`=@<paramref name="parameter"/>;</summary>
+    public static string BuildSelectWhere(string table, string checkColumnEquals, int parameter, params string[] columns)
+    {
+        return "SELECT " + SqlTypes.ColumnList(columns) +
+               $" FROM `{table}` WHERE `{checkColumnEquals}`=@" + parameter.ToString(Data.AdminLocale) + ";";
+    }
+    /// <summary>SELECT <paramref name="columns"/> FROM `<paramref name="table"/>` WHERE `<paramref name="checkColumnEquals"/>`=@<paramref name="parameter"/> LIMIT 1;</summary>
+    public static string BuildSelectWhereLimit1(string table, string checkColumnEquals, int parameter, params string[] columns)
+    {
+        return "SELECT " + SqlTypes.ColumnList(columns) +
+               $" FROM `{table}` WHERE `{checkColumnEquals}`=@" + parameter.ToString(Data.AdminLocale) + " LIMIT 1;";
+    }
+    /// <summary>SELECT <paramref name="columns"/> FROM `<paramref name="table"/>`;</summary>
+    public static string BuildSelect(string table, params string[] columns)
+    {
+        return "SELECT " + SqlTypes.ColumnList(columns) + $" FROM `{table}`;";
     }
 }

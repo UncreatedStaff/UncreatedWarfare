@@ -67,7 +67,7 @@ public class ClearCommand : Command
     }
     public static void WipeVehicles()
     {
-        if (VehicleSpawner.Loaded)
+        if (VehicleSpawnerOld.Loaded)
         {
             VehicleBay.DeleteAllVehiclesFromWorld();
         }
@@ -79,8 +79,8 @@ public class ClearCommand : Command
     public static void WipeVehiclesAndRespawn()
     {
         WipeVehicles();
-        if (VehicleSpawner.Loaded)
-            Task.Run(() => Util.TryWrap(VehicleSpawner.RespawnAllVehicles()));
+        if (VehicleSpawnerOld.Loaded)
+            Task.Run(() => Util.TryWrap(VehicleSpawnerOld.RespawnAllVehicles()));
     }
     public static void ClearItems()
     {

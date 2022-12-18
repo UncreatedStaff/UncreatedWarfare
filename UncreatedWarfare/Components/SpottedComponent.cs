@@ -19,7 +19,7 @@ public class SpottedComponent : MonoBehaviour
     public Guid EffectGUID { get; private set; }
     public EffectAsset? Effect { get; private set; }
     public ESpotted? Type { get; private set; }
-    public EVehicleType? VehicleType { get; private set; }
+    public VehicleType? VehicleType { get; private set; }
     /// <summary>Player who spotted the object.</summary>
     /// <remarks>May not always be online or have a value at all.</remarks>
     public UCPlayer? CurrentSpotter { get; private set; }
@@ -79,79 +79,79 @@ public class SpottedComponent : MonoBehaviour
         else
             L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + EffectGUID);
     }
-    public void Initialize(EVehicleType type)
+    public void Initialize(VehicleType type)
     {
         CurrentSpotter = null;
         IsLaserTarget = VehicleData.IsGroundVehicle(type);
 
         switch (type)
         {
-            case EVehicleType.AA:
+            case Vehicles.VehicleType.AA:
                 EffectGUID = new Guid("0e90e68eff624456b76fee28a4875d14");
                 _defaultTimer = 240;
                 _frequency = 1f;
                 break;
-            case EVehicleType.APC:
+            case Vehicles.VehicleType.APC:
                 EffectGUID = new Guid("31d1404b7b3a465b8631308cdb48e3b2");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 break;
-            case EVehicleType.ATGM:
+            case Vehicles.VehicleType.ATGM:
                 EffectGUID = new Guid("b20a7d914f92492fb1588f7baac80239");
                 _defaultTimer = 240;
                 _frequency = 1f;
                 break;
-            case EVehicleType.HELI_ATTACK:
+            case Vehicles.VehicleType.AttackHeli:
                 EffectGUID = new Guid("3f2c6776ba484f8ea443719161ec6ce5");
                 _defaultTimer = 15;
                 _frequency = 0.5f;
                 break;
-            case EVehicleType.HMG:
+            case Vehicles.VehicleType.HMG:
                 EffectGUID = new Guid("2315e6ed970542499fec1b06df87ffd2");
                 _defaultTimer = 240;
                 _frequency = 1f;
                 break;
-            case EVehicleType.HUMVEE:
+            case Vehicles.VehicleType.Humvee:
                 EffectGUID = new Guid("99a84b82f9bd433891fdb99e80394bf3");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 break;
-            case EVehicleType.IFV:
+            case Vehicles.VehicleType.IFV:
                 EffectGUID = new Guid("f2c29856b4f64146afd9872ab528c242");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 break;
-            case EVehicleType.JET:
+            case Vehicles.VehicleType.Jet:
                 EffectGUID = new Guid("08f2cc6ed558459ea2caf3477b40df64");
                 _defaultTimer = 10;
                 _frequency = 0.5f;
                 break;
-            case EVehicleType.MBT:
+            case Vehicles.VehicleType.MBT:
                 EffectGUID = new Guid("983c6510c13042bf983e81f49cffca39");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 break;
-            case EVehicleType.MORTAR:
+            case Vehicles.VehicleType.Mortar:
                 EffectGUID = new Guid("c377810f849c4c7d84391b491406918b");
                 _defaultTimer = 240;
                 _frequency = 1f;
                 break;
-            case EVehicleType.SCOUT_CAR:
+            case Vehicles.VehicleType.ScoutCar:
                 EffectGUID = new Guid("b0937aff90b94a588b70bc96ece49f53");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 break;
-            case EVehicleType.HELI_TRANSPORT:
+            case Vehicles.VehicleType.TransportAir:
                 EffectGUID = new Guid("91b9f175b84849268d861eb0f0567788");
                 _defaultTimer = 15;
                 _frequency = 0.5f;
                 break;
-            case EVehicleType.LOGISTICS:
+            case Vehicles.VehicleType.LogisticsGround:
                 EffectGUID = new Guid("fa226268e87b4ec89664eca5b22b4d3d");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 break;
-            case EVehicleType.TRANSPORT:
+            case Vehicles.VehicleType.TransportGround:
                 EffectGUID = new Guid("fa226268e87b4ec89664eca5b22b4d3d");
                 _defaultTimer = 30;
                 _frequency = 0.5f;

@@ -116,6 +116,6 @@ public static class UCVehicleManager
         return vehicles.FirstOrDefault(v =>
             v.lockedGroup.m_SteamID == team &&
             bay.GetDataSync(v.asset.GUID) is { } vehicleData &&
-            vehicleData.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT);
+            vehicleData.Type is VehicleType.LogisticsGround or VehicleType.TransportAir);
     }
 }

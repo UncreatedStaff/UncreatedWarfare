@@ -172,9 +172,9 @@ public class RequestCommand : AsyncCommand
             if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.RequestVehicle, out Cooldown cooldown, vehicle.id))
                 throw ctx.Reply(T.RequestVehicleCooldown, cooldown);
 
-            if (VehicleSpawner.Loaded) // check if an owned vehicle is nearby
+            if (VehicleSpawnerOld.Loaded) // check if an owned vehicle is nearby
             {
-                foreach (VehicleSpawn spawn in VehicleSpawner.Spawners)
+                foreach (VehicleSpawn spawn in VehicleSpawnerOld.Spawners)
                 {
                     if (spawn is not null && spawn.HasLinkedVehicle(out InteractableVehicle veh))
                     {
@@ -249,7 +249,7 @@ public class RequestCommand : AsyncCommand
 
         VehicleManager.ServerSetVehicleLock(vehicle, ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
 
-        if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
+        if (VehicleSpawnerOld.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
         {
             VehicleBayComponent? comp = spawn.Component;
             if (comp != null)

@@ -1435,10 +1435,10 @@ internal static class T
     public static readonly Translation XPToastResuppliedTeammate = new Translation("RESUPPLIED TEAMMATE", TranslationFlags.UnityUI);
     public static readonly Translation XPToastRepairedVehicle = new Translation("REPAIRED VEHICLE", TranslationFlags.UnityUI);
     public static readonly Translation XPToastFOBRepairedVehicle = new Translation("FOB REPAIRED VEHICLE", TranslationFlags.UnityUI);
-    public static readonly Translation<EVehicleType> XPToastVehicleDestroyed = new Translation<EVehicleType>("{0} DESTROYED", TranslationFlags.UnityUI, UPPERCASE);
-    public static readonly Translation<EVehicleType> XPToastAircraftDestroyed = new Translation<EVehicleType>("{0} SHOT DOWN", TranslationFlags.UnityUI, UPPERCASE);
-    public static readonly Translation<EVehicleType> XPToastFriendlyVehicleDestroyed = new Translation<EVehicleType>("FRIENDLY {0} DESTROYED", TranslationFlags.UnityUI, UPPERCASE);
-    public static readonly Translation<EVehicleType> XPToastFriendlyAircraftDestroyed = new Translation<EVehicleType>("FRIENDLY {0} SHOT DOWN", TranslationFlags.UnityUI, UPPERCASE);
+    public static readonly Translation<VehicleType> XPToastVehicleDestroyed = new Translation<VehicleType>("{0} DESTROYED", TranslationFlags.UnityUI, UPPERCASE);
+    public static readonly Translation<VehicleType> XPToastAircraftDestroyed = new Translation<VehicleType>("{0} SHOT DOWN", TranslationFlags.UnityUI, UPPERCASE);
+    public static readonly Translation<VehicleType> XPToastFriendlyVehicleDestroyed = new Translation<VehicleType>("FRIENDLY {0} DESTROYED", TranslationFlags.UnityUI, UPPERCASE);
+    public static readonly Translation<VehicleType> XPToastFriendlyAircraftDestroyed = new Translation<VehicleType>("FRIENDLY {0} SHOT DOWN", TranslationFlags.UnityUI, UPPERCASE);
     public static readonly Translation XPToastTransportingPlayers = new Translation("TRANSPORTING PLAYERS", TranslationFlags.UnityUI);
     public static readonly Translation XPToastAceArmorRefund = new Translation("ACE ARMOR SHARE", TranslationFlags.UnityUI);
 
@@ -1540,7 +1540,7 @@ internal static class T
     public static readonly Translation TipPlaceBunker = new Translation("Build a <#a5c3d9>FOB BUNKER</color> so that your team can spawn.", TranslationFlags.UnityUI);
     public static readonly Translation TipUnloadSupplies = new Translation("<#d9c69a>DROP SUPPLIES</color> onto the FOB.", TranslationFlags.UnityUI);
     public static readonly Translation<IPlayer> TipHelpBuild = new Translation<IPlayer>("<#d9c69a>{0} needs help building!", TranslationFlags.UnityUI, UCPlayer.COLOR_NICK_NAME_FORMAT);
-    public static readonly Translation<EVehicleType> TipLogisticsVehicleResupplied = new Translation<EVehicleType>("Your <#009933>{0}</color> has been auto resupplied.", TranslationFlags.UnityUI, UPPERCASE);
+    public static readonly Translation<VehicleType> TipLogisticsVehicleResupplied = new Translation<VehicleType>("Your <#009933>{0}</color> has been auto resupplied.", TranslationFlags.UnityUI, UPPERCASE);
     #endregion
 
     #region Zone Command

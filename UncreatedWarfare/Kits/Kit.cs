@@ -973,7 +973,7 @@ public class PageItem : IItemJar, IItem, IKitItem
     public const string COLUMN_PAGE = "Page";
     public const string COLUMN_AMOUNT = "Amount";
     public const string COLUMN_METADATA = "Metadata";
-    public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool includePage = true, bool oneToOne = false, bool hasPk = false)
+    public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool guidString, bool includePage = true, bool oneToOne = false, bool hasPk = false)
     {
         if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Foreign key column may not be the same as \"" + COLUMN_PK + "\".", nameof(fkColumn));
@@ -1001,7 +1001,7 @@ public class PageItem : IItemJar, IItem, IKitItem
             ForeignKeyColumn = mainPkColumn,
             ForeignKeyTable = mainTable
         };
-        columns[++index] = new Schema.Column(COLUMN_GUID, SqlTypes.GUID);
+        columns[++index] = new Schema.Column(COLUMN_GUID, guidString ? SqlTypes.GUID_STRING : SqlTypes.GUID);
         columns[++index] = new Schema.Column(COLUMN_X, SqlTypes.BYTE);
         columns[++index] = new Schema.Column(COLUMN_Y, SqlTypes.BYTE);
         columns[++index] = new Schema.Column(COLUMN_ROTATION, SqlTypes.BYTE);

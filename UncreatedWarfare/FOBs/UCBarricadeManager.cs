@@ -13,7 +13,7 @@ public static class UCBarricadeManager
     internal static readonly List<RegionCoordinate> RegionBuffer = new List<RegionCoordinate>(48);
     public static BarricadeDrop? GetSignFromInteractable(InteractableSign sign)
         => BarricadeManager.FindBarricadeByRootTransform(sign.transform);
-    public static BarricadeDrop? GetBarricadeFromPosition(Vector3 pos, float tolerance = 0.05f)
+    public static BarricadeDrop? GetBarricadeFromPosition(Guid guid, Vector3 pos, float tolerance = 0.05f)
     {
         if (Regions.tryGetCoordinate(pos, out byte x, out byte y))
         {
@@ -22,8 +22,9 @@ public static class UCBarricadeManager
             {
                 for (int i = 0; i < region.drops.Count; ++i)
                 {
-                    if (region.drops[i].model.position == pos)
-                        return region.drops[i];
+                    BarricadeDrop drop = region.drops[i];
+                    if (drop.asset.GUID == guid && drop.model.position == pos)
+                        return drop;
                 }
             }
             else
@@ -32,6 +33,7 @@ public static class UCBarricadeManager
                 for (int i = 0; i < region.drops.Count; i++)
                 {
                     BarricadeDrop drop = region.drops[i];
+                    if (drop.asset.GUID != guid) continue;
                     Vector3 pos2 = drop.model.position - pos;
                     if (pos2.x > -tolerance && pos2.x < tolerance &&
                         pos2.y > -tolerance && pos2.y < tolerance &&
@@ -44,24 +46,27 @@ public static class UCBarricadeManager
         }
         return null;
     }
-    public static StructureDrop? GetStructureFromPosition(Vector3 pos, float tolerance = 0.05f)
+    public static StructureDrop? GetStructureFromPosition(Guid guid, Vector3 pos, float tolerance = 0.05f)
     {
         if (Regions.tryGetCoordinate(pos, out byte x, out byte y))
         {
             StructureRegion region = StructureManager.regions[x, y];
             if (tolerance == 0f)
             {
-                foreach (StructureDrop drop in region.drops)
+                for (int i = 0; i < region.drops.Count; i++)
                 {
-                    if (drop.model.position == pos)
+                    StructureDrop drop = region.drops[i];
+                    if (drop.asset.GUID == guid && drop.model.position == pos)
                         return drop;
                 }
             }
             else
             {
                 tolerance = tolerance < 0 ? -tolerance : tolerance;
-                foreach (StructureDrop drop in region.drops)
+                for (int i = 0; i < region.drops.Count; i++)
                 {
+                    StructureDrop drop = region.drops[i];
+                    if (drop.asset.GUID != guid) continue;
                     Vector3 pos2 = drop.model.position - pos;
                     if (pos2.x > -tolerance && pos2.x < tolerance &&
                         pos2.y > -tolerance && pos2.y < tolerance &&
