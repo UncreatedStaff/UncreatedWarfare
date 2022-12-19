@@ -1322,7 +1322,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         player = (info.player == null ? null : UCPlayer.FromPlayer(info.player))!;
         return player != null && player.IsOnline;
     }
-    public void LogAction(EActionLogType type, string? data = null)
+    public void LogAction(ActionLogType type, string? data = null)
     {
         ActionLogger.Add(type, data, CallerID);
     }

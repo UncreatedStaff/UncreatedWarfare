@@ -65,14 +65,23 @@ internal static class PatchUtil
             L.LogError(ex);
         }
     }
-    internal static void PatchMethod(MethodInfo original, MethodInfo? prefix = null, MethodInfo? postfix = null, MethodInfo? transpiler = null, MethodInfo? finalizer = null)
+    internal static void PatchMethod(MethodInfo? original, MethodInfo? prefix = null, MethodInfo? postfix = null, MethodInfo? transpiler = null, MethodInfo? finalizer = null)
+    {
+        bool fail = false;
+        PatchMethod(original, ref fail, prefix, postfix, transpiler, finalizer);
+    }
+    internal static void PatchMethod(MethodInfo? original, ref bool fail, MethodInfo? prefix = null, MethodInfo? postfix = null, MethodInfo? transpiler = null, MethodInfo? finalizer = null)
     {
         if ((prefix is null && postfix is null && transpiler is null && finalizer is null))
+        {
+            fail = true;
             return;
+        }
         if (original is null)
         {
             MethodInfo m = prefix ?? postfix ?? transpiler ?? finalizer!;
             L.LogError("Failed to find original method for patch " + m.FullDescription() + ".");
+            fail = true;
             return;
         }
 
@@ -88,6 +97,7 @@ internal static class PatchUtil
         {
             L.LogError("Error patching " + original.FullDescription());
             L.LogError(ex);
+            fail = true;
         }
     }
 }

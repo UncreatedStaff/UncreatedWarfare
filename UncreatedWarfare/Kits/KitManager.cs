@@ -28,7 +28,7 @@ using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Kits;
-
+// todo add delays to kits
 public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync
 {
     private static KitManager? _km;
@@ -1366,7 +1366,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         SetTextNoLock(loadout, displayName);
         kit = await AddOrUpdate(loadout, token).ConfigureAwait(false);
 
-        ActionLogger.Add(EActionLogType.CREATE_KIT, loadoutName, fromPlayer);
+        ActionLogger.Add(ActionLogType.CREATE_KIT, loadoutName, fromPlayer);
 
         return (kit, MessageContext.CODE_SUCCESS);
     }
@@ -1414,7 +1414,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 ctx.Reply(T.RequestKitLimited, allowedPlayers);
                 return;
             }
-            ctx.LogAction(EActionLogType.REQUEST_KIT, $"Loadout #{loadoutId}: {loadout.Item.Id}, Team {team}, Class: {Localization.TranslateEnum(loadout.Item.Class, 0)}");
+            ctx.LogAction(ActionLogType.REQUEST_KIT, $"Loadout #{loadoutId}: {loadout.Item.Id}, Team {team}, Class: {Localization.TranslateEnum(loadout.Item.Class, 0)}");
 
             if (!await GrantKitRequest(ctx, loadout, token).ThenToUpdate(token))
                 throw ctx.SendUnknownError();
@@ -1521,7 +1521,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     else throw ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
                 }
             }
-            ctx.LogAction(EActionLogType.REQUEST_KIT, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
+            ctx.LogAction(ActionLogType.REQUEST_KIT, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
 
             if (!await GrantKitRequest(ctx, proxy, token).ThenToUpdate(token))
                 throw ctx.SendUnknownError();
@@ -1583,7 +1583,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
 
             if (!await GiveAccess(kit, ctx.Caller, KitAccessType.Credits, token).ThenToUpdate(token))
                 throw ctx.SendUnknownError();
-            ctx.LogAction(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Id + " FOR " + kit.CreditCost + " CREDITS");
+            ctx.LogAction(ActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Id + " FOR " + kit.CreditCost + " CREDITS");
             L.Log(ctx.Caller.Name.PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Id);
         }
         finally
@@ -2854,7 +2854,7 @@ public static class KitEx
                     if (proxy.Item != null)
                     {
                         await (state ? KitManager.GiveAccess(proxy, player, type) : KitManager.RemoveAccess(proxy, player)).ConfigureAwait(false);
-                        ActionLogger.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.AdminLocale) + 
+                        ActionLogger.Add(ActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.AdminLocale) + 
                                                                            (state ? (" GIVEN ACCESS TO " + kit + ", REASON: " + type) : 
                                                                            (" DENIED ACCESS TO " + kit + ".")), admin);
                         UCPlayer? onlinePlayer = UCPlayer.FromID(player);
@@ -2894,7 +2894,7 @@ public static class KitEx
                     if (proxy?.Item != null)
                     {
                         await (state ? KitManager.GiveAccess(proxy, player, type) : KitManager.RemoveAccess(proxy, player)).ConfigureAwait(false);
-                        ActionLogger.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.AdminLocale) +
+                        ActionLogger.Add(ActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.AdminLocale) +
                             (state ? (" GIVEN ACCESS TO " + kit + ", REASON: " + type) :
                                 (" DENIED ACCESS TO " + kit + ".")), admin);
                         UCPlayer? onlinePlayer = UCPlayer.FromID(player);

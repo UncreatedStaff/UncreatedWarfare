@@ -36,9 +36,8 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     IGameStats,
     ITraits
 {
-    private VehicleSpawnerOld _vehicleSpawner;
+    private VehicleSpawner _vehicleSpawner;
     private VehicleBay _vehicleBay;
-    private VehicleSigns _vehicleSigns;
     private FOBManager _fobManager;
     private KitManager _kitManager;
     private ReviveManager _reviveManager;
@@ -75,9 +74,8 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     Flag IFlagTeamObjectiveGamemode.ObjectiveTeam2 => Objective;
     int IFlagTeamObjectiveGamemode.ObjectiveT1Index => _objIndex;
     int IFlagTeamObjectiveGamemode.ObjectiveT2Index => _objIndex;
-    public VehicleSpawnerOld VehicleSpawner => _vehicleSpawner;
+    public VehicleSpawner VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
-    public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _fobManager;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
@@ -97,7 +95,6 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         AddSingletonRequirement(ref _vehicleBay);
         AddSingletonRequirement(ref _fobManager);
         AddSingletonRequirement(ref _structureSaver);
-        AddSingletonRequirement(ref _vehicleSigns);
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
@@ -209,17 +206,17 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             case 2ul:
                 L.LogDebug("Owner Changed: " + _objectiveOwner + " for " + Objective.Name + ".");
                 FactionInfo faction = TeamManager.GetFaction(_objectiveOwner);
-                ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + faction.GetName(L.Default));
+                ActionLogger.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + faction.GetName(L.Default));
                 Chat.Broadcast(T.HardpointObjectiveStateCaptured, Objective, faction);
                 break;
             case 3ul:
                 L.LogDebug("Contested: " + Objective.Name + ".");
-                ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + "CONTESTED");
+                ActionLogger.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + "CONTESTED");
                 Chat.Broadcast(T.HardpointObjectiveStateContested, Objective);
                 break;
             default:
                 L.LogDebug("Cleared: " + Objective.Name + ".");
-                ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + "CLEAR");
+                ActionLogger.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + "CLEAR");
                 if (oldState is 1ul or 2ul)
                     Chat.Broadcast(T.HardpointObjectiveStateLost, Objective, TeamManager.GetFaction(oldState));
                 else

@@ -372,7 +372,7 @@ public class DebugCommand : AsyncCommand
         else
             zones.AddRange(fg.Rotation.Select(x => x.ZoneData));
         ctx.ReplyString("Picture has to generate, wait a few seconds then check " + Path.Combine(Data.Paths.FlagStorage, "zonearea.png") + ".");
-        ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "ZONEAREA");
+        ctx.LogAction(ActionLogType.BUILD_ZONE_MAP, "ZONEAREA");
         ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, path, range, drawIn, drawAngles, true);
     }
     private void drawzone(CommandInteraction ctx)
@@ -396,7 +396,7 @@ public class DebugCommand : AsyncCommand
             zoneName = flag.Name;
         }
         List<Zone> zones = new List<Zone>(1) { zone };
-        ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "DRAWZONE");
+        ctx.LogAction(ActionLogType.BUILD_ZONE_MAP, "DRAWZONE");
         ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, false, true, false, true, true, Path.Combine(Data.Paths.FlagStorage, "zonerange_" + zoneName));
     }
     private void drawgraph(CommandInteraction ctx)
@@ -405,7 +405,7 @@ public class DebugCommand : AsyncCommand
 
         ctx.AssertGamemode(out IFlagRotation fg);
 
-        ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "DRAWGRAPH");
+        ctx.LogAction(ActionLogType.BUILD_ZONE_MAP, "DRAWGRAPH");
         ZoneDrawing.DrawZoneMap(fg.LoadedFlags, fg.Rotation, null);
     }
     private void rotation(CommandInteraction ctx)

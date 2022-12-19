@@ -38,7 +38,7 @@ public class TraitCommand : Command
                     throw ctx.Reply(T.TraitNotFound, trait);
 
                 TraitManager.GiveTrait(ctx.Caller, data);
-                ctx.LogAction(EActionLogType.GIVE_TRAIT, data.TypeName);
+                ctx.LogAction(ActionLogType.GIVE_TRAIT, data.TypeName);
                 ctx.Defer();
             }
             else throw ctx.SendCorrectUsage("/trait <give|get> <trait...>");
@@ -60,7 +60,7 @@ public class TraitCommand : Command
                     {
                         Trait t = ctx.Caller.ActiveTraits[i];
                         Object.Destroy(t);
-                        ctx.LogAction(EActionLogType.REVOKE_TRAIT, data.TypeName + " - Active for " + Mathf.CeilToInt(Time.realtimeSinceStartup - t.StartTime).GetTimeFromSeconds(L.Default));
+                        ctx.LogAction(ActionLogType.REVOKE_TRAIT, data.TypeName + " - Active for " + Mathf.CeilToInt(Time.realtimeSinceStartup - t.StartTime).GetTimeFromSeconds(L.Default));
                         throw ctx.Reply(T.TraitRemoved, data);
                     }
                 }
@@ -83,7 +83,7 @@ public class TraitCommand : Command
             if (ct == 0)
                 throw ctx.Reply(T.NoTraitsToClear);
             ctx.Caller.ActiveTraits.Clear();
-            ctx.LogAction(EActionLogType.CLEAR_TRAITS, ct.ToString(Data.AdminLocale) + " trait(s) cleared.");
+            ctx.LogAction(ActionLogType.CLEAR_TRAITS, ct.ToString(Data.AdminLocale) + " trait(s) cleared.");
             ctx.Reply(T.TraitsCleared, ct);
         }
         else if (ctx.MatchParameter(0, "set"))
@@ -102,7 +102,7 @@ public class TraitCommand : Command
                     switch (result)
                     {
                         case ESetFieldResult.SUCCESS:
-                            ctx.LogAction(EActionLogType.SET_TRAIT_PROPERTY, $"{data.TypeName} - SET " + property.ToUpper() + " >> " + value.ToUpper());
+                            ctx.LogAction(ActionLogType.SET_TRAIT_PROPERTY, $"{data.TypeName} - SET " + property.ToUpper() + " >> " + value.ToUpper());
                             ctx.Reply(T.TraitSetProperty, data, property, value);
                             Signs.UpdateTraitSigns(null, data);
                             TraitManager.Singleton.Save();

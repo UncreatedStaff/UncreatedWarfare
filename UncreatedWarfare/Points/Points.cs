@@ -187,7 +187,7 @@ public static class Points
             if (player != null)
                 player.CachedCredits = currentAmount;
 
-            ActionLogger.Add(EActionLogType.CREDITS_CHANGED, oldamt + " >> " + currentAmount, parameters.Steam64);
+            ActionLogger.Add(ActionLogType.CREDITS_CHANGED, oldamt + " >> " + currentAmount, parameters.Steam64);
 
             if (player != null && player.IsOnline && !player.HasUIHidden && !Data.Gamemode.EndScreenUp)
             {
@@ -385,7 +385,7 @@ public static class Points
                 if (player == null)
                     oldRank = new RankData(Mathf.RoundToInt(currentAmount - amt));
 
-                ActionLogger.Add(EActionLogType.XP_CHANGED, oldRank.TotalXP + " >> " + currentAmount, parameters.Steam64);
+                ActionLogger.Add(ActionLogType.XP_CHANGED, oldRank.TotalXP + " >> " + currentAmount, parameters.Steam64);
             }
             finally
             {
@@ -807,7 +807,7 @@ public static class Points
         if (TraitManager.Loaded)
             Signs.UpdateTraitSigns(caller, null);
         
-        if (VehicleSpawnerOld.Loaded && VehicleSigns.Loaded)
+        if (VehicleSpawnerOld.Loaded && VehicleSignsOld.Loaded)
             VehicleSpawnerOld.UpdateSigns(caller);
 
         Signs.UpdateKitSigns(caller, null);
@@ -893,7 +893,7 @@ public static class Points
                 else
                     Chat.Broadcast(T.VehicleDestroyed, e.Instigator, e.Vehicle.asset, reason, distance);
 
-                ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
+                ActionLogger.Add(ActionLogType.OWNED_VEHICLE_DIED, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
                                                                  $" - Destroyed by {e.Instigator.Steam64.ToString(Data.AdminLocale)}", e.OwnerId);
 
                 QuestManager.OnVehicleDestroyed(e);
@@ -951,7 +951,7 @@ public static class Points
                 Translation<VehicleType> message = e.Component.IsAircraft ? T.XPToastFriendlyAircraftDestroyed : T.XPToastFriendlyVehicleDestroyed;
                 Chat.Broadcast(T.VehicleTeamkilled, e.Instigator, e.Vehicle.asset);
 
-                ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
+                ActionLogger.Add(ActionLogType.OWNED_VEHICLE_DIED, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
                                                                  $" - Destroyed by {e.InstigatorId}", e.OwnerId);
                 if (e.Instigator is not null)
                     AwardCredits(e.Instigator, Mathf.Clamp(e.VehicleData.CreditCost, 5, 1000), message, e.VehicleData.Type, true, @lock: false);

@@ -246,7 +246,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             }
         }
     }
-
     public static void OnPlayerJoined(UCPlayer player, string squadName)
     {
         _singleton.IsLoaded();
@@ -419,7 +418,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             }
         }
     }
-
     public static string FindUnusedSquadName(ulong team)
     {
 #if DEBUG
@@ -443,7 +441,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         }
         return SquadNames[SquadNames.Length - 1];
     }
-
     public static Squad CreateSquad(UCPlayer leader, ulong team)
     {
         _singleton.AssertLoaded();
@@ -462,7 +459,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         UpdateUIMemberCount(team);
 
-        ActionLogger.Add(EActionLogType.CREATED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(team, 0), leader);
+        ActionLogger.Add(ActionLogType.CREATED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(team, 0), leader);
 
         return squad;
     }
@@ -500,7 +497,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         UpdateMemberList(squad);
         UpdateUIMemberCount(squad.Team);
 
-        ActionLogger.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + squad.Leader.Steam64.ToString(Data.AdminLocale), player);
+        ActionLogger.Add(ActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + squad.Leader.Steam64.ToString(Data.AdminLocale), player);
 
         if (RallyManager.HasRally(squad, out RallyPoint rally))
             rally.ShowUIForSquad();
@@ -550,7 +547,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
             UpdateUIMemberCount(squad.Team);
 
-            ActionLogger.Add(EActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), player);
+            ActionLogger.Add(ActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), player);
 
             if (RallyManager.HasRally(squad, out RallyPoint rally1))
             {
@@ -566,7 +563,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             return;
         }
 
-        ActionLogger.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.AdminLocale)), player);
+        ActionLogger.Add(ActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.AdminLocale)), player);
 
         if (willNeedNewLeader)
         {
@@ -604,7 +601,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         Squads.Remove(squad);
         squad.Disbanded = true;
 
-        ActionLogger.Add(EActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
+        ActionLogger.Add(ActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
 
         Traits.TraitManager.OnSquadDisbanded(squad);
 
@@ -726,7 +723,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ActionLogger.Add(value ? EActionLogType.LOCKED_SQUAD : EActionLogType.UNLOCKED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
+        ActionLogger.Add(value ? ActionLogType.LOCKED_SQUAD : ActionLogType.UNLOCKED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
         squad.IsLocked = value;
         ReplicateLockSquad(squad);
     }

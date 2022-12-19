@@ -55,7 +55,7 @@ public class StructureCommand : AsyncCommand
                 if (isNew && item.Item != null)
                 {
                     ctx.Reply(T.StructureSaved, item.Item);
-                    ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
+                    ctx.LogAction(ActionLogType.SAVE_STRUCTURE,
                         $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {item.Item.Position:0:##} ({item.Item.InstanceID})");
                 }
                 else if (item.Item != null)
@@ -70,7 +70,7 @@ public class StructureCommand : AsyncCommand
                 if (isNew && item.Item != null)
                 {
                     ctx.Reply(T.StructureSaved, item.Item);
-                    ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
+                    ctx.LogAction(ActionLogType.SAVE_STRUCTURE,
                         $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {item.Item.Position:0:##} ({item.Item.InstanceID})");
                 }
                 else if (item.Item != null)
@@ -94,7 +94,7 @@ public class StructureCommand : AsyncCommand
                     SavedStructure oldItem = item.Item;
                     await item.Delete(token).ThenToUpdate(token);
 
-                    ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                    ctx.LogAction(ActionLogType.UNSAVE_STRUCTURE,
                         $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID})");
                     ctx.Reply(T.StructureUnsaved, oldItem);
                 }
@@ -112,7 +112,7 @@ public class StructureCommand : AsyncCommand
                     SavedStructure oldItem = item.Item;
                     await item.Delete(token).ThenToUpdate(token);
                     
-                    ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                    ctx.LogAction(ActionLogType.UNSAVE_STRUCTURE,
                         $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID})");
                     ctx.Reply(T.StructureUnsaved, oldItem);
                 }
@@ -132,7 +132,7 @@ public class StructureCommand : AsyncCommand
             {
                 VehicleBay.DeleteVehicle(vehicle);
 
-                ctx.LogAction(EActionLogType.POP_STRUCTURE,
+                ctx.LogAction(ActionLogType.POP_STRUCTURE,
                     $"VEHICLE: {vehicle.asset.vehicleName} / {vehicle.asset.id} /" +
                     $" {vehicle.asset.GUID:N} at {vehicle.transform.position:N2} ({vehicle.instanceID})");
                 ctx.Reply(T.StructureDestroyed, vehicle.asset);
@@ -144,14 +144,14 @@ public class StructureCommand : AsyncCommand
                 {
                     SavedStructure oldItem = item.Item;
                     await item.Delete(token).ThenToUpdate(token);
-                    ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                    ctx.LogAction(ActionLogType.UNSAVE_STRUCTURE,
                         $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID}) (Automatically unsaved before destroy)");
                     ctx.Reply(T.StructureUnsaved, oldItem);
                 }
                 else await UCWarfare.ToUpdate(token);
 
                 DestroyStructure(structure, ctx.Caller);
-                ctx.LogAction(EActionLogType.POP_STRUCTURE,
+                ctx.LogAction(ActionLogType.POP_STRUCTURE,
                     $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
                     $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2")} ({structure.instanceID})");
             }
@@ -163,14 +163,14 @@ public class StructureCommand : AsyncCommand
                     SavedStructure oldItem = item.Item;
                     await item.Delete(token).ThenToUpdate(token);
 
-                    ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                    ctx.LogAction(ActionLogType.UNSAVE_STRUCTURE,
                         $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID}) (Autmoatically unsaved before destroy)");
                     ctx.Reply(T.StructureUnsaved, oldItem);
                 }
                 else await UCWarfare.ToUpdate(token);
 
                 DestroyBarricade(barricade, ctx.Caller);
-                ctx.LogAction(EActionLogType.POP_STRUCTURE,
+                ctx.LogAction(ActionLogType.POP_STRUCTURE,
                     $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
                     $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2")} ({barricade.instanceID})");
                 ctx.Defer();
@@ -250,7 +250,7 @@ public class StructureCommand : AsyncCommand
                     }
 
                     await UCWarfare.ToUpdate(token);
-                    ctx.LogAction(EActionLogType.SET_SAVED_STRUCTURE_PROPERTY, $"{asset?.itemName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.Item.ItemGuid:N} - SET " + (grp ? "GROUP" : "OWNER") + " >> " + s64s);
+                    ctx.LogAction(ActionLogType.SET_SAVED_STRUCTURE_PROPERTY, $"{asset?.itemName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.Item.ItemGuid:N} - SET " + (grp ? "GROUP" : "OWNER") + " >> " + s64s);
                 }
                 else
                 {

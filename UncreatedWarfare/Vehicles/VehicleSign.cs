@@ -11,15 +11,15 @@ using Uncreated.Warfare.Structures;
 
 namespace Uncreated.Warfare.Vehicles;
 
-[SingletonDependency(typeof(VehicleSpawnerOld))]
+[SingletonDependency(typeof(VehicleSpawner))]
 [SingletonDependency(typeof(VehicleBay))]
 [SingletonDependency(typeof(StructureSaver))]
 [SingletonDependency(typeof(Level))]
-public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
+public class VehicleSignsOld : ListSingleton<VehicleSign>, ILevelStartListener
 {
-    public VehicleSigns() : base("vehiclesigns", Path.Combine(Data.Paths.VehicleStorage, "signs.json")) { }
-    private static VehicleSigns Singleton;
-    public static bool Loaded => Singleton.IsLoaded<VehicleSigns, VehicleSign>();
+    public VehicleSignsOld() : base("vehiclesigns", Path.Combine(Data.Paths.VehicleStorage, "signs.json")) { }
+    private static VehicleSignsOld Singleton;
+    public static bool Loaded => Singleton.IsLoaded<VehicleSignsOld, VehicleSign>();
     public override void Load()
     {
         Singleton = this;
@@ -69,19 +69,19 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
     }
     public static IEnumerable<VehicleSign> GetLinkedSigns(VehicleSpawn spawn)
     {
-        Singleton.AssertLoaded<VehicleSigns, VehicleSign>();
+        Singleton.AssertLoaded<VehicleSignsOld, VehicleSign>();
         return Singleton.GetObjectsWhere(x => x.VehicleBay != null && x.VehicleBay.InstanceId == spawn.InstanceId && x.VehicleBay.StructureType == spawn.StructureType);
     }
 
     protected override string LoadDefaults() => "[]";
     public static void SaveSingleton()
     {
-        Singleton.AssertLoaded<VehicleSigns, VehicleSign>();
+        Singleton.AssertLoaded<VehicleSignsOld, VehicleSign>();
         Singleton.Save();
     }
     public static void UnlinkSign(InteractableSign sign)
     {
-        Singleton.AssertLoaded<VehicleSigns, VehicleSign>();
+        Singleton.AssertLoaded<VehicleSignsOld, VehicleSign>();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -132,7 +132,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
     }
     public static bool SignExists(InteractableSign sign, out VehicleSign vbsign)
     {
-        Singleton.AssertLoaded<VehicleSigns, VehicleSign>();
+        Singleton.AssertLoaded<VehicleSignsOld, VehicleSign>();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -146,7 +146,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
     }
     public static bool LinkSign(InteractableSign sign, VehicleSpawn spawn)
     {
-        Singleton.AssertLoaded<VehicleSigns, VehicleSign>();
+        Singleton.AssertLoaded<VehicleSignsOld, VehicleSign>();
 #if DEBUG
         IDisposable profiler = ProfilingUtils.StartTracking();
 #endif

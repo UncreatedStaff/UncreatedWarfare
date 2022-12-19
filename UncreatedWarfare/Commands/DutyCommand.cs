@@ -54,7 +54,7 @@ public class DutyCommand : Command
         Signs.UpdateKitSigns(player, null);
         Signs.UpdateLoadoutSigns(player);
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
-        ActionLogger.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
+        ActionLogger.Add(ActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
     }
     public static void AdminOnToOff(UCPlayer player)
     {
@@ -72,7 +72,7 @@ public class DutyCommand : Command
             Signs.UpdateLoadoutSigns(player);
         }
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
-        ActionLogger.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
+        ActionLogger.Add(ActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
     }
     public static void InternOffToOn(UCPlayer player)
     {
@@ -83,7 +83,7 @@ public class DutyCommand : Command
         Signs.UpdateKitSigns(player, null);
         Signs.UpdateLoadoutSigns(player);
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
-        ActionLogger.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
+        ActionLogger.Add(ActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
     }
     public static void InternOnToOff(UCPlayer player)
     {
@@ -99,7 +99,7 @@ public class DutyCommand : Command
             Signs.UpdateLoadoutSigns(player);
         }
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
-        ActionLogger.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
+        ActionLogger.Add(ActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
     }
     public static void SetVanishMode(Player player, bool vanished)
     {

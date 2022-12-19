@@ -178,7 +178,7 @@ public class Order : MonoBehaviour, ITranslationArgument
             case EOrder.BUILDFOB:
                 foreach (UCPlayer player in Squad.Members)
                 {
-                    ActionLogger.Add(EActionLogType.FUFILLED_ORDER, "BUILD FOB AT " + Marker.ToString("N2"), player);
+                    ActionLogger.Add(ActionLogType.FUFILLED_ORDER, "BUILD FOB AT " + Marker.ToString("N2"), player);
                     GiveReward(player);
                     HideUI(player);
                 }
@@ -188,7 +188,7 @@ public class Order : MonoBehaviour, ITranslationArgument
                 {
                     if (player.IsOnline)
                     {
-                        ActionLogger.Add(EActionLogType.FUFILLED_ORDER, "MOVE TO " + Marker.ToString("N2"), player);
+                        ActionLogger.Add(ActionLogType.FUFILLED_ORDER, "MOVE TO " + Marker.ToString("N2"), player);
                         GiveReward(player);
                         HideUI(player);
                     }

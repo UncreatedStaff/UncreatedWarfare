@@ -68,7 +68,7 @@ public class RequestCommand : AsyncCommand
                 else
                     await manager.RequestKit(proxy!, ctx, token).ConfigureAwait(false);
             }
-            else if (VehicleSigns.Loaded && VehicleSigns.SignExists(sign, out VehicleSign vbsign))
+            else if (VehicleSignsOld.Loaded && VehicleSignsOld.SignExists(sign, out VehicleSign vbsign))
             {
                 ctx.AssertGamemode<IVehicles>();
 
@@ -255,14 +255,14 @@ public class RequestCommand : AsyncCommand
             if (comp != null)
             {
                 comp.OnRequest();
-                ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} at spawn {comp.gameObject.transform.position.ToString("N2", Data.AdminLocale)}", ucplayer);
+                ActionLogger.Add(ActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} at spawn {comp.gameObject.transform.position.ToString("N2", Data.AdminLocale)}", ucplayer);
             }
             else
-                ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
+                ActionLogger.Add(ActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
             Data.Reporter?.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.InstanceId);
         }
         else
-            ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
+            ActionLogger.Add(ActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
 
         vehicle.updateVehicle();
         vehicle.updatePhysics();

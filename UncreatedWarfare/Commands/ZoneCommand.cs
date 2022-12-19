@@ -241,7 +241,7 @@ public class ZoneCommand : Command
                 ctx.Reply(T.ZoneGoSuccess, zone);
             else
                 ctx.Reply(T.ZoneGoSuccessGridLocation, location);
-            ctx.LogAction(EActionLogType.TELEPORT, zone == null ? location.ToString() : zone.Name.ToUpper());
+            ctx.LogAction(ActionLogType.TELEPORT, zone == null ? location.ToString() : zone.Name.ToUpper());
         }
         else
         {

@@ -169,7 +169,7 @@ public class UCWarfare : MonoBehaviour
         if (!Config.DisableDailyQuests)
             Quests.DailyQuests.EarlyLoad();
 
-        ActionLogger.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
+        ActionLogger.Add(ActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
     }
     internal void InitNetClient()
     {
@@ -381,19 +381,7 @@ public class UCWarfare : MonoBehaviour
         player.OnLanguageChanged();
         EventDispatcher.InvokeUIRefreshRequest(player);
         UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
-        foreach (BarricadeRegion region in BarricadeManager.regions)
-        {
-            foreach (BarricadeDrop drop in region.drops)
-            {
-                if (drop.interactable is InteractableSign sign)
-                {
-                    if (VehicleSpawnerOld.Loaded && VehicleSpawnerOld.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn))
-                        spawn.UpdateSign(player);
-                    else if (sign.text.StartsWith(Signs.Prefix))
-                        Signs.BroadcastSignUpdate(drop);
-                }
-            }
-        }
+        Signs.UpdateAllSigns(ucplayer);
         if (ucplayer == null) return;
         if (Data.Is<TeamCTF>(out _))
         {
@@ -969,10 +957,10 @@ public class UCWarfare : MonoBehaviour
         for (int i = 0; i < Provider.clients.Count; ++i)
             Provider.kick(Provider.clients[i].playerID.steamID, "Intentional Shutdown: " + reason);
 
-        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+        VehicleSpawner? bay = Data.Singletons.GetSingleton<VehicleSpawner>();
         if (bay != null && bay.IsLoaded)
         {
-            bay.AbandonAllVehicles();
+            bay.AbandonAllVehicles(false);
         }
 
         if (CanUseNetCall)

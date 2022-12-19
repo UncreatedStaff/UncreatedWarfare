@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
+using SDG.Unturned;
 using Uncreated.Networking;
 using UnityEngine;
 
@@ -25,19 +27,21 @@ public class ActionLogger : MonoBehaviour
             Destroy(_instance);
         _instance = this;
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static string AsAsset(Asset asset) => $"{{{asset.FriendlyName} / {asset.id} / {asset.GUID:N}}}";
     private static void SetTimeToNow()
     {
         _currentLogSt = DateTime.UtcNow;
         _currentFileName = _currentLogSt.ToString(DateHeaderFormat, Data.AdminLocale) + ".txt";
     }
 
-    public static void Add(EActionLogType type, string? data, UCPlayer player) =>
-        Add(type, data, player.Steam64);
-    public static void Add(EActionLogType type, string? data = null, ulong player = 0)
+    public static void Add(ActionLogType type, string? data, UCPlayer? player) =>
+        Add(type, data, player == null ? 0ul : player.Steam64);
+    public static void Add(ActionLogType type, string? data = null, ulong player = 0)
     {
         _instance._items.Enqueue(new ActionLogItem(player, type, data, DateTime.UtcNow));
     }
-    public static void AddPriority(EActionLogType type, string? data = null, ulong player = 0)
+    public static void AddPriority(ActionLogType type, string? data = null, ulong player = 0)
     {
         _instance._items.Enqueue(new ActionLogItem(player, type, data, DateTime.UtcNow));
         _instance.Update();
@@ -122,7 +126,7 @@ public class ActionLogger : MonoBehaviour
         stream.Write(data, 0, data.Length);
     }
     // ReSharper disable once StructCanBeMadeReadOnly
-    private record struct ActionLogItem(ulong Player, EActionLogType Type, string? Data, DateTime Timestamp)
+    private record struct ActionLogItem(ulong Player, ActionLogType Type, string? Data, DateTime Timestamp)
     {
         public readonly override string ToString()
         {
@@ -258,7 +262,7 @@ public class ActionLogger : MonoBehaviour
 }
 
 // ReSharper disable InconsistentNaming
-public enum EActionLogType : byte
+public enum ActionLogType : byte
 {
     NONE,
     CHAT_GLOBAL,
@@ -363,6 +367,10 @@ public enum EActionLogType : byte
     GIVE_TRAIT,
     REVOKE_TRAIT,
     CLEAR_TRAITS,
-    MAIN_CAMP_ATTEMPT
+    MAIN_CAMP_ATTEMPT,
+    LEFT_MAIN,
+    POSSIBLE_SOLO,
+    SOLO_RTB,
+    ENTER_MAIN
 }
 // ReSharper restore InconsistentNaming

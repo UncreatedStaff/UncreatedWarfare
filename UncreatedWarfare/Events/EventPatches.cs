@@ -1,56 +1,89 @@
-﻿using HarmonyLib;
+﻿using JetBrains.Annotations;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Harmony;
 using UnityEngine;
+using UnityEngine.Assertions;
 using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Events;
 internal static class EventPatches
 {
+    private static bool _fail;
     internal static void TryPatchAll()
     {
+        _fail = false;
         PatchUtil.PatchMethod(
             typeof(BarricadeManager)
             .GetMethod(nameof(BarricadeManager.destroyBarricade),
                 BindingFlags.Static | BindingFlags.Public,
                 null,
                 new Type[] { typeof(BarricadeDrop), typeof(byte), typeof(byte), typeof(ushort) },
-                null),
+                null), ref _fail,
             postfix: PatchUtil.GetMethodInfo(DestroyBarricadePostFix));
 
-        PatchUtil.PatchMethod(typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.Instance | BindingFlags.NonPublic),
+        PatchUtil.PatchMethod(typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
             postfix: PatchUtil.GetMethodInfo(OnVehicleSpawned));
 
-        PatchUtil.PatchMethod(typeof(InteractableTrap).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic),
+        PatchUtil.PatchMethod(typeof(InteractableTrap).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
             prefix: PatchUtil.GetMethodInfo(TrapOnTriggerEnter));
 
-        PatchUtil.PatchMethod(typeof(InteractableCharge).GetMethod("detonate", BindingFlags.Instance | BindingFlags.Public),
+        PatchUtil.PatchMethod(typeof(InteractableSign).GetMethod("updateText", BindingFlags.Instance | BindingFlags.Public), ref _fail,
+            postfix: PatchUtil.GetMethodInfo(OnTextUpdated));
+
+        PatchUtil.PatchMethod(typeof(InteractableSign).GetMethod("ReceiveChangeTextRequest", BindingFlags.Instance | BindingFlags.Public), ref _fail,
+            postfix: PatchUtil.GetMethodInfo(OnTextUpdateRequested));
+
+        PatchUtil.PatchMethod(typeof(InteractableCharge).GetMethod("detonate", BindingFlags.Instance | BindingFlags.Public), ref _fail,
             prefix: PatchUtil.GetMethodInfo(PreDetonate), postfix: PatchUtil.GetMethodInfo(PostDetonate));
 
-        PatchUtil.PatchMethod(typeof(InteractableVehicle).GetMethod("explode", BindingFlags.Instance | BindingFlags.NonPublic),
+        PatchUtil.PatchMethod(typeof(InteractableVehicle).GetMethod("explode", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
             prefix: PatchUtil.GetMethodInfo(ExplodeVehicle));
 
-        PatchUtil.PatchMethod(typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic),
+        PatchUtil.PatchMethod(typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
             prefix: PatchUtil.GetMethodInfo(RocketOnTriggerEnter));
 
-        PatchUtil.PatchMethod(typeof(PlayerLife).GetMethod("doDamage", BindingFlags.NonPublic | BindingFlags.Instance),
+        PatchUtil.PatchMethod(typeof(PlayerLife).GetMethod("doDamage", BindingFlags.NonPublic | BindingFlags.Instance), ref _fail,
             prefix: PatchUtil.GetMethodInfo(PlayerDamageRequested));
 
         PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(
-                new Action<StructureDrop, byte, byte, Vector3, bool>(StructureManager.destroyStructure)),
+                new Action<StructureDrop, byte, byte, Vector3, bool>(StructureManager.destroyStructure)), ref _fail,
             postfix: PatchUtil.GetMethodInfo(OnStructureDestroyed));
 
-        PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(new Action<SteamPending>(Provider.accept)), prefix: PatchUtil.GetMethodInfo(OnAcceptingPlayer));
+        PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(new Action<SteamPending>(Provider.accept)), ref _fail,
+            prefix: PatchUtil.GetMethodInfo(OnAcceptingPlayer));
+    }
+    [OperationTest("Event Patches")]
+    [Conditional("DEBUG")]
+    [UsedImplicitly]
+    private static void TestEventPatches() => Assert.IsFalse(_fail);
+    // SDG.Unturned.InteractableSign
+    /// <summary>
+    /// Postfix of <see cref="InteractableSign.updateText(string)"/> to invoke <see cref="EventDispatcher.SignTextUpdated"/>.
+    /// </summary>
+    private static void OnTextUpdated(InteractableSign __instance, string newText) => EventDispatcher.InvokeOnSignTextChanged(__instance);
+    // SDG.Unturned.InteractableSign
+    /// <summary>
+    /// Postfix of <see cref="InteractableSign.ReceiveChangeTextRequest(in ServerInvocationContext, string)"/>.
+    /// </summary>
+    private static void OnTextUpdateRequested(InteractableSign __instance, in ServerInvocationContext context, string newText)
+    {
+        Player pl = context.GetPlayer();
+        if (pl != null && __instance.transform.TryGetComponent(out BarricadeComponent bcomp))
+        {
+            bcomp.LastEditor = pl.channel.owner.playerID.steamID.m_SteamID;
+            bcomp.EditTick = UCWarfare.I.Debugger.Updates;
+        }
     }
     // SDG.Unturned.BarricadeManager
     /// <summary>
-    /// Postfix of <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="BarricadeDestroyedHandler"/>.
+    /// Postfix of <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="EventDispatcher.BarricadeDestroyed"/>.
     /// </summary>
     private static void DestroyBarricadePostFix(BarricadeDrop barricade, byte x, byte y, ushort plant)
     {
@@ -181,13 +214,13 @@ internal static class EventPatches
                         damageOrigin = EDamageOrigin.Trap_Explosion,
                         launchSpeed = ___explosionLaunchSpeed
                     }, out _);
-                    if (___explosion2 != 0 && Assets.find(EAssetType.EFFECT, ___explosion2) is EffectAsset asset)
+                    EffectAsset asset = Assets.FindEffectAssetByGuidOrLegacyId(__instance.trapDetonationEffectGuid, ___explosion2);
+                    if (asset != null)
                     {
                         EffectManager.triggerEffect(new TriggerEffectParameters(asset)
                         {
                             position = position,
-                            relevantDistance = EffectManager.LARGE,
-                            reliable = true
+                            relevantDistance = EffectManager.LARGE
                         });
                     }
                     if (ownerData != null)
@@ -213,6 +246,11 @@ internal static class EventPatches
                     DamageTool.damage(triggerer.Player, EDeathCause.SHRED, ELimb.SPINE, owner, Vector3.up, ___playerDamage, 1f, out _, trackKill: true);
                     if (___isBroken)
                         triggerer.Player.life.breakLegs();
+
+                    Data.ServerSpawnLegacyImpact?
+                        .Invoke(__instance.transform.position + Vector3.up, Vector3.down, "Flesh", null,
+                            Provider.EnumerateClients_WithinSphere(__instance.transform.position, EffectManager.SMALL));
+
                     BarricadeManager.damage(barricade.model, 5f, 1f, false, triggerer.CSteamID, EDamageOrigin.Trap_Wear_And_Tear);
                     if (data != null)
                         data.LastShreddedBy = default;
@@ -230,6 +268,11 @@ internal static class EventPatches
                 {
                     instigator = __instance
                 }, out _, out _);
+
+                Data.ServerSpawnLegacyImpact?
+                    .Invoke(__instance.transform.position + Vector3.up, Vector3.down, zombie.isRadioactive ? "Alien" : "Flesh", null,
+                        Provider.EnumerateClients_WithinSphere(__instance.transform.position, EffectManager.SMALL));
+
                 BarricadeManager.damage(barricade.model, zombie.isHyper ? 10f : 5f, 1f, false, CSteamID.Nil, EDamageOrigin.Trap_Wear_And_Tear);
             }
             else
@@ -239,6 +282,11 @@ internal static class EventPatches
                 {
                     instigator = __instance
                 }, out _, out _);
+
+                Data.ServerSpawnLegacyImpact?
+                    .Invoke(__instance.transform.position + Vector3.up, Vector3.down, "Flesh", null,
+                        Provider.EnumerateClients_WithinSphere(__instance.transform.position, EffectManager.SMALL));
+
                 BarricadeManager.damage(barricade.model, 5f, 1f, false, CSteamID.Nil, EDamageOrigin.Trap_Wear_And_Tear);
             }
         }
@@ -356,10 +404,7 @@ internal static class EventPatches
                     VehicleManager.forceRemovePlayer(__instance, passenger.player.playerID.steamID);
             }
         }
-        // item drops commented out
-#if false
-        __instance.DropScrapItems();
-#endif
+        // __instance.DropScrapItems();
         VehicleManager.sendVehicleExploded(__instance);
         EffectAsset effect = __instance.asset.FindExplosionEffectAsset();
         if (effect != null)

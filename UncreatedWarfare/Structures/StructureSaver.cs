@@ -563,6 +563,8 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         this.AssertLoadedIntl();
 
         uint id = drop.instanceID;
+        bool status = true;
+        SavedStructure structure;
         await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -570,7 +572,11 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             {
                 SqlItem<SavedStructure> str = Items[i];
                 if (str.Item != null && str.Item.InstanceID == id && str.Item.ItemGuid == drop.asset.GUID)
-                    return (str, false);
+                {
+                    structure = str.Item;
+                    status = false;
+                    goto save;
+                }
             }
         }
         finally
@@ -581,7 +587,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         await UCWarfare.ToUpdate(token);
 
         StructureData data = drop.GetServersideData();
-        SavedStructure structure = new SavedStructure()
+        structure = new SavedStructure()
         {
             InstanceID = drop.instanceID,
             Group = data.group,
@@ -595,7 +601,8 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             DisplayData = null,
             Items = null
         };
-        return (await AddOrUpdate(structure, token).ConfigureAwait(false), true);
+        save:
+        return (await AddOrUpdate(structure, token).ConfigureAwait(false), status);
     }
     public async Task<(SqlItem<SavedStructure>, bool)> AddBarricade(BarricadeDrop drop, CancellationToken token = default)
     {
@@ -604,14 +611,20 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         this.AssertLoadedIntl();
 
         uint id = drop.instanceID;
+        bool status = true;
+        SavedStructure structure;
         await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
-            for (int i = 0; i < this.Items.Count; ++i)
+            for (int i = 0; i < Items.Count; ++i)
             {
                 SqlItem<SavedStructure> str = Items[i];
                 if (str.Item != null && str.Item.InstanceID == id && str.Item.ItemGuid == drop.asset.GUID)
-                    return (str, false);
+                {
+                    structure = str.Item;
+                    status = false;
+                    goto save;
+                }
             }
         }
         finally
@@ -622,7 +635,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         await UCWarfare.ToUpdate(token);
 
         BarricadeData data = drop.GetServersideData();
-        SavedStructure structure = new SavedStructure()
+        structure = new SavedStructure()
         {
             InstanceID = drop.instanceID,
             Group = data.group,
@@ -672,7 +685,8 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         }
         else
             structure.Metadata = Util.CloneBytes(data.barricade.state);
-        return (await AddOrUpdate(structure, token).ConfigureAwait(false), true);
+        save:
+        return (await AddOrUpdate(structure, token).ConfigureAwait(false), status);
     }
     public Task RemoveItem(SavedStructure structure, CancellationToken token = default)
     {

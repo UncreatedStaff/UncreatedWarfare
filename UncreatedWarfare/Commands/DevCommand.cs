@@ -48,7 +48,7 @@ public class DevCommand : AsyncCommand
 
                 ins.AddCacheSpawn(transform);
                 ctx.ReplyString("Added new cache spawn: " + transform.ToString().Colorize("ebd491"));
-                ctx.LogAction(EActionLogType.ADD_CACHE, "ADDED CACHE SPAWN AT " + transform.ToString());
+                ctx.LogAction(ActionLogType.ADD_CACHE, "ADDED CACHE SPAWN AT " + transform.ToString());
             }
             else throw ctx.ReplyString("You must be looking at a CACHE barricade.".Colorize("c7a29f"));
         }
@@ -102,7 +102,7 @@ public class DevCommand : AsyncCommand
             {
                 insurgency.AddIntelligencePoints(points);
 
-                ctx.LogAction(EActionLogType.ADD_INTEL, "ADDED " + points.ToString(Data.AdminLocale) + " OF INTEL");
+                ctx.LogAction(ActionLogType.ADD_INTEL, "ADDED " + points.ToString(Data.AdminLocale) + " OF INTEL");
                 ctx.ReplyString($"Added {points} intelligence points.".Colorize("ebd491"));
             }
             else throw ctx.ReplyString($"You must supply a valid number of intelligence points (negative or positive).".Colorize("c7a29f"));

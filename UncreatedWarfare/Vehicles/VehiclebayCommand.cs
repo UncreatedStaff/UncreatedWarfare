@@ -30,14 +30,13 @@ public class VehicleBayCommand : AsyncCommand
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ctx.AssertGamemode<IVehicles>();
-
+        ctx.AssertGamemode(out IVehicles vehicleGm);
+        ctx.AssertGamemode(out IStructureSaving structureGm);
         ctx.AssertRanByPlayer();
-        if (!VehicleSpawnerOld.Loaded || !Data.Singletons.TryGetSingleton(out VehicleBay bay))
-        {
-            ctx.SendGamemodeError();
-            return;
-        }
+
+        VehicleBay bay = vehicleGm.VehicleBay;
+        VehicleSpawner spawner = vehicleGm.VehicleSpawner;
+        StructureSaver saver = structureGm.StructureSaver;
 
         ctx.AssertHelpCheck(0, "/vehiclebay <help|add|remove|savemeta|set|delay|crewseats|register|deregister|force|link|unlink|check> [help|parameters...] - Manage vehicle spawners, signs, and the vehicle bay.");
 
@@ -75,7 +74,7 @@ public class VehicleBayCommand : AsyncCommand
                         {
                             data.Item.Delays = Array.Empty<Delay>();
                             await data.SaveItem(token).ThenToUpdate(token);
-                            VehicleSpawnerOld.UpdateSigns(data.Item.VehicleID);
+                            Signs.UpdateVehicleBaySigns(null, data.Item);
                         }
                         ctx.Reply(T.VehicleBayRemovedDelay, rem);
                         return;
@@ -174,14 +173,13 @@ public class VehicleBayCommand : AsyncCommand
 
                     if (adding)
                     {
-                        ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "ADDED DELAY " + type.ToString() + " VALUE: " + val.ToString()
+                        ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY, "ADDED DELAY " + type + " VALUE: " + val.ToString(Data.AdminLocale)
                             + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
                         Delay.AddDelay(ref data.Item.Delays, type, val, gamemode);
-                        if (VehicleSigns.Loaded)
-                            VehicleSpawnerOld.UpdateSigns(data.Item.VehicleID);
-                        foreach (VehicleSpawn spawn in data.Item.EnumerateSpawns)
+                        Signs.UpdateVehicleBaySigns(null, data.Item);
+                        foreach (SqlItem<VehicleSpawn> spawn in spawner.EnumerateSpawns(data))
                         {
-                            VehicleBayComponent? svc = spawn.Component;
+                            VehicleBayComponent? svc = spawn.Item?.Structure?.Item?.Buildable?.Model.GetComponent<VehicleBayComponent>();
                             if (svc != null) svc.UpdateTimeDelay();
                         }
                         await data.SaveItem(token).ThenToUpdate(token);
@@ -194,15 +192,14 @@ public class VehicleBayCommand : AsyncCommand
                             ++rem;
                         if (rem > 0)
                         {
-                            if (VehicleSigns.Loaded)
-                                VehicleSpawnerOld.UpdateSigns(data.Item.VehicleID);
-                            foreach (VehicleSpawn spawn in data.Item.EnumerateSpawns)
+                            Signs.UpdateVehicleBaySigns(null, data.Item);
+                            foreach (SqlItem<VehicleSpawn> spawn in spawner.EnumerateSpawns(data))
                             {
-                                VehicleBayComponent? svc = spawn.Component;
+                                VehicleBayComponent? svc = spawn.Item?.Structure?.Item?.Buildable?.Model.GetComponent<VehicleBayComponent>();
                                 if (svc != null) svc.UpdateTimeDelay();
                             }
                             await data.SaveItem(token).ThenToUpdate(token);
-                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "REMOVED " + rem.ToString(Data.AdminLocale) + " DELAY(S) " + type + " VALUE: " + val.ToString(Data.AdminLocale)
+                            ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY, "REMOVED " + rem.ToString(Data.AdminLocale) + " DELAY(S) " + type + " VALUE: " + val.ToString(Data.AdminLocale)
                                 + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
                         }
                         ctx.Reply(T.VehicleBayRemovedDelay, rem);
@@ -227,7 +224,7 @@ public class VehicleBayCommand : AsyncCommand
                 SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, token).ThenToUpdate(token);
                 if (data?.Item == null)
                 {
-                    ctx.LogAction(EActionLogType.CREATE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
+                    ctx.LogAction(ActionLogType.CREATE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
                     await bay.AddRequestableVehicle(vehicle, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
                     ctx.Reply(T.VehicleBayAdded, vehicle.asset);
@@ -251,7 +248,7 @@ public class VehicleBayCommand : AsyncCommand
             {
                 if (await bay.RemoveRequestableVehicle(vehicle.asset.GUID, token).ThenToUpdate(token))
                 {
-                    ctx.LogAction(EActionLogType.DELETE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
+                    ctx.LogAction(ActionLogType.DELETE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
                     ctx.Reply(T.VehicleBayRemoved, vehicle.asset);
                 }
                 else
@@ -271,7 +268,7 @@ public class VehicleBayCommand : AsyncCommand
                 SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, token).ThenToUpdate(token);
                 if (data?.Item != null)
                 {
-                    ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - SAVED METADATA");
+                    ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - SAVED METADATA");
                     await data.Enter(token).ThenToUpdate(token);
                     try
                     {
@@ -322,7 +319,7 @@ public class VehicleBayCommand : AsyncCommand
                         }
 
                         VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
-                        ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY,
+                        ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY,
                             $"{asset?.vehicleName ?? "null"} / {(asset == null ? "0" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - SET ITEMS");
                         data.Item.Items = items.ToArray();
                         await data.SaveItem(token).ThenToUpdate(token);
@@ -343,11 +340,11 @@ public class VehicleBayCommand : AsyncCommand
                     {
                         case SetPropertyResult.Success:
                             VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
-                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY,
+                            ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY,
                                 $"{asset?.vehicleName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.Item.VehicleID:N} - SET " +
                                 (info?.Name ?? property).ToUpper() + " >> " + value.ToUpper());
                             ctx.Reply(T.VehicleBaySetProperty!, property, asset, value);
-                            VehicleSpawnerOld.UpdateSigns(data.Item.VehicleID);
+                            Signs.UpdateVehicleBaySigns(null, data.Item);
                             break;
                         default:
                         case SetPropertyResult.ObjectNotFound:
@@ -390,7 +387,7 @@ public class VehicleBayCommand : AsyncCommand
                         VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
                         if (!data.Item.CrewSeats.Contains(seat))
                         {
-                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} /" +
+                            ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} /" +
                                 $" {(asset == null ? "null" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - ADDED CREW SEAT {seat}.");
                             await bay.AddCrewSeat(data, seat, token).ThenToUpdate(token);
                             ctx.Reply(T.VehicleBaySeatAdded, seat, asset!);
@@ -414,7 +411,7 @@ public class VehicleBayCommand : AsyncCommand
                         VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
                         if (data.Item.CrewSeats.Contains(seat))
                         {
-                            ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} /" +
+                            ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} /" +
                                 $" {(asset == null ? "null" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - REMOVED CREW SEAT {seat}.");
                             await bay.RemoveCrewSeat(data, seat, token).ThenToUpdate(token);
                             ctx.Reply(T.VehicleBaySeatRemoved, seat, asset!);
@@ -460,11 +457,15 @@ public class VehicleBayCommand : AsyncCommand
                 {
                     if (Gamemode.Config.StructureVehicleBay.MatchGuid(barricade.asset.GUID))
                     {
-                        if (!VehicleSpawnerOld.IsRegistered(barricade.instanceID, out _, StructType.Barricade))
+                        if (!spawner.TryGetSpawn(barricade, out _))
                         {
-                            ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
-                                $"REGISTERED BARRICADE SPAWN AT {barricade.model.transform.position:N2} ID: {barricade.instanceID}");
-                            VehicleSpawnerOld.CreateSpawn(barricade, barricade.GetServersideData(), asset.GUID);
+                            SqlItem<VehicleData>? data = bay.GetDataProxySync(asset.GUID);
+                            if (data?.Item == null)
+                                throw ctx.Reply(T.VehicleBayInvalidInput, asset.GUID.ToString("N"));
+                            (SqlItem<SavedStructure> save, _) = await saver.AddBarricade(barricade, token).ConfigureAwait(false);
+                            await spawner.CreateSpawn(save, data, null, token).ThenToUpdate(token);
+                            ctx.LogAction(ActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                                                                          $"REGISTERED BARRICADE SPAWN AT {barricade.model.transform.position:N2} ID: {barricade.instanceID}");
                             ctx.Reply(T.VehicleBaySpawnRegistered, asset);
                         }
                         else
@@ -479,11 +480,15 @@ public class VehicleBayCommand : AsyncCommand
                 {
                     if (Gamemode.Config.StructureVehicleBay.MatchGuid(structure.asset.GUID))
                     {
-                        if (!VehicleSpawnerOld.IsRegistered(structure.instanceID, out _, StructType.Structure))
+                        if (!spawner.TryGetSpawn(structure, out _))
                         {
-                            ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
-                                $"REGISTERED STRUCTURE SPAWN AT {structure.model.transform.position:N2} ID: {structure.instanceID}");
-                            VehicleSpawnerOld.CreateSpawn(structure, structure.GetServersideData(), asset.GUID);
+                            SqlItem<VehicleData>? data = bay.GetDataProxySync(asset.GUID);
+                            if (data?.Item == null)
+                                throw ctx.Reply(T.VehicleBayInvalidInput, asset.GUID.ToString("N"));
+                            (SqlItem<SavedStructure> save, _) = await saver.AddStructure(structure, token).ConfigureAwait(false);
+                            await spawner.CreateSpawn(save, data, null, token).ThenToUpdate(token);
+                            ctx.LogAction(ActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                                                                          $"REGISTERED STRUCTURE SPAWN AT {structure.model.transform.position:N2} ID: {structure.instanceID}");
                             ctx.Reply(T.VehicleBaySpawnRegistered, asset);
                         }
                         else
@@ -512,10 +517,10 @@ public class VehicleBayCommand : AsyncCommand
                 VehicleSpawnerOld.DeleteSpawn(spawn.InstanceId, spawn.StructureType);
                 VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleGuid);
                 if (asset is not null)
-                    ctx.LogAction(EActionLogType.DEREGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                    ctx.LogAction(ActionLogType.DEREGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
                                                                $"DEREGISTERED SPAWN ID: {spawn.InstanceId}");
                 else
-                    ctx.LogAction(EActionLogType.DEREGISTERED_SPAWN, $"{spawn.VehicleGuid:N} - " +
+                    ctx.LogAction(ActionLogType.DEREGISTERED_SPAWN, $"{spawn.VehicleGuid:N} - " +
                         $"DEREGISTERED SPAWN ID: {spawn.InstanceId}");
                 ctx.Reply(T.VehicleBaySpawnDeregistered, asset!);
             }
@@ -544,10 +549,10 @@ public class VehicleBayCommand : AsyncCommand
                     asset = Assets.find(spawn.VehicleGuid) as VehicleAsset;
                 }
                 if (asset != null)
-                    ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                    ctx.LogAction(ActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
                                                                $"FORCED VEHICLE TO SPAWN ID: {spawn.InstanceId}");
                 else
-                    ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{spawn.VehicleGuid:N} - FORCED VEHICLE TO SPAWN ID: {spawn.InstanceId}");
+                    ctx.LogAction(ActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{spawn.VehicleGuid:N} - FORCED VEHICLE TO SPAWN ID: {spawn.InstanceId}");
                 await spawn.SpawnVehicle(token).ThenToUpdate(token);
                 ctx.Reply(T.VehicleBayForceSuccess, asset!);
             }
@@ -558,7 +563,7 @@ public class VehicleBayCommand : AsyncCommand
         {
             ctx.AssertHelpCheck(1, "/vehiclebay <link> - Use while looking at a spawner to start linking, then on a sign to link the sign to the spawner.");
 
-            if (!VehicleSigns.Loaded)
+            if (!VehicleSignsOld.Loaded)
             {
                 ctx.SendGamemodeError();
                 return;
@@ -569,20 +574,20 @@ public class VehicleBayCommand : AsyncCommand
                 {
                     if (c.currentlylinking != null)
                     {
-                        if (VehicleSigns.SignExists(sign, out _))
-                            VehicleSigns.UnlinkSign(sign);
+                        if (VehicleSignsOld.SignExists(sign, out _))
+                            VehicleSignsOld.UnlinkSign(sign);
                         VehicleBayComponent? c2 = c.currentlylinking.Component;
                         if (c2 != null)
                         {
-                            ctx.LogAction(EActionLogType.LINKED_VEHICLE_BAY_SIGN, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID}- " +
+                            ctx.LogAction(ActionLogType.LINKED_VEHICLE_BAY_SIGN, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID}- " +
                                 $"LINKED TO SPAWN AT {c2.transform.position:N2} ID: {c.currentlylinking.InstanceId}");
                         }
                         else
                         {
-                            ctx.LogAction(EActionLogType.LINKED_VEHICLE_BAY_SIGN, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID}- " +
+                            ctx.LogAction(ActionLogType.LINKED_VEHICLE_BAY_SIGN, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID}- " +
                                 $"LINKED TO SPAWN ID: {c.currentlylinking.InstanceId}");
                         }
-                        VehicleSigns.LinkSign(sign, c.currentlylinking);
+                        VehicleSignsOld.LinkSign(sign, c.currentlylinking);
                         ctx.Reply(T.VehicleBayLinkFinished,
                             (c2 == null
                                 ? null
@@ -618,7 +623,7 @@ public class VehicleBayCommand : AsyncCommand
         {
             ctx.AssertHelpCheck(1, "/vehiclebay <unlink> - Use while looking at a sign to unlink it from it's spawner.");
 
-            if (!VehicleSigns.Loaded)
+            if (!VehicleSignsOld.Loaded)
             {
                 ctx.SendGamemodeError();
                 return;
@@ -626,7 +631,7 @@ public class VehicleBayCommand : AsyncCommand
             VehicleSign? sign = GetSignTarget(ctx);
             if (sign is not null && sign.SignDrop is not null && sign.SignDrop.interactable is InteractableSign sign2)
             {
-                VehicleSigns.UnlinkSign(sign2);
+                VehicleSignsOld.UnlinkSign(sign2);
                 ctx.Reply(T.VehicleBayUnlinked, (sign.VehicleBay is null ? null : Assets.find<VehicleAsset>(sign.VehicleBay.VehicleGuid))!);
             }
             else
@@ -649,7 +654,7 @@ public class VehicleBayCommand : AsyncCommand
     }
 
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
-    private async Task<SqlItem<VehicleData>?> GetVehicleTarget(CommandInteraction ctx, VehicleBay bay, CancellationToken token = default)
+    private async Task<SqlItem<VehicleData>?> GetVehicleTarget(CommandInteraction ctx, VehicleBay bay, VehicleSpawner spawner, CancellationToken token = default)
     {
         if (ctx.TryGetTarget(out InteractableVehicle vehicle))
         {
@@ -661,11 +666,11 @@ public class VehicleBayCommand : AsyncCommand
         VehicleSpawn spawn;
         if (ctx.TryGetTarget(out BarricadeDrop drop))
         {
-            if (VehicleSigns.Loaded)
+            if (VehicleSignsOld.Loaded)
             {
                 if (drop.interactable is InteractableSign sign)
                 {
-                    if (VehicleSigns.SignExists(sign, out VehicleSign sign2))
+                    if (VehicleSignsOld.SignExists(sign, out VehicleSign sign2))
                     {
                         if (sign2.VehicleBay is not null)
                         {
@@ -692,65 +697,35 @@ public class VehicleBayCommand : AsyncCommand
         return null;
     }
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
-    private VehicleSpawn? GetBayTarget(CommandInteraction ctx)
+    private SqlItem<VehicleSpawn>? GetBayTarget(CommandInteraction ctx, VehicleSpawner spawner)
     {
-        if (ctx.TryGetTarget(out InteractableVehicle vehicle) && VehicleSpawnerOld.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
+        if (ctx.TryGetTarget(out InteractableVehicle vehicle) && spawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))
         {
             return spawn;
         }
-        StructureDrop drop2;
-        if (ctx.TryGetTarget(out BarricadeDrop drop))
+        if (ctx.TryGetTarget(out BarricadeDrop drop) && spawner.TryGetSpawn(drop, out spawn))
         {
-            if (VehicleSigns.Loaded)
-            {
-                if (drop.interactable is InteractableSign sign)
-                {
-                    if (VehicleSigns.SignExists(sign, out VehicleSign sign2))
-                    {
-                        if (sign2.VehicleBay is not null)
-                            return sign2.VehicleBay;
-                    }
-                }
-            }
-            if (VehicleSpawnerOld.SpawnExists(drop.instanceID, StructType.Barricade, out spawn) || (ctx.TryGetTarget(out drop2) && VehicleSpawnerOld.SpawnExists(drop2.instanceID, StructType.Structure, out spawn)))
-                return spawn;
-            else return null;
+            return spawn;
         }
-        if (ctx.TryGetTarget(out drop2))
+        if (ctx.TryGetTarget(out StructureDrop drop2) && spawner.TryGetSpawn(drop2, out spawn))
         {
-            return VehicleSpawnerOld.SpawnExists(drop2.instanceID, StructType.Structure, out spawn) ? spawn : null;
+            return spawn;
         }
         return null;
     }
     /// <summary>Sign barricade >> Spawner barricade >> Spawner structure >> Linked Vehicle</summary>
-    private VehicleSign? GetSignTarget(CommandInteraction ctx)
+    private BarricadeDrop? GetSignTarget(CommandInteraction ctx, VehicleSpawner spawner, out SqlItem<VehicleSpawn> spawn)
     {
-        if (!VehicleSigns.Loaded) return null;
-        VehicleSpawn spawn;
-        StructureDrop drop2;
-        if (ctx.TryGetTarget(out BarricadeDrop drop))
+        if (ctx.TryGetTarget(out BarricadeDrop drop) && spawner.TryGetSpawn(drop, out spawn))
         {
-            if (drop.interactable is InteractableSign sign)
-            {
-                if (VehicleSigns.SignExists(sign, out VehicleSign sign2))
-                {
-                    return sign2;
-                }
-            }
-            if (VehicleSpawnerOld.SpawnExists(drop.instanceID, StructType.Barricade, out spawn) || (ctx.TryGetTarget(out drop2) && VehicleSpawnerOld.SpawnExists(drop2.instanceID, StructType.Structure, out spawn)))
-            {
-                VehicleSign[] signs = VehicleSigns.GetLinkedSigns(spawn).ToArray();
-                if (signs.Length == 1)
-                    return signs[0];
-            }
-            return null;
+            return drop;
         }
-        if (ctx.TryGetTarget(out drop2) && VehicleSpawnerOld.SpawnExists(drop2.instanceID, StructType.Structure, out spawn) || (ctx.TryGetTarget(out InteractableVehicle vehicle) && VehicleSpawnerOld.HasLinkedSpawn(vehicle.instanceID, out spawn)))
+        if (ctx.TryGetTarget(out StructureDrop drop2) && spawner.TryGetSpawn(drop2, out spawn) || (ctx.TryGetTarget(out InteractableVehicle vehicle) && spawner.TryGetSpawn(vehicle, out spawn)))
         {
-            VehicleSign[] signs = VehicleSigns.GetLinkedSigns(spawn).ToArray();
-            if (signs.Length == 1)
-                return signs[0];
+            return spawn?.Item?.Sign?.Item?.Buildable?.Drop as BarricadeDrop;
         }
+
+        spawn = null!;
         return null;
     }
 }

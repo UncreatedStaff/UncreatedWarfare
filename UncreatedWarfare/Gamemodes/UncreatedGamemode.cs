@@ -22,6 +22,7 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Gamemodes.UI;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Ranks;
@@ -37,6 +38,10 @@ using Action = System.Action;
 
 namespace Uncreated.Warfare.Gamemodes;
 
+[SingletonDependency(typeof(VehicleBay))]
+[SingletonDependency(typeof(VehicleSpawner))]
+[SingletonDependency(typeof(TraitManager))]
+[SingletonDependency(typeof(KitManager))]
 public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelStartListenerAsync, IReloadableSingleton, ITranslationArgument
 {
     public const float MatchPresentThreshold = 0.65f;
@@ -57,6 +62,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public Whitelister Whitelister;
     public CooldownManager Cooldowns;
     public Tips Tips;
+    public Signs Signs;
     public Coroutine EventLoopCoroutine;
     public bool IsPendingCancel;
     public event Action? StagingPhaseOver;
@@ -103,6 +109,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public virtual bool ShowOFPUI => true;
     public virtual bool UseTips => true;
     public virtual bool AllowCosmetics => false;
+    public virtual bool CustomSigns => true;
     public virtual GamemodeType GamemodeType => GamemodeType.Undefined;
     protected bool HasOnReadyRan => _hasOnReadyRan;
     public bool EndScreenUp => this is IEndScreen es && es.IsScreenUp;
@@ -311,6 +318,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             AddSingletonRequirement(ref Whitelister);
         if (UseTips)
             AddSingletonRequirement(ref Tips);
+        if (CustomSigns)
+            AddSingletonRequirement(ref Signs);
     }
     private async Task InternalPlayerInit(UCPlayer player, bool wasAlreadyOnline, CancellationToken token)
     {
@@ -603,7 +612,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 ts.TimeSync(time);
         }
         TraitSigns.TimeSync();
-        VehicleSigns.TimeSync();
+        VehicleSignsOld.TimeSync();
     }
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => DisplayName;
     public void ShutdownAfterGame(string reason, ulong player)
@@ -645,7 +654,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
             QuestManager.OnGameOver(winner);
 
-            ActionLogger.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
+            ActionLogger.Add(ActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
 
             Chat.Broadcast(T.TeamWin, TeamManager.GetFaction(winner));
 
@@ -727,7 +736,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     goto error;
                 L.Log("Chosen new gamemode " + Data.Gamemode.DisplayName, ConsoleColor.DarkCyan);
                 await Data.Singletons.LoadSingletonAsync(Data.Gamemode, token: token).ConfigureAwait(false);
-                ActionLogger.Add(EActionLogType.GAMEMODE_CHANGED_AUTO, Data.Gamemode.DisplayName);
+                ActionLogger.Add(ActionLogType.GAMEMODE_CHANGED_AUTO, Data.Gamemode.DisplayName);
                 return true;
             }
             catch (SingletonLoadException ex2)

@@ -48,9 +48,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     // vars
     protected int _objectiveT1Index;
     protected int _objectiveT2Index;
-    protected VehicleSpawnerOld _vehicleSpawner;
+    protected VehicleSpawner _vehicleSpawner;
     protected VehicleBay _vehicleBay;
-    protected VehicleSigns _vehicleSigns;
     protected FOBManager _FOBManager;
     protected KitManager _kitManager;
     protected ReviveManager _reviveManager;
@@ -74,9 +73,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     public override bool UseTeamSelector => true;
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
-    public VehicleSpawnerOld VehicleSpawner => _vehicleSpawner;
+    public VehicleSpawner VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
-    public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _FOBManager;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
@@ -96,7 +94,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     {
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
-        AddSingletonRequirement(ref _vehicleSigns);
         AddSingletonRequirement(ref _FOBManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _reviveManager);
@@ -307,7 +304,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        VehicleSigns.OnFlagCaptured();
+        VehicleSignsOld.OnFlagCaptured();
         StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
@@ -386,7 +383,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #endif
         if (newOwner == 1)
         {
-            ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
+            ActionLogger.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
             if (_objectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
             {
                 UCWarfare.RunTask(Data.Gamemode.DeclareWin, 1ul, default, ctx: "Lose game, flags fully captured by team 1.");
@@ -407,7 +404,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         }
         else if (newOwner == 2)
         {
-            ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
+            ActionLogger.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
             if (_objectiveT2Index < 1) // if t2 just capped the last flag
             {
                 UCWarfare.RunTask(Data.Gamemode.DeclareWin, 2ul, default, ctx: "Lose game, flags fully captured by team 2.");

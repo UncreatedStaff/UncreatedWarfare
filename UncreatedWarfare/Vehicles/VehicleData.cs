@@ -61,8 +61,6 @@ public class VehicleData : ITranslationArgument, IListItem
     public MetaSave? Metadata;
     [JsonIgnore]
     public PrimaryKey PrimaryKey { get; set; }
-    [JsonIgnore]
-    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawnerOld.Spawners.Where(x => x.VehicleGuid == VehicleID);
     // for JSON backwards compatability
     public ulong Team
     {
@@ -82,7 +80,6 @@ public class VehicleData : ITranslationArgument, IListItem
             };
         }
     }
-
     public VehicleData(Guid vehicleID)
     {
         VehicleID = vehicleID;

@@ -31,7 +31,7 @@ public class KickCommand : Command
 
         OffenseManager.LogKickPlayer(targetId, ctx.CallerID, reason!, DateTime.Now);
 
-        ctx.LogAction(EActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\"");
+        ctx.LogAction(ActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\"");
         if (ctx.IsConsole)
         {
             ctx.ReplyString($"{names.PlayerName} ({targetId.ToString(Data.LocalLocale)}) was kicked by an operator because: {reason}.", ConsoleColor.Cyan);

@@ -48,7 +48,7 @@ public class BanCommand : AsyncCommand
                 reason!, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration), hwids.ToArray());
         }
         PlayerNames callerName = ctx.Caller is not null ? ctx.Caller.Name : PlayerNames.Console;
-        ActionLogger.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\" DURATION: " +
+        ActionLogger.Add(ActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\" DURATION: " +
             (duration == -1 ? "PERMANENT" : duration.ToString(Data.AdminLocale) + " SECONDS"), ctx.CallerID);
 
         OffenseManager.LogBanPlayer(targetId, ctx.CallerID, reason!, duration, DateTime.Now);

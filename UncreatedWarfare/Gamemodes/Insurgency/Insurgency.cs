@@ -48,9 +48,8 @@ public class Insurgency :
     IGameStats,
     ITraits
 {
-    private VehicleSpawnerOld _vehicleSpawner;
+    private VehicleSpawner _vehicleSpawner;
     private VehicleBay _vehicleBay;
-    private VehicleSigns _vehicleSigns;
     private FOBManager _fobManager;
     private KitManager _kitManager;
     private ReviveManager _reviveManager;
@@ -76,9 +75,8 @@ public class Insurgency :
     public override bool UseTeamSelector => true;
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
-    public VehicleSpawnerOld VehicleSpawner => _vehicleSpawner;
+    public VehicleSpawner VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
-    public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _fobManager;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
@@ -108,7 +106,6 @@ public class Insurgency :
         AddSingletonRequirement(ref _vehicleBay);
         AddSingletonRequirement(ref _fobManager);
         AddSingletonRequirement(ref _structureSaver);
-        AddSingletonRequirement(ref _vehicleSigns);
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
@@ -392,7 +389,7 @@ public class Insurgency :
         cache.SpawnAttackIcon();
 
         TicketManager.UpdateUI(AttackingTeam);
-        VehicleSigns.OnFlagCaptured();
+        VehicleSignsOld.OnFlagCaptured();
     }
     public void SpawnNewCache(bool message = false)
     {
@@ -511,7 +508,7 @@ public class Insurgency :
             .Where(x => x.GetTeam() == _attackTeam && (x.player.transform.position - cache.Position).sqrMagnitude < 10000f)
             .Select(x => x.playerID.steamID.m_SteamID).ToArray());
 
-        ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(AttackingTeam, 0) + " DESTROYED CACHE");
+        ActionLogger.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(AttackingTeam, 0) + " DESTROYED CACHE");
 
         if (CachesLeft == 0)
         {
@@ -567,7 +564,7 @@ public class Insurgency :
         }
         TicketManager.UpdateUI(1);
         TicketManager.UpdateUI(2);
-        VehicleSigns.OnFlagCaptured();
+        VehicleSignsOld.OnFlagCaptured();
     }
     public override void ShowStagingUI(UCPlayer player)
     {

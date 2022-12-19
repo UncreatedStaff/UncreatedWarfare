@@ -29,7 +29,7 @@ public class WarnCommand : Command
         OffenseManager.LogWarnPlayer(targetId, ctx.CallerID, reason!, DateTime.Now);
 
         string tid = targetId.ToString(Data.AdminLocale);
-        ActionLogger.Add(EActionLogType.WARN_PLAYER, $"WARNED {tid} FOR \"{reason}\"", ctx.CallerID);
+        ActionLogger.Add(ActionLogType.WARN_PLAYER, $"WARNED {tid} FOR \"{reason}\"", ctx.CallerID);
         if (ctx.IsConsole)
         {
             L.Log($"{targetNames.PlayerName} ({tid}) was warned for: {reason}.", ConsoleColor.Cyan);

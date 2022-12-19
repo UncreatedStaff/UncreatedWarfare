@@ -62,7 +62,7 @@ public class GroupCommand : Command
                 {
                     ctx.Reply(T.JoinedGroup, team, TeamManager.TranslateName(team, ctx.Caller, true), TeamManager.GetTeamColor(team));
                     L.Log($"{ctx.Caller.Name.PlayerName} ({ctx.CallerID}) joined group \"{TeamManager.TranslateName(team, 0)}\": {team} (ID {groupInfo.groupID}).", ConsoleColor.Cyan);
-                    ctx.LogAction(EActionLogType.CHANGE_GROUP_WITH_COMMAND, "GROUP: " + TeamManager.TranslateName(team, 0).ToUpper());
+                    ctx.LogAction(ActionLogType.CHANGE_GROUP_WITH_COMMAND, "GROUP: " + TeamManager.TranslateName(team, 0).ToUpper());
                 }
                 else
                 {

@@ -1,19 +1,22 @@
-﻿using SDG.NetTransport;
+﻿using JetBrains.Annotations;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using JetBrains.Annotations;
 using Uncreated.SQL;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare;
-public static class Signs
+public class Signs : BaseSingleton, ILevelStartListener
 {
     public const string Prefix = "sign_";
     public const string VBSPrefix = "vbs_";
@@ -22,17 +25,55 @@ public static class Signs
     public const string LoadoutPrefix = "loadout_";
     public const string LongTranslationPrefix = "l_";
     private static readonly Dictionary<uint, CustomSignComponent> ActiveSigns = new Dictionary<uint, CustomSignComponent>(64);
-    private static CustomSignComponent? GetComponent(BarricadeDrop drop)
+    public override void Load()
+    {
+        EventDispatcher.SignTextChanged += OnSignTextChanged;
+        EventDispatcher.BarricadePlaced += OnBarricadePlaced;
+        EventDispatcher.BarricadeDestroyed += OnBarricadeDestroyed;
+    }
+    public override void Unload()
+    {
+        EventDispatcher.BarricadeDestroyed -= OnBarricadeDestroyed;
+        EventDispatcher.BarricadePlaced -= OnBarricadePlaced;
+        EventDispatcher.SignTextChanged -= OnSignTextChanged;
+    }
+    private static void OnSignTextChanged(SignTextChanged e) => CheckSign(e.Barricade);
+    private static void OnBarricadePlaced(BarricadePlaced e) => CheckSign(e.Barricade);
+    private static void OnBarricadeDestroyed(BarricadeDestroyed e)
+    {
+        if (e.Transform.TryGetComponent(out CustomSignComponent comp))
+            UnityEngine.Object.Destroy(comp);
+        ActiveSigns.Remove(e.InstanceID);
+    }
+    void ILevelStartListener.OnLevelReady() => CheckAllSigns();
+    private static CustomSignComponent? GetComponent(BarricadeDrop drop, out bool isNew)
     {
         ThreadUtil.assertIsGameThread();
         if (drop.interactable is not InteractableSign sign)
+        {
+            isNew = false;
             return null;
+        }
+        CustomSignComponent comp;
         string text = sign.text;
         if (!text.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
-            return null;
-        text = text.Substring(Prefix.Length);
-        if (ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp))
         {
+            if (ActiveSigns.TryGetValue(drop.instanceID, out comp))
+            {
+                ActiveSigns.Remove(drop.instanceID);
+                UnityEngine.Object.Destroy(comp);
+            }
+            isNew = true;
+            return null;
+        }
+        text = text.Substring(Prefix.Length);
+        if (ActiveSigns.TryGetValue(drop.instanceID, out comp))
+        {
+            if (comp.CheckStillValid())
+            {
+                isNew = false;
+                return comp;
+            }
             if (comp.isActiveAndEnabled)
                 UnityEngine.Object.Destroy(comp);
             ActiveSigns.Remove(drop.instanceID);
@@ -69,6 +110,7 @@ public static class Signs
 
         comp.Init(drop);
         ActiveSigns.Add(drop.instanceID, comp);
+        isNew = true;
         return comp;
     }
     public static SqlItem<Kit>? GetKitFromSign(BarricadeDrop drop, out int loadoutId)
@@ -85,12 +127,14 @@ public static class Signs
     /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static bool CheckSign(BarricadeDrop drop)
     {
+        ThreadUtil.assertIsGameThread();
         if (drop.model == null)
             return false;
-        CustomSignComponent? comp = GetComponent(drop);
+        CustomSignComponent? comp = GetComponent(drop, out bool isNew);
         if (comp is not null)
         {
-            BroadcastSignUpdate(drop, comp);
+            if (isNew)
+                BroadcastSignUpdate(drop, comp);
             return true;
         }
         return false;
@@ -135,12 +179,15 @@ public static class Signs
         }
     }
     /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
-    public static void UpdateAllSigns(bool updatePlainText = false)
+    public static void UpdateAllSigns(UCPlayer? player = null, bool updatePlainText = false)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ThreadUtil.assertIsGameThread();
+        bool a = player is null;
+        if (!a && !player!.IsOnline)
+            return;
         for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
         {
             for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
@@ -149,7 +196,10 @@ public static class Signs
                 for (int i = 0; i < region.drops.Count; ++i)
                 {
                     if (region.drops[i].asset.build is EBuild.SIGN or EBuild.SIGN_WALL)
-                        BroadcastSignUpdate(region.drops[i], updatePlainText);
+                    {
+                        if (a) BroadcastSignUpdate(region.drops[i], updatePlainText);
+                        else SendSignUpdate(region.drops[i], player!, updatePlainText);
+                    }
                 }
             }
         }
@@ -159,7 +209,10 @@ public static class Signs
             for (int i = 0; i < region.drops.Count; ++i)
             {
                 if (region.drops[i].asset.build is EBuild.SIGN or EBuild.SIGN_WALL)
-                    BroadcastSignUpdate(region.drops[i], updatePlainText);
+                {
+                    if (a) BroadcastSignUpdate(region.drops[i], updatePlainText);
+                    else SendSignUpdate(region.drops[i], player!, updatePlainText);
+                }
             }
         }
     }
@@ -422,6 +475,93 @@ public static class Signs
             }
         }
     }
+    public static void UpdateVehicleBaySigns(UCPlayer? player) => UpdateVehicleBaySigns(player, (VehicleSpawn?)null);
+    public static void UpdateVehicleBaySigns(UCPlayer? player, VehicleSpawn? spawn)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        int key = spawn is null ? PrimaryKey.NotAssigned : spawn.PrimaryKey;
+        ThreadUtil.assertIsGameThread();
+        bool a = key < 0;
+        if (player is null)
+        {
+            for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
+            {
+                for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    for (int i = 0; i < region.drops.Count; ++i)
+                    {
+                        BarricadeDrop drop = region.drops[i];
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn != null && key == comp2.Spawn.PrimaryKey)))
+                            BroadcastSignUpdate(drop, comp2);
+                    }
+                }
+            }
+        }
+        else if (player.IsOnline)
+        {
+            int maxx = Math.Min(player.Player.movement.region_x + BarricadeManager.BARRICADE_REGIONS, Regions.WORLD_SIZE);
+            int maxy = Math.Min(player.Player.movement.region_y + BarricadeManager.BARRICADE_REGIONS, Regions.WORLD_SIZE);
+            for (int x = Math.Max(0, player.Player.movement.region_x - BarricadeManager.BARRICADE_REGIONS); x <= maxx; ++x)
+            {
+                for (int y = Math.Max(0, player.Player.movement.region_y - BarricadeManager.BARRICADE_REGIONS); y <= maxy; ++y)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    for (int i = 0; i < region.drops.Count; ++i)
+                    {
+                        BarricadeDrop drop = region.drops[i];
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn != null && key == comp2.Spawn.PrimaryKey)))
+                            SendSignUpdate(drop, player, comp2);
+                    }
+                }
+            }
+        }
+    }
+    public static void UpdateVehicleBaySigns(UCPlayer? player, VehicleData? data)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        int key = data is null ? PrimaryKey.NotAssigned : data.PrimaryKey;
+        ThreadUtil.assertIsGameThread();
+        bool a = key < 0;
+        if (player is null)
+        {
+            for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
+            {
+                for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    for (int i = 0; i < region.drops.Count; ++i)
+                    {
+                        BarricadeDrop drop = region.drops[i];
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn != null && key == comp2.Spawn.VehicleKey)))
+                            BroadcastSignUpdate(drop, comp2);
+                    }
+                }
+            }
+        }
+        else if (player.IsOnline)
+        {
+            int maxx = Math.Min(player.Player.movement.region_x + BarricadeManager.BARRICADE_REGIONS, Regions.WORLD_SIZE);
+            int maxy = Math.Min(player.Player.movement.region_y + BarricadeManager.BARRICADE_REGIONS, Regions.WORLD_SIZE);
+            for (int x = Math.Max(0, player.Player.movement.region_x - BarricadeManager.BARRICADE_REGIONS); x <= maxx; ++x)
+            {
+                for (int y = Math.Max(0, player.Player.movement.region_y - BarricadeManager.BARRICADE_REGIONS); y <= maxy; ++y)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    for (int i = 0; i < region.drops.Count; ++i)
+                    {
+                        BarricadeDrop drop = region.drops[i];
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn != null && key == comp2.Spawn.VehicleKey)))
+                            SendSignUpdate(drop, player, comp2);
+                    }
+                }
+            }
+        }
+    }
     /// <summary>Can lock <see cref="KitManager"/> write semaphore.</summary>
     public static string GetClientText(BarricadeDrop drop, UCPlayer player, out bool isLong)
     {
@@ -449,6 +589,11 @@ public static class Signs
         }
 
         return string.Empty;
+    }
+    public static string? GetVBCache(BarricadeDrop drop)
+    {
+        if (drop.model.TryGetComponent(out VehicleBaySignComponent comp))
+            return comp.CachedText;
     }
     public static string QuickFormat(string input, string? val)
     {
@@ -487,6 +632,7 @@ public static class Signs
         protected InteractableSign Sign;
         public bool DropIsPlanted { get; private set; }
         public abstract bool PerPlayer { get; }
+        public abstract bool CheckStillValid();
         public void Init(BarricadeDrop drop)
         {
             if (BarricadeManager.tryGetRegion(drop.model, out _, out _, out ushort plant, out _) && plant != ushort.MaxValue)
@@ -497,25 +643,22 @@ public static class Signs
         protected abstract void Init();
         public abstract string Translate(string language, UCPlayer player);
     }
+    // ReSharper disable once ClassNeverInstantiated.Local
     private sealed class TranlationSignComponent : CustomSignComponent
     {
         private Translation? _translation;
-        private string _signId;
         private string? _defCache;
         private bool _warn;
         public override bool PerPlayer => false;
-        public bool CanCache { get; set; } = true;
+        public override bool CheckStillValid() => Sign != null &&
+                                                  Sign.text.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase) && 
+                                                 !Sign.text.StartsWith(Prefix + KitPrefix, StringComparison.OrdinalIgnoreCase) &&
+                                                 !Sign.text.StartsWith(Prefix + TraitPrefix, StringComparison.OrdinalIgnoreCase) &&
+                                                 !Sign.text.StartsWith(Prefix + LoadoutPrefix, StringComparison.OrdinalIgnoreCase) &&
+                                                 !Sign.text.StartsWith(Prefix + VBSPrefix, StringComparison.OrdinalIgnoreCase);
         public bool IsLong { get; set; }
-        public string SignId
-        {
-            get => _signId;
-            set
-            {
-                _signId = value;
-                _defCache = null;
-                Init();
-            }
-        }
+        public string SignId { get; private set; }
+
         [UsedImplicitly]
         void OnDisable()
         {
@@ -525,11 +668,11 @@ public static class Signs
         {
             if (Sign.text.Length > Prefix.Length + TraitPrefix.Length)
             {
-                _signId = Sign.text.Substring(Prefix.Length);
+                SignId = Sign.text.Substring(Prefix.Length);
             }
             else
             {
-                _signId = Sign.text;
+                SignId = Sign.text;
                 if (!_warn)
                 {
                     L.LogWarning("Sign at " + gameObject.transform.position + " has an invalid trait id: \"" + Sign.text + "\".");
@@ -543,28 +686,32 @@ public static class Signs
         private void OnReload() => _defCache = null;
         public override string Translate(string language, UCPlayer player)
         {
-            if (CanCache && language.Equals(L.Default, StringComparison.Ordinal))
+            if (language.Equals(L.Default, StringComparison.Ordinal))
             {
                 return _defCache ??= _translation?.Translate(L.Default) ?? SignId ?? Sign.text.Substring(Prefix.Length);
             }
             return _translation?.Translate(language) ?? SignId ?? Sign.text.Substring(Prefix.Length);
         }
     }
+    // ReSharper disable once ClassNeverInstantiated.Local
     private sealed class VehicleBaySignComponent : CustomSignComponent
     {
-        private VehicleSpawn? _spawn;
+        private SqlItem<VehicleSpawn>? _spawn;
         private string? _defCache;
+        public string? CachedText => _defCache;
         public override bool PerPlayer => true;
-        public VehicleSpawn? Spawn
+        public SqlItem<VehicleSpawn>? Spawn
         {
             get
             {
-                if (_spawn != null || !VehicleSpawnerOld.Loaded)
+                if (_spawn is not null && _spawn.Manager != null)
                     return _spawn;
-                VehicleSpawnerOld.TryGetSpawnFromSign(Sign, out _spawn);
+                VehicleSpawner.GetSingletonQuick()?.TryGetSpawn(Sign, out _spawn);
                 return _spawn;
             }
         }
+        public override bool CheckStillValid() => Sign != null &&
+                                                  Sign.text.StartsWith(Prefix + VBSPrefix, StringComparison.OrdinalIgnoreCase);
         [UsedImplicitly]
         void OnDisable()
         {
@@ -575,7 +722,7 @@ public static class Signs
         public override string Translate(string language, UCPlayer player)
         {
             VehicleSpawn? spawn = Spawn;
-            VehicleData? data = spawn?.Data?.Item;
+            VehicleData? data = spawn?.Vehicle?.Item;
             if (spawn != null && data != null)
             {
                 if (language.Equals(L.Default, StringComparison.Ordinal))
@@ -589,13 +736,14 @@ public static class Signs
             return Sign.text;
         }
     }
+    // ReSharper disable once ClassNeverInstantiated.Local
     private sealed class TraitSignComponent : CustomSignComponent
     {
         private bool _warn;
         private TraitData? _trait;
         private string _traitName;
         private string? _defCache;
-        private bool cacheFmt;
+        private bool _cacheFmt;
         public override bool PerPlayer => true;
         public string TraitName
         {
@@ -617,6 +765,8 @@ public static class Signs
                 return _trait = TraitManager.FindTrait(TraitName);
             }
         }
+        public override bool CheckStillValid() => Sign != null &&
+                                                  Sign.text.StartsWith(Prefix + TraitPrefix, StringComparison.OrdinalIgnoreCase);
         [UsedImplicitly]
         void OnDisable()
         {
@@ -649,8 +799,8 @@ public static class Signs
                 ulong team = trait.Team is 1 or 2 ? trait.Team : player.GetTeam();
                 if (language.Equals(L.Default, StringComparison.Ordinal))
                 {
-                    _defCache ??= TraitSigns.TranslateTraitSign(trait, language, team, out cacheFmt);
-                    return cacheFmt ? TraitSigns.FormatTraitSign(trait, _defCache, player, team) : _defCache;
+                    _defCache ??= TraitSigns.TranslateTraitSign(trait, language, team, out _cacheFmt);
+                    return _cacheFmt ? TraitSigns.FormatTraitSign(trait, _defCache, player, team) : _defCache;
                 }
 
                 string txt = TraitSigns.TranslateTraitSign(trait, language, team, out bool fmt);
@@ -659,6 +809,7 @@ public static class Signs
             return Sign.text;
         }
     }
+    // ReSharper disable once ClassNeverInstantiated.Local
     private sealed class KitSignComponent : CustomSignComponent
     {
         private bool _warn;
@@ -692,6 +843,9 @@ public static class Signs
                 return _kit = m.FindKitNoLock(KitName, true);
             }
         }
+        public override bool CheckStillValid() => Sign != null &&
+                                                  (Sign.text.StartsWith(Prefix + KitPrefix, StringComparison.OrdinalIgnoreCase) ||
+                                                   Sign.text.StartsWith(Prefix + LoadoutPrefix, StringComparison.OrdinalIgnoreCase));
         protected override void Init()
         {
             if (IsLoadout)
@@ -729,7 +883,7 @@ public static class Signs
         {
             if (IsLoadout)
             {
-                return LoadoutIndex > -1 ? Localization.TranslateLoadoutSign((byte)LoadoutIndex, language, player!) : Sign.text;
+                return LoadoutIndex > -1 ? Localization.TranslateLoadoutSign((byte)LoadoutIndex, language, player) : Sign.text;
             }
             Kit? kit = Kit?.Item;
             if (kit != null)

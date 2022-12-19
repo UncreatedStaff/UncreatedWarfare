@@ -54,7 +54,7 @@ public class OfficerCommand : AsyncCommand
                     PlayerNames name = await F.GetPlayerOriginalNamesAsync(steam64, token).ThenToUpdate(token);
                     ctx.Reply(T.OfficerChangedRankFeedback, name, Ranks.RankManager.GetRank(level), Teams.TeamManager.GetFactionSafe(team)!);
                 }
-                ctx.LogAction(EActionLogType.SET_OFFICER_RANK, steam64.ToString(Data.AdminLocale) + " to " + level + " on team " + Teams.TeamManager.TranslateName(team, 0));
+                ctx.LogAction(ActionLogType.SET_OFFICER_RANK, steam64.ToString(Data.AdminLocale) + " to " + level + " on team " + Teams.TeamManager.TranslateName(team, 0));
             }
             else throw ctx.SendCorrectUsage("/officer set <player> <rank> [team = current team]");
         }
@@ -69,7 +69,7 @@ public class OfficerCommand : AsyncCommand
             {
                 OfficerStorage.DischargeOfficer(steam64);
                 ctx.Reply(T.OfficerDischargedFeedback, onlinePlayer as IPlayer ?? (await F.GetPlayerOriginalNamesAsync(steam64, token).ThenToUpdate(token)));
-                ctx.LogAction(EActionLogType.DISCHARGE_OFFICER, steam64.ToString(Data.AdminLocale));
+                ctx.LogAction(ActionLogType.DISCHARGE_OFFICER, steam64.ToString(Data.AdminLocale));
             }
             else throw ctx.SendPlayerNotFound();
         }

@@ -178,7 +178,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
 
             UpdateList();
 
-            ActionLogger.Add(EActionLogType.CHANGE_GROUP_WITH_UI, "GROUP: " + TeamManager.TranslateName(team, 0).ToUpper(), player.Steam64);
+            ActionLogger.Add(ActionLogType.CHANGE_GROUP_WITH_UI, "GROUP: " + TeamManager.TranslateName(team, 0).ToUpper(), player.Steam64);
 
             player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
 

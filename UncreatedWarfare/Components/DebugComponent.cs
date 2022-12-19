@@ -10,12 +10,12 @@ using UnityEngine;
 namespace Uncreated.Warfare.Components;
 internal class DebugComponent : MonoBehaviour
 {
+    public uint Updates;
     private float _startRt;
     private float _lastDt;
     private float _lastFixed;
     private float _frmRt;
     private float _avgFrameRate;
-    private uint _updates;
     private float _maxUpdateSpeed;
     private float _maxFixedUpdateSpeed;
     private int _ttlBytesPlayers;
@@ -52,9 +52,9 @@ internal class DebugComponent : MonoBehaviour
     public void Reset()
     {
         _lagging.RemoveAll(x => !x.IsOnline);
-        if (_updates > 0)
+        if (Updates > 0)
             Dump();
-        _updates = 0;
+        Updates = 0;
         _startRt = Time.realtimeSinceStartup;
         _lastFixed = _startRt;
         _frmRt = 1f / Application.targetFrameRate;
@@ -68,7 +68,7 @@ internal class DebugComponent : MonoBehaviour
     [UsedImplicitly]
     private void Update()
     {
-        _avgFrameRate = (_avgFrameRate * _updates + Time.deltaTime) / ++_updates;
+        _avgFrameRate = (_avgFrameRate * Updates + Time.deltaTime) / ++Updates;
         _lastDt = Time.deltaTime;
 #if DEBUG
         if (_lastDt > _maxUpdateSpeed && Level.isLoaded)
@@ -183,7 +183,7 @@ internal class DebugComponent : MonoBehaviour
         float ttlSeconds = t - _startRt;
         L.Log("Debug output for the last " + ttlSeconds.ToString("F3", Data.AdminLocale) + " seconds.");
         using IDisposable indent = L.IndentLog(2);
-        L.Log("Updates: " + _updates.ToString(Data.AdminLocale));
+        L.Log("Updates: " + Updates.ToString(Data.AdminLocale));
         L.Log("Average framerate: " + (1f / _avgFrameRate).ToString(Data.AdminLocale) + " FPS (target: " + Application.targetFrameRate + " FPS)");
         if (_ttlBytesPlayers > 0)
             L.Log($"Network usage verified players:     {_ttlBytesPlayers.ToString(Data.AdminLocale)} bytes ({(_ttlBytesPlayers / ttlSeconds).ToString("F2", Data.AdminLocale)} B/s)");

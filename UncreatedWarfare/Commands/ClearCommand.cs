@@ -30,7 +30,7 @@ public class ClearCommand : Command
                 if (pl is not null)
                 {
                     Kits.UCInventoryManager.ClearInventory(pl);
-                    ctx.LogAction(EActionLogType.CLEAR_INVENTORY, "CLEARED INVENTORY OF " + pl.Steam64.ToString(Data.AdminLocale));
+                    ctx.LogAction(ActionLogType.CLEAR_INVENTORY, "CLEARED INVENTORY OF " + pl.Steam64.ToString(Data.AdminLocale));
                     ctx.Reply(T.ClearInventoryOther, pl);
                 }
                 else throw ctx.Reply(T.PlayerNotFound);
@@ -40,27 +40,27 @@ public class ClearCommand : Command
             else
             {
                 Kits.UCInventoryManager.ClearInventory(ctx.Caller);
-                ctx.LogAction(EActionLogType.CLEAR_INVENTORY, "CLEARED PERSONAL INVENTORY");
+                ctx.LogAction(ActionLogType.CLEAR_INVENTORY, "CLEARED PERSONAL INVENTORY");
                 ctx.Reply(T.ClearInventorySelf);
             }
         }
         else if (ctx.MatchParameter(0, "items", "item", "i"))
         {
             ClearItems();
-            ctx.LogAction(EActionLogType.CLEAR_ITEMS);
+            ctx.LogAction(ActionLogType.CLEAR_ITEMS);
             ctx.Reply(T.ClearItems);
         }
         else if (ctx.MatchParameter(0, "vehicles", "vehicle", "v"))
         {
             WipeVehiclesAndRespawn();
-            ctx.LogAction(EActionLogType.CLEAR_VEHICLES);
+            ctx.LogAction(ActionLogType.CLEAR_VEHICLES);
             ctx.Reply(T.ClearVehicles);
         }
         else if (ctx.MatchParameter(0, "structures", "structure", "struct") ||
                  ctx.MatchParameter(0, "barricades", "barricade", "b") || ctx.MatchParameter(0, "s"))
         {
             Data.Gamemode.ReplaceBarricadesAndStructures();
-            ctx.LogAction(EActionLogType.CLEAR_STRUCTURES);
+            ctx.LogAction(ActionLogType.CLEAR_STRUCTURES);
             ctx.Reply(T.ClearStructures);
         }
         else throw ctx.SendCorrectUsage(Syntax);

@@ -37,9 +37,9 @@ public sealed partial class Conquest :
     IGameStats,
     ITraits
 {
-    private VehicleSpawnerOld _vehicleSpawner;
+    private VehicleSpawner _vehicleSpawner;
     private VehicleBay _vehicleBay;
-    private VehicleSigns _vehicleSigns;
+    private VehicleSignsOld _vehicleSignsOld;
     private FOBManager _fobManager;
     private KitManager _kitManager;
     private ReviveManager _reviveManager;
@@ -58,9 +58,9 @@ public sealed partial class Conquest :
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
     public override bool AllowPassengersToCapture => true;
-    public VehicleSpawnerOld VehicleSpawner => _vehicleSpawner;
+    public VehicleSpawner VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
-    public VehicleSigns VehicleSigns => _vehicleSigns;
+    public VehicleSignsOld VehicleSignsOld => _vehicleSignsOld;
     public FOBManager FOBManager => _fobManager;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
@@ -80,7 +80,7 @@ public sealed partial class Conquest :
         token.CombineIfNeeded(UnloadToken);
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
-        AddSingletonRequirement(ref _vehicleSigns);
+        AddSingletonRequirement(ref _vehicleSignsOld);
         AddSingletonRequirement(ref _fobManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _reviveManager);
@@ -201,7 +201,7 @@ public sealed partial class Conquest :
 #endif
         if (newOwner == 1)
         {
-            ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
+            ActionLogger.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
             for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
             {
                 if (flag.PlayersOnFlagTeam1[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
@@ -210,7 +210,7 @@ public sealed partial class Conquest :
         }
         else if (newOwner == 2)
         {
-            ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
+            ActionLogger.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
             for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
             {
                 if (flag.PlayersOnFlagTeam2[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
@@ -218,7 +218,7 @@ public sealed partial class Conquest :
             }
         }
 
-        VehicleSigns.OnFlagCaptured();
+        VehicleSignsOld.OnFlagCaptured();
         UpdateFlag(flag);
         ConquestUI.UpdateFlag(flag);
 
@@ -251,7 +251,7 @@ public sealed partial class Conquest :
             _gameStats.flagOwnerChanges++;
         Chat.Broadcast(T.TeamCaptured, TeamManager.GetFactionSafe(capturedTeam)!, flag);
         StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
-        VehicleSigns.OnFlagCaptured();
+        VehicleSignsOld.OnFlagCaptured();
         QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
             .Select(x => x.Steam64).ToArray());
         TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);

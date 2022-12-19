@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using SDG.NetTransport;
 using Uncreated.Framework;
 using Uncreated.Homebase.Unturned.Warfare;
 using Uncreated.Networking;
@@ -141,6 +142,7 @@ public static class Data
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
     internal static StaticGetter<uint> GetItemManagerInstanceCount;
+    internal static Action<Vector3, Vector3, string, Transform?, IEnumerable<ITransportConnection>>? ServerSpawnLegacyImpact;
     [OperationTest(DisplayName = "Fast Kits Check")]
     [Conditional("DEBUG")]
     [UsedImplicitly]
@@ -154,6 +156,13 @@ public static class Data
     private static void TestColoredConsole()
     {
         Assert.IsNotNull(OutputToConsoleMethod);
+    }
+    [OperationTest(DisplayName = "ServerSpawnLegacyImpact Check")]
+    [Conditional("DEBUG")]
+    [UsedImplicitly]
+    private static void TestServerSpawnLegacyImpact()
+    {
+        Assert.IsNotNull(ServerSpawnLegacyImpact);
     }
     [OperationTest(DisplayName = "RPC Check")]
     [Conditional("DEBUG")]
@@ -310,6 +319,17 @@ public static class Data
         catch (Exception ex)
         {
             L.LogWarning("Couldn't get replicateState from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
+        }
+        try
+        {
+            ServerSpawnLegacyImpact = 
+                (Action<Vector3, Vector3, string, Transform?, IEnumerable<ITransportConnection>>?)typeof(DamageTool)
+                    .GetMethod("ServerSpawnLegacyImpact", BindingFlags.Static | BindingFlags.NonPublic)?
+                    .CreateDelegate(typeof(Action<Vector3, Vector3, string, Transform?, IEnumerable<ITransportConnection>>));
+        }
+        catch (Exception ex)
+        {
+            L.LogWarning("Couldn't get ServerSpawnLegacyImpact from DamageTool, explosives will not play the flesh sound. (" + ex.Message + ").");
         }
         indent.Dispose();
 

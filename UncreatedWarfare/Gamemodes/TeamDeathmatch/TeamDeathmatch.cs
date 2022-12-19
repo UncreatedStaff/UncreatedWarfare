@@ -23,9 +23,8 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
 {
     protected TraitManager _traitManager;
     protected ActionManager _actionManager;
-    protected VehicleSpawnerOld _vehicleSpawner;
+    protected VehicleSpawner _vehicleSpawner;
     protected VehicleBay _vehicleBay;
-    protected VehicleSigns _vehicleSigns;
     protected FOBManager _FOBManager;
     protected KitManager _kitManager;
     protected ReviveManager _reviveManager;
@@ -43,9 +42,8 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public override bool EnableAMC => true;
     public override bool ShowXPUI => true;
     public override bool ShowOFPUI => true;
-    public VehicleSpawnerOld VehicleSpawner => _vehicleSpawner;
+    public VehicleSpawner VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
-    public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _FOBManager;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
@@ -55,8 +53,8 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public ActionManager ActionManager => _actionManager;
     public int Team1Score => _t1score;
     public int Team2Score => _t2score;
-    protected int _t1score = 0;
-    protected int _t2score = 0;
+    protected int _t1score;
+    protected int _t2score;
     protected override Task PreInit(CancellationToken token)
     {
         token.CombineIfNeeded(UnloadToken);
@@ -64,7 +62,6 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
-        AddSingletonRequirement(ref _vehicleSigns);
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _reviveManager);
         AddSingletonRequirement(ref _FOBManager);

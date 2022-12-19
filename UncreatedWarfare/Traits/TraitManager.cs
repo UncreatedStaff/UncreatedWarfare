@@ -561,7 +561,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                 }
             }
 
-            ctx.LogAction(EActionLogType.REQUEST_TRAIT, $"Trait {trait.TypeName}, Team {team}, Cost: {trait.CreditCost}");
+            ctx.LogAction(ActionLogType.REQUEST_TRAIT, $"Trait {trait.TypeName}, Team {team}, Cost: {trait.CreditCost}");
             if (CooldownManager.Config.GlobalTraitCooldown != null && CooldownManager.Config.GlobalTraitCooldown.HasValue && CooldownManager.Config.GlobalTraitCooldown.Value >= 0)
                 CooldownManager.StartCooldown(ctx.Caller, CooldownType.GlobalRequestTrait, CooldownManager.Config.GlobalTraitCooldown.Value);
             if (trait.Cooldown is not null && trait.Cooldown.HasValue && trait.Cooldown.Value >= 0f)

@@ -38,6 +38,7 @@ public static class EventDispatcher
     public static event EventDelegate<PlaceBarricadeRequested> BarricadePlaceRequested;
     public static event EventDelegate<BarricadePlaced> BarricadePlaced;
     public static event EventDelegate<LandmineExploding> LandmineExploding;
+    public static event EventDelegate<SignTextChanged> SignTextChanged;
 
     public static event EventDelegate<StructureDestroyed> StructureDestroyed;
     public static event EventDelegate<SalvageStructureRequested> SalvageStructureRequested;
@@ -731,7 +732,7 @@ public static class EventDispatcher
             if (PlayerPendingAsync == null) goto exit;
         }
         
-        await UCWarfare.ToUpdate();
+        await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
         if (args.CanContinue)
         {
@@ -747,6 +748,25 @@ public static class EventDispatcher
                 args.RejectReason ?? "An unknown error occured.");
 
         exit: EventPatches.Accepted.Remove(args.Steam64);
+    }
+    internal static void InvokeOnSignTextChanged(InteractableSign sign)
+    {
+        if (SignTextChanged == null) return;
+        BarricadeDrop? drop = UCBarricadeManager.GetSignFromInteractable(sign);
+        if (drop == null)
+            return;
+        UCPlayer? player = null;
+        if (drop.model.TryGetComponent(out BarricadeComponent comp) && comp.EditTick >= UCWarfare.I.Debugger.Updates)
+            player = UCPlayer.FromID(comp.LastEditor);
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
+        BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out BarricadeRegion region);
+        SignTextChanged args = new SignTextChanged(player, drop, region, x, y, plant, save);
+        foreach (EventDelegate<SignTextChanged> inv in SignTextChanged.GetInvocationList().Cast<EventDelegate<SignTextChanged>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(SignTextChanged));
+        }
     }
 }
 public delegate void EventDelegate<in TState>(TState e) where TState : EventState;
