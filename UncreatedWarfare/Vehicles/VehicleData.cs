@@ -94,9 +94,9 @@ public class VehicleData : ITranslationArgument, IListItem
             if (va.engine == EEngine.PLANE || va.engine == EEngine.HELICOPTER || va.engine == EEngine.BLIMP)
                 Branch = Branch.Airforce;
             else if (va.engine == EEngine.BOAT)
-                Branch = (Branch)5; // navy
+                Branch = Branch.Navy;
             else
-                Branch = Branch.Default;
+                Branch = Branch.Infantry;
         }
         else Branch = Branch.Default;
         RequiredClass = Class.None;

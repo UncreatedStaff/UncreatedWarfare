@@ -17,6 +17,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -465,7 +466,7 @@ public static class Localization
     }
 
     private static readonly Guid F15 = new Guid("423d31c55cf84396914be9175ea70d0c");
-    public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, string language, ulong team)
+    public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, string language, FactionInfo? team)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -484,21 +485,22 @@ public static class Localization
             unlock += $"<color=#b8ffc1>C</color> {data.CreditCost.ToString(Data.LocalLocale)}";
         }
 
+        ulong teamNum = TeamManager.GetTeamNumber(team);
         string finalformat =
             $"{(data.VehicleID == F15 ? "F15-E" : (Assets.find(data.VehicleID) is VehicleAsset asset ? asset.vehicleName : data.VehicleID.ToString("N")))}\n" +
             $"<#{UCWarfare.GetColorHex("vbs_branch")}>{TranslateEnum(data.Branch, language)}</color>\n" +
-            (data.TicketCost > 0 ? T.VBSTickets.Translate(language, data.TicketCost, null, team) : " ") + "\n" +
+            (data.TicketCost > 0 ? T.VBSTickets.Translate(language, data.TicketCost, null, teamNum) : " ") + "\n" +
             unlock +
-            "{{0}}";
+            "{0}";
 
-        finalformat = finalformat.Colorize("ffffff");
-        if (team is not 1 and not 2)
+        finalformat = finalformat.Colorize("ffffff") + "\n";
+        if (comp.State is <= VehicleBayState.Unknown or VehicleBayState.NotInitialized)
             return finalformat;
-        finalformat += "\n";
+
         if (comp.State == VehicleBayState.Dead) // vehicle is dead
         {
             float rem = data.RespawnTime - comp.DeadTime;
-            return finalformat + T.VBSStateDead.Translate(language, Mathf.FloorToInt(rem / 60f), Mathf.FloorToInt(rem) % 60, null, team);
+            return finalformat + T.VBSStateDead.Translate(language, Mathf.FloorToInt(rem / 60f), Mathf.FloorToInt(rem) % 60, null, teamNum);
         }
         if (comp.State == VehicleBayState.InUse)
         {
@@ -507,11 +509,11 @@ public static class Localization
         if (comp.State == VehicleBayState.Idle)
         {
             float rem = data.RespawnTime - comp.IdleTime;
-            return finalformat + T.VBSStateIdle.Translate(language, Mathf.FloorToInt(rem / 60f), Mathf.FloorToInt(rem) % 60, null, team);
+            return finalformat + T.VBSStateIdle.Translate(language, Mathf.FloorToInt(rem / 60f), Mathf.FloorToInt(rem) % 60, null, teamNum);
         }
         if (data.IsDelayed(out Delay delay))
         {
-            string? del = GetDelaySignText(in delay, language, team);
+            string? del = GetDelaySignText(in delay, language, teamNum);
             if (del != null)
                 return finalformat + del;
         }

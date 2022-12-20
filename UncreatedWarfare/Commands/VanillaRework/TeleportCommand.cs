@@ -11,7 +11,7 @@ using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 namespace Uncreated.Warfare.Commands.VanillaRework;
 public class TeleportCommand : Command
 {
-    private const string Syntax = "/tp <x y z|player|location> - or - /tp <player> <x y z|player|location>";
+    private const string Syntax = "/tp <x y z|player|location|wp> - or - /tp <player> <x y z|player|location|wp>";
     private const string Help = "Teleport you or another player to a location.";
 
     public TeleportCommand() : base("teleport", EAdminType.TRIAL_ADMIN_ON_DUTY, 1)

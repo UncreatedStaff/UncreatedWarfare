@@ -221,7 +221,7 @@ public class FOB : IFOB, IDeployable
         Build = 0;
 
         _gc = new GridLocation(Position);
-        _cl = F.GetClosestLocation(Position);
+        _cl = F.GetClosestLocationName(Position);
 
         if (Data.Is(out IFlagRotation fg))
         {

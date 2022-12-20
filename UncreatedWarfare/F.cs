@@ -21,6 +21,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
@@ -728,34 +729,32 @@ public static class F
         player.player.sendBrowserRequest(message, url);
     }
     public static bool CanStandAtLocation(Vector3 source) => PlayerStance.hasStandingHeightClearanceAtPosition(source);
-    public static string GetClosestLocation(Vector3 point)
+    public static string GetClosestLocationName(Vector3 point)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        int index = GetClosestLocationIndex(point);
-        return index == -1 ? string.Empty : ((LocationNode)LevelNodes.nodes[index]).name;
+        LocationDevkitNode? node = GetClosestLocation(point);
+        return node == null ? new GridLocation(in point).ToString() : node.locationName;
     }
-    public static int GetClosestLocationIndex(Vector3 point)
+    public static LocationDevkitNode? GetClosestLocation(Vector3 point)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        IReadOnlyList<LocationDevkitNode> list = LocationDevkitNodeSystem.Get().GetAllNodes();
         int index = -1;
         float smallest = -1f;
-        for (int i = 0; i < LevelNodes.nodes.Count; i++)
+        for (int i = 0; i < list.Count; ++i)
         {
-            if (LevelNodes.nodes[i] is LocationNode node)
+            float amt = (point - list[i].transform.position).sqrMagnitude;
+            if (smallest < 0f || amt < smallest)
             {
-                float amt = (point - node.point).sqrMagnitude;
-                if (smallest < 0f || amt < smallest)
-                {
-                    index = i;
-                    smallest = amt;
-                }
+                index = i;
+                smallest = amt;
             }
         }
-        return index;
+
+        if (index == -1)
+            return null;
+        return list[index];
     }
     public static void NetInvoke(this NetCall call)
     {

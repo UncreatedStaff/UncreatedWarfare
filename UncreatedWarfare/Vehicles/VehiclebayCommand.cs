@@ -444,20 +444,11 @@ public class VehicleBayCommand : AsyncCommand
             ctx.AssertPermissions(EAdminType.MODERATOR);
 
             ctx.AssertHelpCheck(1, "/vehiclebay <register|reg> <vehicle id> - Sets the vehicle spawner you're looking at to spawn the given vehicle id (guid or uint16).");
-
-            VehicleAsset? asset;
-            if (ctx.TryGet(1, out ushort id))
-            {
-                asset = Assets.find(EAssetType.VEHICLE, id) as VehicleAsset;
-            }
-            else if (ctx.TryGet(1, out Guid guid))
-            {
-                asset = Assets.find(guid) as VehicleAsset;
-            }
-            else
+            
+            if (!ctx.TryGet(1, out VehicleAsset asset, out _, true))
             {
                 if (ctx.HasArg(1))
-                    ctx.Reply(T.VehicleBayInvalidInput, ctx.Get(0)!);
+                    ctx.Reply(T.VehicleBayInvalidInput, ctx.Get(1)!);
                 else
                     ctx.SendCorrectUsage("/vehiclebay register <vehicle id or guid>");
                 return;

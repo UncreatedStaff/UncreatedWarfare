@@ -1087,7 +1087,7 @@ internal static class T
     public static readonly Translation<IPlayer> RequestVehicleAlreadyRequested = new Translation<IPlayer>("<#a8918a>This vehicle was already requested by {0}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation<VehicleData> RequestVehicleAlreadyOwned = new Translation<VehicleData>("<#a8918a>You already have a nearby {0}.", VehicleData.COLORED_NAME);
     public static readonly Translation<VehicleData> RequestVehicleSuccess = new Translation<VehicleData>("<#b3a591>This {0} is now yours to take into battle.", VehicleData.COLORED_NAME);
-    public static readonly Translation<VehicleData> RequestVehicleDead = new Translation<VehicleData>("<#b3a591>The {0} was destroyed out and will be restocked soon.", VehicleData.COLORED_NAME);
+    public static readonly Translation<VehicleData> RequestVehicleDead = new Translation<VehicleData>("<#b3a591>The {0} was destroyed and will be restocked soon.", VehicleData.COLORED_NAME);
 
     #region Vehicle Request Delays
     public static readonly Translation<string> RequestVehicleTimeDelay = new Translation<string>("<#b3ab9f>This vehicle is delayed for another: <#c$vbs_delay$>{0}</color>.");

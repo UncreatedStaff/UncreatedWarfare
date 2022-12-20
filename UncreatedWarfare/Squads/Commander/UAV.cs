@@ -19,7 +19,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Squads.Commander;
 public class UAV : MonoBehaviour, IBuff
 {
-    public const float GroundHeightOffset = 75f;
+    public const float GroundHeightOffset = 150f;
     private bool _inited;
     private UCPlayer _requester;
     private UCPlayer _approver;

@@ -28,15 +28,16 @@ using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(VehicleBay))]
 [SingletonDependency(typeof(StructureSaver))]
-public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListener, IGameStartListener, IStagingPhaseOverListener, ITimeSyncListener, IFlagCapturedListener, IFlagNeutralizedListener
+public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListenerAsync, IGameStartListener, IStagingPhaseOverListener, ITimeSyncListener, IFlagCapturedListener, IFlagNeutralizedListener, ICacheDiscoveredListener, ICacheDestroyedListener
 {
-    private static readonly List<VehicleSpawn> TempSpawns = new List<VehicleSpawn>(64);
+    private static readonly List<InteractableVehicle> NearbyTempOutput = new List<InteractableVehicle>(4);
     public const ushort MaxBatteryCharge = 10000;
     public const float VehicleHeightOffset = 5f;
     
@@ -143,29 +144,17 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             }
         }
     }
-    void IFlagNeutralizedListener.OnFlagNeutralized(Flag flag, ulong newOwner, ulong oldOwner) => (this as IFlagCapturedListener).OnFlagCaptured(flag, newOwner, oldOwner);
-    void IFlagCapturedListener.OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner)
+    void ICacheDiscoveredListener.OnCacheDiscovered(Components.Cache cache) => UpdateFlagSigns();
+    void ICacheDestroyedListener.OnCacheDestroyed(Components.Cache cache) => UpdateFlagSigns();
+    void IFlagNeutralizedListener.OnFlagNeutralized(Flag flag, ulong newOwner, ulong oldOwner) => UpdateFlagSigns();
+    void IFlagCapturedListener.OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner) => UpdateFlagSigns();
+    private void UpdateFlagSigns()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ThreadUtil.assertIsGameThread();
-        WriteWait();
-        try
-        {
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                if (Items[i].Item is { Vehicle.Item: { } item } spawn && (item.HasDelayType(DelayType.Flag) || item.HasDelayType(DelayType.FlagPercentage)))
-                    TempSpawns.Add(spawn);
-            }
-        }
-        finally
-        {
-            WriteRelease();
-        }
-        for (int i = 0; i < TempSpawns.Count; ++i)
-            Signs.UpdateVehicleBaySigns(null, TempSpawns[i]);
-        TempSpawns.Clear();
+        Signs.UpdateVehicleBaySigns(null);
     }
     private void SpawnCountermeasuresPressed(UCPlayer player, float timeDown, ref bool handled)
     {
@@ -217,8 +206,9 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
 
         return false;
     }
-    void ILevelStartListener.OnLevelReady()
+    async Task ILevelStartListenerAsync.OnLevelReady(CancellationToken token)
     {
+        ThreadUtil.assertIsGameThread();
         WriteWait();
         try
         {
@@ -255,6 +245,8 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         {
             WriteRelease();
         }
+
+        await RespawnAllVehicles(token).ConfigureAwait(false);
     }
     void IGameStartListener.OnGameStarting(bool isOnLoad)
     {
@@ -263,25 +255,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
     void IStagingPhaseOverListener.OnStagingPhaseOver()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        WriteWait();
-        try
-        {
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                if (Items[i].Item is { Vehicle.Item: { } item } spawn && item.HasDelayType(DelayType.OutOfStaging))
-                    TempSpawns.Add(spawn);
-            }
-        }
-        finally
-        {
-            WriteRelease();
-        }
-        for (int i = 0; i < TempSpawns.Count; ++i)
-            Signs.UpdateVehicleBaySigns(null, TempSpawns[i]);
-        TempSpawns.Clear();
+        Signs.UpdateVehicleBaySigns(null);
     }
     /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
     private void OnBarricadeDestroyed(BarricadeDestroyed e)
@@ -291,7 +265,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
 #endif
         if (Gamemode.Config.StructureVehicleBay.MatchGuid(e.Barricade.asset.GUID) && TryGetSpawn(e.Barricade, out SqlItem<VehicleSpawn> spawn))
         {
-            Guid guid = spawn.Item is { Vehicle: { Item: { } vehicle } } ? vehicle.VehicleID : Guid.Empty;
+            Guid guid = spawn.Item is { Vehicle.Item: { } vehicle } ? vehicle.VehicleID : Guid.Empty;
             UCWarfare.RunTask(RemoveSpawn, spawn, Data.Gamemode.UnloadToken, "Spawn destroyed, removing from database.");
             L.LogDebug("Vehicle spawn {" + guid.ToString("N") + "} #" + spawn.LastPrimaryKey.ToString(Data.AdminLocale) + " deregistered because the barricade was salvaged or destroyed.");
             if (Assets.find(guid) is VehicleAsset asset)
@@ -347,12 +321,20 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     {
         if (spawn is null)
             throw new ArgumentNullException(nameof(spawn));
-        VehicleData? data = spawn.Item?.Vehicle?.Item;
+        VehicleSpawn? spawnItem = spawn.Item;
+        VehicleData? data = spawnItem?.Vehicle?.Item;
         await spawn.Delete(token).ConfigureAwait(false);
+        if (data is null && spawnItem is null) return;
+        await UCWarfare.ToUpdate(token);
         if (data != null)
         {
-            await UCWarfare.ToUpdate(token);
-            Signs.UpdateVehicleBaySigns(null);
+            Signs.UpdateVehicleBaySigns(null, spawnItem);
+        }
+        if (spawnItem != null)
+        {
+            Transform? t = spawnItem.Structure?.Item?.Buildable?.Model;
+            if (t != null && t.TryGetComponent(out VehicleBayComponent comp))
+                UnityEngine.Object.Destroy(comp);
         }
     }
     /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
@@ -489,8 +471,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         await UCWarfare.ToUpdate(token);
-        for (int i = VehicleManager.vehicles.Count - 1; i >= 0; i--)
-            DeleteVehicle(VehicleManager.vehicles[i]);
+        DeleteAllVehiclesFromWorld();
 
         WriteWait();
         List<VehicleSpawn> spawns = new List<VehicleSpawn>(Items.Count);
@@ -537,7 +518,11 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                 if (sign is not null && !sign.PrimaryKey.IsValid)
                     throw new ArgumentException("Saved sign does not have a valid primary key.", nameof(sign));
                 VehicleSpawn spawn = new VehicleSpawn(vehicle.PrimaryKey, structure.PrimaryKey, sign is null ? PrimaryKey.NotAssigned : sign.PrimaryKey);
-                return await AddOrUpdate(spawn, token).ConfigureAwait(false);
+                SqlItem<VehicleSpawn> proxy = await AddOrUpdate(spawn, token).ConfigureAwait(false);
+                Transform? model = structure.Item?.Buildable?.Model;
+                if (model != null && !model.TryGetComponent<VehicleBayComponent>(out _))
+                    model.gameObject.AddComponent<VehicleBayComponent>().Init(proxy, vehicle);
+                return proxy;
             }
             finally
             {
@@ -893,7 +878,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         }
     }
     /// <remarks>Thread Safe</remarks>
-    public static async Task<InteractableVehicle?> SpawnLockedVehicle(Guid vehicleId, Vector3 position, Quaternion rotation, ulong owner = 0ul, ulong groupOwner = 0ul, bool @lock = true, CancellationToken token = default)
+    public static async Task<InteractableVehicle?> SpawnLockedVehicle(Guid vehicleId, Vector3 position, Quaternion rotation, ulong owner = 0ul, ulong groupOwner = 0ul, bool @lock = true, bool checkExisting = false, CancellationToken token = default)
     {
         await UCWarfare.ToLevelLoad();
 #if DEBUG
@@ -905,8 +890,28 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             await dataProxy.Enter(token).ConfigureAwait(false);
         try
         {
-            if (!UCWarfare.IsMainThread)
-                await UCWarfare.ToUpdate();
+            await UCWarfare.ToUpdate(token);
+            if (checkExisting)
+            {
+                VehicleManager.getVehiclesInRadius(position, 2.5f, NearbyTempOutput);
+                if (NearbyTempOutput.Count > 0)
+                {
+                    try
+                    {
+                        for (int i = 0; i < NearbyTempOutput.Count; ++i)
+                        {
+                            InteractableVehicle veh = NearbyTempOutput[i];
+                            if (veh.asset.GUID != vehicleId) continue;
+                            L.LogDebug("Found nearby " + veh.asset.FriendlyName + " when spawning one at " + position.ToString("0.#") + ", removing.veh");
+                            DeleteVehicle(NearbyTempOutput[i]);
+                        }
+                    }
+                    finally
+                    {
+                        NearbyTempOutput.Clear();
+                    }
+                }
+            }
             if (Assets.find(vehicleId) is not VehicleAsset asset)
             {
                 L.LogError("Unable to find vehicle asset of " + vehicleId.ToString("N") + ".");
@@ -1424,7 +1429,7 @@ public class VehicleSpawn : IListItem
             }
             Quaternion rotation = Quaternion.Euler(euler);
             Vector3 offset = structure.Buildable.Model.position + new Vector3(0f, VehicleSpawner.VehicleHeightOffset, 0f);
-            InteractableVehicle? veh = await VehicleSpawner.SpawnLockedVehicle(data.VehicleID, offset, rotation, token: token).ConfigureAwait(false);
+            InteractableVehicle? veh = await VehicleSpawner.SpawnLockedVehicle(data.VehicleID, offset, rotation, checkExisting: true, token: token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
             if (veh == null)
                 return null;
@@ -1464,15 +1469,22 @@ public class VehicleSpawn : IListItem
         LinkedVehicle = vehicle;
         Transform? model = Structure?.Item?.Buildable?.Model;
         if (model != null && model.TryGetComponent(out VehicleBayComponent comp))
+        {
             comp.OnSpawn(vehicle);
+        }
+        ReportInfo("Linked new vehicle: " + vehicle.asset.vehicleName + ", " + vehicle.instanceID + ".");
     }
     public void Unlink()
     {
         ThreadUtil.assertIsGameThread();
+        ReportInfo("Unlinked vehicle: " + (LinkedVehicle == null ? "<no prev linked>" : (LinkedVehicle.asset.vehicleName + ", " + LinkedVehicle.instanceID)) + ".");
         LinkedVehicle = null;
         Transform? model = Structure?.Item?.Buildable?.Model;
         if (model != null && model.TryGetComponent(out VehicleBayComponent comp))
+        {
+            comp.OnSpawn(null);
             comp.UpdateTimeDelay();
+        }
     }
     public void UpdateSign(SteamPlayer player)
     {
@@ -1531,9 +1543,10 @@ public class VehicleSpawn : IListItem
         VehicleData? data = spawn.Vehicle?.Item;
         if (data == null)
             return;
+        FactionInfo? faction = TeamManager.GetFactionSafe(team) ?? TeamManager.GetFactionInfo(data.Faction);
         foreach (LanguageSet set in LanguageSet.All(players))
         {
-            string val = Signs.GetVBCache(drop) ?? Localization.TranslateVBS(spawn, data, set.Language, team == 0 ? data.Team : team);
+            string val = Localization.TranslateVBS(spawn, data, set.Language, faction);
             NetId id = drop.interactable.GetNetId();
             while (set.MoveNext())
             {
@@ -1553,7 +1566,7 @@ public class VehicleSpawn : IListItem
             return;
         string lang = Localization.GetLang(player.playerID.steamID.m_SteamID);
         ulong team = player.GetTeam();
-        string val = Signs.GetVBCache(drop) ?? Localization.TranslateVBS(spawn, data, lang, team == 0 ? data.Team : team);
+        string val = Localization.TranslateVBS(spawn, data, lang, TeamManager.GetFactionSafe(team) ?? TeamManager.GetFactionInfo(data.Faction));
         UCPlayer? pl = UCPlayer.FromSteamPlayer(player);
         string val2 = Signs.QuickFormat(val, pl == null ? string.Empty : data.GetCostLine(pl));
         Data.SendChangeText.Invoke(drop.interactable.GetNetId(), ENetReliability.Unreliable, player.transportConnection, val2);
@@ -1561,7 +1574,6 @@ public class VehicleSpawn : IListItem
     public override string ToString() => $"#{PrimaryKey}, Bay key: {StructureKey}, Vehicle key: {VehicleKey}, " +
                                          $"Sign key: {SignKey}, Linked vehicle: " +
                                          (LinkedVehicle == null ? "<none>" : (LinkedVehicle.asset.FriendlyName + " #" + LinkedVehicle.instanceID)) + ".";
-
 }
 public enum VehicleBayState : byte
 {
@@ -1590,7 +1602,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
         _vehicleData = data;
         _state = VehicleBayState.Unknown;
     }
-    private int _lastLocIndex = -1;
+    private LocationDevkitNode? _lastLoc;
     private float _idleStartTime = -1f;
     public string CurrentLocation = string.Empty;
     public float IdleTime;
@@ -1600,15 +1612,27 @@ public sealed class VehicleBayComponent : MonoBehaviour
     private float _lastSignUpdate;
     private float _lastLocCheck;
     private float _lastDelayCheck;
-    public void OnSpawn(InteractableVehicle vehicle)
+    public void OnSpawn(InteractableVehicle? vehicle)
     {
+        this._vehicle = vehicle == null || vehicle.isDead || vehicle.isExploded ? null : vehicle;
+        if (_vehicle is null)
+        {
+            _state = VehicleBayState.Dead;
+            _deadStartTime = _idleStartTime;
+            DeadTime = IdleTime;
+            _lastSignUpdate = 0f;
+            return;
+        }
         RequestTime = 0f;
-        this._vehicle = vehicle;
         IdleTime = 0f;
+        _deadStartTime = -1f;
+        _idleStartTime = -1f;
         DeadTime = 0f;
+        _lastSignUpdate = 0f;
         if (_vehicleData.Item != null && _vehicleData.Item.IsDelayed(out Delay delay))
             this._state = delay.Type == DelayType.Time ? VehicleBayState.TimeDelayed : VehicleBayState.Delayed;
         else this._state = VehicleBayState.Ready;
+        _lastDelayCheck = Time.realtimeSinceStartup;
     }
     public void OnRequest()
     {
@@ -1616,6 +1640,28 @@ public sealed class VehicleBayComponent : MonoBehaviour
         _state = VehicleBayState.InUse;
     }
     private bool _checkTime;
+    private bool CheckVehicleDead(float time, ref bool vcheck)
+    {
+        if (vcheck) return false;
+        vcheck = true;
+
+        if (_vehicle == null || _vehicle.isDead || _vehicle.isExploded)
+        {
+            if (_state == VehicleBayState.Idle)
+            {
+                _deadStartTime = _idleStartTime;
+                DeadTime = IdleTime;
+            }
+            else
+            {
+                _deadStartTime = time;
+                DeadTime = 0;
+            }
+            _state = VehicleBayState.Dead;
+            return true;
+        }
+        return false;
+    }
     public void UpdateTimeDelay()
     {
         _checkTime = true;
@@ -1628,122 +1674,128 @@ public sealed class VehicleBayComponent : MonoBehaviour
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         float time = Time.realtimeSinceStartup;
-        if (_checkTime || (time - _lastDelayCheck > 1f && (_state == VehicleBayState.Unknown || _state == VehicleBayState.Delayed || _state == VehicleBayState.TimeDelayed)))
+        bool vcheck = false;
+        if (_checkTime || (time - _lastDelayCheck > 1f && _state is VehicleBayState.Unknown or VehicleBayState.Delayed or VehicleBayState.TimeDelayed))
         {
             _lastDelayCheck = time;
             _checkTime = false;
+            if (CheckVehicleDead(time, ref vcheck))
+                goto timers;
             if (_vehicleData.Item != null && _vehicleData.Item.IsDelayed(out Delay delay))
             {
                 if (delay.Type == DelayType.Time)
                 {
                     _state = VehicleBayState.TimeDelayed;
-                    _lastSignUpdate = time;
-                    UpdateSign();
-                    return;
+                    goto timers;
                 }
-                else if (_state != VehicleBayState.Delayed)
+                if (_state != VehicleBayState.Delayed)
                 {
                     _state = VehicleBayState.Delayed;
-                    _lastSignUpdate = time;
-                    UpdateSign();
+                    UpdateSign(time);
+                    return;
                 }
             }
-            else if (_vehicle != null && _spawnData.Item != null && _spawnData.Item.HasLinkedVehicle(out InteractableVehicle veh) && !veh.lockedOwner.IsValid())
-            {
-                _state = VehicleBayState.Ready;
-                _lastSignUpdate = time;
-                UpdateSign();
-            }
-            else
-            {
-                _state = VehicleBayState.InUse;
-                _lastSignUpdate = time;
-                UpdateSign();
-            }
-        }
-        if ((_state == VehicleBayState.Idle || _state == VehicleBayState.InUse) && time - _lastIdleCheck >= 4f)
-        {
-            _lastIdleCheck = time;
-            if (_vehicle != null && (_vehicle.anySeatsOccupied || PlayerManager.IsPlayerNearby(_vehicle.lockedOwner.m_SteamID, 150f, _vehicle.transform.position)))
+            else if (OffenseManager.IsValidSteam64ID(_vehicle!.lockedOwner))
             {
                 if (_state != VehicleBayState.InUse)
                 {
+                    _lastLocCheck = 0f;
+                    _lastLoc = null;
                     _state = VehicleBayState.InUse;
-                    _lastSignUpdate = time;
-                    UpdateSign();
                 }
+                goto locationUpdate;
             }
-            else if (_state != VehicleBayState.Idle)
+            else
+            {
+                _state = VehicleBayState.Ready;
+                UpdateSign(time);
+                return;
+            }
+        }
+
+        if (_state is VehicleBayState.Idle or VehicleBayState.InUse && time - _lastIdleCheck >= 4f)
+        {
+            _lastIdleCheck = time;
+            if (CheckVehicleDead(time, ref vcheck))
+                goto timers;
+            if (_vehicle!.anySeatsOccupied || PlayerManager.IsPlayerNearby(_vehicle.lockedOwner.m_SteamID, 150f, _vehicle.transform.position))
+            {
+                if (_state != VehicleBayState.InUse)
+                {
+                    _lastLocCheck = 0f;
+                    _lastLoc = null;
+                    _state = VehicleBayState.InUse;
+                }
+                goto locationUpdate;
+            }
+            if (_state != VehicleBayState.Idle)
             {
                 _idleStartTime = time;
                 IdleTime = 0f;
                 _state = VehicleBayState.Idle;
-                _lastSignUpdate = time;
-                UpdateSign();
             }
+
+            goto timers;
         }
-        if (_state != VehicleBayState.Dead && _state >= VehicleBayState.Ready && _state <= VehicleBayState.InUse)
+
+        locationUpdate:
+        if (_state == VehicleBayState.InUse && (_lastLoc is null || time - _lastLocCheck > 4f))
         {
-            if (_vehicle is null || _vehicle.isDead || _vehicle.isExploded)
-            {
-                // carry over idle time to dead timer
-                if (_state == VehicleBayState.Idle)
-                {
-                    _deadStartTime = _idleStartTime;
-                    DeadTime = _deadStartTime < 0 ? 0 : time - _deadStartTime;
-                }
-                else
-                {
-                    _deadStartTime = time;
-                    DeadTime = 0f;
-                }
-                _state = VehicleBayState.Dead;
-                _vehicle = null;
-                _lastSignUpdate = time;
-                UpdateSign();
-            }
-        }
-        if (_state == VehicleBayState.InUse && time - _lastLocCheck > 4f && _vehicle != null && !_vehicle.isDead)
-        {
+            if (CheckVehicleDead(time, ref vcheck))
+                goto timers;
             _lastLocCheck = time;
-            if (LastLocation != _vehicle.transform.position)
+            if (!LastLocation.AlmostEquals(_vehicle!.transform.position) || _lastLoc is null)
             {
                 LastLocation = _vehicle.transform.position;
-                int ind = F.GetClosestLocationIndex(LastLocation);
-                if (ind != _lastLocIndex)
+                LocationDevkitNode? ind = F.GetClosestLocation(LastLocation);
+                if (ind is not null && ind != _lastLoc)
                 {
-                    _lastLocIndex = ind;
-                    CurrentLocation = ((LocationNode)LevelNodes.nodes[ind]).name;
-                    _lastSignUpdate = time;
-                    UpdateSign();
+                    _lastLoc = ind;
+                    CurrentLocation = ind.locationName;
+                    UpdateSign(time);
                 }
             }
+            return;
         }
+        timers:
+        bool respawn = false;
         if (_state == VehicleBayState.Idle)
-            IdleTime = _idleStartTime < 0 ? 0 : time - _idleStartTime;
+        {
+            IdleTime = _idleStartTime < 0f ? 0f : time - _idleStartTime;
+            respawn = _vehicleData.Item != null && IdleTime >= _vehicleData.Item.RespawnTime;
+        }
         else if (_state == VehicleBayState.Dead)
-            DeadTime = _deadStartTime < 0 ? 0 : time - _deadStartTime;
-        if (_vehicleData.Item != null && ((_state == VehicleBayState.Idle && IdleTime > _vehicleData.Item.RespawnTime) || (_state == VehicleBayState.Dead && DeadTime > _vehicleData.Item.RespawnTime)))
+        {
+            DeadTime = _deadStartTime < 0f ? 0f : time - _deadStartTime;
+            respawn = _vehicleData.Item != null && DeadTime >= _vehicleData.Item.RespawnTime;
+        }
+        if (respawn)
         {
             if (_vehicle != null)
                 VehicleSpawner.DeleteVehicle(_vehicle);
             _vehicle = null;
             if (_spawnData.Item != null)
-                UCWarfare.RunTask(VehicleSpawner.SpawnVehicle, Spawn, ctx: "Respawning vehicle after idle timer is up.");
+            {
+                UCWarfare.RunTask(VehicleSpawner.SpawnVehicle, Spawn, ctx: "Respawning vehicle " + _spawnData.LastPrimaryKey + " after idle or dead timer is up.");
+                return;
+            }
         }
         if (_state is VehicleBayState.Idle or VehicleBayState.Dead or VehicleBayState.TimeDelayed && time - _lastSignUpdate >= 1f)
         {
-            _lastSignUpdate = time;
-            UpdateSign();
+            UpdateSign(time);
         }
     }
     [UsedImplicitly]
     void OnDestroy()
     {
         _state = VehicleBayState.Unknown;
-        UpdateSign();
+        UpdateSign(Time.realtimeSinceStartup);
     }
-    private void UpdateSign() => _spawnData.Item?.UpdateSign();
+    private void UpdateSign(float time)
+    {
+        _lastSignUpdate = time;
+        _spawnData.Item?.UpdateSign();
+    }
 
     internal void TimeSync()
     {

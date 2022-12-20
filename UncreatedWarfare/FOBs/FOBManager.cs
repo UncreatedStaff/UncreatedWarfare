@@ -937,7 +937,7 @@ public class SpecialFOB : IFOB, IDeployable
     public SpecialFOB(string name, Vector3 point, ulong team, string color, bool disappearAroundEnemies)
     {
         _name = name;
-        _cl = F.GetClosestLocation(point);
+        _cl = F.GetClosestLocationName(point);
 
         if (Data.Is(out IFlagRotation fg))
         {

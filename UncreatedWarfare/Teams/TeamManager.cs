@@ -526,6 +526,9 @@ public static class TeamManager
     public static FactionInfo? GetFactionInfo(PrimaryKey id)
     {
         int pk = id.Key;
+        if (pk < 0) return null;
+        if (_factions.Count > pk && _factions[pk].PrimaryKey.Key == pk)
+            return _factions[pk];
         for (int i = 0; i < _factions.Count; ++i)
         {
             if (_factions[i].PrimaryKey.Key == pk)

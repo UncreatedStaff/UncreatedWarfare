@@ -215,7 +215,7 @@ namespace Uncreated.Warfare.Squads
             AwaitingPlayers = new List<UCPlayer>(6);
             IsActive = true;
             Timer = SquadManager.Config.RallyTimer;
-            NearestLocation = F.GetClosestLocation(drop.model.position);
+            NearestLocation = F.GetClosestLocationName(drop.model.position);
         }
 
         public void UpdateUIForAwaitingPlayers()

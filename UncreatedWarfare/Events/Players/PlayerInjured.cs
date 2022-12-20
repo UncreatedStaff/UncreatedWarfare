@@ -9,7 +9,6 @@ public class PlayerInjured : PlayerEvent
     public unsafe ref DamagePlayerParameters Parameters => ref Unsafe.AsRef<DamagePlayerParameters>(_parameters);
     public unsafe PlayerInjured(UCPlayer player, in DamagePlayerParameters parameters) : base(player)
     {
-        Interlocked.SpeculationBarrier();
         _parameters = Unsafe.AsPointer(ref Unsafe.AsRef(in parameters));
     }
 }
@@ -19,7 +18,6 @@ public class PlayerInjuring : BreakablePlayerEvent
     public unsafe ref DamagePlayerParameters Parameters => ref Unsafe.AsRef<DamagePlayerParameters>(_parameters);
     public unsafe PlayerInjuring(UCPlayer player, in DamagePlayerParameters parameters) : base(player)
     {
-        Interlocked.SpeculationBarrier();
         _parameters = Unsafe.AsPointer(ref Unsafe.AsRef(in parameters));
     }
 }

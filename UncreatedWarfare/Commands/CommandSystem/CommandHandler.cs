@@ -167,7 +167,7 @@ public static class CommandHandler
                 if (!foundPrefix && requirePrefix)
                 {
                     if (c == ' ') continue;
-                    for (int j = 0; j < ContinueArgChars.Length; ++j)
+                    for (int j = 0; j < Prefixes.Length; ++j)
                     {
                         if (c == Prefixes[j])
                         {
@@ -1636,7 +1636,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     {
         return IsConsole ? Warfare.Data.AdminLocale : Localization.GetLocale(Localization.GetLang(CallerID));
     }
-    public struct ContextData
+    public readonly struct ContextData
     {
         public readonly UCPlayer Caller;
         public readonly bool IsConsole;
