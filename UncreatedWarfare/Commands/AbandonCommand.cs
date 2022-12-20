@@ -12,8 +12,8 @@ using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 namespace Uncreated.Warfare.Commands;
 public class AbandonCommand : AsyncCommand
 {
-    private const string SYNTAX = "/abandon | /av";
-    private const string HELP = "If you no longer want to use your vehicle, you can return it to the vehicle pool.";
+    private const string Syntax = "/abandon | /av";
+    private const string Help = "If you no longer want to use your vehicle, you can return it to the vehicle pool.";
 
     public AbandonCommand() : base("abandon", EAdminType.MEMBER)
     {
@@ -24,12 +24,11 @@ public class AbandonCommand : AsyncCommand
     {
         ctx.AssertRanByPlayer();
 
-        ctx.AssertGamemode<IVehicles>();
+        ctx.AssertGamemode(out IVehicles vgm);
 
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
-        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
-        if (bay == null || !bay.IsLoaded || !VehicleSpawnerOld.Loaded)
-            throw ctx.SendGamemodeError();
+        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
+        VehicleBay bay = vgm.VehicleBay;
+        VehicleSpawner spawner = vgm.VehicleSpawner;
 
         if (!TeamManager.IsInMain(ctx.Caller))
             throw ctx.Reply(T.AbandonNotInMain);
@@ -39,10 +38,9 @@ public class AbandonCommand : AsyncCommand
             if (vehicleData?.Item == null)
                 throw ctx.Reply(T.AbandonNoTarget);
             await vehicleData.Enter(token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             try
             {
-                await UCWarfare.ToUpdate();
-                
                 if (vehicleData.Item.DisallowAbandons)
                     throw ctx.Reply(T.AbandonNotAllowed);
 
@@ -55,12 +53,13 @@ public class AbandonCommand : AsyncCommand
                 if ((float)vehicle.fuel / vehicle.asset.fuel < 0.9f)
                     throw ctx.Reply(T.AbandonNeedsFuel, vehicle);
 
-                if (!VehicleSpawnerOld.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
+                if (!spawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))
                     throw ctx.Reply(T.AbandonNoSpace, vehicle);
 
-                bay.AbandonVehicle(vehicle, vehicleData.Item, spawn, true);
-
-                ctx.Reply(T.AbandonSuccess, vehicle);
+                if (spawner.AbandonVehicle(vehicle, vehicleData, spawn, true))
+                    ctx.Reply(T.AbandonSuccess, vehicle);
+                else
+                    throw ctx.SendUnknownError();
             }
             finally
             {

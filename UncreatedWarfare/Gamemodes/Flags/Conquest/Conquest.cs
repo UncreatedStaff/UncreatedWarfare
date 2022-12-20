@@ -39,7 +39,6 @@ public sealed partial class Conquest :
 {
     private VehicleSpawner _vehicleSpawner;
     private VehicleBay _vehicleBay;
-    private VehicleSignsOld _vehicleSignsOld;
     private FOBManager _fobManager;
     private KitManager _kitManager;
     private ReviveManager _reviveManager;
@@ -60,7 +59,6 @@ public sealed partial class Conquest :
     public override bool AllowPassengersToCapture => true;
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
-    public VehicleSignsOld VehicleSignsOld => _vehicleSignsOld;
     public FOBManager FOBManager => _fobManager;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
@@ -80,7 +78,6 @@ public sealed partial class Conquest :
         token.CombineIfNeeded(UnloadToken);
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
-        AddSingletonRequirement(ref _vehicleSignsOld);
         AddSingletonRequirement(ref _fobManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _reviveManager);
@@ -217,8 +214,7 @@ public sealed partial class Conquest :
                     fg.AddCapture();
             }
         }
-
-        VehicleSignsOld.OnFlagCaptured();
+        
         UpdateFlag(flag);
         ConquestUI.UpdateFlag(flag);
 
@@ -238,8 +234,11 @@ public sealed partial class Conquest :
             QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.Steam64).ToArray(), neutralizingTeam);
         else if (neutralizingTeam == 2)
             QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.Steam64).ToArray(), neutralizingTeam);
-        if (TicketManager.Provider is IFlagNeutralizedListener fnl)
-            fnl.OnFlagNeutralized(flag, neutralizingTeam, lostTeam);
+        for (int i = 0; i < Singletons.Count; ++i)
+        {
+            if (Singletons[i] is IFlagNeutralizedListener f)
+                f.OnFlagNeutralized(flag, neutralizingTeam, lostTeam);
+        }
     }
     private void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
@@ -251,10 +250,13 @@ public sealed partial class Conquest :
             _gameStats.flagOwnerChanges++;
         Chat.Broadcast(T.TeamCaptured, TeamManager.GetFactionSafe(capturedTeam)!, flag);
         StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
-        VehicleSignsOld.OnFlagCaptured();
+        for (int i = 0; i < Singletons.Count; ++i)
+        {
+            if (Singletons[i] is IFlagCapturedListener f)
+                f.OnFlagCaptured(flag, capturedTeam, lostTeam);
+        }
         QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
             .Select(x => x.Steam64).ToArray());
-        TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
     }
     private void UpdateFlag(Flag flag)
     {

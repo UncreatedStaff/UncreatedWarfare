@@ -1,8 +1,8 @@
-﻿using System;
-using SDG.Unturned;
-using System.Threading.Tasks;
+﻿using SDG.Unturned;
+using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Vehicles;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -67,20 +67,14 @@ public class ClearCommand : Command
     }
     public static void WipeVehicles()
     {
-        if (VehicleSpawnerOld.Loaded)
-        {
-            VehicleBay.DeleteAllVehiclesFromWorld();
-        }
-        else
-        {
-            VehicleManager.askVehicleDestroyAll();
-        }
+        VehicleSpawner.DeleteAllVehiclesFromWorld();
     }
     public static void WipeVehiclesAndRespawn()
     {
         WipeVehicles();
-        if (VehicleSpawnerOld.Loaded)
-            Task.Run(() => Util.TryWrap(VehicleSpawnerOld.RespawnAllVehicles()));
+        
+        if (Data.Is(out IVehicles vgm))
+            UCWarfare.RunTask(vgm.VehicleSpawner.RespawnAllVehicles, ctx: "Wipe and respawn all vehicles.");
     }
     public static void ClearItems()
     {

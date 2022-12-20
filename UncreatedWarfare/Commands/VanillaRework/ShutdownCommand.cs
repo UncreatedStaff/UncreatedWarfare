@@ -107,7 +107,7 @@ public class ShutdownCommand : Command
     {
         ActionLogger.Add(ActionLogType.SHUTDOWN_SERVER, "AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.AdminLocale)) + ": " + reason);
         Chat.Broadcast(isDaily ? T.ShutdownBroadcastDaily : T.ShutdownBroadcastAfterGame, reason);
-        L.Log($"A shutdown has been scheduled after thi game because: {reason}.", ConsoleColor.Cyan);
+        L.Log($"A shutdown has been scheduled after this game because: {reason}.", ConsoleColor.Cyan);
         Data.Gamemode?.ShutdownAfterGame(reason, 0);
         if (Messager != null)
             UCWarfare.I.StopCoroutine(Messager);

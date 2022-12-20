@@ -113,9 +113,9 @@ public sealed class KitCommand : AsyncCommand
                     throw ctx.Reply(T.ClassNotFoundCreateKit, ctx.Get(2)!);
 
                 kit = new Kit(kitName, @class, KitManager.GetDefaultBranch(@class), type, SquadLevel.Member, faction);
-                await manager.AddOrUpdate(kit, token).ThenToUpdate(token);
+                await manager.AddOrUpdate(kit, token).ConfigureAwait(false);
                 ctx.LogAction(ActionLogType.CREATE_KIT, kitName);
-                await UCWarfare.ToUpdate();
+                await UCWarfare.ToUpdate(token);
                 KitManager.UpdateSigns(kit);
                 ctx.Reply(T.KitCreated, kit);
             }
@@ -164,7 +164,8 @@ public sealed class KitCommand : AsyncCommand
                 if (proxy?.Item != null)
                 {
                     Class @class = proxy.Item.Class;
-                    await manager.GiveKit(ctx.Caller, proxy, token).ThenToUpdate(token);
+                    await manager.GiveKit(ctx.Caller, proxy, token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
                     ctx.LogAction(ActionLogType.GIVE_KIT, kitName);
                     ctx.Reply(T.RequestSignGiven, @class);
                 }
@@ -216,7 +217,8 @@ public sealed class KitCommand : AsyncCommand
                                     }
                                     else ((LevelUnlockRequirement)ulr[index]).UnlockLevel = level;
                                 }
-                                await proxy.SaveItem(token).ThenToUpdate(token);
+                                await proxy.SaveItem(token).ConfigureAwait(false);
+                                await UCWarfare.ToUpdate(token);
                                 ctx.Reply(T.KitPropertySet, property, proxy.Item, newValue);
                                 ctx.LogAction(ActionLogType.SET_KIT_PROPERTY, kitName + ": LEVEL >> " + newValue.ToUpper());
                                 KitManager.UpdateSigns(proxy.Item);
@@ -234,7 +236,8 @@ public sealed class KitCommand : AsyncCommand
                             {
                                 newValue = newValue.Replace("\\n", "\n");
                                 KitManager.SetTextNoLock(proxy.Item, newValue, language);
-                                await proxy.SaveItem(token).ThenToUpdate(token);
+                                await proxy.SaveItem(token).ConfigureAwait(false);
+                                await UCWarfare.ToUpdate(token);
                                 newValue = newValue.Replace('\n', '\\');
                                 ctx.Reply(T.KitPropertySet, "sign text", proxy.Item, language + " : " + newValue);
                                 ctx.LogAction(ActionLogType.SET_KIT_PROPERTY, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
@@ -250,7 +253,8 @@ public sealed class KitCommand : AsyncCommand
                             if (faction != null || isNull)
                             {
                                 proxy.Item.Faction = faction;
-                                await proxy.SaveItem(token).ThenToUpdate(token);
+                                await proxy.SaveItem(token).ConfigureAwait(false);
+                                await UCWarfare.ToUpdate(token);
                                 ctx.Reply(T.KitPropertySet, "faction", proxy.Item, faction?.GetName(L.Default)!);
                                 ctx.LogAction(ActionLogType.SET_KIT_PROPERTY, kitName + ": FACTION >> " +
                                                                                (faction?.Name.ToUpper() ?? Translation.Null(TranslationFlags.NoRichText)));
@@ -294,8 +298,8 @@ public sealed class KitCommand : AsyncCommand
                                 case SetPropertyResult.Success:
                                     if (kit.Class != oldclass && isDefLim)
                                         kit.TeamLimit = KitManager.GetDefaultTeamLimit(kit.Class);
-                                    await proxy.SaveItem(token).ThenToUpdate(token);
-                                    await UCWarfare.ToUpdate();
+                                    await proxy.SaveItem(token).ConfigureAwait(false);
+                                    await UCWarfare.ToUpdate(token);
                                     KitManager.UpdateSigns(kit);
                                     ctx.Reply(T.KitPropertySet, property, kit, newValue);
                                     ctx.LogAction(ActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());

@@ -1,15 +1,14 @@
-﻿using SDG.NetTransport;
+﻿using HarmonyLib;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using HarmonyLib;
 using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
@@ -118,7 +117,8 @@ public class DebugCommand : AsyncCommand
                         if (team is > 0 and < 3)
                         {
                             await Data.DatabaseManager.AddXP(player, team, amount, token).ConfigureAwait(false);
-                            PlayerNames name = await F.GetPlayerOriginalNamesAsync(player, token).ThenToUpdate(token);
+                            PlayerNames name = await F.GetPlayerOriginalNamesAsync(player, token).ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(token);
 
                             ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                         }
@@ -135,7 +135,8 @@ public class DebugCommand : AsyncCommand
                     await XPParameters
                         .WithTranslation(onlinePlayer, team, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, amount)
                         .Award(token)
-                        .ThenToUpdate(token);
+                        .ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
                     ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> " +
                                     $"to {(ctx.IsConsole ? onlinePlayer.Name.PlayerName : onlinePlayer.Name.CharacterName)}.");
                 }
@@ -168,8 +169,8 @@ public class DebugCommand : AsyncCommand
                         if (team is > 0 and < 3)
                         {
                             await Data.DatabaseManager.AddCredits(player, team, amount, token).ConfigureAwait(false);
-                            PlayerNames name = await Data.DatabaseManager.GetUsernamesAsync(player, token).ThenToUpdate(token);
-                            
+                            PlayerNames name = await Data.DatabaseManager.GetUsernamesAsync(player, token).ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(token);
                             ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                         }
                         else
@@ -182,8 +183,8 @@ public class DebugCommand : AsyncCommand
                 {
                     if (team is < 1 or > 2)
                         team = onlinePlayer.GetTeam();
-                    await Points.AwardCreditsAsync(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, token: token)
-                        .ThenToUpdate(token);
+                    await Points.AwardCreditsAsync(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, token: token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
                     ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> " +
                                     $"to {(ctx.IsConsole ? onlinePlayer.Name.PlayerName : onlinePlayer.Name.CharacterName)}.");
                 }
@@ -492,8 +493,8 @@ public class DebugCommand : AsyncCommand
                     switch (result)
                     {
                         case SetPropertyResult.Success:
-                            PlayerNames names = onlinePlayer is not null ? onlinePlayer.Name :
-                                await F.GetPlayerOriginalNamesAsync(player, token).ThenToUpdate(token);
+                            PlayerNames names = await F.GetPlayerOriginalNamesAsync(player, token).ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(token);
                             ctx.ReplyString($"Set {property} in {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}'s playersave to {value}.");
                             break;
                         case SetPropertyResult.PropertyNotFound:
@@ -1127,34 +1128,49 @@ public class DebugCommand : AsyncCommand
         {
             SquadManager.CreateSquad(ctx.Caller, team);
         }
-
-        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
-        if (bay != null && bay.IsLoaded && VehicleSpawnerOld.Loaded)
+        
+        if (Data.Is(out IVehicles vgm))
         {
-            Vehicles.VehicleSpawn? logi;
-            await bay.WaitAsync(token).ConfigureAwait(false);
+            SqlItem<Vehicles.VehicleSpawn>? logi;
+            await vgm.VehicleBay.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                await UCWarfare.ToUpdate();
-                Vector3 pos = ctx.Caller.Position;
-                logi = bay.Items
-                    .Where(x => x.Item != null && (x.Item.Team == team || x.Item.Team == 0) && x.Item.Type is VehicleType.LogisticsGround or VehicleType.TransportAir)
-                    .SelectMany(x => VehicleSpawnerOld.Spawners
-                        .Where(y => y.VehicleGuid == x.Item!.VehicleID && y.HasLinkedVehicle(out _) && y.LinkedSign?.SignInteractable != null))
-                    .OrderBy(x => (pos - x.LinkedSign!.SignInteractable!.transform.position).sqrMagnitude)
-                    .FirstOrDefault();
+                await vgm.VehicleSpawner.WaitAsync(token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
+                try
+                {
+                    vgm.VehicleSpawner.WriteWait();
+                    try
+                    {
+                        Vector3 pos = ctx.Caller.Position;
+                        logi = vgm.VehicleBay.Items
+                            .Where(x => x.Item != null && (x.Item.Team == team || x.Item.Team == 0) && x.Item.Type is VehicleType.LogisticsGround or VehicleType.TransportAir)
+                            .SelectMany(x => vgm.VehicleSpawner.Items
+                                .Where(y => y.Item?.Vehicle?.Item is { } v && v.VehicleID == x.Item!.VehicleID && y.Item.HasLinkedVehicle(out _) && y.Item?.Sign?.Item == null))
+                            .OrderBy(x => (pos - x.Item!.Sign!.Item!.Buildable!.Model.position).sqrMagnitude)
+                            .FirstOrDefault();
+                    }
+                    finally
+                    {
+                        vgm.VehicleSpawner.WriteRelease();
+                    }
+                }
+                finally
+                {
+                    vgm.VehicleSpawner.Release();
+                }
             }
             finally
             {
-                bay.Release();
+                vgm.VehicleBay.Release();
             }
-            if (logi == null)
+            if (logi?.Item is null)
             {
                 ctx.ReplyString("No logistics vehicle nearby to request.", Color.red);
             }
-            else if (logi.HasLinkedVehicle(out InteractableVehicle veh))
+            else if (logi.Item.HasLinkedVehicle(out InteractableVehicle veh))
             {
-                SqlItem<VehicleData>? data = await bay.GetDataProxy(logi.VehicleGuid, token).ConfigureAwait(false);
+                SqlItem<VehicleData>? data = logi.Item.Vehicle;
                 if (data?.Item == null)
                 {
                     await UCWarfare.ToUpdate();
@@ -1165,7 +1181,7 @@ public class DebugCommand : AsyncCommand
                     await data.Enter(token).ConfigureAwait(false);
                     try
                     {
-                        await UCWarfare.ToUpdate();
+                        await UCWarfare.ToUpdate(token);
                         RequestCommand.GiveVehicle(ctx.Caller, veh, data.Item);
                     }
                     finally

@@ -11,7 +11,6 @@ using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -25,10 +24,15 @@ namespace Uncreated.Warfare;
 
 public static class Localization
 {
-    public const string UNITY_RICH_TEXT_COLOR_BASE_START = "<color=#";
-    public const string RICH_TEXT_COLOR_END = ">";
-    public const string TMPRO_RICH_TEXT_COLOR_BASE = "<#";
-    public const string RICH_TEXT_COLOR_CLOSE = "</color>";
+    private const string EnumNamePlaceholder = "%NAME%";
+
+    private static readonly string EnumTranslationFileName = "Enums" + Path.DirectorySeparatorChar;
+    private static readonly Dictionary<Type, Dictionary<string, Dictionary<string, string>>> EnumTranslations = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>(16);
+
+    public const string UnityRichTextColorBaseStart = "<color=#";
+    public const string RichTextColorEnd = ">";
+    public const string TMProRichTextColorBase = "<#";
+    public const string RichTextColorClosingTag = "</color>";
     private static LanguageAliasSet? _defaultSet;
     public static LanguageAliasSet DefaultSet => _defaultSet ??= FindLanguageSet(L.Default, true, true) ?? throw new Exception("Unknown default language alias set (" + L.Default + ").");
 
@@ -36,8 +40,8 @@ public static class Localization
     public static string Colorize(string hex, string inner, TranslationFlags flags)
     {
         return (flags & TranslationFlags.SkipColorize) == TranslationFlags.SkipColorize ? inner : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
-            ? (UNITY_RICH_TEXT_COLOR_BASE_START + hex + RICH_TEXT_COLOR_END + inner + RICH_TEXT_COLOR_CLOSE)
-            : (TMPRO_RICH_TEXT_COLOR_BASE + hex + RICH_TEXT_COLOR_END + inner + RICH_TEXT_COLOR_CLOSE));
+            ? (UnityRichTextColorBaseStart + hex + RichTextColorEnd + inner + RichTextColorClosingTag)
+            : (TMProRichTextColorBase + hex + RichTextColorEnd + inner + RichTextColorClosingTag));
     }
     public static string Translate(Translation translation, UCPlayer? player) =>
         Translate(translation, player is null ? 0 : player.Steam64);
@@ -466,16 +470,8 @@ public static class Localization
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        VehicleBayComponent comp;
-        if (spawn.StructureType == Structures.StructType.Structure)
-            if (spawn.StructureDrop != null)
-                comp = spawn.StructureDrop.model.gameObject.GetComponent<VehicleBayComponent>();
-            else
-                return spawn.VehicleGuid.ToString("N");
-        else if (spawn.BarricadeDrop != null)
-            comp = spawn.BarricadeDrop.model.gameObject.GetComponent<VehicleBayComponent>();
-        else return spawn.VehicleGuid.ToString("N");
-        if (comp == null) return spawn.VehicleGuid.ToString("N");
+        VehicleBayComponent? comp = spawn.Structure?.Item?.Buildable?.Model?.GetComponent<VehicleBayComponent>();
+        if (comp == null) return data.VehicleID.ToString("N");
 
         string unlock = string.Empty;
         if (data.UnlockLevel > 0)
@@ -489,11 +485,11 @@ public static class Localization
         }
 
         string finalformat =
-            $"{(spawn.VehicleGuid == F15 ? "F15-E" : (Assets.find(spawn.VehicleGuid) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleGuid.ToString("N")))}\n" +
+            $"{(data.VehicleID == F15 ? "F15-E" : (Assets.find(data.VehicleID) is VehicleAsset asset ? asset.vehicleName : data.VehicleID.ToString("N")))}\n" +
             $"<#{UCWarfare.GetColorHex("vbs_branch")}>{TranslateEnum(data.Branch, language)}</color>\n" +
             (data.TicketCost > 0 ? T.VBSTickets.Translate(language, data.TicketCost, null, team) : " ") + "\n" +
             unlock +
-            $"{{0}}";
+            "{{0}}";
 
         finalformat = finalformat.Colorize("ffffff");
         if (team is not 1 and not 2)
@@ -504,29 +500,26 @@ public static class Localization
             float rem = data.RespawnTime - comp.DeadTime;
             return finalformat + T.VBSStateDead.Translate(language, Mathf.FloorToInt(rem / 60f), Mathf.FloorToInt(rem) % 60, null, team);
         }
-        else if (comp.State == VehicleBayState.InUse)
+        if (comp.State == VehicleBayState.InUse)
         {
             return finalformat + T.VBSStateActive.Translate(language, comp.CurrentLocation);
         }
-        else if (comp.State == VehicleBayState.Idle)
+        if (comp.State == VehicleBayState.Idle)
         {
             float rem = data.RespawnTime - comp.IdleTime;
             return finalformat + T.VBSStateIdle.Translate(language, Mathf.FloorToInt(rem / 60f), Mathf.FloorToInt(rem) % 60, null, team);
         }
-        else
+        if (data.IsDelayed(out Delay delay))
         {
-            if (data.IsDelayed(out Delay delay))
-            {
-                string? del = GetDelaySignText(in delay, language, team);
-                if (del != null)
-                    return finalformat + del;
-            }
-            return finalformat + T.VBSStateReady.Translate(language);
+            string? del = GetDelaySignText(in delay, language, team);
+            if (del != null)
+                return finalformat + del;
         }
+        return finalformat + T.VBSStateReady.Translate(language);
     }
     public static string TranslateEnum<TEnum>(TEnum value, string language)
     {
-        if (enumTranslations.TryGetValue(typeof(TEnum), out Dictionary<string, Dictionary<string, string>> t))
+        if (EnumTranslations.TryGetValue(typeof(TEnum), out Dictionary<string, Dictionary<string, string>> t))
         {
             if (!t.TryGetValue(language, out Dictionary<string, string>? v) &&
                 (L.Default.Equals(language, StringComparison.Ordinal) ||
@@ -545,17 +538,16 @@ public static class Localization
             return TranslateEnum(value, language);
         return TranslateEnum(value, L.Default);
     }
-    private const string ENUM_NAME_PLACEHOLDER = "%NAME%";
     public static string TranslateEnumName(Type type, string language)
     {
-        if (enumTranslations.TryGetValue(type, out Dictionary<string, Dictionary<string, string>> t))
+        if (EnumTranslations.TryGetValue(type, out Dictionary<string, Dictionary<string, string>> t))
         {
             if (!t.TryGetValue(language, out Dictionary<string, string>? v) &&
                 (L.Default.Equals(language, StringComparison.Ordinal) ||
                  !t.TryGetValue(L.Default, out v)))
                 v = t.Values.FirstOrDefault();
-            if (v == null || !v.TryGetValue(ENUM_NAME_PLACEHOLDER, out string v2))
-                return ENUM_NAME_PLACEHOLDER.ToProperCase();
+            if (v == null || !v.TryGetValue(EnumNamePlaceholder, out string v2))
+                return EnumNamePlaceholder.ToProperCase();
             return v2;
         }
         string name = type.Name;
@@ -576,11 +568,9 @@ public static class Localization
             return TranslateEnumName(type, language);
         return TranslateEnumName(type, L.Default);
     }
-    private static readonly Dictionary<Type, Dictionary<string, Dictionary<string, string>>> enumTranslations = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>();
-    private static readonly string ENUM_TRANSLATION_FILE_NAME = "Enums" + Path.DirectorySeparatorChar;
     public static void ReadEnumTranslations(List<KeyValuePair<Type, string?>> extEnumTypes)
     {
-        enumTranslations.Clear();
+        EnumTranslations.Clear();
         string def = Path.Combine(Data.Paths.LangStorage, L.Default) + Path.DirectorySeparatorChar;
         if (!Directory.Exists(def))
             Directory.CreateDirectory(def);
@@ -592,7 +582,7 @@ public static class Localization
         {
             if (langDirs[i].Name.Equals(L.Default, StringComparison.Ordinal))
             {
-                string p = Path.Combine(langDirs[i].FullName, ENUM_TRANSLATION_FILE_NAME);
+                string p = Path.Combine(langDirs[i].FullName, EnumTranslationFileName);
                 if (!Directory.Exists(p))
                     Directory.CreateDirectory(p);
             }
@@ -606,10 +596,10 @@ public static class Localization
                          .Where(x => x.Key.IsEnum)
                          .Select(x => new KeyValuePair<Type, TranslatableAttribute>(x.Key, new TranslatableAttribute(x.Value)))))
         {
-            if (enumTranslations.ContainsKey(enumType.Key)) continue;
+            if (EnumTranslations.ContainsKey(enumType.Key)) continue;
             Dictionary<string, Dictionary<string, string>> k = new Dictionary<string, Dictionary<string, string>>();
-            enumTranslations.Add(enumType.Key, k);
-            string fn = Path.Combine(def, ENUM_TRANSLATION_FILE_NAME, enumType.Key.FullName + ".json");
+            EnumTranslations.Add(enumType.Key, k);
+            string fn = Path.Combine(def, EnumTranslationFileName, enumType.Key.FullName + ".json");
             FieldInfo[] fields = enumType.Key.GetFields(BindingFlags.Public | BindingFlags.Static);
             if (!File.Exists(fn))
             {
@@ -625,7 +615,7 @@ public static class Localization
             {
                 DirectoryInfo dir = langDirs[i];
                 if (k.ContainsKey(dir.Name)) continue;
-                fn = Path.Combine(dir.FullName, ENUM_TRANSLATION_FILE_NAME, enumType.Key.FullName + ".json");
+                fn = Path.Combine(dir.FullName, EnumTranslationFileName, enumType.Key.FullName + ".json");
                 if (!File.Exists(fn)) continue;
                 Dictionary<string, string> k2 = new Dictionary<string, string>(fields.Length + 1);
                 using (FileStream stream = new FileStream(fn, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -665,7 +655,7 @@ public static class Localization
         for (int i = 0; i < defaultLangs.Count; ++i)
         {
             KeyValuePair<Type, List<string>> v = defaultLangs[i];
-            if (enumTranslations.TryGetValue(v.Key, out Dictionary<string, Dictionary<string, string>> dict))
+            if (EnumTranslations.TryGetValue(v.Key, out Dictionary<string, Dictionary<string, string>> dict))
             {
                 for (int j = 0; j < v.Value.Count; ++j)
                 {
@@ -673,7 +663,7 @@ public static class Localization
                     if (lang.Equals(L.Default, StringComparison.Ordinal))
                         continue;
 
-                    string p = Path.Combine(Data.Paths.LangStorage, lang, ENUM_TRANSLATION_FILE_NAME) + Path.DirectorySeparatorChar;
+                    string p = Path.Combine(Data.Paths.LangStorage, lang, EnumTranslationFileName) + Path.DirectorySeparatorChar;
                     if (!Directory.Exists(p))
                         Directory.CreateDirectory(p);
                     p = Path.Combine(p, v.Key.FullName + ".json");
@@ -722,81 +712,78 @@ public static class Localization
     private static void WriteEnums(string language, FieldInfo[] fields, Type type, TranslatableAttribute? attr1, string fn, Dictionary<string, string> k2, List<KeyValuePair<Type, List<string>>>? otherlangs)
     {
         bool isDeafult = L.Default.Equals(language, StringComparison.Ordinal);
-        using (FileStream stream = new FileStream(fn, FileMode.Create, FileAccess.Write, FileShare.Read))
+        using FileStream stream = new FileStream(fn, FileMode.Create, FileAccess.Write, FileShare.Read);
+        Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+        writer.WriteStartObject();
+        string name;
+        if (attr1 != null && attr1.Default != null && attr1.Language.Equals(language, StringComparison.Ordinal))
         {
-            Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-            writer.WriteStartObject();
-            string name;
-            if (attr1 != null && attr1.Default != null && attr1.Language.Equals(language, StringComparison.Ordinal))
-            {
-                name = attr1.Default;
-                writer.WritePropertyName(ENUM_NAME_PLACEHOLDER);
-                writer.WriteStringValue(name);
-                k2.Add(ENUM_NAME_PLACEHOLDER, name);
-            }
-            else if (Attribute.GetCustomAttributes(type, typeof(TranslatableAttribute))
-                         .OfType<TranslatableAttribute>()
-                         .FirstOrDefault(x => x.Language.Equals(language, StringComparison.Ordinal)) is
-                     TranslatableAttribute attr2 && attr2.Default != null)
-            {
-                name = attr2.Default;
-                writer.WritePropertyName(ENUM_NAME_PLACEHOLDER);
-                writer.WriteStringValue(name);
-                k2.Add(ENUM_NAME_PLACEHOLDER, name);
-            }
-            else if (isDeafult)
-            {
-                name = type.Name;
-                if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
-                    name = name.Substring(1);
-                writer.WritePropertyName(ENUM_NAME_PLACEHOLDER);
-                writer.WriteStringValue(name);
-                k2.Add(ENUM_NAME_PLACEHOLDER, name);
-            }
-
-            for (int i = 0; i < fields.Length; ++i)
-            {
-                string k0 = fields[i].GetValue(null).ToString();
-                string? k1 = null;
-                TranslatableAttribute[] tas = fields[i].GetCustomAttributes(typeof(TranslatableAttribute)).OfType<TranslatableAttribute>().ToArray();
-                if (tas.Length == 0)
-                    k1 = isDeafult ? k0.ToProperCase() : null;
-                else
-                {
-                    for (int j = 0; j < tas.Length; ++j)
-                    {
-                        TranslatableAttribute t = tas[j];
-                        if (((t.Language is null && isDeafult) || (t.Language is not null && t.Language.Equals(language, StringComparison.Ordinal)) && (isDeafult || t.Default != null)))
-                            k1 = t.Default ?? k0.ToProperCase();
-                        else if (otherlangs is not null && t.Language != null)
-                        {
-                            for (int k = 0; k < otherlangs.Count; ++k)
-                            {
-                                KeyValuePair<Type, List<string>> kvp2 = otherlangs[k];
-                                if (kvp2.Key == type)
-                                {
-                                    if (!kvp2.Value.Contains(t.Language))
-                                        kvp2.Value.Add(t.Language);
-                                    goto added;
-                                }
-                            }
-                            otherlangs.Add(new KeyValuePair<Type, List<string>>(type, new List<string>(1) { t.Language }));
-                        }
-                    added:;
-                    }
-                    if (isDeafult)
-                        k1 ??= k0.ToProperCase();
-                }
-                if (k1 is not null)
-                {
-                    k2.Add(k0, k1);
-                    writer.WritePropertyName(k0);
-                    writer.WriteStringValue(k1);
-                }
-            }
-            writer.WriteEndObject();
-            writer.Dispose();
+            name = attr1.Default;
+            writer.WritePropertyName(EnumNamePlaceholder);
+            writer.WriteStringValue(name);
+            k2.Add(EnumNamePlaceholder, name);
         }
+        else if (Attribute.GetCustomAttributes(type, typeof(TranslatableAttribute))
+                     .OfType<TranslatableAttribute>()
+                     .FirstOrDefault(x => x.Language.Equals(language, StringComparison.Ordinal)) is { Default: { } } attr2)
+        {
+            name = attr2.Default;
+            writer.WritePropertyName(EnumNamePlaceholder);
+            writer.WriteStringValue(name);
+            k2.Add(EnumNamePlaceholder, name);
+        }
+        else if (isDeafult)
+        {
+            name = type.Name;
+            if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
+                name = name.Substring(1);
+            writer.WritePropertyName(EnumNamePlaceholder);
+            writer.WriteStringValue(name);
+            k2.Add(EnumNamePlaceholder, name);
+        }
+
+        for (int i = 0; i < fields.Length; ++i)
+        {
+            string k0 = fields[i].GetValue(null).ToString();
+            string? k1 = null;
+            TranslatableAttribute[] tas = fields[i].GetCustomAttributes(typeof(TranslatableAttribute)).OfType<TranslatableAttribute>().ToArray();
+            if (tas.Length == 0)
+                k1 = isDeafult ? k0.ToProperCase() : null;
+            else
+            {
+                for (int j = 0; j < tas.Length; ++j)
+                {
+                    TranslatableAttribute t = tas[j];
+                    if (((t.Language is null && isDeafult) || (t.Language is not null && t.Language.Equals(language, StringComparison.Ordinal)) && (isDeafult || t.Default != null)))
+                        k1 = t.Default ?? k0.ToProperCase();
+                    else if (otherlangs is not null && t.Language != null)
+                    {
+                        for (int k = 0; k < otherlangs.Count; ++k)
+                        {
+                            KeyValuePair<Type, List<string>> kvp2 = otherlangs[k];
+                            if (kvp2.Key == type)
+                            {
+                                if (!kvp2.Value.Contains(t.Language))
+                                    kvp2.Value.Add(t.Language);
+                                goto added;
+                            }
+                        }
+                        otherlangs.Add(new KeyValuePair<Type, List<string>>(type, new List<string>(1) { t.Language }));
+                    }
+                    added:;
+                }
+                if (isDeafult)
+                    k1 ??= k0.ToProperCase();
+            }
+            if (k1 is not null)
+            {
+                k2.Add(k0, k1);
+                writer.WritePropertyName(k0);
+                writer.WriteStringValue(k1);
+            }
+        }
+        writer.WriteEndObject();
+        writer.Dispose();
     }
     internal static string GetLang(ulong player) => Data.Languages.TryGetValue(player, out string lang) ? lang : L.Default;
     internal static IFormatProvider GetLocale(CommandInteraction ctx) => ctx.IsConsole ? Data.AdminLocale : GetLocale(GetLang(ctx.CallerID));
@@ -937,7 +924,7 @@ public static class Localization
                 int ct2 = 0;
                 for (int i = 0; i < rot.Rotation.Count; ++i)
                 {
-                    if (team == 0 ? rot.Rotation[i].HasBeenCapturedT1 | rot.Rotation[i].HasBeenCapturedT2 : (team == 1 ? rot.Rotation[i].HasBeenCapturedT1 : (team == 2 ? rot.Rotation[i].HasBeenCapturedT2 : false)))
+                    if (team == 0 ? rot.Rotation[i].HasBeenCapturedT1 | rot.Rotation[i].HasBeenCapturedT2 : (team == 1 ? rot.Rotation[i].HasBeenCapturedT1 : (team == 2 && rot.Rotation[i].HasBeenCapturedT2)))
                         ++ct2;
                 }
                 int ind = ct - ct2;
@@ -949,8 +936,7 @@ public static class Localization
             else if (Data.Is(out Insurgency ins))
             {
                 int ct = delay.Type == DelayType.Flag ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(ins.Caches.Count * (delay.Value / 100f));
-                int ct2;
-                ct2 = ct - ins.CachesDestroyed;
+                int ct2 = ct - ins.CachesDestroyed;
                 int ind = ct - ct2;
                 if (ct2 == 1 && ins.Caches.Count > 0 && ind < ins.Caches.Count)
                 {
@@ -994,12 +980,12 @@ public static class Localization
             player.SendChat(res.StagingDelay);
             return;
         }
-        else if (delay.Type == DelayType.Time)
+        if (delay.Type == DelayType.Time)
         {
             float timeLeft = delay.Value - Data.Gamemode.SecondsSinceStart;
             player.SendChat(res.TimeDelay, Mathf.RoundToInt(timeLeft).GetTimeFromSeconds(player.Steam64));
         }
-        else if (delay.Type == DelayType.Flag || delay.Type == DelayType.FlagPercentage)
+        else if (delay.Type is DelayType.Flag or DelayType.FlagPercentage)
         {
             if (Data.Is(out Invasion invasion))
             {
@@ -1065,7 +1051,7 @@ public static class Localization
                 int ct2 = 0;
                 for (int i = 0; i < rot.Rotation.Count; ++i)
                 {
-                    if (team == 0 ? rot.Rotation[i].HasBeenCapturedT1 | rot.Rotation[i].HasBeenCapturedT2 : (team == 1 ? rot.Rotation[i].HasBeenCapturedT1 : (team == 2 ? rot.Rotation[i].HasBeenCapturedT2 : false)))
+                    if (team == 0 ? rot.Rotation[i].HasBeenCapturedT1 | rot.Rotation[i].HasBeenCapturedT2 : (team == 1 ? rot.Rotation[i].HasBeenCapturedT1 : (team == 2 && rot.Rotation[i].HasBeenCapturedT2)))
                         ++ct2;
                 }
                 int ind = ct - ct2;
@@ -1082,8 +1068,7 @@ public static class Localization
             else if (Data.Is(out Insurgency ins))
             {
                 int ct = delay.Type == DelayType.Flag ? Mathf.RoundToInt(delay.Value) : Mathf.FloorToInt(ins.Caches.Count * (delay.Value / 100f));
-                int ct2;
-                ct2 = ct - ins.CachesDestroyed;
+                int ct2 = ct - ins.CachesDestroyed;
                 int ind = ct - ct2;
                 if (ct2 == 1 && ins.Caches.Count > 0 && ind < ins.Caches.Count)
                 {
@@ -1104,10 +1089,7 @@ public static class Localization
                 }
                 else
                 {
-                    if (team == ins.AttackingTeam)
-                        player.SendChat(res.CacheDelayMultipleAtk, ct2);
-                    else
-                        player.SendChat(res.CacheDelayMultipleDef, ct2);
+                    player.SendChat(team == ins.AttackingTeam ? res.CacheDelayMultipleAtk : res.CacheDelayMultipleDef, ct2);
                 }
             }
         }
@@ -1174,17 +1156,6 @@ public static class Localization
                 StagingDelay = T.RequestVehicleStagingDelay;
             }
         }
-    }
-    [Obsolete]
-    private class LanguageSetEnumerator : IEnumerable<LanguageSet>
-    {
-        public readonly LanguageSet[] Sets;
-        public LanguageSetEnumerator(LanguageSet[] sets)
-        {
-            Sets = sets;
-        }
-        public IEnumerator<LanguageSet> GetEnumerator() => ((IEnumerable<LanguageSet>)Sets).GetEnumerator();
-        IEnumerator IEnumerable.GetEnumerator() => Sets.GetEnumerator();
     }
 }
 /// <summary>Disposing calls <see cref="Reset"/>.</summary>
@@ -1387,7 +1358,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 Languages.Clear();
             while (players.MoveNext())
             {
-                UCPlayer? pl = UCPlayer.FromSteamPlayer(players.Current);
+                UCPlayer? pl = UCPlayer.FromSteamPlayer(players.Current!);
                 if (pl == null) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
                     lang = L.Default;
@@ -1480,7 +1451,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 Languages.Clear();
             while (players.MoveNext())
             {
-                UCPlayer? pl = UCPlayer.FromPlayer(players.Current);
+                UCPlayer? pl = UCPlayer.FromPlayer(players.Current!);
                 if (pl == null) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
                     lang = L.Default;
@@ -1541,7 +1512,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 Languages.Clear();
             while (players.MoveNext())
             {
-                UCPlayer pl = players.Current;
+                UCPlayer pl = players.Current!;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
                     lang = L.Default;
                 bool found = false;
@@ -1593,7 +1564,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
             return rtn;
         }
     }
-    public static IEnumerable<LanguageSet> InSquad(Squads.Squad squad)
+    public static IEnumerable<LanguageSet> InSquad(Squad squad)
     {
         lock (Languages)
         {

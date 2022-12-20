@@ -131,7 +131,8 @@ public class AmmoCommand : AsyncCommand
                     throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, ammoCost);
 
                 WipeDroppedItems(ctx.CallerID);
-                await req.KitManager.ResupplyKit(ctx.Caller, kit!, token: token).ThenToUpdate(token);
+                await req.KitManager.ResupplyKit(ctx.Caller, kit!, token: token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
 
                 if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
                     F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);
@@ -158,7 +159,8 @@ public class AmmoCommand : AsyncCommand
                     if (ammobag.Ammo < ammoCost)
                         throw ctx.Reply(T.AmmoOutOfStock, ammobag.Ammo, ammoCost);
 
-                    await ammobag.ResupplyPlayer(ctx.Caller, kit!, ammoCost, token).ThenToUpdate(token);
+                    await ammobag.ResupplyPlayer(ctx.Caller, kit!, ammoCost, token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
 
                     if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
                         F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);

@@ -6,69 +6,69 @@ using Action = System.Action;
 
 namespace Uncreated.Warfare;
 
-public sealed class MainThreadTask
+public class MainThreadTask
 {
-    internal const int DEFAULT_TIMEOUT_MS = 5000;
-    internal const int POLL_SPEED_MS = 25;
-    private readonly bool skipFrame;
-    private volatile bool isCompleted = false;
-    private readonly MainThreadResult awaiter;
+    internal static MainThreadTask CompletedNoSkip => new MainThreadTask(false);
+    internal static MainThreadTask CompletedSkip => new MainThreadTask(true);
+    internal const int DefaultTimeout = 5000;
+    protected readonly bool SkipFrame;
+    protected volatile bool IsCompleted = false;
+    protected readonly MainThreadResult Awaiter;
     public readonly CancellationToken Token;
+
+    private MainThreadTask(bool skipFrame)
+    {
+        this.SkipFrame = skipFrame;
+        this.Token = CancellationToken.None;
+        IsCompleted = true;
+        Awaiter = new MainThreadResult(this);
+    }
     public MainThreadTask(bool skipFrame, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        this.skipFrame = skipFrame;
+        this.SkipFrame = skipFrame;
         this.Token = token;
-        awaiter = new MainThreadResult(this);
+        Awaiter = new MainThreadResult(this);
     }
     public MainThreadResult GetAwaiter()
     {
-        return awaiter;
+        return Awaiter;
     }
     public sealed class MainThreadResult : INotifyCompletion
     {
+        internal Action Continuation;
         public readonly MainThreadTask Task;
         public MainThreadResult(MainThreadTask task)
         {
             this.Task = task ?? throw new ArgumentNullException(nameof(task), "Task was null in MainThreadResult constructor.");
         }
-        internal Action continuation;
-        public bool IsCompleted { get => Task.isCompleted; }
+        public bool IsCompleted { get => UCWarfare.IsMainThread || Task.IsCompleted; }
         public void OnCompleted(Action continuation)
         {
             Task.Token.ThrowIfCancellationRequested();
-            if (UCWarfare.IsMainThread && !Task.skipFrame)
+            if (UCWarfare.IsMainThread && !Task.SkipFrame)
             {
                 continuation();
-                Task.isCompleted = true;
+                Task.IsCompleted = true;
             }
             else
             {
-                this.continuation = continuation;
+                this.Continuation = continuation;
                 lock (UCWarfare.ThreadActionRequests)
                     UCWarfare.ThreadActionRequests.Enqueue(this);
             }
         }
         internal void Complete()
         {
-            Task.isCompleted = true;
+            Task.IsCompleted = true;
         }
 
-        private bool WaitCheck() => Task.isCompleted;
+        private bool WaitCheck() => Task.IsCompleted;
         public void GetResult()
         {
             if (UCWarfare.IsMainThread)
                 return;
-            UCWarfare.SpinWaitUntil(WaitCheck, DEFAULT_TIMEOUT_MS);
-            /*
-            int counter = 0;
-            int maxloop = DEFAULT_TIMEOUT_MS / POLL_SPEED_MS;
-            while (!Task.isCompleted && counter < maxloop)
-            {
-                Task.Token.ThrowIfCancellationRequested();
-                Thread.Sleep(POLL_SPEED_MS);
-                counter++;
-            }*/
+            UCWarfare.SpinWaitUntil(WaitCheck, DefaultTimeout);
         }
     }
 }

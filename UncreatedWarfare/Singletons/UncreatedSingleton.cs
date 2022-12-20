@@ -8,6 +8,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Singletons;
@@ -85,6 +86,14 @@ public interface IGameStartListenerAsync
 public interface IFlagCapturedListener
 {
     void OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner);
+}
+public interface ICacheDiscoveredListener
+{
+    void OnCacheDiscovered(Components.Cache cache);
+}
+public interface ICacheDestroyedListener
+{
+    void OnCacheDestroyed(Components.Cache cache);
 }
 public interface ICraftingSettingsOverride
 {

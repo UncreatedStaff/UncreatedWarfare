@@ -137,7 +137,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         _tokenSrc = new CancellationTokenSource();
         token.CombineIfNeeded(UnloadToken);
-        await UCWarfare.ToUpdate();
+        await UCWarfare.ToUpdate(token);
         if (!this.isActiveAndEnabled)
             throw new Exception("Gamemode object has been destroyed!");
 #if DEBUG
@@ -154,7 +154,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         _wasLevelLoadedOnStart = Level.isLoaded;
         _isPreLoading = true;
         InternalPreInit();
-        await PreInit(token).ThenToUpdate();
+        await PreInit(token).ConfigureAwait(false);
 
         _isPreLoading = false;
         await Data.Singletons.LoadSingletonsInOrderAsync(_singletons, token).ConfigureAwait(false);
@@ -612,7 +612,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 ts.TimeSync(time);
         }
         TraitSigns.TimeSync();
-        VehicleSignsOld.TimeSync();
     }
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => DisplayName;
     public void ShutdownAfterGame(string reason, ulong player)

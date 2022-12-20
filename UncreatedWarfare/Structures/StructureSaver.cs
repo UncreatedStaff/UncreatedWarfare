@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Sync;
@@ -36,14 +37,8 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
 #if IMPORT
     private bool _hasImported;
 #endif
-    private static StructureSaver? _ss;
 
-    public static StructureSaver? GetSingletonQuick()
-    {
-        if (_ss == null || !_ss.IsLoaded)
-            return _ss = Data.Singletons.GetSingleton<StructureSaver>();
-        return _ss;
-    }
+    public static StructureSaver? GetSingletonQuick() => Data.Is(out IStructureSaving r) ? r.StructureSaver : null;
 
     [OperationTest("Display State Methods Check")]
     [Conditional("DEBUG")]
@@ -1456,7 +1451,7 @@ public class UCBarricade : IBuildable
     public uint InstanceId => Drop.instanceID;
     public StructType Type => StructType.Barricade;
     public ItemAsset Asset => Drop.asset;
-    public Transform Model => Drop.model;
+    public Transform Model => Drop.model == null ? null! : Drop.model; // so you can use ? on it
     public ulong Owner => Data.owner;
     public ulong Group => Data.group;
     public NetId NetId => Drop.GetNetId();
@@ -1476,7 +1471,7 @@ public class UCStructure : IBuildable
     public uint InstanceId => Drop.instanceID;
     public StructType Type => StructType.Structure;
     public ItemAsset Asset => Drop.asset;
-    public Transform Model => Drop.model;
+    public Transform Model => Drop.model == null ? null! : Drop.model; // so you can use ? on it
     public ulong Owner => Data.owner;
     public ulong Group => Data.group;
     public NetId NetId => Drop.GetNetId();

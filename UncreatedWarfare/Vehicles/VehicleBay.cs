@@ -1,10 +1,8 @@
 ﻿using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -13,16 +11,10 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Events.Vehicles;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
-using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
@@ -36,14 +28,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
 {
     private static VehicleBayConfig _config;
     private bool _hasWhitelisted;
-    private static VehicleBay? _vb;
 
-    public static VehicleBay? GetSingletonQuick()
-    {
-        if (_vb == null || !_vb.IsLoaded)
-            return _vb = Data.Singletons.GetSingleton<VehicleBay>();
-        return _vb;
-    }
+    public static VehicleBay? GetSingletonQuick() => Data.Is(out IVehicles r) ? r.VehicleBay : null;
     public static VehicleBayData Config => _config == null ? throw new SingletonUnloadedException(typeof(VehicleBay)) : _config.Data;
     public VehicleBay() : base("vehiclebay", SCHEMAS)
     {
@@ -55,16 +41,14 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         else _config.Reload();
         return base.PreLoad(token);
     }
-    public override /*async*/ Task PostLoad(CancellationToken token)
-    {
-        //await ImportFromJson(Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json"), token: token).ConfigureAwait(false);
-        //await base.PostLoad(token);
-        return base.PostLoad(token);
-    }
+    //public override async Task PostLoad(CancellationToken token)
+    //{
+    //    await ImportFromJson(Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json"), token: token).ConfigureAwait(false);
+    //    await base.PostLoad(token);
+    //}
     public override Task PostUnload(CancellationToken token)
     {
         _hasWhitelisted = false;
-        _vb = null;
         return Task.CompletedTask;
     }
     public override bool AwaitLoad => true;
@@ -120,7 +104,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (!UCWarfare.IsMainThread)
                 await UCWarfare.ToUpdate(token);
-            AbandonAllVehicles();
+            VehicleSpawner.GetSingletonQuick()?.AbandonAllVehicles(true);
         }
         finally
         {

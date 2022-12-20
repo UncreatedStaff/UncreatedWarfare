@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.SQL;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using UnityEngine;
@@ -241,7 +242,7 @@ public class Reporter : MonoBehaviour
             }
         }
     }
-    internal void OnVehicleRequest(ulong player, Guid vehicle, uint bayInstID)
+    internal void OnVehicleRequest(ulong player, Guid vehicle, PrimaryKey spawn)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -252,7 +253,7 @@ public class Reporter : MonoBehaviour
             {
                 data[i].recentRequests.Add(new VehicleLifeData()
                 {
-                    bayInstId = bayInstID,
+                    spawnKey = spawn,
                     died = false,
                     lifeTime = 0,
                     requestTime = Time.realtimeSinceStartup,
@@ -262,12 +263,12 @@ public class Reporter : MonoBehaviour
             }
         }
     }
-    internal void OnVehicleDied(ulong owner, uint bayInstId, ulong killer, Guid vehicle, Guid weapon, EDamageOrigin origin, bool tk)
+    internal void OnVehicleDied(ulong owner, PrimaryKey spawnKey, ulong killer, Guid vehicle, Guid weapon, EDamageOrigin origin, bool tk)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (bayInstId != uint.MaxValue)
+        if (spawnKey.IsValid)
         {
             for (int i = 0; i < data.Count; ++i)
             {
@@ -277,7 +278,7 @@ public class Reporter : MonoBehaviour
                     for (int j = 0; j < playerData.recentRequests.Count; j++)
                     {
                         VehicleLifeData data = playerData.recentRequests[j];
-                        if (data.bayInstId == bayInstId && !data.died)
+                        if (data.spawnKey.Key == spawnKey.Key && !data.died)
                         {
                             data.died = true;
                             playerData.recentRequests[j] = data;
@@ -693,7 +694,7 @@ public class Reporter : MonoBehaviour
     private struct VehicleLifeData
     {
         public Guid vehicle;
-        public uint bayInstId;
+        public PrimaryKey spawnKey;
         public float requestTime;
         public float lifeTime;
         public bool died;

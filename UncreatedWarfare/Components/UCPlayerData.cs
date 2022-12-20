@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.SQL;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
@@ -11,6 +12,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
+using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Components;
 
@@ -46,22 +48,19 @@ public class UCPlayerData : MonoBehaviour
 {
     public const int PING_BUFFER_SIZE = 256;
     public float CurrentTimeSeconds;
-    public float JoinTime = 0f;
+    public float JoinTime;
     public Gamemodes.Interfaces.IStats stats;
     public Player player;
     public Guid LastRocketShot;
     public Guid LastRocketShotVehicle;
     public ulong lastAttacker;
     public KeyValuePair<ulong, DateTime> secondLastAttacker;
-    internal List<ThrowableComponent> ActiveThrownItems = new List<ThrowableComponent>(4);
     public BarricadeDrop? ExplodingLandmine;
     public BarricadeDrop? TriggeringLandmine;
-    internal ThrowableComponent? TriggeringThrowable;
     public Guid lastExplodedVehicle;
     public Guid LastVehicleHitBy;
     public ItemMagazineAsset LastProjectedAmmoType;
     public Coroutine? CurrentTeleportRequest;
-    public Vehicles.VehicleSpawn? currentlylinking;
     public DeathMessageArgs LastBleedingArgs;
     public PlayerDied? LastBleedingEvent;
     public Guid LastInfectableConsumed;
@@ -69,11 +68,14 @@ public class UCPlayerData : MonoBehaviour
     public Guid LastChargeDetonated;
     public Guid LastShreddedBy;
     public Guid LastGunShot; // used for amc
-    internal VehicleComponent? ExplodingVehicle;
     public object PendingFOB;
     public float[] PingBuffer = new float[PING_BUFFER_SIZE];
     public int PingBufferIndex = -1;
     public float LastAvgPingDifference;
+    internal List<ThrowableComponent> ActiveThrownItems = new List<ThrowableComponent>(4);
+    internal SqlItem<VehicleSpawn>? Currentlylinking;
+    internal VehicleComponent? ExplodingVehicle;
+    internal ThrowableComponent? TriggeringThrowable;
     #region TOASTS
     public struct ToastMessageInfo
     {

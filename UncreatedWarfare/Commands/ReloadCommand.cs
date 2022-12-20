@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -11,11 +10,9 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -109,19 +106,14 @@ public class ReloadCommand : AsyncCommand
             }
             else
             {
-                ctx.Defer();
-                Task.Run(async () =>
-                {
-                    IReloadableSingleton? reloadable = await Data.Singletons.ReloadSingletonAsync(module);
-                    await UCWarfare.ToUpdate();
-                    if (reloadable is null)
-                        ctx.SendCorrectUsage(Syntax);
-                    else
-                    {
-                        ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
-                        ctx.LogAction(ActionLogType.RELOAD_COMPONENT, module.ToUpperInvariant());
-                    }
-                });
+                IReloadableSingleton? reloadable = await Data.Singletons.ReloadSingletonAsync(module, token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
+
+                if (reloadable is null)
+                    throw ctx.SendCorrectUsage(Syntax);
+
+                ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
+                ctx.LogAction(ActionLogType.RELOAD_COMPONENT, module.ToUpperInvariant());
             }
         }
     }

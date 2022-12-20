@@ -51,28 +51,49 @@ public class RequestCommand : AsyncCommand
             }
             throw ctx.SendCorrectUsage(Syntax + " - " + Help);
         }
-        if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
+        if (ctx.TryGetTarget(out BarricadeDrop drop))
         {
-            StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-            if (saver != null && await saver.GetSave(drop, token).ThenToUpdate(token) == null)
+            StructureSaver? saver = StructureSaver.GetSingletonQuick();
+            InteractableSign? sign = drop.interactable as InteractableSign;
+            if (saver != null && await saver.GetSave(drop, token).ConfigureAwait(false) == null)
+            {
+                await UCWarfare.ToUpdate(token);
                 throw ctx.Reply(T.RequestKitNotRegistered);
-
-            SqlItem<Kit>? proxy = Signs.GetKitFromSign(drop, out int loadoutId);
-            if (proxy?.Item != null || loadoutId > 0)
-            {
-                ctx.AssertGamemode(out IKitRequests gm);
-                KitManager manager = gm.KitManager;
-
-                if (loadoutId > 0)
-                    await manager.RequestLoadout(loadoutId, ctx, token).ConfigureAwait(false);
-                else
-                    await manager.RequestKit(proxy!, ctx, token).ConfigureAwait(false);
             }
-            else if (VehicleSignsOld.Loaded && VehicleSignsOld.SignExists(sign, out VehicleSign vbsign))
+            await UCWarfare.ToUpdate(token);
+            if (sign != null)
             {
-                ctx.AssertGamemode<IVehicles>();
+                SqlItem<Kit>? proxy = Signs.GetKitFromSign(drop, out int loadoutId);
+                if (proxy?.Item != null || loadoutId > 0)
+                {
+                    ctx.AssertGamemode(out IKitRequests gm);
+                    KitManager manager = gm.KitManager;
 
-                if (vbsign.VehicleBay.HasLinkedVehicle(out InteractableVehicle vehicle))
+                    if (loadoutId > 0)
+                        await manager.RequestLoadout(loadoutId, ctx, token).ConfigureAwait(false);
+                    else
+                        await manager.RequestKit(proxy!, ctx, token).ConfigureAwait(false);
+                    return;
+                }
+                if (TraitManager.Loaded && sign.text.StartsWith(Signs.Prefix + Signs.TraitPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.AssertGamemode<ITraits>();
+
+                    if (!TraitManager.Loaded)
+                        throw ctx.SendGamemodeError();
+
+                    TraitData? d = TraitManager.GetData(sign.text.Substring(Signs.Prefix.Length + Signs.TraitPrefix.Length));
+                    if (d == null)
+                        throw ctx.Reply(T.RequestNoTarget);
+
+                    TraitManager.RequestTrait(d, ctx);
+                    return;
+                }
+            }
+
+            if (Data.Is(out IVehicles vgm) && vgm.VehicleSpawner.TryGetSpawn(drop, out SqlItem<VehicleSpawn> vbsign))
+            {
+                if (vbsign.Item != null && vbsign.Item.HasLinkedVehicle(out InteractableVehicle vehicle))
                 {
                     VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
                     if (bay != null && bay.IsLoaded)
@@ -96,22 +117,9 @@ public class RequestCommand : AsyncCommand
                     }
                     else throw ctx.SendGamemodeError();
                 }
-                throw ctx.Reply(T.RequestNoTarget);
+                else throw ctx.Reply(T.RequestVehicleDead, vbsign.Item?.Vehicle?.Item!);
             }
-            else if (TraitManager.Loaded && sign.text.StartsWith(Signs.Prefix + Signs.TraitPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                ctx.AssertGamemode<ITraits>();
-
-                if (!TraitManager.Loaded)
-                    throw ctx.SendGamemodeError();
-
-                TraitData? d = TraitManager.GetData(sign.text.Substring(Signs.Prefix.Length + Signs.TraitPrefix.Length));
-                if (d == null)
-                    throw ctx.Reply(T.RequestNoTarget);
-
-                TraitManager.RequestTrait(d, ctx);
-            }
-            else throw ctx.Reply(T.RequestNoTarget);
+            throw ctx.Reply(T.RequestNoTarget);
         }
         else if (ctx.TryGetTarget(out InteractableVehicle vehicle))
         {
@@ -147,7 +155,11 @@ public class RequestCommand : AsyncCommand
         if (!UCWarfare.IsMainThread)
             await UCWarfare.ToUpdate();
         if (vehicle.lockedOwner != CSteamID.Nil || vehicle.lockedGroup != CSteamID.Nil)
-            throw ctx.Reply(T.RequestVehicleAlreadyRequested, await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ThenToUpdate(token));
+        {
+            IPlayer names = await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
+            throw ctx.Reply(T.RequestVehicleAlreadyRequested, names);
+        }
 
         if (data.Team != 0 && data.Team != team)
             throw ctx.Reply(T.RequestVehicleOtherTeam, TeamManager.GetFactionSafe(data.Team)!);
@@ -158,7 +170,8 @@ public class RequestCommand : AsyncCommand
         if (proxy?.Item == null)
             throw ctx.Reply(T.RequestVehicleNoKit);
 
-        await proxy.Enter(token).ThenToUpdate(token);
+        await proxy.Enter(token).ConfigureAwait(false);
+        await UCWarfare.ToUpdate(token);
         try
         {
             if (proxy.Item == null)
@@ -172,17 +185,27 @@ public class RequestCommand : AsyncCommand
             if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.RequestVehicle, out Cooldown cooldown, vehicle.id))
                 throw ctx.Reply(T.RequestVehicleCooldown, cooldown);
 
-            if (VehicleSpawnerOld.Loaded) // check if an owned vehicle is nearby
+            // check if an owned vehicle is nearby
+            if (Data.Is(out IVehicles vgm))
             {
-                foreach (VehicleSpawn spawn in VehicleSpawnerOld.Spawners)
+                vgm.VehicleSpawner.WriteWait();
+                try
                 {
-                    if (spawn is not null && spawn.HasLinkedVehicle(out InteractableVehicle veh))
+                    for (int i = 0; i < vgm.VehicleSpawner.Items.Count; ++i)
                     {
-                        if (veh == null || veh.isDead) continue;
-                        if (veh.lockedOwner.m_SteamID == ctx.CallerID &&
-                            (veh.transform.position - vehicle.transform.position).sqrMagnitude < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
-                            throw ctx.Reply(T.RequestVehicleAlreadyOwned, data);
+                        if (vgm.VehicleSpawner.Items[i]?.Item is { } item && item.HasLinkedVehicle(out InteractableVehicle veh))
+                        {
+                            if (veh == null || veh.isDead || veh.isExploded)
+                                continue;
+                            if (veh.lockedOwner.m_SteamID == ctx.CallerID && (veh.transform.position - vehicle.transform.position).sqrMagnitude <
+                                UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
+                                throw ctx.Reply(T.RequestVehicleAlreadyOwned, data);
+                        }
                     }
+                }
+                finally
+                {
+                    vgm.VehicleSpawner.WriteRelease();
                 }
             }
             if (data.IsDelayed(out Delay delay) && delay.Type != DelayType.None)
@@ -249,17 +272,16 @@ public class RequestCommand : AsyncCommand
 
         VehicleManager.ServerSetVehicleLock(vehicle, ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
 
-        if (VehicleSpawnerOld.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
+        if (Data.Is(out IVehicles vgm) && vgm.VehicleSpawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))
         {
-            VehicleBayComponent? comp = spawn.Component;
-            if (comp != null)
+            if (spawn.Item?.Structure?.Item?.Buildable?.Model?.GetComponent<VehicleBayComponent>() is { } comp)
             {
                 comp.OnRequest();
                 ActionLogger.Add(ActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} at spawn {comp.gameObject.transform.position.ToString("N2", Data.AdminLocale)}", ucplayer);
             }
             else
                 ActionLogger.Add(ActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
-            Data.Reporter?.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.InstanceId);
+            Data.Reporter?.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.PrimaryKey);
         }
         else
             ActionLogger.Add(ActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
@@ -274,7 +296,7 @@ public class RequestCommand : AsyncCommand
 
         if (!FOBManager.Config.Buildables.Exists(e => e.Type == EBuildableType.EMPLACEMENT && e.Emplacement != null && e.Emplacement.EmplacementVehicle.MatchGuid(vehicle.asset.GUID)))
         {
-            ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true); // gas can
+            ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true);  // gas can
             ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true); // car jack
         }
         foreach (Guid item in data.Items)

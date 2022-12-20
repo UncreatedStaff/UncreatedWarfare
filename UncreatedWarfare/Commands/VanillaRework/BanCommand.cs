@@ -31,7 +31,8 @@ public class BanCommand : AsyncCommand
             throw ctx.Reply(T.NoReasonProvided);
         PlayerNames name;
         uint ipv4;
-        List<byte[]> hwids = await OffenseManager.GetAllHWIDs(targetId).ThenToUpdate(token);
+        List<byte[]> hwids = await OffenseManager.GetAllHWIDs(targetId, token).ConfigureAwait(false);
+        await UCWarfare.ToUpdate(token);
 
         if (target is not null && target.IsOnline) // player is online
         {
@@ -43,7 +44,8 @@ public class BanCommand : AsyncCommand
         else
         {
             ipv4 = await Data.DatabaseManager.TryGetPackedIPAsync(targetId, token).ConfigureAwait(false);
-            name = await F.GetPlayerOriginalNamesAsync(targetId, token).ThenToUpdate(token);
+            name = await F.GetPlayerOriginalNamesAsync(targetId, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             F.OfflineBan(targetId, ipv4, ctx.Caller == null ? CSteamID.Nil : ctx.Caller.Player.channel.owner.playerID.steamID,
                 reason!, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration), hwids.ToArray());
         }

@@ -1,18 +1,16 @@
 ﻿using JetBrains.Annotations;
 using SDG.NetTransport;
 using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Steamworks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.SQL;
@@ -26,31 +24,26 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
-using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(VehicleBay))]
 [SingletonDependency(typeof(StructureSaver))]
-public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListener, IGameStartListener, IStagingPhaseOverListener, ITimeSyncListener
+public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListener, IGameStartListener, IStagingPhaseOverListener, ITimeSyncListener, IFlagCapturedListener, IFlagNeutralizedListener
 {
+    private static readonly List<VehicleSpawn> TempSpawns = new List<VehicleSpawn>(64);
     public const ushort MaxBatteryCharge = 10000;
     public const float VehicleHeightOffset = 5f;
-
-    private static VehicleSpawner? _vs;
+    
     public override MySqlDatabase Sql => Data.AdminSql;
     public override bool AwaitLoad => true;
     public VehicleSpawner() : base("vehiclespawns", SCHEMAS) { }
-    public static VehicleSpawner? GetSingletonQuick()
-    {
-        if (_vs == null || !_vs.IsLoaded)
-            return _vs = Data.Singletons.GetSingleton<VehicleSpawner>();
-        return _vs;
-    }
+    public static VehicleSpawner? GetSingletonQuick() => Data.Is(out IVehicles r) ? r.VehicleSpawner : null;
     public override Task PreLoad(CancellationToken token)
     {
         EventDispatcher.EnterVehicleRequested += OnVehicleEnterRequested;
@@ -150,6 +143,30 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             }
         }
     }
+    void IFlagNeutralizedListener.OnFlagNeutralized(Flag flag, ulong newOwner, ulong oldOwner) => (this as IFlagCapturedListener).OnFlagCaptured(flag, newOwner, oldOwner);
+    void IFlagCapturedListener.OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ThreadUtil.assertIsGameThread();
+        WriteWait();
+        try
+        {
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                if (Items[i].Item is { Vehicle.Item: { } item } spawn && (item.HasDelayType(DelayType.Flag) || item.HasDelayType(DelayType.FlagPercentage)))
+                    TempSpawns.Add(spawn);
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+        for (int i = 0; i < TempSpawns.Count; ++i)
+            Signs.UpdateVehicleBaySigns(null, TempSpawns[i]);
+        TempSpawns.Clear();
+    }
     private void SpawnCountermeasuresPressed(UCPlayer player, float timeDown, ref bool handled)
     {
         InteractableVehicle? vehicle = player.Player.movement.getVehicle();
@@ -246,22 +263,25 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
     void IStagingPhaseOverListener.OnStagingPhaseOver()
     {
-        List<VehicleSpawn> spawns = new List<VehicleSpawn>(16);
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         WriteWait();
         try
         {
             for (int i = 0; i < Items.Count; ++i)
             {
                 if (Items[i].Item is { Vehicle.Item: { } item } spawn && item.HasDelayType(DelayType.OutOfStaging))
-                    spawns.Add(spawn);
+                    TempSpawns.Add(spawn);
             }
         }
         finally
         {
             WriteRelease();
         }
-        for (int i = 0; i < spawns.Count; ++i)
-            Signs.UpdateVehicleBaySigns(null, spawns[i]);
+        for (int i = 0; i < TempSpawns.Count; ++i)
+            Signs.UpdateVehicleBaySigns(null, TempSpawns[i]);
+        TempSpawns.Clear();
     }
     /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
     private void OnBarricadeDestroyed(BarricadeDestroyed e)
@@ -606,7 +626,23 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ThreadUtil.assertIsGameThread();
-        vehicle.forceRemoveAllPlayers();
+        PreDeleteVehicle(vehicle);
+        VehicleManager.askVehicleDestroy(vehicle);
+    }
+    public static void DeleteAllVehiclesFromWorld()
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ThreadUtil.assertIsGameThread();
+        for (int i = 0; i < VehicleManager.vehicles.Count; i++)
+        {
+            PreDeleteVehicle(VehicleManager.vehicles[i]);
+        }
+        VehicleManager.askVehicleDestroyAll();
+    }
+    private static void PreDeleteVehicle(InteractableVehicle vehicle)
+    {
         BarricadeRegion reg = BarricadeManager.getRegionFromVehicle(vehicle);
         if (reg != null)
         {
@@ -619,15 +655,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             }
         }
         vehicle.trunkItems?.clear();
-        VehicleManager.askVehicleDestroy(vehicle);
-    }
-    public static void DeleteAllVehiclesFromWorld()
-    {
-        ThreadUtil.assertIsGameThread();
-        for (int i = 0; i < VehicleManager.vehicles.Count; i++)
-        {
-            DeleteVehicle(VehicleManager.vehicles[i]);
-        }
     }
     public static bool IsVehicleFull(InteractableVehicle vehicle, bool excludeDriver = false)
     {
@@ -964,6 +991,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             if (save?.Item == null)
                 return false;
             int key = save.PrimaryKey;
+            VehicleSpawn? spawn = null;
             await WaitAsync(token).ConfigureAwait(false);
             try
             {
@@ -972,11 +1000,10 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                 {
                     for (int i = 0; i < Items.Count; ++i)
                     {
-                        VehicleSpawn? spawn = Items[i].Item;
+                        spawn = Items[i].Item;
                         if (spawn != null && spawn.SignKey.Key == key)
                         {
                             spawn.SignKey = PrimaryKey.NotAssigned;
-                            await Items[i].SaveItem(token).ConfigureAwait(false);
                             break;
                         }
                     }
@@ -990,7 +1017,8 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             {
                 Release();
             }
-
+            if (spawn != null)
+                await AddOrUpdate(spawn, token).ConfigureAwait(false);
             await save.Delete(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
             Signs.SetSignTextServerOnly(sign, string.Empty);
@@ -1012,6 +1040,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         {
             VehicleData? data = spawn.Item?.Vehicle?.Item;
             Guid vehId = data == null ? Guid.Empty : data.VehicleID;
+            await UCWarfare.ToUpdate(token);
             Signs.SetSignTextServerOnly(sign, Signs.Prefix + Signs.VBSPrefix + vehId.ToString("N"));
             (SqlItem<SavedStructure> save, _) = await saver.AddBarricade(drop, token).ConfigureAwait(false);
             await spawn.Enter(token).ConfigureAwait(false);
@@ -1027,7 +1056,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             {
                 spawn.Release();
             }
-            await UCWarfare.ToUpdate();
+            await UCWarfare.ToUpdate(token);
             Signs.CheckSign(drop);
             return true;
         }
@@ -1395,7 +1424,8 @@ public class VehicleSpawn : IListItem
             }
             Quaternion rotation = Quaternion.Euler(euler);
             Vector3 offset = structure.Buildable.Model.position + new Vector3(0f, VehicleSpawner.VehicleHeightOffset, 0f);
-            InteractableVehicle? veh = await VehicleSpawner.SpawnLockedVehicle(data.VehicleID, offset, rotation, token: token).ThenToUpdate(token);
+            InteractableVehicle? veh = await VehicleSpawner.SpawnLockedVehicle(data.VehicleID, offset, rotation, token: token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             if (veh == null)
                 return null;
             LinkNewVehicle(veh);

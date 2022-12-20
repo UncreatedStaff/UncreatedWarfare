@@ -94,7 +94,9 @@ public class ReportCommand : AsyncCommand
             ctx.Reply(T.ReportNotConnected);
             return;
         }
-        PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(target, token).ThenToUpdate(token);
+
+        PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(target, token);
+        await UCWarfare.ToUpdate(token);
 
         if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, CooldownType.Report, out Cooldown cd) && cd.data.Length > 0 && cd.data[0] is ulong ul && ul == target)
         {

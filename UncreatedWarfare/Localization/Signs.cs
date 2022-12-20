@@ -66,7 +66,6 @@ public class Signs : BaseSingleton, ILevelStartListener
             isNew = true;
             return null;
         }
-        text = text.Substring(Prefix.Length);
         if (ActiveSigns.TryGetValue(drop.instanceID, out comp))
         {
             if (comp.CheckStillValid())
@@ -81,6 +80,7 @@ public class Signs : BaseSingleton, ILevelStartListener
         if (drop.model.TryGetComponent(out comp))
             UnityEngine.Object.Destroy(comp);
 
+        text = text.Substring(Prefix.Length);
         if (text.StartsWith(VBSPrefix, StringComparison.OrdinalIgnoreCase))
         {
             comp = drop.model.gameObject.AddComponent<VehicleBaySignComponent>();
@@ -494,7 +494,7 @@ public class Signs : BaseSingleton, ILevelStartListener
                     for (int i = 0; i < region.drops.Count; ++i)
                     {
                         BarricadeDrop drop = region.drops[i];
-                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn != null && key == comp2.Spawn.PrimaryKey)))
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn?.Item is { } c && key == c.PrimaryKey.Key)))
                             BroadcastSignUpdate(drop, comp2);
                     }
                 }
@@ -512,7 +512,7 @@ public class Signs : BaseSingleton, ILevelStartListener
                     for (int i = 0; i < region.drops.Count; ++i)
                     {
                         BarricadeDrop drop = region.drops[i];
-                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn != null && key == comp2.Spawn.PrimaryKey)))
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn?.Item is { } c && key == c.PrimaryKey.Key)))
                             SendSignUpdate(drop, player, comp2);
                     }
                 }
@@ -537,7 +537,7 @@ public class Signs : BaseSingleton, ILevelStartListener
                     for (int i = 0; i < region.drops.Count; ++i)
                     {
                         BarricadeDrop drop = region.drops[i];
-                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn != null && key == comp2.Spawn.VehicleKey)))
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn?.Item is { } c && key == c.PrimaryKey.Key)))
                             BroadcastSignUpdate(drop, comp2);
                     }
                 }
@@ -555,7 +555,7 @@ public class Signs : BaseSingleton, ILevelStartListener
                     for (int i = 0; i < region.drops.Count; ++i)
                     {
                         BarricadeDrop drop = region.drops[i];
-                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn != null && key == comp2.Spawn.VehicleKey)))
+                        if (drop.asset.build is EBuild.SIGN or EBuild.SIGN_WALL && ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) && comp is VehicleBaySignComponent comp2 && (a || (comp2.Spawn?.Item is { } c && key == c.PrimaryKey.Key)))
                             SendSignUpdate(drop, player, comp2);
                     }
                 }
@@ -592,8 +592,7 @@ public class Signs : BaseSingleton, ILevelStartListener
     }
     public static string? GetVBCache(BarricadeDrop drop)
     {
-        if (drop.model.TryGetComponent(out VehicleBaySignComponent comp))
-            return comp.CachedText;
+        return drop.model.TryGetComponent(out VehicleBaySignComponent comp) ? comp.CachedText : null;
     }
     public static string QuickFormat(string input, string? val)
     {
@@ -611,6 +610,7 @@ public class Signs : BaseSingleton, ILevelStartListener
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        ThreadUtil.assertIsGameThread();
         BarricadeDrop barricadeByRootFast = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
         byte[] state = barricadeByRootFast.GetServersideData().barricade.state;
         byte[] bytes = System.Text.Encoding.UTF8.GetBytes(text);
@@ -718,12 +718,15 @@ public class Signs : BaseSingleton, ILevelStartListener
             Translation.OnReload -= OnReload;
         }
         private void OnReload() => _defCache = null;
-        protected override void Init() { }
+        protected override void Init()
+        {
+            Translation.OnReload += OnReload;
+        }
         public override string Translate(string language, UCPlayer player)
         {
-            VehicleSpawn? spawn = Spawn;
-            VehicleData? data = spawn?.Vehicle?.Item;
-            if (spawn != null && data != null)
+            VehicleSpawn? spawn = Spawn?.Item;
+            VehicleData? data;
+            if (spawn != null && (data = spawn.Vehicle?.Item) != null)
             {
                 if (language.Equals(L.Default, StringComparison.Ordinal))
                 {

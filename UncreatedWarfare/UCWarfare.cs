@@ -125,7 +125,8 @@ public class UCWarfare : MonoBehaviour
         new PermissionSaver();
         await Data.LoadSQL(token).ConfigureAwait(false);
         await ItemIconProvider.DownloadConfig(token).ConfigureAwait(false);
-        await TeamManager.ReloadFactions(token).ThenToUpdate(token);
+        await TeamManager.ReloadFactions(token).ConfigureAwait(false);
+        await ToUpdate(token);
 
         /* LOAD LOCALIZATION ASSETS */
         L.Log("Loading Localization and Color Data...", ConsoleColor.Magenta);
@@ -198,7 +199,8 @@ public class UCWarfare : MonoBehaviour
     {
         if (_earlyLoadTask != null && !_earlyLoadTask.IsCompleted)
         {
-            await _earlyLoadTask.ThenToUpdate(token);
+            await _earlyLoadTask.ConfigureAwait(false);
+            await ToUpdate(token);
             _earlyLoadTask = null;
         }
         else await ToUpdate(token);
@@ -428,8 +430,8 @@ public class UCWarfare : MonoBehaviour
     private static Queue<LevelLoadTask.LevelLoadResult>? _levelLoadRequests;
     internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests => _threadActionRequests ??= new Queue<MainThreadTask.MainThreadResult>(4);
     internal static Queue<LevelLoadTask.LevelLoadResult> LevelLoadRequests => _levelLoadRequests ??= new Queue<LevelLoadTask.LevelLoadResult>(4);
-    public static MainThreadTask ToUpdate(CancellationToken token = default) => new MainThreadTask(false, token);
-    public static MainThreadTask SkipFrame(CancellationToken token = default) => new MainThreadTask(true, token);
+    public static MainThreadTask ToUpdate(CancellationToken token = default) => IsMainThread ? MainThreadTask.CompletedNoSkip : new MainThreadTask(false, token);
+    public static MainThreadTask SkipFrame(CancellationToken token = default) => IsMainThread ? MainThreadTask.CompletedSkip : new MainThreadTask(true, token);
     public static LevelLoadTask ToLevelLoad(CancellationToken token = default) => new LevelLoadTask(token);
 
     // 'fire and forget' functions that will report errors once the task completes.
@@ -738,7 +740,7 @@ public class UCWarfare : MonoBehaviour
                 {
                     res = _threadActionRequests.Dequeue();
                     res.Task.Token.ThrowIfCancellationRequested();
-                    res.continuation();
+                    res.Continuation();
                 }
                 catch (OperationCanceledException) { L.LogDebug("Execution on update cancelled."); }
                 catch (Exception ex)
@@ -844,7 +846,8 @@ public class UCWarfare : MonoBehaviour
                 }
             }
 
-            await LetTasksUnload(token).ThenToUpdate(token);
+            await LetTasksUnload(token).ConfigureAwait(false);
+            await ToUpdate(token);
 
             ThreadUtil.assertIsGameThread();
             if (Solver != null)
@@ -884,7 +887,8 @@ public class UCWarfare : MonoBehaviour
                     Data.RemoteSQL = null!;
                 }
             }
-            await LetTasksUnload(token).ThenToUpdate(token);
+            await LetTasksUnload(token).ConfigureAwait(false);
+            await ToUpdate(token);
             ThreadUtil.assertIsGameThread();
             L.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();

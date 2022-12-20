@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
+using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
@@ -17,6 +18,7 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Point;
 
@@ -380,7 +382,10 @@ public static class Points
                     await UCWarfare.ToUpdate();
                 }
                 else
-                    currentAmount = await Data.DatabaseManager.AddXP(parameters.Steam64, team, amount, token).ThenToUpdate(token);
+                {
+                    currentAmount = await Data.DatabaseManager.AddXP(parameters.Steam64, team, amount, token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
+                }
 
                 if (player == null)
                     oldRank = new RankData(Mathf.RoundToInt(currentAmount - amt));
@@ -406,15 +411,7 @@ public static class Points
                             EToastMessageSeverity.BIG));
                 }
                 else goto skipUpdates;
-
-                Signs.UpdateKitSigns(player, null);
-                Signs.UpdateLoadoutSigns(player);
-
-                if (VehicleSpawnerOld.Loaded)
-                    VehicleSpawnerOld.UpdateSigns(player);
-
-                if (TraitManager.Loaded)
-                    Signs.UpdateTraitSigns(player, null);
+                Signs.UpdateAllSigns(player);
 
                 skipUpdates:
                 for (int i = 0; i < player.ActiveBuffs.Length; ++i)
@@ -803,15 +800,8 @@ public static class Points
         await UCWarfare.ToUpdate(token);
         UpdateXPUI(caller);
         UpdateCreditsUI(caller);
-
-        if (TraitManager.Loaded)
-            Signs.UpdateTraitSigns(caller, null);
         
-        if (VehicleSpawnerOld.Loaded && VehicleSignsOld.Loaded)
-            VehicleSpawnerOld.UpdateSigns(caller);
-
-        Signs.UpdateKitSigns(caller, null);
-        Signs.UpdateLoadoutSigns(caller);
+        Signs.UpdateAllSigns(caller);
     }
     /*
     public static void AwardSquadXP(UCPlayer ucplayer, float range, int xp, int ofp, string KeyplayerTranslationKey, string squadTranslationKey, float squadMultiplier)
@@ -990,12 +980,8 @@ public static class Points
                 }
             }
             */
-
-            Data.Reporter?.OnVehicleDied(e.OwnerId,
-                    VehicleSpawnerOld.HasLinkedSpawn(e.Vehicle.instanceID, out Vehicles.VehicleSpawn spawn)
-                        ? spawn.InstanceId
-                        : uint.MaxValue, e.InstigatorId, e.Vehicle.asset.GUID, e.Component.LastItem,
-                    e.Component.LastDamageOrigin, vehicleWasFriendly);
+            Data.Reporter?.OnVehicleDied(e.OwnerId, Data.Is(out IVehicles vgm) && vgm.VehicleSpawner.TryGetSpawn(e.Vehicle, out SqlItem<VehicleSpawn> spawn)
+                        ? spawn.PrimaryKey : PrimaryKey.NotAssigned, e.InstigatorId, e.Vehicle.asset.GUID, e.Component.LastItem, e.Component.LastDamageOrigin, vehicleWasFriendly);
         }
     }
 }

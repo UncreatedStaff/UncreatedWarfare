@@ -1424,60 +1424,6 @@ public static class F
         }
         else list.Add(lang, reader.GetString(colOffset + 2));
     }
-    public static ConfiguredTaskAwaitable ThenToUpdate(this Task task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(true);
-    public static ConfiguredTaskAwaitable<T> ThenToUpdate<T>(this Task<T> task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(true);
-    public static ConfiguredTaskAwaitable ThenToUpdate(this ValueTask task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(true);
-    public static ConfiguredTaskAwaitable<T> ThenToUpdate<T>(this ValueTask<T> task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(true);
-    private static async Task ThenToUpdateIntl(Task task, CancellationToken token = default)
-    {
-        await task.ConfigureAwait(false);
-        if (!UCWarfare.IsMainThread)
-        {
-            await UCWarfare.ToUpdate(token);
-#if DEBUG
-            ThreadUtil.assertIsGameThread();
-#endif
-        }
-    }
-    private static async Task<T> ThenToUpdateIntl<T>(Task<T> task, CancellationToken token = default)
-    {
-        T result = await task.ConfigureAwait(false);
-        if (!UCWarfare.IsMainThread)
-        {
-            await UCWarfare.ToUpdate(token);
-#if DEBUG
-            ThreadUtil.assertIsGameThread();
-#endif
-        }
-        return result;
-    }
-    private static async Task ThenToUpdateIntl(ValueTask task, CancellationToken token = default)
-    {
-        await task.ConfigureAwait(false);
-        if (!UCWarfare.IsMainThread)
-        {
-            await UCWarfare.ToUpdate(token);
-#if DEBUG
-            ThreadUtil.assertIsGameThread();
-#endif
-        }
-    }
-    private static async Task<T> ThenToUpdateIntl<T>(ValueTask<T> task, CancellationToken token = default)
-    {
-        T result = await task.ConfigureAwait(false);
-        if (!UCWarfare.IsMainThread)
-        {
-            await UCWarfare.ToUpdate(token);
-#if DEBUG
-            ThreadUtil.assertIsGameThread();
-#endif
-        }
-        return result;
-    }
     public static ItemJarData[] GetItemsFromStorageState(ItemStorageAsset storage, byte[] state, out ItemDisplayData? displayData, PrimaryKey parent, bool clientState = false)
     {
         if (!Level.isLoaded)

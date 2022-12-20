@@ -55,7 +55,10 @@ public abstract class TeamGamemode : Gamemode, ITeams
         }
         Task task = base.PostInit(token);
         if (!task.IsCompleted)
-            await task.ThenToUpdate();
+        {
+            await task.ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
+        }
     }
     protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {

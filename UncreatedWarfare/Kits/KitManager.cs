@@ -18,6 +18,7 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -31,7 +32,6 @@ namespace Uncreated.Warfare.Kits;
 // todo add delays to kits
 public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync
 {
-    private static KitManager? _km;
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
     public static event KitChanged? OnKitChanged;
@@ -83,12 +83,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         PlayerLife.OnPreDeath -= OnPreDeath;
         return base.PreUnload(token);
     }
-    public static KitManager? GetSingletonQuick()
-    {
-        if (_km == null || !_km.IsLoaded)
-            return _km = Data.Singletons.GetSingleton<KitManager>();
-        return _km.IsLoaded ? _km : null;
-    }
+    public static KitManager? GetSingletonQuick() => Data.Is(out IKitRequests r) ? r.KitManager : null;
     public static float GetDefaultTeamLimit(Class @class) => @class switch
     {
         Class.HAT => 0.1f,
@@ -912,7 +907,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             Signs.UpdateKitSigns(allPlayer, null);
         UCWarfare.RunTask(async () =>
         {
-            await WaitAsync().ThenToUpdate();
+            await WaitAsync().ConfigureAwait(false);
             try
             {
                 await UCWarfare.ToUpdate();
@@ -1416,8 +1411,11 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
             ctx.LogAction(ActionLogType.REQUEST_KIT, $"Loadout #{loadoutId}: {loadout.Item.Id}, Team {team}, Class: {Localization.TranslateEnum(loadout.Item.Class, 0)}");
 
-            if (!await GrantKitRequest(ctx, loadout, token).ThenToUpdate(token))
+            if (!await GrantKitRequest(ctx, loadout, token).ConfigureAwait(false))
+            {
+                await UCWarfare.ToUpdate(token);
                 throw ctx.SendUnknownError();
+            }
         }
         finally
         {
@@ -1491,7 +1489,8 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             bool hasAccess = kit.CreditCost == 0 && kit.IsPublicKit || UCWarfare.Config.OverrideKitRequirements;
             if (!hasAccess)
             {
-                hasAccess = await HasAccess(kit, ctx.Caller.Steam64, token).ThenToUpdate(token);
+                hasAccess = await HasAccess(kit, ctx.Caller.Steam64, token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
                 if (!hasAccess)
                 {
                     if (kit.IsPaid)
@@ -1523,8 +1522,11 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
             ctx.LogAction(ActionLogType.REQUEST_KIT, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
 
-            if (!await GrantKitRequest(ctx, proxy, token).ThenToUpdate(token))
+            if (!await GrantKitRequest(ctx, proxy, token).ConfigureAwait(false))
+            {
+                await UCWarfare.ToUpdate(token);
                 throw ctx.SendUnknownError();
+            }
         }
         finally
         {
@@ -1581,8 +1583,11 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 ctx.Caller.PurchaseSync.Release();
             }
 
-            if (!await GiveAccess(kit, ctx.Caller, KitAccessType.Credits, token).ThenToUpdate(token))
+            if (!await GiveAccess(kit, ctx.Caller, KitAccessType.Credits, token).ConfigureAwait(false))
+            {
+                await UCWarfare.ToUpdate(token);
                 throw ctx.SendUnknownError();
+            }
             ctx.LogAction(ActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Id + " FOR " + kit.CreditCost + " CREDITS");
             L.Log(ctx.Caller.Name.PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Id);
         }
@@ -1644,7 +1649,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         ulong team = player.GetTeam();
         Kit? kit = player.ActiveKit?.Item;
         if (kit == null || !kit.Requestable || (kit.Type != KitType.Loadout && kit.IsLimited(out _, out _, team)) || (kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out _, team)))
-            await TryGiveRiflemanKit(player, token).ThenToUpdate(token);
+            await TryGiveRiflemanKit(player, token).ConfigureAwait(false);
         else if (UCWarfare.Config.ModifySkillLevels)
             player.EnsureSkillsets(kit.Skillsets ?? Array.Empty<Skillset>());
     }

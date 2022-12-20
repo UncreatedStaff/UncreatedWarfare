@@ -215,7 +215,8 @@ public class DevCommand : AsyncCommand
 
             if (ctx.TryGet(1, out VehicleAsset asset, out _, true))
             {
-                InteractableVehicle? vehicle = await bay.SpawnLockedVehicle(asset.GUID, ctx.Caller!.Player.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0), token: token).ThenToUpdate(token);
+                InteractableVehicle? vehicle = await VehicleSpawner.SpawnLockedVehicle(asset.GUID, ctx.Caller!.Player.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0), token: token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
                 ctx.ReplyString($"Successfully spawned AA target: {(vehicle == null ? asset.GUID.ToString("N") : vehicle.asset.vehicleName)}".Colorize("ebd491"));
             }
             else if (!ctx.HasArgs(2))

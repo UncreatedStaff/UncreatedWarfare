@@ -1501,8 +1501,6 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.Is(out IVehicles v))
-            v.VehicleSpawner.OnStructureDestroyed(e);
         if (e.Instigator != null)
         {
             ActionLogger.Add(ActionLogType.DESTROY_STRUCTURE, 
@@ -1539,11 +1537,6 @@ public static class EventFunctions
 
         if (Data.Is<ISquads>(out _))
             RallyManager.OnBarricadeDestroyed(e.ServersideData, e.Barricade, e.InstanceID, e.VehicleRegionIndex);
-        if (Data.Is(out IVehicles v))
-        {
-            v.VehicleSpawner.OnBarricadeDestroyed(e.ServersideData, e.Barricade, e.InstanceID, e.VehicleRegionIndex);
-            v.VehicleSigns.OnBarricadeDestroyed(e.ServersideData, e.Barricade, e.InstanceID, e.VehicleRegionIndex);
-        }
         if (e.Transform.TryGetComponent(out BarricadeComponent c))
         {
             SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);

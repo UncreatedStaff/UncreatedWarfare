@@ -23,7 +23,8 @@ public class UnbanCommand : AsyncCommand
         if (!ctx.TryGet(0, out ulong targetId, out UCPlayer? target))
             throw ctx.Reply(T.PlayerNotFound);
 
-        PlayerNames targetNames = target is null ? await F.GetPlayerOriginalNamesAsync(targetId, token).ThenToUpdate(token) : target.Name;
+        PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(targetId, token);
+        await UCWarfare.ToUpdate(token);
         if (target is not null || !Provider.requestUnbanPlayer(ctx.CallerCSteamID, new CSteamID(targetId)))
         {
             ctx.Reply(T.UnbanNotBanned, targetNames);

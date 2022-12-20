@@ -23,6 +23,7 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
@@ -388,8 +389,12 @@ public class Insurgency :
 
         cache.SpawnAttackIcon();
 
+        for (int i = 0; i < Singletons.Count; ++i)
+        {
+            if (Singletons[i] is ICacheDiscoveredListener f)
+                f.OnCacheDiscovered(cache);
+        }
         TicketManager.UpdateUI(AttackingTeam);
-        VehicleSignsOld.OnFlagCaptured();
     }
     public void SpawnNewCache(bool message = false)
     {
@@ -564,7 +569,12 @@ public class Insurgency :
         }
         TicketManager.UpdateUI(1);
         TicketManager.UpdateUI(2);
-        VehicleSignsOld.OnFlagCaptured();
+
+        for (int i = 0; i < Singletons.Count; ++i)
+        {
+            if (Singletons[i] is ICacheDestroyedListener f)
+                f.OnCacheDestroyed(cache);
+        }
     }
     public override void ShowStagingUI(UCPlayer player)
     {

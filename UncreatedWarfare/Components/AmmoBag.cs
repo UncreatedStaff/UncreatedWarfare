@@ -28,11 +28,14 @@ public class AmmoBagComponent : MonoBehaviour
 #endif
         Ammo -= ammoCost;
         if (Data.Is(out IKitRequests req))
-            await req.KitManager.ResupplyKit(player, kit, true, token).ThenToUpdate(token);
+        {
+            await req.KitManager.ResupplyKit(player, kit, true, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
+        }
         else
         {
-            await UCWarfare.ToUpdate(token);
             L.LogWarning("Failed to resupply " + player + ", KitManager is not loaded.");
+            return;
         }
 
         UCPlayer? owner = UCPlayer.FromID(Drop.GetServersideData().owner);

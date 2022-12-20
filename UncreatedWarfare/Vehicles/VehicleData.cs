@@ -157,7 +157,6 @@ public class VehicleData : ITranslationArgument, IListItem
         }
         return false;
     }
-    public List<VehicleSpawn> GetSpawners() => EnumerateSpawns.ToList();
     public void SaveMetaData(InteractableVehicle vehicle)
     {
         List<VBarricade>? barricades = null;

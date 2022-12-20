@@ -304,11 +304,15 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        VehicleSignsOld.OnFlagCaptured();
         StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
-        TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+        for (int i = 0; i < Singletons.Count; ++i)
+        {
+            if (Singletons[i] is IFlagCapturedListener f)
+                f.OnFlagCaptured(flag, capturedTeam, lostTeam);
+        }
         QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
             .Select(x => x.Steam64).ToArray());
+        
     }
     protected virtual void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
@@ -316,8 +320,11 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.Steam64).ToArray(), capturedTeam);
         else if (capturedTeam == 2)
             QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.Steam64).ToArray(), capturedTeam);
-        if (TicketManager.Provider is IFlagNeutralizedListener fnl)
-            fnl.OnFlagNeutralized(flag, capturedTeam, lostTeam);
+        for (int i = 0; i < Singletons.Count; ++i)
+        {
+            if (Singletons[i] is IFlagNeutralizedListener f)
+                f.OnFlagNeutralized(flag, capturedTeam, lostTeam);
+        }
     }
     protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
     {

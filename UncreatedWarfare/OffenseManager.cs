@@ -524,7 +524,7 @@ public static class OffenseManager
     }
     public static void LogBanPlayer(ulong violator, ulong caller, string reason, int duration, DateTimeOffset timestamp)
     {
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
             await Data.DatabaseManager.AddBan(violator, caller, duration, reason).ConfigureAwait(false);
             await UCWarfare.ToUpdate();
@@ -538,13 +538,13 @@ public static class OffenseManager
             lock (PendingBans)
                 PendingBans.Add(new Ban(violator, caller, reason, duration, timestamp));
             Save<Ban>(0);
-        });
+        }, ctx: "Ban log");
     }
     public static void LogUnbanPlayer(ulong violator, ulong caller, DateTimeOffset timestamp)
     {
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
-            await Data.DatabaseManager.AddUnban(violator, caller).ThenToUpdate();
+            await Data.DatabaseManager.AddUnban(violator, caller).ConfigureAwait(false);
             if (UCWarfare.CanUseNetCall)
             {
                 RequestResponse response = await NetCalls.SendPlayerUnbanned.RequestAck(UCWarfare.I.NetClient!, violator, caller, timestamp, 10000);
@@ -555,11 +555,11 @@ public static class OffenseManager
             lock (PendingUnbans)
                 PendingUnbans.Add(new Unban(violator, caller, timestamp));
             Save<Unban>(1);
-        });
+        }, "Unban log");
     }
     public static void LogKickPlayer(ulong violator, ulong caller, string reason, DateTimeOffset timestamp)
     {
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
             await Data.DatabaseManager.AddKick(violator, caller, reason).ConfigureAwait(false);
             await UCWarfare.ToUpdate();
@@ -573,11 +573,11 @@ public static class OffenseManager
             lock (PendingKicks)
                 PendingKicks.Add(new Kick(violator, caller, reason, timestamp));
             Save<Kick>(2);
-        });
+        }, ctx: "Kick log");
     }
     public static void LogWarnPlayer(ulong violator, ulong caller, string reason, DateTimeOffset timestamp)
     {
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
             await Data.DatabaseManager.AddWarning(violator, caller, reason).ConfigureAwait(false);
             await UCWarfare.ToUpdate();
@@ -591,11 +591,11 @@ public static class OffenseManager
             lock (PendingWarnings)
                 PendingWarnings.Add(new Warn(violator, caller, reason, timestamp));
             Save<Warn>(3);
-        });
+        }, ctx: "Warn log");
     }
     public static void LogMutePlayer(ulong violator, ulong caller, EMuteType type, int duration, string reason, DateTimeOffset timestamp)
     {
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
@@ -608,11 +608,11 @@ public static class OffenseManager
             lock (PendingMutes)
                 PendingMutes.Add(new Mute(violator, caller, type, duration, reason, timestamp));
             Save<Mute>(4);
-        });
+        }, ctx: "Mute log");
     }
     public static void LogBattlEyeKicksPlayer(ulong violator, string reason, DateTimeOffset timestamp)
     {
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
             await Data.DatabaseManager.AddBattleyeKick(violator, reason).ConfigureAwait(false);
             await UCWarfare.ToUpdate();
@@ -626,11 +626,11 @@ public static class OffenseManager
             lock (PendingBattlEyeKicks)
                 PendingBattlEyeKicks.Add(new BattlEyeKick(violator, reason, timestamp));
             Save<BattlEyeKick>(5);
-        });
+        }, ctx: "BattlEye log");
     }
     public static void LogTeamkill(ulong violator, ulong teamkilled, string deathCause, string itemName, ushort itemId, float distance, DateTimeOffset timestamp)
     {
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
             await Data.DatabaseManager.AddTeamkill(violator, teamkilled, deathCause, itemName, itemId, distance).ConfigureAwait(false);
             await UCWarfare.ToUpdate();
@@ -644,11 +644,11 @@ public static class OffenseManager
             lock (PendingTeamkills)
                 PendingTeamkills.Add(new Teamkill(violator, teamkilled, deathCause, itemName, timestamp));
             Save<Teamkill>(6);
-        });
+        }, ctx: "Teamkill log");
     }
     public static void LogVehicleTeamkill(ulong violator, ushort vehicleId, string vehicleName, DateTimeOffset timestamp)
     {
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
@@ -661,11 +661,11 @@ public static class OffenseManager
             lock (PendingVehicleTeamkills)
                 PendingVehicleTeamkills.Add(new VehicleTeamkill(violator, vehicleId, vehicleName, timestamp));
             Save<VehicleTeamkill>(7);
-        });
+        }, ctx: "Vehicle teamkill log");
     }
     public static void LogUnmutePlayer(ulong violator, ulong callerId, DateTimeOffset timestamp)
     {
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
@@ -678,7 +678,7 @@ public static class OffenseManager
             lock (PendingUnmutes)
                 PendingUnmutes.Add(new Unmute(violator, callerId, timestamp));
             Save<Unmute>(8);
-        });
+        }, ctx: "Unmute log");
     }
     /// <returns>0 for a successful ban.</returns>
     internal static async Task<int> BanPlayerAsync(ulong targetId, ulong callerId, string reason, int duration, DateTimeOffset timestamp, CancellationToken token = default)
@@ -790,7 +790,8 @@ public static class OffenseManager
         else
         {
             UCPlayer? callerPlayer = UCPlayer.FromID(callerId);
-            PlayerNames callerNames = callerPlayer is not null ? callerPlayer.Name : (await F.GetPlayerOriginalNamesAsync(callerId, token).ThenToUpdate(token));
+            PlayerNames callerNames = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             L.Log($"{names.PlayerName} ({targetId}) was kicked by {callerNames.PlayerName} ({callerId}) because {reason}.", ConsoleColor.Cyan);
             Chat.Broadcast(LanguageSet.AllBut(callerId), T.KickSuccessBroadcast, target, callerPlayer as IPlayer ?? callerNames);
             callerPlayer?.SendChat(T.KickSuccessFeedback, target);
@@ -804,7 +805,8 @@ public static class OffenseManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(targetId, token).ThenToUpdate(token);
+        PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(targetId, token).ConfigureAwait(false);
+        await UCWarfare.ToUpdate(token);
         if (!Provider.requestUnbanPlayer(callerId == 0 ? CSteamID.Nil : new CSteamID(callerId), new CSteamID(targetId)))
         {
             L.Log(callerId + " not banned.", ConsoleColor.Cyan);
@@ -823,7 +825,8 @@ public static class OffenseManager
         else
         {
             UCPlayer? caller = UCPlayer.FromID(callerId);
-            PlayerNames callerNames = caller is not null ? caller.Name : (await F.GetPlayerOriginalNamesAsync(callerId, token).ThenToUpdate(token));
+            PlayerNames callerNames = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {callerNames.PlayerName} ({callerId}).", ConsoleColor.Cyan);
             caller?.SendChat(T.UnbanSuccessFeedback, targetNames);
             Chat.Broadcast(LanguageSet.AllBut(callerId), T.UnbanSuccessBroadcast, targetNames, caller as IPlayer ?? callerNames);
@@ -860,7 +863,8 @@ public static class OffenseManager
         }
         else
         {
-            PlayerNames callerNames = caller is null ? (await F.GetPlayerOriginalNamesAsync(callerId, token).ThenToUpdate(token)) : caller.Name;
+            PlayerNames callerNames = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             L.Log($"{targetNames.PlayerName} ({targetId}) was warned by {callerNames.PlayerName} ({caller}) because {reason}.", ConsoleColor.Cyan);
             IPlayer caller2 = caller as IPlayer ?? callerNames;
             Chat.Broadcast(LanguageSet.AllBut(callerId, targetId), T.WarnSuccessBroadcast, target, caller2);
