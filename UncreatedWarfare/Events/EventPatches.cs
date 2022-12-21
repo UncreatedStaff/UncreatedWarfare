@@ -104,28 +104,9 @@ internal static class EventPatches
     /// <summary>
     /// Postfix of <see cref="VehicleManager.addVehicle(a lot)"/> to call OnVehicleSpawned
     /// </summary>
-    private static void OnVehicleSpawned(Guid assetGuid,
-        ushort skinID,
-        ushort mythicID,
-        float roadPosition,
-        Vector3 point,
-        Quaternion angle,
-        bool sirens,
-        bool blimp,
-        bool headlights,
-        bool taillights,
-        ushort fuel,
-        bool isExploded,
-        ushort health,
-        ushort batteryCharge,
-        CSteamID owner,
-        CSteamID group,
-        bool locked,
-        CSteamID[] passengers,
-        byte[][] turrets,
-        uint instanceID,
-        byte tireAliveMask,
-        NetId netId, InteractableVehicle __result)
+    private static void OnVehicleSpawned(Guid assetGuid, ushort skinID, ushort mythicID, float roadPosition, Vector3 point, Quaternion angle,
+        bool sirens, bool blimp, bool headlights, bool taillights, ushort fuel, bool isExploded, ushort health, ushort batteryCharge, CSteamID owner,
+        CSteamID group, bool locked, CSteamID[] passengers, byte[][] turrets, uint instanceID, byte tireAliveMask, NetId netId, InteractableVehicle __result)
     {
         if (__result != null)
         {

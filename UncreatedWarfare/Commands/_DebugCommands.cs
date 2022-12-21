@@ -14,6 +14,8 @@ using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -26,6 +28,7 @@ using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Squads.Commander;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -1108,6 +1111,61 @@ public class DebugCommand : AsyncCommand
         UAV.RequestUAV(ctx.Caller);
         ctx.Defer();
     }
+#if DEBUG
+
+    private async Task testfield(CommandInteraction ctx, CancellationToken token)
+    {
+        ctx.AssertRanByPlayer();
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        ctx.AssertGamemode(out IVehicles vehicles);
+        ulong other = TeamManager.Other(ctx.Caller.GetTeam());
+        //FactionInfo? other = TeamManager.GetFactionSafe(oteam);
+        if (other is not 1ul and not 2ul)
+            throw ctx.Reply(T.NotOnCaptureTeam);
+        VehicleData[] data;
+        vehicles.VehicleBay.WriteWait();
+        try
+        {
+            data = vehicles.VehicleBay.Items
+                .Select(x => x.Item)
+                .Where(x => x is { Branch: Branch.Default or Branch.Infantry or Branch.Armor }).ToArray()!;
+        }
+        finally
+        {
+            vehicles.VehicleBay.WriteRelease();
+        }
+
+        Vector3 st = ctx.Caller.Position;
+        Quaternion rot = Quaternion.Euler(Vector3.zero);
+        const int size = 480;
+        const int offset = 24;
+        const int sections = size / 2 / offset;
+        for (int x = -sections; x <= sections; ++x)
+        {
+            for (int z = -sections; z <= sections; ++z)
+            {
+                Vector3 pos = new Vector3(st.x + x * offset, st.y, st.z + z * offset);
+                float h = LevelGround.getHeight(pos);
+                if (h <= 0f)
+                    continue;
+                pos = pos with { y = h + 10f };
+                VehicleData veh = data[UnityEngine.Random.Range(0, data.Length)];
+                if (VehicleData.IsEmplacement(veh.Type) && Assets.find(veh.VehicleID) is VehicleAsset asset)
+                {
+                    BuildableComponent.SpawnImplacement(asset, pos, Vector3.zero, 0ul, other, Guid.Empty);
+                }
+                else
+                {
+                    await VehicleSpawner.SpawnLockedVehicle(veh.VehicleID, pos, rot, groupOwner: other, token: token);
+                }
+                await Task.Delay(25, token);
+                await UCWarfare.ToUpdate(token);
+            }
+        }
+
+        ctx.ReplyString("Spawned " + (sections * sections * 4) + " vehicles.");
+    }
+#endif
     private async Task squad(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);

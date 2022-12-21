@@ -7,6 +7,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
@@ -18,13 +19,13 @@ public class SpottedComponent : MonoBehaviour
 {
     public Guid EffectGUID { get; private set; }
     public EffectAsset? Effect { get; private set; }
-    public ESpotted? Type { get; private set; }
+    public Spotted? Type { get; private set; }
     public VehicleType? VehicleType { get; private set; }
     /// <summary>Player who spotted the object.</summary>
     /// <remarks>May not always be online or have a value at all.</remarks>
     public UCPlayer? CurrentSpotter { get; private set; }
     public ulong SpottingTeam => team;
-    public ulong OwnerTeam { get => ownerTeam; set => ownerTeam = value; }
+    public ulong OwnerTeam { get => _vehicle is not null ? _vehicle.lockedGroup.m_SteamID.GetTeam() : ownerTeam; set => ownerTeam = value; }
     public bool IsActive { get => _coroutine != null; }
     public bool IsLaserTarget { get; private set; }
     private float _frequency;
@@ -36,36 +37,38 @@ public class SpottedComponent : MonoBehaviour
     public UCPlayer? LastNonUAVSpotter = null;
     private ulong team;
     private ulong ownerTeam;
+    private InteractableVehicle? _vehicle;
     public Vector3 UAVLastKnown { get; internal set; }
 
     public static readonly HashSet<SpottedComponent> ActiveMarkers = new HashSet<SpottedComponent>();
     public static readonly List<SpottedComponent> AllMarkers = new List<SpottedComponent>(128);
 #if ENABLE_SPOTTED_BUFF
-    private static bool statInit = false;
+    private static bool _statInit;
 #endif
-    public void Initialize(ESpotted type, ulong ownerTeam)
+    public void Initialize(Spotted type, ulong ownerTeam)
     {
         this.ownerTeam = ownerTeam;
+        _vehicle = null;
 #if ENABLE_SPOTTED_BUFF
-        if (!statInit)
+        if (!_statInit)
         {
             EventDispatcher.EnterVehicle += OnEnterVehicle;
             EventDispatcher.ExitVehicle += OnExitVehicle;
-            statInit = true;
+            _statInit = true;
         }
 #endif
         Type = type;
         CurrentSpotter = null;
-        IsLaserTarget = type == ESpotted.FOB;
+        IsLaserTarget = type == Spotted.FOB;
 
         switch (type)
         {
-            case ESpotted.INFANTRY:
+            case Spotted.Infantry:
                 EffectGUID = new Guid("79add0f1b07c478f87207d30fe5a5f4f");
                 _defaultTimer = 12;
                 _frequency = 0.5f;
                 break;
-            case ESpotted.FOB:
+            case Spotted.FOB:
                 EffectGUID = new Guid("39dce42142074b46b819feba9ce83353");
                 _defaultTimer = 240;
                 _frequency = 1f;
@@ -78,85 +81,110 @@ public class SpottedComponent : MonoBehaviour
         }
         else
             L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + EffectGUID);
+
+        if (!AllMarkers.Contains(this))
+            AllMarkers.Add(this);
+
+        L.LogDebug("Spotter initialized: " + ToString() + ".");
     }
-    public void Initialize(VehicleType type)
+    public void Initialize(VehicleType type, InteractableVehicle vehicle)
     {
         CurrentSpotter = null;
         IsLaserTarget = VehicleData.IsGroundVehicle(type);
-
+        _vehicle = vehicle;
+        VehicleType = type;
         switch (type)
         {
             case Vehicles.VehicleType.AA:
                 EffectGUID = new Guid("0e90e68eff624456b76fee28a4875d14");
                 _defaultTimer = 240;
                 _frequency = 1f;
+                Type = Spotted.Emplacement;
                 break;
             case Vehicles.VehicleType.APC:
                 EffectGUID = new Guid("31d1404b7b3a465b8631308cdb48e3b2");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
+                Type = Spotted.Emplacement;
                 break;
             case Vehicles.VehicleType.ATGM:
                 EffectGUID = new Guid("b20a7d914f92492fb1588f7baac80239");
                 _defaultTimer = 240;
                 _frequency = 1f;
+                Type = Spotted.Emplacement;
                 break;
             case Vehicles.VehicleType.AttackHeli:
                 EffectGUID = new Guid("3f2c6776ba484f8ea443719161ec6ce5");
                 _defaultTimer = 15;
                 _frequency = 0.5f;
+                Type = Spotted.Aircraft;
                 break;
             case Vehicles.VehicleType.HMG:
                 EffectGUID = new Guid("2315e6ed970542499fec1b06df87ffd2");
                 _defaultTimer = 240;
                 _frequency = 1f;
+                Type = Spotted.Emplacement;
                 break;
             case Vehicles.VehicleType.Humvee:
                 EffectGUID = new Guid("99a84b82f9bd433891fdb99e80394bf3");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
+                Type = Spotted.LightVehicle;
                 break;
             case Vehicles.VehicleType.IFV:
                 EffectGUID = new Guid("f2c29856b4f64146afd9872ab528c242");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
+                Type = Spotted.Armor;
                 break;
             case Vehicles.VehicleType.Jet:
                 EffectGUID = new Guid("08f2cc6ed558459ea2caf3477b40df64");
                 _defaultTimer = 10;
                 _frequency = 0.5f;
+                Type = Spotted.Aircraft;
                 break;
             case Vehicles.VehicleType.MBT:
                 EffectGUID = new Guid("983c6510c13042bf983e81f49cffca39");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
+                Type = Spotted.Armor;
                 break;
             case Vehicles.VehicleType.Mortar:
                 EffectGUID = new Guid("c377810f849c4c7d84391b491406918b");
                 _defaultTimer = 240;
                 _frequency = 1f;
+                Type = Spotted.Emplacement;
                 break;
             case Vehicles.VehicleType.ScoutCar:
                 EffectGUID = new Guid("b0937aff90b94a588b70bc96ece49f53");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
+                Type = Spotted.LightVehicle;
                 break;
             case Vehicles.VehicleType.TransportAir:
                 EffectGUID = new Guid("91b9f175b84849268d861eb0f0567788");
                 _defaultTimer = 15;
                 _frequency = 0.5f;
+                Type = Spotted.Aircraft;
                 break;
             case Vehicles.VehicleType.LogisticsGround:
                 EffectGUID = new Guid("fa226268e87b4ec89664eca5b22b4d3d");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
+                Type = Spotted.LightVehicle;
                 break;
             case Vehicles.VehicleType.TransportGround:
                 EffectGUID = new Guid("fa226268e87b4ec89664eca5b22b4d3d");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
+                Type = Spotted.LightVehicle;
                 break;
-
+            default:
+                VehicleType = null;
+                _vehicle = null;
+                L.LogWarning("Unknown vehicle type: " + type + " in SpottedComponent.");
+                Destroy(this);
+                return;
         }
 
         if (Assets.find(EffectGUID) is EffectAsset effect)
@@ -166,7 +194,10 @@ public class SpottedComponent : MonoBehaviour
         else
             L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + EffectGUID);
 
-        AllMarkers.Add(this);
+        if (!AllMarkers.Contains(this))
+            AllMarkers.Add(this);
+
+        L.LogDebug("Spotter initialized: " + ToString() + ".");
     }
 #if ENABLE_SPOTTED_BUFF
     private static void OnExitVehicle(ExitVehicle e)
@@ -252,6 +283,8 @@ public class SpottedComponent : MonoBehaviour
         endTime = Time.realtimeSinceStartup + seconds;
         if (!isUav)
             toBeUnspottedNonUAV = endTime;
+        else
+            UAVLastKnown = transform.position;
         UAVMode = isUav;
         if (_coroutine != null)
             StopCoroutine(_coroutine);
@@ -264,9 +297,9 @@ public class SpottedComponent : MonoBehaviour
         if (!isUav)
             spotter.ActivateMarker(this);
 #if ENABLE_SPOTTED_BUFF
-        if (Type is ESpotted.INFANTRY or ESpotted.LIGHT_VEHICLE or ESpotted.ARMOR or ESpotted.AIRCRAFT or ESpotted.EMPLACEMENT)
+        if (Type is Spotted.Infantry or Spotted.LightVehicle or Spotted.Armor or Spotted.Aircraft or Spotted.Emplacement)
         {
-            if (Type == ESpotted.INFANTRY)
+            if (Type == Spotted.Infantry)
             {
                 UCPlayer? target = UCPlayer.FromPlayer(GetComponent<Player>());
                 if (target != null)
@@ -347,9 +380,9 @@ public class SpottedComponent : MonoBehaviour
         _coroutine = null;
         CurrentSpotter = null;
 #if ENABLE_SPOTTED_BUFF
-        if (Type is ESpotted.INFANTRY or ESpotted.LIGHT_VEHICLE or ESpotted.ARMOR or ESpotted.AIRCRAFT or ESpotted.EMPLACEMENT)
+        if (Type is Spotted.Infantry or Spotted.LightVehicle or Spotted.Armor or Spotted.Aircraft or Spotted.Emplacement)
         {
-            if (Type == ESpotted.INFANTRY)
+            if (Type == Spotted.Infantry)
             {
                 UCPlayer? target = UCPlayer.FromPlayer(GetComponent<Player>());
                 if (target != null)
@@ -371,10 +404,10 @@ public class SpottedComponent : MonoBehaviour
     }
     internal void SendMarkers()
     {
+        Vector3 pos = UAVMode ? UAVLastKnown : transform.position;
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
             UCPlayer player = PlayerManager.OnlinePlayers[i];
-            Vector3 pos = UAVMode ? UAVLastKnown : transform.position;
             if (player.GetTeam() == team && (player.Position - pos).sqrMagnitude < Math.Pow(650, 2))
             {
                 if (Effect != null)
@@ -417,14 +450,15 @@ public class SpottedComponent : MonoBehaviour
     {
         return $"Spotter ({GetInstanceID()}) for {Type}: {(IsActive ? "Spotted" : "Not Spotted")}, CurrentSpotter: {(CurrentSpotter == null ? "null" : CurrentSpotter.Name.PlayerName)}. Under UAV: {(UAVMode ? "Yes" : "No")}, Spotting team: {SpottingTeam}, Owner Team: {OwnerTeam}";
     }
-    public enum ESpotted
+    public enum Spotted
     {
-        INFANTRY,
+        Infantry,
         FOB,
-        LIGHT_VEHICLE,
-        ARMOR,
-        AIRCRAFT,
-        EMPLACEMENT
+        LightVehicle,
+        Armor,
+        Aircraft,
+        Emplacement,
+        UAV // todo
     }
 
     private sealed class SpottedBuff : IBuff

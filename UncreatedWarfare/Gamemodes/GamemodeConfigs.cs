@@ -425,6 +425,7 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("general_uav_radius")]
     public RotatableConfig<float> GeneralUAVRadius { get; set; }
 
+    /// <summary>In sq m per second.</summary>
     [Sync(606)]
     [JsonPropertyName("general_uav_scan_speed")]
     public RotatableConfig<float> GeneralUAVScanSpeed { get; set; }
@@ -777,7 +778,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         GeneralLeaderboardTime = 30f;
         GeneralUAVStartDelay = 15f;
         GeneralUAVRadius = 350f;
-        GeneralUAVScanSpeed = 1f;
+        GeneralUAVScanSpeed = 38484.51f;
         GeneralUAVAliveTime = 60f;
         GeneralAllowCraftingAmmo = true;
         GeneralAllowCraftingRepair = true;

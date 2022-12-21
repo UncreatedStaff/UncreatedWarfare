@@ -5,7 +5,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using Uncreated.Framework;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
@@ -32,10 +31,7 @@ public class UAV : MonoBehaviour, IBuff
     private float _scanSpeed;
     private readonly List<KeyValuePair<float, SpottedComponent>> _scanOutput = new List<KeyValuePair<float, SpottedComponent>>(32);
     private float _lastScan;
-    private float _lastDequeue;
-    private float _currentDelay = 0.05f;
     private float _radius;
-    private int _currentTotal;
     private bool _isBlinking = true;
     private bool _active;
     private bool _buffAdded;
@@ -48,6 +44,8 @@ public class UAV : MonoBehaviour, IBuff
     private BarricadeDrop? _drop;
     private bool _didDropExist;
     private Transform? _modelAnimTransform;
+    private float _reachDistSqr;
+    private float _nextReachDistSqr;
 #if DEBUG
     private float _lastPing;
 #endif
@@ -208,7 +206,7 @@ public class UAV : MonoBehaviour, IBuff
     public static UAV SpawnUAV(ulong team, UCPlayer requester, UCPlayer approver, Vector3 loc, bool isMarker)
     {
         GameObject obj = new GameObject(requester.Steam64 + "'s UAV", typeof(UAV));
-        obj.transform.position = loc;
+        obj.transform.SetPositionAndRotation(loc, Quaternion.Euler(0f, UnityEngine.Random.value * 359.9f, 0f));
         UAV uav = obj.GetComponent<UAV>();
         uav.Init(team, requester, approver, loc, isMarker);
         return uav;
@@ -240,9 +238,21 @@ public class UAV : MonoBehaviour, IBuff
 
         _scanSpeed = Gamemode.Config.GeneralUAVScanSpeed;
         _stDelay = Gamemode.Config.GeneralUAVStartDelay;
-        _aliveTime = Gamemode.Config.GeneralUAVStartDelay + Gamemode.Config.GeneralUAVAliveTime;
+        _aliveTime = _stDelay + Gamemode.Config.GeneralUAVAliveTime;
         _radius = Gamemode.Config.GeneralUAVRadius;
-
+#if DEBUG
+        CircleZone.CalculateParticleSpawnPoints(out Vector2[] points, _radius, loc);
+        TriggerEffectParameters p = new TriggerEffectParameters(ZonePlayerComponent.Side)
+        {
+            reliable = true,
+            relevantDistance = Level.size
+        };
+        p.SetRelevantTransportConnections(Provider.EnumerateClients_Remote());
+        for (int i = 0; i < points.Length; ++i)
+        {
+            EffectManager.triggerEffect(p with { position = points[i] });
+        }
+#endif
         this._inited = true;
     }
 
@@ -280,11 +290,7 @@ public class UAV : MonoBehaviour, IBuff
             c.OnUAVLeft();
         }
     }
-
-    // speed gap parameters
-    private const float BaseStart = 0.2f;
-    private const float RampMultiplier = 0.004656f;
-
+    
     [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
     [UsedImplicitly]
     private void Update()
@@ -312,7 +318,8 @@ public class UAV : MonoBehaviour, IBuff
             _isBlinking = true;
             TraitManager.BuffUI.UpdateBuffTimeState(this);
         }
-        if (time - _lastScan > _scanSpeed && _activeIndex <= 0)
+        
+        if (time - _lastScan > 4f)
         {
             _lastScan = time;
             // diffing scan
@@ -320,6 +327,7 @@ public class UAV : MonoBehaviour, IBuff
             {
                 KeyValuePair<float, SpottedComponent>[] sp2 = _scanOutput.ToArray();
                 _scanOutput.Clear();
+                L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Scanning, " + sp2.Length + " existing spotters.");
                 Scan();
                 for (int j = 0; j < sp2.Length; ++j)
                 {
@@ -329,42 +337,65 @@ public class UAV : MonoBehaviour, IBuff
                         if (ReferenceEquals(c, _scanOutput[i].Value))
                             goto next;
                     }
-                    L.LogDebug("Spotter left: " + c);
+                    L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " spotter left: " + c + ".");
                     c.OnUAVLeft();
                 next:;
                 }
-            }
-            else Scan();
-            _currentTotal = _scanOutput.Count;
-            _currentDelay = _scanSpeed / _currentTotal;
-            _activeIndex = _scanOutput.Count;
-            return;
-        }
-        else if (_activeIndex > 0 && time - _lastDequeue > _currentDelay)
-        {
-            _lastDequeue = time;
-            _lastScan = time;
-            KeyValuePair<float, SpottedComponent> c = _scanOutput[--_activeIndex];
-            float dist = c.Key;
-            _currentDelay = dist <= 1f ? BaseStart : (RampMultiplier / _radius * dist /* dist is already squared */ + BaseStart);
-            SpottedComponent spot = c.Value;
-
-            if (spot.UAVMode && spot.CurrentSpotter != null)
-            {
-                if (spot.CurrentSpotter.Steam64 == _requester.Steam64)
-                {
-                    spot.UAVLastKnown = spot.transform.position;
-                    L.LogDebug("Updating spotter: " + spot);
-                }
-                else
-                {
-                    L.LogDebug("Spotter: " + spot + ": is already under the control of another UAV.");
-                }
+                L.LogDebug(time.ToString("0.##", Data.AdminLocale) +  " spotters remaining: " + _scanOutput.Count + ".");
             }
             else
             {
-                spot.Activate(_requester, true);
-                L.LogDebug("Activated spotter: " + spot);
+                L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Scanning, no existing spotters.");
+                Scan();
+            }
+            _activeIndex = 0;
+            _reachDistSqr = 0;
+            _nextReachDistSqr = 0;
+            L.LogDebug(time.ToString("0.##", Data.AdminLocale) + $" Metrics: Reach: {_reachDistSqr:F2}, Active Index: {_activeIndex}.");
+            return;
+        }
+        else if (_scanOutput.Count > 0 && _reachDistSqr < _radius * _radius)
+        {
+            _reachDistSqr = ((_reachDistSqr * Mathf.PI) + _scanSpeed * Time.deltaTime) / Mathf.PI;
+            _lastScan = time - 3f;
+            if (_nextReachDistSqr <= _reachDistSqr)
+            {
+                for (int i = _activeIndex; i < _scanOutput.Count; ++i)
+                {
+                    KeyValuePair<float, SpottedComponent> c = _scanOutput[i];
+                    float dist = c.Key;
+                    if (_reachDistSqr < dist)
+                    {
+                        if (i != _activeIndex)
+                        {
+                            _nextReachDistSqr = dist;
+                            _activeIndex = i;
+                            L.LogDebug(time.ToString("0.##", Data.AdminLocale) + $" Metrics: Reach: {Mathf.Sqrt(_reachDistSqr):F2}, Active Index: {_activeIndex}.");
+                        }
+                        break;
+                    }
+                    SpottedComponent spot = c.Value;
+                    L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Dequeued " + spot + ".");
+
+                    if (spot.UAVMode && spot.CurrentSpotter != null)
+                    {
+                        if (spot.CurrentSpotter.Steam64 == _requester.Steam64)
+                        {
+                            spot.UAVLastKnown = spot.transform.position;
+                            L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Updating spotter: " + spot);
+                        }
+                        else
+                        {
+                            L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Spotter: " + spot +
+                                       ": is already under the control of another UAV.");
+                        }
+                    }
+                    else
+                    {
+                        spot.Activate(_requester, true);
+                        L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Activated spotter: " + spot);
+                    }
+                }
             }
         }
 #if DEBUG
@@ -418,13 +449,14 @@ public class UAV : MonoBehaviour, IBuff
     {
 #if DEBUG
         IDisposable profiler = ProfilingUtils.StartTracking();
+        float time = Time.realtimeSinceStartup;
 #endif
         float rad = _radius * _radius;
         foreach (SpottedComponent spot in SpottedComponent.AllMarkers)
         {
             if (spot.OwnerTeam != _team && spot.isActiveAndEnabled && spot.Type.HasValue && CanUAVSpot(spot.Type.Value))
             {
-                float dist = Util.SqrDistance2D(_deployPosition, spot.transform.position);
+                float dist = (spot.transform.position - _deployPosition).sqrMagnitude;
                 if (dist < rad)
                     _scanOutput.Add(new KeyValuePair<float, SpottedComponent>(dist, spot));
             }
@@ -433,15 +465,15 @@ public class UAV : MonoBehaviour, IBuff
         _scanOutput.Sort((a, b) => a.Key.CompareTo(b.Key));
 #if DEBUG
         profiler.Dispose();
-        L.LogDebug(Time.realtimeSinceStartup.ToString("0.#", Data.AdminLocale) + " Scan output: ");
+        L.LogDebug(time.ToString("0.##", Data.AdminLocale) + " Scan output: ");
         using IDisposable d = L.IndentLog(1);
         for (int i = 0; i < _scanOutput.Count; ++i)
         {
-            L.LogDebug(Mathf.Sqrt(_scanOutput[i].Key).ToString("0.#", Data.AdminLocale) + "m: " + _scanOutput[i].Value);
+            L.LogDebug(Mathf.Sqrt(_scanOutput[i].Key).ToString("0.##", Data.AdminLocale) + "m: " + _scanOutput[i].Value);
         }
 #endif
     }
-    private static bool CanUAVSpot(SpottedComponent.ESpotted spotType)
+    private static bool CanUAVSpot(SpottedComponent.Spotted spotType)
     {
         return spotType switch { _ => true };
     }

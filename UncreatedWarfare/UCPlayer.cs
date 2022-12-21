@@ -494,7 +494,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     {
         CurrentMarkers.Remove(marker);
 
-        if (CurrentMarkers.Count(x => !x.UAVMode) == 3)
+        if (CurrentMarkers.Count(x => !x.UAVMode) >= 3)
         {
             SpottedComponent? oldest = CurrentMarkers.LastOrDefault(x => !x.UAVMode);
             if (oldest != null)

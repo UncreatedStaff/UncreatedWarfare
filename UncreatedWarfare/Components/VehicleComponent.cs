@@ -61,12 +61,12 @@ public class VehicleComponent : MonoBehaviour
         Quota = 0;
         RequiredQuota = -1;
         
-        VehicleBay? bay = Warfare.Data.Singletons.GetSingleton<VehicleBay>();
-        if (bay != null && bay.IsLoaded)
+        VehicleBay? bay = VehicleBay.GetSingletonQuick();
+        if (bay != null)
         {
             Data = bay.GetDataProxySync(Vehicle.asset.GUID);
             if (Data?.Item != null)
-                vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(Data.Item.Type);
+                vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(Data.Item.Type, vehicle);
         }
         _lastPos = this.transform.position;
 
