@@ -390,7 +390,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #endif
         if (newOwner == 1)
         {
-            ActionLogger.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
+            ActionLog.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
             if (_objectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
             {
                 UCWarfare.RunTask(Data.Gamemode.DeclareWin, 1ul, default, ctx: "Lose game, flags fully captured by team 1.");
@@ -411,7 +411,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         }
         else if (newOwner == 2)
         {
-            ActionLogger.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
+            ActionLog.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
             if (_objectiveT2Index < 1) // if t2 just capped the last flag
             {
                 UCWarfare.RunTask(Data.Gamemode.DeclareWin, 2ul, default, ctx: "Lose game, flags fully captured by team 2.");

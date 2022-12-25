@@ -232,11 +232,7 @@ public static class OffenseManager
         joining.MuteReason = reason;
         joining.MuteType = type;
     }
-    public static bool IsValidSteam64ID(ulong id)
-    {
-        return id / 100000000000000ul == 765;
-    }
-    public static bool IsValidSteam64ID(CSteamID id)
+    public static bool IsValidSteam64Id(CSteamID id)
     {
         return id.m_SteamID / 100000000000000ul == 765;
     }
@@ -712,7 +708,7 @@ public static class OffenseManager
             callerName = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
         else
             callerName = PlayerNames.Console;
-        ActionLogger.Add(ActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\" DURATION: " +
+        ActionLog.Add(ActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\" DURATION: " +
             (duration == -1 ? "PERMANENT" : (duration.ToString(Data.AdminLocale) + " SECONDS")), callerId);
 
         LogBanPlayer(targetId, callerId, reason, duration, timestamp);
@@ -781,7 +777,7 @@ public static class OffenseManager
 
         LogKickPlayer(targetId, callerId, reason, timestamp);
 
-        ActionLogger.Add(ActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\"", callerId);
+        ActionLog.Add(ActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\"", callerId);
         if (callerId == 0)
         {
             L.Log($"{names.PlayerName} ({targetId}) was kicked by an operator because {reason}.", ConsoleColor.Cyan);
@@ -816,7 +812,7 @@ public static class OffenseManager
         LogUnbanPlayer(targetId, callerId, DateTime.Now);
 
         string tid = targetId.ToString(Data.AdminLocale);
-        ActionLogger.Add(ActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", callerId);
+        ActionLog.Add(ActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", callerId);
         if (callerId == 0)
         {
             L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by an operator.", ConsoleColor.Cyan);
@@ -849,7 +845,7 @@ public static class OffenseManager
         LogWarnPlayer(targetId, callerId, reason, DateTime.Now);
 
         string tid = targetId.ToString(Data.AdminLocale);
-        ActionLogger.Add(ActionLogType.WARN_PLAYER, $"WARNED {tid} FOR \"{reason}\"", callerId);
+        ActionLog.Add(ActionLogType.WARN_PLAYER, $"WARNED {tid} FOR \"{reason}\"", callerId);
         if (callerId == 0)
         {
             L.Log($"{targetNames.PlayerName} ({targetId}) was warned by an operator because {reason}.", ConsoleColor.Cyan);
@@ -904,7 +900,7 @@ public static class OffenseManager
         LogMutePlayer(target, admin, type, duration, reason, DateTime.Now);
 
         string dur = duration == -1 ? "PERMANENT" : duration.GetTimeFromSeconds(0);
-        ActionLogger.Add(ActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur, admin);
+        ActionLog.Add(ActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur, admin);
 
         if (admin == 0)
         {
@@ -1005,7 +1001,7 @@ public static class OffenseManager
                     onlinePlayer?.SendChat(T.UnmuteSuccessDM, n2);
                     caller?.SendChat(T.UnmuteSuccessFeedback, names);
                 }
-                ActionLogger.Add(ActionLogType.UNMUTE_PLAYER, targetId.ToString() + " unmuted.", callerId);
+                ActionLog.Add(ActionLogType.UNMUTE_PLAYER, targetId.ToString() + " unmuted.", callerId);
                 L.Log($"{names.PlayerName} ({targetId}) was unmuted by {(callerId == 0 ? "an operator" : (n2.PlayerName + "(" + callerId + ")"))}.");
                 return MessageContext.CODE_SUCCESS;
             }

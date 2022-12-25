@@ -228,7 +228,7 @@ public class StructureCommand : AsyncCommand
 
                 await UCWarfare.ToUpdate(token);
                 bool saved = data?.Item?.Buildable?.Drop is not null;
-                if (!ctx.TryGet(2, out ulong s64) || s64 != 0 && (!grp && !OffenseManager.IsValidSteam64ID(s64)))
+                if (!ctx.TryGet(2, out ulong s64) || s64 != 0 && (!grp && !OffenseManager.IsValidSteam64Id(s64)))
                 {
                     if (ctx.MatchParameter(2, "me"))
                         s64 = grp ? ctx.Caller.Player.quests.groupID.m_SteamID : ctx.CallerID;

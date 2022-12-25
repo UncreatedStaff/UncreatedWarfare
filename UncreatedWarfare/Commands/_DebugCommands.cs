@@ -37,9 +37,7 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Commands;
 
-#pragma warning disable IDE1006 // Naming Styles
 public class DebugCommand : AsyncCommand
-#pragma warning restore IDE1006 // Naming Styles
 {
     public DebugCommand() : base("test", EAdminType.MEMBER)
     {

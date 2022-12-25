@@ -27,15 +27,23 @@ public static class L
         F.CheckDir(Data.Paths.Logs, out _, true);
         if (File.Exists(Data.Paths.CurrentLog))
         {
-            string n = Path.Combine(Data.Paths.Logs, File.GetCreationTime(Data.Paths.CurrentLog).ToString(ActionLogger.DateHeaderFormat) + ".txt");
+            string n = Path.Combine(Data.Paths.Logs, File.GetCreationTime(Data.Paths.CurrentLog).ToString(ActionLog.DateHeaderFormat) + ".txt");
             if (File.Exists(n))
                 File.Delete(n);
             File.Move(Data.Paths.CurrentLog, n);
         }
         _log = new FileStream(Data.Paths.CurrentLog, FileMode.Create, FileAccess.Write, FileShare.Read);
-        Harmony.Patches.Patcher.Patch(typeof(Logs).GetMethod(nameof(Logs.printLine)),
-            prefix: new HarmonyMethod(typeof(L).GetMethod(nameof(PrintLinePatch),
-                BindingFlags.Static | BindingFlags.NonPublic)));
+        try
+        {
+            Harmony.Patches.Patcher.Patch(typeof(Logs).GetMethod(nameof(Logs.printLine)),
+                prefix: new HarmonyMethod(typeof(L).GetMethod(nameof(PrintLinePatch),
+                    BindingFlags.Static | BindingFlags.NonPublic)));
+        }
+        catch (Exception ex)
+        {
+            LogError("Error patching Logs.printLine.");
+            LogError(ex);
+        }
     }
     private static void PrintLinePatch(string message)
     {

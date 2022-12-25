@@ -191,7 +191,7 @@ public class BuildableComponent : MonoBehaviour
                     : entry.Value * Points.XPConfig.ShovelXP;
 
                 Points.AwardXP(player, Mathf.CeilToInt(amount), structureName.ToUpper() + " BUILT");
-                ActionLogger.Add(ActionLogType.HELP_BUILD_BUILDABLE, $"{Foundation.asset.itemName} / {Foundation.asset.id} / {Foundation.asset.GUID:N} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.AdminLocale)}%", player);
+                ActionLog.Add(ActionLogType.HELP_BUILD_BUILDABLE, $"{Foundation.asset.itemName} / {Foundation.asset.id} / {Foundation.asset.GUID:N} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.AdminLocale)}%", player);
                 if (contribution > 1f / 3f)
                     QuestManager.OnBuildableBuilt(player, Buildable);
             }

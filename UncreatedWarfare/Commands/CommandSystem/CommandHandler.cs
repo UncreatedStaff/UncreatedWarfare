@@ -1058,7 +1058,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
 
         string s = GetParamForParse(parameter);
-        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
+        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && Util.IsValidSteam64Id(steam64))
         {
             onlinePlayer = UCPlayer.FromID(steam64);
             return true;
@@ -1083,7 +1083,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
 
         string s = GetParamForParse(parameter);
-        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
+        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && Util.IsValidSteam64Id(steam64))
         {
             foreach (UCPlayer player in selection)
             {
@@ -1324,7 +1324,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     public void LogAction(ActionLogType type, string? data = null)
     {
-        ActionLogger.Add(type, data, CallerID);
+        ActionLog.Add(type, data, CallerID);
     }
     public bool HasPermission(EAdminType level, PermissionComparison comparison = PermissionComparison.AtLeast)
     {

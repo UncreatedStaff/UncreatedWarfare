@@ -156,7 +156,7 @@ public class UCWarfare : MonoBehaviour
 
         if (Config.EnableSync)
             gameObject.AddComponent<ConfigSync>();
-        gameObject.AddComponent<ActionLogger>();
+        gameObject.AddComponent<ActionLog>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
 
@@ -170,7 +170,7 @@ public class UCWarfare : MonoBehaviour
         if (!Config.DisableDailyQuests)
             Quests.DailyQuests.EarlyLoad();
 
-        ActionLogger.Add(ActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
+        ActionLog.Add(ActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
     }
     internal void InitNetClient()
     {

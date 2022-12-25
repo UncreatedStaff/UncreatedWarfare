@@ -841,14 +841,14 @@ public static class TeamManager
     private static void InvokeOnLeftMain(UCPlayer player, ulong team)
     {
         player.SendChat(T.LeftMain, GetFaction(team));
-        ActionLogger.Add(ActionLogType.LEFT_MAIN, "Team: " + TranslateName(player.GetTeam(), L.Default) + ", Base: " + TranslateName(team, L.Default) + 
+        ActionLog.Add(ActionLogType.LEFT_MAIN, "Team: " + TranslateName(player.GetTeam(), L.Default) + ", Base: " + TranslateName(team, L.Default) + 
                                                    ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
         OnPlayerLeftMainBase?.Invoke(player, team);
     }
     private static void InvokeOnEnterMain(UCPlayer player, ulong team)
     {
         player.SendChat(T.EnteredMain, GetFaction(team));
-        ActionLogger.Add(ActionLogType.ENTER_MAIN, "Team: " + TranslateName(player.GetTeam(), L.Default) + ", Base: " + TranslateName(team, L.Default) + 
+        ActionLog.Add(ActionLogType.ENTER_MAIN, "Team: " + TranslateName(player.GetTeam(), L.Default) + ", Base: " + TranslateName(team, L.Default) + 
                                                     ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
         OnPlayerEnteredMainBase?.Invoke(player, team);
     }

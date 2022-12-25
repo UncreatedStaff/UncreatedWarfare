@@ -174,12 +174,12 @@ public class ReportCommand : AsyncCommand
             //await UCWarfare.ToUpdate();
             //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
             L.Log($"Report against {names.PlayerName} ({target}) record: \"{messageUrl}\".", ConsoleColor.Cyan);
-            ActionLogger.Add(ActionLogType.CONFIRM_REPORT, report + ", Report URL: " + messageUrl, ctx.Caller);
+            ActionLog.Add(ActionLogType.CONFIRM_REPORT, report + ", Report URL: " + messageUrl, ctx.Caller);
         }
         else
         {
             L.Log($"Report against {names.PlayerName} ({target}) failed to send to UCHB.", ConsoleColor.Cyan);
-            ActionLogger.Add(ActionLogType.CONFIRM_REPORT, report + ", Report did not reach the discord bot.", ctx.Caller);
+            ActionLog.Add(ActionLogType.CONFIRM_REPORT, report + ", Report did not reach the discord bot.", ctx.Caller);
         }
         return;
     PlayerNotFound:

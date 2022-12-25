@@ -1361,7 +1361,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         SetTextNoLock(loadout, displayName);
         kit = await AddOrUpdate(loadout, token).ConfigureAwait(false);
 
-        ActionLogger.Add(ActionLogType.CREATE_KIT, loadoutName, fromPlayer);
+        ActionLog.Add(ActionLogType.CREATE_KIT, loadoutName, fromPlayer);
 
         return (kit, MessageContext.CODE_SUCCESS);
     }
@@ -2859,7 +2859,7 @@ public static class KitEx
                     if (proxy.Item != null)
                     {
                         await (state ? KitManager.GiveAccess(proxy, player, type) : KitManager.RemoveAccess(proxy, player)).ConfigureAwait(false);
-                        ActionLogger.Add(ActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.AdminLocale) + 
+                        ActionLog.Add(ActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.AdminLocale) + 
                                                                            (state ? (" GIVEN ACCESS TO " + kit + ", REASON: " + type) : 
                                                                            (" DENIED ACCESS TO " + kit + ".")), admin);
                         UCPlayer? onlinePlayer = UCPlayer.FromID(player);
@@ -2899,7 +2899,7 @@ public static class KitEx
                     if (proxy?.Item != null)
                     {
                         await (state ? KitManager.GiveAccess(proxy, player, type) : KitManager.RemoveAccess(proxy, player)).ConfigureAwait(false);
-                        ActionLogger.Add(ActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.AdminLocale) +
+                        ActionLog.Add(ActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.AdminLocale) +
                             (state ? (" GIVEN ACCESS TO " + kit + ", REASON: " + type) :
                                 (" DENIED ACCESS TO " + kit + ".")), admin);
                         UCPlayer? onlinePlayer = UCPlayer.FromID(player);

@@ -459,7 +459,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         UpdateUIMemberCount(team);
 
-        ActionLogger.Add(ActionLogType.CREATED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(team, 0), leader);
+        ActionLog.Add(ActionLogType.CREATED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(team, 0), leader);
 
         return squad;
     }
@@ -497,7 +497,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         UpdateMemberList(squad);
         UpdateUIMemberCount(squad.Team);
 
-        ActionLogger.Add(ActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + squad.Leader.Steam64.ToString(Data.AdminLocale), player);
+        ActionLog.Add(ActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + squad.Leader.Steam64.ToString(Data.AdminLocale), player);
 
         if (RallyManager.HasRally(squad, out RallyPoint rally))
             rally.ShowUIForSquad();
@@ -547,7 +547,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
             UpdateUIMemberCount(squad.Team);
 
-            ActionLogger.Add(ActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), player);
+            ActionLog.Add(ActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), player);
 
             if (RallyManager.HasRally(squad, out RallyPoint rally1))
             {
@@ -563,7 +563,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             return;
         }
 
-        ActionLogger.Add(ActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.AdminLocale)), player);
+        ActionLog.Add(ActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.AdminLocale)), player);
 
         if (willNeedNewLeader)
         {
@@ -601,7 +601,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         Squads.Remove(squad);
         squad.Disbanded = true;
 
-        ActionLogger.Add(ActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
+        ActionLog.Add(ActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
 
         Traits.TraitManager.OnSquadDisbanded(squad);
 
@@ -723,7 +723,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ActionLogger.Add(value ? ActionLogType.LOCKED_SQUAD : ActionLogType.UNLOCKED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
+        ActionLog.Add(value ? ActionLogType.LOCKED_SQUAD : ActionLogType.UNLOCKED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
         squad.IsLocked = value;
         ReplicateLockSquad(squad);
     }

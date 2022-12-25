@@ -504,15 +504,15 @@ internal static class Localization
     {
         string log = Util.RemoveRichText(msg);
         L.Log(log, tk ? ConsoleColor.Cyan : ConsoleColor.DarkCyan);
-        if (OffenseManager.IsValidSteam64ID(e.Instigator))
+        if (OffenseManager.IsValidSteam64Id(e.Instigator))
         {
-            ActionLogger.Add(ActionLogType.DEATH, log + " | Killer: " + e.Instigator.m_SteamID, e.Player.Steam64);
-            ActionLogger.Add(ActionLogType.KILL, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
+            ActionLog.Add(ActionLogType.DEATH, log + " | Killer: " + e.Instigator.m_SteamID, e.Player.Steam64);
+            ActionLog.Add(ActionLogType.KILL, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
             if (tk)
-                ActionLogger.Add(ActionLogType.TEAMKILL, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
+                ActionLog.Add(ActionLogType.TEAMKILL, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
         }
         else
-            ActionLogger.Add(ActionLogType.DEATH, log, e.Player.Steam64);
+            ActionLog.Add(ActionLogType.DEATH, log, e.Player.Steam64);
     }
     internal static void Reload()
     {

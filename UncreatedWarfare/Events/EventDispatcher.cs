@@ -640,7 +640,7 @@ public static class EventDispatcher
     private static void StructureManagerOnDamageStructureRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
         if (!shouldAllow) return;
-        if (OffenseManager.IsValidSteam64ID(instigatorSteamID))
+        if (OffenseManager.IsValidSteam64Id(instigatorSteamID))
             DestroyerComponent.AddOrUpdate(structureTransform.gameObject, instigatorSteamID.m_SteamID);
 
         if (DamageStructureRequested == null) return;

@@ -20,7 +20,7 @@ public class ShutdownCommand : Command
 
         if (ctx.ArgumentCount == 0)
         {
-            ActionLogger.AddPriority(ActionLogType.SHUTDOWN_SERVER, "INSTANT", ctx.CallerID);
+            ActionLog.AddPriority(ActionLogType.SHUTDOWN_SERVER, "INSTANT", ctx.CallerID);
             UCWarfare.ShutdownNow("None specified", ctx.CallerID);
             throw ctx.Defer();
         }
@@ -28,12 +28,12 @@ public class ShutdownCommand : Command
         {
             if (ctx.TryGetRange(1, out string reason))
             {
-                ActionLogger.AddPriority(ActionLogType.SHUTDOWN_SERVER, "INSTANT: " + reason, ctx.CallerID);
+                ActionLog.AddPriority(ActionLogType.SHUTDOWN_SERVER, "INSTANT: " + reason, ctx.CallerID);
                 UCWarfare.ShutdownNow(reason, ctx.CallerID);
             }
             else
             {
-                ActionLogger.AddPriority(ActionLogType.SHUTDOWN_SERVER, "INSTANT", ctx.CallerID);
+                ActionLog.AddPriority(ActionLogType.SHUTDOWN_SERVER, "INSTANT", ctx.CallerID);
                 UCWarfare.ShutdownNow("None specified", ctx.CallerID);
             }
             ctx.Defer();
@@ -89,7 +89,7 @@ public class ShutdownCommand : Command
             {
                 a = true;
                 L.Log($"A shutdown has been scheduled in {time} by {instigator} because: {reason}.", ConsoleColor.Cyan);
-                ActionLogger.Add(ActionLogType.SHUTDOWN_SERVER, "IN " + time.ToUpper() + ": " + reason, instigator);
+                ActionLog.Add(ActionLogType.SHUTDOWN_SERVER, "IN " + time.ToUpper() + ": " + reason, instigator);
             }
             Chat.Broadcast(set, T.ShutdownBroadcastTime, time, reason);
         }
@@ -97,7 +97,7 @@ public class ShutdownCommand : Command
         {
             time = seconds.GetTimeFromSeconds(L.Default);
             L.Log($"A shutdown has been scheduled in {time} by {instigator} because: {reason}.", ConsoleColor.Cyan);
-            ActionLogger.Add(ActionLogType.SHUTDOWN_SERVER, "IN " + time.ToUpper() + ": " + reason, instigator);
+            ActionLog.Add(ActionLogType.SHUTDOWN_SERVER, "IN " + time.ToUpper() + ": " + reason, instigator);
         }
         NetCalls.SendShuttingDownInSeconds.NetInvoke(instigator, reason, (uint)seconds);
         Provider.shutdown(seconds, reason);
@@ -105,7 +105,7 @@ public class ShutdownCommand : Command
     public static void ShutdownAfterGameDaily() => ShutdownAfterGame("Daily Restart", true);
     public static void ShutdownAfterGame(string reason, bool isDaily)
     {
-        ActionLogger.Add(ActionLogType.SHUTDOWN_SERVER, "AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.AdminLocale)) + ": " + reason);
+        ActionLog.Add(ActionLogType.SHUTDOWN_SERVER, "AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.AdminLocale)) + ": " + reason);
         Chat.Broadcast(isDaily ? T.ShutdownBroadcastDaily : T.ShutdownBroadcastAfterGame, reason);
         L.Log($"A shutdown has been scheduled after this game because: {reason}.", ConsoleColor.Cyan);
         Data.Gamemode?.ShutdownAfterGame(reason, 0);

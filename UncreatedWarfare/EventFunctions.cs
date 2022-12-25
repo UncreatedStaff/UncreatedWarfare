@@ -90,7 +90,7 @@ public static class EventFunctions
     internal static void OnStructurePlaced(StructureRegion region, StructureDrop drop)
     {
         StructureData data = drop.GetServersideData();
-        ActionLogger.Add(ActionLogType.PLACE_STRUCTURE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", data.owner);
+        ActionLog.Add(ActionLogType.PLACE_STRUCTURE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", data.owner);
     }
     internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeDrop drop)
     {
@@ -105,7 +105,7 @@ public static class EventFunctions
         owner.Player = player?.player;
         owner.BarricadeGUID = data.barricade.asset.GUID;
 
-        ActionLogger.Add(ActionLogType.PLACE_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", data.owner);
+        ActionLog.Add(ActionLogType.PLACE_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", data.owner);
 
         RallyManager.OnBarricadePlaced(drop, region);
 
@@ -563,7 +563,7 @@ public static class EventFunctions
                 ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? T.WelcomeMessage : T.WelcomeBackMessage, ucplayer, ucplayer), EToastMessageSeverity.INFO));
             });
             ucplayer.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);
-            ActionLogger.Add(ActionLogType.CONNECT, $"Players online: {Provider.clients.Count}", ucplayer);
+            ActionLog.Add(ActionLogType.CONNECT, $"Players online: {Provider.clients.Count}", ucplayer);
             if (UCWarfare.Config.EnablePlayerJoinLeaveMessages)
                 Chat.Broadcast(T.PlayerConnected, ucplayer);
             Data.Reporter?.OnPlayerJoin(ucplayer.SteamPlayer);
@@ -703,7 +703,7 @@ public static class EventFunctions
         PlayerNames names = player != null ? player.Name : new PlayerNames(client);
         Chat.Broadcast(T.BattlEyeKickBroadcast, names);
         L.Log($"{names.PlayerName} ({client.playerID.steamID.m_SteamID}) was kicked by BattlEye for \"{reason}\".");
-        ActionLogger.Add(ActionLogType.KICKED_BY_BATTLEYE, "REASON: \"" + reason + "\"", client.playerID.steamID.m_SteamID);
+        ActionLog.Add(ActionLogType.KICKED_BY_BATTLEYE, "REASON: \"" + reason + "\"", client.playerID.steamID.m_SteamID);
         if (UCWarfare.Config.ModerationSettings.BattleyeExclusions != null &&
             !UCWarfare.Config.ModerationSettings.BattleyeExclusions.Contains(reason))
         {
@@ -1002,7 +1002,7 @@ public static class EventFunctions
             component = e.Vehicle.transform.gameObject.AddComponent<VehicleComponent>();
             component.Initialize(e.Vehicle);
         }
-        ActionLogger.Add(ActionLogType.ENTER_VEHICLE_SEAT, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.asset.id} / {e.Vehicle.asset.GUID:N}, Owner: {e.Vehicle.lockedOwner.m_SteamID}, " +
+        ActionLog.Add(ActionLogType.ENTER_VEHICLE_SEAT, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.asset.id} / {e.Vehicle.asset.GUID:N}, Owner: {e.Vehicle.lockedOwner.m_SteamID}, " +
                                                             $"ID: ({e.Vehicle.instanceID}) Seat move: >> " +
                                                             $"{e.PassengerIndex.ToString(Data.AdminLocale)}", e.Player.Steam64);
         component.OnPlayerEnteredVehicle(e);
@@ -1041,7 +1041,7 @@ public static class EventFunctions
             shouldAllow = false;
             return;
         }
-        if (parameters.cause < DeathTracker.MAIN_CAMP_OFFSET && Data.Gamemode is TeamGamemode gm && gm.EnableAMC && OffenseManager.IsValidSteam64ID(parameters.killer) && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
+        if (parameters.cause < DeathTracker.MAIN_CAMP_OFFSET && Data.Gamemode is TeamGamemode gm && gm.EnableAMC && OffenseManager.IsValidSteam64Id(parameters.killer) && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
         {
             Player killer = PlayerTool.getPlayer(parameters.killer);
             if (killer != null)
@@ -1301,7 +1301,7 @@ public static class EventFunctions
         {
             component.OnPlayerExitedVehicle(e);
         }
-        ActionLogger.Add(ActionLogType.LEAVE_VEHICLE_SEAT, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.asset.id} / {e.Vehicle.asset.GUID:N}, Owner: {e.Vehicle.lockedOwner.m_SteamID}, " +
+        ActionLog.Add(ActionLogType.LEAVE_VEHICLE_SEAT, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.asset.id} / {e.Vehicle.asset.GUID:N}, Owner: {e.Vehicle.lockedOwner.m_SteamID}, " +
                                                          $"ID: ({e.Vehicle.instanceID})", e.Steam64);
     }
     internal static void OnVehicleSwapSeat(VehicleSwapSeat e)
@@ -1314,7 +1314,7 @@ public static class EventFunctions
         {
             component.OnPlayerSwapSeatRequested(e);
         }
-        ActionLogger.Add(ActionLogType.ENTER_VEHICLE_SEAT, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
+        ActionLog.Add(ActionLogType.ENTER_VEHICLE_SEAT, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
                                                             $"ID: ({vehicle.instanceID}) Seat move: {e.OldSeat.ToString(Data.AdminLocale)} >> " +
                                                             $"{e.NewSeat.ToString(Data.AdminLocale)}", e.Player.Steam64);
     }
@@ -1392,12 +1392,12 @@ public static class EventFunctions
             if (gotptcomp)
             {
                 c!.stats = null!;
-                ActionLogger.Add(ActionLogType.DISCONNECT, "PLAYED FOR " + Mathf.RoundToInt(Time.realtimeSinceStartup - c.JoinTime).GetTimeFromSeconds(0).ToUpper(), ucplayer.Steam64);
+                ActionLog.Add(ActionLogType.DISCONNECT, "PLAYED FOR " + Mathf.RoundToInt(Time.realtimeSinceStartup - c.JoinTime).GetTimeFromSeconds(0).ToUpper(), ucplayer.Steam64);
                 Data.PlaytimeComponents.Remove(ucplayer.Steam64);
                 UnityEngine.Object.Destroy(c);
             }
             else
-                ActionLogger.Add(ActionLogType.DISCONNECT, $"Players online: {Provider.clients.Count - 1}", ucplayer.Steam64);
+                ActionLog.Add(ActionLogType.DISCONNECT, $"Players online: {Provider.clients.Count - 1}", ucplayer.Steam64);
             PlayerManager.NetCalls.SendPlayerLeft.NetInvoke(ucplayer.Steam64);
         }
         catch (Exception ex)
@@ -1417,7 +1417,7 @@ public static class EventFunctions
         if (player == null) return;
         try
         {
-            ActionLogger.Add(ActionLogType.TRY_CONNECT, $"Steam Name: {player.playerID.playerName}, Public Name: {player.playerID.characterName}, Private Name: {player.playerID.nickName}, Character ID: {player.playerID.characterID}.", ticket.m_SteamID.m_SteamID);
+            ActionLog.Add(ActionLogType.TRY_CONNECT, $"Steam Name: {player.playerID.playerName}, Public Name: {player.playerID.characterName}, Private Name: {player.playerID.nickName}, Character ID: {player.playerID.characterID}.", ticket.m_SteamID.m_SteamID);
             bool kick = false;
             string? cn = null;
             string? nn = null;
@@ -1503,7 +1503,7 @@ public static class EventFunctions
 #endif
         if (e.Instigator != null)
         {
-            ActionLogger.Add(ActionLogType.DESTROY_STRUCTURE, 
+            ActionLog.Add(ActionLogType.DESTROY_STRUCTURE, 
                 $"{e.Structure.asset.itemName} / {e.Structure.asset.id} / {e.Structure.asset.GUID:N} " +
                 $"- Owner: {e.ServersideData.owner}, Team: {TeamManager.TranslateName(e.ServersideData.group.GetTeam(), 0)}, ID: {e.Structure.instanceID}",
                 e.Instigator.Steam64);
@@ -1540,7 +1540,7 @@ public static class EventFunctions
         if (e.Transform.TryGetComponent(out BarricadeComponent c))
         {
             SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
-            ActionLogger.Add(ActionLogType.DESTROY_BARRICADE, $"{e.Barricade.asset.itemName} / {e.Barricade.asset.id} / {e.Barricade.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(e.ServersideData.group.GetTeam(), 0)}, ID: {e.Barricade.instanceID}", c.LastDamager);
+            ActionLog.Add(ActionLogType.DESTROY_BARRICADE, $"{e.Barricade.asset.itemName} / {e.Barricade.asset.id} / {e.Barricade.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(e.ServersideData.group.GetTeam(), 0)}, ID: {e.Barricade.instanceID}", c.LastDamager);
             if (Data.Reporter is not null && damager != null && e.ServersideData.group.GetTeam() == damager.GetTeam())
             {
                 Data.Reporter.OnDestroyedStructure(c.LastDamager, e.InstanceID);

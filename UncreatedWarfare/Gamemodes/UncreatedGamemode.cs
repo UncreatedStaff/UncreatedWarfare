@@ -653,7 +653,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
             QuestManager.OnGameOver(winner);
 
-            ActionLogger.Add(ActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
+            ActionLog.Add(ActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
 
             Chat.Broadcast(T.TeamWin, TeamManager.GetFaction(winner));
 
@@ -735,7 +735,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     goto error;
                 L.Log("Chosen new gamemode " + Data.Gamemode.DisplayName, ConsoleColor.DarkCyan);
                 await Data.Singletons.LoadSingletonAsync(Data.Gamemode, token: token).ConfigureAwait(false);
-                ActionLogger.Add(ActionLogType.GAMEMODE_CHANGED_AUTO, Data.Gamemode.DisplayName);
+                ActionLog.Add(ActionLogType.GAMEMODE_CHANGED_AUTO, Data.Gamemode.DisplayName);
                 return true;
             }
             catch (SingletonLoadException ex2)

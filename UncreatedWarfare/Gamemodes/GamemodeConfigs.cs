@@ -207,6 +207,70 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("ui_loading")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UILoading { get; set; }
 
+    [Sync(475)]
+    [JsonPropertyName("effect_spotted_marker_infantry")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerInfantry { get; set; }
+
+    [Sync(476)]
+    [JsonPropertyName("effect_spotted_marker_fob")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerFOB { get; set; }
+
+    [Sync(477)]
+    [JsonPropertyName("effect_spotted_marker_aa")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerAA { get; set; }
+
+    [Sync(478)]
+    [JsonPropertyName("effect_spotted_marker_apc")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerAPC { get; set; }
+
+    [Sync(479)]
+    [JsonPropertyName("effect_spotted_marker_atgm")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerATGM { get; set; }
+
+    [Sync(480)]
+    [JsonPropertyName("effect_spotted_marker_attack_heli")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerAttackHeli { get; set; }
+
+    [Sync(481)]
+    [JsonPropertyName("effect_spotted_marker_hmg")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerHMG { get; set; }
+
+    [Sync(482)]
+    [JsonPropertyName("effect_spotted_marker_humvee")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerHumvee { get; set; }
+
+    [Sync(483)]
+    [JsonPropertyName("effect_spotted_marker_ifv")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerIFV { get; set; }
+
+    [Sync(484)]
+    [JsonPropertyName("effect_spotted_marker_jet")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerJet { get; set; }
+
+    [Sync(485)]
+    [JsonPropertyName("effect_spotted_marker_mbt")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerMBT { get; set; }
+
+    [Sync(486)]
+    [JsonPropertyName("effect_spotted_marker_mortar")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerMortar { get; set; }
+
+    [Sync(487)]
+    [JsonPropertyName("effect_spotted_marker_scout_car")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerScoutCar { get; set; }
+
+    [Sync(488)]
+    [JsonPropertyName("effect_spotted_marker_transport_air")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerTransportAir { get; set; }
+
+    [Sync(489)]
+    [JsonPropertyName("effect_spotted_marker_logistics_ground")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerLogisticsGround { get; set; }
+
+    [Sync(490)]
+    [JsonPropertyName("effect_spotted_marker_transport_ground")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerTransportGround { get; set; }
+
     [Sync(500)]
     [JsonPropertyName("effect_marker_ammo")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectMarkerAmmo { get; set; }

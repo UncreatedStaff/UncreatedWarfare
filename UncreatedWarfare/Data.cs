@@ -406,7 +406,7 @@ public static class Data
     {
         L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
         PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
-        ActionLogger.OnConnected();
+        ActionLog.OnConnected();
         if (!UCWarfare.Config.DisableDailyQuests)
             Quests.DailyQuests.OnConnectedToServer();
         if (Gamemode != null && Gamemode.ShouldShutdownAfterGame)

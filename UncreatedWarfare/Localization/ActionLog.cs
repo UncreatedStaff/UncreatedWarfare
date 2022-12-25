@@ -1,15 +1,497 @@
 ﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using SDG.Unturned;
+using System.Threading;
+using System.Threading.Tasks;
+using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.Networking.Async;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
+public class ActionLog : MonoBehaviour
+{
+    public const string DateHeaderFormat = "yyyy-MM-dd_HH-mm-ss";
+    public const string DateLineFormat = "s";
+    public const int DateLineFormatLength = 19;
+    public const string SteamIDFormat = "D17";
+    public const int SteamIDLength = 17;
+    public const int WriteBufferSize = 288;
+    private readonly ConcurrentQueue<ActionLogItem> _items = new ConcurrentQueue<ActionLogItem>();
+    private volatile bool _sendingLog;
+    private ActionLogMeta? _current;
+    private FileStream? _stream;
+    private static ActionLog _instance;
+    private static ByteWriter? _metaWriter;
+    private static ByteReader? _metaReader;
+    private static char[][]? _types;
+    private CancellationTokenSource _src = new CancellationTokenSource();
+    private static ByteReader MetaReader => _metaReader ??= new ByteReader();
+    private static ByteWriter MetaWriter => _metaWriter ??= new ByteWriter(false, ActionLogMeta.Capacity);
+    private static char[][] Types
+    {
+        get
+        {
+            if (_types is null)
+            {
+                _types = new char[(int)ActionLogType.Max][];
+                for (int i = 0; i < _types.Length; ++i)
+                    _types[i] = ((ActionLogType)i).ToString().ToCharArray();
+            }
+
+            return _types;
+        }
+    }
+    [UsedImplicitly]
+    void Awake()
+    {
+        if (_instance != null)
+            Destroy(_instance);
+        _instance = this;
+    }
+    [UsedImplicitly]
+    void OnDestroy() => OnApplicationQuit();
+    void OnApplicationQuit()
+    {
+        if (_stream is not null)
+        {
+            try
+            {
+                _stream.Flush();
+                _stream.Dispose();
+            }
+            catch (ObjectDisposedException) { }
+        }
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static string AsAsset(Asset asset) => $"{{{asset.FriendlyName} / {asset.id} / {asset.GUID:N}}}";
+    public static void Add(ActionLogType type, string? data, UCPlayer? player) => Add(type, data, player == null ? 0ul : player.Steam64);
+    public static void Add(ActionLogType type, string? data = null, ulong player = 0)
+    {
+        _instance._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
+    }
+    public static void AddPriority(ActionLogType type, string? data = null, ulong player = 0)
+    {
+        _instance._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
+        _instance.Update();
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string GetMetaPath(ActionLogMeta meta) => Path.Combine(Data.Paths.ActionLog, meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".meta");
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string GetLogPath(ActionLogMeta meta) => Path.Combine(Data.Paths.ActionLog, meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".txt");
+    private void SaveMeta(string path)
+    {
+        using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        MetaWriter.Stream = str;
+        try
+        {
+            _current!.Write(MetaWriter);
+        }
+        finally
+        {
+            MetaWriter.Flush();
+        }
+    }
+    private void SendCurrentLog() => SendLog(_current!);
+    private void SendLog(ActionLogMeta meta)
+    {
+        UCWarfare.RunTask(SendLogAsync, meta, MessageContext.Nil, ctx: "Sending log " + meta.FirstTimestamp.ToString("s") + " to homebase.");
+    }
+    private static void DeleteLog(ActionLogMeta meta)
+    {
+        string path = GetLogPath(meta);
+        if (File.Exists(path))
+            File.Delete(path);
+        path = GetMetaPath(meta);
+        if (File.Exists(path))
+            File.Delete(path);
+    }
+    private Task SendCurrentLogAsync(MessageContext context, CancellationToken token = default) =>
+        _current == null
+        ? Task.FromException(new Exception("No current log loaded."))
+        : SendLogAsync(_current, context, token);
+    private async Task SendLogAsync(ActionLogMeta meta, MessageContext context, CancellationToken token = default)
+    {
+        if (!UCWarfare.CanUseNetCall)
+            return;
+        int c = 0;
+        while (_sendingLog)
+        {
+            if (c > 4000)
+                return;
+            await Task.Delay(25, token);
+            ++c;
+        }
+        _sendingLog = true;
+        try
+        {
+            string path = GetLogPath(meta);
+            if (File.Exists(path))
+            {
+                byte[] bytes;
+                if (meta == _current) // switch to main thread if sending current so it's not overwritten by the update loop.
+                    await UCWarfare.ToUpdate(token);
+                using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    int l = (int)Math.Min(stream.Length, int.MaxValue);
+                    bytes = new byte[l];
+                    l = await stream.ReadAsync(bytes, 0, l, token);
+                    if (l != bytes.Length)
+                    {
+                        byte[] old = bytes;
+                        bytes = new byte[l];
+                        Buffer.BlockCopy(old, 0, bytes, 0, l);
+                    }
+                }
+                if (!UCWarfare.CanUseNetCall)
+                    return;
+
+                RequestResponse response = await NetCalls.SendLog.RequestAck(UCWarfare.I.NetClient!, meta, bytes, 10000);
+                if (response.Responded && response.ErrorCode.HasValue && response.ErrorCode.Value == MessageContext.CODE_SUCCESS)
+                {
+                    if (meta != _current)
+                        DeleteLog(meta);
+                }
+                else
+                {
+                    L.LogWarning("UCHB failed to acknoledge SendLog request: " + response.Context + ".");
+                }
+            }
+        }
+        finally
+        {
+            _sendingLog = false;
+        }
+    }
+    [UsedImplicitly]
+    void Update()
+    {
+        while (_items.TryDequeue(out ActionLogItem item))
+        {
+            if (_current != null && (item.Timestamp - _current.FirstTimestamp).TotalHours > 1d)
+            {
+                _stream?.Dispose();
+                _stream = null;
+                SendLog(_current);
+                _current = null;
+            }
+            _current ??= new ActionLogMeta
+            {
+                FirstTimestamp = item.Timestamp,
+                LoggedPlayers = new List<ulong>(64),
+                LoggedDataTypes = new List<ActionLogType>(32),
+                DataReferencedPlayers = new List<ulong>(48),
+                UtcOffset = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now)
+            };
+            if (Util.IsValidSteam64Id(item.Player) && !_current.LoggedPlayers.Contains(item.Player))
+                _current.LoggedPlayers.Add(item.Player);
+
+            if (!string.IsNullOrEmpty(item.Data))
+                ActionLogMeta.FindReferencesInLine(item.Data!, _current.DataReferencedPlayers);
+
+            if (!_current.LoggedDataTypes.Contains(item.Type))
+                _current.LoggedDataTypes.Add(item.Type);
+
+            _current.LastTimestamp = item.Timestamp;
+            _stream ??= new FileStream(GetLogPath(_current), FileMode.Append, FileAccess.Write, FileShare.Read);
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(item.ToCharArr());
+            _stream.Write(bytes, 0, bytes.Length);
+            _stream.Flush();
+            SaveMeta(GetMetaPath(_current));
+        }
+    }
+    public static bool TryParseLogType(string text, out ActionLogType type) => Enum.TryParse(text, true, out type);
+    internal void OnConnected()
+    {
+        if (!UCWarfare.Config.SendActionLogs)
+            return;
+        F.CheckDir(Data.Paths.ActionLog, out bool success);
+        if (success)
+        {
+            lock (_instance)
+            {
+                List<string> files = new List<string>();
+                foreach (string file in Directory.EnumerateFiles(Data.Paths.ActionLog, "*.txt"))
+                {
+                    string name = Path.GetFileName(file);
+                    if (name.Equals(_currentFileName, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    name = Path.GetFileNameWithoutExtension(name);
+                    if (DateTimeOffset.TryParseExact(name, DateHeaderFormat, Data.AdminLocale, DateTimeStyles.AssumeLocal, out DateTimeOffset offs) && offs != _currentLogSt)
+                    {
+                        files.Add(file);
+                    }
+                }
+
+                if (files.Count > 0)
+                {
+                    NetCalls.SendLogs.NetInvoke(writer =>
+                    {
+                        writer.Write(files.Count);
+                        for (int i = 0; i < files.Count; i++)
+                        {
+                            L.Log("Sending old log: \"" + files[i] + "\".", ConsoleColor.Magenta);
+                            if (DateTimeOffset.TryParseExact(Path.GetFileNameWithoutExtension(files[i]), DateHeaderFormat, Data.AdminLocale, DateTimeStyles.AssumeLocal, out DateTimeOffset dto))
+                            {
+                                using FileStream str = new FileStream(files[i], FileMode.Open, FileAccess.Read, FileShare.Read);
+                                writer.Write(dto);
+                                int len = (int)Math.Min(str.Length, int.MaxValue);
+                                byte[] bytes = new byte[len];
+                                str.Read(bytes, 0, len);
+                                writer.WriteLong(bytes);
+                            }
+                            else
+                            {
+                                writer.Write(DateTimeOffset.MinValue);
+                                writer.WriteLong(Array.Empty<byte>());
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    }
+    // ReSharper disable once StructCanBeMadeReadOnly
+    private record struct ActionLogItem(ulong Player, ActionLogType Type, string? Data, DateTimeOffset Timestamp)
+    {
+        public static ActionLogItem? FromLine(string line)
+        {
+            if (line.Length <= DateLineFormatLength + 6 + SteamIDLength)
+                return null;
+            int endbracket = line.IndexOf(']', DateLineFormatLength + 6 + SteamIDLength);
+            if (endbracket == -1)
+                return null;
+            if (!DateTimeOffset.TryParseExact(
+                    line.Substring(1, DateLineFormatLength), DateLineFormat, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeLocal, out DateTimeOffset timestamp) ||
+                !ulong.TryParse(line.Substring(3 + DateLineFormatLength, SteamIDLength), NumberStyles.Number, CultureInfo.InvariantCulture, out ulong steam64) ||
+                !TryParseLogType(line.Substring(DateLineFormatLength + 6 + SteamIDLength, endbracket - (DateLineFormatLength + 6 + SteamIDLength)), out ActionLogType type))
+                return null;
+            return new ActionLogItem(steam64, type, endbracket == line.Length - 1 ? string.Empty : line.Substring(endbracket + 1), timestamp);
+        }
+
+        public readonly override string ToString() => new string(ToCharArr());
+        public readonly unsafe char[] ToCharArr()
+        {
+            char[] t = Types.Length <= (int)Type ? Type.ToString().ToCharArray() : Types[(int)Type];
+            int l2 = 6;
+            if (Data is not null)
+                l2 += 1 + Data!.Length;
+            char[] chars = new char[l2 + DateLineFormatLength + SteamIDLength + t.Length];
+            fixed (char* outPtr = chars)
+            {
+                outPtr[0] = '[';
+                outPtr[DateLineFormatLength + 1] = ']';
+                outPtr[DateLineFormatLength + 2] = '[';
+                outPtr[DateLineFormatLength + 3 + SteamIDLength] = ']';
+                outPtr[DateLineFormatLength + 4 + SteamIDLength] = '[';
+                outPtr[DateLineFormatLength + 5 + SteamIDLength + t.Length] = ']';
+                fixed (char* ptr = Timestamp.ToString(DateLineFormat))
+                    Buffer.MemoryCopy(ptr, outPtr + 2, DateLineFormatLength * 2, DateLineFormatLength * 2);
+                fixed (char* ptr = Player.ToString(SteamIDFormat))
+                    Buffer.MemoryCopy(ptr, outPtr + DateLineFormatLength * 2 + 6, SteamIDLength * 2, SteamIDLength * 2);
+                fixed (char* ptr = t)
+                    Buffer.MemoryCopy(ptr, outPtr + DateLineFormatLength * 2 + 10 + SteamIDLength * 2, t.Length * 2, t.Length * 2);
+                if (Data is not null)
+                {
+                    outPtr[DateLineFormatLength + 6 + SteamIDLength + t.Length] = ' ';
+                    fixed (char* ptr = Data)
+                        Buffer.MemoryCopy(ptr, outPtr + DateLineFormatLength * 2 + 14 + SteamIDLength * 2 + t.Length * 2, Data.Length * 2, Data.Length * 2);
+                }
+            }
+            return chars;
+        }
+    }
+    public class ActionLogMeta : IVersionableReadWrite
+    {
+        public const int Capacity = 2048;
+        private const byte DataVersion = 1;
+        public TimeSpan UtcOffset;
+        public DateTimeOffset FirstTimestamp = DateTimeOffset.MaxValue;
+        public DateTimeOffset LastTimestamp = DateTimeOffset.MinValue;
+        public List<ulong> LoggedPlayers;
+        public List<ulong> DataReferencedPlayers;
+        public List<ActionLogType> LoggedDataTypes;
+        public byte Version { get; set; } = DataVersion;
+        public ActionLogMeta() { }
+        public ActionLogMeta(DateTimeOffset start, DateTimeOffset end, List<ulong> players, List<ulong> refPlayers, List<ActionLogType> types)
+        {
+            FirstTimestamp = start;
+            LastTimestamp = end;
+            LoggedPlayers = players;
+            DataReferencedPlayers = refPlayers;
+            LoggedDataTypes = types;
+        }
+        /// <exception cref="ByteBufferOverflowException"/>
+        public static ActionLogMeta FromMetaFile(string file)
+        {
+            lock (MetaReader)
+            {
+                bool f = MetaReader.ThrowOnError;
+                MetaReader.ThrowOnError = true;
+                ActionLogMeta meta;
+                using (FileStream stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    MetaReader.LoadNew(stream);
+                    meta = ReadMeta(MetaReader);
+                }
+
+                MetaReader.ThrowOnError = f;
+                return meta;
+            }
+        }
+        public static ActionLogMeta? FromLogFile(string file)
+        {
+            using StreamReader reader = new StreamReader(file, System.Text.Encoding.UTF8);
+            List<ulong> logged = new List<ulong>(48);
+            List<ulong> refed = new List<ulong>(48);
+            List<ActionLogType> types = new List<ActionLogType>(48);
+            DateTimeOffset first = DateTimeOffset.MaxValue;
+            DateTimeOffset last = DateTimeOffset.MinValue;
+            bool readOneLine = false;
+            while (reader.ReadLine() is { } line)
+            {
+                ActionLogItem? n = ActionLogItem.FromLine(line);
+                if (n.HasValue)
+                {
+                    readOneLine = true;
+                    ActionLogItem item = n.Value;
+                    if (Util.IsValidSteam64Id(item.Player) && !logged.Contains(item.Player))
+                    {
+                        logged.Add(item.Player);
+                    }
+                    if (!string.IsNullOrEmpty(item.Data))
+                        FindReferencesInLine(item.Data!, refed);
+                    if (!types.Contains(item.Type))
+                        types.Add(item.Type);
+                    if (first > item.Timestamp)
+                        first = item.Timestamp;
+                    if (last > item.Timestamp)
+                        last = item.Timestamp;
+                }
+            }
+
+            return !readOneLine ? null : new ActionLogMeta(first, last, logged, refed, types);
+        }
+        public static ActionLogMeta ReadMeta(ByteReader reader)
+        {
+            ActionLogMeta meta = new ActionLogMeta();
+            meta.Read(reader);
+            return meta;
+        }
+        public static void WriteMeta(ByteWriter writer, ActionLogMeta meta) => meta.Write(writer);
+        public static void FindReferencesInLine(string data, ICollection<ulong> output)
+        {
+            int index = -1;
+            const int s64Lm1 = SteamIDLength - 1;
+            while (true)
+            {
+                index = data.IndexOf('7', index + 1);
+                if (index == -1 || data.Length - index < SteamIDLength)
+                    break;
+                int end = index;
+                while (end - index < s64Lm1 && char.IsDigit(data[end + 1])) ++end;
+                if (end - index == s64Lm1 && ulong.TryParse(data.Substring(index, SteamIDLength), NumberStyles.Number, CultureInfo.InvariantCulture, out ulong steam64) && Util.IsValidSteam64Id(steam64) && !output.Contains(steam64))
+                    output.Add(steam64);
+
+                index = end;
+            }
+        }
+        public void Read(ByteReader reader)
+        {
+            byte version = reader.ReadUInt8();
+            Version = DataVersion;
+            if (version > 0)
+            {
+                FirstTimestamp = reader.ReadDateTimeOffset();
+                LastTimestamp = reader.ReadDateTimeOffset();
+                int len = reader.ReadUInt16();
+                LoggedPlayers = new List<ulong>(len);
+                for (int i = 0; i < len; ++i)
+                    LoggedPlayers.Add(reader.ReadUInt64());
+                len = reader.ReadUInt16();
+                LoggedDataTypes = new List<ActionLogType>(len);
+                for (int i = 0; i < len; ++i)
+                    LoggedDataTypes.Add(reader.ReadEnum<ActionLogType>());
+                len = reader.ReadUInt16();
+                DataReferencedPlayers = new List<ulong>(len);
+                for (int i = 0; i < len; ++i)
+                    DataReferencedPlayers.Add(reader.ReadUInt64());
+            }
+        }
+        public void Write(ByteWriter writer)
+        {
+            if (writer.Stream == null)
+            {
+                writer.ExtendBuffer(27 +
+                                    (LoggedPlayers == null ? 0 : LoggedPlayers.Count) +
+                                    (LoggedDataTypes == null ? 0 : LoggedDataTypes.Count) +
+                                    (DataReferencedPlayers == null ? 0 : DataReferencedPlayers.Count));
+            }
+            writer.Write(Version);
+            if (Version > 0)
+            {
+                writer.Write(FirstTimestamp);
+                writer.Write(LastTimestamp);
+                if (LoggedPlayers is { Count: > 0 })
+                {
+                    writer.Write((ushort)LoggedPlayers.Count);
+                    for (int i = 0; i < LoggedPlayers.Count; ++i)
+                        writer.Write(LoggedPlayers[i]);
+                }
+                else
+                {
+                    writer.Write((ushort)0);
+                }
+                if (LoggedDataTypes is { Count: > 0 })
+                {
+                    writer.Write((ushort)LoggedDataTypes.Count);
+                    for (int i = 0; i < LoggedDataTypes.Count; ++i)
+                        writer.Write(LoggedDataTypes[i]);
+                }
+                else
+                {
+                    writer.Write((ushort)0);
+                }
+                if (DataReferencedPlayers is { Count: > 0 })
+                {
+                    writer.Write((ushort)DataReferencedPlayers.Count);
+                    for (int i = 0; i < DataReferencedPlayers.Count; ++i)
+                        writer.Write(DataReferencedPlayers[i]);
+                }
+                else
+                {
+                    writer.Write((ushort)0);
+                }
+            }
+        }
+    }
+    public static class NetCalls
+    {
+        public static readonly NetCallRaw<ActionLogMeta, byte[]> SendLog = new NetCallRaw<ActionLogMeta, byte[]>(1127, ActionLogMeta.ReadMeta,
+            reader => reader.ReadLongBytes(), ActionLogMeta.WriteMeta, (writer, b) => writer.WriteLong(b));
+        public static readonly NetCall<DateTimeOffset> AckLog = new NetCall<DateTimeOffset>(1128);
+        public static readonly NetCall RequestCurrentLog = new NetCall(ReceiveCurrentLogRequest);
+
+        [NetCall(ENetCall.FROM_SERVER, 1129)]
+        internal static Task ReceiveCurrentLogRequest(MessageContext context)
+        {
+            if (UCWarfare.Config.SendActionLogs && _instance != null)
+            {
+                return _instance.SendCurrentLogAsync(context);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+}
 public class ActionLogger : MonoBehaviour
 {
     private readonly Queue<ActionLogItem> _items = new Queue<ActionLogItem>(16);
@@ -125,17 +607,6 @@ public class ActionLogger : MonoBehaviour
         byte[] data = System.Text.Encoding.UTF8.GetBytes(item.ToString() + "\n");
         stream.Write(data, 0, data.Length);
     }
-    // ReSharper disable once StructCanBeMadeReadOnly
-    private record struct ActionLogItem(ulong Player, ActionLogType Type, string? Data, DateTime Timestamp)
-    {
-        public readonly override string ToString()
-        {
-            string v = "[" + Timestamp.ToString("s") + "][" + Player.ToString("D17") + "][" + Type.ToString() + "]";
-            if (Data != null)
-                return v + " " + Data;
-            else return v;
-        }
-    }
     private void SendCurrentLog(in MessageContext ctx)
     {
         if (!UCWarfare.Config.SendActionLogs)
@@ -157,108 +628,7 @@ public class ActionLogger : MonoBehaviour
             }
         }
     }
-    internal static void OnConnected()
-    {
-#if aDEBUG
-        return;
-#endif
-        if (!UCWarfare.Config.SendActionLogs)
-            return;
-        if (_instance != null)
-        {
-            F.CheckDir(Data.Paths.ActionLog, out bool success);
-            if (success)
-            {
-                lock (_instance)
-                {
-                    List<string> files = new List<string>();
-                    foreach (string file in Directory.EnumerateFiles(Data.Paths.ActionLog, "*.txt"))
-                    {
-                        string name = Path.GetFileName(file);
-                        if (name.Equals(_currentFileName, StringComparison.OrdinalIgnoreCase))
-                            continue;
-                        name = Path.GetFileNameWithoutExtension(name);
-                        if (DateTimeOffset.TryParseExact(name, DateHeaderFormat, Data.AdminLocale, DateTimeStyles.AssumeLocal, out DateTimeOffset offs) && offs != _currentLogSt)
-                        {
-                            files.Add(file);
-                        }
-                    }
 
-                    if (files.Count > 0)
-                    {
-                        NetCalls.SendLogs.NetInvoke(writer =>
-                        {
-                            writer.Write(files.Count);
-                            for (int i = 0; i < files.Count; i++)
-                            {
-                                L.Log("Sending old log: \"" + files[i] + "\".", ConsoleColor.Magenta);
-                                if (DateTimeOffset.TryParseExact(Path.GetFileNameWithoutExtension(files[i]), DateHeaderFormat, Data.AdminLocale, DateTimeStyles.AssumeLocal, out DateTimeOffset dto))
-                                {
-                                    using FileStream str = new FileStream(files[i], FileMode.Open, FileAccess.Read, FileShare.Read);
-                                    writer.Write(dto);
-                                    int len = (int)Math.Min(str.Length, int.MaxValue);
-                                    byte[] bytes = new byte[len];
-                                    str.Read(bytes, 0, len);
-                                    writer.WriteLong(bytes);
-                                }
-                                else
-                                {
-                                    writer.Write(DateTimeOffset.MinValue);
-                                    writer.WriteLong(Array.Empty<byte>());
-                                }
-                            }
-                        });
-                    }
-                }
-            }
-        }
-    }
-
-    public static class NetCalls
-    {
-        public static readonly NetCallCustom SendLogs = new NetCallCustom(1127, 32768);
-        public static readonly NetCall<DateTimeOffset[]> AckLogs = new NetCall<DateTimeOffset[]>(ReceiveAckLogs);
-        public static readonly NetCall RequestCurrentLog = new NetCall(ReceiveCurrentLogRequest);
-
-        [NetCall(ENetCall.FROM_SERVER, 1128)]
-        internal static void ReceiveAckLogs(MessageContext context, DateTimeOffset[] files)
-        {
-            for (int i = 0; i < files.Length; ++i)
-            {
-                string path = Path.Combine(Data.Paths.ActionLog, files[i].UtcDateTime.ToString(DateHeaderFormat, Data.AdminLocale) + ".txt");
-                L.LogDebug("Action Log \"" + path + "\" acknowledged.");
-                if (_instance == null)
-                {
-                    if (File.Exists(path))
-                        File.Delete(path);
-                }
-                else
-                {
-                    lock (_instance)
-                    {
-                        if (File.Exists(path))
-                            File.Delete(path);
-                    }
-                }
-            }
-        }
-        [NetCall(ENetCall.FROM_SERVER, 1129)]
-        internal static void ReceiveCurrentLogRequest(MessageContext context)
-        {
-            if (UCWarfare.Config.SendActionLogs && _instance != null)
-            {
-                _instance.SendCurrentLog(in context);
-            }
-            else
-            {
-                context.Reply(SendLogs, writer =>
-                {
-                    writer.Write(DateTimeOffset.MinValue);
-                    writer.WriteLong(Array.Empty<byte>());
-                });
-            }
-        }
-    }
 }
 
 // ReSharper disable InconsistentNaming
@@ -371,6 +741,8 @@ public enum ActionLogType : byte
     LEFT_MAIN,
     POSSIBLE_SOLO,
     SOLO_RTB,
-    ENTER_MAIN
+    ENTER_MAIN,
+
+    Max = ENTER_MAIN
 }
 // ReSharper restore InconsistentNaming
