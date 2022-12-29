@@ -255,7 +255,7 @@ public abstract class Zone : IDeployable
     {
         if (Data.UseCase is EZoneUseCase.T1_MAIN or EZoneUseCase.T2_MAIN)
         {
-            ActionLog.Add(ActionLogType.DEPLOY_TO_LOCATION, "MAIN BASE " + TeamManager.TranslateName(Data.UseCase == EZoneUseCase.T1_MAIN ? 1ul : 2ul, 0), player);
+            ActionLog.Add(ActionLogType.DeployToLocation, "MAIN BASE " + TeamManager.TranslateName(Data.UseCase == EZoneUseCase.T1_MAIN ? 1ul : 2ul, 0), player);
             if (chat)
                 player.SendChat(T.DeploySuccess, this);
         }
@@ -263,13 +263,13 @@ public abstract class Zone : IDeployable
         {
             if (chat)
                 player.SendChat(T.DeploySuccess, this);
-            ActionLog.Add(ActionLogType.DEPLOY_TO_LOCATION, "LOBBY", player);
+            ActionLog.Add(ActionLogType.DeployToLocation, "LOBBY", player);
         }
         else
         {
             if (chat)
                 player.SendChat(T.DeploySuccess, this);
-            ActionLog.Add(ActionLogType.DEPLOY_TO_LOCATION, "ZONE " + Name, player);
+            ActionLog.Add(ActionLogType.DeployToLocation, "ZONE " + Name, player);
         }
     }
 }

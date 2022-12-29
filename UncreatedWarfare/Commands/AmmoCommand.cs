@@ -80,12 +80,12 @@ public class AmmoCommand : AsyncCommand
                 {
                     fob!.ReduceAmmo(vehicleData.RearmCost);
                     ctx.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.Ammo);
-                    ctx.LogAction(ActionLogType.REQUEST_AMMO, "FOR VEHICLE");
+                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR VEHICLE");
                 }
                 else
                 {
                     ctx.Reply(T.AmmoResuppliedVehicleMain, vehicleData, vehicleData.RearmCost);
-                    ctx.LogAction(ActionLogType.REQUEST_AMMO, "FOR VEHICLE IN MAIN");
+                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR VEHICLE IN MAIN");
                 }
             }
             finally
@@ -140,7 +140,7 @@ public class AmmoCommand : AsyncCommand
                 if (isInMain)
                 {
                     ctx.Reply(T.AmmoResuppliedKitMain, ammoCost);
-                    ctx.LogAction(ActionLogType.REQUEST_AMMO, "FOR KIT IN MAIN");
+                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR KIT IN MAIN");
 
                     if (FOBManager.Config.AmmoCommandCooldown > 0)
                         CooldownManager.StartCooldown(ctx.Caller, CooldownType.Ammo, FOBManager.Config.AmmoCommandCooldown);
@@ -148,7 +148,7 @@ public class AmmoCommand : AsyncCommand
                 else
                 {
                     fob.ReduceAmmo(ammoCost);
-                    ctx.LogAction(ActionLogType.REQUEST_AMMO, "FOR KIT FROM BOX");
+                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BOX");
                     ctx.Reply(T.AmmoResuppliedKit, ammoCost, fob.Ammo);
                 }
             }
@@ -165,7 +165,7 @@ public class AmmoCommand : AsyncCommand
                     if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
                         F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);
 
-                    ctx.LogAction(ActionLogType.REQUEST_AMMO, "FOR KIT FROM BAG");
+                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BAG");
 
                     WipeDroppedItems(ctx.CallerID);
                     ctx.Reply(T.AmmoResuppliedKit, ammoCost, ammobag.Ammo);

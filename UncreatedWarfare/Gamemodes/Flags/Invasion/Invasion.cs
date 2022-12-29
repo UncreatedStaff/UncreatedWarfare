@@ -279,7 +279,7 @@ public class Invasion :
 #endif
         if (newOwner == 1)
         {
-            ActionLog.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0) + (_attackTeam == 1 ? " ATTACK" : " DEFENSE"));
+            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(1, 0) + (_attackTeam == 1 ? " ATTACK" : " DEFENSE"));
             if (_attackTeam == 1 && _objectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
             {
                 UCWarfare.RunTask(Data.Gamemode.DeclareWin, 1ul, default, ctx: "Lose game, flags fully captured by team 1.");
@@ -304,7 +304,7 @@ public class Invasion :
         }
         else if (newOwner == 2)
         {
-            ActionLog.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0) + (_attackTeam == 2 ? " ATTACK" : " DEFENSE"));
+            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(2, 0) + (_attackTeam == 2 ? " ATTACK" : " DEFENSE"));
             if (_attackTeam == 2 && ObjectiveT2Index < 1) // if t2 just capped the last flag
             {
                 UCWarfare.RunTask(Data.Gamemode.DeclareWin, 2ul, default, ctx: "Lose game, flags fully captured by team 2.");

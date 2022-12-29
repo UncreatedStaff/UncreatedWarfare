@@ -44,43 +44,43 @@ public class ReloadCommand : AsyncCommand
         {
             ReloadTranslations();
             ctx.Reply(T.ReloadedTranslations);
-            ctx.LogAction(ActionLogType.RELOAD_COMPONENT, "TRANSLATIONS");
+            ctx.LogAction(ActionLogType.ReloadComponent, "TRANSLATIONS");
         }
         else if (module.Equals("flags", StringComparison.OrdinalIgnoreCase))
         {
             ReloadFlags();
             ctx.Reply(T.ReloadedFlags);
-            ctx.LogAction(ActionLogType.RELOAD_COMPONENT, "FLAGS");
+            ctx.LogAction(ActionLogType.ReloadComponent, "FLAGS");
         }
         else if (module.Equals("permissions", StringComparison.OrdinalIgnoreCase))
         {
             ReloadPermissions();
             ctx.Reply(T.ReloadedPermissions);
-            ctx.LogAction(ActionLogType.RELOAD_COMPONENT, "PERMISSIONS");
+            ctx.LogAction(ActionLogType.ReloadComponent, "PERMISSIONS");
         }
         else if (module.Equals("colors", StringComparison.OrdinalIgnoreCase))
         {
             ReloadColors();
             ctx.Reply(T.ReloadedGeneric, "colors");
-            ctx.LogAction(ActionLogType.RELOAD_COMPONENT, "COLORS");
+            ctx.LogAction(ActionLogType.ReloadComponent, "COLORS");
         }
         else if (module.Equals("tcp", StringComparison.OrdinalIgnoreCase))
         {
             ReloadTCPServer();
             ctx.Reply(T.ReloadedTCP);
-            ctx.LogAction(ActionLogType.RELOAD_COMPONENT, "TCP SERVER");
+            ctx.LogAction(ActionLogType.ReloadComponent, "TCP SERVER");
         }
         else if (module.Equals("sql", StringComparison.OrdinalIgnoreCase))
         {
             ReloadSQLServer(ctx);
-            ctx.LogAction(ActionLogType.RELOAD_COMPONENT, "MYSQL CONNECTION");
+            ctx.LogAction(ActionLogType.ReloadComponent, "MYSQL CONNECTION");
         }
         else if (module.Equals("teams", StringComparison.OrdinalIgnoreCase) || module.Equals("factions", StringComparison.OrdinalIgnoreCase))
         {
             await TeamManager.ReloadFactions(token).ConfigureAwait(false);
             TeamManager.SetupConfig();
             ctx.Reply(T.ReloadedGeneric, "teams and factions");
-            ctx.LogAction(ActionLogType.RELOAD_COMPONENT, "TEAMS & FACTIONS");
+            ctx.LogAction(ActionLogType.ReloadComponent, "TEAMS & FACTIONS");
         }
         else if (module.Equals("all", StringComparison.OrdinalIgnoreCase))
         {
@@ -93,7 +93,7 @@ public class ReloadCommand : AsyncCommand
                 config.Value.Reload();
 
             ctx.Reply(T.ReloadedAll);
-            ctx.LogAction(ActionLogType.RELOAD_COMPONENT, "ALL");
+            ctx.LogAction(ActionLogType.ReloadComponent, "ALL");
         }
         else
         {
@@ -102,7 +102,7 @@ public class ReloadCommand : AsyncCommand
             {
                 config.Reload();
                 ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
-                ctx.LogAction(ActionLogType.RELOAD_COMPONENT, module.ToUpperInvariant());
+                ctx.LogAction(ActionLogType.ReloadComponent, module.ToUpperInvariant());
             }
             else
             {
@@ -113,7 +113,7 @@ public class ReloadCommand : AsyncCommand
                     throw ctx.SendCorrectUsage(Syntax);
 
                 ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
-                ctx.LogAction(ActionLogType.RELOAD_COMPONENT, module.ToUpperInvariant());
+                ctx.LogAction(ActionLogType.ReloadComponent, module.ToUpperInvariant());
             }
         }
     }

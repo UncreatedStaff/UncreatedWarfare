@@ -3,9 +3,10 @@ using SDG.Unturned;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,29 +27,45 @@ public class ActionLog : MonoBehaviour
     public const int WriteBufferSize = 288;
     private readonly ConcurrentQueue<ActionLogItem> _items = new ConcurrentQueue<ActionLogItem>();
     private volatile bool _sendingLog;
+    private readonly byte[] _writeBuffer = new byte[WriteBufferSize];
     private ActionLogMeta? _current;
     private FileStream? _stream;
-    private static ActionLog _instance;
+    private static ActionLog? _instance;
     private static ByteWriter? _metaWriter;
     private static ByteReader? _metaReader;
     private static char[][]? _types;
-    private CancellationTokenSource _src = new CancellationTokenSource();
+    private static char[]? _nl;
+    private volatile int _version;
+    private static readonly DateTimeOffset MinDatetime = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero); // jan 1st, 2021
     private static ByteReader MetaReader => _metaReader ??= new ByteReader();
     private static ByteWriter MetaWriter => _metaWriter ??= new ByteWriter(false, ActionLogMeta.Capacity);
+    public static ActionLog? Instance => _instance;
+#pragma warning disable CS0618
     private static char[][] Types
     {
         get
         {
             if (_types is null)
             {
+                FieldInfo[] fields = typeof(ActionLogType).GetFields(BindingFlags.Static | BindingFlags.Public);
                 _types = new char[(int)ActionLogType.Max][];
                 for (int i = 0; i < _types.Length; ++i)
-                    _types[i] = ((ActionLogType)i).ToString().ToCharArray();
+                {
+                    FieldInfo? field = fields.FirstOrDefault(x => (byte)x.GetValue(null) == (byte)i && !x.Name.Equals(nameof(ActionLogType.Max)));
+                    if (field == null || Attribute.GetCustomAttribute(field, typeof(TranslatableAttribute)) is not TranslatableAttribute { Default.Length: > 0 } tr)
+                        _types[i] = ((ActionLogType)i).ToString().ToCharArray();
+                    else
+                    {
+                        _types[i] = tr.Default.ToCharArray();
+                    }
+                }
             }
 
             return _types;
         }
     }
+#pragma warning restore CS0618
+    private static char[] NewLineChars => _nl ??= Environment.NewLine.ToCharArray();
     [UsedImplicitly]
     void Awake()
     {
@@ -75,34 +92,31 @@ public class ActionLog : MonoBehaviour
     public static void Add(ActionLogType type, string? data, UCPlayer? player) => Add(type, data, player == null ? 0ul : player.Steam64);
     public static void Add(ActionLogType type, string? data = null, ulong player = 0)
     {
-        _instance._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
+        _instance!._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
     }
+    /// <exception cref="NotSupportedException"/>
     public static void AddPriority(ActionLogType type, string? data = null, ulong player = 0)
     {
-        _instance._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
+        ThreadUtil.assertIsGameThread();
+        _instance!._items.Enqueue(new ActionLogItem(player, type, data, DateTimeOffset.UtcNow));
         _instance.Update();
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string GetMetaPath(ActionLogMeta meta) => Path.Combine(Data.Paths.ActionLog, meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".meta");
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string GetLogPath(ActionLogMeta meta) => Path.Combine(Data.Paths.ActionLog, meta.FirstTimestamp.ToString(DateHeaderFormat, CultureInfo.InvariantCulture) + ".txt");
-    private void SaveMeta(string path)
+    private void SaveMeta(ActionLogMeta meta)
     {
-        using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        using FileStream str = new FileStream(GetMetaPath(meta), FileMode.Create, FileAccess.Write, FileShare.Read);
         MetaWriter.Stream = str;
         try
         {
-            _current!.Write(MetaWriter);
+            meta.Write(MetaWriter);
         }
         finally
         {
             MetaWriter.Flush();
         }
-    }
-    private void SendCurrentLog() => SendLog(_current!);
-    private void SendLog(ActionLogMeta meta)
-    {
-        UCWarfare.RunTask(SendLogAsync, meta, MessageContext.Nil, ctx: "Sending log " + meta.FirstTimestamp.ToString("s") + " to homebase.");
     }
     private static void DeleteLog(ActionLogMeta meta)
     {
@@ -113,19 +127,19 @@ public class ActionLog : MonoBehaviour
         if (File.Exists(path))
             File.Delete(path);
     }
-    private Task SendCurrentLogAsync(MessageContext context, CancellationToken token = default) =>
+    private Task<bool> SendCurrentLogAsync(MessageContext context, CancellationToken token = default) =>
         _current == null
-        ? Task.FromException(new Exception("No current log loaded."))
+        ? Task.FromResult(false)
         : SendLogAsync(_current, context, token);
-    private async Task SendLogAsync(ActionLogMeta meta, MessageContext context, CancellationToken token = default)
+    private async Task<bool> SendLogAsync(ActionLogMeta meta, MessageContext context, CancellationToken token = default)
     {
         if (!UCWarfare.CanUseNetCall)
-            return;
+            return false;
         int c = 0;
         while (_sendingLog)
         {
-            if (c > 4000)
-                return;
+            if (c > 400)
+                return false;
             await Task.Delay(25, token);
             ++c;
         }
@@ -151,17 +165,25 @@ public class ActionLog : MonoBehaviour
                     }
                 }
                 if (!UCWarfare.CanUseNetCall)
-                    return;
+                    return false;
+                L.LogDebug("Sending log " + meta.FirstTimestamp.ToString("s") + "...");
+                const int timeoutMs = 10000;
+                NetTask netTask = context.Connection != null
+                    ? context.ReplyAndRequestAck(NetCalls.SendLog, meta, bytes, timeoutMs)
+                    : NetCalls.SendLog.RequestAck(UCWarfare.I.NetClient!, meta, bytes, timeoutMs);
 
-                RequestResponse response = await NetCalls.SendLog.RequestAck(UCWarfare.I.NetClient!, meta, bytes, 10000);
-                if (response.Responded && response.ErrorCode.HasValue && response.ErrorCode.Value == MessageContext.CODE_SUCCESS)
+                RequestResponse response = await netTask;
+                L.LogDebug("  ... Done, " + (response.Responded ? ("Response: " + response.Context) : "No response."));
+                if (response.Responded && response.ErrorCode is (int)StandardErrorCode.Success)
                 {
                     if (meta != _current)
                         DeleteLog(meta);
+                    return true;
                 }
                 else
                 {
                     L.LogWarning("UCHB failed to acknoledge SendLog request: " + response.Context + ".");
+                    return false;
                 }
             }
         }
@@ -169,6 +191,8 @@ public class ActionLog : MonoBehaviour
         {
             _sendingLog = false;
         }
+
+        return false;
     }
     [UsedImplicitly]
     void Update()
@@ -179,7 +203,8 @@ public class ActionLog : MonoBehaviour
             {
                 _stream?.Dispose();
                 _stream = null;
-                SendLog(_current);
+                if (UCWarfare.CanUseNetCall)
+                    UCWarfare.RunTask(SendLogAsync, _current, MessageContext.Nil, ctx: "Sending log \"" + _current.FirstTimestamp.ToString("s") + "\" to homebase.");
                 _current = null;
             }
             _current ??= new ActionLogMeta
@@ -201,65 +226,141 @@ public class ActionLog : MonoBehaviour
 
             _current.LastTimestamp = item.Timestamp;
             _stream ??= new FileStream(GetLogPath(_current), FileMode.Append, FileAccess.Write, FileShare.Read);
-            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(item.ToCharArr());
-            _stream.Write(bytes, 0, bytes.Length);
+            WriteItemToStream(in item, _stream, _writeBuffer);
             _stream.Flush();
-            SaveMeta(GetMetaPath(_current));
+            SaveMeta(_current);
         }
     }
-    public static bool TryParseLogType(string text, out ActionLogType type) => Enum.TryParse(text, true, out type);
+    public static void WriteItemToStream(in ActionLogItem item, Stream stream, byte[] buffer)
+    {
+        char[] cs = item.ToCharArr(true);
+        int ct = System.Text.Encoding.UTF8.GetByteCount(cs);
+        byte[] bytes = ct <= WriteBufferSize ? buffer : new byte[ct];
+        ct = System.Text.Encoding.UTF8.GetBytes(cs, 0, cs.Length, bytes, 0);
+        stream.Write(buffer, 0, ct);
+    }
+    public static bool TryParseLogType(string text, out ActionLogType type)
+    {
+        char[] t = text.ToCharArray();
+        for (int i = 0; i < Types.Length; ++i)
+        {
+            char[]? val = Types[i];
+            if (val is null || val.Length != t.Length)
+                continue;
+            for (int j = 0; j < t.Length; ++j)
+            {
+                if (char.ToUpperInvariant(t[j]) != char.ToUpperInvariant(val[j]))
+                    goto g;
+            }
+
+            type = (ActionLogType)i;
+            return true;
+            g:;
+        }
+        return Enum.TryParse(text, true, out type);
+    }
+    public static string GetLogTypeString(ActionLogType type) => (int)type >= Types.Length ? type.ToString() : new string(_types![(int)type]);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ValidDateTimeOffset(in DateTimeOffset o) => o <= DateTimeOffset.UtcNow && o >= MinDatetime;
     internal void OnConnected()
     {
         if (!UCWarfare.Config.SendActionLogs)
             return;
         F.CheckDir(Data.Paths.ActionLog, out bool success);
-        if (success)
+        if (!success)
+            return;
+        int v = _version;
+        Interlocked.Increment(ref _version);
+        UCWarfare.RunTask(async () =>
         {
-            lock (_instance)
+            if (v != _version || !UCWarfare.CanUseNetCall) return;
+            string[] files = Directory.GetFiles(Data.Paths.ActionLog, "*.txt");
+            foreach (string file in files)
             {
-                List<string> files = new List<string>();
-                foreach (string file in Directory.EnumerateFiles(Data.Paths.ActionLog, "*.txt"))
+                string logName = Path.GetFileNameWithoutExtension(file);
+                try
                 {
-                    string name = Path.GetFileName(file);
-                    if (name.Equals(_currentFileName, StringComparison.OrdinalIgnoreCase))
+                    if (!File.Exists(file))
+                    {
+#if DEBUG
+                        L.LogWarning("[ACT LOG] File not found: \"" + file + "\".");
+#endif
                         continue;
-                    name = Path.GetFileNameWithoutExtension(name);
-                    if (DateTimeOffset.TryParseExact(name, DateHeaderFormat, Data.AdminLocale, DateTimeStyles.AssumeLocal, out DateTimeOffset offs) && offs != _currentLogSt)
-                    {
-                        files.Add(file);
                     }
-                }
-
-                if (files.Count > 0)
-                {
-                    NetCalls.SendLogs.NetInvoke(writer =>
+                    string metaPath = Path.Combine(Path.GetDirectoryName(file)!, logName + ".meta");
+                    bool genMeta = false;
+                    ActionLogMeta meta = null!;
+                    if (!File.Exists(metaPath))
                     {
-                        writer.Write(files.Count);
-                        for (int i = 0; i < files.Count; i++)
+                        genMeta = true;
+                        meta = ActionLogMeta.FromMetaFile(file);
+                        if (!ValidDateTimeOffset(in meta.FirstTimestamp) || !ValidDateTimeOffset(in meta.LastTimestamp))
                         {
-                            L.Log("Sending old log: \"" + files[i] + "\".", ConsoleColor.Magenta);
-                            if (DateTimeOffset.TryParseExact(Path.GetFileNameWithoutExtension(files[i]), DateHeaderFormat, Data.AdminLocale, DateTimeStyles.AssumeLocal, out DateTimeOffset dto))
-                            {
-                                using FileStream str = new FileStream(files[i], FileMode.Open, FileAccess.Read, FileShare.Read);
-                                writer.Write(dto);
-                                int len = (int)Math.Min(str.Length, int.MaxValue);
-                                byte[] bytes = new byte[len];
-                                str.Read(bytes, 0, len);
-                                writer.WriteLong(bytes);
-                            }
-                            else
-                            {
-                                writer.Write(DateTimeOffset.MinValue);
-                                writer.WriteLong(Array.Empty<byte>());
-                            }
+                            L.LogWarning("[ACT LOG] Invalid data detected in meta file \"" + logName + "\".");
+                            genMeta = true;
                         }
-                    });
+                    }
+                    if (genMeta) // meta file missing or invalid, generate one
+                    {
+                        if ((meta = ActionLogMeta.FromLogFile(file)!) is null)
+                        {
+#if DEBUG
+                            L.LogWarning("[ACT LOG] Log file is does not contain any valid logs, meta file will not be generated \"" + logName + "\".");
+#endif
+                            continue;
+                        }
+
+                        try
+                        {
+                            SaveMeta(meta);
+                        }
+                        catch (Exception ex)
+                        {
+                            L.LogError("[ACT LOG] Error saving meta file \"" + logName + "\".");
+                            L.LogError(ex);
+                        }
+                    }
+                    if (_current != null && meta.FirstTimestamp == _current.FirstTimestamp)
+                        continue; // log in progress.
+
+                    using FileStream str = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    byte[] buffer = new byte[str.Length];
+                    int amt = await str.ReadAsync(buffer, 0, buffer.Length);
+                    if (v != _version || !UCWarfare.CanUseNetCall) return;
+                    if (amt < buffer.Length)
+                    {
+                        byte[] old = buffer;
+                        buffer = new byte[amt];
+                        Buffer.BlockCopy(old, 0, buffer, 0, amt);
+                    }
+
+                    CancellationTokenSource src = new CancellationTokenSource();
+                    Task t = SendLogAsync(meta, MessageContext.Nil, src.Token);
+                    try
+                    {
+                        await Task.WhenAny(t, new Func<Task>( // while send is not complete and version is the same and can use net call and < 20 seconds since start
+                            async () => { int c = 0; while (!t.IsCompleted && v == _version && UCWarfare.CanUseNetCall && ++c < 801) { await Task.Delay(25, src.Token); } })());
+                        src.Cancel();
+                    }
+                    catch (OperationCanceledException) when (src.IsCancellationRequested) { }
+#if DEBUG
+                    if (!t.IsCompleted)
+                    {
+                        L.LogWarning("[ACT LOG] Send task timed out on log \"" + logName + "\".");
+                    }
+#endif
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("[ACT LOG] Error reading meta file of action log \"" + logName + "\".");
+                    L.LogError(ex);
                 }
             }
-        }
+        });
     }
     // ReSharper disable once StructCanBeMadeReadOnly
-    private record struct ActionLogItem(ulong Player, ActionLogType Type, string? Data, DateTimeOffset Timestamp)
+    public record struct ActionLogItem(ulong Player, ActionLogType Type, string? Data, DateTimeOffset Timestamp)
     {
         public static ActionLogItem? FromLine(string line)
         {
@@ -277,14 +378,17 @@ public class ActionLog : MonoBehaviour
             return new ActionLogItem(steam64, type, endbracket == line.Length - 1 ? string.Empty : line.Substring(endbracket + 1), timestamp);
         }
 
-        public readonly override string ToString() => new string(ToCharArr());
-        public readonly unsafe char[] ToCharArr()
+        public readonly string ToString(bool newLine) => new string(ToCharArr(newLine));
+        public readonly override string ToString() => new string(ToCharArr(false));
+        public readonly unsafe char[] ToCharArr(bool newLine)
         {
             char[] t = Types.Length <= (int)Type ? Type.ToString().ToCharArray() : Types[(int)Type];
             int l2 = 6;
             if (Data is not null)
                 l2 += 1 + Data!.Length;
-            char[] chars = new char[l2 + DateLineFormatLength + SteamIDLength + t.Length];
+            if (newLine) l2 += NewLineChars.Length;
+            l2 += DateLineFormatLength + SteamIDLength + t.Length;
+            char[] chars = new char[l2];
             fixed (char* outPtr = chars)
             {
                 outPtr[0] = '[';
@@ -294,16 +398,22 @@ public class ActionLog : MonoBehaviour
                 outPtr[DateLineFormatLength + 4 + SteamIDLength] = '[';
                 outPtr[DateLineFormatLength + 5 + SteamIDLength + t.Length] = ']';
                 fixed (char* ptr = Timestamp.ToString(DateLineFormat))
-                    Buffer.MemoryCopy(ptr, outPtr + 2, DateLineFormatLength * 2, DateLineFormatLength * 2);
+                    Buffer.MemoryCopy(ptr, outPtr + 1, DateLineFormatLength * 2, DateLineFormatLength * 2);
                 fixed (char* ptr = Player.ToString(SteamIDFormat))
-                    Buffer.MemoryCopy(ptr, outPtr + DateLineFormatLength * 2 + 6, SteamIDLength * 2, SteamIDLength * 2);
+                    Buffer.MemoryCopy(ptr, outPtr + DateLineFormatLength + 3, SteamIDLength * 2, SteamIDLength * 2);
                 fixed (char* ptr = t)
-                    Buffer.MemoryCopy(ptr, outPtr + DateLineFormatLength * 2 + 10 + SteamIDLength * 2, t.Length * 2, t.Length * 2);
+                    Buffer.MemoryCopy(ptr, outPtr + DateLineFormatLength + 5 + SteamIDLength, t.Length * 2, t.Length * 2);
                 if (Data is not null)
                 {
                     outPtr[DateLineFormatLength + 6 + SteamIDLength + t.Length] = ' ';
                     fixed (char* ptr = Data)
-                        Buffer.MemoryCopy(ptr, outPtr + DateLineFormatLength * 2 + 14 + SteamIDLength * 2 + t.Length * 2, Data.Length * 2, Data.Length * 2);
+                        Buffer.MemoryCopy(ptr, outPtr + DateLineFormatLength + 7 + SteamIDLength + t.Length, Data.Length * 2, Data.Length * 2);
+                }
+                if (newLine)
+                {
+                    char[] nlc = NewLineChars;
+                    for (int i = 0; i < nlc.Length; ++i)
+                        outPtr[l2 - (nlc.Length - i)] = nlc[i];
                 }
             }
             return chars;
@@ -477,10 +587,9 @@ public class ActionLog : MonoBehaviour
     {
         public static readonly NetCallRaw<ActionLogMeta, byte[]> SendLog = new NetCallRaw<ActionLogMeta, byte[]>(1127, ActionLogMeta.ReadMeta,
             reader => reader.ReadLongBytes(), ActionLogMeta.WriteMeta, (writer, b) => writer.WriteLong(b));
-        public static readonly NetCall<DateTimeOffset> AckLog = new NetCall<DateTimeOffset>(1128);
         public static readonly NetCall RequestCurrentLog = new NetCall(ReceiveCurrentLogRequest);
 
-        [NetCall(ENetCall.FROM_SERVER, 1129)]
+        [NetCall(ENetCall.FROM_SERVER, 1128)]
         internal static Task ReceiveCurrentLogRequest(MessageContext context)
         {
             if (UCWarfare.Config.SendActionLogs && _instance != null)
@@ -488,261 +597,233 @@ public class ActionLog : MonoBehaviour
                 return _instance.SendCurrentLogAsync(context);
             }
 
+            SendLog.Invoke(context.Connection, new ActionLogMeta(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null!, null!, null!), Array.Empty<byte>());
             return Task.CompletedTask;
         }
     }
 }
-public class ActionLogger : MonoBehaviour
-{
-    private readonly Queue<ActionLogItem> _items = new Queue<ActionLogItem>(16);
-    public const string DateHeaderFormat = "yyyy-MM-dd_HH-mm-ss";
-    private static ActionLogger _instance;
-    private static DateTime _currentLogSt;
-    private static string _currentFileName;
 
-    [UsedImplicitly]
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
-    private void Awake()
-    {
-        SetTimeToNow();
-        if (_instance != null)
-            Destroy(_instance);
-        _instance = this;
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string AsAsset(Asset asset) => $"{{{asset.FriendlyName} / {asset.id} / {asset.GUID:N}}}";
-    private static void SetTimeToNow()
-    {
-        _currentLogSt = DateTime.UtcNow;
-        _currentFileName = _currentLogSt.ToString(DateHeaderFormat, Data.AdminLocale) + ".txt";
-    }
-
-    public static void Add(ActionLogType type, string? data, UCPlayer? player) =>
-        Add(type, data, player == null ? 0ul : player.Steam64);
-    public static void Add(ActionLogType type, string? data = null, ulong player = 0)
-    {
-        _instance._items.Enqueue(new ActionLogItem(player, type, data, DateTime.UtcNow));
-    }
-    public static void AddPriority(ActionLogType type, string? data = null, ulong player = 0)
-    {
-        _instance._items.Enqueue(new ActionLogItem(player, type, data, DateTime.UtcNow));
-        _instance.Update();
-    }
-    private void Update()
-    {
-        if (_items.Count > 0)
-        {
-            F.CheckDir(Data.Paths.ActionLog, out bool success);
-            if (success)
-            {
-                lock (_instance)
-                {
-                    string outputFile = Path.Combine(Data.Paths.ActionLog, _currentFileName);
-                    if ((DateTime.UtcNow - _currentLogSt).TotalHours > 1d)
-                    {
-                        if (UCWarfare.CanUseNetCall && File.Exists(outputFile))
-                        {
-                            try
-                            {
-                                using FileStream str = new FileStream(outputFile, FileMode.Open, FileAccess.Read, FileShare.Read);
-                                if (str.Length <= int.MaxValue)
-                                {
-                                    int len = (int)str.Length;
-                                    byte[] bytes = new byte[len];
-                                    str.Read(bytes, 0, len);
-                                    if (UCWarfare.Config.SendActionLogs && UCWarfare.CanUseNetCall)
-                                    {
-                                        NetCalls.SendLogs.NetInvoke(writer =>
-                                        {
-                                            writer.Write((DateTimeOffset)_currentLogSt);
-                                            writer.WriteLong(bytes);
-                                        });
-                                    }
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                L.LogError("Error sending log to homebase:");
-                                L.LogError(ex);
-                            }
-                        }
-
-                        SetTimeToNow();
-                        outputFile = Path.Combine(Data.Paths.ActionLog, _currentFileName);
-                    }
-
-                    using FileStream stream = new FileStream(outputFile, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
-                    stream.Seek(0, SeekOrigin.End);
-                    while (_items.Count > 0)
-                    {
-                        ActionLogItem item = _items.Dequeue();
-                        WriteItem(in item, stream);
-                    }
-                }
-            }
-        }
-    }
-    [UsedImplicitly]
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
-    private void OnDestroy()
-    {
-        if (_instance != null)
-        {
-            Update();
-            _instance = null!;
-        }
-    }
-    [UsedImplicitly]
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
-    private void OnApplicationQuit()
-    {
-        if (_instance != null)
-        {
-            Update();
-            _instance = null!;
-        }
-    }
-    private void WriteItem(in ActionLogItem item, FileStream stream)
-    {
-        byte[] data = System.Text.Encoding.UTF8.GetBytes(item.ToString() + "\n");
-        stream.Write(data, 0, data.Length);
-    }
-    private void SendCurrentLog(in MessageContext ctx)
-    {
-        if (!UCWarfare.Config.SendActionLogs)
-            return;
-        lock (_instance)
-        {
-            string outputFile = Path.Combine(Data.Paths.ActionLog, _currentFileName);
-            if (File.Exists(outputFile))
-            {
-                using FileStream str = new FileStream(outputFile, FileMode.Open, FileAccess.Read, FileShare.Read);
-                int len = (int)Math.Min(str.Length, int.MaxValue);
-                byte[] bytes = new byte[len];
-                str.Read(bytes, 0, len);
-                ctx.Reply(NetCalls.SendLogs, writer =>
-                {
-                    writer.Write((DateTimeOffset)_currentLogSt);
-                    writer.WriteLong(bytes);
-                });
-            }
-        }
-    }
-
-}
-
-// ReSharper disable InconsistentNaming
+// Add a Translatable attribute in all caps format and update ActionLogType.Max if you add a log type
 public enum ActionLogType : byte
 {
-    NONE,
-    CHAT_GLOBAL,
-    CHAT_AREA_OR_SQUAD,
-    CHAT_GROUP,
-    REQUEST_AMMO,
-    DUTY_CHANGED,
-    BAN_PLAYER,
-    KICK_PLAYER,
-    UNBAN_PLAYER,
-    WARN_PLAYER,
-    START_REPORT,
-    CONFIRM_REPORT,
-    BUY_KIT,
-    CLEAR_ITEMS,
-    CLEAR_INVENTORY,
-    CLEAR_VEHICLES,
-    CLEAR_STRUCTURES,
-    ADD_CACHE,
-    ADD_INTEL,
-    CHANGE_GROUP_WITH_COMMAND,
-    CHANGE_GROUP_WITH_UI,
-    TRY_CONNECT,
-    CONNECT,
-    DISCONNECT,
-    GIVE_ITEM,
-    CHANGE_LANGUAGE,
-    LOAD_SUPPLIES,
-    LOAD_OLD_BANS,
-    MUTE_PLAYER,
-    UNMUTE_PLAYER,
-    RELOAD_COMPONENT,
-    REQUEST_KIT,
-    REQUEST_VEHICLE,
-    SHUTDOWN_SERVER,
-    POP_STRUCTURE,
-    SAVE_STRUCTURE,
-    UNSAVE_STRUCTURE,
-    SAVE_REQUEST_SIGN,
-    UNSAVE_REQUEST_SIGN,
-    ADD_WHITELIST,
-    REMOVE_WHITELIST,
-    SET_WHITELIST_MAX_AMOUNT,
-    DESTROY_BARRICADE,
-    DESTROY_STRUCTURE,
-    PLACE_BARRICADE,
-    PLACE_STRUCTURE,
-    ENTER_VEHICLE_SEAT,
-    LEAVE_VEHICLE_SEAT,
-    HELP_BUILD_BUILDABLE,
-    DEPLOY_TO_LOCATION,
-    TELEPORT,
-    CHANGE_GAMEMODE_COMMAND,
-    GAMEMODE_CHANGED_AUTO,
-    TEAM_WON,
-    TEAM_CAPTURED_OBJECTIVE,
-    BUILD_ZONE_MAP,
-    DISCHARGE_OFFICER,
-    SET_OFFICER_RANK,
-    INJURED,
-    REVIVED_PLAYER,
-    DEATH,
-    START_QUEST,
-    MAKE_QUEST_PROGRESS,
-    COMPLETE_QUEST,
-    XP_CHANGED,
-    CREDITS_CHANGED,
-    CREATED_SQUAD,
-    JOINED_SQUAD,
-    LEFT_SQUAD,
-    DISBANDED_SQUAD,
-    LOCKED_SQUAD,
-    UNLOCKED_SQUAD,
-    PLACED_RALLY,
-    TELEPORTED_TO_RALLY,
-    CREATED_ORDER,
-    FUFILLED_ORDER,
-    OWNED_VEHICLE_DIED,
-    SERVER_STARTUP,
-    CREATE_KIT,
-    DELETE_KIT,
-    GIVE_KIT,
-    CHANGE_KIT_ACCESS,
-    EDIT_KIT,
-    SET_KIT_PROPERTY,
-    CREATE_VEHICLE_DATA,
-    DELETE_VEHICLE_DATA,
-    REGISTERED_SPAWN,
-    DEREGISTERED_SPAWN,
-    LINKED_VEHICLE_BAY_SIGN,
-    UNLINKED_VEHICLE_BAY_SIGN,
-    SET_VEHICLE_DATA_PROPERTY,
-    VEHICLE_BAY_FORCE_SPAWN,
-    PERMISSION_LEVEL_CHANGED,
-    CHAT_FILTER_VIOLATION,
-    KICKED_BY_BATTLEYE,
-    TEAMKILL,
-    KILL,
-    REQUEST_TRAIT,
-    SET_SAVED_STRUCTURE_PROPERTY,
-    SET_TRAIT_PROPERTY,
-    GIVE_TRAIT,
-    REVOKE_TRAIT,
-    CLEAR_TRAITS,
-    MAIN_CAMP_ATTEMPT,
-    LEFT_MAIN,
-    POSSIBLE_SOLO,
-    SOLO_RTB,
-    ENTER_MAIN,
+    [Translatable("NONE")]
+    None,
+    [Translatable("CHAT_GLOBAL")]
+    ChatGlobal,
+    [Translatable("CHAT_AREA_OR_SQUAD")]
+    ChatAreaOrSquad,
+    [Translatable("CHAT_GROUP")]
+    ChatGroup,
+    [Translatable("REQUEST_AMMO")]
+    RequestAmmo,
+    [Translatable("DUTY_CHANGED")]
+    DutyChanged,
+    [Translatable("BAN_PLAYER")]
+    BanPlayer,
+    [Translatable("KICK_PLAYER")]
+    KickPlayer,
+    [Translatable("UNBAN_PLAYER")]
+    UnbanPlayer,
+    [Translatable("WARN_PLAYER")]
+    WarnPlayer,
+    [Translatable("START_REPORT")]
+    StartReport,
+    [Translatable("CONFIRM_REPORT")]
+    ConfirmReport,
+    [Translatable("BUY_KIT")]
+    BuyKit,
+    [Translatable("CLEAR_ITEMS")]
+    ClearItems,
+    [Translatable("CLEAR_INVENTORY")]
+    ClearInventory,
+    [Translatable("CLEAR_VEHICLES")]
+    ClearVehicles,
+    [Translatable("CLEAR_STRUCTURES")]
+    ClearStructures,
+    [Translatable("ADD_CACHE")]
+    AddCache,
+    [Translatable("ADD_INTEL")]
+    AddIntel,
+    [Translatable("CHANGE_GROUP_WITH_COMMAND")]
+    ChangeGroupWithCommand,
+    [Translatable("CHANGE_GROUP_WITH_UI")]
+    ChangeGroupWithUI,
+    [Translatable("TRY_CONNECT")]
+    TryConnect,
+    [Translatable("CONNECT")]
+    Connect,
+    [Translatable("DISCONNECT")]
+    Disconnect,
+    [Translatable("GIVE_ITEM")]
+    GiveItem,
+    [Translatable("CHANGE_LANGUAGE")]
+    ChangeLanguage,
+    [Translatable("LOAD_SUPPLIES")]
+    LoadSupplies,
+    [Translatable("LOAD_OLD_BANS")]
+    LoadOldBans,
+    [Translatable("MUTE_PLAYER")]
+    MutePlayer,
+    [Translatable("UNMUTE_PLAYER")]
+    UnmutePlayer,
+    [Translatable("RELOAD_COMPONENT")]
+    ReloadComponent,
+    [Translatable("REQUEST_KIT")]
+    RequestKit,
+    [Translatable("REQUEST_VEHICLE")]
+    RequestVehicle,
+    [Translatable("SHUTDOWN_SERVER")]
+    ShutdownServer,
+    [Translatable("POP_STRUCTURE")]
+    PopStructure,
+    [Translatable("SAVE_STRUCTURE")]
+    SaveStructure,
+    [Translatable("UNSAVE_STRUCTURE")]
+    UnsaveStructure,
+    [Translatable("SAVE_REQUEST_SIGN")]
+    SaveRequestSign,
+    [Translatable("UNSAVE_REQUEST_SIGN")]
+    UnsaveRequestSign,
+    [Translatable("ADD_WHITELIST")]
+    AddWhitelist,
+    [Translatable("REMOVE_WHITELIST")]
+    RemoveWhitelist,
+    [Translatable("SET_WHITELIST_MAX_AMOUNT")]
+    SetWhitelistMaxAmount,
+    [Translatable("DESTROY_BARRICADE")]
+    DestroyBarricade,
+    [Translatable("DESTROY_STRUCTURE")]
+    DestroyStructure,
+    [Translatable("PLACE_BARRICADE")]
+    PlaceBarricade,
+    [Translatable("PLACE_STRUCTURE")]
+    PlaceStructure,
+    [Translatable("ENTER_VEHICLE_SEAT")]
+    EnterVehicleSeat,
+    [Translatable("LEAVE_VEHICLE_SEAT")]
+    LeaveVehicleSeat,
+    [Translatable("HELP_BUILD_BUILDABLE")]
+    HelpBuildBuildable,
+    [Translatable("DEPLOY_TO_LOCATION")]
+    DeployToLocation,
+    [Translatable("TELEPORT")]
+    Teleport,
+    [Translatable("CHANGE_GAMEMODE_COMMAND")]
+    ChangeGamemodeCommand,
+    [Translatable("GAMEMODE_CHANGED_AUTO")]
+    GamemodeChangedAuto,
+    [Translatable("TEAM_WON")]
+    TeamWon,
+    [Translatable("TEAM_CAPTURED_OBJECTIVE")]
+    TeamCapturedObjective,
+    [Translatable("BUILD_ZONE_MAP")]
+    BuildZoneMap,
+    [Translatable("DISCHARGE_OFFICER")]
+    DischargeOfficer,
+    [Translatable("SET_OFFICER_RANK")]
+    SetOfficerRank,
+    [Translatable("INJURED")]
+    Injured,
+    [Translatable("REVIVED_PLAYER")]
+    RevivedPlayer,
+    [Translatable("DEATH")]
+    Death,
+    [Translatable("START_QUEST")]
+    StartQuest,
+    [Translatable("MAKE_QUEST_PROGRESS")]
+    MakeQuestProgress,
+    [Translatable("COMPLETE_QUEST")]
+    CompleteQuest,
+    [Translatable("XP_CHANGED")]
+    XPChanged,
+    [Translatable("CREDITS_CHANGED")]
+    CreditsChanged,
+    [Translatable("CREATED_SQUAD")]
+    CreatedSquad,
+    [Translatable("JOINED_SQUAD")]
+    JoinedSquad,
+    [Translatable("LEFT_SQUAD")]
+    LeftSquad,
+    [Translatable("DISBANDED_SQUAD")]
+    DisbandedSquad,
+    [Translatable("LOCKED_SQUAD")]
+    LockedSquad,
+    [Translatable("UNLOCKED_SQUAD")]
+    UnlockedSquad,
+    [Translatable("PLACED_RALLY")]
+    PlacedRally,
+    [Translatable("TELEPORTED_TO_RALLY")]
+    TeleportedToRally,
+    [Translatable("CREATED_ORDER")]
+    CreatedOrder,
+    [Translatable("FUFILLED_ORDER")]
+    FufilledOrder,
+    [Translatable("OWNED_VEHICLE_DIED")]
+    OwnedVehicleDied,
+    [Translatable("SERVER_STARTUP")]
+    ServerStartup,
+    [Translatable("CREATE_KIT")]
+    CreateKit,
+    [Translatable("DELETE_KIT")]
+    DeleteKit,
+    [Translatable("GIVE_KIT")]
+    GiveKit,
+    [Translatable("CHANGE_KIT_ACCESS")]
+    ChangeKitAccess,
+    [Translatable("EDIT_KIT")]
+    EditKit,
+    [Translatable("SET_KIT_PROPERTY")]
+    SetKitProperty,
+    [Translatable("CREATE_VEHICLE_DATA")]
+    CreateVehicleData,
+    [Translatable("DELETE_VEHICLE_DATA")]
+    DeleteVehicleData,
+    [Translatable("REGISTERED_SPAWN")]
+    RegisteredSpawn,
+    [Translatable("DEREGISTERED_SPAWN")]
+    DeregisteredSpawn,
+    [Translatable("LINKED_VEHICLE_BAY_SIGN")]
+    LinkedVehicleBaySign,
+    [Translatable("UNLINKED_VEHICLE_BAY_SIGN")]
+    UnlinkedVehicleBaySign,
+    [Translatable("SET_VEHICLE_DATA_PROPERTY")]
+    SetVehicleDataProperty,
+    [Translatable("VEHICLE_BAY_FORCE_SPAWN")]
+    VehicleBayForceSpawn,
+    [Translatable("PERMISSION_LEVEL_CHANGED")]
+    PermissionLevelChanged,
+    [Translatable("CHAT_FILTER_VIOLATION")]
+    ChatFilterViolation,
+    [Translatable("KICKED_BY_BATTLEYE")]
+    KickedByBattlEye,
+    [Translatable("TEAMKILL")]
+    Teamkill,
+    [Translatable("KILL")]
+    Kill,
+    [Translatable("REQUEST_TRAIT")]
+    RequestTrait,
+    [Translatable("SET_SAVED_STRUCTURE_PROPERTY")]
+    SetSavedStructureProperty,
+    [Translatable("SET_TRAIT_PROPERTY")]
+    SetTraitProperty,
+    [Translatable("GIVE_TRAIT")]
+    GiveTrait,
+    [Translatable("REVOKE_TRAIT")]
+    RevokeTrait,
+    [Translatable("CLEAR_TRAITS")]
+    ClearTraits,
+    [Translatable("MAIN_CAMP_ATTEMPT")]
+    MainCampAttempt,
+    [Translatable("LEFT_MAIN")]
+    LeftMain,
+    [Translatable("POSSIBLE_SOLO")]
+    PossibleSolo,
+    [Translatable("SOLO_RTB")]
+    SoloRTB,
+    [Translatable("ENTER_MAIN")]
+    EnterMain,
 
-    Max = ENTER_MAIN
+    [Obsolete("Don't use this.")]
+    Max = EnterMain
 }
 // ReSharper restore InconsistentNaming

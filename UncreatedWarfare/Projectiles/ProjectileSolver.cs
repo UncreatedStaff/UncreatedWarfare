@@ -23,7 +23,7 @@ internal class ProjectileSolver : MonoBehaviour
     private ProjectileData _current;
 
     [UsedImplicitly]
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+    [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
     private void Start()
     {
         _mainScene = SceneManager.GetActiveScene();
@@ -93,7 +93,7 @@ internal class ProjectileSolver : MonoBehaviour
         }
     }
     [UsedImplicitly]
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+    [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
     private void Update()
     {
         if (_queue.Count > 0 && _current.Gun is null)
@@ -166,7 +166,7 @@ internal class ProjectileSolver : MonoBehaviour
         data.Callback?.Invoke(!data.Gun.player.isActiveAndEnabled ? null : data.Gun.player, pos, landTime, data.GunAsset, data.AmmunitionType);
     }
     [UsedImplicitly]
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+    [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
     private void FixedUpdate()
     {
         _mainPhysxScene.Simulate(Time.fixedDeltaTime);
@@ -185,7 +185,7 @@ internal class ProjectileSolver : MonoBehaviour
             _queue.Enqueue(new ProjectileData(obj, origin, direction, gun, ammo, Time.realtimeSinceStartup, callback));
     }
     [UsedImplicitly]
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+    [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
     private void OnDestroy()
     {
         SceneManager.UnloadSceneAsync(_simScene);
@@ -224,13 +224,13 @@ internal class ProjectileSolver : MonoBehaviour
         public Transform IgnoreTransform;
         public Rocket OriginalRocketData;
         [UsedImplicitly]
-        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+        [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
         private void Start()
         {
             L.LogDebug("Added component to " + gameObject.name + ".");
         }
         [UsedImplicitly]
-        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+        [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
         private void OnTriggerEnter(Collider other)
         {
             L.LogDebug("hit " + other.name);
@@ -249,7 +249,7 @@ internal class ProjectileSolver : MonoBehaviour
             }
         }
         [UsedImplicitly]
-        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+        [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
         private void OnDestroy()
         {
             IsExploded = true;

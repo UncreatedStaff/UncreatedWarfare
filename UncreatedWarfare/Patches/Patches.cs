@@ -182,17 +182,17 @@ public static partial class Patches
                     case EChatMode.GLOBAL:
                         L.Log($"[ALL]  {name} \"{text}\"", ConsoleColor.DarkGray);
                         if (ShouldLog(text))
-                            ActionLog.Add(ActionLogType.CHAT_GLOBAL, text, callingPlayer.playerID.steamID.m_SteamID);
+                            ActionLog.Add(ActionLogType.ChatGlobal, text, callingPlayer.playerID.steamID.m_SteamID);
                         break;
                     case EChatMode.LOCAL:
                         L.Log($"[A/S]  {name} \"{text}\"", ConsoleColor.DarkGray);
                         if (ShouldLog(text))
-                            ActionLog.Add(ActionLogType.CHAT_AREA_OR_SQUAD, text, callingPlayer.playerID.steamID.m_SteamID);
+                            ActionLog.Add(ActionLogType.ChatAreaOrSquad, text, callingPlayer.playerID.steamID.m_SteamID);
                         break;
                     case EChatMode.GROUP:
                         L.Log($"[TEAM] {name} \"{text}\"", ConsoleColor.DarkGray);
                         if (ShouldLog(text))
-                            ActionLog.Add(ActionLogType.CHAT_GROUP, text, callingPlayer.playerID.steamID.m_SteamID);
+                            ActionLog.Add(ActionLogType.ChatGroup, text, callingPlayer.playerID.steamID.m_SteamID);
                         break;
                     default:
                         return false;
@@ -228,7 +228,7 @@ public static partial class Patches
                     if (match.Success && match.Length > 0)
                     {
                         caller.SendChat(T.ChatFilterFeedback, match.Value);
-                        ActionLog.Add(ActionLogType.CHAT_FILTER_VIOLATION, mode switch { EChatMode.LOCAL => "AREA/SQUAD: ", EChatMode.GLOBAL => "GLOBAL: ", _ => "TEAM: " } + text, caller);
+                        ActionLog.Add(ActionLogType.ChatFilterViolation, mode switch { EChatMode.LOCAL => "AREA/SQUAD: ", EChatMode.GLOBAL => "GLOBAL: ", _ => "TEAM: " } + text, caller);
                         return false;
                     }
                 }

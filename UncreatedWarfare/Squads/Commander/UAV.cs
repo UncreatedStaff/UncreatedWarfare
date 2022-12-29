@@ -256,7 +256,7 @@ public class UAV : MonoBehaviour, IBuff
         this._inited = true;
     }
 
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+    [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
     [UsedImplicitly]
     private void OnDestroy()
     {
@@ -291,7 +291,7 @@ public class UAV : MonoBehaviour, IBuff
         }
     }
     
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+    [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
     [UsedImplicitly]
     private void Update()
     {

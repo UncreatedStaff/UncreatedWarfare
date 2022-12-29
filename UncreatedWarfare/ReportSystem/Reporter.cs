@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.SQL;
@@ -30,6 +31,20 @@ public class Reporter : MonoBehaviour
                 return data[i].CustomReport(message, reporter);
         }
         return null;
+    }
+    public Report? CreateReport(ulong reporter, ulong violator, string message, EReportType type)
+    {
+        return type switch
+        {
+            EReportType.CHAT_ABUSE => CreateChatAbuseReport(reporter, violator, message),
+            EReportType.VOICE_CHAT_ABUSE => CreateVoiceChatAbuseReport(reporter, violator, message),
+            EReportType.SOLOING_VEHICLE => CreateSoloingReport(reporter, violator, message),
+            EReportType.WASTING_ASSETS => CreateWastingAssetsReport(reporter, violator, message),
+            EReportType.INTENTIONAL_TEAMKILL => CreateIntentionalTeamkillReport(reporter, violator, message),
+            EReportType.GREIFING_FOBS => CreateGreifingFOBsReport(reporter, violator, message),
+            EReportType.CHEATING => CreateCheatingReport(reporter, violator, message),
+            _ => CreateReport(reporter, violator, message),
+        };
     }
     public ChatAbuseReport? CreateChatAbuseReport(ulong reporter, ulong violator, string message)
     {
@@ -732,5 +747,18 @@ public class Reporter : MonoBehaviour
         /// <summary>T1: report <br>T2: isOnline</br></summary>
         public static readonly NetCallRaw<Report?, bool> SendReportInvocation = new NetCallRaw<Report?, bool>(4000, Report.ReadReport, null, Report.WriteReport!, null, 256);
         public static readonly NetCall<bool, string> ReceiveInvocationResponse = new NetCall<bool, string>(4001, 78);
+        public static readonly NetCall<ulong, EReportType> RequestReport = new NetCall<ulong, EReportType>(4002);
+
+        [NetCall(ENetCall.FROM_SERVER, 4002)]
+        private static async Task ReceiveReportRequest(MessageContext ctx, ulong player, EReportType type)
+        {
+            if (!UCWarfare.IsLoaded)
+                return;
+            await UCWarfare.ToUpdate();
+            if (Data.Reporter != null)
+            {
+                Data.Reporter.
+            }
+        }
     }
 }

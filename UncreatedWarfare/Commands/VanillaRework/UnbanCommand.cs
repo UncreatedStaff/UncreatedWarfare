@@ -34,7 +34,7 @@ public class UnbanCommand : AsyncCommand
         OffenseManager.LogUnbanPlayer(targetId, ctx.CallerID, DateTime.Now);
 
         string tid = targetId.ToString(Data.AdminLocale);
-        ActionLog.Add(ActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", ctx.CallerID);
+        ActionLog.Add(ActionLogType.UnbanPlayer, $"UNBANNED {tid}", ctx.CallerID);
         if (ctx.IsConsole)
         {
             L.Log($"{targetNames.PlayerName} ({tid}) was successfully unbanned.", ConsoleColor.Cyan);

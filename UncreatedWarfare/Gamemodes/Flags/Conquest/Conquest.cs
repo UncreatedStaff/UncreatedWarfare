@@ -198,7 +198,7 @@ public sealed partial class Conquest :
 #endif
         if (newOwner == 1)
         {
-            ActionLog.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
+            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(1, 0));
             for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
             {
                 if (flag.PlayersOnFlagTeam1[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
@@ -207,7 +207,7 @@ public sealed partial class Conquest :
         }
         else if (newOwner == 2)
         {
-            ActionLog.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
+            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(2, 0));
             for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
             {
                 if (flag.PlayersOnFlagTeam2[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)

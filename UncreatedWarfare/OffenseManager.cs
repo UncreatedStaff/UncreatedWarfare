@@ -3,7 +3,6 @@ using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -677,7 +676,7 @@ public static class OffenseManager
         }, ctx: "Unmute log");
     }
     /// <returns>0 for a successful ban.</returns>
-    internal static async Task<int> BanPlayerAsync(ulong targetId, ulong callerId, string reason, int duration, DateTimeOffset timestamp, CancellationToken token = default)
+    internal static async Task<StandardErrorCode> BanPlayerAsync(ulong targetId, ulong callerId, string reason, int duration, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -708,7 +707,7 @@ public static class OffenseManager
             callerName = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
         else
             callerName = PlayerNames.Console;
-        ActionLog.Add(ActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\" DURATION: " +
+        ActionLog.Add(ActionLogType.BanPlayer, $"BANNED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\" DURATION: " +
             (duration == -1 ? "PERMANENT" : (duration.ToString(Data.AdminLocale) + " SECONDS")), callerId);
 
         LogBanPlayer(targetId, callerId, reason, duration, timestamp);
@@ -764,20 +763,20 @@ public static class OffenseManager
                 caller?.SendChat(T.BanSuccessFeedback, target as IPlayer ?? name, time);
             }
         }
-        return MessageContext.CODE_SUCCESS;
+        return StandardErrorCode.Success;
     }
     /// <returns>0 for a successful kick, 2 when the target is offline.</returns>
-    internal static async Task<int> KickPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp, CancellationToken token = default)
+    internal static async Task<StandardErrorCode> KickPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
         UCPlayer? target = UCPlayer.FromID(targetId);
         if (target is null)
-            return 2;
+            return StandardErrorCode.NotFound;
         PlayerNames names = target.Name;
         Provider.kick(target.Player.channel.owner.playerID.steamID, reason);
 
         LogKickPlayer(targetId, callerId, reason, timestamp);
 
-        ActionLog.Add(ActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\"", callerId);
+        ActionLog.Add(ActionLogType.KickPlayer, $"KICKED {targetId.ToString(Data.AdminLocale)} FOR \"{reason}\"", callerId);
         if (callerId == 0)
         {
             L.Log($"{names.PlayerName} ({targetId}) was kicked by an operator because {reason}.", ConsoleColor.Cyan);
@@ -793,10 +792,10 @@ public static class OffenseManager
             callerPlayer?.SendChat(T.KickSuccessFeedback, target);
         }
 
-        return MessageContext.CODE_SUCCESS;
+        return StandardErrorCode.Success;
     }
     /// <returns>0 for a successful unban, 2 when the target isn't banned.</returns>
-    internal static async Task<int> UnbanPlayer(ulong targetId, ulong callerId, DateTimeOffset timestamp, CancellationToken token = default)
+    internal static async Task<StandardErrorCode> UnbanPlayer(ulong targetId, ulong callerId, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -806,13 +805,13 @@ public static class OffenseManager
         if (!Provider.requestUnbanPlayer(callerId == 0 ? CSteamID.Nil : new CSteamID(callerId), new CSteamID(targetId)))
         {
             L.Log(callerId + " not banned.", ConsoleColor.Cyan);
-            return 2;
+            return StandardErrorCode.NotFound;
         }
 
         LogUnbanPlayer(targetId, callerId, DateTime.Now);
 
         string tid = targetId.ToString(Data.AdminLocale);
-        ActionLog.Add(ActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", callerId);
+        ActionLog.Add(ActionLogType.UnbanPlayer, $"UNBANNED {tid}", callerId);
         if (callerId == 0)
         {
             L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by an operator.", ConsoleColor.Cyan);
@@ -828,24 +827,24 @@ public static class OffenseManager
             Chat.Broadcast(LanguageSet.AllBut(callerId), T.UnbanSuccessBroadcast, targetNames, caller as IPlayer ?? callerNames);
         }
 
-        return MessageContext.CODE_SUCCESS;
+        return StandardErrorCode.Success;
     }
     /// <returns>0 for a successful warn, 2 when the target isn't banned.</returns>
-    internal static async Task<int> WarnPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp, CancellationToken token = default)
+    internal static async Task<StandardErrorCode> WarnPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer? target = UCPlayer.FromID(targetId);
         if (target is null)
-            return 2;
+            return StandardErrorCode.NotFound;
         UCPlayer? caller = UCPlayer.FromID(callerId);
         PlayerNames targetNames = target.Name;
 
         LogWarnPlayer(targetId, callerId, reason, DateTime.Now);
 
         string tid = targetId.ToString(Data.AdminLocale);
-        ActionLog.Add(ActionLogType.WARN_PLAYER, $"WARNED {tid} FOR \"{reason}\"", callerId);
+        ActionLog.Add(ActionLogType.WarnPlayer, $"WARNED {tid} FOR \"{reason}\"", callerId);
         if (callerId == 0)
         {
             L.Log($"{targetNames.PlayerName} ({targetId}) was warned by an operator because {reason}.", ConsoleColor.Cyan);
@@ -873,10 +872,10 @@ public static class OffenseManager
             target.SendChat(T.WarnSuccessDM, caller2, reason);
         }
 
-        return MessageContext.CODE_SUCCESS;
+        return StandardErrorCode.Success;
     }
     /// <returns>0 for a successful mute.</returns>
-    internal static async Task<int> MutePlayerAsync(ulong target, ulong admin, EMuteType type, int duration, string reason, DateTimeOffset timestamp, CancellationToken token = default)
+    internal static async Task<StandardErrorCode> MutePlayerAsync(ulong target, ulong admin, EMuteType type, int duration, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -900,7 +899,7 @@ public static class OffenseManager
         LogMutePlayer(target, admin, type, duration, reason, DateTime.Now);
 
         string dur = duration == -1 ? "PERMANENT" : duration.GetTimeFromSeconds(0);
-        ActionLog.Add(ActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur, admin);
+        ActionLog.Add(ActionLogType.MutePlayer, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur, admin);
 
         if (admin == 0)
         {
@@ -954,10 +953,10 @@ public static class OffenseManager
             }
         }
 
-        return MessageContext.CODE_SUCCESS;
+        return StandardErrorCode.Success;
     }
     /// <returns>0 for a successful unmute, 2 when the target isn't muted.</returns>
-    internal static async Task<int> UnmutePlayerAsync(ulong targetId, ulong callerId, DateTimeOffset timestamp)
+    internal static async Task<StandardErrorCode> UnmutePlayerAsync(ulong targetId, ulong callerId, DateTimeOffset timestamp)
     {
         UCPlayer? caller = UCPlayer.FromID(callerId);
         UCPlayer? onlinePlayer = UCPlayer.FromID(targetId);
@@ -976,7 +975,7 @@ public static class OffenseManager
                     caller.SendChat(T.UnmuteNotMuted, names);
                 else if (callerId == 0)
                     L.Log(Util.RemoveRichText(T.UnmuteNotMuted.Translate(L.Default, names, out Color color)), Util.GetClosestConsoleColor(color));
-                return 2;
+                return StandardErrorCode.GenericError;
             }
             else
             {
@@ -1001,9 +1000,9 @@ public static class OffenseManager
                     onlinePlayer?.SendChat(T.UnmuteSuccessDM, n2);
                     caller?.SendChat(T.UnmuteSuccessFeedback, names);
                 }
-                ActionLog.Add(ActionLogType.UNMUTE_PLAYER, targetId.ToString() + " unmuted.", callerId);
+                ActionLog.Add(ActionLogType.UnmutePlayer, targetId.ToString() + " unmuted.", callerId);
                 L.Log($"{names.PlayerName} ({targetId}) was unmuted by {(callerId == 0 ? "an operator" : (n2.PlayerName + "(" + callerId + ")"))}.");
-                return MessageContext.CODE_SUCCESS;
+                return StandardErrorCode.Success;
             }
         }
         else
@@ -1013,7 +1012,7 @@ public static class OffenseManager
                 caller.SendChat(T.PlayerNotFound);
             else if (callerId == 0)
                 L.Log(Util.RemoveRichText(T.PlayerNotFound.Translate(L.Default, out Color color)), Util.GetClosestConsoleColor(color));
-            return 2;
+            return StandardErrorCode.NotFound;
         }
     }
     private static void OnPlayerDied(PlayerDied e)

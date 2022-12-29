@@ -437,7 +437,7 @@ public class VehicleComponent : MonoBehaviour
     public float LastDriverTime;
     public float LastDriverDistance;
 
-    [SuppressMessage(Warfare.Data.SUPPRESS_CATEGORY, Warfare.Data.SUPPRESS_ID)]
+    [SuppressMessage(Warfare.Data.SuppressCategory, Warfare.Data.SuppressID)]
     [UsedImplicitly]
     private void Update()
     {

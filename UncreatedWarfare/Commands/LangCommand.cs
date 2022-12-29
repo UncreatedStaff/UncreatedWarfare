@@ -55,7 +55,7 @@ public class LangCommand : Command
                     throw ctx.Reply(T.LangAlreadySet, set);
 
                 JSONMethods.SetLanguage(ctx.CallerID, L.Default);
-                ctx.LogAction(ActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + L.Default);
+                ctx.LogAction(ActionLogType.ChangeLanguage, oldLang + " >> " + L.Default);
                 OnPlayerChangedLanguage?.Invoke(ctx.Caller, set, oldSet);
                 ctx.Reply(T.ResetLanguage, set);
             }
@@ -76,7 +76,7 @@ public class LangCommand : Command
                     throw ctx.Reply(T.LangAlreadySet, oldSet);
 
                 JSONMethods.SetLanguage(ctx.CallerID, newSet.key);
-                ctx.LogAction(ActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + newSet.key);
+                ctx.LogAction(ActionLogType.ChangeLanguage, oldLang + " >> " + newSet.key);
                 OnPlayerChangedLanguage?.Invoke(ctx.Caller, newSet, oldSet);
                 ctx.Reply(T.ChangedLanguage, newSet);
             }

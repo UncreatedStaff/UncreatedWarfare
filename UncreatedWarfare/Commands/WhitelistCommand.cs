@@ -37,9 +37,9 @@ public class WhitelistCommand : Command
                 if (!Whitelister.IsWhitelisted(asset.GUID, out _))
                 {
                     Whitelister.AddItem(asset.GUID, amount);
-                    ctx.LogAction(ActionLogType.ADD_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+                    ctx.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
                     if (amount != 255)
-                        ctx.LogAction(ActionLogType.SET_WHITELIST_MAX_AMOUNT, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+                        ctx.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
                     ctx.Reply(T.WhitelistAdded, asset);
                 }
                 else
@@ -56,7 +56,7 @@ public class WhitelistCommand : Command
             if (ctx.TryGet(1, out ItemAsset asset, out bool multiple, true, selector: x => Whitelister.IsWhitelistedFast(x.GUID)))
             {
                 Whitelister.RemoveItem(asset.GUID);
-                ctx.LogAction(ActionLogType.REMOVE_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+                ctx.LogAction(ActionLogType.RemoveWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
                 ctx.Reply(T.WhitelistRemoved, asset);
             }
             else if (multiple)
@@ -81,16 +81,16 @@ public class WhitelistCommand : Command
                     if (!Whitelister.IsWhitelisted(asset.GUID, out _))
                     {
                         Whitelister.AddItem(asset.GUID, amount);
-                        ctx.LogAction(ActionLogType.ADD_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+                        ctx.LogAction(ActionLogType.AddWhitelist, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
                         if (amount != 255)
-                            ctx.LogAction(ActionLogType.SET_WHITELIST_MAX_AMOUNT, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+                            ctx.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
                         ctx.Reply(T.WhitelistAdded, asset);
                         ctx.Reply(T.WhitelistSetAmount, asset, amount);
                     }
                     else
                     {
                         if (amount != 255)
-                            ctx.LogAction(ActionLogType.SET_WHITELIST_MAX_AMOUNT, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+                            ctx.LogAction(ActionLogType.SetWhitelistMaxAmount, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
                         Whitelister.SetAmount(asset.GUID, amount);
                         ctx.Reply(T.WhitelistSetAmount, asset, amount);
                     }

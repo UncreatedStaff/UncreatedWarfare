@@ -76,7 +76,7 @@ public sealed class KitCommand : AsyncCommand
                         if (kit == null)
                             goto @new;
                         kit.Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true);
-                        ctx.LogAction(ActionLogType.EDIT_KIT, "OVERRIDE ITEMS " + kit.Id + ".");
+                        ctx.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + kit.Id + ".");
                         await proxy.SaveItem(token).ConfigureAwait(false);
                         await UCWarfare.ToUpdate();
                         KitManager.UpdateSigns(kit);
@@ -114,7 +114,7 @@ public sealed class KitCommand : AsyncCommand
 
                 kit = new Kit(kitName, @class, KitManager.GetDefaultBranch(@class), type, SquadLevel.Member, faction);
                 await manager.AddOrUpdate(kit, token).ConfigureAwait(false);
-                ctx.LogAction(ActionLogType.CREATE_KIT, kitName);
+                ctx.LogAction(ActionLogType.CreateKit, kitName);
                 await UCWarfare.ToUpdate(token);
                 KitManager.UpdateSigns(kit);
                 ctx.Reply(T.KitCreated, kit);
@@ -142,7 +142,7 @@ public sealed class KitCommand : AsyncCommand
 
                     Kit? item = proxy.Item;
                     await proxy.Delete(token).ConfigureAwait(false);
-                    ctx.LogAction(ActionLogType.DELETE_KIT, kitName);
+                    ctx.LogAction(ActionLogType.DeleteKit, kitName);
                     await UCWarfare.ToUpdate();
                     ctx.Reply(T.KitDeleted, item);
                 }
@@ -166,7 +166,7 @@ public sealed class KitCommand : AsyncCommand
                     Class @class = proxy.Item.Class;
                     await manager.GiveKit(ctx.Caller, proxy, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
-                    ctx.LogAction(ActionLogType.GIVE_KIT, kitName);
+                    ctx.LogAction(ActionLogType.GiveKit, kitName);
                     ctx.Reply(T.RequestSignGiven, @class);
                 }
                 else
@@ -220,7 +220,7 @@ public sealed class KitCommand : AsyncCommand
                                 await proxy.SaveItem(token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
                                 ctx.Reply(T.KitPropertySet, property, proxy.Item, newValue);
-                                ctx.LogAction(ActionLogType.SET_KIT_PROPERTY, kitName + ": LEVEL >> " + newValue.ToUpper());
+                                ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": LEVEL >> " + newValue.ToUpper());
                                 KitManager.UpdateSigns(proxy.Item);
                                 ctx.Defer();
                             }
@@ -240,7 +240,7 @@ public sealed class KitCommand : AsyncCommand
                                 await UCWarfare.ToUpdate(token);
                                 newValue = newValue.Replace('\n', '\\');
                                 ctx.Reply(T.KitPropertySet, "sign text", proxy.Item, language + " : " + newValue);
-                                ctx.LogAction(ActionLogType.SET_KIT_PROPERTY, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
+                                ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
                                 KitManager.UpdateSigns(proxy.Item);
                             }
                             else
@@ -256,7 +256,7 @@ public sealed class KitCommand : AsyncCommand
                                 await proxy.SaveItem(token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
                                 ctx.Reply(T.KitPropertySet, "faction", proxy.Item, faction?.GetName(L.Default)!);
-                                ctx.LogAction(ActionLogType.SET_KIT_PROPERTY, kitName + ": FACTION >> " +
+                                ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": FACTION >> " +
                                                                                (faction?.Name.ToUpper() ?? Translation.Null(TranslationFlags.NoRichText)));
                                 KitManager.UpdateSigns(proxy.Item);
                             }
@@ -302,7 +302,7 @@ public sealed class KitCommand : AsyncCommand
                                     await UCWarfare.ToUpdate(token);
                                     KitManager.UpdateSigns(kit);
                                     ctx.Reply(T.KitPropertySet, property, kit, newValue);
-                                    ctx.LogAction(ActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
+                                    ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
                                     if (oldbranch != kit.Branch || oldclass != kit.Class || prevType != kit.Type)
                                         manager.InvokeAfterMajorKitUpdate(proxy);
                                     return;
@@ -347,7 +347,7 @@ public sealed class KitCommand : AsyncCommand
                             return;
                         }
                         await KitManager.GiveAccess(proxy, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
-                        ctx.LogAction(ActionLogType.CHANGE_KIT_ACCESS, playerId.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + kitName + ", REASON: " + type);
+                        ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + kitName + ", REASON: " + type);
 
                         await UCWarfare.ToUpdate();
                         ctx.Reply(T.KitAccessGiven, onlinePlayer as IPlayer ?? names, playerId, proxy.Item);
@@ -392,7 +392,7 @@ public sealed class KitCommand : AsyncCommand
                             return;
                         }
                         await KitManager.RemoveAccess(proxy, playerId, token).ConfigureAwait(false);
-                        ctx.LogAction(ActionLogType.CHANGE_KIT_ACCESS, playerId.ToString(Data.AdminLocale) + " DENIED ACCESS TO " + kitName);
+                        ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " DENIED ACCESS TO " + kitName);
 
                         await UCWarfare.ToUpdate();
                         ctx.Reply(T.KitAccessRevoked, onlinePlayer as IPlayer ?? names, playerId, proxy.Item);
@@ -443,7 +443,7 @@ public sealed class KitCommand : AsyncCommand
                 }
 
                 await manager.AddOrUpdate(kit, token).ConfigureAwait(false);
-                ctx.LogAction(ActionLogType.CREATE_KIT, kitName + " COPIED FROM " + existingName);
+                ctx.LogAction(ActionLogType.CreateKit, kitName + " COPIED FROM " + existingName);
                 await UCWarfare.ToUpdate();
                 KitManager.UpdateSigns(kit);
                 ctx.Reply(T.KitCopied, existing.Item, kit);
@@ -479,7 +479,7 @@ public sealed class KitCommand : AsyncCommand
                     await UCWarfare.ToUpdate();
                     SqlItem<Kit> kit = await manager.AddOrUpdate(loadout, token).ConfigureAwait(false);
                     await KitManager.GiveAccess(kit, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
-                    ctx.LogAction(ActionLogType.CREATE_KIT, loadout.Id);
+                    ctx.LogAction(ActionLogType.CreateKit, loadout.Id);
                     await UCWarfare.ToUpdate();
                     KitManager.UpdateSigns(loadout);
                     ctx.Reply(T.LoadoutCreated, @class, onlinePlayer as IPlayer ?? names, playerId, loadout);

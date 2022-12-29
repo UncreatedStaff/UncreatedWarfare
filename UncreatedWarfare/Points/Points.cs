@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
@@ -189,7 +190,7 @@ public static class Points
             if (player != null)
                 player.CachedCredits = currentAmount;
 
-            ActionLog.Add(ActionLogType.CREDITS_CHANGED, oldamt + " >> " + currentAmount, parameters.Steam64);
+            ActionLog.Add(ActionLogType.CreditsChanged, oldamt + " >> " + currentAmount, parameters.Steam64);
 
             if (player != null && player.IsOnline && !player.HasUIHidden && !Data.Gamemode.EndScreenUp)
             {
@@ -390,7 +391,7 @@ public static class Points
                 if (player == null)
                     oldRank = new RankData(Mathf.RoundToInt(currentAmount - amt));
 
-                ActionLog.Add(ActionLogType.XP_CHANGED, oldRank.TotalXP + " >> " + currentAmount, parameters.Steam64);
+                ActionLog.Add(ActionLogType.XPChanged, oldRank.TotalXP + " >> " + currentAmount, parameters.Steam64);
             }
             finally
             {
@@ -883,7 +884,7 @@ public static class Points
                 else
                     Chat.Broadcast(T.VehicleDestroyed, e.Instigator, e.Vehicle.asset, reason, distance);
 
-                ActionLog.Add(ActionLogType.OWNED_VEHICLE_DIED, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
+                ActionLog.Add(ActionLogType.OwnedVehicleDied, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
                                                                  $" - Destroyed by {e.Instigator.Steam64.ToString(Data.AdminLocale)}", e.OwnerId);
 
                 QuestManager.OnVehicleDestroyed(e);
@@ -941,7 +942,7 @@ public static class Points
                 Translation<VehicleType> message = e.Component.IsAircraft ? T.XPToastFriendlyAircraftDestroyed : T.XPToastFriendlyVehicleDestroyed;
                 Chat.Broadcast(T.VehicleTeamkilled, e.Instigator, e.Vehicle.asset);
 
-                ActionLog.Add(ActionLogType.OWNED_VEHICLE_DIED, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
+                ActionLog.Add(ActionLogType.OwnedVehicleDied, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
                                                                  $" - Destroyed by {e.InstigatorId}", e.OwnerId);
                 if (e.Instigator is not null)
                     AwardCredits(e.Instigator, Mathf.Clamp(e.VehicleData.CreditCost, 5, 1000), message, e.VehicleData.Type, true, @lock: false);
@@ -1100,7 +1101,7 @@ public struct CreditsParameters
         new CreditsParameters(player, team, amount, translation.Translate(player, arg1, arg2));
     public CreditsParameters(ulong player, ulong team, int amount)
     {
-        if (!OffenseManager.IsValidSteam64Id(player))
+        if (!Util.IsValidSteam64Id(player))
             throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
         Steam64 = player;
         Player = UCPlayer.FromID(player);
@@ -1111,7 +1112,7 @@ public struct CreditsParameters
     }
     public CreditsParameters(ulong player, ulong team, int amount, string? message, bool isPunishment = true)
     {
-        if (!OffenseManager.IsValidSteam64Id(player))
+        if (!Util.IsValidSteam64Id(player))
             throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
         Steam64 = player;
         Player = UCPlayer.FromID(player);
@@ -1170,7 +1171,7 @@ public struct XPParameters
         new XPParameters(player, team, amount, translation.Translate(player, arg1, arg2), awardCredits);
     public XPParameters(ulong player, ulong team, int amount)
     {
-        if (!OffenseManager.IsValidSteam64Id(player))
+        if (!Util.IsValidSteam64Id(player))
             throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
         Steam64 = player;
         Player = UCPlayer.FromID(player);
@@ -1181,7 +1182,7 @@ public struct XPParameters
     }
     public XPParameters(ulong player, ulong team, int amount, string? message, bool awardCredits)
     {
-        if (!OffenseManager.IsValidSteam64Id(player))
+        if (!Util.IsValidSteam64Id(player))
             throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
         Steam64 = player;
         Player = UCPlayer.FromID(player);

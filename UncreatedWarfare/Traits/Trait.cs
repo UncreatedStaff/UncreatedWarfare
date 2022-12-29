@@ -44,7 +44,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
     }
 
     [UsedImplicitly]
-    [SuppressMessage(Warfare.Data.SUPPRESS_CATEGORY, Warfare.Data.SUPPRESS_ID)]
+    [SuppressMessage(Warfare.Data.SuppressCategory, Warfare.Data.SuppressID)]
     private void Start()
     {
         if (!_inited)
@@ -110,7 +110,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
     }
 
     [UsedImplicitly]
-    [SuppressMessage(Warfare.Data.SUPPRESS_CATEGORY, Warfare.Data.SUPPRESS_ID)]
+    [SuppressMessage(Warfare.Data.SuppressCategory, Warfare.Data.SuppressID)]
     private void OnDestroy()
     {
         if (!_inited)

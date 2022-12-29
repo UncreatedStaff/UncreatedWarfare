@@ -506,13 +506,13 @@ internal static class Localization
         L.Log(log, tk ? ConsoleColor.Cyan : ConsoleColor.DarkCyan);
         if (OffenseManager.IsValidSteam64Id(e.Instigator))
         {
-            ActionLog.Add(ActionLogType.DEATH, log + " | Killer: " + e.Instigator.m_SteamID, e.Player.Steam64);
-            ActionLog.Add(ActionLogType.KILL, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
+            ActionLog.Add(ActionLogType.Death, log + " | Killer: " + e.Instigator.m_SteamID, e.Player.Steam64);
+            ActionLog.Add(ActionLogType.Kill, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
             if (tk)
-                ActionLog.Add(ActionLogType.TEAMKILL, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
+                ActionLog.Add(ActionLogType.Teamkill, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
         }
         else
-            ActionLog.Add(ActionLogType.DEATH, log, e.Player.Steam64);
+            ActionLog.Add(ActionLogType.Death, log, e.Player.Steam64);
     }
     internal static void Reload()
     {

@@ -74,7 +74,7 @@ public class OrderCommand : Command
                         switch (type)
                         {
                             case EOrder.ATTACK or EOrder.DEFEND:
-                                ctx.LogAction(ActionLogType.CREATED_ORDER, Localization.TranslateEnum(type, 0) + " " + marker.ToString("N2"));
+                                ctx.LogAction(ActionLogType.CreatedOrder, Localization.TranslateEnum(type, 0) + " " + marker.ToString("N2"));
                                 switch (Data.Gamemode)
                                 {
                                     case null:
@@ -134,7 +134,7 @@ public class OrderCommand : Command
                                             message = T.OrderUIDefendNearArea;
                                         break;
                                 }
-                                ctx.LogAction(ActionLogType.CREATED_ORDER, (type is EOrder.ATTACK ? "ATTACK" : "DEFEND") + " AT " + marker.ToString("N2"));
+                                ctx.LogAction(ActionLogType.CreatedOrder, (type is EOrder.ATTACK ? "ATTACK" : "DEFEND") + " AT " + marker.ToString("N2"));
                                 break;
                             case EOrder.BUILDFOB:
                                 ctx.AssertGamemode<IFOBs>();
@@ -185,7 +185,7 @@ public class OrderCommand : Command
                                             break;
                                     }
 
-                                    ctx.LogAction(ActionLogType.CREATED_ORDER, "BUILD A FOB AT " + marker.ToString("N2"));
+                                    ctx.LogAction(ActionLogType.CreatedOrder, "BUILD A FOB AT " + marker.ToString("N2"));
                                 }
                                 break;
                             case EOrder.MOVE:
@@ -238,7 +238,7 @@ public class OrderCommand : Command
                                             message = T.OrderUIMoveNearArea;
                                             break;
                                     }
-                                    ctx.LogAction(ActionLogType.CREATED_ORDER, "MOVE TO " + marker.ToString("N2"));
+                                    ctx.LogAction(ActionLogType.CreatedOrder, "MOVE TO " + marker.ToString("N2"));
 
                                 }
                                 else throw ctx.Reply(T.OrderSquadTooClose, squad);

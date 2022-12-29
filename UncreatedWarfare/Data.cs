@@ -94,8 +94,8 @@ public static class Data
         public const PlayerKey DropSupplyOverride = PlayerKey.PluginKey3;
     }
 
-    public const string SUPPRESS_CATEGORY = "Microsoft.Performance";
-    public const string SUPPRESS_ID = "IDE0051";
+    public const string SuppressCategory = "Microsoft.Performance";
+    public const string SuppressID = "IDE0051";
     public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/][il][gqb](?!h)\W{0,1}[gqb]{0,1}\W{0,1}[gqb]{0,1}\W{0,1}[ae]{0,1}\W{0,1}[r]{0,1}(?:ia){0,1})|(?:f\W{0,1}a\W{0,1}g{1,2}\W{0,1}o{0,1}\W{0,1}t{0,1})");
     [Obsolete("Choose between LocalLocale and AdminLocale")]
     public static CultureInfo Locale = LanguageAliasSet.ENGLISH_C;
@@ -386,16 +386,16 @@ public static class Data
     };
     internal static void OnClientReceivedMessage(IConnection connection, in MessageOverhead overhead, byte[] message)
     {
-        if (UCWarfare.Config.Debug && (overhead.Flags & EMessageFlags.SYS_MESSAGE) == 0)
+        if (UCWarfare.Config.Debug)
         {
-            L.Log("Received from TCP server: " + overhead.ToString() + ".", ConsoleColor.DarkGray);
+            L.Log("Received from TCP server: " + overhead + ".", ConsoleColor.DarkGray);
         }
     }
     internal static void OnClientSentMessage(IConnection connection, in MessageOverhead overhead, byte[] message)
     {
-        if (UCWarfare.Config.Debug && (overhead.Flags & EMessageFlags.SYS_MESSAGE) == 0)
+        if (UCWarfare.Config.Debug)
         {
-            L.Log("Sent over TCP server    : " + overhead.ToString() + ".", ConsoleColor.DarkGray);
+            L.Log("Sent over TCP server    : " + overhead + ".", ConsoleColor.DarkGray);
         }
     }
     internal static void OnClientDisconnected(IConnection connection)
@@ -406,7 +406,8 @@ public static class Data
     {
         L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
         PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
-        ActionLog.OnConnected();
+        if (ActionLog.Instance != null)
+            ActionLog.Instance.OnConnected();
         if (!UCWarfare.Config.DisableDailyQuests)
             Quests.DailyQuests.OnConnectedToServer();
         if (Gamemode != null && Gamemode.ShouldShutdownAfterGame)

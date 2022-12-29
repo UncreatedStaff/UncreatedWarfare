@@ -171,7 +171,7 @@ public class VehicleBayCommand : AsyncCommand
 
                     if (adding)
                     {
-                        ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY, "ADDED DELAY " + type + " VALUE: " + val.ToString(Data.AdminLocale)
+                        ctx.LogAction(ActionLogType.SetVehicleDataProperty, "ADDED DELAY " + type + " VALUE: " + val.ToString(Data.AdminLocale)
                             + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
                         Delay.AddDelay(ref data.Item.Delays, type, val, gamemode);
                         Signs.UpdateVehicleBaySigns(null, data.Item);
@@ -199,7 +199,7 @@ public class VehicleBayCommand : AsyncCommand
                             }
                             await data.SaveItem(token).ConfigureAwait(false);
                             await UCWarfare.ToUpdate(token);
-                            ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY, "REMOVED " + rem.ToString(Data.AdminLocale) + " DELAY(S) " + type + " VALUE: " + val.ToString(Data.AdminLocale)
+                            ctx.LogAction(ActionLogType.SetVehicleDataProperty, "REMOVED " + rem.ToString(Data.AdminLocale) + " DELAY(S) " + type + " VALUE: " + val.ToString(Data.AdminLocale)
                                 + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
                         }
                         ctx.Reply(T.VehicleBayRemovedDelay, rem);
@@ -225,7 +225,7 @@ public class VehicleBayCommand : AsyncCommand
                 await UCWarfare.ToUpdate(token);
                 if (data?.Item == null)
                 {
-                    ctx.LogAction(ActionLogType.CREATE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
+                    ctx.LogAction(ActionLogType.CreateVehicleData, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
                     await bay.AddRequestableVehicle(vehicle, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
                     ctx.Reply(T.VehicleBayAdded, vehicle.asset);
@@ -250,7 +250,7 @@ public class VehicleBayCommand : AsyncCommand
                 if (await bay.RemoveRequestableVehicle(vehicle.asset.GUID, token).ConfigureAwait(false))
                 {
                     await UCWarfare.ToUpdate(token);
-                    ctx.LogAction(ActionLogType.DELETE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
+                    ctx.LogAction(ActionLogType.DeleteVehicleData, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
                     ctx.Reply(T.VehicleBayRemoved, vehicle.asset);
                 }
                 else
@@ -273,7 +273,7 @@ public class VehicleBayCommand : AsyncCommand
                 SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, spawner, token).ConfigureAwait(false);
                 if (data?.Item != null)
                 {
-                    ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - SAVED METADATA");
+                    ctx.LogAction(ActionLogType.SetVehicleDataProperty, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - SAVED METADATA");
                     await data.Enter(token).ConfigureAwait(false);
                     try
                     {
@@ -326,7 +326,7 @@ public class VehicleBayCommand : AsyncCommand
                         }
 
                         VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
-                        ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY,
+                        ctx.LogAction(ActionLogType.SetVehicleDataProperty,
                             $"{asset?.vehicleName ?? "null"} / {(asset == null ? "0" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - SET ITEMS");
                         data.Item.Items = items.ToArray();
                         await data.SaveItem(token).ConfigureAwait(false);
@@ -349,7 +349,7 @@ public class VehicleBayCommand : AsyncCommand
                     {
                         case SetPropertyResult.Success:
                             VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
-                            ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY,
+                            ctx.LogAction(ActionLogType.SetVehicleDataProperty,
                                 $"{asset?.vehicleName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.Item.VehicleID:N} - SET " +
                                 (info?.Name ?? property).ToUpper() + " >> " + value.ToUpper());
                             ctx.Reply(T.VehicleBaySetProperty!, property, asset, value);
@@ -396,7 +396,7 @@ public class VehicleBayCommand : AsyncCommand
                         VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
                         if (!data.Item.CrewSeats.Contains(seat))
                         {
-                            ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} /" +
+                            ctx.LogAction(ActionLogType.SetVehicleDataProperty, $"{asset?.vehicleName ?? "null"} /" +
                                 $" {(asset == null ? "null" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - ADDED CREW SEAT {seat}.");
                             await bay.AddCrewSeat(data, seat, token).ConfigureAwait(false);
                             await UCWarfare.ToUpdate(token);
@@ -421,7 +421,7 @@ public class VehicleBayCommand : AsyncCommand
                         VehicleAsset? asset = Assets.find<VehicleAsset>(data.Item.VehicleID);
                         if (data.Item.CrewSeats.Contains(seat))
                         {
-                            ctx.LogAction(ActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} /" +
+                            ctx.LogAction(ActionLogType.SetVehicleDataProperty, $"{asset?.vehicleName ?? "null"} /" +
                                 $" {(asset == null ? "null" : asset.id.ToString(Data.AdminLocale))} / {data.Item.VehicleID:N} - REMOVED CREW SEAT {seat}.");
                             await bay.RemoveCrewSeat(data, seat, token).ConfigureAwait(false);
                             await UCWarfare.ToUpdate(token);
@@ -467,7 +467,7 @@ public class VehicleBayCommand : AsyncCommand
                             (SqlItem<SavedStructure> save, _) = await saver.AddBarricade(barricade, token).ConfigureAwait(false);
                             await spawner.CreateSpawn(save, data, null, token).ConfigureAwait(false);
                             await UCWarfare.ToUpdate(token);
-                            ctx.LogAction(ActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                            ctx.LogAction(ActionLogType.RegisteredSpawn, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
                                                                           $"REGISTERED BARRICADE SPAWN AT {barricade.model.transform.position:N2} ID: {barricade.instanceID}");
                             ctx.Reply(T.VehicleBaySpawnRegistered, asset);
                         }
@@ -491,7 +491,7 @@ public class VehicleBayCommand : AsyncCommand
                             (SqlItem<SavedStructure> save, _) = await saver.AddStructure(structure, token).ConfigureAwait(false);
                             await spawner.CreateSpawn(save, data, null, token).ConfigureAwait(false);
                             await UCWarfare.ToUpdate(token);
-                            ctx.LogAction(ActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                            ctx.LogAction(ActionLogType.RegisteredSpawn, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
                                                                           $"REGISTERED STRUCTURE SPAWN AT {structure.model.transform.position:N2} ID: {structure.instanceID}");
                             ctx.Reply(T.VehicleBaySpawnRegistered, asset);
                         }
@@ -523,12 +523,12 @@ public class VehicleBayCommand : AsyncCommand
                 VehicleData? data = spawn2.Vehicle?.Item;
                 if (data is not null && Assets.find(data.VehicleID) is VehicleAsset asset)
                 {
-                    ctx.LogAction(ActionLogType.DEREGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - DEREGISTERED SPAWN KEY: {spawn2.StructureKey}.");
+                    ctx.LogAction(ActionLogType.DeregisteredSpawn, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - DEREGISTERED SPAWN KEY: {spawn2.StructureKey}.");
                     ctx.Reply(T.VehicleBaySpawnDeregistered, asset);
                 }
                 else
                 {
-                    ctx.LogAction(ActionLogType.DEREGISTERED_SPAWN, $"{spawn2.VehicleKey} - DEREGISTERED SPAWN ID: {spawn2.StructureKey}");
+                    ctx.LogAction(ActionLogType.DeregisteredSpawn, $"{spawn2.VehicleKey} - DEREGISTERED SPAWN ID: {spawn2.StructureKey}");
                     ctx.Reply(T.VehicleBaySpawnDeregistered, null!);
                 }
             }
@@ -553,7 +553,7 @@ public class VehicleBayCommand : AsyncCommand
                 await UCWarfare.ToUpdate(token);
                 if (vehicle != null)
                 {
-                    ctx.LogAction(ActionLogType.VEHICLE_BAY_FORCE_SPAWN,
+                    ctx.LogAction(ActionLogType.VehicleBayForceSpawn,
                         $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - FORCED VEHICLE TO SPAWN ID: {spawn2.StructureKey}");
                     ctx.Reply(T.VehicleBayForceSuccess, vehicle.asset);
                 }
@@ -577,7 +577,7 @@ public class VehicleBayCommand : AsyncCommand
                         if (await spawner.LinkSign(drop, proxy, token).ConfigureAwait(false))
                         {
                             await UCWarfare.ToUpdate(token);
-                            ctx.LogAction(ActionLogType.LINKED_VEHICLE_BAY_SIGN,
+                            ctx.LogAction(ActionLogType.LinkedVehicleBaySign,
                                 $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID} - " +
                                 $"LINKED TO SPAWN AT {drop.model.transform.position:N2} KEY: {c.Currentlylinking.PrimaryKey}");
                             VehicleData? data = proxy?.Item?.Vehicle?.Item;

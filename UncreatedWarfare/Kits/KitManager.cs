@@ -65,7 +65,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 kit = string.IsNullOrEmpty(TeamManager.Team2UnarmedKit) ? null : FindKitNoLock(TeamManager.Team2UnarmedKit!);
                 if (kit?.Item == null)
                     L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to the " + TeamManager.Team2Faction.Name + " faction.");
-                kit = string.IsNullOrEmpty(TeamManager.DefaultKit) ? null : FindKitNoLock(TeamManager.DefaultKit!);
+                kit = string.IsNullOrEmpty(TeamManager.DefaultKit) ? null : FindKitNoLock(TeamManager.DefaultKit);
                 if (kit?.Item == null)
                     L.LogError("The default kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to the team config.");
             }
@@ -1334,7 +1334,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         });
         return let;
     }
-    public async Task<(SqlItem<Kit>, int)> CreateLoadout(ulong fromPlayer, ulong player, ulong team, Class @class, string displayName, CancellationToken token = default)
+    public async Task<(SqlItem<Kit>, StandardErrorCode)> CreateLoadout(ulong fromPlayer, ulong player, ulong team, Class @class, string displayName, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1343,7 +1343,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         string loadoutName = player.ToString(Data.AdminLocale) + "_" + let;
         SqlItem<Kit>? existing = await FindKit(loadoutName, token, true).ConfigureAwait(false);
         if (existing?.Item != null)
-            return (existing, MessageContext.CODE_GENERIC_FAILURE);
+            return (existing, StandardErrorCode.GenericError);
         SqlItem<Kit>? kit = await GetDefaultKit(team, token).ConfigureAwait(false);
         IKitItem[] items;
         if (kit?.Item != null)
@@ -1361,9 +1361,9 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         SetTextNoLock(loadout, displayName);
         kit = await AddOrUpdate(loadout, token).ConfigureAwait(false);
 
-        ActionLog.Add(ActionLogType.CREATE_KIT, loadoutName, fromPlayer);
+        ActionLog.Add(ActionLogType.CreateKit, loadoutName, fromPlayer);
 
-        return (kit, MessageContext.CODE_SUCCESS);
+        return (kit, StandardErrorCode.Success);
     }
     internal void InvokeAfterMajorKitUpdate(SqlItem<Kit> proxy)
     {
@@ -1409,7 +1409,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 ctx.Reply(T.RequestKitLimited, allowedPlayers);
                 return;
             }
-            ctx.LogAction(ActionLogType.REQUEST_KIT, $"Loadout #{loadoutId}: {loadout.Item.Id}, Team {team}, Class: {Localization.TranslateEnum(loadout.Item.Class, 0)}");
+            ctx.LogAction(ActionLogType.RequestKit, $"Loadout #{loadoutId}: {loadout.Item.Id}, Team {team}, Class: {Localization.TranslateEnum(loadout.Item.Class, 0)}");
 
             if (!await GrantKitRequest(ctx, loadout, token).ConfigureAwait(false))
             {
@@ -1520,7 +1520,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     else throw ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
                 }
             }
-            ctx.LogAction(ActionLogType.REQUEST_KIT, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
+            ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
 
             if (!await GrantKitRequest(ctx, proxy, token).ConfigureAwait(false))
             {
@@ -1588,7 +1588,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 await UCWarfare.ToUpdate(token);
                 throw ctx.SendUnknownError();
             }
-            ctx.LogAction(ActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Id + " FOR " + kit.CreditCost + " CREDITS");
+            ctx.LogAction(ActionLogType.BuyKit, "BOUGHT KIT " + kit.Id + " FOR " + kit.CreditCost + " CREDITS");
             L.Log(ctx.Caller.Name.PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Id);
         }
         finally
@@ -2821,9 +2821,8 @@ public static class KitEx
     }
     public static class NetCalls
     {
-        public const int KitNotFoundErrorCode = 2;
-        public const int PlayerHasAccessCode = 4;
-        public const int PlayerHasNoAccessCode = 3;
+        public const int PlayerHasAccessCode = -4;
+        public const int PlayerHasNoAccessCode = -3;
 
         public static readonly NetCall<ulong, ulong, string, KitAccessType, bool> RequestSetKitAccess = new NetCall<ulong, ulong, string, KitAccessType, bool>(ReceiveSetKitAccess);
         public static readonly NetCall<ulong, ulong, string[], KitAccessType, bool> RequestSetKitsAccess = new NetCall<ulong, ulong, string[], KitAccessType, bool>(ReceiveSetKitsAccess);
@@ -2844,11 +2843,11 @@ public static class KitEx
         public static readonly NetCall<byte, byte[]> SendKitsAccess = new NetCall<byte, byte[]>(1137);
 
         [NetCall(ENetCall.FROM_SERVER, 1100)]
-        internal static async Task<int> ReceiveSetKitAccess(MessageContext context, ulong admin, ulong player, string kit, KitAccessType type, bool state)
+        internal static async Task<StandardErrorCode> ReceiveSetKitAccess(MessageContext context, ulong admin, ulong player, string kit, KitAccessType type, bool state)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager == null)
-                return MessageContext.CODE_GENERIC_FAILURE;
+                return StandardErrorCode.GenericError;
 
             SqlItem<Kit>? proxy = await manager.FindKit(kit).ConfigureAwait(false);
             if (proxy?.Item != null)
@@ -2859,13 +2858,13 @@ public static class KitEx
                     if (proxy.Item != null)
                     {
                         await (state ? KitManager.GiveAccess(proxy, player, type) : KitManager.RemoveAccess(proxy, player)).ConfigureAwait(false);
-                        ActionLog.Add(ActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.AdminLocale) + 
+                        ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + 
                                                                            (state ? (" GIVEN ACCESS TO " + kit + ", REASON: " + type) : 
                                                                            (" DENIED ACCESS TO " + kit + ".")), admin);
                         UCPlayer? onlinePlayer = UCPlayer.FromID(player);
                         if (onlinePlayer != null && onlinePlayer.IsOnline)
                             KitManager.UpdateSigns(proxy.Item, onlinePlayer);
-                        return MessageContext.CODE_SUCCESS;
+                        return StandardErrorCode.Success;
                     }
                 }
                 finally
@@ -2874,7 +2873,7 @@ public static class KitEx
                 }
             }
 
-            return KitNotFoundErrorCode;
+            return StandardErrorCode.NotFound;
         }
         [NetCall(ENetCall.FROM_SERVER, 1132)]
         internal static async Task ReceiveSetKitsAccess(MessageContext context, ulong admin, ulong player, string[] kits, KitAccessType type, bool state)
@@ -2884,7 +2883,7 @@ public static class KitEx
             if (manager == null)
             {
                 for (int i = 0; i < successes.Length; ++i)
-                    successes[i] = MessageContext.CODE_GENERIC_FAILURE;
+                    successes[i] = (int)StandardErrorCode.Success;
                 context.Reply(SendAckSetKitsAccess, successes);
                 return;
             }
@@ -2899,7 +2898,7 @@ public static class KitEx
                     if (proxy?.Item != null)
                     {
                         await (state ? KitManager.GiveAccess(proxy, player, type) : KitManager.RemoveAccess(proxy, player)).ConfigureAwait(false);
-                        ActionLog.Add(ActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.AdminLocale) +
+                        ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
                             (state ? (" GIVEN ACCESS TO " + kit + ", REASON: " + type) :
                                 (" DENIED ACCESS TO " + kit + ".")), admin);
                         UCPlayer? onlinePlayer = UCPlayer.FromID(player);
@@ -2908,7 +2907,7 @@ public static class KitEx
                         continue;
                     }
 
-                    successes[i] = KitNotFoundErrorCode;
+                    successes[i] = (int)StandardErrorCode.NotFound;
                 }
             }
             finally
@@ -2925,10 +2924,10 @@ public static class KitEx
             KitManager? manager = KitManager.GetSingletonQuick();
 
             if (manager == null)
-                return MessageContext.CODE_GENERIC_FAILURE;
+                return (int)StandardErrorCode.GenericError;
             SqlItem<Kit>? proxy = await manager.FindKit(kit).ConfigureAwait(false);
             if (proxy?.Item == null)
-                return KitNotFoundErrorCode;
+                return (int)StandardErrorCode.NotFound;
 
             return await KitManager.HasAccess(proxy.LastPrimaryKey, player).ConfigureAwait(false) ? PlayerHasAccessCode : PlayerHasNoAccessCode;
         }
@@ -2942,28 +2941,28 @@ public static class KitEx
             if (manager == null)
             {
                 for (int i = 0; i < outp.Length; ++i)
-                    outp[i] = MessageContext.CODE_GENERIC_FAILURE;
-                context.Reply(SendKitsAccess, (byte)MessageContext.CODE_GENERIC_FAILURE, outp);
+                    outp[i] = (int)StandardErrorCode.GenericError;
+                context.Reply(SendKitsAccess, (byte)StandardErrorCode.GenericError, outp);
                 return;
             }
             for (int i = 0; i < kits.Length; ++i)
             {
                 SqlItem<Kit>? proxy = await manager.FindKit(kits[i]).ConfigureAwait(false);
                 if (proxy?.Item == null)
-                    outp[i] = KitNotFoundErrorCode;
+                    outp[i] = (int)StandardErrorCode.NotFound;
                 else outp[i] = (byte)(await KitManager.HasAccess(proxy.LastPrimaryKey, player).ConfigureAwait(false) ? PlayerHasAccessCode : PlayerHasNoAccessCode);
             }
-            context.Reply(SendKitsAccess, (byte)MessageContext.CODE_SUCCESS, outp);
+            context.Reply(SendKitsAccess, (byte)StandardErrorCode.Success, outp);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1109)]
-        internal static async Task<int> ReceiveCreateKit(MessageContext context, Kit? kit)
+        internal static async Task<StandardErrorCode> ReceiveCreateKit(MessageContext context, Kit? kit)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager == null || kit == null)
-                return MessageContext.CODE_GENERIC_FAILURE;
+                return StandardErrorCode.GenericError;
             await manager.AddOrUpdate(kit);
-            return MessageContext.CODE_SUCCESS;
+            return StandardErrorCode.Success;
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1113)]
@@ -3048,13 +3047,13 @@ public static class KitEx
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {
-                (SqlItem<Kit> kit, int code) = await manager.CreateLoadout(fromPlayer, player, team, @class, displayName);
+                (SqlItem<Kit> kit, StandardErrorCode code) = await manager.CreateLoadout(fromPlayer, player, team, @class, displayName);
 
-                context.Reply(SendAckCreateLoadout, kit.Item is null ? string.Empty : kit.Item.Id, code);
+                context.Reply(SendAckCreateLoadout, kit.Item is null ? string.Empty : kit.Item.Id, (int)code);
             }
             else
             {
-                context.Reply(SendAckCreateLoadout, string.Empty, MessageContext.CODE_GENERIC_FAILURE);
+                context.Reply(SendAckCreateLoadout, string.Empty, (int)StandardErrorCode.GenericError);
             }
         }
     }

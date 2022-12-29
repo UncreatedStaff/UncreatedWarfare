@@ -10,9 +10,9 @@ using Uncreated.Warfare.Singletons;
 namespace Uncreated.Warfare.Sync;
 public static class ListSync
 {
-    private static readonly Dictionary<Type, int> syncIds = new Dictionary<Type, int>(12);
-    private static readonly List<KeyValuePair<ushort, PrimaryKey>> sendQueue = new List<KeyValuePair<ushort, PrimaryKey>>(16);
-    private static bool reflected;
+    private static readonly Dictionary<Type, int> SyncIds = new Dictionary<Type, int>(12);
+    private static readonly List<KeyValuePair<ushort, PrimaryKey>> SendQueue = new List<KeyValuePair<ushort, PrimaryKey>>(16);
+    private static bool _reflected;
     private static void GetAllSyncTypes()
     {
         Type[] types = Assembly.GetExecutingAssembly().GetTypes();
@@ -21,20 +21,20 @@ public static class ListSync
         for (int i = 0; i < types.Length; ++i)
         {
             Type type = types[i];
-            if (syncIds.ContainsKey(type))
+            if (SyncIds.ContainsKey(type))
                 continue;
             if (Attribute.GetCustomAttribute(type, typeof(SyncAttribute)) is SyncAttribute attr &&
                 attr.SyncId > 0 && attr.SyncId <= ushort.MaxValue && attr.SyncMode != SyncMode.NoSync)
             {
                 L.Log("[LIST SYNC] Found syncable type: " + type.Name + ".", ConsoleColor.Magenta);
-                syncIds.Add(type, attr.SyncId);
+                SyncIds.Add(type, attr.SyncId);
             }
         }
-        reflected = true;
+        _reflected = true;
     }
     public static void OnItemUpdated<TList, TItem>(PrimaryKey key) where TList : ListSqlConfig<TItem> where TItem : class, IListItem, new()
     {
-        if (syncIds.TryGetValue(typeof(T), out int syncId))
+        if (SyncIds.TryGetValue(typeof(T), out int syncId))
         {
             if (!(syncId <= 0 || syncId > ushort.MaxValue))
             {
@@ -42,25 +42,25 @@ public static class ListSync
                 return;
             }
         }
-        else if (!reflected)
+        else if (!_reflected)
         {
             Type type = typeof(TList);
             if (Attribute.GetCustomAttribute(type, typeof(SyncAttribute)) is SyncAttribute attr &&
                 attr.SyncId > 0 && attr.SyncId <= ushort.MaxValue && attr.SyncMode != SyncMode.NoSync)
             {
-                syncIds.Add(type, attr.SyncId);
+                SyncIds.Add(type, attr.SyncId);
                 OnItemUpdated(key, (ushort)attr.SyncId);
                 return;
             }
-            else syncIds.Add(type, -1);
+            else SyncIds.Add(type, -1);
         }
 
         throw new ArgumentException(nameof(TList), typeof(TList).Name + " does not have the SyncAttribute applied to it with a unique ID.");
     }
     public static void OnItemUpdated(PrimaryKey key, ushort syncId)
     {
-        lock (sendQueue)
-            sendQueue.Add(new KeyValuePair<ushort, PrimaryKey>(syncId, key));
+        lock (SendQueue)
+            SendQueue.Add(new KeyValuePair<ushort, PrimaryKey>(syncId, key));
         if (UCWarfare.CanUseNetCall)
         {
             Task.Run(async () =>
@@ -68,12 +68,12 @@ public static class ListSync
                 if (UCWarfare.CanUseNetCall)
                 {
                     RequestResponse resp = await NetCalls.MulticastListItemUpdated.RequestAck(UCWarfare.I.NetClient!, syncId, key, 10000);
-                    if (resp.Responded && (!resp.ErrorCode.HasValue || resp.ErrorCode.Value == MessageContext.CODE_SUCCESS))
+                    if (resp.Responded && (!resp.ErrorCode.HasValue || resp.ErrorCode.Value == (int)StandardErrorCode.Success))
                     {
-                        lock (sendQueue)
+                        lock (SendQueue)
                         {
-                            int ind = sendQueue.FindLastIndex(x => x.Key == syncId && x.Value.Key == key.Key);
-                            sendQueue.RemoveAt(ind);
+                            int ind = SendQueue.FindLastIndex(x => x.Key == syncId && x.Value.Key == key.Key);
+                            SendQueue.RemoveAt(ind);
                         }
                     }
                 }
@@ -84,15 +84,15 @@ public static class ListSync
     public static void OnConnected(IConnection connection)
     {
         List<KeyValuePair<ushort, PrimaryKey>> q;
-        lock (sendQueue)
+        lock (SendQueue)
         {
-            if (sendQueue.Count == 0)
+            if (SendQueue.Count == 0)
                 return;
-            q = new List<KeyValuePair<ushort, PrimaryKey>>(sendQueue.Count);
-            for (int i = 0; i < sendQueue.Count; ++i)
+            q = new List<KeyValuePair<ushort, PrimaryKey>>(SendQueue.Count);
+            for (int i = 0; i < SendQueue.Count; ++i)
             {
-                ushort a = sendQueue[i].Key;
-                PrimaryKey b = sendQueue[i].Value;
+                ushort a = SendQueue[i].Key;
+                PrimaryKey b = SendQueue[i].Value;
                 for (int j = 0; j < q.Count; ++j)
                 {
                     if (a == q[j].Key && b == q[j].Value)
@@ -123,33 +123,35 @@ public static class ListSync
                         else
                             task = NetCalls.MulticastListItemsUpdated.RequestAck(connection, lastGrp, pks.ToArray(), 10000 + 2000 * pks.Count);
                         RequestResponse resp = await task;
-                        if (resp.Responded && (!resp.ErrorCode.HasValue || resp.ErrorCode.Value == MessageContext.CODE_SUCCESS))
+                        if (resp.Responded && (!resp.ErrorCode.HasValue || resp.ErrorCode.Value == (int)StandardErrorCode.Success))
                         {
                             for (int j = 0; j < pks.Count; j++)
                             {
                                 int pk = pks[j];
-                                lock (sendQueue)
+                                lock (SendQueue)
                                 {
-                                    int ind = sendQueue.FindLastIndex(x => x.Key == lastGrp && x.Value.Key == pk);
-                                    sendQueue.RemoveAt(ind);
+                                    int ind = SendQueue.FindLastIndex(x => x.Key == lastGrp && x.Value.Key == pk);
+                                    SendQueue.RemoveAt(ind);
                                 }
                             }
                         }
                         pks.Clear();
                     }
-                    lastGrp = sendQueue[i].Key;
+                    lock (SendQueue)
+                        lastGrp = SendQueue[i].Key;
                 }
 
-                pks.Add(sendQueue[i].Value.Key);
+                lock (SendQueue)
+                    pks.Add(SendQueue[i].Value.Key);
             }
         });
     }
     private static async Task<IListConfig?> UpdateGetType(ushort syncId)
     {
         await UCWarfare.ToUpdate();
-        if (!reflected) GetAllSyncTypes();
+        if (!_reflected) GetAllSyncTypes();
         Type? t = null;
-        foreach (KeyValuePair<Type, int> v in syncIds)
+        foreach (KeyValuePair<Type, int> v in SyncIds)
         {
             if (v.Value == syncId)
             {

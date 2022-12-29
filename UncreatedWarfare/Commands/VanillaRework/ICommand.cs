@@ -167,6 +167,6 @@ public class ICommand : Command
             message += $" ({similarNamesCount} similarly named items exist)".Colorize("7f8182");
 
         ctx.ReplyString(message);
-        ctx.LogAction(ActionLogType.GIVE_ITEM, $"GAVE {amount}x {asset.ActionLogDisplay()}");
+        ctx.LogAction(ActionLogType.GiveItem, $"GAVE {amount}x {asset.ActionLogDisplay()}");
     }
 }

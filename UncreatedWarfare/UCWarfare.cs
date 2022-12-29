@@ -170,7 +170,7 @@ public class UCWarfare : MonoBehaviour
         if (!Config.DisableDailyQuests)
             Quests.DailyQuests.EarlyLoad();
 
-        ActionLog.Add(ActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
+        ActionLog.Add(ActionLogType.ServerStartup, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
     }
     internal void InitNetClient()
     {

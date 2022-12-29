@@ -240,7 +240,7 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ActionLog.Add(ActionLogType.START_QUEST, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
+        ActionLog.Add(ActionLogType.StartQuest, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (!tracker.IsDailyQuest && tracker.Flag != 0)
         {
             tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
@@ -256,7 +256,7 @@ public static class QuestManager
         {
             L.LogDebug(tracker.Player!.Name.PlayerName + " finished a quest: " + tracker.GetDisplayString());
         }
-        ActionLog.Add(ActionLogType.COMPLETE_QUEST, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
+        ActionLog.Add(ActionLogType.CompleteQuest, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
         {
             if (!UCWarfare.Config.DisableDailyQuests)
@@ -296,7 +296,7 @@ public static class QuestManager
         {
             L.LogDebug(tracker.Player!.Name.PlayerName + " updated a quest: " + tracker.GetDisplayString());
         }
-        ActionLog.Add(ActionLogType.MAKE_QUEST_PROGRESS, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
+        ActionLog.Add(ActionLogType.MakeQuestProgress, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
         {
             if (!UCWarfare.Config.DisableDailyQuests)

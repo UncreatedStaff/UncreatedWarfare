@@ -428,24 +428,24 @@ public class UCPlayerData : MonoBehaviour
             {
                 position = fob.Bunker.model.position;
                 rotation = fob.Bunker.model.eulerAngles.y;
-                ActionLog.Add(ActionLogType.DEPLOY_TO_LOCATION, "FOB BUNKER " + fob.Name + " TEAM " + Teams.TeamManager.TranslateName(fob.Team, 0), player);
+                ActionLog.Add(ActionLogType.DeployToLocation, "FOB BUNKER " + fob.Name + " TEAM " + Teams.TeamManager.TranslateName(fob.Team, 0), player);
             }
         }
         else if (isCache)
         {
             position = cache!.Structure.model.TransformPoint(new Vector3(3, 0, 0));
             rotation = cache.Structure.model.eulerAngles.y;
-            ActionLog.Add(ActionLogType.DEPLOY_TO_LOCATION, "CACHE " + cache.Name + " TEAM " + Teams.TeamManager.TranslateName(cache.Team, 0), player);
+            ActionLog.Add(ActionLogType.DeployToLocation, "CACHE " + cache.Name + " TEAM " + Teams.TeamManager.TranslateName(cache.Team, 0), player);
         }
         else if (isSpecialFOB)
         {
             position = special!.Position;
-            ActionLog.Add(ActionLogType.DEPLOY_TO_LOCATION, "SPECIAL FOB " + special.Name + " TEAM " + Teams.TeamManager.TranslateName(special.Team, 0), player);
+            ActionLog.Add(ActionLogType.DeployToLocation, "SPECIAL FOB " + special.Name + " TEAM " + Teams.TeamManager.TranslateName(special.Team, 0), player);
         }
         else if (structure is Vector3 vector)
         {
             position = vector;
-            ActionLog.Add(ActionLogType.DEPLOY_TO_LOCATION, "MAIN BASE " + Teams.TeamManager.TranslateName(player.GetTeam(), 0), player);
+            ActionLog.Add(ActionLogType.DeployToLocation, "MAIN BASE " + Teams.TeamManager.TranslateName(player.GetTeam(), 0), player);
         }
 
         if (yawOverride != -1)

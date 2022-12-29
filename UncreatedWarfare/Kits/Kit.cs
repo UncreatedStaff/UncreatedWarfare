@@ -770,7 +770,7 @@ public class QuestUnlockRequirement : UnlockRequirement
     }
     protected override void Read(ByteReader reader)
     {
-        QuestID = reader.ReadGUID();
+        QuestID = reader.ReadGuid();
         UnlockPresets = reader.ReadGuidArray();
     }
     protected override void Write(ByteWriter writer)

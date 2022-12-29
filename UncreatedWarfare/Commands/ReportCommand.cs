@@ -105,7 +105,7 @@ public class ReportCommand : AsyncCommand
         }
 
         ctx.Reply(T.ReportConfirm, target, targetNames);
-        ctx.LogAction(ActionLogType.START_REPORT, string.Join(", ", ctx.Parameters));
+        ctx.LogAction(ActionLogType.StartReport, string.Join(", ", ctx.Parameters));
         bool didConfirm = await CommandWaiter.WaitAsync(ctx.Caller, "confirm", 10000);
         await UCWarfare.ToUpdate();
         if (!didConfirm)
@@ -174,12 +174,12 @@ public class ReportCommand : AsyncCommand
             //await UCWarfare.ToUpdate();
             //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
             L.Log($"Report against {names.PlayerName} ({target}) record: \"{messageUrl}\".", ConsoleColor.Cyan);
-            ActionLog.Add(ActionLogType.CONFIRM_REPORT, report + ", Report URL: " + messageUrl, ctx.Caller);
+            ActionLog.Add(ActionLogType.ConfirmReport, report + ", Report URL: " + messageUrl, ctx.Caller);
         }
         else
         {
             L.Log($"Report against {names.PlayerName} ({target}) failed to send to UCHB.", ConsoleColor.Cyan);
-            ActionLog.Add(ActionLogType.CONFIRM_REPORT, report + ", Report did not reach the discord bot.", ctx.Caller);
+            ActionLog.Add(ActionLogType.ConfirmReport, report + ", Report did not reach the discord bot.", ctx.Caller);
         }
         return;
     PlayerNotFound:

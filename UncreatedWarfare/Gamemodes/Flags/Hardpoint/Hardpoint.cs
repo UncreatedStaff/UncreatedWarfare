@@ -206,17 +206,17 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             case 2ul:
                 L.LogDebug("Owner Changed: " + _objectiveOwner + " for " + Objective.Name + ".");
                 FactionInfo faction = TeamManager.GetFaction(_objectiveOwner);
-                ActionLog.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + faction.GetName(L.Default));
+                ActionLog.Add(ActionLogType.TeamCapturedObjective, Objective.Name + " - " + faction.GetName(L.Default));
                 Chat.Broadcast(T.HardpointObjectiveStateCaptured, Objective, faction);
                 break;
             case 3ul:
                 L.LogDebug("Contested: " + Objective.Name + ".");
-                ActionLog.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + "CONTESTED");
+                ActionLog.Add(ActionLogType.TeamCapturedObjective, Objective.Name + " - " + "CONTESTED");
                 Chat.Broadcast(T.HardpointObjectiveStateContested, Objective);
                 break;
             default:
                 L.LogDebug("Cleared: " + Objective.Name + ".");
-                ActionLog.Add(ActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + "CLEAR");
+                ActionLog.Add(ActionLogType.TeamCapturedObjective, Objective.Name + " - " + "CLEAR");
                 if (oldState is 1ul or 2ul)
                     Chat.Broadcast(T.HardpointObjectiveStateLost, Objective, TeamManager.GetFaction(oldState));
                 else

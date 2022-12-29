@@ -215,7 +215,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 #endif
         if (target.Player.TryGetComponent(out Reviver r) && _injuredPlayers.ContainsKey(target.Steam64))
         {
-            ActionLog.Add(ActionLogType.REVIVED_PLAYER, target.Steam64.ToString(Data.AdminLocale), medic.Steam64);
+            ActionLog.Add(ActionLogType.RevivedPlayer, target.Steam64.ToString(Data.AdminLocale), medic.Steam64);
             r.RevivePlayer(null);
             byte team = medic.Player.GetTeamByte();
             byte tteam = target.Player.GetTeamByte();
@@ -344,7 +344,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         parameters.player.SendChat(T.InjuredUIGiveUpChat);
 
-        ActionLog.Add(ActionLogType.INJURED, "by " + (killer == null ? "self" : killer.playerID.steamID.m_SteamID.ToString(Data.AdminLocale)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
+        ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.playerID.steamID.m_SteamID.ToString(Data.AdminLocale)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
 
         _injuredPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, new DownedPlayerData(parameters));
         SpawnInjuredMarker(parameters.player.transform.position, team);

@@ -622,7 +622,7 @@ public static class F
         if (pl != null)
             return new ValueTask<PlayerNames>(pl.Name);
 
-        return OffenseManager.IsValidSteam64Id(player)
+        return Util.IsValidSteam64Id(player)
             ? new ValueTask<PlayerNames>(Data.DatabaseManager.GetUsernamesAsync(player, token))
             : new ValueTask<PlayerNames>(PlayerNames.Nil);
     }
