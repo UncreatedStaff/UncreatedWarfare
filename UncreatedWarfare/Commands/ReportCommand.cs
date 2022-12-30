@@ -119,17 +119,7 @@ public class ReportCommand : AsyncCommand
             return;
         }
         CooldownManager.StartCooldown(ctx.Caller, CooldownType.Report, 3600f, target);
-        Report? report = type switch
-        {
-            EReportType.CHAT_ABUSE => Data.Reporter.CreateChatAbuseReport(ctx.CallerID, target, message),
-            EReportType.VOICE_CHAT_ABUSE => Data.Reporter.CreateVoiceChatAbuseReport(ctx.CallerID, target, message),
-            EReportType.SOLOING_VEHICLE => Data.Reporter.CreateSoloingReport(ctx.CallerID, target, message),
-            EReportType.WASTING_ASSETS => Data.Reporter.CreateWastingAssetsReport(ctx.CallerID, target, message),
-            EReportType.INTENTIONAL_TEAMKILL => Data.Reporter.CreateIntentionalTeamkillReport(ctx.CallerID, target, message),
-            EReportType.GREIFING_FOBS => Data.Reporter.CreateGreifingFOBsReport(ctx.CallerID, target, message),
-            EReportType.CHEATING => Data.Reporter.CreateCheatingReport(ctx.CallerID, target, message),
-            _ => Data.Reporter.CreateReport(ctx.CallerID, target, message),
-        };
+        Report? report = Data.Reporter.CreateReport(ctx.CallerID, target, message, type);
         if (report == null)
         {
             ctx.SendUnknownError();

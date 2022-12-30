@@ -437,14 +437,14 @@ public class UCWarfare : MonoBehaviour
     // 'fire and forget' functions that will report errors once the task completes.
 
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T1, T2, T3>(Func<T1, T2, T3, CancellationToken, Task> task, T1 arg1, T2 arg2, T3 arg3, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false)
+    public static void RunTask<T1, T2, T3>(Func<T1, T2, T3, CancellationToken, Task> task, T1 arg1, T2 arg2, T3 arg3, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
         {
             L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1, arg2, arg3, token);
-            RunTask(t, ctx, member, fp, awaitOnUnload);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
         }
         catch (Exception e)
         {
@@ -457,14 +457,14 @@ public class UCWarfare : MonoBehaviour
         }
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T1, T2, T3>(Func<T1, T2, T3, Task> task, T1 arg1, T2 arg2, T3 arg3, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false)
+    public static void RunTask<T1, T2, T3>(Func<T1, T2, T3, Task> task, T1 arg1, T2 arg2, T3 arg3, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
         {
             L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1, arg2, arg3);
-            RunTask(t, ctx, member, fp, awaitOnUnload);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
         }
         catch (Exception e)
         {
@@ -477,14 +477,14 @@ public class UCWarfare : MonoBehaviour
         }
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T1, T2>(Func<T1, T2, CancellationToken, Task> task, T1 arg1, T2 arg2, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false)
+    public static void RunTask<T1, T2>(Func<T1, T2, CancellationToken, Task> task, T1 arg1, T2 arg2, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
         {
             L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1, arg2, token);
-            RunTask(t, ctx, member, fp, awaitOnUnload);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
         }
         catch (Exception e)
         {
@@ -497,14 +497,14 @@ public class UCWarfare : MonoBehaviour
         }
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T1, T2>(Func<T1, T2, Task> task, T1 arg1, T2 arg2, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false)
+    public static void RunTask<T1, T2>(Func<T1, T2, Task> task, T1 arg1, T2 arg2, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
         {
             L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1, arg2);
-            RunTask(t, ctx, member, fp, awaitOnUnload);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
         }
         catch (Exception e)
         {
@@ -517,14 +517,14 @@ public class UCWarfare : MonoBehaviour
         }
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T>(Func<T, CancellationToken, Task> task, T arg1, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false)
+    public static void RunTask<T>(Func<T, CancellationToken, Task> task, T arg1, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
         {
             L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1, token);
-            RunTask(t, ctx, member, fp, awaitOnUnload);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
         }
         catch (Exception e)
         {
@@ -537,14 +537,14 @@ public class UCWarfare : MonoBehaviour
         }
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask<T>(Func<T, Task> task, T arg1, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false)
+    public static void RunTask<T>(Func<T, Task> task, T arg1, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
         {
             L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(arg1);
-            RunTask(t, ctx, member, fp, awaitOnUnload);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
         }
         catch (Exception e)
         {
@@ -557,14 +557,14 @@ public class UCWarfare : MonoBehaviour
         }
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask(Func<CancellationToken, Task> task, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false)
+    public static void RunTask(Func<CancellationToken, Task> task, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
         {
             L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task(default);
-            RunTask(t, ctx, member, fp, awaitOnUnload);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
         }
         catch (Exception e)
         {
@@ -577,14 +577,14 @@ public class UCWarfare : MonoBehaviour
         }
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask(Func<Task> task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false)
+    public static void RunTask(Func<Task> task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         Task t;
         try
         {
             L.LogDebug("Running task " + (ctx ?? member) + ".");
             t = task();
-            RunTask(t, ctx, member, fp, awaitOnUnload);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
         }
         catch (Exception e)
         {
@@ -597,7 +597,7 @@ public class UCWarfare : MonoBehaviour
         }
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void RunTask(Task task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false)
+    public static void RunTask(Task task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
     {
         if (!IsLoaded)
             throw new SingletonUnloadedException(typeof(UCWarfare));
@@ -624,7 +624,11 @@ public class UCWarfare : MonoBehaviour
             return;
         }
         L.LogDebug("Adding task \"" + ctx + "\".");
-        I._tasks.Add(new UCTask(task, ctx, awaitOnUnload));
+        I._tasks.Add(new UCTask(task, ctx, awaitOnUnload
+#if DEBUG
+            , timeout
+#endif
+        ));
     }
     private static void RegisterErroredTask(Task task, string? ctx)
     {
@@ -703,7 +707,7 @@ public class UCWarfare : MonoBehaviour
                 if (!task.Task.IsCompleted)
                 {
 #if DEBUG
-                    if (sec > 180f)
+                    if (task.TimeoutMs >= 0 && sec > task.TimeoutMs)
                     {
                         L.LogDebug($"Task not completed after a long time ({sec} seconds)." + (string.IsNullOrEmpty(task.Context) ? string.Empty : (" Context: " + task.Context)));
                     }
@@ -1004,14 +1008,20 @@ public class UCWarfare : MonoBehaviour
         public readonly string? Context;
         public readonly bool AwaitOnUnload;
 #if DEBUG
+        public readonly int TimeoutMs;
         public readonly DateTime StartTime;
 #endif
-        public UCTask(Task task, string context, bool awaitOnUnload)
+        public UCTask(Task task, string context, bool awaitOnUnload
+#if DEBUG
+            , int timeout
+#endif
+            )
         {
             Task = task;
             Context = context;
             AwaitOnUnload = awaitOnUnload;
 #if DEBUG
+            TimeoutMs = timeout;
             StartTime = DateTime.UtcNow;
 #endif
         }

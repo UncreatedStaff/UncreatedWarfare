@@ -30,13 +30,14 @@ public class ActionLog : MonoBehaviour
     private readonly byte[] _writeBuffer = new byte[WriteBufferSize];
     private ActionLogMeta? _current;
     private FileStream? _stream;
+    private string? _activeFileName;
     private static ActionLog? _instance;
     private static ByteWriter? _metaWriter;
     private static ByteReader? _metaReader;
     private static char[][]? _types;
     private static char[]? _nl;
     private volatile int _version;
-    private static readonly DateTimeOffset MinDatetime = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero); // jan 1st, 2021
+    public static readonly DateTimeOffset MinDatetime = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero); // jan 1st, 2021
     private static ByteReader MetaReader => _metaReader ??= new ByteReader();
     private static ByteWriter MetaWriter => _metaWriter ??= new ByteWriter(false, ActionLogMeta.Capacity);
     public static ActionLog? Instance => _instance;
@@ -203,6 +204,7 @@ public class ActionLog : MonoBehaviour
             {
                 _stream?.Dispose();
                 _stream = null;
+                _activeFileName = null;
                 if (UCWarfare.CanUseNetCall)
                     UCWarfare.RunTask(SendLogAsync, _current, MessageContext.Nil, ctx: "Sending log \"" + _current.FirstTimestamp.ToString("s") + "\" to homebase.");
                 _current = null;
@@ -225,7 +227,8 @@ public class ActionLog : MonoBehaviour
                 _current.LoggedDataTypes.Add(item.Type);
 
             _current.LastTimestamp = item.Timestamp;
-            _stream ??= new FileStream(GetLogPath(_current), FileMode.Append, FileAccess.Write, FileShare.Read);
+            _activeFileName ??= GetLogPath(_current);
+            _stream ??= new FileStream(_activeFileName, FileMode.Append, FileAccess.Write, FileShare.Read);
             WriteItemToStream(in item, _stream, _writeBuffer);
             _stream.Flush();
             SaveMeta(_current);
@@ -270,15 +273,22 @@ public class ActionLog : MonoBehaviour
         F.CheckDir(Data.Paths.ActionLog, out bool success);
         if (!success)
             return;
-        int v = _version;
-        Interlocked.Increment(ref _version);
+        int v = Interlocked.Increment(ref _version);
         UCWarfare.RunTask(async () =>
         {
-            if (v != _version || !UCWarfare.CanUseNetCall) return;
+            if (v != _version || !UCWarfare.CanUseNetCall)
+            {
+                L.Log("Cancelled action log sending...", ConsoleColor.Magenta);
+                return;
+            }
             string[] files = Directory.GetFiles(Data.Paths.ActionLog, "*.txt");
+            L.Log("Found " + files.Length + " log" + files.Length.S() + " to send to homebase...", ConsoleColor.Magenta);
             foreach (string file in files)
             {
                 string logName = Path.GetFileNameWithoutExtension(file);
+                string? c = _activeFileName;
+                if (c != null && logName.Equals(c, StringComparison.OrdinalIgnoreCase))
+                    continue; // active log, skip
                 try
                 {
                     if (!File.Exists(file))
@@ -294,7 +304,10 @@ public class ActionLog : MonoBehaviour
                     if (!File.Exists(metaPath))
                     {
                         genMeta = true;
-                        meta = ActionLogMeta.FromMetaFile(file);
+                    }
+                    else
+                    {
+                        meta = ActionLogMeta.FromMetaFile(metaPath);
                         if (!ValidDateTimeOffset(in meta.FirstTimestamp) || !ValidDateTimeOffset(in meta.LastTimestamp))
                         {
                             L.LogWarning("[ACT LOG] Invalid data detected in meta file \"" + logName + "\".");
@@ -324,28 +337,44 @@ public class ActionLog : MonoBehaviour
                     if (_current != null && meta.FirstTimestamp == _current.FirstTimestamp)
                         continue; // log in progress.
 
-                    using FileStream str = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
-                    byte[] buffer = new byte[str.Length];
-                    int amt = await str.ReadAsync(buffer, 0, buffer.Length);
-                    if (v != _version || !UCWarfare.CanUseNetCall) return;
-                    if (amt < buffer.Length)
-                    {
-                        byte[] old = buffer;
-                        buffer = new byte[amt];
-                        Buffer.BlockCopy(old, 0, buffer, 0, amt);
-                    }
-
                     CancellationTokenSource src = new CancellationTokenSource();
                     Task t = SendLogAsync(meta, MessageContext.Nil, src.Token);
                     try
                     {
                         await Task.WhenAny(t, new Func<Task>( // while send is not complete and version is the same and can use net call and < 20 seconds since start
-                            async () => { int c = 0; while (!t.IsCompleted && v == _version && UCWarfare.CanUseNetCall && ++c < 801) { await Task.Delay(25, src.Token); } })());
+                            async () => { int counter = 0; while (!t.IsCompleted && v == _version && UCWarfare.CanUseNetCall && ++counter < 801) { await Task.Delay(25, src.Token); } })());
                         src.Cancel();
                     }
                     catch (OperationCanceledException) when (src.IsCancellationRequested) { }
+                    if (v != _version || !UCWarfare.CanUseNetCall)
+                    {
+                        L.Log("Cancelled action log sending...", ConsoleColor.Magenta);
+                        return;
+                    }
+
+                    if (t.IsCompleted)
+                    {
+                        try
+                        {
+                            File.Delete(file);
+                        }
+                        catch (Exception ex)
+                        {
+                            L.LogError("Error deleting log file \"" + file + "\".");
+                            L.LogError(ex);
+                        }
+                        try
+                        {
+                            File.Delete(metaPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            L.LogError("Error deleting meta file \"" + metaPath + "\".");
+                            L.LogError(ex);
+                        }
+                    }
 #if DEBUG
-                    if (!t.IsCompleted)
+                    else
                     {
                         L.LogWarning("[ACT LOG] Send task timed out on log \"" + logName + "\".");
                     }
@@ -357,7 +386,7 @@ public class ActionLog : MonoBehaviour
                     L.LogError(ex);
                 }
             }
-        });
+        }, timeout: 1200000);
     }
     // ReSharper disable once StructCanBeMadeReadOnly
     public record struct ActionLogItem(ulong Player, ActionLogType Type, string? Data, DateTimeOffset Timestamp)
@@ -371,9 +400,9 @@ public class ActionLog : MonoBehaviour
                 return null;
             if (!DateTimeOffset.TryParseExact(
                     line.Substring(1, DateLineFormatLength), DateLineFormat, CultureInfo.InvariantCulture,
-                    DateTimeStyles.AssumeLocal, out DateTimeOffset timestamp) ||
+                    DateTimeStyles.AssumeUniversal, out DateTimeOffset timestamp) ||
                 !ulong.TryParse(line.Substring(3 + DateLineFormatLength, SteamIDLength), NumberStyles.Number, CultureInfo.InvariantCulture, out ulong steam64) ||
-                !TryParseLogType(line.Substring(DateLineFormatLength + 6 + SteamIDLength, endbracket - (DateLineFormatLength + 6 + SteamIDLength)), out ActionLogType type))
+                !TryParseLogType(line.Substring(DateLineFormatLength + 5 + SteamIDLength, endbracket - (DateLineFormatLength + 5 + SteamIDLength)), out ActionLogType type))
                 return null;
             return new ActionLogItem(steam64, type, endbracket == line.Length - 1 ? string.Empty : line.Substring(endbracket + 1), timestamp);
         }
@@ -451,6 +480,7 @@ public class ActionLog : MonoBehaviour
                 {
                     MetaReader.LoadNew(stream);
                     meta = ReadMeta(MetaReader);
+                    MetaReader.Stream = null;
                 }
 
                 MetaReader.ThrowOnError = f;
@@ -483,7 +513,7 @@ public class ActionLog : MonoBehaviour
                         types.Add(item.Type);
                     if (first > item.Timestamp)
                         first = item.Timestamp;
-                    if (last > item.Timestamp)
+                    if (last < item.Timestamp)
                         last = item.Timestamp;
                 }
             }

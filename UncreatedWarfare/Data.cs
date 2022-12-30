@@ -1,4 +1,7 @@
-﻿using SDG.Unturned;
+﻿
+//#define SHOW_BYTES
+
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -388,14 +391,22 @@ public static class Data
     {
         if (UCWarfare.Config.Debug)
         {
-            L.Log("Received from TCP server: " + overhead + ".", ConsoleColor.DarkGray);
+            L.Log("Received from TCP server: " + overhead + "."
+#if SHOW_BYTES
+                + "\n" + Logging.GetBytesHex(message)
+#endif
+                , ConsoleColor.DarkGray);
         }
     }
     internal static void OnClientSentMessage(IConnection connection, in MessageOverhead overhead, byte[] message)
     {
         if (UCWarfare.Config.Debug)
         {
-            L.Log("Sent over TCP server    : " + overhead + ".", ConsoleColor.DarkGray);
+            L.Log("Sent over TCP server    : " + overhead + "."
+#if SHOW_BYTES
+                  + "\n" + Logging.GetBytesHex(message)
+#endif
+                , ConsoleColor.DarkGray);
         }
     }
     internal static void OnClientDisconnected(IConnection connection)
