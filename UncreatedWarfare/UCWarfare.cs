@@ -235,9 +235,6 @@ public class UCWarfare : MonoBehaviour
         F.CheckDir(Data.Paths.VehicleStorage, out _, true);
         ZonePlayerComponent.UIInit();
 
-        Data.ZoneProvider.Reload();
-        Data.ZoneProvider.Save();
-
         Solver = gameObject.AddComponent<Projectiles.ProjectileSolver>();
 
         Announcer = await Data.Singletons.LoadSingletonAsync<UCAnnouncer>(token: token);

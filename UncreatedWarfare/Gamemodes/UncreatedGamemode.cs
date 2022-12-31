@@ -203,7 +203,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 }
             }
             ThreadUtil.assertIsGameThread();
-            InternalOnReady();
+            await InternalOnReady(token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             task = OnReady(token);
             if (!task.IsCompleted)
             {
@@ -360,7 +361,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
             return;
-        PlayerInitIntl(player, wasAlreadyOnline, token);
+        PlayerInitIntl(player, wasAlreadyOnline);
         task = PlayerInit(player, wasAlreadyOnline, token);
         if (!task.IsCompleted)
             await task.ConfigureAwait(false);
@@ -382,7 +383,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             }
         }
     }
-    private void PlayerInitIntl(UCPlayer player, bool wasAlreadyOnline, CancellationToken token)
+    private void PlayerInitIntl(UCPlayer player, bool wasAlreadyOnline)
     {
         if (!AllowCosmetics)
             player.SetCosmeticStates(false);
@@ -404,7 +405,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             StagingPhaseTimer = null;
         }
     }
-    private void InternalOnReady()
+    private async Task InternalOnReady(CancellationToken token = default)
     {
         ThreadUtil.assertIsGameThread();
         if (this is IFOBs)
@@ -415,12 +416,16 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
         ReplaceBarricadesAndStructures();
         Signs.CheckAllSigns();
-        Data.ZoneProvider.Reload();
 
         _hasTimeSynced = false;
         if (_useEventLoop)
         {
             EventLoopCoroutine = StartCoroutine(EventLoop());
+        }
+        if (Data.Singletons.TryGetSingleton(out ZoneList list))
+        {
+            await list.DownloadAll(token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
         }
     }
     private Task PostOnReady(CancellationToken token) => StartNextGame(token, true);
@@ -466,7 +471,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 }
             }
             ThreadUtil.assertIsGameThread();
-            InternalOnReady();
+            await InternalOnReady(token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             task = OnReady(token);
             if (!task.IsCompleted)
             {

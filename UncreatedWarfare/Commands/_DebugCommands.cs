@@ -218,7 +218,7 @@ public class DebugCommand : AsyncCommand
             }
             else
             {
-                flag.CapT1(Flag.MAX_POINTS - flag.Points - 1);
+                flag.CapT1(Flag.MaxPoints - flag.Points - 1);
             }
         }
         else if (team == 2)
@@ -229,7 +229,7 @@ public class DebugCommand : AsyncCommand
             }
             else
             {
-                flag.CapT2(Flag.MAX_POINTS - flag.Points - 2);
+                flag.CapT2(Flag.MaxPoints - flag.Points - 2);
             }
         }
         else ctx.SendGamemodeError();
@@ -266,7 +266,11 @@ public class DebugCommand : AsyncCommand
         {
             zones.Clear();
             ReloadCommand.ReloadFlags();
-            fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
+            fg.Rotation.ForEach(x =>
+            {
+                if (x.ZoneData.Item is { } z)
+                    zones.Add(z);
+            });
             ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, true, true, false, false, true, Path.Combine(directory, "zonearea_" + i.ToString(Data.AdminLocale)));
             L.Log("Done with " + (i + 1).ToString(Data.LocalLocale) + '/' + times.ToString(Data.LocalLocale));
         }
@@ -338,6 +342,9 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         ctx.AssertGamemode(out IFlagRotation fg);
+        ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
+        if (singleton == null)
+            throw ctx.SendGamemodeError();
         bool all = true;
         bool extra = true;
         bool path = true;
@@ -367,12 +374,12 @@ public class DebugCommand : AsyncCommand
         List<Zone> zones = new List<Zone>();
         if (all)
         {
-            zones.AddRange(extra
-                ? Data.ZoneProvider.Zones
-                : Data.ZoneProvider.Zones.Where(x => x.Data.UseCase == EZoneUseCase.FLAG));
+            zones.AddRange((extra
+                ? singleton.Items.Select(x => x.Item).Where(x => x is not null)
+                : singleton.Items.Where(x => x.Item is { } item && item.Data.UseCase == ZoneUseCase.Flag).Select(x => x.Item))!);
         }
         else
-            zones.AddRange(fg.Rotation.Select(x => x.ZoneData));
+            zones.AddRange(fg.Rotation.Select(x => x.ZoneData.Item).Where(x => x != null)!);
         ctx.ReplyString("Picture has to generate, wait a few seconds then check " + Path.Combine(Data.Paths.FlagStorage, "zonearea.png") + ".");
         ctx.LogAction(ActionLogType.BuildZoneMap, "ZONEAREA");
         ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, path, range, drawIn, drawAngles, true);
@@ -382,8 +389,6 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         ctx.AssertGamemode(out IFlagRotation fg);
-        Zone zone;
-        string zoneName;
         Vector3 pos = ctx.Caller.Position;
         if (pos == Vector3.zero) return;
         Flag? flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(pos));
@@ -392,11 +397,11 @@ public class DebugCommand : AsyncCommand
             ctx.Reply(T.ZoneNoResultsLocation);
             return;
         }
-        else
-        {
-            zone = flag.ZoneData;
-            zoneName = flag.Name;
-        }
+        Zone? zone = flag.ZoneData.Item;
+        string zoneName = flag.Name;
+        if (zone is null)
+            throw ctx.Reply(T.ZoneNoResultsLocation);
+
         List<Zone> zones = new List<Zone>(1) { zone };
         ctx.LogAction(ActionLogType.BuildZoneMap, "DRAWZONE");
         ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, false, true, false, true, true, Path.Combine(Data.Paths.FlagStorage, "zonerange_" + zoneName));
@@ -482,7 +487,7 @@ public class DebugCommand : AsyncCommand
             ctx.SendCorrectUsage(PLAYER_SAVE_USAGE);
             return;
         }
-        if (ctx.TryGet(0, out ulong player, out UCPlayer? onlinePlayer))
+        if (ctx.TryGet(0, out ulong player, out _))
         {
             if (PlayerManager.HasSave(player, out PlayerSave save))
             {
@@ -1504,7 +1509,6 @@ public class DebugCommand : AsyncCommand
                                 }
                             }
                         }
-
                     }
                 }
             }

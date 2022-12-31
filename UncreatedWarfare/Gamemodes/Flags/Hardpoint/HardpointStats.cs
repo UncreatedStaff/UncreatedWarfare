@@ -116,7 +116,7 @@ public class HardpointPlayerStats : TeamPlayerStats, IExperienceStats, IFOBStats
     {
         if (_player is null || !_player.IsOnline || Data.Gamemode is not IFlagObjectiveGamemode gm) return;
         Flag? obj = gm.Objective;
-        if (obj != null && obj.ZoneData.IsInside(_player.Position))
+        if (obj != null && obj.PlayerInRange(_player.Position))
         {
             timeonpoint += dt;
             timedeployed += dt;

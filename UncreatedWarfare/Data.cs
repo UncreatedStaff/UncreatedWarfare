@@ -112,7 +112,6 @@ public static class Data
     public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
     public static List<LanguageAliasSet> LanguageAliases;
     public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = new Dictionary<ulong, UCPlayerData>();
-    internal static JsonZoneProvider ZoneProvider;
     internal static WarfareSQL DatabaseManager;
     internal static WarfareSQL? RemoteSQL;
     public static Gamemode Gamemode;
@@ -257,8 +256,8 @@ public static class Data
         F.CheckDir(Paths.FOBStorage, out _, true);
         F.CheckDir(Paths.OfficerStorage, out _, true);
 
-        ZoneProvider = new JsonZoneProvider(new FileInfo(Path.Combine(Paths.FlagStorage, "zones.json")));
-        L.Log("Read " + ZoneProvider.Zones.Count + " zones.", ConsoleColor.Magenta);
+        ZoneList l = await Singletons.LoadSingletonAsync<ZoneList>(token: token);
+        L.Log("Read " + l.Items.Count + " zones.", ConsoleColor.Magenta);
 
         /* CONSTRUCT FRAMEWORK */
         L.Log("Instantiating Framework...", ConsoleColor.Magenta);

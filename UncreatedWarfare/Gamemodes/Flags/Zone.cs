@@ -2,34 +2,51 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
+
 /// <summary>
 /// Do not depend on object equality for your plugins. Zone objects will be cycled every time the file is re-read.
 /// The equality operators and function will compare names with <see cref="StringComparison.OrdinalIgnoreCase"/>. This is the most reliable way to compare <see cref="Zone"/>s.
 /// </summary>
-public abstract class Zone : IDeployable
+public abstract class Zone : IDeployable, IListItem
 {
-    internal int Id = -1;
-    private static bool isReady = false;
+    public PrimaryKey PrimaryKey { get => Id; set => Id = value; }
+    internal int Id;
+    private static bool _isReady;
     /// <summary>
     /// For converting between image sources and coordinate sources.
     /// </summary>
     protected static float ImageMultiplier;
-    internal static ushort lvlSize;
-    internal static ushort lvlBrdr;
+    internal static ushort LvlSize;
+    internal static ushort LvlBrdr;
+
     /// <summary>Returns a zone builder scaled to world coordinates.</summary>
-    internal abstract ZoneBuilder Builder { get; }
+    internal virtual ZoneBuilder Builder => new ZoneBuilder
+    {
+        ZoneType = Type,
+        MinHeight = MinHeight,
+        MaxHeight = MaxHeight,
+        Name = Name,
+        ShortName = ShortName,
+        Adjacencies = Data.Adjacencies,
+        Id = Id,
+        SpawnX = Spawn.x,
+        SpawnZ = Spawn.y,
+        UseMapCoordinates = false,
+        UseCase = Data.UseCase
+    };
     internal static void OnLevelLoaded()
     {
-        lvlSize = Level.size;
-        lvlBrdr = Level.border;
-        ImageMultiplier = (lvlSize - lvlBrdr * 2) / (float)lvlSize;
-        isReady = true;
+        LvlSize = Level.size;
+        LvlBrdr = Level.border;
+        ImageMultiplier = (LvlSize - LvlBrdr * 2) / (float)LvlSize;
+        _isReady = true;
     }
     /// <summary>
     /// Convert 2 <see langword="float"/> that was gotten from the Map image to world coordinates.
@@ -37,7 +54,7 @@ public abstract class Zone : IDeployable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static (float x, float y) FromMapCoordinates(float x, float y)
     {
-        return ((x - lvlSize / 2) * ImageMultiplier, (y - lvlSize / 2) * -ImageMultiplier);
+        return ((x - LvlSize / 2) * ImageMultiplier, (y - LvlSize / 2) * -ImageMultiplier);
     }
     /// <summary>
     /// Convert a <see cref="Vector2"/> that was gotten from the Map image to world coordinates.
@@ -45,7 +62,7 @@ public abstract class Zone : IDeployable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 FromMapCoordinates(Vector2 v2)
     {
-        return new Vector2((v2.x - lvlSize / 2) * ImageMultiplier, (v2.y - lvlSize / 2) * -ImageMultiplier);
+        return new Vector2((v2.x - LvlSize / 2) * ImageMultiplier, (v2.y - LvlSize / 2) * -ImageMultiplier);
     }
     /// <summary>
     /// Convert a <see cref="Vector2"/> that was gotten from world coordinates to Map image coordinates.
@@ -67,7 +84,7 @@ public abstract class Zone : IDeployable
     /// <summary>
     /// Zone shape definition type.
     /// </summary>
-    public readonly EZoneType Type;
+    public readonly ZoneType Type;
     /// <summary>
     /// The 2D center of the zone (x = x, y = z)
     /// </summary>
@@ -87,12 +104,34 @@ public abstract class Zone : IDeployable
                 _c3d = new Vector3(Center.x, F.GetHeight(_center, MinHeight), Center.y);
                 return _c3d.Value;
             }
-            else return _center;
+            return _center;
+        }
+    }
+    /// <summary>
+    /// The Spawn point of the zone (x = x, y = z)
+    /// </summary>
+    public readonly Vector2 Spawn;
+    private readonly Vector3 _spawn;
+    private Vector3? _sp3d;
+    /// <summary>
+    /// The 3D Spawn point of the zone (at terrain height).
+    /// </summary>
+    public Vector3 Spawn3D
+    {
+        get
+        {
+            if (_sp3d.HasValue) return _sp3d.Value;
+            if (Level.isLoaded)
+            {
+                _sp3d = new Vector3(Spawn.x, F.GetHeight(_spawn, MinHeight), Spawn.y);
+                return _sp3d.Value;
+            }
+            return _spawn;
         }
     }
     protected bool SucessfullyParsed = false;
     internal readonly ZoneModel Data;
-    protected Vector2[]? _particleSpawnPoints;
+    protected Vector2[]? ParticleSpawnPoints;
     /// <summary>
     /// Display name for the zone.
     /// </summary>
@@ -101,18 +140,18 @@ public abstract class Zone : IDeployable
     /// Shorter display name for the zone. Optional.
     /// </summary>
     public readonly string? ShortName;
-    protected Vector4 _bounds;
-    protected float _boundArea;
+    protected Vector4 Bound;
+    protected float BoundArea;
     /// <summary>
     /// Square area of the bounds rectangle, good for sorting layers.
     /// </summary>
     /// <remarks>Cached</remarks>
-    public float BoundsArea => _boundArea;
+    public float BoundsArea => BoundArea;
     /// <summary>
     /// Rectangular bounds of the zone. (x = left, y = bottom, z = right, w = top)
     /// </summary>
     /// <remarks>Cached</remarks>
-    public Vector4 Bounds => _bounds;
+    public Vector4 Bounds => Bound;
     /// <summary>
     /// Check if a 2D <paramref name="location"/> is inside the zone. Doesn't take height into account.
     /// </summary>
@@ -154,26 +193,22 @@ public abstract class Zone : IDeployable
     {
         return location.x >= Bounds.x && location.x <= Bounds.z && location.z >= Bounds.y && location.z <= Bounds.w && (float.IsNaN(MinHeight) || location.y >= MinHeight) && (float.IsNaN(MaxHeight) || location.y <= MaxHeight);
     }
-    private Zone()
-    {
-        throw new NotImplementedException();
-    }
-    private bool drawDataGenerated = false;
+    private bool _drawDataGenerated;
     private DrawData _drawData;
     internal DrawData DrawingData
     {
         get
         {
-            if (!drawDataGenerated)
+            if (!_drawDataGenerated)
             {
                 _drawData = GenerateDrawData();
-                drawDataGenerated = true;
+                _drawDataGenerated = true;
             }
             return _drawData;
         }
     }
 
-    Vector3 IDeployable.Position => Center3D + new Vector3(0, 1.5f, 0);
+    Vector3 IDeployable.Position => Spawn3D + new Vector3(0, 1.5f, 0);
 
     protected abstract DrawData GenerateDrawData();
     public struct DrawData
@@ -188,10 +223,10 @@ public abstract class Zone : IDeployable
     /// Zones must set <see cref="SucessfullyParsed"/> to <see langword="true"/>.
     /// </summary>
     /// <exception cref="InvalidOperationException">Tried to construct a zone before the level has loaded.</exception>
-    internal Zone(ref ZoneModel data)
+    internal Zone(in ZoneModel data)
     {
         this.UseMapCoordinates = data.UseMapCoordinates;
-        if (UseMapCoordinates && !isReady)
+        if (UseMapCoordinates && !_isReady)
             throw new InvalidOperationException("Tried to construct a zone before the level has loaded.");
         this.Data = data;
         this.Type = data.ZoneType;
@@ -202,13 +237,17 @@ public abstract class Zone : IDeployable
         this.Id = data.Id;
         if (data.UseMapCoordinates)
         {
-            this.Center = FromMapCoordinates(new Vector2(data.X, data.Z));
+            this.Center = FromMapCoordinates(new Vector2(data.ZoneData.X, data.ZoneData.Z));
             this._center = new Vector3(Center.x, 0f, Center.y);
+            this.Spawn = FromMapCoordinates(new Vector2(data.SpawnX, data.SpawnZ));
+            this._spawn = new Vector3(Spawn.x, 0f, Spawn.y);
         }
         else
         {
-            this._center = new Vector3(data.X, 0f, data.Z);
+            this._center = new Vector3(data.ZoneData.X, 0f, data.ZoneData.Z);
             this.Center = new Vector2(_center.x, _center.z);
+            this._spawn = new Vector3(data.SpawnX, 0f, data.SpawnZ);
+            this.Spawn = new Vector2(_spawn.x, _spawn.z);
         }
     }
     /// <summary>Compares <see cref="Name"/></summary>
@@ -246,20 +285,20 @@ public abstract class Zone : IDeployable
     }
     float IDeployable.Yaw => Data.UseCase switch
     {
-        EZoneUseCase.T1_MAIN => TeamManager.Team1SpawnAngle,
-        EZoneUseCase.T2_MAIN => TeamManager.Team2SpawnAngle,
-        EZoneUseCase.LOBBY => TeamManager.LobbySpawnAngle,
+        ZoneUseCase.Team1Main => TeamManager.Team1SpawnAngle,
+        ZoneUseCase.Team2Main => TeamManager.Team2SpawnAngle,
+        ZoneUseCase.Lobby => TeamManager.LobbySpawnAngle,
         _ => 0f
     };
     void IDeployable.OnDeploy(UCPlayer player, bool chat)
     {
-        if (Data.UseCase is EZoneUseCase.T1_MAIN or EZoneUseCase.T2_MAIN)
+        if (Data.UseCase is ZoneUseCase.Team1Main or ZoneUseCase.Team2Main)
         {
-            ActionLog.Add(ActionLogType.DeployToLocation, "MAIN BASE " + TeamManager.TranslateName(Data.UseCase == EZoneUseCase.T1_MAIN ? 1ul : 2ul, 0), player);
+            ActionLog.Add(ActionLogType.DeployToLocation, "MAIN BASE " + TeamManager.TranslateName(Data.UseCase == ZoneUseCase.Team1Main ? 1ul : 2ul, 0), player);
             if (chat)
                 player.SendChat(T.DeploySuccess, this);
         }
-        else if (Data.UseCase is EZoneUseCase.LOBBY)
+        else if (Data.UseCase is ZoneUseCase.Lobby)
         {
             if (chat)
                 player.SendChat(T.DeploySuccess, this);

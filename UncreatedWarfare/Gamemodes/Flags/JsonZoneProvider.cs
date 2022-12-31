@@ -5,20 +5,28 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Uncreated.Json;
-using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Maps;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
 public class JsonZoneProvider
 {
-    public List<Zone> Zones => _zones;
     private readonly List<Zone> _zones;
     private readonly FileInfo _file;
+    public IReadOnlyList<Zone> Zones { get; }
+
+    public JsonZoneProvider(FileInfo file, IEnumerable<Zone> zones)
+    {
+        this._file = file;
+        this._zones = new List<Zone>(zones);
+        Zones = _zones.AsReadOnly();
+    }
     public JsonZoneProvider(FileInfo file)
     {
         this._file = file;
         this._zones = new List<Zone>();
+        Zones = _zones.AsReadOnly();
     }
     public void Reload()
     {
@@ -135,7 +143,7 @@ public class JsonZoneProvider
             for (int i = 0; i < _zones.Count; i++)
             {
                 ZoneModel mdl = _zones[i].Data;
-                WriteJsonZone(writer, ref mdl);
+                WriteJsonZone(writer, in mdl);
             }
 
             writer.WriteEndArray();
@@ -152,7 +160,7 @@ public class JsonZoneProvider
 
     internal static void ReadJsonZone(ref Utf8JsonReader reader, out ZoneModel mdl)
     {
-        mdl = new ZoneModel();
+        mdl = new ZoneModel() { Map = -1 };
         while (reader.Read())
         {
             if (reader.TokenType == JsonTokenType.EndObject) break;
@@ -174,31 +182,57 @@ public class JsonZoneProvider
                             mdl.ShortName = null;
                     }
                     else if (prop.Equals("x", StringComparison.Ordinal))
-                        reader.TryGetSingle(out mdl.X);
+                        reader.TryGetSingle(out mdl.ZoneData.X);
                     else if (prop.Equals("z", StringComparison.Ordinal) || prop.Equals("y", StringComparison.Ordinal))
-                        reader.TryGetSingle(out mdl.Z);
+                        reader.TryGetSingle(out mdl.ZoneData.Z);
+                    else if (prop.Equals("spawn-x", StringComparison.Ordinal))
+                        reader.TryGetSingle(out mdl.SpawnX);
+                    else if (prop.Equals("spawn-z", StringComparison.Ordinal) || prop.Equals("spawn-y", StringComparison.Ordinal))
+                        reader.TryGetSingle(out mdl.SpawnZ);
+                    else if (prop.Equals("map", StringComparison.Ordinal) && !reader.TryGetInt32(out mdl.Map))
+                        mdl.Map = -1;
                     else if (prop.Equals("use-map-coordinates", StringComparison.Ordinal) || prop.Equals("use_map_size_multiplier", StringComparison.Ordinal))
                         mdl.UseMapCoordinates = reader.TokenType == JsonTokenType.True;
                     else if (prop.Equals("min-height", StringComparison.Ordinal) || prop.Equals("minHeight", StringComparison.Ordinal))
                     {
                         reader.TryGetSingle(out mdl.MinimumHeight);
-                        if (mdl.MinimumHeight == -1 && prop.Equals("minHeight", StringComparison.Ordinal)) // backwards compatability
+                        if (mdl.MinimumHeight < 0 && prop.Equals("minHeight", StringComparison.Ordinal)) // backwards compatability
                             mdl.MinimumHeight = float.NaN;
                     }
                     else if (prop.Equals("max-height", StringComparison.Ordinal) || prop.Equals("maxHeight", StringComparison.Ordinal))
                     {
                         reader.TryGetSingle(out mdl.MaximumHeight);
-                        if (mdl.MaximumHeight == -1 && prop.Equals("maxHeight", StringComparison.Ordinal)) // backwards compatability
+                        if (mdl.MaximumHeight < 0 && prop.Equals("maxHeight", StringComparison.Ordinal)) // backwards compatability
                             mdl.MaximumHeight = float.NaN;
                     }
                     else if (prop.Equals("use-case", StringComparison.Ordinal))
                     {
                         if (reader.TokenType == JsonTokenType.String)
-                            Enum.TryParse(reader.GetString()!, true, out mdl.UseCase);
+                        {
+                            string str = reader.GetString()!;
+                            if (!Enum.TryParse(str, true, out mdl.UseCase))
+                            {
+                                if (str.Equals("OTHER", StringComparison.Ordinal))
+                                    mdl.UseCase = ZoneUseCase.Other;
+                                else if (str.Equals("FLAG", StringComparison.Ordinal))
+                                    mdl.UseCase = ZoneUseCase.Flag;
+                                else if (str.Equals("T1_MAIN", StringComparison.Ordinal))
+                                    mdl.UseCase = ZoneUseCase.Team1Main;
+                                else if (str.Equals("T2_MAIN", StringComparison.Ordinal))
+                                    mdl.UseCase = ZoneUseCase.Team2Main;
+                                else if (str.Equals("T1_AMC", StringComparison.Ordinal))
+                                    mdl.UseCase = ZoneUseCase.Team1MainCampZone;
+                                else if (str.Equals("T2_AMC", StringComparison.Ordinal))
+                                    mdl.UseCase = ZoneUseCase.Team2MainCampZone;
+                                else if (str.Equals("LOBBY", StringComparison.Ordinal))
+                                    mdl.UseCase = ZoneUseCase.Lobby;
+                                else throw new JsonException("Invalid use case: " + str + ".");
+                            }
+                        }
                         else if (reader.TokenType == JsonTokenType.Number)
                         {
                             if (reader.TryGetByte(out byte n))
-                                mdl.UseCase = (EZoneUseCase)n;
+                                mdl.UseCase = (ZoneUseCase)n;
                         }
                     }
                     else if (prop.Equals("adjacencies", StringComparison.Ordinal))
@@ -215,10 +249,34 @@ public class JsonZoneProvider
                             mdl.Adjacencies = tlist.ToArray();
                         }
                     }
+                    else if (prop.Equals("grid-objects", StringComparison.Ordinal))
+                    {
+                        if (reader.TokenType == JsonTokenType.StartArray)
+                        {
+                            List<GridObject> tlist = new List<GridObject>(32);
+                            while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
+                            {
+                                GridObject afd = new GridObject();
+                                afd.ReadJson(ref reader);
+                                tlist.Add(afd);
+                            }
+                            mdl.GridObjects = tlist.ToArray();
+                        }
+                    }
                     else if (prop.Equals("zone", StringComparison.Ordinal)) // legacy FlagData converter
                     {
-                        mdl.X -= (Level.size / 2);
-                        mdl.Z = -(mdl.Z - Level.size / 2);
+                        ushort lvlSize = Level.size;
+                        mdl.SpawnX -= lvlSize / 2;
+                        mdl.SpawnZ = -(mdl.SpawnZ - lvlSize / 2);
+                        if (!float.IsNaN(mdl.ZoneData.X))
+                            mdl.ZoneData.X -= lvlSize / 2;
+                        else
+                            mdl.ZoneData.X = mdl.SpawnX;
+                        
+                        if (!float.IsNaN(mdl.ZoneData.Z))
+                            mdl.ZoneData.Z = -(mdl.SpawnZ - lvlSize / 2);
+                        else
+                            mdl.ZoneData.Z = mdl.SpawnZ;
                         if (reader.TokenType == JsonTokenType.StartObject)
                         {
                             while (reader.Read())
@@ -232,7 +290,7 @@ public class JsonZoneProvider
                                         if (prop2.Equals("type", StringComparison.Ordinal))
                                         {
                                             string? type = reader.GetString();
-                                            if (type != null && Enum.TryParse(type, true, out EZoneType t) && (t == EZoneType.POLYGON || t == EZoneType.CIRCLE || t == EZoneType.RECTANGLE))
+                                            if (type != null && Enum.TryParse(type, true, out ZoneType t) && (t == ZoneType.Polygon || t == ZoneType.Circle || t == ZoneType.Rectangle))
                                             {
                                                 mdl.ZoneType = t;
                                             }
@@ -244,13 +302,13 @@ public class JsonZoneProvider
                                             {
                                                 switch (mdl.ZoneType)
                                                 {
-                                                    case EZoneType.CIRCLE:
+                                                    case ZoneType.Circle:
                                                         if (float.TryParse(data, System.Globalization.NumberStyles.Any, Data.AdminLocale, out float rad))
                                                         {
                                                             mdl.ZoneData.Radius = rad;
                                                         }
                                                         break;
-                                                    case EZoneType.RECTANGLE:
+                                                    case ZoneType.Rectangle:
                                                         string[] nums = data.Split(',');
                                                         if (nums.Length == 2)
                                                         {
@@ -262,7 +320,7 @@ public class JsonZoneProvider
                                                             }
                                                         }
                                                         break;
-                                                    case EZoneType.POLYGON:
+                                                    case ZoneType.Polygon:
                                                         nums = data.Split(',');
                                                         if (nums.Length % 2 == 0 && nums.Length >= 6)
                                                         {
@@ -294,7 +352,7 @@ public class JsonZoneProvider
                             ref ZoneModel.PropertyData data = ref ZoneModel.ValidProperties[i];
                             if (data.Name.Equals(prop, StringComparison.Ordinal))
                             {
-                                if (mdl.ZoneType == EZoneType.INVALID || mdl.ZoneType == data.ZoneType)
+                                if (mdl.ZoneType == ZoneType.Invalid || mdl.ZoneType == data.ZoneType)
                                 {
                                     mdl.ZoneType = data.ZoneType;
                                     if (reader.TokenType == JsonTokenType.Number && reader.TryGetSingle(out float f))
@@ -303,13 +361,13 @@ public class JsonZoneProvider
                                     }
                                     else if (reader.TokenType == JsonTokenType.StartArray)
                                     {
-                                        List<Vector2> v2s = new List<Vector2>(16);
+                                        List<Vector2> v2 = new List<Vector2>(16);
                                         Vector2 current = default;
                                         while (reader.Read())
                                         {
                                             if (reader.TokenType == JsonTokenType.EndObject)
                                             {
-                                                v2s.Add(current);
+                                                v2.Add(current);
                                                 current = default;
                                             }
                                             else if (reader.TokenType == JsonTokenType.PropertyName)
@@ -321,7 +379,7 @@ public class JsonZoneProvider
                                                     {
                                                         reader.TryGetSingle(out current.x);
                                                     }
-                                                    else if (prop2.Equals("z", StringComparison.Ordinal))
+                                                    else if (prop2.Equals("z", StringComparison.Ordinal) || prop2.Equals("y", StringComparison.Ordinal))
                                                     {
                                                         reader.TryGetSingle(out current.y);
                                                     }
@@ -329,7 +387,7 @@ public class JsonZoneProvider
                                             }
                                             else if (reader.TokenType == JsonTokenType.EndArray) break;
                                         }
-                                        ((ZoneModel.PropertyData.ModData<Vector2[]>)data.Modifier)(ref mdl.ZoneData, v2s.ToArray());
+                                        ((ZoneModel.PropertyData.ModData<Vector2[]>)data.Modifier)(ref mdl.ZoneData, v2.ToArray());
                                     }
                                 }
                             }
@@ -338,12 +396,34 @@ public class JsonZoneProvider
                 }
             }
         }
+
+        if (mdl.Map == -1)
+            mdl.Map = MapScheduler.Current;
+        if (mdl.ZoneType == ZoneType.Polygon)
+        {
+            if (!float.IsNaN(mdl.ZoneData.X))
+                mdl.SpawnX = mdl.ZoneData.X;
+            else if (!float.IsNaN(mdl.SpawnX))
+                mdl.ZoneData.X = mdl.SpawnX;
+            if (!float.IsNaN(mdl.ZoneData.Z))
+                mdl.SpawnZ = mdl.ZoneData.Z;
+            else if (!float.IsNaN(mdl.SpawnZ))
+                mdl.ZoneData.Z = mdl.SpawnZ;
+        }
+        else
+        {
+            if (!float.IsNaN(mdl.ZoneData.X) && float.IsNaN(mdl.SpawnX))
+                mdl.SpawnX = mdl.ZoneData.X;
+            if (!float.IsNaN(mdl.ZoneData.Z) && float.IsNaN(mdl.SpawnZ))
+                mdl.SpawnZ = mdl.ZoneData.Z;
+        }
+        
         mdl.ValidateRead();
     }
-    internal static void WriteJsonZone(Utf8JsonWriter writer, ref ZoneModel mdl)
+    internal static void WriteJsonZone(Utf8JsonWriter writer, in ZoneModel mdl)
     {
         writer.WriteStartObject();
-        if (!mdl.IsValid || mdl.ZoneType == EZoneType.INVALID)
+        if (!mdl.IsValid || mdl.ZoneType == ZoneType.Invalid)
         {
             writer.WriteBoolean("error", true);
             writer.WriteEndObject();
@@ -354,17 +434,23 @@ public class JsonZoneProvider
         writer.WriteString("name", mdl.Name);
         if (mdl.ShortName != null)
             writer.WriteString("short-name", mdl.ShortName);
-        writer.WriteNumber("x", mdl.X);
-        writer.WriteNumber("z", mdl.Z);
+        writer.WriteNumber("x", float.IsNaN(mdl.ZoneData.X) ? mdl.SpawnX : mdl.ZoneData.X);
+        writer.WriteNumber("z", float.IsNaN(mdl.ZoneData.Z) ? mdl.SpawnZ : mdl.ZoneData.Z);
+        if (!float.IsNaN(mdl.SpawnX))
+            writer.WriteNumber("spawn-x", mdl.SpawnX);
+        if (!float.IsNaN(mdl.SpawnZ))
+            writer.WriteNumber("spawn-z", mdl.SpawnZ);
         if (mdl.UseMapCoordinates)
             writer.WriteBoolean("use-map-coordinates", mdl.UseMapCoordinates);
         if (!float.IsNaN(mdl.MinimumHeight))
             writer.WriteNumber("min-height", mdl.MinimumHeight);
         if (!float.IsNaN(mdl.MaximumHeight))
             writer.WriteNumber("max-height", mdl.MaximumHeight);
-        if (mdl.UseCase != EZoneUseCase.OTHER && mdl.UseCase <= EZoneUseCase.LOBBY)
+        if (mdl.Map > 0 && mdl.Map < MapScheduler.MapCount)
+            writer.WriteNumber("map", mdl.Map);
+        if (mdl.UseCase != ZoneUseCase.Other && mdl.UseCase <= ZoneUseCase.Lobby)
             writer.WriteString("use-case", mdl.UseCase.ToString().ToLower());
-        if (mdl.Adjacencies != null && mdl.Adjacencies.Length > 0)
+        if (mdl.Adjacencies is { Length: > 0 })
         {
             writer.WritePropertyName("adjacencies");
             writer.WriteStartArray();
@@ -376,16 +462,28 @@ public class JsonZoneProvider
             }
             writer.WriteEndArray();
         }
+        if (mdl.GridObjects is { Length: > 0 })
+        {
+            writer.WritePropertyName("grid-objects");
+            writer.WriteStartArray();
+            for (int i = 0; i < mdl.GridObjects.Length; i++)
+            {
+                writer.WriteStartObject();
+                mdl.GridObjects[i].WriteJson(writer);
+                writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
+        }
         switch (mdl.ZoneType)
         {
-            case EZoneType.RECTANGLE:
+            case ZoneType.Rectangle:
                 writer.WriteNumber("size-x", mdl.ZoneData.SizeX);
                 writer.WriteNumber("size-z", mdl.ZoneData.SizeZ);
                 break;
-            case EZoneType.CIRCLE:
+            case ZoneType.Circle:
                 writer.WriteNumber("radius", mdl.ZoneData.Radius);
                 break;
-            case EZoneType.POLYGON:
+            case ZoneType.Polygon:
                 writer.WritePropertyName("points");
                 writer.WriteStartArray();
                 for (int i = 0; i < mdl.ZoneData.Points.Length; ++i)

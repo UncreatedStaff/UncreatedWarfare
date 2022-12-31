@@ -14,7 +14,7 @@ public static class CTFUI
     public static readonly CaptureUI CaptureUI = new CaptureUI();
     public static readonly FlagListUI ListUI = new FlagListUI();
     public static readonly StagingUI StagingUI = new StagingUI();
-    public static int FromMax(int cap) => FromMax(cap, Mathf.RoundToInt(Flag.MAX_POINTS));
+    public static int FromMax(int cap) => FromMax(cap, Mathf.RoundToInt(Flag.MaxPoints));
     public static int FromMax(int cap, int max) => Math.Abs(cap) >= max ? Gamemode.Config.UICircleFontCharacters.Length - 1 : (Gamemode.Config.UICircleFontCharacters.Length - 1) / max * Math.Abs(cap);
     public static CaptureUIParameters ComputeUI(ulong team, Flag flag, bool inVehicle)
     {
@@ -41,7 +41,7 @@ public static class CTFUI
             {
                 if (flag.Points > 0)
                 {
-                    if (flag.Points < Flag.MAX_POINTS)
+                    if (flag.Points < Flag.MaxPoints)
                     {
                         return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
                     }
@@ -52,7 +52,7 @@ public static class CTFUI
                 }
                 else
                 {
-                    if (flag.Points > -Flag.MAX_POINTS)
+                    if (flag.Points > -Flag.MaxPoints)
                     {
                         return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CLEARING, flag);
                     }
@@ -66,7 +66,7 @@ public static class CTFUI
             {
                 if (flag.Points < 0)
                 {
-                    if (flag.Points > -Flag.MAX_POINTS)
+                    if (flag.Points > -Flag.MaxPoints)
                     {
                         return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
                     }
@@ -77,7 +77,7 @@ public static class CTFUI
                 }
                 else
                 {
-                    if (flag.Points < Flag.MAX_POINTS)
+                    if (flag.Points < Flag.MaxPoints)
                     {
                         return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
                     }
@@ -94,7 +94,7 @@ public static class CTFUI
             {
                 if (flag.Points < 0)
                 {
-                    if (flag.Points > -Flag.MAX_POINTS)
+                    if (flag.Points > -Flag.MaxPoints)
                     {
                         return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
                     }
@@ -105,7 +105,7 @@ public static class CTFUI
                 }
                 else
                 {
-                    if (flag.Points < Flag.MAX_POINTS)
+                    if (flag.Points < Flag.MaxPoints)
                     {
                         return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CLEARING, flag);
                     }
@@ -119,7 +119,7 @@ public static class CTFUI
             {
                 if (flag.Points > 0)
                 {
-                    if (flag.Points < Flag.MAX_POINTS)
+                    if (flag.Points < Flag.MaxPoints)
                     {
                         return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
                     }
@@ -130,7 +130,7 @@ public static class CTFUI
                 }
                 else
                 {
-                    if (flag.Points > -Flag.MAX_POINTS)
+                    if (flag.Points > -Flag.MaxPoints)
                     {
                         return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
                     }

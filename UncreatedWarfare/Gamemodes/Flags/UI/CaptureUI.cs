@@ -32,7 +32,7 @@ public class CaptureUI : UnturnedUI
         string desc = new string(Gamemode.Config.UICircleFontCharacters[CTFUI.FromMax(p.Points)], 1);
         IFormatProvider locale = Localization.GetLocale(lang);
         if (p.Type is not EFlagStatus.BLANK or EFlagStatus.DONT_DISPLAY && Gamemode.Config.UICaptureShowPointCount)
-            translation += " (" + p.Points.ToString(locale) + "/" + Flag.MAX_POINTS.ToString(locale) + ")";
+            translation += " (" + p.Points.ToString(locale) + "/" + Flag.MaxPoints.ToString(locale) + ")";
 
         SendToPlayer(c, "<color=#" + forecolor + ">" + translation + "</color>", "<color=#" + forecolor + ">" + desc + "</color>", backcolor);
         if (Gamemode.Config.UICaptureEnablePlayerCount && p.Flag is not null)
@@ -89,7 +89,7 @@ public class CaptureUI : UnturnedUI
             if (flag is not null && type is EFlagStatus.CAPTURING or EFlagStatus.LOSING or EFlagStatus.CONTESTED or EFlagStatus.CLEARING or EFlagStatus.IN_VEHICLE)
                 Points = Mathf.RoundToInt(flag.Points);
             else
-                Points = Mathf.RoundToInt(Flag.MAX_POINTS);
+                Points = Mathf.RoundToInt(Flag.MaxPoints);
         }
     }
 }

@@ -237,7 +237,7 @@ public abstract class BaseAsyncReloadSingleton : BaseAsyncSingleton, IReloadable
     }
 }
 
-public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadableSingleton where TItem : class, IListItem, new()
+public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadableSingleton where TItem : class, IListItem
 {
     private volatile bool _isLoading;
     private volatile bool _isUnloading;

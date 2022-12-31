@@ -250,8 +250,8 @@ public static class F
         ulong team = player.GetTeam();
         return team switch
         {
-            1 => TeamManager.Team1Main.Center3D,
-            2 => TeamManager.Team2Main.Center3D,
+            1 => TeamManager.Team1Main.Spawn3D,
+            2 => TeamManager.Team2Main.Spawn3D,
             _ => TeamManager.LobbySpawn
         };
     }
@@ -265,8 +265,8 @@ public static class F
         team = player.GetTeam();
         return team switch
         {
-            1 => TeamManager.Team1Main.Center3D,
-            2 => TeamManager.Team2Main.Center3D,
+            1 => TeamManager.Team1Main.Spawn3D,
+            2 => TeamManager.Team2Main.Spawn3D,
             _ => TeamManager.LobbySpawn
         };
     }
@@ -279,8 +279,8 @@ public static class F
 
         return team switch
         {
-            1 => TeamManager.Team1Main.Center3D,
-            2 => TeamManager.Team2Main.Center3D,
+            1 => TeamManager.Team1Main.Spawn3D,
+            2 => TeamManager.Team2Main.Spawn3D,
             _ => TeamManager.LobbySpawn
         };
     }
@@ -1253,6 +1253,10 @@ public static class F
         return Mathf.Abs(left.x - right.x) < tolerance &&
                Mathf.Abs(left.y - right.y) < tolerance;
     }
+    public static bool AlmostEquals(this float left, float right, float tolerance = 0.05f)
+    {
+        return Mathf.Abs(left - right) < tolerance;
+    }
     public static Schema GetForeignKeyListSchema(string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, string foreignTableName, string foreignTablePkColumn, bool hasPk = false, bool oneToOne = false, bool nullable = false, bool unique = false, string pkName = "pk")
     {
         Schema.Column[] columns = new Schema.Column[hasPk ? 3 : 2];
@@ -1527,7 +1531,7 @@ public static class F
     {
         return collection == null || collection.Count == 0;
     }
-    public static int StringSearch<T>(IList<T> collection, Func<T, string?> selector, string input, bool equalsOnly = false)
+    public static int StringSearch<T>(IReadOnlyList<T> collection, Func<T, string?> selector, string input, bool equalsOnly = false)
     {
         if (input == null)
             return -1;
@@ -1557,7 +1561,7 @@ public static class F
 
         return -1;
     }
-    public static void StringSearch<T>(IList<T> collection, IList<T> output, Func<T, string?> selector, string input, bool equalsOnly = false)
+    public static void StringSearch<T>(IReadOnlyList<T> collection, IList<T> output, Func<T, string?> selector, string input, bool equalsOnly = false)
     {
         if (input == null)
             return;
@@ -1690,7 +1694,7 @@ public static class F
     }
 
     /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>[,`<paramref name="columnPk"/>`]) VALUES (parameters[,LAST_INSERT_ID(@pk)]) ON DUPLICATE KEY UPDATE (<paramref name="columns"/>,`<paramref name="columnPk"/>`=LAST_INSERT_ID(`<paramref name="columnPk"/>`);<br/>SET @pk := (SELECT LAST_INSERT_ID() as `pk`);<br/>SELECT @pk</summary>
-    public static string BuildInitialInsertQuery(string table, string columnPk, bool hasPk, params string[] columns)
+    public static string BuildInitialInsertQuery(string table, string columnPk, bool hasPk, string? extPk, string[]? deleteTables, params string[] columns)
     {
         return "INSERT INTO `" + table + "` (" + SqlTypes.ColumnList(columns) +
             (hasPk ? $",`{columnPk}`" : string.Empty) +
@@ -1699,8 +1703,15 @@ public static class F
             ") ON DUPLICATE KEY UPDATE " +
             SqlTypes.ColumnUpdateList(0, columns) +
             $",`{columnPk}`=LAST_INSERT_ID(`{columnPk}`);" +
-            "SET @pk := (SELECT LAST_INSERT_ID() as `pk`);" +
-            "SELECT @pk;";
+            "SET @pk := (SELECT LAST_INSERT_ID() as `pk`);" + (hasPk && extPk != null && deleteTables != null ? GetDeleteText(deleteTables, extPk, columns.Length) : string.Empty) +
+            " SELECT @pk;";
+    }
+    private static string GetDeleteText(string[] deleteTables, string columnPk, int pk)
+    {
+        StringBuilder sb = new StringBuilder(deleteTables.Length * 15);
+        for (int i = 0; i < deleteTables.Length; ++i)
+            sb.Append("DELETE FROM `").Append(deleteTables[i]).Append("` WHERE `").Append(columnPk).Append("`=@").Append(pk.ToString(Data.AdminLocale)).Append(';');
+        return sb.ToString();
     }
     /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>) VALUES (parameters);</summary>
     public static string BuildOtherInsertQueryNoUpdate(string table, params string[] columns)
@@ -1745,5 +1756,11 @@ public static class F
     public static string BuildSelect(string table, params string[] columns)
     {
         return "SELECT " + SqlTypes.ColumnList(columns) + $" FROM `{table}`;";
+    }
+    public static Task<int> DeleteItem(MySqlDatabase data, PrimaryKey pk, string tableMain, string columnPk, CancellationToken token = default)
+    {
+        if (!pk.IsValid)
+            throw new ArgumentException("If item is null, pk must have a value to delete the item.", nameof(pk));
+        return data.NonQueryAsync($"DELETE FROM `{tableMain}` WHERE `{columnPk}`=@0;", new object[] { pk.Key }, token);
     }
 }

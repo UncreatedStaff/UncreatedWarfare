@@ -1561,7 +1561,7 @@ internal static class T
     public static readonly Translation ZoneDeleteEditingZoneDeleted = new Translation("<#ff8c69>Someone deleted the zone you're working on, saving this will create a new one.");
 
     // Zone > Create
-    public static readonly Translation<string, EZoneType> ZoneCreated = new Translation<string, EZoneType>("<#e6e3d5>Started zone builder for {0}, a {1} zone.", Flag.NAME_FORMAT);
+    public static readonly Translation<string, ZoneType> ZoneCreated = new Translation<string, ZoneType>("<#e6e3d5>Started zone builder for {0}, a {1} zone.", Flag.NAME_FORMAT);
     public static readonly Translation<string> ZoneCreateNameTaken = new Translation<string>("<#ff8c69>The name \"{0}\" is already in use by another zone.");
     public static readonly Translation<string, IPlayer> ZoneCreateNameTakenEditing = new Translation<string, IPlayer>("<#ff8c69>The name \"{0}\" is already in use by another zone being created by {1}.", arg1Fmt: UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     
@@ -1572,11 +1572,11 @@ internal static class T
     // Zone > Edit > Existing
     public static readonly Translation ZoneEditExistingInvalid = new Translation("<#ff8c69>Edit existing zone requires the zone name as a parameter. Alternatively stand in the zone (without overlapping another).");
     public static readonly Translation ZoneEditExistingInProgress = new Translation("<#ff8c69>Cancel or finalize the zone you're currently editing first.");
-    public static readonly Translation<string, EZoneType> ZoneEditExistingSuccess = new Translation<string, EZoneType>("<#e6e3d5>Started editing zone <#fff>{0}</color>, a <#ff9999>{1}</color> zone.");
+    public static readonly Translation<string, ZoneType> ZoneEditExistingSuccess = new Translation<string, ZoneType>("<#e6e3d5>Started editing zone <#fff>{0}</color>, a <#ff9999>{1}</color> zone.");
 
     // Zone > Edit > Finalize
     public static readonly Translation ZoneEditNotStarted = new Translation("<#ff8c69>Start creating a zone with <#fff>/zone create <polygon|rectangle|circle> <name></color>.");
-    public static readonly Translation ZoneEditFinalizeExists = new Translation("<#ff8c69>There's already a zone saved with that id.");
+    public static readonly Translation ZoneEditFinalizeExists = new Translation("<#ff8c69>There's already a zone saved with that name.");
     public static readonly Translation<Zone> ZoneEditFinalizeSuccess = new Translation<Zone>("<#e6e3d5>Successfully finalized and saved {0}.", Flag.NAME_FORMAT);
     public static readonly Translation<string> ZoneEditFinalizeFailure = new Translation<string>("<#ff8c69>The provided zone data was invalid because: <#fff>{0}</color>.");
     public static readonly Translation ZoneEditFinalizeUseCaseUnset = new Translation("<#ff8c69>Before saving you must set a use case with /zone edit use case <type>: \"flag\", \"lobby\", \"t1_main\", \"t2_main\", \"t1_amc\", or \"t2_amc\".");
@@ -1587,8 +1587,8 @@ internal static class T
 
     // Zone > Edit > Type
     public static readonly Translation ZoneEditTypeInvlaid = new Translation("<#ff8c69>Type must be rectangle, circle, or polygon.");
-    public static readonly Translation<EZoneType> ZoneEditTypeAlreadySet = new Translation<EZoneType>("<#ff8c69>This zone is already a <#ff9999>{0}</color>.");
-    public static readonly Translation<EZoneType> ZoneEditTypeSuccess = new Translation<EZoneType>("<#ff8c69>Set type to <#ff9999>{0}</color>.");
+    public static readonly Translation<ZoneType> ZoneEditTypeAlreadySet = new Translation<ZoneType>("<#ff8c69>This zone is already a <#ff9999>{0}</color>.");
+    public static readonly Translation<ZoneType> ZoneEditTypeSuccess = new Translation<ZoneType>("<#ff8c69>Set type to <#ff9999>{0}</color>.");
 
     // Zone > Edit > Max-Height
     public static readonly Translation ZoneEditMaxHeightInvalid = new Translation("<#ff8c69>Maximum Height must be a decimal or whole number, or leave it blank to use the player's current height.");
@@ -1634,7 +1634,11 @@ internal static class T
     // Zone > Edit > Center
     public static readonly Translation ZoneEditCenterInvalid = new Translation("<#ff8c69>To set center you must provide two decimal or whole numbers, or leave them blank to use the player's current position.");
     public static readonly Translation<Vector2> ZoneEditCenterSuccess = new Translation<Vector2>("<#e6e3d5>Set center position to <#ff9999>{0}</color>.", "0.##");
-    public static readonly Translation<Vector2, float> ZoneEditCenterSuccessRotation = new Translation<Vector2, float>("<#e6e3d5>Set center position to <#ff9999>{0}</color> and yaw to <#ff9999>{1}</color>°.", "0.##", "0.##");
+
+    // Zone > Edit > Spawn
+    public static readonly Translation ZoneEditSpawnInvalid = new Translation("<#ff8c69>To set spawn point you must provide two decimal or whole numbers, or leave them blank to use the player's current position.");
+    public static readonly Translation<Vector2> ZoneEditSpawnSuccess = new Translation<Vector2>("<#e6e3d5>Set spawn point to <#ff9999>{0}</color>.", "0.##");
+    public static readonly Translation<Vector2, float> ZoneEditSpawnSuccessRotation = new Translation<Vector2, float>("<#e6e3d5>Set spawn point to <#ff9999>{0}</color> and yaw to <#ff9999>{1}</color>°.", "0.##", "0.##");
 
     // Zone > Edit > Name
     public static readonly Translation ZoneEditNameInvalid = new Translation("<#ff8c69>Name requires one string argument. Quotation marks aren't required.");
@@ -1647,7 +1651,7 @@ internal static class T
 
     // Zone > Edit > Use-Case
     public static readonly Translation ZoneEditUseCaseInvalid = new Translation("<#ff8c69>Use case requires one string argument: \"flag\", \"lobby\", \"t1_main\", \"t2_main\", \"t1_amc\", or \"t2_amc\".");
-    public static readonly Translation<EZoneUseCase> ZoneEditUseCaseSuccess = new Translation<EZoneUseCase>("<#e6e3d5>Set use case to \"<#ff9999>{0}</color>\".");
+    public static readonly Translation<ZoneUseCase> ZoneEditUseCaseSuccess = new Translation<ZoneUseCase>("<#e6e3d5>Set use case to \"<#ff9999>{0}</color>\".");
 
     // Zone > Edit > Transactions
     public static readonly Translation ZoneEditUndoEmpty = new Translation("<#ff8c69>There is nothing to undo.");

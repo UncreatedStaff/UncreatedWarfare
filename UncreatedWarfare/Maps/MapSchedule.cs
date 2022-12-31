@@ -51,6 +51,7 @@ internal class MapScheduler : MonoBehaviour
 
     private static List<ulong> _originalMods;
     private static List<ulong> _originalIgnoreChildren;
+    public static int MapCount => MapRotation.Count;
 
     [UsedImplicitly]
     void Awake()

@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -64,14 +65,6 @@ public class ZoneCommand : Command
 
             ctx.Offset = 1;
             Go(ctx);
-            ctx.Offset = 0;
-        }
-        else if (ctx.MatchParameter(0, "list"))
-        {
-            ctx.AssertRanByConsole();
-
-            ctx.Offset = 1;
-            List(ctx);
             ctx.Offset = 0;
         }
         else if (ctx.MatchParameter(0, "edit", "e"))
@@ -202,13 +195,6 @@ public class ZoneCommand : Command
         EffectManager.askEffectClearByID(ZonePlayerComponent.Corner.id, channel);
         EffectManager.askEffectClearByID(ZonePlayerComponent.Center.id, channel);
     }
-    private void List(CommandInteraction ctx)
-    {
-        for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
-        {
-            L.Log(Data.ZoneProvider.Zones[i].ToString(), ConsoleColor.DarkGray);
-        }
-    }
     private void Go(CommandInteraction ctx)
     {
         Zone? zone;
@@ -249,129 +235,14 @@ public class ZoneCommand : Command
             L.LogWarning("Tried to teleport to " + (zone == null ? location.ToString() : zone.Name.ToUpper()) + " and there was no terrain to teleport to at " + pos + ".");
         }
     }
-    internal static Zone? GetZone(string nameInput)
+
+    internal static Zone? GetZone(string nameInput) => GetZone(Data.Singletons.GetSingleton<ZoneList>()!, nameInput);
+    internal static Zone? GetZone(ZoneList singleton, string nameInput) => singleton?.SearchZone(nameInput)?.Item;
+    internal static Zone? GetZone(Vector3 position) => GetZone(Data.Singletons.GetSingleton<ZoneList>()!, position);
+    internal static Zone? GetZone(ZoneList singleton, Vector3 position)
     {
-        if (int.TryParse(nameInput, System.Globalization.NumberStyles.Any, Data.LocalLocale, out int num))
-        {
-            for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
-            {
-                if (Data.ZoneProvider.Zones[i].Id == num)
-                    return Data.ZoneProvider.Zones[i];
-            }
-        }
-        for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
-        {
-            if (Data.ZoneProvider.Zones[i].Name.Equals(nameInput, StringComparison.OrdinalIgnoreCase))
-                return Data.ZoneProvider.Zones[i];
-        }
-        for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
-        {
-            if (Data.ZoneProvider.Zones[i].Name.IndexOf(nameInput, StringComparison.OrdinalIgnoreCase) != -1)
-                return Data.ZoneProvider.Zones[i];
-        }
-        if (nameInput.Equals("lobby", StringComparison.OrdinalIgnoreCase))
-            return Teams.TeamManager.LobbyZone;
-        if (nameInput.Equals("t1main", StringComparison.OrdinalIgnoreCase) || nameInput.Equals("t1", StringComparison.OrdinalIgnoreCase))
-            return Teams.TeamManager.Team1Main;
-        if (nameInput.Equals("t2main", StringComparison.OrdinalIgnoreCase) || nameInput.Equals("t2", StringComparison.OrdinalIgnoreCase))
-            return Teams.TeamManager.Team2Main;
-        if (nameInput.Equals("t1amc", StringComparison.OrdinalIgnoreCase))
-            return Teams.TeamManager.Team1AMC;
-        if (nameInput.Equals("t2amc", StringComparison.OrdinalIgnoreCase))
-            return Teams.TeamManager.Team2AMC;
-        if (nameInput.Equals("obj1", StringComparison.OrdinalIgnoreCase))
-        {
-            if (Data.Is(out IFlagTeamObjectiveGamemode gm))
-            {
-                Gamemodes.Flags.Flag? fl = gm.ObjectiveTeam1;
-                if (fl != null)
-                    return fl.ZoneData;
-            }
-            else if (Data.Is(out IAttackDefense atdef) && Data.Is(out IFlagRotation rot))
-            {
-                ulong t = atdef.DefendingTeam;
-                if (t == 1)
-                {
-                    Gamemodes.Flags.Flag? fl = gm.ObjectiveTeam1;
-                    if (fl != null)
-                        return fl.ZoneData;
-                }
-                else
-                {
-                    Gamemodes.Flags.Flag? fl = gm.ObjectiveTeam2;
-                    if (fl != null)
-                        return fl.ZoneData;
-                }
-            }
-        }
-        else if (nameInput.Equals("obj2", StringComparison.OrdinalIgnoreCase))
-        {
-            if (Data.Is(out IFlagTeamObjectiveGamemode gm))
-            {
-                Gamemodes.Flags.Flag? fl = gm.ObjectiveTeam2;
-                if (fl != null)
-                    return fl.ZoneData;
-            }
-            else if (Data.Is(out IAttackDefense atdef) && Data.Is(out IFlagRotation rot))
-            {
-                ulong t = atdef.DefendingTeam;
-                if (t == 1)
-                {
-                    Gamemodes.Flags.Flag? fl = gm.ObjectiveTeam1;
-                    if (fl != null)
-                        return fl.ZoneData;
-                }
-                else
-                {
-                    Gamemodes.Flags.Flag? fl = gm.ObjectiveTeam2;
-                    if (fl != null)
-                        return fl.ZoneData;
-                }
-            }
-        }
-        else if (nameInput.Equals("obj", StringComparison.OrdinalIgnoreCase))
-        {
-            if (Data.Is(out IFlagTeamObjectiveGamemode rot))
-            {
-                if (Data.Is(out IAttackDefense atdef))
-                {
-                    ulong t = atdef.DefendingTeam;
-                    if (t == 1)
-                    {
-                        Gamemodes.Flags.Flag? fl = rot.ObjectiveTeam1;
-                        if (fl != null)
-                            return fl.ZoneData;
-                    }
-                    else
-                    {
-                        Gamemodes.Flags.Flag? fl = rot.ObjectiveTeam2;
-                        if (fl != null)
-                            return fl.ZoneData;
-                    }
-                }
-            }
-            else if (Data.Is(out IFlagObjectiveGamemode obj))
-            {
-                Gamemodes.Flags.Flag? fl = obj.Objective;
-                if (fl != null)
-                    return fl.ZoneData;
-            }
-        }
-        return null;
-    }
-    internal static Zone? GetZone(Vector3 position)
-    {
-        for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
-        {
-            if (Data.ZoneProvider.Zones[i].IsInside(position))
-                return Data.ZoneProvider.Zones[i];
-        }
-        Vector2 pos2 = new Vector2(position.x, position.z);
-        for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
-        {
-            if (Data.ZoneProvider.Zones[i].IsInside(pos2))
-                return Data.ZoneProvider.Zones[i];
-        }
-        return null;
+        return singleton == null ? null : 
+           (singleton.FindInsizeZone(position, false) is { Item: { } z } ? z :
+            singleton.FindInsizeZone(new Vector2(position.x, position.z), false)?.Item);
     }
 }

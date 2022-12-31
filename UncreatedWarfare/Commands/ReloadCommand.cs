@@ -196,9 +196,19 @@ public class ReloadCommand : AsyncCommand
             if (Data.Gamemode is FlagGamemode flaggm)
                 flaggm.LoadAllFlags();
             else
-                Data.ZoneProvider.Reload();
+            {
+                ZoneList? zl = Data.Singletons.GetSingleton<ZoneList>();
+                if (zl != null)
+                {
+                    UCWarfare.RunTask(async () =>
+                    {
+                        await zl.DownloadAll();
+                        await UCWarfare.ToUpdate();
+                        TeamManager.OnReloadFlags();
+                    }, ctx: "Reload flags");
+                }
+            }
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
-            TeamManager.OnReloadFlags();
             OnFlagsReloaded?.Invoke();
         }
         catch (Exception ex)

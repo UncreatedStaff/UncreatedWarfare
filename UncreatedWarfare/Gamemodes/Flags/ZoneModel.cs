@@ -1,60 +1,70 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using Uncreated.SQL;
+using Uncreated.Warfare.Maps;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
-public struct ZoneModel
+internal struct ZoneModel : IListItem
 {
     internal int Id = -1;
+    internal int Map;
     internal string Name = null!;
     internal string? ShortName;
-    internal float X;
-    internal float Z;
+    internal float SpawnX = float.NaN;
+    internal float SpawnZ = float.NaN;
     internal bool UseMapCoordinates;
     internal float MinimumHeight = float.NaN;
     internal float MaximumHeight = float.NaN;
-    internal EZoneType ZoneType = EZoneType.INVALID;
-    internal EZoneUseCase UseCase = EZoneUseCase.OTHER;
+    internal ZoneType ZoneType = ZoneType.Invalid;
+    internal ZoneUseCase UseCase = ZoneUseCase.Other;
     internal AdjacentFlagData[] Adjacencies;
+    internal GridObject[] GridObjects;
     internal Data ZoneData = new Data();
+    PrimaryKey IListItem.PrimaryKey { get => Id; set => Id = value; }
     internal struct Data
     {
         internal Vector2[] Points = null!;
         internal float SizeX = float.NaN;
         internal float SizeZ = float.NaN;
         internal float Radius = float.NaN;
+        internal float X = float.NaN;
+        internal float Z = float.NaN;
         public Data() { }
     }
     internal bool IsValid = false;
     internal static readonly PropertyData[] ValidProperties = new PropertyData[]
     {
-        new PropertyData("size-x", EZoneType.RECTANGLE, (PropertyData.ModData<float>)    ((ref Data d, float v)     => d.SizeX  = v)),
-        new PropertyData("size-z", EZoneType.RECTANGLE, (PropertyData.ModData<float>)    ((ref Data d, float v)     => d.SizeZ  = v)),
-        new PropertyData("radius", EZoneType.CIRCLE,    (PropertyData.ModData<float>)    ((ref Data d, float v)     => d.Radius = v)),
-        new PropertyData("points", EZoneType.POLYGON,   (PropertyData.ModData<Vector2[]>)((ref Data d, Vector2[] v) => d.Points = v))
+        new PropertyData("size-x", ZoneType.Rectangle, (PropertyData.ModData<float>)    ((ref Data d, float v)     => d.SizeX  = v)),
+        new PropertyData("size-z", ZoneType.Rectangle, (PropertyData.ModData<float>)    ((ref Data d, float v)     => d.SizeZ  = v)),
+        new PropertyData("radius", ZoneType.Circle,    (PropertyData.ModData<float>)    ((ref Data d, float v)     => d.Radius = v)),
+        new PropertyData("points", ZoneType.Polygon,   (PropertyData.ModData<Vector2[]>)((ref Data d, Vector2[] v) => d.Points = v))
     };
     internal readonly struct PropertyData
     {
         public readonly string Name;
-        public readonly EZoneType ZoneType;
+        public readonly ZoneType ZoneType;
         public readonly Delegate Modifier;
-        public PropertyData(string name, EZoneType zoneType, Delegate modifier)
+        public PropertyData(string name, ZoneType zoneType, Delegate modifier)
         {
             Name = name;
             ZoneType = zoneType;
             Modifier = modifier;
         }
 
-        public delegate void ModData<T>(ref Data d, T v);
+        public delegate void ModData<in T>(ref Data d, T v);
     }
     public ZoneModel()
     {
         ShortName = null;
-        X = float.NaN;
-        Z = float.NaN;
+        SpawnX = float.NaN;
+        SpawnZ = float.NaN;
         UseMapCoordinates = false;
         Id = -1;
         Adjacencies = Array.Empty<AdjacentFlagData>();
+        GridObjects = Array.Empty<GridObject>();
+        Map = -1;
     }
 
     internal Zone GetZone()
@@ -63,50 +73,53 @@ public struct ZoneModel
         {
             switch (ZoneType)
             {
-                case EZoneType.RECTANGLE:
-                    return new RectZone(ref this);
-                case EZoneType.CIRCLE:
-                    return new CircleZone(ref this);
-                case EZoneType.POLYGON:
-                    return new PolygonZone(ref this);
+                case ZoneType.Rectangle:
+                    return new RectZone(in this);
+                case ZoneType.Circle:
+                    return new CircleZone(in this);
+                case ZoneType.Polygon:
+                    return new PolygonZone(in this);
             }
         }
         throw new ZoneReadException("Failure when creating a zone object. This JSONZoneData was not read properly.");
     }
     /// <returns><see langword="false"/> if <paramref name="fl"/> is <see cref="float.NaN"/> or <see cref="float.PositiveInfinity"/> or <see cref="float.NegativeInfinity"/>.</returns>
-    private bool IsBadFloat(float fl) => float.IsNaN(fl) || float.IsInfinity(fl);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsBadFloat(float fl) => float.IsNaN(fl) || float.IsInfinity(fl);
     /// <summary>
     /// Validates all data in this model.
     /// </summary>
     /// <exception cref="ZoneReadException">If data is invalid.</exception>
     internal void ValidateRead()
     {
-        if (Id < 0)
-            throw new ZoneReadException("No ID was provided.");
-        if (float.IsNaN(X) || float.IsNaN(Z))
-            throw new ZoneReadException("Zones are required to define: x (float), z (float).") { Data = this };
         if (string.IsNullOrEmpty(Name))
             throw new ZoneReadException("Zones are required to define: name (string, max. 128 char), and optionally short-name (string, max. 64 char).") { Data = this };
         else if (Name.Length > 128)
             throw new ZoneReadException("Name must be 128 characters or less.") { Data = this };
         if (ShortName != null && ShortName.Length > 64)
             throw new ZoneReadException("Short name must be 64 characters or less.") { Data = this };
-        if (ZoneType == EZoneType.INVALID)
+        if (ZoneType == ZoneType.Invalid)
         {
             throw new ZoneReadException("Zone JSON data should have at least one valid data property: " + string.Join(", ", ValidProperties.Select(x => x.Name))) { Data = this };
         }
-        if (ZoneType == EZoneType.RECTANGLE)
+        if (ZoneType == ZoneType.Rectangle)
         {
+            if (IsBadFloat(ZoneData.X) || IsBadFloat(ZoneData.Z))
+                throw new ZoneReadException("Rectangle zones are required to define: x (float), z (float).") { Data = this };
             if (IsBadFloat(ZoneData.SizeX) || IsBadFloat(ZoneData.SizeZ) || ZoneData.SizeX <= 0 || ZoneData.SizeZ <= 0)
                 throw new ZoneReadException("Rectangle zones are required to define: size-x (float, > 0), size-z (float, > 0).") { Data = this };
         }
-        else if (ZoneType == EZoneType.CIRCLE)
+        else if (ZoneType == ZoneType.Circle)
         {
+            if (IsBadFloat(ZoneData.X) || IsBadFloat(ZoneData.Z))
+                throw new ZoneReadException("Circle zones are required to define: x (float), z (float).") { Data = this };
             if (IsBadFloat(ZoneData.Radius) || ZoneData.Radius <= 0)
                 throw new ZoneReadException("Circle zones are required to define: radius (float, > 0).") { Data = this };
         }
-        else if (ZoneType == EZoneType.POLYGON)
+        else if (ZoneType == ZoneType.Polygon)
         {
+            if (IsBadFloat(SpawnX) || IsBadFloat(SpawnZ))
+                throw new ZoneReadException("Polygon zones are required to define: x (float), z (float).") { Data = this };
             if (ZoneData.Points == null || ZoneData.Points.Length < 3)
                 throw new ZoneReadException("Polygon zones are required to define at least 3 points: points ({ \"x\", \"z\" } array).") { Data = this };
         }
@@ -114,33 +127,37 @@ public struct ZoneModel
         {
             throw new ZoneReadException("Zone JSON data should have at least one valid data property: " + string.Join(", ", ValidProperties.Select(x => x.Name))) { Data = this };
         }
-        if (UseCase < EZoneUseCase.OTHER || UseCase > EZoneUseCase.LOBBY)
+        if (UseCase is < ZoneUseCase.Other or > ZoneUseCase.Lobby)
             throw new ZoneReadException("Use case is out of range, must be: OTHER (0), FLAG (1), T1_MAIN (2), T2_MAIN (3), T1_AMC (4), T2_AMC (5), LOBBY (6).");
+        if (Map < 0 || Map >= MapScheduler.MapCount)
+            throw new ZoneReadException("Map index is out of range, must be between 0 and " + (MapScheduler.MapCount - 1).ToString(Warfare.Data.AdminLocale)) { Data = this };
+        if (!IsBadFloat(MinimumHeight) && !IsBadFloat(MaximumHeight) && MaximumHeight <= MinimumHeight)
+            throw new ZoneReadException("Max height is less than or equal to min height, it must be greater than it and vice versa (or not defined).") { Data = this };
         IsValid = true;
     }
 }
 
 [Translatable]
-public enum EZoneType : byte
+public enum ZoneType : byte
 {
-    INVALID = 0,
-    CIRCLE = 1,
-    RECTANGLE = 2,
-    POLYGON = 4
+    Invalid = 0,
+    Circle = 1,
+    Rectangle = 2,
+    Polygon = 4
 }
 [Translatable("Use Case")]
-public enum EZoneUseCase : byte
+public enum ZoneUseCase : byte
 {
     [Translatable("Unknown")]
-    OTHER = 0,
-    FLAG = 1,
+    Other = 0,
+    Flag = 1,
     [Translatable("Main Base: Team 1")]
-    T1_MAIN = 2,
+    Team1Main = 2,
     [Translatable("Main Base: Team 2")]
-    T2_MAIN = 3,
+    Team2Main = 3,
     [Translatable("AMC Zone: Team 1")]
-    T1_AMC = 4,
+    Team1MainCampZone = 4,
     [Translatable("AMC Zone: Team 2")]
-    T2_AMC = 5,
-    LOBBY = 6
+    Team2MainCampZone = 5,
+    Lobby = 6
 }

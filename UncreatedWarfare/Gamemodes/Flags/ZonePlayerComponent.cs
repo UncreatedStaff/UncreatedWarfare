@@ -4,8 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
 
@@ -22,9 +22,10 @@ internal class ZonePlayerComponent : MonoBehaviour
     private ZoneBuilder? _currentBuilder;
     private bool _currentBuilderIsExisting;
     private List<Vector2>? _currentPoints;
-    private float _lastZonePreviewRefresh = 0f;
+    private float _lastZonePreviewRefresh;
     private static readonly List<ZonePlayerComponent> Builders = new List<ZonePlayerComponent>(2);
     internal static EffectAsset? Airdrop;
+    internal static EffectAsset Spawn = null!;
     internal static EffectAsset Center = null!;
     internal static EffectAsset Corner = null!;
     internal static EffectAsset Side = null!;
@@ -32,19 +33,22 @@ internal class ZonePlayerComponent : MonoBehaviour
     private int _lastPtCheck = -4;
     private readonly List<Transaction> _undoBuffer = new List<Transaction>(16);
     private readonly List<Transaction> _redoBuffer = new List<Transaction>(4);
+    private volatile bool _isLoading;
     internal static void UIInit()
     {
         _edit = Assets.find<EffectAsset>(new Guid("503fed1019db4c7e9c365bf6e108b43f"));
         Center = Assets.find<EffectAsset>(new Guid("1815d4fc66e84e82a70a598534d8c319"));
         Corner = Assets.find<EffectAsset>(new Guid("e8637c08f4d54ad68650c1250b0c57a1"));
         Side = Assets.find<EffectAsset>(new Guid("00de10ee40894e1081e43d1b863d7037"));
+        Spawn = Assets.find<EffectAsset>(new Guid("effb5901fc934c4eaaf0e80ba4c642e3"));
         Airdrop = null;
-        if (Center == null || Corner == null || Side == null)
+        if (Center == null || Corner == null || Side == null || Spawn == null)
         {
             Airdrop = Assets.find<EffectAsset>(new Guid("2c17fbd0f0ce49aeb3bc4637b68809a2"))!;
             Center = Assets.find<EffectAsset>(new Guid("0bbb4d81380148a88aef453b3c5158bd"))!;
             Corner = Assets.find<EffectAsset>(new Guid("563658fc7a334dbc8c0b9e322aac96b9"))!;
             Side = Assets.find<EffectAsset>(new Guid("d9820fabf8174ed5807dc44593800406"))!;
+            Spawn = Assets.find<EffectAsset>(new Guid("d24723f15bfe4544bc9ee689c0d8d611"));
         }
     }
     internal void Init(UCPlayer player)
@@ -60,7 +64,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             float t = Time.time;
             if (t - _lastZonePreviewRefresh > 55f)
                 RefreshPreview();
-            else if (_currentBuilder.ZoneType == EZoneType.POLYGON && (_closestPoint == -1 || t - _lastPtCheck > 2f) && _currentPoints is not null && _currentPoints.Count > 0)
+            else if (_currentBuilder.ZoneType == ZoneType.Polygon && (_closestPoint == -1 || t - _lastPtCheck > 2f) && _currentPoints is not null && _currentPoints.Count > 0)
             {
                 Vector3 pos = _player.Position;
                 if (pos == default)
@@ -111,29 +115,20 @@ internal class ZonePlayerComponent : MonoBehaviour
 
     internal void DeleteCommand(CommandInteraction ctx)
     {
+        if (_isLoading)
+            return;
         ThreadUtil.assertIsGameThread();
-        Zone zone;
+        SqlItem<Zone> proxy;
+        ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
+        if (singleton is null)
+            throw ctx.SendGamemodeError();
         if (!ctx.HasArgs(1))
         {
             Vector3 pos = _player.Position;
             if (pos == default) return;
-            List<int> t = new List<int>(2);
-            for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
-            {
-                if (Data.ZoneProvider.Zones[i].IsInside(pos))
-                {
-                    t.Add(i);
-                }
-            }
-            if (t.Count == 1)
-            {
-                zone = Data.ZoneProvider.Zones[t[0]];
-            }
-            else
-            {
-                ctx.Reply(T.ZoneDeleteZoneNotInZone);
-                return;
-            }
+            proxy = singleton.FindInsizeZone(pos, true)!;
+            if (proxy is null)
+                throw ctx.Reply(T.ZoneDeleteZoneNotInZone);
         }
         else
         {
@@ -142,75 +137,34 @@ internal class ZonePlayerComponent : MonoBehaviour
                 ctx.Reply(T.ZoneDeleteZoneNotFound, Translation.Null(T.ZoneDeleteZoneNotFound.Flags));
                 return;
             }
-            zone = null!;
-            if (int.TryParse(name, System.Globalization.NumberStyles.Any, Data.LocalLocale, out int id) && id > -1)
-            {
-                for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
-                {
-                    if (Data.ZoneProvider.Zones[i].Id == id)
-                    {
-                        zone = Data.ZoneProvider.Zones[i];
-                        break;
-                    }
-                }
-            }
-            if (zone is null)
-            {
-                for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
-                {
-                    if (Data.ZoneProvider.Zones[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-                    {
-                        zone = Data.ZoneProvider.Zones[i];
-                        break;
-                    }
-                }
-                if (zone is null)
-                {
-                    for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
-                    {
-                        if (Data.ZoneProvider.Zones[i].Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                        {
-                            zone = Data.ZoneProvider.Zones[i];
-                            break;
-                        }
-                    }
-                }
-            }
-            if (zone is null)
-            {
-                ctx.Reply(T.ZoneDeleteZoneNotFound, name);
-                return;
-            }
+
+            proxy = singleton.SearchZone(name)!;
+            if (proxy is null)
+                throw ctx.Reply(T.ZoneDeleteZoneNotFound, name);
         }
+
+        Zone? zone = proxy.Item;
+        if (zone is null)
+            throw ctx.Reply(T.ZoneDeleteZoneNotFound, name);
         ctx.Reply(T.ZoneDeleteZoneConfirm, zone);
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
             if (await CommandWaiter.WaitAsync(_player, "confirm", 10000))
             {
-                await UCWarfare.ToUpdate();
+                await proxy.Delete();
 
-                for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
+                await UCWarfare.ToUpdate();
+                for (int j = 0; j < Builders.Count; ++j)
                 {
-                    if (Data.ZoneProvider.Zones[i].Name.Equals(zone.Name, StringComparison.Ordinal))
-                    {
-                        int id = Data.ZoneProvider.Zones[i].Id;
-                        Data.ZoneProvider.Zones.RemoveAt(i);
-                        Data.ZoneProvider.Save();
-                        for (int j = 0; j < Builders.Count; ++j)
-                        {
-                            ZonePlayerComponent b = Builders[j];
-                            if (b._currentBuilder is not null && b._currentBuilderIsExisting && b._currentBuilder!.Id == id)
-                                b.OnDeleted();
-                        }
-                        ctx.Reply(T.ZoneDeleteZoneSuccess, zone);
-                        return;
-                    }
+                    ZonePlayerComponent b = Builders[j];
+                    if (b._currentBuilder is not null && b._currentBuilderIsExisting && b._currentBuilder!.Id == zone.Id)
+                        b.OnDeleted();
                 }
-                ctx.Reply(T.ZoneDeleteZoneNotFound, zone.Name);
+                ctx.Reply(T.ZoneDeleteZoneSuccess, zone);
             }
             else
                 ctx.Reply(T.ZoneDeleteDidNotConfirm, zone);
-        });
+        }, ctx: "Delete zone confirmation wait.", timeout: 11000);
         ctx.Defer();
     }
 
@@ -218,51 +172,40 @@ internal class ZonePlayerComponent : MonoBehaviour
     {
         _player.SendChat(T.ZoneDeleteEditingZoneDeleted);
         _currentBuilderIsExisting = false;
-
-        int nextId = Data.ZoneProvider.NextFreeID();
-        for (int i = Builders.Count - 1; i >= 0; --i)
-        {
-            ZoneBuilder? zb = Builders[i]._currentBuilder;
-            if (zb == null)
-            {
-                Builders.RemoveAt(i);
-                continue;
-            }
-            if (zb.Id >= nextId)
-            {
-                nextId = zb.Id + 1;
-            }
-        }
-        _currentBuilder!.Id = nextId;
+        _currentBuilder!.Id = -1;
     }
 
     internal void CreateCommand(CommandInteraction ctx)
     {
+        if (_isLoading)
+            return;
         ThreadUtil.assertIsGameThread();
         if (ctx.HasArgs(2))
             throw ctx.SendCorrectUsage("/zone create <polygon|rectange|circle> <name>");
+        ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
+        if (singleton is null)
+            throw ctx.SendGamemodeError();
 
-        EZoneType type = EZoneType.INVALID;
+        ZoneType type = ZoneType.Invalid;
         if (ctx.MatchParameter(0, "rect", "rectangle", "square", "sqr"))
         {
-            type = EZoneType.RECTANGLE;
+            type = ZoneType.Rectangle;
         }
         if (ctx.MatchParameter(0, "circle", "oval", "ellipse"))
         {
-            type = EZoneType.CIRCLE;
+            type = ZoneType.Circle;
         }
         if (ctx.MatchParameter(0, "polygon", "poly", "shape"))
         {
-            type = EZoneType.POLYGON;
+            type = ZoneType.Polygon;
         }
-        if (type == EZoneType.INVALID)
+        if (type == ZoneType.Invalid)
             throw ctx.SendCorrectUsage("Invalid Type - /zone create <polygon|rectange|circle> <name>");
 
         string name = ctx.GetRange(1)!;
 
-        for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
-            if (Data.ZoneProvider.Zones[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-                throw ctx.Reply(T.ZoneCreateNameTaken, Data.ZoneProvider.Zones[i].Name);
+        if (singleton.IsNameTaken(name, out string originalName))
+            throw ctx.Reply(T.ZoneCreateNameTaken, originalName);
 
         for (int i = Builders.Count - 1; i >= 0; --i)
         {
@@ -276,42 +219,29 @@ internal class ZonePlayerComponent : MonoBehaviour
                 throw ctx.Reply(T.ZoneCreateNameTakenEditing, zb.Name, Builders[i]._player);
         }
 
-        int nextId = Data.ZoneProvider.NextFreeID();
-        for (int i = Builders.Count - 1; i >= 0; --i)
-        {
-            ZoneBuilder? zb = Builders[i]._currentBuilder;
-            if (zb == null)
-            {
-                Builders.RemoveAt(i);
-                continue;
-            }
-            if (zb.Id >= nextId)
-            {
-                nextId = zb.Id + 1;
-            }
-        }
-
         Vector3 pos = _player.Position;
-        _currentBuilder = new ZoneBuilder()
+        _currentBuilder = new ZoneBuilder
         {
             Name = name,
             UseMapCoordinates = false,
-            X = pos.x,
-            Z = pos.z,
+            SpawnX = pos.x,
+            SpawnZ = pos.z,
             ZoneType = type,
-            Id = nextId,
+            Id = -1,
             Adjacencies = Array.Empty<AdjacentFlagData>()
         };
+        _currentBuilder.ZoneData.X = pos.x;
+        _currentBuilder.ZoneData.Z = pos.z;
         _undoBuffer.Clear();
         _redoBuffer.Clear();
         _currentBuilderIsExisting = false;
         switch (type)
         {
-            case EZoneType.RECTANGLE:
+            case ZoneType.Rectangle:
                 _currentBuilder.ZoneData.SizeX = 10f;
                 _currentBuilder.ZoneData.SizeZ = 10f;
                 break;
-            case EZoneType.CIRCLE:
+            case ZoneType.Circle:
                 _currentBuilder.ZoneData.Radius = 5f;
                 break;
         }
@@ -342,17 +272,19 @@ internal class ZonePlayerComponent : MonoBehaviour
         EffectManager.askEffectClearByID(Corner.id, channel);
         EffectManager.askEffectClearByID(Center.id, channel);
         if (_currentBuilder == null) return;
-        Vector3 pos = new Vector3(_currentBuilder.X, 0f, _currentBuilder.Z);
+        Vector3 pos = new Vector3(_currentBuilder.CenterX, 0f, _currentBuilder.CenterZ);
         pos.y = F.GetHeight(pos, _currentBuilder.MinHeight);
         F.TriggerEffectReliable(Center, channel, pos); // purple paintball splatter
+        if (_currentBuilder.ZoneType != ZoneType.Polygon)
+            F.TriggerEffectReliable(Center, channel, pos); // purple paintball splatter
         if (Airdrop != null)
             F.TriggerEffectReliable(Airdrop, channel, pos); // airdrop
         switch (_currentBuilder.ZoneType)
         {
-            case EZoneType.CIRCLE:
+            case ZoneType.Circle:
                 if (!float.IsNaN(_currentBuilder.ZoneData.Radius))
                 {
-                    CircleZone.CalculateParticleSpawnPoints(out Vector2[] points, _currentBuilder.ZoneData.Radius, new Vector2(_currentBuilder.X, _currentBuilder.Z));
+                    CircleZone.CalculateParticleSpawnPoints(out Vector2[] points, _currentBuilder.ZoneData.Radius, new Vector2(_currentBuilder.CenterX, _currentBuilder.CenterZ));
                     for (int i = 0; i < points.Length; i++)
                     {
                         ref Vector2 point = ref points[i];
@@ -364,11 +296,11 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                 }
                 break;
-            case EZoneType.RECTANGLE:
+            case ZoneType.Rectangle:
                 if (!float.IsNaN(_currentBuilder.ZoneData.SizeX) && !float.IsNaN(_currentBuilder.ZoneData.SizeZ))
                 {
                     RectZone.CalculateParticleSpawnPoints(out Vector2[] points, out Vector2[] corners,
-                        new Vector2(_currentBuilder.ZoneData.SizeX, _currentBuilder.ZoneData.SizeZ), new Vector2(_currentBuilder.X, _currentBuilder.Z));
+                        new Vector2(_currentBuilder.ZoneData.SizeX, _currentBuilder.ZoneData.SizeZ), new Vector2(_currentBuilder.CenterX, _currentBuilder.CenterZ));
                     for (int i = 0; i < points.Length; i++)
                     {
                         ref Vector2 point = ref points[i];
@@ -389,7 +321,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                 }
                 break;
-            case EZoneType.POLYGON:
+            case ZoneType.Polygon:
                 if (_currentPoints != null && _currentPoints.Count > 2)
                 {
                     PolygonZone.CalculateParticleSpawnPoints(out Vector2[] points, _currentPoints);
@@ -417,9 +349,14 @@ internal class ZonePlayerComponent : MonoBehaviour
     }
     internal void EditCommand(CommandInteraction ctx)
     {
+        if (_isLoading)
+            return;
         ThreadUtil.assertIsGameThread();
         if (!ctx.HasArgs(1))
             throw ctx.SendCorrectUsage(ZoneEditUsage);
+        ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
+        if (singleton is null)
+            throw ctx.SendGamemodeError();
 
         Vector3 pos = _player.Position;
         if (pos == default)
@@ -430,63 +367,20 @@ internal class ZonePlayerComponent : MonoBehaviour
             if (_currentBuilder != null)
                 throw ctx.Reply(T.ZoneEditExistingInProgress);
 
-            Zone? zone = null;
+            SqlItem<Zone>? proxy = null;
             if (ctx.HasArgsExact(1))
             {
-                List<int> t = new List<int>(2);
-                for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
-                {
-                    if (Data.ZoneProvider.Zones[i].IsInside(pos))
-                    {
-                        t.Add(i);
-                    }
-                }
-                if (t.Count == 1)
-                {
-                    zone = Data.ZoneProvider.Zones[t[0]];
-                }
-                else
+                proxy = singleton.FindInsizeZone(pos, true);
+                if (proxy is null)
                     throw ctx.Reply(T.ZoneEditExistingInvalid);
             }
             else
             {
                 string name = ctx.GetRange(1)!;
-                if (int.TryParse(name, System.Globalization.NumberStyles.Any, Data.LocalLocale, out int id) && id > -1)
-                {
-                    for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
-                    {
-                        if (Data.ZoneProvider.Zones[i].Id == id)
-                        {
-                            zone = Data.ZoneProvider.Zones[i];
-                            break;
-                        }
-                    }
-                }
-                if (zone == null)
-                {
-                    for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
-                    {
-                        if (Data.ZoneProvider.Zones[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-                        {
-                            zone = Data.ZoneProvider.Zones[i];
-                            break;
-                        }
-                    }
-                    if (zone == null)
-                    {
-                        for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
-                        {
-                            if (Data.ZoneProvider.Zones[i].Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                            {
-                                zone = Data.ZoneProvider.Zones[i];
-                                break;
-                            }
-                        }
-                    }
-                }
+                proxy = singleton.SearchZone(name);
             }
 
-            if (zone == null)
+            if (proxy?.Item is not { } zone)
                 throw ctx.Reply(T.ZoneEditExistingInvalid);
 
             _currentBuilderIsExisting = true;
@@ -494,7 +388,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             _currentPoints?.Clear();
             _undoBuffer.Clear();
             _redoBuffer.Clear();
-            if (_currentBuilder.ZoneType == EZoneType.POLYGON && _currentBuilder.ZoneData.Points != null)
+            if (_currentBuilder.ZoneType == ZoneType.Polygon && _currentBuilder.ZoneData.Points != null)
             {
                 if (_currentPoints == null)
                     _currentPoints = new List<Vector2>(_currentBuilder.ZoneData.Points);
@@ -561,10 +455,10 @@ internal class ZonePlayerComponent : MonoBehaviour
             {
                 if (ctx.HasArgs(2))
                 {
-                    EZoneType type = EZoneType.INVALID;
+                    ZoneType type = ZoneType.Invalid;
                     if (ctx.MatchParameter(1, "rect", "rectangle", "square"))
                     {
-                        type = EZoneType.RECTANGLE;
+                        type = ZoneType.Rectangle;
                         if (float.IsNaN(_currentBuilder.ZoneData.SizeX))
                             _currentBuilder.ZoneData.SizeX = 10f;
                         if (float.IsNaN(_currentBuilder.ZoneData.SizeZ))
@@ -572,15 +466,15 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                     if (ctx.MatchParameter(1, "circle", "oval", "ellipse"))
                     {
-                        type = EZoneType.CIRCLE;
+                        type = ZoneType.Circle;
                         if (float.IsNaN(_currentBuilder.ZoneData.Radius))
                             _currentBuilder.ZoneData.Radius = 5f;
                     }
                     if (ctx.MatchParameter(1, "polygon", "poly", "shape", "custom"))
                     {
-                        type = EZoneType.POLYGON;
+                        type = ZoneType.Polygon;
                     }
-                    if (type == EZoneType.INVALID)
+                    if (type == ZoneType.Invalid)
                     {
                         ctx.Reply(T.ZoneEditTypeInvlaid);
                         return;
@@ -602,29 +496,13 @@ internal class ZonePlayerComponent : MonoBehaviour
             {
                 try
                 {
-                    if (_currentBuilder.UseCase == EZoneUseCase.OTHER || _currentBuilder.UseCase > EZoneUseCase.LOBBY)
+                    if (_currentBuilder.UseCase == ZoneUseCase.Other || _currentBuilder.UseCase > ZoneUseCase.Lobby)
                     {
                         ctx.Reply(T.ZoneEditFinalizeUseCaseUnset);
                         return;
                     }
-                    int replIndex = -1;
-                    for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
-                    {
-                        if (Data.ZoneProvider.Zones[i].Id == _currentBuilder.Id)
-                        {
-                            if (!_currentBuilderIsExisting)
-                            {
-                                ctx.Reply(T.ZoneEditFinalizeExists);
-                                return;
-                            }
-                            else
-                            {
-                                replIndex = i;
-                                break;
-                            }
-                        }
-                    }
-                    if (_currentBuilder.ZoneType == EZoneType.POLYGON && _currentPoints != null)
+
+                    if (_currentBuilder.ZoneType == ZoneType.Polygon && _currentPoints != null)
                         _currentBuilder.Points = _currentPoints.ToArray();
                     ZoneModel mdl;
                     try
@@ -641,31 +519,39 @@ internal class ZonePlayerComponent : MonoBehaviour
                         ctx.Reply(T.ZoneEditFinalizeFailure, ex2.Message);
                         return;
                     }
+                    if (singleton.IsNameTaken(mdl.Name, out _))
+                        throw ctx.Reply(T.ZoneEditFinalizeExists);
                     Zone zone = mdl.GetZone();
                     bool @new;
-                    if (replIndex == -1)
+                    int id = _currentBuilder.Id;
+                    _isLoading = true;
+                    UCWarfare.RunTask(async () =>
                     {
-                        Data.ZoneProvider.Zones.Add(zone);
-                        @new = true;
-                    }
-                    else
-                    {
-                        Data.ZoneProvider.Zones[replIndex] = zone;
-                        @new = false;
-                    }
-                    Data.ZoneProvider.Save();
-                    Builders.Remove(this);
-                    ctx.Reply(@new ? T.ZoneEditFinalizeSuccess : T.ZoneEditFinalizeOverwrote, zone);
-                    _currentPoints = null;
-                    _currentBuilder = null;
-                    _undoBuffer.Clear();
-                    _redoBuffer.Clear();
-                    if (_edit != null)
-                        EffectManager.askEffectClearByID(_edit.id, _player.Player.channel.owner.transportConnection);
-                    _player.HasUIHidden = false;
-                    UCWarfare.I.UpdateLangs(_player);
-                    _currentBuilderIsExisting = false;
-                    RefreshPreview();
+                        try
+                        {
+                            SqlItem<Zone> proxy = await singleton.AddOrUpdate(zone);
+                            zone = proxy.Item ?? zone;
+                            @new = id < 0;
+                            await UCWarfare.ToUpdate();
+                            ctx.Reply(@new ? T.ZoneEditFinalizeSuccess : T.ZoneEditFinalizeOverwrote, zone);
+                        }
+                        finally
+                        {
+                            _isLoading = false;
+                            Builders.Remove(this);
+                            _currentPoints = null;
+                            _currentBuilder = null;
+                            _undoBuffer.Clear();
+                            _redoBuffer.Clear();
+                            if (_edit != null)
+                                EffectManager.askEffectClearByID(_edit.id, _player.Player.channel.owner.transportConnection);
+                            _player.HasUIHidden = false;
+                            UCWarfare.I.UpdateLangs(_player);
+                            _currentBuilderIsExisting = false;
+                            RefreshPreview();
+                        }
+                    }, ctx: "Finalizing zone.");
+                    ctx.Defer();
                 }
                 catch (Exception ex)
                 {
@@ -721,7 +607,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     index = 0;
                     _currentPoints = new List<Vector2>(8) { v };
                 }
-                if (!CheckType(EZoneType.POLYGON))
+                if (!CheckType(ZoneType.Polygon))
                 {
                     ITransportConnection tc = _player.Player.channel.owner.transportConnection;
                     EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Point_Value_" + (_currentPoints.Count - 1), PointText(_currentPoints.Count - 1));
@@ -751,7 +637,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         --index;
                         Vector2 pt = _currentPoints[index];
                         _currentPoints.RemoveAt(index);
-                        if (!CheckType(EZoneType.POLYGON))
+                        if (!CheckType(ZoneType.Polygon))
                         {
                             tc = _player.Player.channel.owner.transportConnection;
                             for (int i = index; i < _currentPoints.Count; ++i)
@@ -793,7 +679,7 @@ internal class ZonePlayerComponent : MonoBehaviour
 
                 Vector2 pt2 = _currentPoints[ind];
                 _currentPoints.RemoveAt(ind);
-                if (!CheckType(EZoneType.POLYGON))
+                if (!CheckType(ZoneType.Polygon))
                 {
                     tc = _player.Player.channel.owner.transportConnection;
                     for (int i = ind; i < _currentPoints.Count; ++i)
@@ -813,7 +699,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     AddTransaction(new ClearPointsTransaction(_currentPoints));
                     _currentPoints.Clear();
                 }
-                if (!CheckType(EZoneType.POLYGON))
+                if (!CheckType(ZoneType.Polygon))
                 {
                     ITransportConnection tc = _player.Player.channel.owner.transportConnection;
                     for (int i = 0; i < PointRows; ++i)
@@ -855,7 +741,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     Vector2 @new = new Vector2(dstX, dstZ);
                     _currentPoints[ind] = @new;
                     tc = _player.Player.channel.owner.transportConnection;
-                    if (!CheckType(EZoneType.POLYGON))
+                    if (!CheckType(ZoneType.Polygon))
                     {
                         EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Point_Value_" + ind, PointText(ind));
                         EffectManager.sendUIEffectVisibility(EditKey, tc, true, "Polygon_Point_Num_" + ind, true);
@@ -877,7 +763,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     Vector2 @new = new Vector2(dstX, dstZ);
                     _currentPoints[index] = @new;
                     tc = _player.Player.channel.owner.transportConnection;
-                    if (!CheckType(EZoneType.POLYGON))
+                    if (!CheckType(ZoneType.Polygon))
                     {
                         EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Point_Value_" + index, PointText(index));
                         EffectManager.sendUIEffectVisibility(EditKey, tc, true, "Polygon_Point_Num_" + index, true);
@@ -913,7 +799,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     Vector2 @new = new Vector2(pos.x, pos.z);
                     _currentPoints[ind] = @new;
                     tc = _player.Player.channel.owner.transportConnection;
-                    if (!CheckType(EZoneType.POLYGON))
+                    if (!CheckType(ZoneType.Polygon))
                     {
                         EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Point_Value_" + ind, PointText(ind));
                         EffectManager.sendUIEffectVisibility(EditKey, tc, true, "Polygon_Point_Num_" + ind, true);
@@ -935,7 +821,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     Vector2 @new = new Vector2(pos.x, pos.z);
                     _currentPoints[index] = @new;
                     tc = _player.Player.channel.owner.transportConnection;
-                    if (!CheckType(EZoneType.POLYGON))
+                    if (!CheckType(ZoneType.Polygon))
                     {
                         EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Point_Value_" + index, PointText(index));
                         EffectManager.sendUIEffectVisibility(EditKey, tc, true, "Polygon_Point_Num_" + index, true);
@@ -969,7 +855,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     Vector2 old = _currentPoints[ind];
                     _currentPoints[ind] = v;
                     tc = _player.Player.channel.owner.transportConnection;
-                    if (!CheckType(EZoneType.POLYGON))
+                    if (!CheckType(ZoneType.Polygon))
                     {
                         EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Point_Value_" + ind, PointText(ind));
                         EffectManager.sendUIEffectVisibility(EditKey, tc, true, "Polygon_Point_Num_" + ind, true);
@@ -1094,7 +980,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 _currentPoints.RemoveAt(from);
                 _currentPoints.Insert(to, old);
                 ITransportConnection tc = _player.Player.channel.owner.transportConnection;
-                if (!CheckType(EZoneType.POLYGON))
+                if (!CheckType(ZoneType.Polygon))
                 {
                     int ind2 = Math.Min(from, to);
                     for (int i = ind2; i < _currentPoints.Count; ++i)
@@ -1112,7 +998,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             {
                 float radius;
                 if (!ctx.HasArgs(2))
-                    radius = (new Vector2(pos.x, pos.z) - new Vector2(_currentBuilder.X, _currentBuilder.Z)).magnitude;
+                    radius = (new Vector2(pos.x, pos.z) - new Vector2(_currentBuilder.CenterX, _currentBuilder.CenterZ)).magnitude;
                 else if (!ctx.TryGet(1, out radius))
                     throw ctx.Reply(T.ZoneEditRadiusInvalid);
 
@@ -1123,7 +1009,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             {
                 float sizex;
                 if (!ctx.HasArgs(2))
-                    sizex = Mathf.Abs(pos.x - _currentBuilder.X) * 2;
+                    sizex = Mathf.Abs(pos.x - _currentBuilder.CenterX) * 2;
                 else if (!ctx.TryGet(1, out sizex))
                     throw ctx.Reply(T.ZoneEditSizeXInvalid);
 
@@ -1134,7 +1020,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             {
                 float sizez;
                 if (!ctx.HasArgs(2))
-                    sizez = Mathf.Abs(pos.z - _currentBuilder.Z) * 2;
+                    sizez = Mathf.Abs(pos.z - _currentBuilder.CenterZ) * 2;
                 else if (!ctx.TryGet(1, out sizez))
                     throw ctx.Reply(T.ZoneEditSizeZInvalid);
 
@@ -1153,8 +1039,23 @@ internal class ZonePlayerComponent : MonoBehaviour
                 else if (!ctx.TryGet(1, out x) || !ctx.TryGet(2, out z))
                     throw ctx.Reply(T.ZoneEditCenterInvalid);
 
-                AddTransaction(new SetCenterTransaction(_currentBuilder.X, _currentBuilder.Z, x, z));
-                SetCenter(x, z);
+                AddTransaction(new SetCenterTransaction(_currentBuilder.CenterX, _currentBuilder.CenterZ, x, z, false));
+                SetCenter(x, z, false);
+            }
+            else if (ctx.MatchParameter(0, "spawn", "spawnpoint", "respawn"))
+            {
+                float x;
+                float z;
+                if (!ctx.HasArgs(3))
+                {
+                    x = pos.x;
+                    z = pos.z;
+                }
+                else if (!ctx.TryGet(1, out x) || !ctx.TryGet(2, out z))
+                    throw ctx.Reply(T.ZoneEditSpawnInvalid);
+
+                AddTransaction(new SetCenterTransaction(_currentBuilder.CenterX, _currentBuilder.CenterZ, x, z, false));
+                SetCenter(x, z, false);
             }
             else if (ctx.MatchParameter(0, "name", "title", "longname"))
             {
@@ -1175,7 +1076,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 if (!ctx.HasArgsExact(3) && w2Ic)
                     throw ctx.Reply(T.ZoneEditUseCaseInvalid);
 
-                if (Enum.TryParse(ctx.GetRange(w2Ic ? 2 : 1)!.Replace(' ', '_'), true, out EZoneUseCase uc))
+                if (Enum.TryParse(ctx.GetRange(w2Ic ? 2 : 1)!.Replace(' ', '_'), true, out ZoneUseCase uc))
                 {
                     AddTransaction(new SetUseTransaction(_currentBuilder!.UseCase, uc));
                     SetUseCase(uc);
@@ -1217,7 +1118,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         }
     }
 
-    private void SetUseCase(EZoneUseCase uc)
+    private void SetUseCase(ZoneUseCase uc)
     {
         _currentBuilder!.UseCase = uc;
         _player.SendChat(T.ZoneEditUseCaseSuccess, uc);
@@ -1241,7 +1142,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     private void SetRadius(float radius)
     {
         _currentBuilder!.ZoneData.Radius = radius;
-        if (!CheckType(EZoneType.CIRCLE))
+        if (!CheckType(ZoneType.Circle))
         {
             EffectManager.sendUIEffectText(EditKey, _player.Player.channel.owner.transportConnection, true, "Circle_Radius", _currentBuilder.ZoneData.Radius.ToString("F2", Data.LocalLocale) + "m");
             RefreshPreview();
@@ -1273,7 +1174,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     private void SetSizeX(float sizex)
     {
         _currentBuilder!.ZoneData.SizeX = sizex;
-        if (!CheckType(EZoneType.RECTANGLE))
+        if (!CheckType(ZoneType.Rectangle))
         {
             EffectManager.sendUIEffectText(EditKey, _player.Player.channel.owner.transportConnection, true, "Rect_SizeX", _currentBuilder.ZoneData.SizeX.ToString("F2", Data.LocalLocale) + "m");
             RefreshPreview();
@@ -1283,82 +1184,95 @@ internal class ZonePlayerComponent : MonoBehaviour
     private void SetSizeZ(float sizez)
     {
         _currentBuilder!.ZoneData.SizeZ = sizez;
-        if (!CheckType(EZoneType.RECTANGLE))
+        if (!CheckType(ZoneType.Rectangle))
         {
             EffectManager.sendUIEffectText(EditKey, _player.Player.channel.owner.transportConnection, true, "Rect_SizeZ", _currentBuilder.ZoneData.SizeZ.ToString("F2", Data.LocalLocale) + "m");
             RefreshPreview();
         }
         _player.SendChat(T.ZoneEditSizeZSuccess, sizez);
     }
-    private void SetCenter(float x, float z)
+    private void SetCenter(float x, float z, bool isSpawn)
     {
-        _currentBuilder!.X = x;
-        _currentBuilder!.Z = z;
-        ITransportConnection tc = _player.Player.channel.owner.transportConnection;
-        switch (_currentBuilder.ZoneType)
+        if (isSpawn)
         {
-            case EZoneType.RECTANGLE:
-                EffectManager.sendUIEffectText(EditKey, tc, true, "Rect_Position", FromV2(_currentBuilder.X, _currentBuilder.Z));
-                break;
-            case EZoneType.CIRCLE:
-                EffectManager.sendUIEffectText(EditKey, tc, true, "Circle_Position", FromV2(_currentBuilder.X, _currentBuilder.Z));
-                break;
-            case EZoneType.POLYGON:
-                EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Position", FromV2(_currentBuilder.X, _currentBuilder.Z));
-                break;
+            _currentBuilder!.SpawnX = x;
+            _currentBuilder!.SpawnZ = z;
         }
-
-        float rot = _player.Player.transform.rotation.eulerAngles.y;
-        for (int i = 1; i < 5; ++i)
-        {
-            if (rot > 90 * i - 5f && rot < 90 * i + 5f)
-                rot = 90 * i;
-        }
-        bool srot = false;
-        switch (_currentBuilder.UseCase)
-        {
-            case EZoneUseCase.T1_MAIN:
-                Teams.TeamManager.Config.Team1SpawnYaw.SetCurrentMapValue(rot);
-                Teams.TeamManager.SaveConfig();
-                srot = true;
-                break;
-            case EZoneUseCase.T2_MAIN:
-                Teams.TeamManager.Config.Team2SpawnYaw.SetCurrentMapValue(rot);
-                Teams.TeamManager.SaveConfig();
-                srot = true;
-                break;
-            case EZoneUseCase.LOBBY:
-                Teams.TeamManager.Config.LobbySpawnpointYaw.SetCurrentMapValue(rot);
-                Teams.TeamManager.SaveConfig();
-                srot = true;
-                break;
-        }
-
-        if (srot)
-            _player.SendChat(T.ZoneEditCenterSuccessRotation, new Vector2(x, z), rot);
         else
-            _player.SendChat(T.ZoneEditCenterSuccess, new Vector2(x, z));
-        RefreshPreview();
+        {
+            _currentBuilder!.CenterX = x;
+            _currentBuilder!.CenterZ = z;
+        }
+        ITransportConnection tc = _player.Player.channel.owner.transportConnection;
+        if (!isSpawn || _currentBuilder.ZoneType == ZoneType.Polygon)
+        {
+            switch (_currentBuilder.ZoneType)
+            {
+                case ZoneType.Rectangle:
+                    EffectManager.sendUIEffectText(EditKey, tc, true, "Rect_Position", FromV2(_currentBuilder.CenterX, _currentBuilder.CenterZ));
+                    break;
+                case ZoneType.Circle:
+                    EffectManager.sendUIEffectText(EditKey, tc, true, "Circle_Position", FromV2(_currentBuilder.CenterX, _currentBuilder.CenterZ));
+                    break;
+                case ZoneType.Polygon:
+                    EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Position", FromV2(_currentBuilder.CenterX, _currentBuilder.CenterZ));
+                    break;
+            }
+        }
+        if (isSpawn || _currentBuilder.ZoneType == ZoneType.Polygon)
+        {
+            float rot = _player.Player.transform.rotation.eulerAngles.y;
+            for (int i = 1; i < 5; ++i)
+            {
+                if (rot > 90 * i - 5f && rot < 90 * i + 5f)
+                    rot = 90 * i;
+            }
+            bool srot = false;
+            switch (_currentBuilder.UseCase)
+            {
+                case ZoneUseCase.Team1Main:
+                    Teams.TeamManager.Config.Team1SpawnYaw.SetCurrentMapValue(rot);
+                    Teams.TeamManager.SaveConfig();
+                    srot = true;
+                    break;
+                case ZoneUseCase.Team2Main:
+                    Teams.TeamManager.Config.Team2SpawnYaw.SetCurrentMapValue(rot);
+                    Teams.TeamManager.SaveConfig();
+                    srot = true;
+                    break;
+                case ZoneUseCase.Lobby:
+                    Teams.TeamManager.Config.LobbySpawnpointYaw.SetCurrentMapValue(rot);
+                    Teams.TeamManager.SaveConfig();
+                    srot = true;
+                    break;
+            }
+
+            if (srot)
+                _player.SendChat(T.ZoneEditSpawnSuccessRotation, new Vector2(x, z), rot);
+            else
+                _player.SendChat(isSpawn ? T.ZoneEditSpawnSuccess : T.ZoneEditCenterSuccess, new Vector2(x, z));
+            RefreshPreview();
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FromV2(Vector2 v2) => $"({v2.x.ToString("F2", Data.LocalLocale)}, {v2.y.ToString("F2", Data.LocalLocale)})";
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FromV2(float x, float y) => $"({x.ToString("F2", Data.LocalLocale)}, {y.ToString("F2", Data.LocalLocale)})";
-    private bool CheckType(EZoneType type, bool overwrite = false, bool @implicit = true, bool transact = true)
+    private bool CheckType(ZoneType type, bool overwrite = false, bool @implicit = true, bool transact = true)
     {
         if (_currentBuilder == null || (!overwrite && _currentBuilder.ZoneType == type)) return false;
         ThreadUtil.assertIsGameThread();
         ITransportConnection tc = _player.Player.channel.owner.transportConnection;
         switch (_currentBuilder.ZoneType)
         {
-            case EZoneType.CIRCLE:
+            case ZoneType.Circle:
                 EffectManager.sendUIEffectVisibility(EditKey, tc, true, "CircleImage", false);
                 break;
-            case EZoneType.RECTANGLE:
+            case ZoneType.Rectangle:
                 EffectManager.sendUIEffectVisibility(EditKey, tc, true, "RectImage", false);
                 break;
-            case EZoneType.POLYGON:
+            case ZoneType.Polygon:
                 EffectManager.sendUIEffectVisibility(EditKey, tc, true, "PolygonParent", false);
                 break;
         }
@@ -1369,19 +1283,19 @@ internal class ZonePlayerComponent : MonoBehaviour
         EffectManager.sendUIEffectText(EditKey, tc, true, "Type", Localization.TranslateEnum(type, _player.Steam64));
         switch (type)
         {
-            case EZoneType.CIRCLE:
+            case ZoneType.Circle:
                 EffectManager.sendUIEffectText(EditKey, tc, true, "Circle_Radius", _currentBuilder.ZoneData.Radius.ToString("F2", Data.LocalLocale) + "m");
-                EffectManager.sendUIEffectText(EditKey, tc, true, "Circle_Position", FromV2(_currentBuilder.X, _currentBuilder.Z));
+                EffectManager.sendUIEffectText(EditKey, tc, true, "Circle_Position", FromV2(_currentBuilder.CenterX, _currentBuilder.CenterZ));
                 EffectManager.sendUIEffectVisibility(EditKey, tc, true, "CircleImage", true);
                 break;
-            case EZoneType.RECTANGLE:
+            case ZoneType.Rectangle:
                 EffectManager.sendUIEffectText(EditKey, tc, true, "Rect_SizeX", _currentBuilder.ZoneData.SizeX.ToString("F2", Data.LocalLocale) + "m");
                 EffectManager.sendUIEffectText(EditKey, tc, true, "Rect_SizeZ", _currentBuilder.ZoneData.SizeZ.ToString("F2", Data.LocalLocale) + "m");
-                EffectManager.sendUIEffectText(EditKey, tc, true, "Rect_Position", FromV2(_currentBuilder.X, _currentBuilder.Z));
+                EffectManager.sendUIEffectText(EditKey, tc, true, "Rect_Position", FromV2(_currentBuilder.CenterX, _currentBuilder.CenterZ));
                 EffectManager.sendUIEffectVisibility(EditKey, tc, true, "RectImage", true);
                 break;
-            case EZoneType.POLYGON:
-                EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Position", FromV2(_currentBuilder.X, _currentBuilder.Z));
+            case ZoneType.Polygon:
+                EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Position", FromV2(_currentBuilder.CenterX, _currentBuilder.CenterZ));
                 _currentPoints ??= new List<Vector2>(8);
                 for (int i = 0; i < PointRows; ++i)
                 {
@@ -1408,14 +1322,14 @@ internal class ZonePlayerComponent : MonoBehaviour
         cmds[++pos] = T.ZoneEditSuggestedCommand3;
         cmds[++pos] = T.ZoneEditSuggestedCommand1;
         cmds[++pos] = T.ZoneEditSuggestedCommand2;
-        if (_currentBuilder.ZoneType == EZoneType.CIRCLE)
+        if (_currentBuilder.ZoneType == ZoneType.Circle)
             cmds[++pos] = T.ZoneEditSuggestedCommand9;
-        else if (_currentBuilder.ZoneType == EZoneType.RECTANGLE)
+        else if (_currentBuilder.ZoneType == ZoneType.Rectangle)
         {
             cmds[++pos] = T.ZoneEditSuggestedCommand10;
             cmds[++pos] = T.ZoneEditSuggestedCommand11;
         }
-        else if (_currentBuilder.ZoneType == EZoneType.POLYGON)
+        else if (_currentBuilder.ZoneType == ZoneType.Polygon)
         {
             cmds[++pos] = T.ZoneEditSuggestedCommand5;
             cmds[++pos] = T.ZoneEditSuggestedCommand6;
@@ -1445,9 +1359,9 @@ internal class ZonePlayerComponent : MonoBehaviour
             EffectManager.sendUIEffectText(EditKey, _player.Player.channel.owner.transportConnection, true,
                 _currentBuilder.ZoneType switch
                 {
-                    EZoneType.CIRCLE => "Circle_YLimit",
-                    EZoneType.RECTANGLE => "Rect_YLimit",
-                    EZoneType.POLYGON => "Polygon_YLimit",
+                    ZoneType.Circle => "Circle_YLimit",
+                    ZoneType.Rectangle => "Rect_YLimit",
+                    ZoneType.Polygon => "Polygon_YLimit",
                     _ => string.Empty
                 },
                 T.ZoneEditUIYLimits.Translate(_player,
@@ -1503,27 +1417,29 @@ internal class ZonePlayerComponent : MonoBehaviour
         private readonly float _oldZ;
         private readonly float _newX;
         private readonly float _newZ;
-        public SetCenterTransaction(float oldX, float oldZ, float newX, float newZ) : base(false)
+        private readonly bool _isSpawn;
+        public SetCenterTransaction(float oldX, float oldZ, float newX, float newZ, bool isSpawn) : base(false)
         {
             _oldX = oldX;
             _oldZ = oldZ;
             _newX = newX;
             _newZ = newZ;
+            _isSpawn = isSpawn;
         }
         public override void Redo(ZonePlayerComponent component)
         {
-            component.SetCenter(_newX, _newZ);
+            component.SetCenter(_newX, _newZ, _isSpawn);
         }
         public override void Undo(ZonePlayerComponent component)
         {
-            component.SetCenter(_oldX, _oldZ);
+            component.SetCenter(_oldX, _oldZ, _isSpawn);
         }
     }
     private class SetUseTransaction : Transaction
     {
-        private readonly EZoneUseCase _old;
-        private readonly EZoneUseCase _new;
-        public SetUseTransaction(EZoneUseCase old, EZoneUseCase @new) : base(false)
+        private readonly ZoneUseCase _old;
+        private readonly ZoneUseCase _new;
+        public SetUseTransaction(ZoneUseCase old, ZoneUseCase @new) : base(false)
         {
             _old = old;
             _new = @new;
@@ -1539,9 +1455,9 @@ internal class ZonePlayerComponent : MonoBehaviour
     }
     private class SetTypeTransaction : Transaction
     {
-        private readonly EZoneType _old;
-        private readonly EZoneType _new;
-        public SetTypeTransaction(EZoneType old, EZoneType @new, bool @implicit) : base(@implicit)
+        private readonly ZoneType _old;
+        private readonly ZoneType _new;
+        public SetTypeTransaction(ZoneType old, ZoneType @new, bool @implicit) : base(@implicit)
         {
             _old = old;
             _new = @new;
@@ -1682,7 +1598,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 component._currentPoints.Insert(_index, _position);
             else
                 component._currentPoints = new List<Vector2>(8) { _position };
-            if (!component.CheckType(EZoneType.POLYGON, transact: false))
+            if (!component.CheckType(ZoneType.Polygon, transact: false))
             {
                 ITransportConnection tc = component._player.Player.channel.owner.transportConnection;
                 EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Point_Value_" + (component._currentPoints.Count - 1), component.PointText(component._currentPoints.Count - 1));
@@ -1696,7 +1612,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             if (component._currentPoints is null || component._currentPoints.Count <= _index) return;
             Vector2 pt2 = component._currentPoints![_index];
             component._currentPoints.RemoveAt(_index);
-            if (!component.CheckType(EZoneType.POLYGON, transact: false))
+            if (!component.CheckType(ZoneType.Polygon, transact: false))
             {
                 ITransportConnection tc = component._player.Player.channel.owner.transportConnection;
                 for (int i = _index; i < component._currentPoints.Count; ++i)
@@ -1737,7 +1653,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         private void Set(ZonePlayerComponent component, Vector2 @new, Vector2 old)
         {
             component._currentPoints![_index] = @new;
-            if (!component.CheckType(EZoneType.POLYGON, transact: false))
+            if (!component.CheckType(ZoneType.Polygon, transact: false))
             {
                 ITransportConnection tc = component._player.Player.channel.owner.transportConnection;
                 EffectManager.sendUIEffectText(EditKey, tc, true, "Polygon_Point_Value_" + _index, component.PointText(_index));
@@ -1765,7 +1681,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         public override void Redo(ZonePlayerComponent component)
         {
             component._currentPoints?.Clear();
-            if (!component.CheckType(EZoneType.POLYGON, transact: false))
+            if (!component.CheckType(ZoneType.Polygon, transact: false))
             {
                 ITransportConnection tc = component._player.Player.channel.owner.transportConnection;
                 for (int i = 0; i < PointRows; ++i)
@@ -1781,7 +1697,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             if (Old is not null)
             {
                 component._currentPoints = Old.ToList();
-                if (!component.CheckType(EZoneType.POLYGON, transact: false))
+                if (!component.CheckType(ZoneType.Polygon, transact: false))
                 {
                     ITransportConnection tc = component._player.Player.channel.owner.transportConnection;
                     for (int i = 0; i < component._currentPoints.Count; ++i)
@@ -1812,7 +1728,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             component._currentPoints.RemoveAt(from);
             component._currentPoints.Insert(to, old);
             ITransportConnection tc = component._player.Player.channel.owner.transportConnection;
-            if (!component.CheckType(EZoneType.POLYGON))
+            if (!component.CheckType(ZoneType.Polygon))
             {
                 int ind2 = Math.Min(from, to);
                 for (int i = ind2; i < component._currentPoints.Count; ++i)

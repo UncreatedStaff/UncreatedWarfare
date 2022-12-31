@@ -6,9 +6,10 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes.Flags;
 public sealed class PolygonZone : Zone
 {
-    private readonly Vector2[] Points;
-    private readonly Line[] Lines;
-    private const float SPACING = 10f;
+    private const float Spacing = 10f;
+
+    private readonly Vector2[] _points;
+    private readonly Line[] _lines;
     /// <returns>Top left corner of bounds rectangle</returns>
     public static Vector4 GetBounds(Vector2[] points)
     {
@@ -31,27 +32,27 @@ public sealed class PolygonZone : Zone
         }
         return Vector4.zero;
     }
-    internal PolygonZone(ref ZoneModel data) : base(ref data)
+    internal PolygonZone(in ZoneModel data) : base(in data)
     {
-        Points = new Vector2[data.ZoneData.Points.Length];
-        Array.Copy(data.ZoneData.Points, 0, Points, 0, Points.Length);
+        _points = new Vector2[data.ZoneData.Points.Length];
+        Array.Copy(data.ZoneData.Points, 0, _points, 0, _points.Length);
         if (UseMapCoordinates)
         {
-            for (int i = 0; i < Points.Length; ++i)
+            for (int i = 0; i < _points.Length; ++i)
             {
-                ref Vector2 point = ref Points[i];
+                ref Vector2 point = ref _points[i];
                 point = FromMapCoordinates(point);
             }
         }
-        Lines = new Line[Points.Length];
-        for (int i = 0; i < Points.Length; i++)
-            Lines[i] = new Line(Points[i], Points[i == Points.Length - 1 ? 0 : i + 1]);
+        _lines = new Line[_points.Length];
+        for (int i = 0; i < _points.Length; i++)
+            _lines[i] = new Line(_points[i], _points[i == _points.Length - 1 ? 0 : i + 1]);
         GetParticleSpawnPoints(out _, out _);
-        _bounds = GetBounds(Points);
-        _boundArea = (Bounds.z - Bounds.x) * (Bounds.w - Bounds.y);
+        Bound = GetBounds(_points);
+        BoundArea = (Bounds.z - Bounds.x) * (Bounds.w - Bounds.y);
         SucessfullyParsed = true;
     }
-    public static void CalculateParticleSpawnPoints(out Vector2[] points, Vector2[] corners, float spacing = SPACING, Line[]? lines = null)
+    public static void CalculateParticleSpawnPoints(out Vector2[] points, Vector2[] corners, float spacing = Spacing, Line[]? lines = null)
     {
         List<Vector2> rtnSpawnPoints = new List<Vector2>(64);
         if (lines == null)
@@ -75,7 +76,7 @@ public sealed class PolygonZone : Zone
         }
         points = rtnSpawnPoints.ToArray();
     }
-    public static void CalculateParticleSpawnPoints(out Vector2[] points, List<Vector2> corners, float spacing = SPACING, Line[]? lines = null)
+    public static void CalculateParticleSpawnPoints(out Vector2[] points, List<Vector2> corners, float spacing = Spacing, Line[]? lines = null)
     {
         List<Vector2> rtnSpawnPoints = new List<Vector2>(64);
         if (lines == null)
@@ -103,20 +104,20 @@ public sealed class PolygonZone : Zone
     /// <inheritdoc/>
     public override Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center)
     {
-        corners = Points;
+        corners = _points;
         center = Center;
-        if (_particleSpawnPoints != null) return _particleSpawnPoints;
-        CalculateParticleSpawnPoints(out _particleSpawnPoints, Points, SPACING, Lines);
-        return _particleSpawnPoints;
+        if (ParticleSpawnPoints != null) return ParticleSpawnPoints;
+        CalculateParticleSpawnPoints(out ParticleSpawnPoints, _points, Spacing, _lines);
+        return ParticleSpawnPoints;
     }
     /// <inheritdoc/>
     public override bool IsInside(Vector2 location)
     {
         if (!IsInsideBounds(location)) return false;
         int intersects = 0;
-        for (int i = 0; i < Lines.Length; i++)
+        for (int i = 0; i < _lines.Length; i++)
         {
-            if (Lines[i].IsIntersecting(location.x, location.y)) intersects++;
+            if (_lines[i].IsIntersecting(location.x, location.y)) intersects++;
         }
         if (intersects % 2 == 1) return true; // is odd
         else return false;
@@ -126,9 +127,9 @@ public sealed class PolygonZone : Zone
     {
         if (!IsInsideBounds(location)) return false;
         int intersects = 0;
-        for (int i = 0; i < Lines.Length; i++)
+        for (int i = 0; i < _lines.Length; i++)
         {
-            if (Lines[i].IsIntersecting(location.x, location.z)) intersects++;
+            if (_lines[i].IsIntersecting(location.x, location.z)) intersects++;
         }
         if (intersects % 2 == 1) return true; // is odd
         else return false;
@@ -137,23 +138,23 @@ public sealed class PolygonZone : Zone
     public override string ToString()
     {
         StringBuilder sb = new StringBuilder($"{base.ToString()}\n");
-        for (int i = 0; i < Lines.Length; i++)
+        for (int i = 0; i < _lines.Length; i++)
         {
-            sb.Append($"Line {i + 1}: ({Lines[i].Point1.x}, {Lines[i].Point1.y}) to ({Lines[i].Point2.x}, {Lines[i].Point2.y}).\n");
+            sb.Append($"Line {i + 1}: ({_lines[i].Point1.x}, {_lines[i].Point1.y}) to ({_lines[i].Point2.x}, {_lines[i].Point2.y}).\n");
         }
         return sb.ToString();
     }
     protected override DrawData GenerateDrawData()
     {
-        DrawData d = new DrawData()
+        DrawData d = new DrawData
         {
             Center = ToMapCoordinates(Center),
-            Lines = new Line[this.Points.Length]
+            Lines = new Line[this._points.Length]
         };
-        for (int i = 0; i < Points.Length; i++)
-            d.Lines[i] = new Line(ToMapCoordinates(Points[i]), ToMapCoordinates(Points[i == Points.Length - 1 ? 0 : i + 1]));
-        Vector2 b1 = ToMapCoordinates((Vector2)_bounds);
-        Vector2 b2 = ToMapCoordinates(new Vector2(_bounds.z, _bounds.w));
+        for (int i = 0; i < _points.Length; i++)
+            d.Lines[i] = new Line(ToMapCoordinates(_points[i]), ToMapCoordinates(_points[i == _points.Length - 1 ? 0 : i + 1]));
+        Vector2 b1 = ToMapCoordinates(Bound);
+        Vector2 b2 = ToMapCoordinates(new Vector2(Bound.z, Bound.w));
         d.Bounds = new Vector4(b1.x, b1.y, b2.x, b2.y);
         return d;
     }
@@ -162,21 +163,10 @@ public sealed class PolygonZone : Zone
     {
         get
         {
-            ZoneBuilder zb = new ZoneBuilder()
-            {
-                ZoneType = EZoneType.POLYGON,
-                MinHeight = MinHeight,
-                MaxHeight = MaxHeight,
-                Name = Name,
-                ShortName = ShortName,
-                Adjacencies = Data.Adjacencies,
-                Id = Id,
-                UseMapCoordinates = false,
-                X = Center.x,
-                Z = Center.y,
-                UseCase = Data.UseCase
-            };
-            zb.ZoneData.Points = Points;
+            ZoneBuilder zb = base.Builder;
+            zb.ZoneData.X = Center.x;
+            zb.ZoneData.Z = Center.y;
+            zb.ZoneData.Points = _points;
             return zb;
         }
     }

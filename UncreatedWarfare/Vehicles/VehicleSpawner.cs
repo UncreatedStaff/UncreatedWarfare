@@ -1201,7 +1201,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         objs[2] = item.SignKey.IsValid ? item.SignKey.Key : DBNull.Value;
         if (hasPk)
             objs[3] = pk.Key;
-        await Sql.QueryAsync(F.BuildInitialInsertQuery(TABLE_MAIN, COLUMN_PK, hasPk, COLUMN_VEHICLE, COLUMN_STRUCTURE, COLUMN_SIGN),
+        await Sql.QueryAsync(F.BuildInitialInsertQuery(TABLE_MAIN, COLUMN_PK, hasPk, null, null, COLUMN_VEHICLE, COLUMN_STRUCTURE, COLUMN_SIGN),
             objs, reader =>
             {
                 pk2 = reader.GetInt32(0);

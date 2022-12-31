@@ -183,7 +183,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
 
             player.Player.teleportToLocationUnsafe(
-                team is 1 ? TeamManager.Team1Main.Center3D : TeamManager.Team2Main.Center3D,
+                team is 1 ? TeamManager.Team1Main.Spawn3D : TeamManager.Team2Main.Spawn3D,
                 team is 1 ? TeamManager.Team1SpawnAngle : TeamManager.Team2SpawnAngle);
 
             UpdateList();

@@ -234,7 +234,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             {
                 if (Team == 1)
                 {
-                    for (int i = NewFlagObj.index; i < NewFlagObj.index + Config.AASDiscoveryForesight; i++)
+                    for (int i = NewFlagObj.Index; i < NewFlagObj.Index + Config.AASDiscoveryForesight; i++)
                     {
                         if (i >= FlagRotation.Count || i < 0) break;
                         FlagRotation[i].Discover(1);
@@ -246,7 +246,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 }
                 else if (Team == 2)
                 {
-                    for (int i = NewFlagObj.index; i > NewFlagObj.index - Config.AASDiscoveryForesight; i--)
+                    for (int i = NewFlagObj.Index; i > NewFlagObj.Index - Config.AASDiscoveryForesight; i--)
                     {
                         if (i >= FlagRotation.Count || i < 0) break;
                         FlagRotation[i].Discover(2);
@@ -399,8 +399,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             }
             else
             {
-                _objectiveT1Index = flag.index + 1;
-                InvokeOnObjectiveChanged(flag, FlagRotation[_objectiveT1Index], 1, flag.index, _objectiveT1Index);
+                _objectiveT1Index = flag.Index + 1;
+                InvokeOnObjectiveChanged(flag, FlagRotation[_objectiveT1Index], 1, flag.Index, _objectiveT1Index);
                 InvokeOnFlagCaptured(flag, 1, oldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                 {
@@ -421,8 +421,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             else
             {
 
-                _objectiveT2Index = flag.index - 1;
-                InvokeOnObjectiveChanged(flag, FlagRotation[_objectiveT2Index], 2, flag.index, _objectiveT2Index);
+                _objectiveT2Index = flag.Index - 1;
+                InvokeOnObjectiveChanged(flag, FlagRotation[_objectiveT2Index], 2, flag.Index, _objectiveT2Index);
                 InvokeOnFlagCaptured(flag, 2, oldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                 {
@@ -436,20 +436,20 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             if (oldOwner == 1)
             {
                 int oldindex = _objectiveT1Index;
-                _objectiveT1Index = flag.index;
-                if (oldindex != flag.index)
+                _objectiveT1Index = flag.Index;
+                if (oldindex != flag.Index)
                 {
-                    InvokeOnObjectiveChanged(FlagRotation[oldindex], flag, 0, oldindex, flag.index);
+                    InvokeOnObjectiveChanged(FlagRotation[oldindex], flag, 0, oldindex, flag.Index);
                 }
                 InvokeOnFlagNeutralized(flag, 2, 1);
             }
             else if (oldOwner == 2)
             {
                 int oldindex = _objectiveT2Index;
-                _objectiveT2Index = flag.index;
-                if (oldindex != flag.index)
+                _objectiveT2Index = flag.Index;
+                if (oldindex != flag.Index)
                 {
-                    InvokeOnObjectiveChanged(FlagRotation[oldindex], flag, 0, oldindex, flag.index);
+                    InvokeOnObjectiveChanged(FlagRotation[oldindex], flag, 0, oldindex, flag.Index);
                 }
                 InvokeOnFlagNeutralized(flag, 1, 2);
             }

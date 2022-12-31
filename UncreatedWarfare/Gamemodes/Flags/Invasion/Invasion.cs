@@ -62,7 +62,9 @@ public class Invasion :
         else
             SpawnBlockerOnT2();
         if (firstFlag != null)
-            _vcp = FOBManager.RegisterNewSpecialFOB(Config.InvasionSpecialFOBName, new Vector3(firstFlag.ZoneData.Center.x, F.GetHeight(firstFlag.ZoneData.Center, firstFlag.ZoneData.MinHeight) + 2f, firstFlag.ZoneData.Center.y), _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
+            _vcp = FOBManager.RegisterNewSpecialFOB(Config.InvasionSpecialFOBName, new Vector3(firstFlag.X,
+                F.GetHeight(firstFlag.Position2D, firstFlag is { ZoneData.Item: { } z } ? z.MinHeight : float.NaN) + 2f, firstFlag.Y),
+                _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
         StartStagingPhase(Config.InvasionStagingTime);
         return base.PostGameStarting(isOnLoad, token);
     }
@@ -144,7 +146,7 @@ public class Invasion :
         flag.EvaluatePointsOverride = FlagCheck;
         flag.IsContestedOverride = ContestedCheck;
         flag.SetOwner(_defenseTeam, false);
-        flag.SetPoints(_attackTeam == 2 ? Flag.MAX_POINTS : -Flag.MAX_POINTS, true, true);
+        flag.SetPoints(_attackTeam == 2 ? Flag.MaxPoints : -Flag.MaxPoints, true, true);
     }
     private void FlagCheck(Flag flag, bool overrideInactiveCheck = false)
     {
@@ -232,16 +234,16 @@ public class Invasion :
     {
         CaptureUIParameters t1 = default;
         CaptureUIParameters t2 = default;
-        CaptureUIParameters t1v = default;
-        CaptureUIParameters t2v = default;
+        CaptureUIParameters t1V = default;
+        CaptureUIParameters t2V = default;
         if (flag.Team1TotalCappers > 0)
             t1 = InvasionUI.RefreshStaticUI(1, flag, false, _attackTeam);
         if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
-            t1v = InvasionUI.RefreshStaticUI(1, flag, true, _attackTeam);
+            t1V = InvasionUI.RefreshStaticUI(1, flag, true, _attackTeam);
         if (flag.Team2TotalCappers > 0)
             t2 = InvasionUI.RefreshStaticUI(2, flag, false, _attackTeam);
         if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
-            t2v = InvasionUI.RefreshStaticUI(2, flag, true, _attackTeam);
+            t2V = InvasionUI.RefreshStaticUI(2, flag, true, _attackTeam);
         for (int i = 0; i < flag.PlayersOnFlag.Count; i++)
         {
             Player capper = flag.PlayersOnFlag[i];
@@ -252,14 +254,14 @@ public class Invasion :
                 if (capper.movement.getVehicle() == null)
                     CTFUI.CaptureUI.Send(capper, in t1);
                 else
-                    CTFUI.CaptureUI.Send(capper, in t1v);
+                    CTFUI.CaptureUI.Send(capper, in t1V);
             }
             else if (t == 2)
             {
                 if (capper.movement.getVehicle() == null)
                     CTFUI.CaptureUI.Send(capper, in t2);
                 else
-                    CTFUI.CaptureUI.Send(capper, in t2v);
+                    CTFUI.CaptureUI.Send(capper, in t2V);
             }
         }
     }
@@ -288,8 +290,8 @@ public class Invasion :
             }
             else if (_attackTeam == 1)
             {
-                _objectiveT1Index = flag.index + 1;
-                InvokeOnObjectiveChanged(flag, FlagRotation[ObjectiveT1Index], newOwner, flag.index, ObjectiveT1Index);
+                _objectiveT1Index = flag.Index + 1;
+                InvokeOnObjectiveChanged(flag, FlagRotation[ObjectiveT1Index], newOwner, flag.Index, ObjectiveT1Index);
                 InvokeOnFlagCaptured(flag, newOwner, oldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                 {
@@ -313,8 +315,8 @@ public class Invasion :
             }
             else if (_attackTeam == 2)
             {
-                _objectiveT2Index = flag.index - 1;
-                InvokeOnObjectiveChanged(flag, FlagRotation[ObjectiveT2Index], newOwner, flag.index, ObjectiveT2Index);
+                _objectiveT2Index = flag.Index - 1;
+                InvokeOnObjectiveChanged(flag, FlagRotation[ObjectiveT2Index], newOwner, flag.Index, ObjectiveT2Index);
                 InvokeOnFlagCaptured(flag, newOwner, oldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                 {

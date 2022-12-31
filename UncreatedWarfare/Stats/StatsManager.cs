@@ -449,7 +449,10 @@ public static class StatsManager
                 {
                     // copy to new file appended with _corrupt
                     L.LogWarning("Failed to read " + s64.ToString(Data.AdminLocale) + "'s stat file, creating a backup and resetting it.");
-                    File.Move(dir, Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + "_corrupt.dat"));
+
+                    string p2 = Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + "_corrupt.dat");
+                    File.Delete(p2);
+                    File.Move(dir, p2);
                     WarfareStats reset = new WarfareStats()
                     {
                         DATA_VERSION = WarfareStats.CURRENT_DATA_VERSION,
@@ -509,7 +512,7 @@ public static class StatsManager
                     for (int f = 0; f < fg.Rotation.Count; f++)
                     {
                         Gamemodes.Flags.Flag flag = fg.Rotation[f];
-                        if (flag.ZoneData.IsInside(kilPos))
+                        if (flag.PlayerInRange(kilPos))
                         {
                             def = flag.IsContested(out ulong winner) || winner != e.KillerTeam;
                             atk = !def;

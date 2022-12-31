@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
 
@@ -77,14 +78,23 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         TeamManager.OnReloadFlags();
+        int c = AllFlags.Count == 0 ? 48 : AllFlags.Count;
         AllFlags.Clear();
-        AllFlags.Capacity = Data.ZoneProvider.Zones.Count;
-        for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
+        AllFlags.Capacity = c;
+        ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
+        if (singleton == null) throw new SingletonUnloadedException(typeof(ZoneList));
+        singleton.WriteWait();
+        try
         {
-            if (Data.ZoneProvider.Zones[i].Data.UseCase == EZoneUseCase.FLAG)
+            for (int i = 0; i < singleton.Items.Count; ++i)
             {
-                AllFlags.Add(new Flag(Data.ZoneProvider.Zones[i], this) { index = -1 });
+                if (singleton[i] is { Item.Data.UseCase: ZoneUseCase.Flag } proxy)
+                    AllFlags.Add(new Flag(proxy, this) { Index = -1 });
             }
+        }
+        finally
+        {
+            singleton.WriteRelease();
         }
         AllFlags.Sort((a, b) => a.ID.CompareTo(b.ID));
     }

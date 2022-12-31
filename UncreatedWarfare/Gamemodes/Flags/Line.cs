@@ -12,10 +12,10 @@ public readonly struct Line
     public readonly Vector2 Point2;
     /// <summary>Length of the line.</summary>
     public readonly float Length;
-    /// <summary>Slope</summary>
-    internal readonly float m;
-    /// <summary>Y-Intercept</summary>
-    internal readonly float b;
+    /// <summary>Slope of the line.</summary>
+    internal readonly float Slope;
+    /// <summary>Y-Intercept of the line.</summary>
+    internal readonly float Intercept;
     /// <summary>
     /// Create a line from two end points (order not important).
     /// </summary>
@@ -23,25 +23,25 @@ public readonly struct Line
     {
         this.Point1 = pt1;
         this.Point2 = pt2;
-        this.m = (pt1.y - pt2.y) / (pt1.x - pt2.x);
-        this.b = -1 * (m * pt1.x - pt1.y);
+        this.Slope = (pt1.y - pt2.y) / (pt1.x - pt2.x);
+        this.Intercept = -1 * (Slope * pt1.x - pt1.y);
         this.Length = Vector2.Distance(pt1, pt2);
     }
     /// <summary>
     /// Create a line from two end points (order not important).
     /// </summary>
-    public Line(float p1x, float p1z, float p2x, float p2z)
+    public Line(float p1X, float p1Z, float p2X, float p2Z)
     {
-        this.Point1 = new Vector2(p1x, p1z);
-        this.Point2 = new Vector2(p2x, p2z);
-        this.m = (p1z - p2z) / (p1x - p2x);
-        this.b = -1 * (m * p1x - p1z);
+        this.Point1 = new Vector2(p1X, p1Z);
+        this.Point2 = new Vector2(p2X, p2Z);
+        this.Slope = (p1Z - p2Z) / (p1X - p2X);
+        this.Intercept = -1 * (Slope * p1X - p1Z);
         this.Length = Vector2.Distance(this.Point1, this.Point2);
     }
     /// <summary>
     /// Round to the closest spacing that can fit an exact number of points.
     /// </summary>
-    public readonly float NormalizeSpacing(float baseSpacing)
+    public float NormalizeSpacing(float baseSpacing)
     {
         float answer = Length / baseSpacing;
         int remainder = Mathf.RoundToInt((answer - Mathf.Floor(answer)) * baseSpacing);
@@ -55,7 +55,7 @@ public readonly struct Line
     /// <summary>
     /// Checks if the input X is left of but on the same Y level as the line 
     /// </summary>
-    public readonly bool IsIntersecting(float xPos, float yPos)
+    public bool IsIntersecting(float xPos, float yPos)
     {
         // if the y doesn't line up, return false.
         if (yPos < Mathf.Min(Point1.y, Point2.y) || yPos >= Mathf.Max(Point1.y, Point2.y)) return false;
@@ -65,13 +65,13 @@ public readonly struct Line
         return x >= xPos;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private readonly float GetX(float y) => (y - b) / m; // inverse slope function
+    private float GetX(float y) => (y - Intercept) / Slope; // inverse slope function
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private readonly float GetY(float x) => m * x + b;   // slope function
+    private float GetY(float x) => Slope * x + Intercept;   // slope function
     /// <summary>
     /// Gets the point on the line <paramref name="alpha"/> through it starting at <see cref="Point1"/>.
     /// </summary>
-    public readonly Vector2 GetPointAcrossP1(float alpha)
+    public Vector2 GetPointAcrossP1(float alpha)
     {
         if (Point1.x == Point2.x) return new Vector2(Point1.x, Point1.y + (Point2.y - Point1.y) * alpha);
         float x = Point1.x + ((Point2.x - Point1.x) * alpha);
@@ -81,11 +81,11 @@ public readonly struct Line
     /// Gets the point on the line <paramref name="distance"/> meters from <see cref="Point1"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public readonly Vector2 GetPointFromP1(float distance) => GetPointAcrossP1(distance / Length);
+    public Vector2 GetPointFromP1(float distance) => GetPointAcrossP1(distance / Length);
     /// <summary>
     /// Gets the point on the line <paramref name="alpha"/> through it starting at <see cref="Point2"/>.
     /// </summary>
-    public readonly Vector2 GetPointAcrossP2(float alpha)
+    public Vector2 GetPointAcrossP2(float alpha)
     {
         if (Point2.x == Point1.x) return new Vector2(Point2.x, Point2.y + (Point1.y - Point2.y) * alpha);
         float x = Point2.x + (Point1.x - Point2.x) * alpha;
@@ -95,5 +95,5 @@ public readonly struct Line
     /// Gets the point on the line <paramref name="distance"/> meters from <see cref="Point2"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public readonly Vector2 GetPointFromP2(float distance) => GetPointAcrossP2(distance / Length);
+    public Vector2 GetPointFromP2(float distance) => GetPointAcrossP2(distance / Length);
 }

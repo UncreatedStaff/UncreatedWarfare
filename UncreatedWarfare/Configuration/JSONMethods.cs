@@ -487,11 +487,11 @@ public static partial class JSONMethods
                 foreach (KeyValuePair<string, string> color in DefaultColors)
                 {
                     string y = color.Value;
-                    if (y.Equals(T1_COLOR_PH, StringComparison.Ordinal))
+                    if (y.Equals(Team1ColorPlaceholder, StringComparison.Ordinal))
                         y = TeamManager.Team1ColorHex;
-                    else if (y.Equals(T2_COLOR_PH, StringComparison.Ordinal))
+                    else if (y.Equals(Team2ColorPlaceholder, StringComparison.Ordinal))
                         y = TeamManager.Team2ColorHex;
-                    else if (y.Equals(T3_COLOR_PH, StringComparison.Ordinal))
+                    else if (y.Equals(Team3ColorPlaceholder, StringComparison.Ordinal))
                         y = TeamManager.AdminColorHex;
                     writer.WritePropertyName(color.Key);
                     writer.WriteStringValue(color.Value);
@@ -533,11 +533,11 @@ public static partial class JSONMethods
                                     L.LogWarning("Duplicate color key \"" + key + "\" in chat_colors.json");
                                 else
                                 {
-                                    if (color.Equals(T1_COLOR_PH, StringComparison.Ordinal))
+                                    if (color.Equals(Team1ColorPlaceholder, StringComparison.Ordinal))
                                         color = TeamManager.Team1ColorHex;
-                                    else if (color.Equals(T2_COLOR_PH, StringComparison.Ordinal))
+                                    else if (color.Equals(Team2ColorPlaceholder, StringComparison.Ordinal))
                                         color = TeamManager.Team2ColorHex;
-                                    else if (color.Equals(T3_COLOR_PH, StringComparison.Ordinal))
+                                    else if (color.Equals(Team3ColorPlaceholder, StringComparison.Ordinal))
                                         color = TeamManager.AdminColorHex;
                                     hexValues.Add(key, color);
                                     converted.Add(key, color.Hex());

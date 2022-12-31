@@ -59,7 +59,7 @@ public partial class Conquest
                 for (int i = 0; i < adj1.Length; ++i)
                 {
                     ref AdjacentFlagData d = ref adj1[i];
-                    if (d.flag_id == x.ID)
+                    if (d.PrimaryKey.Key == x.ID)
                         return false;
                 }
                 return true;
@@ -77,7 +77,7 @@ public partial class Conquest
                 for (int i = 0; i < adj2.Length; ++i)
                 {
                     ref AdjacentFlagData d = ref adj2[i];
-                    if (d.flag_id == x.ID)
+                    if (d.PrimaryKey.Key == x.ID)
                         return false;
                 }
                 return true;
@@ -141,7 +141,7 @@ public partial class Conquest
         for (int i = 0; i < FlagRotation.Count; ++i)
         {
             Flag flag1 = FlagRotation[i];
-            flag1.index = i;
+            flag1.Index = i;
             InitFlag(flag1);
         }
     }

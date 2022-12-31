@@ -81,7 +81,7 @@ public class OrderCommand : Command
                                         throw ctx.SendGamemodeError();
                                     case IFlagRotation rot:
                                         Vector2 mkr = new Vector2(marker.x, marker.z);
-                                        Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.ZoneData.IsInside(mkr));
+                                        Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.PlayerInRange(mkr));
                                         if (flag is null)
                                             goto default;
                                         formatting = new object[] { flag };
@@ -151,7 +151,7 @@ public class OrderCommand : Command
                                             throw ctx.SendGamemodeError();
                                         case IFlagRotation rot:
                                             Vector2 mkr = new Vector2(marker.x, marker.z);
-                                            Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.ZoneData.IsInside(mkr));
+                                            Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.PlayerInRange(mkr));
                                             // flag is not discovered or is taken
                                             if (flag is null || flag.IsFull(Teams.TeamManager.Other(team)))
                                                 goto default;
@@ -205,7 +205,7 @@ public class OrderCommand : Command
                                             throw ctx.SendGamemodeError();
                                         case IFlagRotation rot:
                                             Vector2 mkr = new Vector2(marker.x, marker.z);
-                                            Flag flag = rot.Rotation.Find(f => f.ZoneData.IsInside(mkr));
+                                            Flag flag = rot.Rotation.Find(f => f.PlayerInRange(mkr));
                                             // flag is not discovered or is taken
                                             if (flag is null || !flag.Discovered(team))
                                                 goto default;
