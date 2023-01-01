@@ -116,6 +116,8 @@ public static class Data
     internal static WarfareSQL? RemoteSQL;
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
+    public static bool UseFastKits;
+    public static bool UseElectricalGrid;
     internal static MethodInfo ReplicateStance;
     internal static ICommandInputOutput? DefaultIOHandler;
     public static Reporter? Reporter;
@@ -133,7 +135,6 @@ public static class Data
     internal static ClientStaticMethod SendMultipleBarricades;
     internal static ClientStaticMethod SendEffectClearAll;
     internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual;
-    public static bool UseFastKits;
     internal static ClientInstanceMethod? SendInventory;
     internal delegate void OutputToConsole(string value, ConsoleColor color);
     internal static OutputToConsole? OutputToConsoleMethod;

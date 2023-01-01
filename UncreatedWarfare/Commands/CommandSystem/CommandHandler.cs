@@ -1410,8 +1410,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public Exception SendUnknownError() => Reply(T.UnknownError);
     public Exception SendNoPermission() => Reply(T.NoPermissions);
     public Exception SendPlayerNotFound() => Reply(T.PlayerNotFound);
-    public Exception SendCorrectUsage(string usage)
-                                            => Reply(T.CorrectUsage, usage);
+    public Exception SendCorrectUsage(string usage) => Reply(T.CorrectUsage, usage);
     public Exception ReplyString(string message, Color color)
     {
         if (message is null) throw new ArgumentNullException(nameof(message));

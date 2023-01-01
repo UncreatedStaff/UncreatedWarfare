@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Reflection;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -58,6 +59,9 @@ internal static class EventPatches
 
         PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(new Action<SteamPending>(Provider.accept)), ref _fail,
             prefix: PatchUtil.GetMethodInfo(OnAcceptingPlayer));
+
+        if (!PatchUtil.PatchMethod(typeof(InteractablePower).GetMethod("CalculateIsConnectedToPower", BindingFlags.NonPublic | BindingFlags.Instance), prefix: PatchUtil.GetMethodInfo(OnCalculatingPower)))
+            Data.UseElectricalGrid = false;
     }
     [OperationTest("Event Patches")]
     [Conditional("DEBUG")]
@@ -466,5 +470,31 @@ internal static class EventPatches
             return true;
         Accepted.Add(player.playerID.steamID.m_SteamID);
         return false;
+    }
+
+    private static bool OnCalculatingPower(InteractablePower __instance, ref bool __result)
+    {
+        if (Data.Gamemode is not FlagGamemode fg || fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.Disabled)
+        {
+            __result = false;
+            return true;
+        }
+        if (fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.AllEnabled)
+        {
+            __result = true;
+            return false;
+        }
+        if (__instance is InteractableObject obj)
+        {
+            __result = fg.IsPowerObjectEnabled(obj);
+            return false;
+        }
+
+        BarricadeDrop? drop = BarricadeManager.FindBarricadeByRootTransform(__instance.transform);
+        if (drop != null)
+        {
+            __result = fg.IsBarricadeObjectEnabled(drop);
+            return false;
+        }
     }
 }

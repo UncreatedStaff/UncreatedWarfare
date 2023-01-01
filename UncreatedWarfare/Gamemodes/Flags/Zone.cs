@@ -39,7 +39,8 @@ public abstract class Zone : IDeployable, IListItem
         SpawnX = Spawn.x,
         SpawnZ = Spawn.y,
         UseMapCoordinates = false,
-        UseCase = Data.UseCase
+        UseCase = Data.UseCase,
+        GridObjects = Data.GridObjects
     };
     internal static void OnLevelLoaded()
     {

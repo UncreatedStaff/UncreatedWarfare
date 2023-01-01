@@ -18,10 +18,11 @@ internal class ZonePlayerComponent : MonoBehaviour
     private UCPlayer _player = null!;
     private static EffectAsset? _edit;
     private const short EditKey = 25432;
-    private const string ZoneEditUsage = "/zone edit <existing|maxheight|minheight|finalize|cancel|use case|addpoint|delpoint|clearpoints|setpoint|orderpoint|radius|sizex|sizez|center|name|short name|type|> [value]";
+    private const string ZoneEditUsage = "/zone edit <existing|maxheight|minheight|finalize|cancel|use case|addpoint|delpoint|clearpoints|setpoint|orderpoint|radius|sizex|sizez|center|name|short name|type|addgobj|delgobj> [value]";
     private ZoneBuilder? _currentBuilder;
     private bool _currentBuilderIsExisting;
     private List<Vector2>? _currentPoints;
+    private List<KeyValuePair<Vector3, GridObject>>? _currentGridObjects;
     private float _lastZonePreviewRefresh;
     private static readonly List<ZonePlayerComponent> Builders = new List<ZonePlayerComponent>(2);
     internal static EffectAsset? Airdrop;
@@ -41,10 +42,9 @@ internal class ZonePlayerComponent : MonoBehaviour
         Corner = Assets.find<EffectAsset>(new Guid("e8637c08f4d54ad68650c1250b0c57a1"));
         Side = Assets.find<EffectAsset>(new Guid("00de10ee40894e1081e43d1b863d7037"));
         Spawn = Assets.find<EffectAsset>(new Guid("effb5901fc934c4eaaf0e80ba4c642e3"));
-        Airdrop = null;
+        Airdrop = Assets.find<EffectAsset>(new Guid("2c17fbd0f0ce49aeb3bc4637b68809a2"))!;
         if (Center == null || Corner == null || Side == null || Spawn == null)
         {
-            Airdrop = Assets.find<EffectAsset>(new Guid("2c17fbd0f0ce49aeb3bc4637b68809a2"))!;
             Center = Assets.find<EffectAsset>(new Guid("0bbb4d81380148a88aef453b3c5158bd"))!;
             Corner = Assets.find<EffectAsset>(new Guid("563658fc7a334dbc8c0b9e322aac96b9"))!;
             Side = Assets.find<EffectAsset>(new Guid("d9820fabf8174ed5807dc44593800406"))!;
@@ -112,7 +112,6 @@ internal class ZonePlayerComponent : MonoBehaviour
                 _player.Player.transform.rotation.eulerAngles.y);
         }
     }
-
     internal void DeleteCommand(CommandInteraction ctx)
     {
         if (_isLoading)
@@ -167,14 +166,12 @@ internal class ZonePlayerComponent : MonoBehaviour
         }, ctx: "Delete zone confirmation wait.", timeout: 11000);
         ctx.Defer();
     }
-
     private void OnDeleted()
     {
         _player.SendChat(T.ZoneDeleteEditingZoneDeleted);
         _currentBuilderIsExisting = false;
         _currentBuilder!.Id = -1;
     }
-
     internal void CreateCommand(CommandInteraction ctx)
     {
         if (_isLoading)
@@ -272,13 +269,20 @@ internal class ZonePlayerComponent : MonoBehaviour
         EffectManager.askEffectClearByID(Corner.id, channel);
         EffectManager.askEffectClearByID(Center.id, channel);
         if (_currentBuilder == null) return;
-        Vector3 pos = new Vector3(_currentBuilder.CenterX, 0f, _currentBuilder.CenterZ);
+        Vector3 pos = new Vector3(_currentBuilder.SpawnX, 0f, _currentBuilder.SpawnZ);
         pos.y = F.GetHeight(pos, _currentBuilder.MinHeight);
-        F.TriggerEffectReliable(Center, channel, pos); // purple paintball splatter
+        F.TriggerEffectReliable(Spawn, channel, pos); // green pillar
+        pos = new Vector3(_currentBuilder.CenterX, 0f, _currentBuilder.CenterZ);
+        pos.y = F.GetHeight(pos, _currentBuilder.MinHeight);
         if (_currentBuilder.ZoneType != ZoneType.Polygon)
-            F.TriggerEffectReliable(Center, channel, pos); // purple paintball splatter
-        if (Airdrop != null)
-            F.TriggerEffectReliable(Airdrop, channel, pos); // airdrop
+            F.TriggerEffectReliable(Center, channel, pos); // purple pillar
+        if (Airdrop != null && _currentGridObjects != null)
+        {
+            for (int i = 0; i < _currentGridObjects.Count; ++i)
+            {
+                F.TriggerEffectReliable(Airdrop, channel, _currentGridObjects[i].Key);
+            }
+        }
         switch (_currentBuilder.ZoneType)
         {
             case ZoneType.Circle:
@@ -386,6 +390,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             _currentBuilderIsExisting = true;
             _currentBuilder = zone.Builder;
             _currentPoints?.Clear();
+            _currentGridObjects?.Clear();
             _undoBuffer.Clear();
             _redoBuffer.Clear();
             if (_currentBuilder.ZoneType == ZoneType.Polygon && _currentBuilder.ZoneData.Points != null)
@@ -394,6 +399,27 @@ internal class ZonePlayerComponent : MonoBehaviour
                     _currentPoints = new List<Vector2>(_currentBuilder.ZoneData.Points);
                 else
                     _currentPoints.AddRange(_currentBuilder.ZoneData.Points);
+            }
+            if (_currentBuilder.GridObjects is { Length: > 0 })
+            {
+                if (_currentGridObjects is null)
+                    _currentGridObjects = new List<KeyValuePair<Vector3, GridObject>>(_currentBuilder.GridObjects.Length);
+                else if (_currentGridObjects.Capacity < _currentBuilder.GridObjects.Length)
+                    _currentGridObjects.Capacity = _currentBuilder.GridObjects.Length;
+                for (int i = 0; i < _currentBuilder.GridObjects.Length; ++i)
+                {
+                    GridObject obj = _currentBuilder.GridObjects[i];
+                    LevelObject? @object;
+                    if (obj.Object != null)
+                        @object = obj.Object;
+                    else
+                    {
+                        @object = UCBarricadeManager.FindObject(obj.ObjectInstanceId, new Vector3(obj.X, obj.Y, obj.Z));
+                        obj.Object = @object;
+                    }
+                    if (@object != null)
+                        _currentGridObjects.Add(new KeyValuePair<Vector3, GridObject>(@object.transform.position, obj));
+                }
             }
             Builders.Add(this);
             ITransportConnection tc = _player.Player.channel.owner.transportConnection;
@@ -496,7 +522,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             {
                 try
                 {
-                    if (_currentBuilder.UseCase == ZoneUseCase.Other || _currentBuilder.UseCase > ZoneUseCase.Lobby)
+                    if (_currentBuilder.UseCase > ZoneUseCase.Lobby)
                     {
                         ctx.Reply(T.ZoneEditFinalizeUseCaseUnset);
                         return;
@@ -504,6 +530,13 @@ internal class ZonePlayerComponent : MonoBehaviour
 
                     if (_currentBuilder.ZoneType == ZoneType.Polygon && _currentPoints != null)
                         _currentBuilder.Points = _currentPoints.ToArray();
+                    if (_currentGridObjects is { Count: > 0 })
+                    {
+                        GridObject[] objs = new GridObject[_currentGridObjects.Count];
+                        for (int i = 0; i < _currentGridObjects.Count; ++i)
+                            objs[i] = _currentGridObjects[i].Value;
+                        _currentBuilder.GridObjects = objs;
+                    }
                     ZoneModel mdl;
                     try
                     {
@@ -1005,6 +1038,38 @@ internal class ZonePlayerComponent : MonoBehaviour
                 AddTransaction(new SetFloatTransaction(_currentBuilder.ZoneData.Radius, radius, SetFloatTransaction.FloatType.Radius));
                 SetRadius(radius);
             }
+            else if (ctx.MatchParameter(0, "addgobj", "addgridobj", "addobject"))
+            {
+                if (Physics.Raycast(new Ray(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward), out RaycastHit hit, 4f,
+                        RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL) && hit.transform != null)
+                {
+                    LevelObject? @object = UCBarricadeManager.FindObject(hit.transform);
+                    if (@object == null)
+                        throw ctx.Reply(T.ZoneEditAddGridObjInvalid);
+                    AddTransaction(new AddDelGridObjTransaction(@object, false, false));
+                    AddGridObject(@object);
+                }
+                else
+                    throw ctx.Reply(T.ZoneEditAddGridObjInvalid);
+            }
+            else if (ctx.MatchParameter(0, "delgobj", "delgridobj", "delobject"))
+            {
+                if (ctx.MatchParameter(1, "clear", "all", "*"))
+                {
+                    AddTransaction(new AddDelGridObjTransaction(null, true, true, RemoveAllGridObjects()));
+                }
+                else if (Physics.Raycast(new Ray(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward),
+                             out RaycastHit hit, 4f, RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL) && hit.transform != null)
+                {
+                    LevelObject? @object = UCBarricadeManager.FindObject(hit.transform);
+                    if (@object == null)
+                        throw ctx.Reply(T.ZoneEditAddGridObjInvalid);
+                    AddTransaction(new AddDelGridObjTransaction(@object, false, false));
+                    AddGridObject(@object);
+                }
+                else
+                    throw ctx.Reply(T.ZoneEditAddGridObjInvalid);
+            }
             else if (ctx.MatchParameter(0, "sizex", "width", "length"))
             {
                 float sizex;
@@ -1117,13 +1182,11 @@ internal class ZonePlayerComponent : MonoBehaviour
             }
         }
     }
-
     private void SetUseCase(ZoneUseCase uc)
     {
         _currentBuilder!.UseCase = uc;
         _player.SendChat(T.ZoneEditUseCaseSuccess, uc);
     }
-
     private void SetName(string name)
     {
         _currentBuilder!.Name = name;
@@ -1138,7 +1201,6 @@ internal class ZonePlayerComponent : MonoBehaviour
         else
             _player.SendChat(T.ZoneEditShortNameRemoved);
     }
-
     private void SetRadius(float radius)
     {
         _currentBuilder!.ZoneData.Radius = radius;
@@ -1149,14 +1211,12 @@ internal class ZonePlayerComponent : MonoBehaviour
         }
         _player.SendChat(T.ZoneEditRadiusSuccess, radius);
     }
-
     private void SetMaxHeight(float mh)
     {
         _currentBuilder!.MaxHeight = mh;
         UpdateHeights();
         _player.SendChat(T.ZoneEditMaxHeightSuccess, mh);
     }
-
     private void SetMinHeight(float mh)
     {
         _currentBuilder!.MinHeight = mh;
@@ -1164,13 +1224,11 @@ internal class ZonePlayerComponent : MonoBehaviour
         _player.SendChat(T.ZoneEditMinHeightSuccess, mh);
         RefreshPreview();
     }
-
     internal void ReloadLang()
     {
         if (_currentBuilder == null) return;
         CheckType(_currentBuilder.ZoneType, true);
     }
-
     private void SetSizeX(float sizex)
     {
         _currentBuilder!.ZoneData.SizeX = sizex;
@@ -1190,6 +1248,57 @@ internal class ZonePlayerComponent : MonoBehaviour
             RefreshPreview();
         }
         _player.SendChat(T.ZoneEditSizeZSuccess, sizez);
+    }
+    private void AddGridObject(LevelObject obj)
+    {
+        _currentGridObjects ??= new List<KeyValuePair<Vector3, GridObject>>(16);
+        for (int i = 0; i < _currentGridObjects.Count; ++i)
+        {
+            if (_currentGridObjects[i].Value.ObjectInstanceId == obj.instanceID)
+            {
+                _player.SendChat(T.ZoneEditAddGridObjAlreadyExists);
+                return;
+            }
+        }
+
+        Vector3 pos = obj.GetPosition();
+        _currentGridObjects.Add(new KeyValuePair<Vector3, GridObject>(pos, new GridObject(_currentBuilder!.Id, obj.instanceID, obj.GUID, pos.x, pos.y, pos.z, obj)));
+        _player.SendChat(T.ZoneEditAddGridObjSuccess, obj.asset);
+    }
+    private List<KeyValuePair<Vector3, GridObject>> RemoveAllGridObjects()
+    {
+        List<KeyValuePair<Vector3, GridObject>> old = _currentGridObjects?.ToList() ?? new List<KeyValuePair<Vector3, GridObject>>(0);
+        _player.SendChat(T.ZoneEditDelGridObjAllSuccess, old.Count, old.Count.S());
+        if (old.Count > 0)
+            _currentGridObjects!.Clear();
+        return old;
+    }
+    private void AddAllGridObjectsBack(List<KeyValuePair<Vector3, GridObject>> objs)
+    {
+        int c = objs.Count;
+        if (_currentGridObjects == null)
+            _currentGridObjects = objs;
+        else
+            _currentGridObjects.AddRange(objs);
+        _player.SendChat(T.ZoneEditAddGridObjAllSuccess, c, c.S());
+    }
+    private void RemoveGridObject(LevelObject obj)
+    {
+        if (_currentGridObjects is not { Count: > 0 })
+        {
+            _player.SendChat(T.ZoneEditDelGridObjDoesntExist);
+            return;
+        }
+
+        for (int i = 0; i < _currentGridObjects.Count; ++i)
+        {
+            if (_currentGridObjects[i].Value.ObjectInstanceId == obj.instanceID)
+            {
+                _currentGridObjects.RemoveAt(i);
+                _player.SendChat(T.ZoneEditDelGridObjSuccess, obj.asset);
+                return;
+            }
+        }
     }
     private void SetCenter(float x, float z, bool isSpawn)
     {
@@ -1257,6 +1366,7 @@ internal class ZonePlayerComponent : MonoBehaviour
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FromV2(Vector2 v2) => $"({v2.x.ToString("F2", Data.LocalLocale)}, {v2.y.ToString("F2", Data.LocalLocale)})";
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FromV2(float x, float y) => $"({x.ToString("F2", Data.LocalLocale)}, {y.ToString("F2", Data.LocalLocale)})";
     private bool CheckType(ZoneType type, bool overwrite = false, bool @implicit = true, bool transact = true)
@@ -1529,7 +1639,6 @@ internal class ZonePlayerComponent : MonoBehaviour
                     break;
             }
         }
-
         public enum FloatType : byte
         {
             MinY,
@@ -1639,6 +1748,39 @@ internal class ZonePlayerComponent : MonoBehaviour
                 Delete(component);
         }
     }
+    private class AddDelGridObjTransaction : Transaction
+    {
+        private readonly LevelObject? _obj;
+        private readonly bool _isDeleteOp;
+        private readonly bool _isAllOp;
+        private List<KeyValuePair<Vector3, GridObject>>? _old;
+        public AddDelGridObjTransaction(LevelObject? obj, bool delete, bool all, IEnumerable<KeyValuePair<Vector3, GridObject>>? objs = null) : base(false)
+        {
+            _obj = obj;
+            _isDeleteOp = delete;
+            _isAllOp = all && delete;
+            if (_isAllOp)
+                _old = objs == null ? new List<KeyValuePair<Vector3, GridObject>>(0) : objs.ToList();
+        }
+        public override void Redo(ZonePlayerComponent component)
+        {
+            if (!_isDeleteOp)
+                component.AddGridObject(_obj!);
+            else if (_isAllOp)
+                _old = component.RemoveAllGridObjects();
+            else
+                component.RemoveGridObject(_obj!);
+        }
+        public override void Undo(ZonePlayerComponent component)
+        {
+            if (!_isDeleteOp)
+                component.RemoveGridObject(_obj!);
+            else if (_isAllOp)
+                component.AddAllGridObjectsBack(_old!);
+            else
+                component.AddGridObject(_obj!);
+        }
+    }
     private class SetPointTransaction : Transaction
     {
         private readonly int _index;
@@ -1673,10 +1815,10 @@ internal class ZonePlayerComponent : MonoBehaviour
     }
     private class ClearPointsTransaction : Transaction
     {
-        public readonly List<Vector2>? Old;
-        public ClearPointsTransaction(List<Vector2> points) : base(false)
+        private readonly List<Vector2>? _old;
+        public ClearPointsTransaction(IEnumerable<Vector2> points) : base(false)
         {
-            Old = points?.ToList();
+            _old = points?.ToList();
         }
         public override void Redo(ZonePlayerComponent component)
         {
@@ -1694,9 +1836,9 @@ internal class ZonePlayerComponent : MonoBehaviour
         }
         public override void Undo(ZonePlayerComponent component)
         {
-            if (Old is not null)
+            if (_old is not null)
             {
-                component._currentPoints = Old.ToList();
+                component._currentPoints = _old.ToList();
                 if (!component.CheckType(ZoneType.Polygon, transact: false))
                 {
                     ITransportConnection tc = component._player.Player.channel.owner.transportConnection;

@@ -269,6 +269,12 @@ public class UCWarfare : MonoBehaviour
         Provider.modeConfigData.Barricades.Decay_Time = 0;
         Provider.modeConfigData.Structures.Decay_Time = 0;
 
+        if (!Level.info.configData.Has_Global_Electricity)
+        {
+            L.LogWarning("Level does not have global electricity enabled, electrical grid effects will not work!");
+            Data.UseElectricalGrid = false;
+        }
+
         UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
     }
     private IEnumerator<WaitForSecondsRealtime> RestartIn(float seconds)

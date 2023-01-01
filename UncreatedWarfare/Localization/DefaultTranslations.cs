@@ -1622,6 +1622,18 @@ internal static class T
     // Zone > Edit > Radius
     public static readonly Translation ZoneEditRadiusInvalid = new Translation("<#ff8c69>Radius must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.");
     public static readonly Translation<float> ZoneEditRadiusSuccess = new Translation<float>("<#e6e3d5>Set radius to <#ff9999>{0}</color>.", "0.##");
+    
+    // Zone > Edit > Add Grid Object
+    public static readonly Translation ZoneEditAddGridObjInvalid = new Translation("<#ff8c69>You must be looking at an interactable object.");
+    public static readonly Translation ZoneEditAddGridObjAlreadyExists = new Translation("<#ff8c69>That object is already a grid object.");
+    public static readonly Translation<ObjectAsset> ZoneEditAddGridObjSuccess = new Translation<ObjectAsset>("<#e6e3d5>Added <#ff9999>{0}</color> as a grid object.");
+    public static readonly Translation<int, string> ZoneEditAddGridObjAllSuccess = new Translation<int, string>("<#e6e3d5>Added <#ff9999>{0}</color> grid object{1}.");
+
+    // Zone > Edit > Delete Grid Object
+    public static readonly Translation ZoneEditDelGridObjInvalid = new Translation("<#ff8c69>You must be looking at an interactable object.");
+    public static readonly Translation<ObjectAsset> ZoneEditDelGridObjDoesntExist = new Translation<ObjectAsset>("<#e6e3d5>That object was never added.");
+    public static readonly Translation<ObjectAsset> ZoneEditDelGridObjSuccess = new Translation<ObjectAsset>("<#e6e3d5>Removed <#ff9999>{0}</color> as a grid object.");
+    public static readonly Translation<int, string> ZoneEditDelGridObjAllSuccess = new Translation<int, string>("<#e6e3d5>Removed <#ff9999>{0}</color> grid object{1}.");
 
     // Zone > Edit > Size-X
     public static readonly Translation ZoneEditSizeXInvalid = new Translation("<#ff8c69>Size X must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.");

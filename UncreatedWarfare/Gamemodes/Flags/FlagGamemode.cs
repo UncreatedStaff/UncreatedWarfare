@@ -9,6 +9,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
@@ -21,6 +22,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     public List<Flag> LoadedFlags => AllFlags;
     public Dictionary<ulong, int> OnFlag => OnFlagDict;
     public virtual bool AllowPassengersToCapture => false;
+    public virtual ElectricalGridBehaivor ElectricalGridBehavior => ElectricalGridBehaivor.EnabledWhenInRotation;
     protected FlagGamemode(string name, float eventLoopSpeed) : base(name, eventLoopSpeed)
     { }
     protected abstract bool TimeToEvaluatePoints();
@@ -216,5 +218,138 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
             winner = t2 - Config.AASRequiredCapturingPlayerDifference >= t1 ? 2ul : Intimidation.CheckSquadsForContestBoost(flag);
 
         return winner == 0;
+    }
+    internal virtual bool IsBarricadeObjectEnabled(BarricadeDrop drop)
+    {
+        Vector3 pos = drop.model.position;
+        switch (ElectricalGridBehavior)
+        {
+            case ElectricalGridBehaivor.AllEnabled: return true;
+            case ElectricalGridBehaivor.EnabledWhenInRotation:
+                if (Rotation != null)
+                {
+                    for (int i = 0; i < Rotation.Count; ++i)
+                    {
+                        if (Rotation[i].PlayerInRange(pos))
+                            return true;
+                    }
+                }
+                goto default;
+            case ElectricalGridBehaivor.EnabledWhenObjective:
+                if (this is IFlagObjectiveGamemode obj1)
+                {
+                    Flag? flag = obj1.Objective;
+                    if (flag != null && flag.PlayerInRange(pos))
+                        return true;
+                }
+                else if (this is IFlagTeamObjectiveGamemode obj2)
+                {
+                    Flag? flag = obj2.ObjectiveTeam1;
+                    if (flag != null && flag.PlayerInRange(pos))
+                        return true;
+                    flag = obj2.ObjectiveTeam2;
+                    if (flag != null && flag.PlayerInRange(pos))
+                        return true;
+                }
+                goto default;
+            default:
+                return false;
+        }
+    }
+    internal virtual bool IsPowerObjectEnabled(InteractableObject obj)
+    {
+        switch (ElectricalGridBehavior)
+        {
+            case ElectricalGridBehaivor.AllEnabled:
+                return true;
+            case ElectricalGridBehaivor.EnabledWhenInRotation:
+                if (Rotation != null)
+                {
+                    for (int i = 0; i < Rotation.Count; ++i)
+                    {
+                        GridObject[]? grid = Rotation[i].ZoneData?.Item?.Data.GridObjects;
+                        if (grid is not { Length: > 0 })
+                            continue;
+                        if (CheckFlag(grid))
+                            return true;
+                    }
+                }
+                break;
+            case ElectricalGridBehaivor.EnabledWhenObjective:
+                if (this is IFlagObjectiveGamemode obj1)
+                {
+                    GridObject[]? grid = obj1.Objective?.ZoneData?.Item?.Data.GridObjects;
+                    if (grid is { Length: > 0 })
+                        if (CheckFlag(grid))
+                            return true;
+                }
+                else if (this is IFlagTeamObjectiveGamemode obj2)
+                {
+                    GridObject[]? grid = obj2.ObjectiveTeam1?.ZoneData?.Item?.Data.GridObjects;
+                    if (grid is { Length: > 0 })
+                        if (CheckFlag(grid))
+                            return true;
+                    grid = obj2.ObjectiveTeam2?.ZoneData?.Item?.Data.GridObjects;
+                    if (grid is { Length: > 0 })
+                        if (CheckFlag(grid))
+                            return true;
+                }
+                break;
+        }
+        return false;
+        bool CheckFlag(GridObject[] grid)
+        {
+            GameObject go = obj.gameObject;
+            for (int g = 0; g < grid.Length; ++g)
+            {
+                GridObject @object = grid[g];
+                GameObject? obj2 = @object.Object?.transform.gameObject;
+                if (obj2 == go)
+                    return true;
+            }
+
+            return false;
+        }
+    }
+    protected virtual void OnObjectiveChangedPowerHandler(Flag? oldObj, Flag? newObj)
+    {
+        if (ElectricalGridBehavior != ElectricalGridBehaivor.EnabledWhenObjective)
+            return;
+        GridObject[]? arr = oldObj?.ZoneData?.Item?.Data.GridObjects;
+        if (arr is { Length: > 0 })
+        {
+            SetPowerForAllInGrid(arr, false);
+        }
+        arr = newObj?.ZoneData?.Item?.Data.GridObjects;
+        if (arr is { Length: > 0 })
+        {
+            SetPowerForAllInGrid(arr, true);
+        }
+    }
+    protected virtual void OnRotationUpdated()
+    {
+        // todo
+    }
+    private void SetPowerForAllInGrid(GridObject[] arr, bool state)
+    {
+        for (int i = 0; i < arr.Length; ++i)
+        {
+            if (arr[i].Object is { interactable: { } inx } && inx != null)
+            {
+                if (inx.objectAsset.interactability == EObjectInteractability.BINARY_STATE &&
+                    inx.objectAsset.interactabilityHint is EObjectInteractabilityHint.SWITCH or EObjectInteractabilityHint.FIRE or EObjectInteractabilityHint.GENERATOR)
+                {
+                    ObjectManager.forceObjectBinaryState(inx.transform, state);
+                }
+                inx.updateWired(false);
+            }
+        }
+    }
+    public enum ElectricalGridBehaivor : byte
+    {
+        Disabled,
+        AllEnabled,
+        EnabledWhenObjective,
+        EnabledWhenInRotation
     }
 }

@@ -20,6 +20,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags;
 [SingletonDependency(typeof(Level))]
 public sealed class ZoneList : ListSqlSingleton<Zone>
 {
+    public const int MaxNameLength = 48;
+    public const int MaxShortNameLength = 24;
     public override MySqlDatabase Sql => Data.AdminSql;
     public override bool AwaitLoad => true;
     public ZoneList() : base("zones", Schemas) { }
@@ -212,8 +214,8 @@ public sealed class ZoneList : ListSqlSingleton<Zone>
             },
             new Schema.Column(COLUMN_MAP, SqlTypes.INCREMENT_KEY),
             new Schema.Column(COLUMN_ZONE_TYPE, SqlTypes.Enum(ZoneType.Invalid)),
-            new Schema.Column(COLUMN_NAME, SqlTypes.String(48)),
-            new Schema.Column(COLUMN_SHORT_NAME, SqlTypes.String(24)) { Nullable = true },
+            new Schema.Column(COLUMN_NAME, SqlTypes.String(MaxNameLength)),
+            new Schema.Column(COLUMN_SHORT_NAME, SqlTypes.String(MaxShortNameLength)) { Nullable = true },
             new Schema.Column(COLUMN_SPAWN_X, SqlTypes.FLOAT) { Nullable = true },
             new Schema.Column(COLUMN_SPAWN_Z, SqlTypes.FLOAT) { Nullable = true },
             new Schema.Column(COLUMN_USE_CASE, SqlTypes.Enum<ZoneUseCase>()),

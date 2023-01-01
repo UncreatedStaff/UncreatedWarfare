@@ -1,45 +1,51 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using SDG.Unturned;
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
-using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
-[SingletonDependency(typeof(ZoneList))]
-public class ElectricalGridManager : BaseSingleton
-{
-
-    // todo
-
-
-    public override void Load()
-    {
-
-    }
-
-    public override void Unload()
-    {
-
-    }
-}
-
 /// <param name="PrimaryKey">Flag primary key.</param>
-public record struct GridObject(
-    [property: JsonPropertyName("flag_id")] PrimaryKey PrimaryKey,
-    [property: JsonPropertyName("instance_id")] uint ObjectInstanceId,
-    [property: JsonPropertyName("object_guid")] Guid Guid,
-    [property: JsonPropertyName("x")] float X,
-    [property: JsonPropertyName("y")] float Y,
-    [property: JsonPropertyName("z")] float Z) : IJsonReadWrite, IListItem
+public class GridObject : IJsonReadWrite, IListItem
 {
+    [JsonPropertyName("flag_id")]
+    public PrimaryKey PrimaryKey { get; set; }
+
+    [JsonPropertyName("instance_id")]
+    public uint ObjectInstanceId { get; set; }
+
+    [JsonPropertyName("object_guid")]
+    public Guid Guid { get; set; }
+
+    [JsonPropertyName("x")]
+    public float X { get; set; }
+
+    [JsonPropertyName("y")]
+    public float Y { get; set; }
+
+    [JsonPropertyName("z")]
+    public float Z { get; set; }
+
+    [JsonIgnore]
+    public LevelObject? Object { get; set; }
+
+    public GridObject(PrimaryKey primaryKey, uint objectInstanceId, Guid guid, float x, float y, float z, LevelObject? @object = null)
+    {
+        PrimaryKey = primaryKey;
+        ObjectInstanceId = objectInstanceId;
+        Guid = guid;
+        X = x;
+        Y = y;
+        Z = z;
+        Object = @object;
+        if (@object == null && LevelObjects.objects != null)
+            Object = UCBarricadeManager.FindObject(objectInstanceId, new Vector3(x, y, z));
+    }
+
     public GridObject() : this (PrimaryKey.NotAssigned, uint.MaxValue, Guid.Empty, 0f, 0f, 0f) { }
     public override string ToString() => $"Flag: {PrimaryKey}, Object: {ObjectInstanceId}.";
     public void WriteJson(Utf8JsonWriter writer)
