@@ -14,6 +14,6 @@ public class AttachCommand : Command
     {
         ctx.AssertPermissions(EAdminType.ADMIN_ON_DUTY);
 
-        ctx.ReplyString("cry.", Color.red);
+        if (ctx.TryGet(out ))
     }
 }
