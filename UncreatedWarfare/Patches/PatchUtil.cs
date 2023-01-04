@@ -31,7 +31,7 @@ internal static class PatchUtil
     }
     internal static bool PatchMethod(Delegate original, Delegate? prefix = null, Delegate? postfix = null, Delegate? transpiler = null, Delegate? finalizer = null)
     {
-        if (original is null || (prefix is null && postfix is null && transpiler is null && finalizer is null)) return;
+        if (original is null || (prefix is null && postfix is null && transpiler is null && finalizer is null)) return false;
         try
         {
             MethodInfo? originalInfo = original.Method;

@@ -649,7 +649,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
-        return Parameters[parameter].Equals(value, StringComparison.OrdinalIgnoreCase);
+        return Parameters[parameter].Equals(value, StringComparison.InvariantCultureIgnoreCase);
     }
     /// <summary>Zero based, compare the value of argument <paramref name="parameter"/> with <paramref name="value"/> and <paramref name="alternate"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
@@ -659,7 +659,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         string v = Parameters[parameter];
-        return v.Equals(value, StringComparison.OrdinalIgnoreCase) || v.Equals(alternate, StringComparison.OrdinalIgnoreCase);
+        return v.Equals(value, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate, StringComparison.InvariantCultureIgnoreCase);
     }
     /// <summary>Zero based, compare the value of argument <paramref name="parameter"/> with <paramref name="value"/>, <paramref name="alternate1"/>, and <paramref name="alternate2"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
@@ -669,7 +669,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         string v = Parameters[parameter];
-        return v.Equals(value, StringComparison.OrdinalIgnoreCase) || v.Equals(alternate1, StringComparison.OrdinalIgnoreCase) || v.Equals(alternate2, StringComparison.OrdinalIgnoreCase);
+        return v.Equals(value, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate1, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate2, StringComparison.InvariantCultureIgnoreCase);
     }
     /// <summary>Zero based, compare the value of argument <paramref name="parameter"/> with all <paramref name="alternates"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
@@ -681,7 +681,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         string v = Parameters[parameter];
         for (int i = 0; i < alternates.Length; ++i)
         {
-            if (v.Equals(alternates[i], StringComparison.OrdinalIgnoreCase))
+            if (v.Equals(alternates[i], StringComparison.InvariantCultureIgnoreCase))
                 return true;
         }
         return false;
@@ -830,20 +830,20 @@ public sealed class CommandInteraction : BaseCommandInteraction
         {
             return value is > 0 and < 4;
         }
-        if (p.Equals(Teams.TeamManager.Team1Code, StringComparison.OrdinalIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.Team1Name, StringComparison.OrdinalIgnoreCase) || p.Equals("t1", StringComparison.OrdinalIgnoreCase))
+        if (p.Equals(Teams.TeamManager.Team1Code, StringComparison.InvariantCultureIgnoreCase) ||
+                 p.Equals(Teams.TeamManager.Team1Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t1", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 1ul;
             return true;
         }
-        if (p.Equals(Teams.TeamManager.Team2Code, StringComparison.OrdinalIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.Team2Name, StringComparison.OrdinalIgnoreCase) || p.Equals("t2", StringComparison.OrdinalIgnoreCase))
+        if (p.Equals(Teams.TeamManager.Team2Code, StringComparison.InvariantCultureIgnoreCase) ||
+                 p.Equals(Teams.TeamManager.Team2Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t2", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 2ul;
             return true;
         }
-        if (p.Equals(Teams.TeamManager.AdminCode, StringComparison.OrdinalIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.AdminName, StringComparison.OrdinalIgnoreCase) || p.Equals("t3", StringComparison.OrdinalIgnoreCase))
+        if (p.Equals(Teams.TeamManager.AdminCode, StringComparison.InvariantCultureIgnoreCase) ||
+                 p.Equals(Teams.TeamManager.AdminName, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t3", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 3ul;
             return true;
@@ -1150,7 +1150,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             {
                 for (int i = 0; i < assets.Length; ++i)
                 {
-                    if (assets[i].FriendlyName.Equals(p, StringComparison.OrdinalIgnoreCase))
+                    if (assets[i].FriendlyName.Equals(p, StringComparison.InvariantCultureIgnoreCase))
                     {
                         asset = assets[i];
                         multipleResultsFound = false;
@@ -1159,7 +1159,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
                 }
                 for (int i = 0; i < assets.Length; ++i)
                 {
-                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.OrdinalIgnoreCase) != -1)
+                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.InvariantCultureIgnoreCase) != -1)
                     {
                         asset = assets[i];
                         multipleResultsFound = false;
@@ -1172,7 +1172,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
                 List<TAsset> results = new List<TAsset>(16);
                 for (int i = 0; i < assets.Length; ++i)
                 {
-                    if (assets[i].FriendlyName.Equals(p, StringComparison.OrdinalIgnoreCase))
+                    if (assets[i].FriendlyName.Equals(p, StringComparison.InvariantCultureIgnoreCase))
                     {
                         results.Add(assets[i]);
                     }
@@ -1191,7 +1191,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
                 }
                 for (int i = 0; i < assets.Length; ++i)
                 {
-                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.OrdinalIgnoreCase) != -1)
+                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.InvariantCultureIgnoreCase) != -1)
                     {
                         results.Add(assets[i]);
                     }

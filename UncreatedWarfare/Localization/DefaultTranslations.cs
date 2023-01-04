@@ -1631,7 +1631,7 @@ internal static class T
 
     // Zone > Edit > Delete Grid Object
     public static readonly Translation ZoneEditDelGridObjInvalid = new Translation("<#ff8c69>You must be looking at an interactable object.");
-    public static readonly Translation<ObjectAsset> ZoneEditDelGridObjDoesntExist = new Translation<ObjectAsset>("<#e6e3d5>That object was never added.");
+    public static readonly Translation<ObjectAsset> ZoneEditDelGridObjDoesntExist = new Translation<ObjectAsset>("<#e6e3d5>The object <#ff9999>{0}</color> was never added.");
     public static readonly Translation<ObjectAsset> ZoneEditDelGridObjSuccess = new Translation<ObjectAsset>("<#e6e3d5>Removed <#ff9999>{0}</color> as a grid object.");
     public static readonly Translation<int, string> ZoneEditDelGridObjAllSuccess = new Translation<int, string>("<#e6e3d5>Removed <#ff9999>{0}</color> grid object{1}.");
 
@@ -1852,6 +1852,34 @@ internal static class T
     [TranslationData(UAV_SECTION, "Sent to the requested if someone else is already requesting a UAV.")]
     public static readonly Translation RequestAlreadyActive = new Translation("<#e86868>Someone else on your team is already requesting a <#cc99ff>UAV</color>.");
 
+    #endregion
+
+    #region Attach
+    private const string ATTACH_SECTION = "Attach";
+
+    [TranslationData(ATTACH_SECTION, "Sent when a player tries to use /attach without holding a gun.")]
+    public static readonly Translation AttachNoGunHeld = new Translation("<#ff8c69>You must be holding a gun to attach an attachment.");
+
+    [TranslationData(ATTACH_SECTION, "Sent when a player tries to use /attach remove without providing a valid attachment type.", "Caller's input")]
+    public static readonly Translation<string> AttachClearInvalidType = new Translation<string>("<#ff8c69><#fff>{0}</color> is not a valid attachment type. Enter one of the following: <#fff><sight|tact|grip|barrel|ammo></color>.");
+
+    [TranslationData(ATTACH_SECTION, "Sent when a player tries to use /attach remove <type> without that attachment.", "Held gun asset", "Type of attachment")]
+    public static readonly Translation<ItemGunAsset, AttachmentType> AttachClearAlreadyGone = new Translation<ItemGunAsset, AttachmentType>("<#ff8c69>There is not a <#cedcde>{1}</color> on your {0}.", RARITY_COLOR_FORMAT, UPPERCASE);
+
+    [TranslationData(ATTACH_SECTION, "Sent when a player successfully uses /attach remove <type>.", "Held gun asset", "Type of attachment")]
+    public static readonly Translation<ItemGunAsset, AttachmentType> AttachClearSuccess = new Translation<ItemGunAsset, AttachmentType>("<#bfb9ac>You removed the <#cedcde>{1}</color> from your {0}.", RARITY_COLOR_FORMAT, UPPERCASE);
+
+    [TranslationData(ATTACH_SECTION, "Sent when a player successfully uses /attach <attachment>.", "Held gun asset", "Type of attachment", "Attachment item asset")]
+    public static readonly Translation<ItemGunAsset, AttachmentType, ItemCaliberAsset> AttachSuccess = new Translation<ItemGunAsset, AttachmentType, ItemCaliberAsset>("<#bfb9ac>Added {2} as a <#cedcde>{1}</color> to your {0}.", RARITY_COLOR_FORMAT, UPPERCASE, RARITY_COLOR_FORMAT);
+
+    [TranslationData(ATTACH_SECTION, "Sent when a player tries to attach an item but either it's not an attachment or can't be found.", "Caller's input")]
+    public static readonly Translation<string> AttachCaliberNotFound = new Translation<string>("<#ff8c69>Unable to find an attachment named <#fff>{0}</color>.", PROPERCASE);
+
+    [TranslationData(ATTACH_SECTION, "Sent when a player successfully sets the ammo count of a gun.", "Held gun asset", "Amount of ammo")]
+    public static readonly Translation<ItemGunAsset, byte> AttachSetAmmoSuccess = new Translation<ItemGunAsset, byte>("<#bfb9ac>Set the ammo count in your {0} to <#fff>{1}</color>.", RARITY_COLOR_FORMAT);
+
+    [TranslationData(ATTACH_SECTION, "Sent when a player successfully sets the ammo count of a gun.", "Held gun asset", "Amount of ammo")]
+    public static readonly Translation<ItemGunAsset, EFiremode> AttachSetFiremodeSuccess = new Translation<ItemGunAsset, EFiremode>("<#bfb9ac>Set the fire mode of your {0} to <#cedcde>{1}</color>.", RARITY_COLOR_FORMAT, UPPERCASE);
     #endregion
 
     [FormatDisplay(typeof(object), "Plural")]

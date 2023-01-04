@@ -282,7 +282,8 @@ public class ActionLog : MonoBehaviour
                 return;
             }
             string[] files = Directory.GetFiles(Data.Paths.ActionLog, "*.txt");
-            L.Log("Found " + files.Length + " log" + files.Length.S() + " to send to homebase...", ConsoleColor.Magenta);
+            int ttl = files.Length - (_current == null ? 0 : 1);
+            L.Log("Found " + ttl + " log" + ttl.S() + " to send to homebase...", ConsoleColor.Magenta);
             foreach (string file in files)
             {
                 string logName = Path.GetFileNameWithoutExtension(file);
@@ -852,6 +853,14 @@ public enum ActionLogType : byte
     SoloRTB,
     [Translatable("ENTER_MAIN")]
     EnterMain,
+    [Translatable("ATTACH")]
+    Attach,
+    [Translatable("DETACH")]
+    Detach,
+    [Translatable("SET_AMMO")]
+    SetAmmo,
+    [Translatable("SET_FIREMODE")]
+    SetFiremode,
 
     [Obsolete("Don't use this.")]
     Max = EnterMain

@@ -496,5 +496,7 @@ internal static class EventPatches
             __result = fg.IsBarricadeObjectEnabled(drop);
             return false;
         }
+
+        return true;
     }
 }
