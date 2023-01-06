@@ -1459,7 +1459,7 @@ public static class F
                     object[] objArray = block.read(Types.BYTE_TYPE, Types.BYTE_TYPE, Types.UINT16_TYPE, Types.BYTE_TYPE, Types.BYTE_TYPE, Types.BYTE_ARRAY_TYPE);
                     Guid guid = Assets.find(EAssetType.ITEM, (ushort)objArray[2]) is ItemAsset asset ? asset.GUID : new Guid((ushort)objArray[2], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
                     rtn[i] = new ItemJarData(PrimaryKey.NotAssigned, parent, guid,
-                        (byte)objArray[0], (byte)objArray[1], (byte)0, (byte)objArray[3], (byte)objArray[4],
+                        (byte)objArray[0], (byte)objArray[1], 0, (byte)objArray[3], (byte)objArray[4],
                         (byte[])objArray[5]);
                 }
             }

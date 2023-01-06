@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.Assets;
 using Uncreated.SQL;
+using Uncreated.Warfare.Kits;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -141,7 +142,7 @@ internal static class ItemIconProvider
         New("c19cbeec032d45b5b36d2cc5687c61c1", '阽', WHITE), // QLG-91
         New("0e08c3fee09d4598ac41a80830ef472b", '陀', WHITE), // HK69A1
         New("46eb642a829f44d0ac1ebfd16d739aad", '陃', WHITE), // Panzerfaust 3
-
+        new ItemIconData(RedirectType.EntrenchingTool, '\0', WHITE),  // todo
 
         
         New("d9b900ec96fe46aeaee7fdb317f41200", "21d9abe142ee4793887a0a9af3bb2faf"), // SCAR-L STD (Black)
@@ -360,6 +361,7 @@ internal static class ItemIconProvider
     private readonly struct ItemIconData
     {
         public readonly Guid Item;
+        public readonly RedirectType RedirectType;
         public readonly char? Character;
         public readonly Guid Parent;
         public readonly int PackedColor;
@@ -375,6 +377,15 @@ internal static class ItemIconProvider
             this.Parent = parent;
             ParentCopyFlag = 0b11;
         }
+        public ItemIconData(RedirectType item, char? character, int color)
+        {
+            RedirectType = item;
+            Character = character;
+            PackedColor = color;
+            Parent = default;
+            ParentCopyFlag = 0;
+            Item = default;
+        }
         public ItemIconData(Guid item, char? character, int color)
         {
             Item = item;
@@ -382,6 +393,7 @@ internal static class ItemIconProvider
             PackedColor = color;
             Parent = default;
             ParentCopyFlag = 0;
+            RedirectType = RedirectType.None;
         }
     }
 }

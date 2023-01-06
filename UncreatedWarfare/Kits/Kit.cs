@@ -1226,6 +1226,7 @@ public enum Class : byte
     [Translatable(LanguageAliasSet.SPANISH, "Puscas Automat")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Fuzileiro Automobilístico")]
     [Translatable(LanguageAliasSet.POLISH, "Strzelec Automatyczny")]
+    [Translatable(LanguageAliasSet.ENGLISH, "Automatic Rifleman")]
     AutomaticRifleman = 6,
     [Translatable(LanguageAliasSet.RUSSIAN, "Гренадёр")]
     [Translatable(LanguageAliasSet.SPANISH, "Granadero")]
@@ -1234,6 +1235,7 @@ public enum Class : byte
     [Translatable(LanguageAliasSet.POLISH, "Grenadier")]
     Grenadier = 7,
     [Translatable(LanguageAliasSet.ROMANIAN, "Mitralior")]
+    [Translatable(LanguageAliasSet.ENGLISH, "Machine Gunner")]
     MachineGunner = 8,
     [Translatable("LAT")]
     [Translatable(LanguageAliasSet.RUSSIAN, "Лёгкий противотанк")]
@@ -1267,6 +1269,7 @@ public enum Class : byte
     [Translatable(LanguageAliasSet.ROMANIAN, "Inginer")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Engenheiro")]
     [Translatable(LanguageAliasSet.POLISH, "Inżynier")]
+    [Translatable(LanguageAliasSet.ENGLISH, "Combat Engineer")]
     CombatEngineer = 14,
     [Translatable(LanguageAliasSet.RUSSIAN, "Механик-водитель")]
     [Translatable(LanguageAliasSet.SPANISH, "Tripulante")]
