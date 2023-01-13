@@ -83,8 +83,8 @@ public class UCWarfare : MonoBehaviour
         }
         catch (Exception ex)
         {
-            Logging.LogError("Error in early load!");
-            Logging.LogException(ex);
+            L.LogError("Error in early load!");
+            L.LogError(ex);
             Provider.shutdown();
         }
     });
@@ -95,7 +95,7 @@ public class UCWarfare : MonoBehaviour
 #endif
         L.Log("Started loading - Uncreated Warfare version " + Version + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
               "Please stop using this plugin now.", ConsoleColor.Green);
-
+        throw new Exception("test exception", new Exception("inner test exception"));
         /* INITIALIZE UNCREATED NETWORKING */
         Logging.OnLogInfo += L.NetLogInfo;
         Logging.OnLogWarning += L.NetLogWarning;
@@ -1037,9 +1037,11 @@ public class UCWarfareNexus : IModuleNexus
 
     void IModuleNexus.initialize()
     {
+#if DEBUG
+        File.WriteAllText(@"C:\text.txt", "LOADED " + DateTime.UtcNow.ToString("s"));
+#endif
         CommandWindow.Log("Initializing UCWarfareNexus...");
-        Thread.Sleep(1000);
-        Data.LoadColoredConsole();
+        L.Init();
         Level.onPostLevelLoaded += OnLevelLoaded;
         UCWarfare.Nexus = this;
         GameObject go = new GameObject("UCWarfare " + UCWarfare.Version);

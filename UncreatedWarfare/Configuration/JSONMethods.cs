@@ -256,7 +256,7 @@ public struct SerializableTransform : IJsonReadWrite
     }
 }
 
-/// <summary>Wrapper for a <see cref="Dictionary{string, string}"/>, has custom JSON reading to take a string or dictionary of translations.<br/><see langword="null"/> = empty list.</summary>
+/// <summary>Wrapper for a <see cref="Dictionary{TKey, TValue}"/>, has custom JSON reading to take a string or dictionary of translations.<br/><see langword="null"/> = empty list.</summary>
 /// <remarks>Extension methods located in <see cref="T"/>.</remarks>
 [JsonConverter(typeof(TranslationListConverter))]
 public sealed class TranslationList : Dictionary<string, string>, ICloneable

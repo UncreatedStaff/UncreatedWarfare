@@ -119,7 +119,6 @@ public static class Data
     public static bool UseFastKits;
     public static bool UseElectricalGrid;
     internal static MethodInfo ReplicateStance;
-    internal static ICommandInputOutput? DefaultIOHandler;
     public static Reporter? Reporter;
     public static DeathTracker DeathTracker;
     internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
@@ -136,8 +135,6 @@ public static class Data
     internal static ClientStaticMethod SendEffectClearAll;
     internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual;
     internal static ClientInstanceMethod? SendInventory;
-    internal delegate void OutputToConsole(string value, ConsoleColor color);
-    internal static OutputToConsole? OutputToConsoleMethod;
     internal static SingletonManager Singletons;
     internal static InstanceSetter<PlayerStance, EPlayerStance> SetPrivateStance;
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
@@ -152,13 +149,6 @@ public static class Data
     private static void TestFastKits()
     {
         Assert.IsTrue(UseFastKits);
-    }
-    [OperationTest(DisplayName = "Colored Console Check")]
-    [Conditional("DEBUG")]
-    [UsedImplicitly]
-    private static void TestColoredConsole()
-    {
-        Assert.IsNotNull(OutputToConsoleMethod);
     }
     [OperationTest(DisplayName = "ServerSpawnLegacyImpact Check")]
     [Conditional("DEBUG")]
@@ -197,32 +187,7 @@ public static class Data
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Is<TGamemode>() where TGamemode : class, IGamemode => Gamemode is TGamemode;
-
-    public static void LoadColoredConsole()
-    {
-        try
-        {
-            FieldInfo? defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (defaultIoHandlerFieldInfo != null)
-            {
-                DefaultIOHandler = (ICommandInputOutput)defaultIoHandlerFieldInfo.GetValue(Dedicator.commandWindow);
-                MethodInfo? appendConsoleMethod = DefaultIOHandler.GetType().GetMethod("outputToConsole", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (appendConsoleMethod != null)
-                {
-                    OutputToConsoleMethod = (OutputToConsole)appendConsoleMethod.CreateDelegate(typeof(OutputToConsole), DefaultIOHandler);
-                    L.Log("Gathered IO Methods for Colored Console Messages", ConsoleColor.Magenta);
-                    return;
-                }
-            }
-            OutputToConsoleMethod = null;
-        }
-        catch (Exception ex)
-        {
-            CommandWindow.LogError("Couldn't get defaultIOHandler from CommandWindow:");
-            CommandWindow.LogError(ex);
-            OutputToConsoleMethod = null;
-        }
-    }
+    
     internal static async Task LoadSQL(CancellationToken token)
     {
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);

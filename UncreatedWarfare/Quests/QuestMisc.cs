@@ -1735,7 +1735,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
                 _value = value.constant;
             }
         }
-        /// <summary>Will return <see langword="null"/> if <see cref="DynamicStringValue.SelectionBehavior"/> is <see cref=ChoiceBehavior.InclusiveL"/> and the value is not of type <see cref=DynamicValueType.ConstantT"/>.</summary>
+        /// <summary>Will return <see langword="null"/> if <see cref="DynamicStringValue.SelectionBehavior"/> is <see cref="ChoiceBehavior.Inclusive"/> and the value is not of type <see cref="DynamicValueType.Constant"/>.</summary>
         public readonly string InsistValue() => _value!;
         public readonly bool IsMatch(string value)
         {
@@ -2127,7 +2127,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                 }
             }
         }
-        /// <summary>Will return <see langword="null"/> if <see cref="DynamicAssetValue{TAsset}.SelectionBehavior"/> is <see cref=ChoiceBehavior.InclusiveL"/> and the value is not of type <see cref=DynamicValueType.ConstantT"/>.</summary>
+        /// <summary>Will return <see langword="null"/> if <see cref="DynamicAssetValue{TAsset}.SelectionBehavior"/> is <see cref="ChoiceBehavior.Inclusive"/> and the value is not of type <see cref="DynamicValueType.Constant"/>.</summary>
         public readonly Guid InsistValue() => _value;
         public readonly TAsset InsistAssetValue() => (_valueCache ?? (Assets.isLoading ? null : Assets.find<TAsset>(_value)))!;
         public readonly TAsset[] GetAssetValueSet()

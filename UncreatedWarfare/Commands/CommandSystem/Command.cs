@@ -14,11 +14,13 @@ public abstract class Command : IExecutableCommand
     private readonly EAdminType allowedUsers;
     private readonly List<string> _aliases = new List<string>(0);
     public readonly IReadOnlyList<string> Aliases;
+    SemaphoreSlim? IExecutableCommand.Semaphore { get; set; }
     bool IExecutableCommand.ExecuteAsynchronously => false;
     IReadOnlyList<string>? IExecutableCommand.Aliases => Aliases;
     public string CommandName => commandName;
     public EAdminType AllowedPermissions => allowedUsers;
     public int Priority => priority;
+    bool IExecutableCommand.Synchronize => false;
     protected Command(string command, EAdminType allowedUsers = 0, int priority = 0)
     {
         commandName = command;
@@ -54,6 +56,7 @@ public abstract class AsyncCommand : IExecutableCommand
 {
     protected const string Default = CommandInteraction.Default;
     private readonly string commandName;
+    private readonly bool sync;
     private readonly int priority;
     private readonly EAdminType allowedUsers;
     private readonly List<string> _aliases = new List<string>(0);
@@ -62,13 +65,16 @@ public abstract class AsyncCommand : IExecutableCommand
     public string CommandName => commandName;
     bool IExecutableCommand.ExecuteAsynchronously => true;
     public EAdminType AllowedPermissions => allowedUsers;
+    SemaphoreSlim? IExecutableCommand.Semaphore { get; set; }
     public int Priority => priority;
-    protected AsyncCommand(string command, EAdminType allowedUsers = 0, int priority = 0)
+    bool IExecutableCommand.Synchronize => sync;
+    protected AsyncCommand(string command, EAdminType allowedUsers = 0, int priority = 0, bool sync = false)
     {
         commandName = command;
         this.allowedUsers = allowedUsers;
         this.priority = priority;
         Aliases = _aliases.AsReadOnly();
+        this.sync = sync;
     }
     protected void AddAlias(string alias) => _aliases.Add(alias);
     /// <summary>Runs before <see cref="Execute"/>. Sends "no_permissions" translation to the player if it returns <see langword="false"/>. This could also be done in <see cref="Execute"/> if desired.</summary>

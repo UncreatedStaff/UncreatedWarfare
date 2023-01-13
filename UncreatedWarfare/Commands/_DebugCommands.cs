@@ -1520,4 +1520,13 @@ public class DebugCommand : AsyncCommand
         });
     }
 #endif
+
+    private async Task waittest(CommandInteraction ctx, CancellationToken token)
+    {
+        ctx.AssertRanByConsole();
+
+        ctx.ReplyString("Starting...");
+        await Task.Delay(5000, token);
+        ctx.ReplyString("Done.");
+    }
 }

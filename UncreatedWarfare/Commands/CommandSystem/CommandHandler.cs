@@ -117,7 +117,11 @@ public static class CommandHandler
         }
 
         Commands.Add(cmd);
-    regCmd:
+
+        regCmd:
+        if (cmd.Synchronize && cmd.ExecuteAsynchronously)
+            cmd.Semaphore = new SemaphoreSlim(1, 1);
+
         if (cmd is VanillaCommand)
             L.Log("Command /" + name.ToLower() + " registered from Unturned.", ConsoleColor.DarkGray);
         else
@@ -139,6 +143,35 @@ public static class CommandHandler
             _ => EAdminType.VANILLA_ADMIN,
         };
     }
+    internal static void OnLog(string message)
+    {
+        ActiveCommands.FindLast(x => x.Command is VanillaCommand)?.ReplyString("<#bfb9ac>" + message + "</color>");
+    }
+    private static void RunCommand(int index, UCPlayer? player, string[] args, string message, bool keepSlash)
+    {
+        IExecutableCommand cmd = Commands[index];
+        CommandInteraction interaction = cmd.SetupCommand(player, args, message, keepSlash);
+        ActiveCommands.Add(interaction);
+        if (cmd.ExecuteAsynchronously)
+        {
+            UCWarfare.RunTask(interaction.ExecuteCommandAsync, ctx: (player == null ? "Console" : player.Steam64.ToString(Data.AdminLocale)) + " executing /" + cmd.CommandName + " with " + args.Length + " args.");
+        }
+        else
+        {
+            interaction.ExecuteCommandSync();
+        }
+    }
+    
+    private static void OnCommandInput(string text, ref bool shouldExecuteCommand)
+    {
+        if (shouldExecuteCommand && CheckRunCommand(null, text, false))
+            shouldExecuteCommand = false;
+    }
+    private struct ArgumentInfo
+    {
+        public int Start;
+        public int End;
+    }
     private static unsafe bool CheckRunCommand(UCPlayer? player, string message, bool requirePrefix)
     {
         ThreadUtil.assertIsGameThread();
@@ -147,7 +180,7 @@ public static class CommandHandler
             PendingMessages.Add(new KeyValuePair<KeyValuePair<UCPlayer?, bool>, string>(new KeyValuePair<UCPlayer?, bool>(player, requirePrefix), message));
             return true;
         }
-            
+
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -190,7 +223,7 @@ public static class CommandHandler
                         }
                     }
                     cmdStart = i;
-                    c:
+                c:
                     continue;
                 }
 
@@ -213,7 +246,7 @@ public static class CommandHandler
                                 info.End = -1;
                                 info.Start = i + 1;
                             }
-                            c:
+                        c:
                             cmdEnd = i - 1;
                         }
                     }
@@ -259,9 +292,9 @@ public static class CommandHandler
                             goto c;
                     }
                     goto n;
-                    c:
+                c:
                     continue;
-                    n:
+                n:
                     if (argCt != -1)
                     {
                         ref ArgumentInfo info2 = ref ArgBuffer[argCt];
@@ -277,7 +310,7 @@ public static class CommandHandler
                 }
                 continue;
 
-                contArgChr:
+            contArgChr:
                 if (inArg)
                 {
                     ref ArgumentInfo info = ref ArgBuffer[argCt];
@@ -306,7 +339,7 @@ public static class CommandHandler
                     inArg = true;
                 }
                 continue;
-                getCommand:
+            getCommand:
                 for (int k = 0; k < Commands.Count; ++k)
                 {
                     string c2 = Commands[k].CommandName;
@@ -401,7 +434,7 @@ public static class CommandHandler
                     }
                 }
             }
-            runCommand:
+        runCommand:
             if (cmdInd == -1) goto notCommand;
             int ct2 = 0;
             for (int i = 0; i <= argCt; ++i)
@@ -421,37 +454,8 @@ public static class CommandHandler
             RunCommand(cmdInd, player, args, message, message[message.Length - 1] == '\\');
         }
         return true;
-        notCommand:
+    notCommand:
         return false;
-    }
-    internal static void OnLog(string message)
-    {
-        ActiveCommands.FindLast(x => x.Command is VanillaCommand)?.ReplyString("<#bfb9ac>" + message + "</color>");
-    }
-    private static void RunCommand(int index, UCPlayer? player, string[] args, string message, bool keepSlash)
-    {
-        IExecutableCommand cmd = Commands[index];
-        CommandInteraction interaction = cmd.SetupCommand(player, args, message, keepSlash);
-        ActiveCommands.Add(interaction);
-        if (cmd.ExecuteAsynchronously)
-        {
-            UCWarfare.RunTask(interaction.ExecuteCommandAsync, ctx: (player == null ? "Console" : player.Steam64.ToString(Data.AdminLocale)) + " executing /" + cmd.CommandName + " with " + args.Length + " args.");
-        }
-        else
-        {
-            interaction.ExecuteCommandSync();
-        }
-    }
-    
-    private static void OnCommandInput(string text, ref bool shouldExecuteCommand)
-    {
-        if (shouldExecuteCommand && CheckRunCommand(null, text, false))
-            shouldExecuteCommand = false;
-    }
-    private struct ArgumentInfo
-    {
-        public int Start;
-        public int End;
     }
 }
 public abstract class BaseCommandInteraction : Exception
@@ -552,32 +556,47 @@ public sealed class CommandInteraction : BaseCommandInteraction
 #if DEBUG
                     using IDisposable profiler = ProfilingUtils.StartTracking("Execute command: " + Command.CommandName);
 #endif
-                    
-                    await (Task = Command.Execute(this,
-                        (Caller is null || !Caller.IsOnline
-                            ? CommandHandler.GlobalCommandCancel
-                            : CancellationTokenSource.CreateLinkedTokenSource(CommandHandler.GlobalCommandCancel.Token, Caller.DisconnectToken)).Token)
-                        ).ConfigureAwait(false);
-#if DEBUG
-                    profiler.Dispose();
-#endif
-                    CommandHandler.ActiveCommands.Remove(this);
-                    rem = true;
-                    if (CommandHandler.TryingToCancel)
-                        return;
-                    if (!UCWarfare.IsMainThread)
-                        await UCWarfare.ToUpdate();
-                    if (CommandHandler.TryingToCancel)
-                        return;
-
-                    if (!Responded)
+                    if (Command.Synchronize)
+                        await Command.Semaphore!.WaitAsync().ConfigureAwait(false);
+                    try
                     {
-                        Reply(T.UnknownError);
-                        MarkComplete();
+                        await (Task = Command.Execute(this,
+                                (Caller is null || !Caller.IsOnline
+                                    ? CommandHandler.GlobalCommandCancel
+                                    : CancellationTokenSource.CreateLinkedTokenSource(CommandHandler.GlobalCommandCancel.Token, Caller.DisconnectToken)).Token)
+                            ).ConfigureAwait(false);
                     }
+                    finally
+                    {
+                        try
+                        {
+#if DEBUG
+                            profiler.Dispose();
+#endif
+                            CommandHandler.ActiveCommands.Remove(this);
+                        }
+                        finally
+                        {
+                            Command.Semaphore!.Release();
+                        }
+                        rem = true;
+                        if (!CommandHandler.TryingToCancel)
+                        {
+                            if (!UCWarfare.IsMainThread)
+                                await UCWarfare.ToUpdate();
+                            if (!CommandHandler.TryingToCancel)
+                            {
+                                if (!Responded)
+                                {
+                                    Reply(T.UnknownError);
+                                    MarkComplete();
+                                }
 
-                    if (Caller is not null)
-                        CommandWaiter.OnCommandExecuted(Caller, Command);
+                                if (Caller is not null)
+                                    CommandWaiter.OnCommandExecuted(Caller, Command);
+                            }
+                        }
+                    }
                 }
                 catch (TaskCanceledException)
                 {

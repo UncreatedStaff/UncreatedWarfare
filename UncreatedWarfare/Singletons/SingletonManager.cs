@@ -79,9 +79,9 @@ internal class SingletonManager : MonoBehaviour
     /// <summary>Loads a singleton, (asynchronously when available), unloading any others.</summary>
     /// <param name="throwErrors"><see langword="True"/> to throw any <see cref="SingletonLoadException"/>s that may be thrown upon loading. Otherwise, <see langword="false"/>.</param>
     /// <exception cref="NotSupportedException">Thrown if the function isn't executed on the game thread.</exception>
-    /// <exception cref="SingletonLoadException">Thrown if <paramref name="singleton"/> isn't successfully loaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
+    /// <exception cref="SingletonLoadException">Thrown if <paramref name="type"/> isn't successfully loaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
     /// <exception cref="ArgumentException">Type is not derived from <see cref="IUncreatedSingleton"/>.</exception>
-    /// <exception cref="InvalidOperationException">Thrown if <paramref name="singleton"/> has to be loaded asynchronously.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if <paramref name="type"/> has to be loaded asynchronously.</exception>
     /// <returns>The loaded singleton.</returns>
     public async Task<IUncreatedSingleton> LoadSingletonAsync(Type type, bool throwErrors = true, bool @lock = true, CancellationToken token = default)
     {

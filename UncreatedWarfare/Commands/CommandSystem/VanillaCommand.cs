@@ -10,11 +10,13 @@ public sealed class VanillaCommand : IExecutableCommand, IComparable<VanillaComm
 {
     private readonly SDG.Unturned.Command _cmd;
     private readonly EAdminType _allowedUsers;
+    SemaphoreSlim? IExecutableCommand.Semaphore { get; set; }
     string IExecutableCommand.CommandName => _cmd.command;
     EAdminType IExecutableCommand.AllowedPermissions => _allowedUsers;
     bool IExecutableCommand.ExecuteAsynchronously => false;
     int IExecutableCommand.Priority => 0;
     IReadOnlyList<string>? IExecutableCommand.Aliases => null;
+    bool IExecutableCommand.Synchronize => false;
     public VanillaCommand(SDG.Unturned.Command cmd)
     {
         _cmd = cmd;

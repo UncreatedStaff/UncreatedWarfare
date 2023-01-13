@@ -9,7 +9,6 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
-/// <param name="PrimaryKey">Flag primary key.</param>
 public class GridObject : IJsonReadWrite, IListItem
 {
     [JsonPropertyName("flag_id")]

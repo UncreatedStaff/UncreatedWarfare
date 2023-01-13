@@ -581,5 +581,5 @@ public class WarfareSQL : MySqlDatabase
     protected override void LogError(string message, ConsoleColor color = ConsoleColor.Red)
         => L.LogError(message, color, "MySQL");
     protected override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
-        => L.LogError(ex, color, "MySQL");
+        => L.LogError(ex, method: "MySQL");
 }

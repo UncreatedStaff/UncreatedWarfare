@@ -119,7 +119,7 @@ public static partial class Patches
 
         // SDG.Unturned.BarricadeManager
         /// <summary>
-        /// Prefix of <see cref="BarricadeManager.SendRegion(SteamPlayer client, byte x, byte y, ushort plant)"/> to set translation data of signs.
+        /// Prefix of <see cref="BarricadeManager.SendRegion(SteamPlayer, BarricadeRegion, byte, byte, NetId, float)"/> to set translation data of signs.
         /// </summary>
         [HarmonyPatch(typeof(BarricadeManager), "SendRegion")]
         [HarmonyPrefix]

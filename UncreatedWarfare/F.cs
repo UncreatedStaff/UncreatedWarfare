@@ -580,21 +580,6 @@ public static class F
             }
         }
     }
-    [Obsolete("Use UCPlayer.Name instead.")]
-    public static PlayerNames GetPlayerOriginalNames(UCPlayer player) => player.Name;
-    [Obsolete("Use UCPlayer.Name instead.")]
-    public static PlayerNames GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
-    [Obsolete("Use UCPlayer.Name instead.")]
-    public static PlayerNames GetPlayerOriginalNames(Player player)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        UCPlayer? pl = UCPlayer.FromPlayer(player);
-        if (pl != null)
-            return pl.Name;
-        return new PlayerNames(player);
-    }
     public static PlayerNames GetPlayerName(ulong player)
     {
         if (player == 0) return PlayerNames.Console;

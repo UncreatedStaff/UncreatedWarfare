@@ -118,7 +118,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
         {
             if (spotted.SpottingTeam == _firer.quests.groupID.m_SteamID && spotted.IsLaserTarget)
             {
-                if ((spotted.transform.position - _projectile.transform.position).sqrMagnitude < Math.Pow(_aquisitionRange, 2))
+                if ((spotted.transform.position - _projectile.transform.position).sqrMagnitude < _aquisitionRange * _aquisitionRange)
                 {
                     float angleBetween = Vector3.Angle(spotted.transform.position - _projectile.transform.position, _projectile.transform.forward);
                     if (angleBetween < minAngle)
