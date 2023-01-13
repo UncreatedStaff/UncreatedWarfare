@@ -45,7 +45,7 @@ public delegate void VoidDelegate();
 public class UCWarfare : MonoBehaviour
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
-    public static readonly Version Version = new Version(2, 7, 1, 1);
+    public static readonly Version Version = new Version(3, 0, 0, 0);
     private readonly SystemConfig _config = new SystemConfig();
     private readonly List<UCTask> _tasks = new List<UCTask>(16);
     public static UCWarfare I;
