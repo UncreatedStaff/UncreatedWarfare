@@ -8,6 +8,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
@@ -162,6 +163,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(418)]
     [JsonPropertyName("ui_buffs")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIBuffs { get; set; }
+
+    [Sync(419, OnPullMethod = nameof(OnUIKitMenuUpdated))]
+    [JsonPropertyName("ui_kit_menu")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> UIKitMenu { get; set; }
 
     [Sync(450, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_toast_info")]
@@ -911,6 +916,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         #endregion
     }
     private void OnUIToastUpdated() => UCPlayerData.ReloadToastIDs();
+    private void OnUIKitMenuUpdated() => KitManager.MenuUI.LoadFromConfig(UIKitMenu);
     private void OnUIToastWinUpdated() => Gamemode.WinToastUI.LoadFromConfig(UIToastWin);
     private void OnUIActionMenuUpdated() => ActionManager.ActionMenuUI.LoadFromConfig(UIActionMenu);
     private void OnUILoadingUpdated() => UCPlayer.LoadingUI.LoadFromConfig(UILoading);

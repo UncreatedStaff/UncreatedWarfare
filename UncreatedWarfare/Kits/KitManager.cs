@@ -32,6 +32,7 @@ namespace Uncreated.Warfare.Kits;
 // todo add delays to kits
 public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync
 {
+    public static readonly KitMenuUI MenuUI = new KitMenuUI();
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
     public static event KitChanged? OnKitChanged;
@@ -2761,6 +2762,41 @@ public static class KitEx
             }
         }
         return false;
+    }
+    public static char GetIcon(this Class @class)
+    {
+        if (SquadManager.Config is { Classes: { Length: > 0 } arr })
+        {
+            int i = (int)@class;
+            if (arr.Length > i && arr[i].Class == @class)
+                return arr[i].Icon;
+            for (i = 0; i < arr.Length; ++i)
+            {
+                if (arr[i].Class == @class)
+                    return arr[i].Icon;
+            }
+        }
+
+        return @class switch
+        {
+            Class.Squadleader => '¦',
+            Class.Rifleman => '¡',
+            Class.Medic => '¢',
+            Class.Breacher => '¤',
+            Class.AutomaticRifleman => '¥',
+            Class.Grenadier => '¬',
+            Class.MachineGunner => '«',
+            Class.LAT => '®',
+            Class.HAT => '¯',
+            Class.Marksman => '¨',
+            Class.Sniper => '£',
+            Class.APRifleman => '©',
+            Class.CombatEngineer => 'ª',
+            Class.Crewman => '§',
+            Class.Pilot => '°',
+            Class.SpecOps => '×',
+            _ => '±'
+        };
     }
     public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
     {

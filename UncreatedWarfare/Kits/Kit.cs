@@ -1289,11 +1289,11 @@ public enum Class : byte
     [Translatable(LanguageAliasSet.PORTUGUESE, "Op. Esp.")]
     [Translatable(LanguageAliasSet.POLISH, "Specjalista")]
     SpecOps = 17,
-    // increment ClassConverter.MAX_CLASS if adding another field!
+    // increment ClassConverter.MaxClass if adding another field!
 }
 public sealed class ClassConverter : JsonConverter<Class>
 {
-    private const Class MaxClass = Class.SpecOps;
+    internal const Class MaxClass = Class.SpecOps;
     public override Class Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         switch (reader.TokenType)
