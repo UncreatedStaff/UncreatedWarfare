@@ -1341,21 +1341,21 @@ public class BuildableData : ITranslationArgument
         {
             if (Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vasset))
             {
-                if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+                if (format is not null && format.Equals(T.FormatRarityColor))
                     return Localization.Colorize(ItemTool.getRarityColorUI(vasset.rarity).Hex(), Translation.Pluralize(vasset.vehicleName, flags), flags);
                 else
                     return Translation.Pluralize(vasset.vehicleName, flags);
             }
             if (Emplacement.BaseBarricade.ValidReference(out asset))
             {
-                if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+                if (format is not null && format.Equals(T.FormatRarityColor))
                     return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Translation.Pluralize(asset.itemName, flags), flags);
                 else
                     return Translation.Pluralize(asset.itemName, flags);
             }
             if (Emplacement.Ammo.ValidReference(out ItemAsset iasset))
             {
-                if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+                if (format is not null && format.Equals(T.FormatRarityColor))
                     return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), Translation.Pluralize(iasset.itemName, flags), flags);
                 else
                     return Translation.Pluralize(iasset.itemName, flags);
@@ -1364,7 +1364,7 @@ public class BuildableData : ITranslationArgument
 
         if (BuildableBarricade.ValidReference(out asset) || Foundation.ValidReference(out asset))
         {
-            if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+            if (format is not null && format.Equals(T.FormatRarityColor))
                 return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Translation.Pluralize(asset.itemName, flags), flags);
             else
                 return Translation.Pluralize(asset.itemName, flags);

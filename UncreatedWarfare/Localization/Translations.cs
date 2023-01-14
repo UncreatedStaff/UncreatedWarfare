@@ -240,7 +240,7 @@ public class Translation
         {
             if (format is not null)
             {
-                if (format.Equals(Warfare.T.TIME_LONG, StringComparison.Ordinal))
+                if (format.Equals(Warfare.T.FormatTimeLong, StringComparison.Ordinal))
                 {
                     int sec = -1;
                     switch (value)
@@ -268,8 +268,8 @@ public class Translation
                 }
                 else
                 {
-                    bool b1 = format.Equals(Warfare.T.TIME_SHORT_MM_SS, StringComparison.Ordinal);
-                    bool b2 = !b1 && format.Equals(Warfare.T.TIME_SHORT_HH_MM_SS, StringComparison.Ordinal);
+                    bool b1 = format.Equals(Warfare.T.FormatTimeShort_MM_SS, StringComparison.Ordinal);
+                    bool b2 = !b1 && format.Equals(Warfare.T.FormatTimeShort_HH_MM_SS, StringComparison.Ordinal);
                     if (b1 || b2)
                     {
                         string sep = locale is CultureInfo info ? info.DateTimeFormat.TimeSeparator : ":";
@@ -334,7 +334,7 @@ public class Translation
         {
             if (format is not null)
             {
-                if (format.Equals(Warfare.T.RARITY_COLOR_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(Warfare.T.FormatRarityColor, StringComparison.Ordinal))
                     return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Pluralize(asset.vehicleName, flags), flags);
             }
             return asset.vehicleName;
@@ -343,7 +343,7 @@ public class Translation
         {
             if (format is not null)
             {
-                if (format.Equals(Warfare.T.RARITY_COLOR_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(Warfare.T.FormatRarityColor, StringComparison.Ordinal))
                     return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Pluralize(asset.itemName, flags), flags);
             }
             return asset.itemName;
@@ -352,11 +352,11 @@ public class Translation
         {
             if (format is not null)
             {
-                if (format.Equals(Warfare.T.UPPERCASE, StringComparison.Ordinal))
+                if (format.Equals(Warfare.T.FormatUppercase, StringComparison.Ordinal))
                     return str.ToUpperInvariant();
-                else if (format.Equals(Warfare.T.LOWERCASE, StringComparison.Ordinal))
+                else if (format.Equals(Warfare.T.FormatLowercase, StringComparison.Ordinal))
                     return str.ToLowerInvariant();
-                else if (format.Equals(Warfare.T.PROPERCASE, StringComparison.Ordinal))
+                else if (format.Equals(Warfare.T.FormatPropercase, StringComparison.Ordinal))
                     return str.ToProperCase();
             }
             return str;
@@ -1354,7 +1354,7 @@ public class Translation
     {
         if (!string.IsNullOrEmpty(fmt))
         {
-            int ind1 = fmt!.IndexOf(T.PLURAL, StringComparison.Ordinal);
+            int ind1 = fmt!.IndexOf(T.FormatPlural, StringComparison.Ordinal);
             if (ind1 != -1)
             {
                 if (fmt[fmt.Length - 1] == '}')
@@ -1439,7 +1439,7 @@ public enum TranslationFlags
     /// <summary>Use for translations to be used on non-TMPro UI. Skips color optimization and convert to &lt;color=#ffffff&gt; format, doesn't replace already existing TMPro tags.</summary>
     UnityUINoReplace = NoColorOptimization | TranslateWithUnityRichText,
 
-    /// <summary>Tells the translator to format the term plurally, this will be automatically applied to individual arguments if the format is <see cref="T.PLURAL"/>.</summary>
+    /// <summary>Tells the translator to format the term plurally, this will be automatically applied to individual arguments if the format is <see cref="T.FormatPlural"/>.</summary>
     Plural = 4096,
 
     /// <summary>Tells the translator to not try to turn arguments plural.</summary>

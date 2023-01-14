@@ -76,6 +76,7 @@ public sealed class KitCommand : AsyncCommand
                         if (kit == null)
                             goto @new;
                         kit.Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true);
+                        kit.UpdateLastEdited(ctx.CallerID);
                         ctx.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + kit.Id + ".");
                         await proxy.SaveItem(token).ConfigureAwait(false);
                         await UCWarfare.ToUpdate();
@@ -113,6 +114,7 @@ public sealed class KitCommand : AsyncCommand
                     throw ctx.Reply(T.ClassNotFoundCreateKit, ctx.Get(2)!);
 
                 kit = new Kit(kitName, @class, KitManager.GetDefaultBranch(@class), type, SquadLevel.Member, faction);
+                kit.Creator = kit.LastEditor = ctx.CallerID;
                 await manager.AddOrUpdate(kit, token).ConfigureAwait(false);
                 ctx.LogAction(ActionLogType.CreateKit, kitName);
                 await UCWarfare.ToUpdate(token);
@@ -141,6 +143,7 @@ public sealed class KitCommand : AsyncCommand
                     }
 
                     Kit? item = proxy.Item;
+                    item.UpdateLastEdited(ctx.CallerID);
                     await proxy.Delete(token).ConfigureAwait(false);
                     ctx.LogAction(ActionLogType.DeleteKit, kitName);
                     await UCWarfare.ToUpdate();
@@ -217,6 +220,7 @@ public sealed class KitCommand : AsyncCommand
                                     }
                                     else ((LevelUnlockRequirement)ulr[index]).UnlockLevel = level;
                                 }
+                                proxy.Item.UpdateLastEdited(ctx.CallerID);
                                 await proxy.SaveItem(token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
                                 ctx.Reply(T.KitPropertySet, property, proxy.Item, newValue);
@@ -235,7 +239,7 @@ public sealed class KitCommand : AsyncCommand
                             if (ctx.TryGetRange(4, out newValue))
                             {
                                 newValue = newValue.Replace("\\n", "\n");
-                                KitManager.SetTextNoLock(proxy.Item, newValue, language);
+                                KitManager.SetTextNoLock(ctx.CallerID, proxy.Item, newValue, language);
                                 await proxy.SaveItem(token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
                                 newValue = newValue.Replace('\n', '\\');
@@ -253,6 +257,7 @@ public sealed class KitCommand : AsyncCommand
                             if (faction != null || isNull)
                             {
                                 proxy.Item.Faction = faction;
+                                proxy.Item.UpdateLastEdited(ctx.CallerID);
                                 await proxy.SaveItem(token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
                                 ctx.Reply(T.KitPropertySet, "faction", proxy.Item, faction?.GetName(L.Default)!);
@@ -298,6 +303,7 @@ public sealed class KitCommand : AsyncCommand
                                 case SetPropertyResult.Success:
                                     if (kit.Class != oldclass && isDefLim)
                                         kit.TeamLimit = KitManager.GetDefaultTeamLimit(kit.Class);
+                                    proxy.Item.UpdateLastEdited(ctx.CallerID);
                                     await proxy.SaveItem(token).ConfigureAwait(false);
                                     await UCWarfare.ToUpdate(token);
                                     KitManager.UpdateSigns(kit);
@@ -434,7 +440,8 @@ public sealed class KitCommand : AsyncCommand
                     kit = new Kit(kitName, existing.Item)
                     {
                         Season = UCWarfare.Season,
-                        Disabled = false
+                        Disabled = false,
+                        Creator = ctx.CallerID
                     };
                 }
                 finally
@@ -471,7 +478,9 @@ public sealed class KitCommand : AsyncCommand
                 await UCWarfare.ToUpdate(token);
                 Kit loadout = new Kit(playerId, let, @class, signText, faction)
                 {
-                    Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true)
+                    Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true),
+                    Creator = ctx.CallerID,
+                    LastEditor = ctx.CallerID
                 };
                 SqlItem<Kit>? oldKit = await manager.FindKit(loadout.Id, token).ConfigureAwait(false);
                 if (let <= 'z' && oldKit?.Item == null)

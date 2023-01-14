@@ -386,7 +386,7 @@ public static class QuestManager
         L.LogError("Failed to create a quest object of type " + type);
         return null;
     }
-    /// <summary>Read function to parse a quest data with quest type <paramref name="type"/>.</summary>
+    /// <summary>Read function to parse a quest data.</summary>
     public static BaseQuestData? ReadQuestData(ref Utf8JsonReader reader)
     {
 #if DEBUG

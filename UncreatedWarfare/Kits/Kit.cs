@@ -45,6 +45,10 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public PrimaryKey[] MapFilter { get; set; }
     public PrimaryKey[] RequestSigns { get; set; }
     public string? WeaponText { get; set; }
+    public DateTimeOffset CreatedTimestamp { get; set; }
+    public ulong Creator { get; set; }
+    public DateTimeOffset LastEditedTimestamp { get; set; }
+    public ulong LastEditor { get; set; }
     public FactionInfo? Faction
     {
         get => FactionKey.IsValid ? TeamManager.GetFactionInfo(FactionKey) : null;
@@ -65,11 +69,11 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist. Checks both active teams, use <see cref="IsRequestable(ulong)"/> to check for a certain team.</summary>
     public bool Requestable => !Disabled && (Season == UCWarfare.Season || Season < 1) &&
                              !IsCurrentMapAllowed() &&
-                             (!IsFactionAllowed(TeamManager.Team1Faction) || !IsFactionAllowed(TeamManager.Team2Faction));
+                             (IsFactionAllowed(TeamManager.Team1Faction) || IsFactionAllowed(TeamManager.Team2Faction));
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
     public bool IsRequestable(ulong team) => team is not 1ul and not 2ul ? Requestable : (!Disabled && (Season == UCWarfare.Season || Season < 1) &&
-                             !IsCurrentMapAllowed() &&
-                             !IsFactionAllowed(TeamManager.GetFaction(team)));
+                             IsCurrentMapAllowed() &&
+                             IsFactionAllowed(TeamManager.GetFactionSafe(team)));
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
     public bool IsRequestable(FactionInfo? faction) => faction is null ? Requestable : (!Disabled && (Season == UCWarfare.Season || Season < 1) &&
                                                                                !IsCurrentMapAllowed() &&
@@ -92,6 +96,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         Season = UCWarfare.Season;
         TeamLimit = KitManager.GetDefaultTeamLimit(@class);
         RequestCooldown = KitManager.GetDefaultRequestCooldown(@class);
+        CreatedTimestamp = LastEditedTimestamp = DateTime.UtcNow;
         /* DEFAULTS *
         FactionFilterIsWhitelist = false;
         MapFilterIsWhitelist = false;
@@ -125,6 +130,9 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         CreditCost = copy.CreditCost;
         PremiumCost = copy.PremiumCost;
         WeaponText = copy.WeaponText;
+        CreatedTimestamp = DateTime.UtcNow;
+        LastEditedTimestamp = copy.LastEditedTimestamp;
+        LastEditor = copy.LastEditor;
     }
     public Kit(ulong loadoutOwner, char loadout, Class @class, string? displayName, FactionInfo? faction)
     {
@@ -145,6 +153,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         TeamLimit = KitManager.GetDefaultTeamLimit(@class);
         RequestCooldown = KitManager.GetDefaultRequestCooldown(@class);
         PremiumCost = UCWarfare.Config.LoadoutCost;
+        CreatedTimestamp = LastEditedTimestamp = DateTime.UtcNow;
         /* DEFAULTS *
         FactionFilterIsWhitelist = false;
         MapFilterIsWhitelist = false;

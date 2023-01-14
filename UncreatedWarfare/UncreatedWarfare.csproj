@@ -41,10 +41,12 @@
     <DebugType>portable</DebugType>
     <WarningLevel>5</WarningLevel>
     <DefineConstants>$(DefineConstants)TRACE;UNITY_ASSERTIONS</DefineConstants>
+    <NoWarn>1701;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>portable</DebugType>
     <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
+    <NoWarn>1701;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Command_blank.txt" />

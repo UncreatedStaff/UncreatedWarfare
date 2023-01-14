@@ -119,8 +119,13 @@ public static class CommandHandler
         Commands.Add(cmd);
 
         regCmd:
-        if (cmd.Synchronize && cmd.ExecuteAsynchronously)
-            cmd.Semaphore = new SemaphoreSlim(1, 1);
+        if (cmd.Synchronize)
+        {
+            if (cmd.ExecuteAsynchronously)
+                cmd.Semaphore = new SemaphoreSlim(1, 1);
+            else
+                L.LogWarning("Synchronous commands can not use Semaphores to synchronize access: " + cmd.GetType().FullName + ".");
+        }
 
         if (cmd is VanillaCommand)
             L.Log("Command /" + name.ToLower() + " registered from Unturned.", ConsoleColor.DarkGray);
@@ -246,7 +251,7 @@ public static class CommandHandler
                                 info.End = -1;
                                 info.Start = i + 1;
                             }
-                        c:
+                            c:
                             cmdEnd = i - 1;
                         }
                     }
@@ -434,7 +439,7 @@ public static class CommandHandler
                     }
                 }
             }
-        runCommand:
+            runCommand:
             if (cmdInd == -1) goto notCommand;
             int ct2 = 0;
             for (int i = 0; i <= argCt; ++i)
@@ -577,7 +582,8 @@ public sealed class CommandInteraction : BaseCommandInteraction
                         }
                         finally
                         {
-                            Command.Semaphore!.Release();
+                            if (Command.Synchronize)
+                                Command.Semaphore!.Release();
                         }
                         rem = true;
                         if (!CommandHandler.TryingToCancel)
@@ -1124,7 +1130,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     /// <summary>Get an asset based on a <see cref="Guid"/> search, <see cref="ushort"/> search, then <see cref="Asset.FriendlyName"/> search.</summary>
     /// <typeparam name="TAsset"><see cref="Asset"/> type to find.</typeparam>
-    /// <param name="length">Set to 1 to only get one parameter (default), set to -1 to get any remaining parameters.</param>
+    /// <param name="len">Set to 1 to only get one parameter (default), set to -1 to get any remaining parameters.</param>
     /// <param name="multipleResultsFound"><see langword="true"/> if <paramref name="allowMultipleResults"/> is <see langword="false"/> and multiple results were found.</param>
     /// <param name="allowMultipleResults">Set to <see langword="false"/> to make the function return <see langword="false"/> if multiple results are found. <paramref name="asset"/> will still be set.</param>
     /// <returns><see langword="true"/> If a <typeparamref name="TAsset"/> is found or multiple are found and <paramref name="allowMultipleResults"/> is <see langword="true"/>.</returns>

@@ -1719,7 +1719,7 @@ public static class F
                ") VALUES (" + SqlTypes.ParameterList(0, columns.Length) + ") ON DUPLICATE KEY UPDATE " + 
                SqlTypes.ColumnUpdateList(1, 1, columns) + ";";
     }
-    /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>) VALUES (parameters) ON DUPLICATE KEY UPDATE (<paramref name="columns"/> without first column);</summary>
+    /// <summary> ON DUPLICATE KEY UPDATE (<paramref name="columns"/> without first column);</summary>
     /// <remarks>Assumes pk is first column.</remarks>
     public static string EndBuildOtherInsertQueryUpdate(params string[] columns)
     {

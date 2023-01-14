@@ -55,6 +55,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public readonly SemaphoreSlim PurchaseSync = new SemaphoreSlim(1, 1);
     public readonly UCPlayerKeys Keys;
     public readonly UCPlayerEvents Events;
+    public KitMenuUIComponent KitMenuData;
     public readonly ulong Steam64;
     public volatile bool HasInitedOnce;
     public volatile bool HasDownloadedKits;
@@ -112,6 +113,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         SuppliesUnloaded = 0;
         CurrentMarkers = new List<SpottedComponent>();
         _disconnectTokenSrc = pendingSrc;
+        KitMenuData = player.GetComponent<KitMenuUIComponent>();
         if (Data.UseFastKits)
         {
             try
@@ -359,6 +361,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         _disconnectTokenSrc.Cancel();
         Events.Dispose();
         Keys.Dispose();
+        KitMenuData = null!;
+        PurchaseSync.Dispose();
     }
     public static UCPlayer? FromID(ulong steamID)
     {

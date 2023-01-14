@@ -23,7 +23,7 @@ public class RequestCommand : AsyncCommand
     private const string Syntax = "/request [save|remove]";
     private const string Help = "Request a kit by targeting a sign or request a vehicle by targeting the vehicle or it's sign while doing /request.";
 
-    public RequestCommand() : base("request", EAdminType.MEMBER)
+    public RequestCommand() : base("request", EAdminType.MEMBER, sync: true)
     {
         AddAlias("req");
     }

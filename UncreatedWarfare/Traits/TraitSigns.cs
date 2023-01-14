@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
+using Uncreated.Framework;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
@@ -27,11 +28,11 @@ internal static class TraitSigns
             if (player.ActiveTraits[i].Data.Type == trait.Type)
             {
                 if (trait.LastsUntilDeath)
-                    return Signs.QuickFormat(tr2, T.TraitSignAlreadyActiveDeath.Translate(player));
+                    return Util.QuickFormat(tr2, T.TraitSignAlreadyActiveDeath.Translate(player));
                 else
                 {
                     int secs = Mathf.CeilToInt(trait.EffectDuration - (Time.realtimeSinceStartup - player.ActiveTraits[i].StartTime));
-                    return Signs.QuickFormat(tr2, T.TraitSignAlreadyActiveTime.Translate(player, secs / 60, secs % 60));
+                    return Util.QuickFormat(tr2, T.TraitSignAlreadyActiveTime.Translate(player, secs / 60, secs % 60));
                 }
             }
         }
@@ -46,7 +47,7 @@ internal static class TraitSigns
                 goto next;
 
             int secs = Mathf.CeilToInt(cooldown.SecondsLeft);
-            return Signs.QuickFormat(tr2, T.TraitSignCooldown.Translate(player, secs / 60, secs % 60));
+            return Util.QuickFormat(tr2, T.TraitSignCooldown.Translate(player, secs / 60, secs % 60));
         }
         next:
         if (trait.UnlockRequirements is not null)
@@ -55,7 +56,7 @@ internal static class TraitSigns
             {
                 UnlockRequirement req = trait.UnlockRequirements[i];
                 if (!req.CanAccess(player))
-                    return Signs.QuickFormat(tr2, req.GetSignText(player));
+                    return Util.QuickFormat(tr2, req.GetSignText(player));
             }
         }
 
@@ -64,25 +65,25 @@ internal static class TraitSigns
             if (!trait.CanClassUse(player.KitClass))
             {
                 if (trait.ClassListIsBlacklist || trait.ClassList.Length > 2 || trait.ClassList.Length == 0)
-                    return Signs.QuickFormat(tr2, T.TraitSignClassBlacklisted.Translate(player, player.KitClass));
+                    return Util.QuickFormat(tr2, T.TraitSignClassBlacklisted.Translate(player, player.KitClass));
                 if (trait.ClassList.Length == 2)
-                    return Signs.QuickFormat(tr2, T.TraitSignClassWhitelisted2.Translate(player, trait.ClassList[0], trait.ClassList[1]));
-                return Signs.QuickFormat(tr2, T.TraitSignClassWhitelisted1.Translate(player, trait.ClassList[0]));
+                    return Util.QuickFormat(tr2, T.TraitSignClassWhitelisted2.Translate(player, trait.ClassList[0], trait.ClassList[1]));
+                return Util.QuickFormat(tr2, T.TraitSignClassWhitelisted1.Translate(player, trait.ClassList[0]));
             }
         }
         else
-            return Signs.QuickFormat(tr2, T.TraitSignNoKit.Translate(player));
+            return Util.QuickFormat(tr2, T.TraitSignNoKit.Translate(player));
         if (player.Squad is null)
         {
             if (trait.RequireSquadLeader)
-                return Signs.QuickFormat(tr2, T.TraitSignRequiresSquadLeader.Translate(player));
+                return Util.QuickFormat(tr2, T.TraitSignRequiresSquadLeader.Translate(player));
             else if (trait.RequireSquad)
-                return Signs.QuickFormat(tr2, T.TraitSignRequiresSquad.Translate(player));
+                return Util.QuickFormat(tr2, T.TraitSignRequiresSquad.Translate(player));
         }
         else if (trait.RequireSquadLeader && player.Squad.Leader.Steam64 != player.Steam64)
-            return Signs.QuickFormat(tr2, T.TraitSignRequiresSquadLeader.Translate(player));
+            return Util.QuickFormat(tr2, T.TraitSignRequiresSquadLeader.Translate(player));
 
-        return Signs.QuickFormat(tr2, string.Empty /* T.TraitSignUnlocked.Translate(player) */);
+        return Util.QuickFormat(tr2, string.Empty /* T.TraitSignUnlocked.Translate(player) */);
     }
     internal static string TranslateTraitSign(TraitData trait, string language, ulong team, out bool fmt)
     {
@@ -163,7 +164,7 @@ internal static class TraitSigns
         private byte _y;
         private ulong _team;
         private readonly Dictionary<ulong, TraitSignState> _states = new Dictionary<ulong, TraitSignState>(Provider.maxPlayers);
-        private TraitSignState GetState(ulong pl) => _state < TraitSignState.Ready ? (TraitSignState)_state : (_states.TryGetValue(pl, out TraitSignState st) ? st : (_state == TraitSignState.Ready ? TraitSignState.Ready : (TraitSignState)_state));
+        private TraitSignState GetState(ulong pl) => _state < TraitSignState.Ready ? _state : (_states.TryGetValue(pl, out TraitSignState st) ? st : _state);
         private void SetState(ulong pl, TraitSignState st)
         {
             if (_states.ContainsKey(pl))

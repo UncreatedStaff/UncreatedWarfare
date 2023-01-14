@@ -39,7 +39,7 @@ namespace Uncreated.Warfare.Commands;
 
 public class DebugCommand : AsyncCommand
 {
-    public DebugCommand() : base("test", EAdminType.MEMBER)
+    public DebugCommand() : base("test", EAdminType.MEMBER, sync: true)
     {
         AddAlias("dev");
         AddAlias("tests");
@@ -1520,13 +1520,4 @@ public class DebugCommand : AsyncCommand
         });
     }
 #endif
-
-    private async Task waittest(CommandInteraction ctx, CancellationToken token)
-    {
-        ctx.AssertRanByConsole();
-
-        ctx.ReplyString("Starting...");
-        await Task.Delay(5000, token);
-        ctx.ReplyString("Done.");
-    }
 }
