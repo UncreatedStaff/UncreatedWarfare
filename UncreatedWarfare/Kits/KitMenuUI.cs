@@ -429,7 +429,9 @@ public class KitMenuUI : UnturnedUI
         const int length = 30;
         if (DefaultLanguageCache is not { Length: length })
             DefaultLanguageCache = new string[length];
-
+        for (int i = 0; i < DefaultClassCache.Length; ++i)
+            DefaultClassCache[i] = Localization.TranslateEnum((Class)i, L.Default);
+        
         DefaultLanguageCache[0]  = T.KitMenuUITabBaseKits.Translate(L.Default);
         DefaultLanguageCache[1]  = T.KitMenuUITabEliteKits.Translate(L.Default);
         DefaultLanguageCache[2]  = T.KitMenuUITabLoadouts.Translate(L.Default);

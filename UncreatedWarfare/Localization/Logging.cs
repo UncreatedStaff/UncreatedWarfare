@@ -1,17 +1,14 @@
 ﻿using HarmonyLib;
+using JetBrains.Annotations;
 using SDG.Unturned;
+using StackCleaner;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
-using JetBrains.Annotations;
-using StackCleaner;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine.Assertions;
@@ -252,7 +249,10 @@ public static class L
     {
         if (!UCWarfare.IsLoaded)
             Logging.LogException(ex, cleanStack);
-        else WriteExceptionIntl(ex, cleanStack, _indention, method);
+        else
+        {
+            WriteExceptionIntl(ex, cleanStack, _indention, method);
+        }
     }
 
     private static readonly char[] TrimChars = { '\n', '\r' };
@@ -265,7 +265,7 @@ public static class L
             Monitor.Enter(_log);
         try
         {
-            for (; ex != null; ex = ex.InnerException!)
+            while (ex != null)
             {
                 if (inner)
                 {
@@ -297,19 +297,16 @@ public static class L
                 {
                     if (cleanStack)
                     {
-                        StackTrace trace = new StackTrace(ex, true);
-                        string str = Cleaner.GetString(trace);
+                        string str = Cleaner.GetString(ex);
                         AddLine(str, ConsoleColor.DarkGray);
                     }
-                    else
-                    {
-                        AddLine(indent != 0
-                            ? string.Join(Environment.NewLine, ex.StackTrace.Split(SplitChars).Select(x => ind + x.Trim(TrimChars)))
-                            : ex.StackTrace, ConsoleColor.DarkGray);
-                    }
+                    
+                    AddLine(indent != 0
+                        ? string.Join(Environment.NewLine, ex.StackTrace.Split(SplitChars).Select(x => ind + x.Trim(TrimChars)))
+                        : ex.StackTrace, ConsoleColor.DarkGray);
                 }
-                if (ex is AggregateException) break;
-
+                if (ex is AggregateException) break; ;
+                ex = ex.InnerException!;
                 inner = true;
             }
             _log.Flush();

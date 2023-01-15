@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -8,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Quests;
@@ -208,15 +210,15 @@ public class Translation
 
             str = Type switch
             {
-                1 => ToStringFunc1!(value, format!, locale),
-                2 => ToStringFunc2!(value, format!),
-                3 => ToStringFunc3!(value, locale),
-                4 => Pluralize((value as ITranslationArgument)!.Translate(language, format, target, ref flags), flags),
-                5 => CheckCase(Pluralize((value as UnityEngine.Object)!.name, flags), format),
-                6 => value is Color clr ? clr.Hex() : value.ToString(),
-                7 => value is CSteamID id ? id.m_SteamID.ToString(format, locale) : value.ToString(),
-                8 => PlayerToString((value as PlayerCaller)!.player, flags, format),
-                9 => PlayerToString((value as Player)!, flags, format),
+                1  => ToStringFunc1!(value, format!, locale),
+                2  => ToStringFunc2!(value, format!),
+                3  => ToStringFunc3!(value, locale),
+                4  => Pluralize((value as ITranslationArgument)!.Translate(language, format, target, ref flags), flags),
+                5  => CheckCase(Pluralize((value as UnityEngine.Object)!.name, flags), format),
+                6  => value is Color clr ? clr.Hex() : value.ToString(),
+                7  => value is CSteamID id ? id.m_SteamID.ToString(format, locale) : value.ToString(),
+                8  => PlayerToString((value as PlayerCaller)!.player, flags, format),
+                9  => PlayerToString((value as Player)!, flags, format),
                 10 => PlayerToString((value as SteamPlayer)!.player, flags, format),
                 11 => PlayerToString((value as SteamPlayerID)!, flags, format),
                 12 => CheckCase(Pluralize(value is Type t ? (t.IsEnum ? Localization.TranslateEnumName(t, language) : (t.IsArray ? (t.GetElementType()!.Name + " Array") : TypeToString(t))) : value.ToString(), flags), format),
@@ -231,10 +233,43 @@ public class Translation
                 51 => CheckTime(value, format, out string? val, language, locale) ? val! : ToStringFunc1!(value, format!, locale),
                 52 => CheckTime(value, format, out string? val, language, locale) ? val! : ToStringFunc2!(value, format!),
                 53 => CheckTime(value, format, out string? val, language, locale) ? val! : ToStringFunc3!(value, locale),
-                _ => value.ToString(),
+                _  => Default(value, format, language, locale, target, flags),
             };
 
             return str;
+        }
+
+        private static string Default(T value, string? format, string lang, IFormatProvider locale, UCPlayer? target, TranslationFlags flags)
+        {
+            if (value is ICollection col)
+            {
+                StringBuilder builder = new StringBuilder("[", col.Count * 5);
+                Type? tlast = null;
+                MethodInfo? mlast = null;
+                object?[]? args = null;
+                foreach (object obj in col)
+                {
+                    if (tlast == null || !tlast.GenericTypeArguments[0].IsInstanceOfType(obj))
+                    {
+                        tlast = typeof(ToStringHelperClass<>).MakeGenericType(obj.GetType());
+                        mlast = tlast.GetMethod(nameof(ToString),
+                            BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                        if (mlast == null)
+                            goto norm;
+                    }
+
+                    if (args is null)
+                        args = new object?[] { obj, lang, format, target, locale, flags };
+                    else args[0] = obj;
+                    
+                    builder.Append((string)mlast!.Invoke(null, args));
+                }
+
+                builder.Append(']');
+                return builder.ToString();
+            }
+            norm:
+            return value!.ToString();
         }
         private static bool CheckTime(T value, string? format, out string? val, string lang, IFormatProvider locale)
         {

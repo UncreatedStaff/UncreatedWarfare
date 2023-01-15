@@ -547,9 +547,13 @@ public static class EventFunctions
                 {
                     await Data.Gamemode.OnPlayerJoined(ucplayer, default).ConfigureAwait(false);
                 }
+                catch (OperationCanceledException)
+                {
+                    L.LogDebug("Player disconnected mid player-init.");
+                }
                 catch (Exception ex)
                 {
-                    L.LogError("Error initalizing player: " + ucplayer);
+                    L.LogError("Error initializing player: " + ucplayer);
                     L.LogError(ex);
                 }
                 finally
