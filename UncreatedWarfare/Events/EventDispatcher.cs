@@ -723,31 +723,39 @@ public static class EventDispatcher
     }
     private static async Task InvokePrePlayerConnectAsync(PlayerPending args, CancellationToken token = default)
     {
-        if (PlayerPendingAsync == null) goto exit;
-        foreach (AsyncEventDelegate<PlayerPending> inv in PlayerPendingAsync.GetInvocationList()
-                     .Cast<AsyncEventDelegate<PlayerPending>>())
+        await UCWarfare.I.PlayerJoinLock.WaitAsync(token);
+        try
         {
-            if (!args.CanContinue) break;
-            await TryInvoke(inv, args, nameof(PlayerPendingAsync), token).ConfigureAwait(true);
             if (PlayerPendingAsync == null) goto exit;
-        }
-        
-        await UCWarfare.ToUpdate(token);
-        ThreadUtil.assertIsGameThread();
-        if (args.CanContinue)
-        {
-            if (args.PendingPlayer.canAcceptYet)
+            foreach (AsyncEventDelegate<PlayerPending> inv in PlayerPendingAsync.GetInvocationList()
+                         .Cast<AsyncEventDelegate<PlayerPending>>())
             {
-                EventPatches.Accept = args.Steam64;
-                Provider.accept(args.PendingPlayer);
-                EventPatches.Accept = 0ul;
+                if (!args.CanContinue) break;
+                await TryInvoke(inv, args, nameof(PlayerPendingAsync), token).ConfigureAwait(true);
+                if (PlayerPendingAsync == null) goto exit;
             }
-        }
-        else
-            Provider.reject(args.PendingPlayer.transportConnection, ESteamRejection.PLUGIN,
-                args.RejectReason ?? "An unknown error occured.");
 
-        exit: EventPatches.Accepted.Remove(args.Steam64);
+            await UCWarfare.ToUpdate(token);
+            ThreadUtil.assertIsGameThread();
+            if (args.CanContinue)
+            {
+                if (args.PendingPlayer.canAcceptYet)
+                {
+                    EventPatches.Accept = args.Steam64;
+                    Provider.accept(args.PendingPlayer);
+                    EventPatches.Accept = 0ul;
+                }
+            }
+            else
+                Provider.reject(args.PendingPlayer.transportConnection, ESteamRejection.PLUGIN,
+                    args.RejectReason ?? "An unknown error occured.");
+
+            exit: EventPatches.Accepted.Remove(args.Steam64);
+        }
+        finally
+        {
+            UCWarfare.I.PlayerJoinLock.Release();
+        }
     }
     internal static void InvokeOnSignTextChanged(InteractableSign sign)
     {

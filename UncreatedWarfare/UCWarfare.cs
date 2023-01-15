@@ -62,6 +62,8 @@ public class UCWarfare : MonoBehaviour
     internal volatile bool ProcessTasks = true;
     private Task? _earlyLoadTask;
     private readonly CancellationTokenSource _unloadCancellationTokenSource = new CancellationTokenSource();
+    public readonly SemaphoreSlim PlayerJoinLock = new SemaphoreSlim(0, 1);
+    public bool FullyLoaded { get; private set; }
     public static CancellationToken UnloadCancel => IsLoaded ? I._unloadCancellationTokenSource.Token : CancellationToken.None;
     public static int Season => Version.Major;
     public static bool IsLoaded => I is not null;
@@ -72,6 +74,7 @@ public class UCWarfare : MonoBehaviour
     {
         if (I != null) throw new SingletonLoadException(SingletonLoadType.Load, null, new Exception("Uncreated Warfare is already loaded."));
         I = this;
+        FullyLoaded = false;
     }
     [UsedImplicitly]
     private void Start() => _earlyLoadTask = Task.Run( async () =>
@@ -275,6 +278,8 @@ public class UCWarfare : MonoBehaviour
         }
 
         UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
+        FullyLoaded = true;
+        PlayerJoinLock.Release();
     }
     private IEnumerator<WaitForSecondsRealtime> RestartIn(float seconds)
     {
@@ -823,6 +828,7 @@ public class UCWarfare : MonoBehaviour
 #if DEBUG
         IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        FullyLoaded = false;
         try
         {
             ProcessTasks = false;
@@ -931,6 +937,7 @@ public class UCWarfare : MonoBehaviour
             L.LogError("Error unloading: ");
             L.LogError(ex);
         }
+
         if (Data.Singletons != null)
         {
             await Data.Singletons.UnloadAllAsync(token);

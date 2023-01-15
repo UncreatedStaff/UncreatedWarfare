@@ -12,6 +12,15 @@ using UnityEngine;
 namespace Uncreated.Warfare.Kits;
 public class KitMenuUI : UnturnedUI
 {
+    private const EPluginWidgetFlags DisabledWidgets = EPluginWidgetFlags.ShowLifeMeters |
+                                                       EPluginWidgetFlags.ShowCenterDot |
+                                                       EPluginWidgetFlags.ShowInteractWithEnemy |
+                                                       EPluginWidgetFlags.ShowVehicleStatus |
+                                                       EPluginWidgetFlags.ShowUseableGunStatus |
+                                                       EPluginWidgetFlags.ShowDeathMenu;
+
+    private const EPluginWidgetFlags EnabledWidgets = EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur;
+
     public const int KitListCount = 40;
     public const int TabCount = 4;
     public const int IncludedItemsCount = 17;
@@ -174,7 +183,7 @@ public class KitMenuUI : UnturnedUI
     public readonly string[] DefaultClassCache;
 
     public string[]? DefaultLanguageCache;
-    public KitMenuUI() : base(12013, Gamemode.Config.UIKitMenu)
+    public KitMenuUI() : base(12014, Gamemode.Config.UIKitMenu)
     {
         DropdownButtons = new UnturnedButton[(int)ClassConverter.MaxClass + 1];
         DefaultClassCache = new string[DropdownButtons.Length];
@@ -244,6 +253,9 @@ public class KitMenuUI : UnturnedUI
         {
             pl.KitMenuData.IsOpen = false;
         }
+
+        player.enablePluginWidgetFlag(DisabledWidgets);
+        player.disablePluginWidgetFlag(EnabledWidgets);
     }
 
     public void OpenUI(UCPlayer player)
@@ -261,6 +273,8 @@ public class KitMenuUI : UnturnedUI
             SwitchToTab(player, player.KitMenuData.Tab);
         }
         player.KitMenuData.IsOpen = true;
+        player.Player.disablePluginWidgetFlag(DisabledWidgets);
+        player.Player.enablePluginWidgetFlag(EnabledWidgets);
     }
     private string TranslateClass(Class @class, UCPlayer player)
     {

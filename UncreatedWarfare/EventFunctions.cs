@@ -541,7 +541,9 @@ public static class EventFunctions
             Data.PlaytimeComponents.Add(ucplayer.Steam64, pt);
             Task.Run(async () =>
             {
+                L.LogDebug("Entered async portion.");
                 await ucplayer.PurchaseSync.WaitAsync().ConfigureAwait(false);
+                L.LogDebug("Entered psync portion.");
                 await UCWarfare.ToUpdate();
                 try
                 {
@@ -555,6 +557,7 @@ public static class EventFunctions
                 {
                     L.LogError("Error initializing player: " + ucplayer);
                     L.LogError(ex);
+                    L.LogError(ex.ToString());
                 }
                 finally
                 {

@@ -1661,22 +1661,23 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         if (Data.Gamemode is not TeamGamemode { UseTeamSelector: true })
         {
             Task t = SetupPlayer(player, token);
-            await RefreshFavorites(player, token).ConfigureAwait(false);
+            await RefreshFavorites(player, false, token).ConfigureAwait(false);
             await t.ConfigureAwait(false);
             return;
         }
         UCInventoryManager.ClearInventory(player);
         player.EnsureSkillsets(Array.Empty<Skillset>());
-        await RefreshFavorites(player, token).ConfigureAwait(false);
+        await RefreshFavorites(player, false, token).ConfigureAwait(false);
     }
     Task IJoinedTeamListenerAsync.OnJoinTeamAsync(UCPlayer player, ulong team, CancellationToken token)
     {
         return TryGiveKitOnJoinTeam(player, token);
     }
-    public async Task RefreshFavorites(UCPlayer player, CancellationToken token = default)
+    public async Task RefreshFavorites(UCPlayer player, bool @lock, CancellationToken token = default)
     {
         token.CombineIfNeeded(player.DisconnectToken);
-        await player.PurchaseSync.WaitAsync(token);
+        if (@lock)
+            await player.PurchaseSync.WaitAsync(token);
         try
         {
             player.KitMenuData.FavoriteKits = new List<PrimaryKey>(
@@ -1690,7 +1691,8 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         }
         finally
         {
-            player.PurchaseSync.Release();
+            if (@lock)
+                player.PurchaseSync.Release();
         }
     }
     #region Sql
