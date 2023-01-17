@@ -576,10 +576,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             try
             {
                 EventLoopAction();
-                OnGameTick?.Invoke();
-                for (int i = 0; i < _singletons.Count; ++i)
-                    if (_singletons[i] is IGameTickListener ticker)
-                        ticker.Tick();
+                if (Data.Gamemode is not null)
+                {
+                    OnGameTick?.Invoke();
+                    for (int i = 0; i < _singletons.Count; ++i)
+                        if (_singletons[i] is IGameTickListener ticker)
+                            ticker.Tick();
+                }
             }
             catch (Exception ex)
             {

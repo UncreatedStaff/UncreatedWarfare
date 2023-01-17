@@ -3,15 +3,18 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Kits;
 public class KitMenuUI : UnturnedUI
 {
+    private const bool RichIcons = true;
     private const EPluginWidgetFlags DisabledWidgets = EPluginWidgetFlags.ShowLifeMeters |
                                                        EPluginWidgetFlags.ShowCenterDot |
                                                        EPluginWidgetFlags.ShowInteractWithEnemy |
@@ -162,31 +165,34 @@ public class KitMenuUI : UnturnedUI
     /* ARRAYS */
 
     // kit info
+    public readonly UnturnedUIElement[] IncludedItems = UnturnedUIElement.GetPattern("kit_included_{0}", IncludedItemsCount, 0);
     public readonly UnturnedLabel[] IncludedItemsText = UnturnedLabel.GetPattern("kit_included_text_{0}", IncludedItemsCount, 0);
-    public readonly UnturnedLabel[] IncludedItemsIcons = UnturnedLabel.GetPattern("kit_included_icons_{0}", IncludedItemsCount, 0);
+    public readonly UnturnedLabel[] IncludedItemsIcons = UnturnedLabel.GetPattern("kit_included_icon_{0}", IncludedItemsCount, 0);
     public readonly UnturnedLabel[] IncludedItemsAmounts = UnturnedLabel.GetPattern("kit_included_amt_{0}", IncludedItemsCount, 0);
 
     // kit list
-    public readonly UnturnedUIElement[] Kits =    UnturnedUIElement.GetPattern("kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] FlagLabels =      UnturnedLabel.GetPattern("flag_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] NameLabels =      UnturnedLabel.GetPattern("name_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] WeaponLabels =    UnturnedLabel.GetPattern("weapon_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] IdLabels =        UnturnedLabel.GetPattern("id_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] FavoriteLabels =  UnturnedLabel.GetPattern("txt_fav_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] ClassLabels =     UnturnedLabel.GetPattern("class_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] StatusLabels =    UnturnedLabel.GetPattern("status_kit_{0}", KitListCount, 1);
+    public readonly UnturnedButton[] Kits = UnturnedButton.GetPattern("kit_{0}", KitListCount, 1);
+    public readonly UnturnedLabel[] FlagLabels = UnturnedLabel.GetPattern("flag_kit_{0}", KitListCount, 1);
+    public readonly UnturnedLabel[] NameLabels = UnturnedLabel.GetPattern("name_kit_{0}", KitListCount, 1);
+    public readonly UnturnedLabel[] WeaponLabels = UnturnedLabel.GetPattern("weapon_kit_{0}", KitListCount, 1);
+    public readonly UnturnedLabel[] IdLabels = UnturnedLabel.GetPattern("id_kit_{0}", KitListCount, 1);
+    public readonly UnturnedLabel[] FavoriteLabels = UnturnedLabel.GetPattern("txt_fav_kit_{0}", KitListCount, 1);
+    public readonly UnturnedLabel[] ClassLabels = UnturnedLabel.GetPattern("class_kit_{0}", KitListCount, 1);
+    public readonly UnturnedLabel[] StatusLabels = UnturnedLabel.GetPattern("status_kit_{0}", KitListCount, 1);
     public readonly UnturnedButton[] FavoriteButtons = UnturnedButton.GetPattern("btn_fav_kit_{0}", KitListCount, 1);
 
     public readonly UnturnedUIElement[] LogicSetTabs = UnturnedUIElement.GetPattern("anim_logic_set_tab_{0}", TabCount, 1);
 
     public readonly UnturnedButton[] DropdownButtons;
     public readonly string[] DefaultClassCache;
+    public readonly string[] ClassIconCache;
 
     public string[]? DefaultLanguageCache;
     public KitMenuUI() : base(12014, Gamemode.Config.UIKitMenu)
     {
         DropdownButtons = new UnturnedButton[(int)ClassConverter.MaxClass + 1];
         DefaultClassCache = new string[DropdownButtons.Length];
+        ClassIconCache = new string[DropdownButtons.Length];
         DropdownButtons[(int)Class.None] = BtnDropdownNone;
         DropdownButtons[(int)Class.Unarmed] = BtnDropdownNone;
         DropdownButtons[(int)Class.APRifleman] = BtnDropdownAPRifleman;
@@ -208,6 +214,7 @@ public class KitMenuUI : UnturnedUI
         for (int i = 0; i < DropdownButtons.Length; ++i)
         {
             DefaultClassCache[i] = Localization.TranslateEnum((Class)i, L.Default);
+            ClassIconCache[i] = ((Class)i).GetIcon().ToString();
             if (DropdownButtons[i] is not { } btn)
                 L.LogWarning("DropdownButtons[" + i + "] was not initialized (class: " + (Class)i + ").", method: "KIT MENU UI");
             else
@@ -231,11 +238,31 @@ public class KitMenuUI : UnturnedUI
         {
             FavoriteButtons[i].OnClicked += FavoriteClickedIntl;
         }
+        for (int i = 0; i < Kits.Length; ++i)
+        {
+            Kits[i].OnClicked += KitClickedIntl;
+        }
 
         Translation.OnReload += OnReload;
         CacheLanguages();
     }
 
+    private void KitClickedIntl(UnturnedButton button, Player player)
+    {
+        UCPlayer? ucp = UCPlayer.FromPlayer(player);
+        if (ucp != null)
+        {
+            int index = Array.IndexOf(Kits, button);
+            if (index != -1)
+                OnKitClicked(index, ucp);
+        }
+    }
+    internal void OnFavoritesRefreshed(UCPlayer player)
+    {
+        if (!player.KitMenuData.IsOpen)
+            return;
+        RefreshList(player);
+    }
     private void FavoriteClickedIntl(UnturnedButton button, Player player)
     {
         UCPlayer? ucp = UCPlayer.FromPlayer(player);
@@ -246,7 +273,13 @@ public class KitMenuUI : UnturnedUI
                 OnFavoriteToggled(index, ucp);
         }
     }
-
+    private string GetClassIcon(Class @class)
+    {
+        byte c = (byte)@class;
+        if (c < ClassIconCache.Length)
+            return ClassIconCache[c];
+        return new string(@class.GetIcon(), 1);
+    }
     private void OnClosed(UnturnedButton button, Player player)
     {
         if (UCPlayer.FromPlayer(player) is { } pl)
@@ -261,6 +294,7 @@ public class KitMenuUI : UnturnedUI
     public void OpenUI(UCPlayer player)
     {
         ITransportConnection c = player.Connection;
+        player.KitMenuData.ActiveTeam = player.GetTeam();
         if (!player.KitMenuData.IsAlive)
         {
             SendToPlayer(c);
@@ -328,6 +362,10 @@ public class KitMenuUI : UnturnedUI
 
         LblStatsTitle.SetText(c, T.KitMenuUIStatsLabel.Translate(lang));
         LblActionsTitle.SetText(c, T.KitMenuUIActionsLabel.Translate(lang));
+
+        int len = Math.Min(DefaultClassCache.Length, ClassLabels.Length);
+        for (int i = 0; i < len; ++i)
+            ClassLabels[i].SetText(c, Localization.TranslateEnum((Class)i, lang));
     }
     private void SetCachedValues(ITransportConnection c)
     {
@@ -356,13 +394,29 @@ public class KitMenuUI : UnturnedUI
 
         LblStatsTitle.SetText(c, DefaultLanguageCache[22]);
         LblActionsTitle.SetText(c, DefaultLanguageCache[23]);
+
+        int len = Math.Min(DefaultClassCache.Length, ClassLabels.Length);
+        for (int i = 0; i < len; ++i)
+            ClassLabels[i].SetText(c, DefaultClassCache[i]);
     }
     private void SwitchToTab(UCPlayer player, byte tab)
     {
+        L.LogDebug("Switching to tab " + tab);
         if (tab >= TabCount) return;
         player.KitMenuData.IsOpen = true;
         player.KitMenuData.Tab = tab;
         RefreshList(player);
+
+        if (player.KitMenuData.Filter == Class.None)
+        {
+            DropdownSelectedName.SetText(player.Connection, string.Empty);
+            DropdownSelectedClass.SetText(player.Connection, string.Empty);
+        }
+        else
+        {
+            DropdownSelectedName.SetText(player.Connection, TranslateClass(player.KitMenuData.Filter, player));
+            DropdownSelectedClass.SetText(player.Connection, player.KitMenuData.Filter.GetIcon().ToString());
+        }
     }
     private void RefreshSelected(UCPlayer player)
     {
@@ -377,11 +431,13 @@ public class KitMenuUI : UnturnedUI
     }
     private void OpenKit(UCPlayer player, Kit kit)
     {
+        L.LogDebug("Opening kit: " + kit.Id);
+        FactionInfo? plFaction = TeamManager.GetFactionSafe(player.GetTeam());
         ITransportConnection c = player.Connection;
         string lang = player.Language;
-        LblInfoTitle.SetText(c, kit.GetDisplayName(lang));
+        LblInfoTitle.SetText(c, kit.GetDisplayName(lang).Replace('\n', ' ').Replace("\r", string.Empty));
         FactionInfo? faction = kit.Faction;
-        ValInfoFaction.SetText(c, faction?.GetName(lang) ?? (
+        ValInfoFaction.SetText(c, faction?.GetShortName(lang) ?? (
             DefaultLanguageCache != null &&
             player.Language.Equals(L.Default, StringComparison.Ordinal)
                 ? DefaultLanguageCache[29]
@@ -392,7 +448,181 @@ public class KitMenuUI : UnturnedUI
         LblInfoClassIcon.SetText(c, kit.Class.GetIcon().ToString());
         
         ValInfoType.SetText(c, GetTypeString(player, kit.Type));
-        // todo included items, stats, actions
+
+        List<KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>>? groups = kit.ItemListCache;
+        if (groups == null)
+        {
+            kit.ItemListCache = groups = new List<KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>>();
+            List<IKitItem> items = new List<IKitItem>(kit.Items.OrderBy(x => x is not IItemJar jar || jar.Page > Page.Secondary));
+            items.Sort((a, b) => a.CompareTo(b));
+            string? clothSet = null;
+            for (int i = 0; i < items.Count; ++i)
+            {
+                IKitItem item = items[i];
+                if (item is IAssetRedirect redir)
+                {
+                    if (groups.Exists(x => x.Key.Value == redir.RedirectType))
+                        continue;
+                    if (redir.RedirectType <= RedirectType.Glasses)
+                    {
+                        ItemAsset? asset = TeamManager.GetRedirectInfo(redir.RedirectType, faction, null, out _, out _);
+                        if (asset != null)
+                        {
+                            if (redir.RedirectType is RedirectType.Shirt or RedirectType.Pants && clothSet == null)
+                            {
+                                if (asset != null)
+                                {
+                                    int index3 = asset.name.IndexOf(redir.RedirectType == RedirectType.Shirt ? "_Top" : "_Bottom", StringComparison.Ordinal);
+                                    if (index3 != -1)
+                                    {
+                                        clothSet = asset.name.Substring(0, index3).Replace('_', ' ');
+                                        continue;
+                                    }
+                                }
+                            }
+                            else if (clothSet != null && asset.name.StartsWith(clothSet, StringComparison.Ordinal))
+                            {
+                                continue;
+                            }
+                        }
+                    }
+                    groups.Add(
+                        new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(
+                            new KeyValuePair<ItemAsset?, RedirectType>(null, redir.RedirectType), 1));
+                }
+                else
+                {
+                    ItemAsset? asset = item.GetItem(kit, plFaction, out _, out _);
+                    if (asset != null)
+                    {
+                        if (asset.id > 30000 && asset is ItemClothingAsset)
+                        {
+                            if (clothSet == null && (asset is ItemShirtAsset || asset is ItemPantsAsset))
+                            {
+                                int index3 = asset.name.IndexOf(asset is ItemShirtAsset ? "_Top" : "_Bottom", StringComparison.Ordinal);
+                                if (index3 != -1)
+                                {
+                                    clothSet = asset.name.Substring(0, index3).Replace('_', ' ');
+                                    continue;
+                                }
+                            }
+                            else if (clothSet != null && asset.name.StartsWith(clothSet, StringComparison.Ordinal))
+                            {
+                                continue;
+                            }
+                        }
+                        int index2 = groups.FindLastIndex(x => x.Key.Key == asset);
+                        if (index2 == -1)
+                        {
+                            groups.Add(new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(
+                                new KeyValuePair<ItemAsset?, RedirectType>(asset, RedirectType.None), 1));
+                        }
+                        else
+                        {
+                            KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int> grp = groups[index2];
+                            groups[index2] = new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(grp.Key, grp.Value + 1);
+                        }
+                    }
+                }
+            }
+
+            if (clothSet != null)
+            {
+                int ind = 0;
+                for (int i = 0; i < groups.Count; ++i)
+                {
+                    if (groups[i].Key.Key is ItemGunAsset)
+                        ind = i + 1;
+                    else break;
+                }
+                groups.Insert(ind, new KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>(
+                    new KeyValuePair<ItemAsset?, RedirectType>(null, RedirectType.None), 255));
+            }
+
+            kit.ClothingSetCache = clothSet;
+        }
+        int index = 0;
+        IFormatProvider locale = Localization.GetLocale(lang);
+        for (int i = 0; i < groups.Count; ++i)
+        {
+            if (index >= IncludedItemsCount)
+                break;
+            KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int> grp = groups[i];
+            string icon;
+            string name;
+            int amt = grp.Value;
+            if (grp.Key.Key != null)
+            {
+                if (!ItemIconProvider.TryGetIcon(grp.Key.Key, out icon, RichIcons, true))
+                {
+                    if (grp.Key.Key is ItemMagazineAsset)
+                        icon = ItemIconProvider.GetIcon(RedirectType.StandardAmmoIcon, RichIcons, true);
+                    else if (grp.Key.Key is ItemMeleeAsset)
+                        icon = ItemIconProvider.GetIcon(RedirectType.StandardMeleeIcon, RichIcons, true);
+                    else if (grp.Key.Key is ItemThrowableAsset throwable)
+                    {
+                        if (throwable.isExplosive)
+                            icon = ItemIconProvider.GetIcon(RedirectType.StandardGrenadeIcon, RichIcons, true);
+                        else if (throwable.itemName.IndexOf("smoke", StringComparison.InvariantCultureIgnoreCase) != -1)
+                            icon = ItemIconProvider.GetIcon(RedirectType.StandardSmokeGrenadeIcon, RichIcons, true);
+                    }
+                    else if (grp.Key.Key is ItemClothingAsset cloth)
+                    {
+                        RedirectType type = cloth.type switch
+                        {
+                            EItemType.HAT => RedirectType.Hat,
+                            EItemType.PANTS => RedirectType.Pants,
+                            EItemType.SHIRT => RedirectType.Shirt,
+                            EItemType.MASK => RedirectType.Mask,
+                            EItemType.BACKPACK => RedirectType.Backpack,
+                            EItemType.VEST => RedirectType.Vest,
+                            EItemType.GLASSES => RedirectType.Glasses,
+                            _ => RedirectType.None
+                        };
+                        if (type != RedirectType.None)
+                            icon = ItemIconProvider.GetIcon(type, RichIcons, true);
+                    }
+                }
+                name = grp.Key.Key.FriendlyName;
+            }
+            else if (grp.Key.Value != RedirectType.None)
+            {
+                icon = ItemIconProvider.GetIcon(grp.Key.Value, RichIcons, true);
+                name = Localization.TranslateEnum(grp.Key.Value, lang);
+            }
+            else if (grp.Value == 255)
+            {
+                icon = ItemIconProvider.GetIcon(RedirectType.Shirt, RichIcons, true);
+                if (kit.ClothingSetCache != null)
+                    name = kit.ClothingSetCache + " Set";
+                else if (faction != null)
+                    name = "Default " + faction.GetAbbreviation(lang) + " Set.";
+                else
+                    name = "Default Set";
+                amt = 1;
+            }
+            else continue;
+            IncludedItems[index].SetVisibility(c, true);
+            IncludedItemsIcons[index].SetText(c, icon);
+            IncludedItemsText[index].SetText(c, name);
+            IncludedItemsAmounts[index].SetVisibility(c, amt != 1);
+            if (amt != 1)
+                IncludedItemsAmounts[index].SetText(c, "x" + amt.ToString(locale));
+            ++index;
+        }
+        for (; index < IncludedItemsText.Length; ++index)
+        {
+            IncludedItems[index].SetVisibility(c, false);
+        }
+
+        WarfareStats? stats = StatsManager.OnlinePlayers.FirstOrDefault(x => x.Steam64 == player.Steam64);
+        if (stats != null && stats.Kits.FirstOrDefault(x => x.KitID.Equals(kit.Id, StringComparison.Ordinal)) is { } kitStats)
+        {
+            ValStatsKills.SetText(c, kitStats.Kills.ToString(locale));
+            ValStatsDeaths.SetText(c, kitStats.Deaths.ToString(locale));
+            ValStatsPrimaryAverageDistance.SetText(c, kitStats.AverageGunKillDistance.ToString("0.#", locale) + " m");
+            ValStatsPlaytime.SetText(c, ((int)kitStats.PlaytimeMinutes).GetTimeFromMinutes(lang));
+        }
     }
     private string GetTypeString(UCPlayer player, KitType type)
     {
@@ -416,6 +646,7 @@ public class KitMenuUI : UnturnedUI
     }
     private void SendKitList(UCPlayer player)
     {
+        LogicClearList.SetVisibility(player.Connection, true);
         for (int i = 0; i < player.KitMenuData.Kits.Length; ++i)
         {
             if (player.KitMenuData.Kits[i].Item is { } kit)
@@ -432,11 +663,13 @@ public class KitMenuUI : UnturnedUI
             FavoriteLabels[index].SetText(c, favorited ? "<#fd0>¼" : "¼");
         WeaponLabels[index].SetText(c, kit.WeaponText ?? string.Empty);
         IdLabels[index].SetText(c, kit.Id);
-        NameLabels[index].SetText(c, kit.GetDisplayName(player.Language));
+        NameLabels[index].SetText(c, kit.GetDisplayName(player.Language).Replace('\n', ' ').Replace("\r", string.Empty));
         StatusLabels[index].SetText(c, hasAccess ? Gamemode.Config.UIIconPlayer.ToString() : string.Empty);
         ClassLabels[index].SetText(c, kit.Class.GetIcon().ToString());
         FlagLabels[index].SetText(c, kit.Faction.GetFlagIcon());
         FavoriteButtons[index].SetVisibility(c, kit.Type != KitType.Loadout);
+        
+        Kits[index].SetVisibility(c, true);
     }
     private void CacheLanguages()
     {
@@ -482,20 +715,37 @@ public class KitMenuUI : UnturnedUI
     }
     private void OnClassButtonClicked(UnturnedButton button, Player player)
     {
-        Class @class = (Class)Array.IndexOf(DropdownButtons, button);
-        if (@class > ClassConverter.MaxClass)
-            return;
-        ITransportConnection tc = player.channel.owner.transportConnection;
+        if (UCPlayer.FromPlayer(player) is { } ucp)
+        {
+            Class @class = (Class)Array.IndexOf(DropdownButtons, button);
+            if (@class > ClassConverter.MaxClass)
+                return;
+            ITransportConnection tc = player.channel.owner.transportConnection;
 
-        // update dropdown text to translated value
-        string lang = Localization.GetLang(player.channel.owner.playerID.steamID.m_SteamID);
-        if (lang.Equals(L.Default, StringComparison.Ordinal))
-            lang = DefaultClassCache[(int)@class];
-        else
-            lang = Localization.TranslateEnum(@class, lang);
+            ucp.KitMenuData.Filter = @class;
+            RefreshList(ucp);
+            if (@class == Class.None)
+            {
+                DropdownSelectedName.SetText(tc, string.Empty);
+                DropdownSelectedClass.SetText(tc, string.Empty);
+                return;
+            }
 
-        DropdownSelectedName.SetText(tc, lang);
-        DropdownSelectedClass.SetText(tc, new string(@class.GetIcon(), 1));
+            // update dropdown text to translated value
+            string lang = Localization.GetLang(player.channel.owner.playerID.steamID.m_SteamID);
+            if (lang.Equals(L.Default, StringComparison.Ordinal))
+                lang = DefaultClassCache[(int)@class];
+            else
+                lang = Localization.TranslateEnum(@class, lang);
+
+            DropdownSelectedName.SetText(tc, lang);
+            DropdownSelectedClass.SetText(tc, new string(@class.GetIcon(), 1));
+        }
+    }
+    private void OnKitClicked(int kitIndex, UCPlayer player)
+    {
+        if (player.KitMenuData.Kits.Length > kitIndex && player.KitMenuData.Kits[kitIndex].Item is { } kit)
+            OpenKit(player, kit);
     }
     private void OnFavoriteToggled(int kitIndex, UCPlayer player)
     {
@@ -504,6 +754,11 @@ public class KitMenuUI : UnturnedUI
             bool fav = player.KitMenuData.Favorited[kitIndex] = !player.KitMenuData.Favorited[kitIndex];
             FavoriteLabels[kitIndex].SetText(player.Connection, fav ? "<#fd0>¼" : "¼");
             player.KitMenuData.FavoritesDirty = true;
+            L.LogDebug((fav ? "Favorited " : "Unfavorited ") + kit.Id);
+            if (fav)
+                (player.KitMenuData.FavoriteKits ??= new List<PrimaryKey>(8)).Add(kit.PrimaryKey);
+            else
+                player.KitMenuData.FavoriteKits?.RemoveAll(x => x.Key == kit.PrimaryKey.Key);
         }
     }
     private void OnActionButtonClicked(UnturnedButton button, Player player)
@@ -545,7 +800,7 @@ public class KitMenuUI : UnturnedUI
     }
 }
 
-public sealed class KitMenuUIComponent : MonoBehaviour, IPlayerComponent
+public sealed class KitMenuUIData : IPlayerComponent
 {
     public UCPlayer Player { get; set; }
     public ulong ActiveTeam { get; set; }
@@ -558,6 +813,7 @@ public sealed class KitMenuUIComponent : MonoBehaviour, IPlayerComponent
     public SqlItem<Kit>[] Kits { get; set; } = Array.Empty<SqlItem<Kit>>();
     public List<PrimaryKey>? FavoriteKits { get; set; }
     public bool[] Favorited { get; set; } = Array.Empty<bool>();
+    private FactionInfo? _faction;
     public void Init()
     {
 
@@ -573,6 +829,7 @@ public sealed class KitMenuUIComponent : MonoBehaviour, IPlayerComponent
         manager.WriteWait();
         try
         {
+            _faction = Player.Faction;
             Func<SqlItem<Kit>, bool> predicate = Tab switch
             {
                 0 => KitListBasePredicate,
@@ -581,9 +838,17 @@ public sealed class KitMenuUIComponent : MonoBehaviour, IPlayerComponent
                 3 => KitListSpecialPredicate,
                 _ => x => x.Item != null,
             };
+            L.LogDebug(manager.Items.Count + " searched... ");
             Kits = manager.Items.Where(predicate)
                 .OrderByDescending(x => FavoriteKits?.Contains(x.LastPrimaryKey))
-                .ThenBy(x => x.Item?.GetDisplayName(L.Default)).ToArray();
+                .ThenBy(x =>
+                {
+                    string dn = x.Item?.GetDisplayName(L.Default) ?? x.PrimaryKey.Key.ToString();
+                    if (dn.Length <= 0 || char.IsDigit(dn[0]))
+                        dn = "ZZ" + dn;
+                    return dn;
+                }).ToArray();
+            L.LogDebug(Kits.Length + " selected for tab " + Tab + "... ");
             if (Kits.Length > KitMenuUI.KitListCount)
             {
                 SqlItem<Kit>[] old = Kits;
@@ -594,6 +859,7 @@ public sealed class KitMenuUIComponent : MonoBehaviour, IPlayerComponent
                 Favorited = new bool[Kits.Length];
             for (int i = 0; i < Kits.Length; ++i)
                 Favorited[i] = FavoriteKits != null && FavoriteKits.Contains(Kits[i].LastPrimaryKey);
+            using IDisposable disp = L.IndentLog(1);
         }
         finally
         {
@@ -602,13 +868,14 @@ public sealed class KitMenuUIComponent : MonoBehaviour, IPlayerComponent
     }
 
     private bool KitListBasePredicate(SqlItem<Kit> x)
-        => x.Item is { Type: KitType.Public } kit && kit.IsRequestable(ActiveTeam);
+        => x.Item is { Type: KitType.Public } kit && (Filter == Class.None || kit.Class == Filter) && kit.Class > Class.Unarmed && kit.IsRequestable(_faction);
     private bool KitListElitePredicate(SqlItem<Kit> x)
-        => x.Item is { Type: KitType.Elite } kit && kit.IsRequestable(ActiveTeam);
+        => x.Item is { Type: KitType.Elite } kit && (Filter == Class.None || kit.Class == Filter) && kit.Class > Class.Unarmed && kit.IsRequestable(_faction);
     private bool KitListLoadoutPredicate(SqlItem<Kit> x)
-        => x.Item is { Type: KitType.Loadout } kit && kit.IsRequestable(ActiveTeam);
+        => x.Item is { Type: KitType.Loadout } kit && (Filter == Class.None || kit.Class == Filter) && kit.Requestable &&
+           (Player.OnDuty() && kit.Creator == Player.Steam64 || KitManager.HasAccessQuick(x, Player));
     private bool KitListSpecialPredicate(SqlItem<Kit> x)
-        => x.Item is { Type: KitType.Special } kit && kit.IsRequestable(ActiveTeam);
+        => x.Item is { Type: KitType.Special } kit && (Filter == Class.None || kit.Class == Filter) && kit.IsRequestable(_faction) && (Player.OnDuty() || KitManager.HasAccessQuick(x, Player));
 
     void OnDestroy()
     {

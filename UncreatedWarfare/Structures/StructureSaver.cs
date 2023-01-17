@@ -218,8 +218,8 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                                 ReportError(structure, "Barricade not found via instance ID or position, unable to replace.");
                                 continue;
                             }
-                            ReportInfo(structure, "Barricade not found via instance ID, found with position, instance ID replaced successfully.");
                             structure.InstanceID = bdrop.instanceID;
+                            ReportInfo(structure, "Barricade not found via instance ID, found with position, instance ID replaced successfully.");
                             bmatched.Add(structure.InstanceID);
                             structure.Position = bdrop.model.position;
                             structure.Rotation = bdrop.model.rotation.eulerAngles;
@@ -1281,7 +1281,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                 Guid? guid = reader.ReadGuidString(1);
                 if (!guid.HasValue)
                     L.LogWarning("Invalid item GUID at structure " + pk + ": \"" + reader.GetString(1) + "\".");
-                else str.Add(new SavedStructure()
+                else str.Add(new SavedStructure
                     {
                         PrimaryKey = pk,
                         ItemGuid = guid.Value,
@@ -1293,23 +1293,22 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                         InstanceID = uint.MaxValue
                     });
             }, token).ConfigureAwait(false);
-        if (ServerRegion.Key != byte.MaxValue)
-        {
-            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_ITEM_STRUCTURE_PK, COLUMN_INSTANCES_INSTANCE_ID)} FROM " +
-                                 $"`{TABLE_INSTANCES}` WHERE `{COLUMN_INSTANCES_REGION_KEY}`=@0;",
-                new object[] { ServerRegion.Key }, reader =>
+
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_ITEM_STRUCTURE_PK, COLUMN_INSTANCES_INSTANCE_ID)} FROM " +
+                             $"`{TABLE_INSTANCES}` WHERE `{COLUMN_INSTANCES_REGION_KEY}`=@0;",
+            new object[] { ServerRegion.Key }, reader =>
+            {
+                int pk = reader.GetInt32(0);
+                for (int i = 0; i < str.Count; ++i)
                 {
-                    PrimaryKey pk = reader.GetInt32(0);
-                    for (int i = 0; i < str.Count; ++i)
+                    if (str[i].PrimaryKey.Key == pk)
                     {
-                        if (str[i].PrimaryKey.Key == pk.Key)
-                        {
-                            str[i].InstanceID = reader.GetUInt32(1);
-                            return;
-                        }
+                        str[i].InstanceID = reader.GetUInt32(1);
+                        return;
                     }
-                }, token).ConfigureAwait(false);
-        }
+                }
+            }, token).ConfigureAwait(false);
+
         await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_PK, COLUMN_DISPLAY_SKIN, COLUMN_DISPLAY_MYTHIC,
                              COLUMN_DISPLAY_ROT, COLUMN_DISPLAY_DYNAMIC_PROPS, COLUMN_DISPLAY_TAGS)} FROM `{TABLE_DISPLAY_DATA}`;", null, reader =>
          {
@@ -1327,19 +1326,18 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
              } 
          }, token).ConfigureAwait(false);
         List<ItemJarData>? itemData = null;
-        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_ITEM_PK, COLUMN_ITEM_STRUCTURE_PK, COLUMN_ITEM_GUID,
+        await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_ITEM_STRUCTURE_PK, COLUMN_ITEM_GUID,
                              COLUMN_ITEM_AMOUNT, COLUMN_ITEM_QUALITY, COLUMN_ITEM_POS_X,
                              COLUMN_ITEM_POS_Y, COLUMN_ITEM_ROT, COLUMN_ITEM_METADATA)} FROM `{TABLE_STRUCTURE_ITEMS}`;",
             null, reader =>
             {
-                int pk = reader.GetInt32(0);
-                Guid? guid = reader.ReadGuidString(2);
+                Guid? guid = reader.ReadGuidString(1);
                 if (!guid.HasValue)
-                    L.LogWarning("Invalid item GUID at structure item " + pk + ": \"" + reader.GetString(1) + "\".");
+                    L.LogWarning("Invalid item GUID at structure " + reader.GetInt32(0) + ": \"" + reader.GetString(1) + "\".");
                 else
-                    (itemData ??= new List<ItemJarData>(64)).Add(new ItemJarData(pk, reader.GetInt32(1),
-                        guid.Value, reader.GetByte(5), reader.GetByte(6), reader.GetByte(7),
-                        reader.GetByte(3), reader.GetByte(4), reader.ReadByteArray(8)));
+                    (itemData ??= new List<ItemJarData>(64)).Add(new ItemJarData(PrimaryKey.NotAssigned, reader.GetInt32(0),
+                        guid.Value, reader.GetByte(4), reader.GetByte(5), reader.GetByte(6),
+                        reader.GetByte(2), reader.GetByte(3), reader.ReadByteArray(7)));
             }, token).ConfigureAwait(false);
         if (itemData != null)
         {

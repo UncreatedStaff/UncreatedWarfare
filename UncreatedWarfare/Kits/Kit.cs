@@ -14,6 +14,7 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
@@ -49,6 +50,11 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public ulong Creator { get; set; }
     public DateTimeOffset LastEditedTimestamp { get; set; }
     public ulong LastEditor { get; set; }
+    [JsonIgnore]
+    internal List<KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>>? ItemListCache { get; set; }
+
+    [JsonIgnore]
+    internal string? ClothingSetCache { get; set; }
     public FactionInfo? Faction
     {
         get => FactionKey.IsValid ? TeamManager.GetFactionInfo(FactionKey) : null;
@@ -67,17 +73,17 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     /// <summary>Elite kit or loadout.</summary>
     public bool IsPaid => Type is KitType.Elite or KitType.Loadout;
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist. Checks both active teams, use <see cref="IsRequestable(ulong)"/> to check for a certain team.</summary>
-    public bool Requestable => !Disabled && (Season == UCWarfare.Season || Season < 1) &&
-                             !IsCurrentMapAllowed() &&
+    public bool Requestable => !Disabled && (Season >= UCWarfare.Season || Season < 1) &&
+                             IsCurrentMapAllowed() &&
                              (IsFactionAllowed(TeamManager.Team1Faction) || IsFactionAllowed(TeamManager.Team2Faction));
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
-    public bool IsRequestable(ulong team) => team is not 1ul and not 2ul ? Requestable : (!Disabled && (Season == UCWarfare.Season || Season < 1) &&
+    public bool IsRequestable(ulong team) => team is not 1ul and not 2ul ? Requestable : (!Disabled && (Season >= UCWarfare.Season || Season < 1) &&
                              IsCurrentMapAllowed() &&
-                             IsFactionAllowed(TeamManager.GetFactionSafe(team)));
+                             IsFactionAllowed(TeamManager.GetFaction(team)));
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
-    public bool IsRequestable(FactionInfo? faction) => faction is null ? Requestable : (!Disabled && (Season == UCWarfare.Season || Season < 1) &&
-                                                                               !IsCurrentMapAllowed() &&
-                                                                               !IsFactionAllowed(faction));
+    public bool IsRequestable(FactionInfo? faction) => faction is null ? Requestable : (!Disabled && (Season >= UCWarfare.Season || Season < 1) &&
+                                                                               IsCurrentMapAllowed() &&
+                                                                               IsFactionAllowed(faction));
     public Kit(string id, Class @class, Branch branch, KitType type, SquadLevel squadLevel, FactionInfo? faction)
     {
         Faction = faction;
@@ -165,8 +171,11 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public Kit() { }
     public bool IsFactionAllowed(FactionInfo? faction)
     {
+        if (faction == TeamManager.Team1Faction && Faction == TeamManager.Team2Faction ||
+            faction == TeamManager.Team2Faction && Faction == TeamManager.Team1Faction)
+            return false;
         if (FactionFilter.NullOrEmpty() || faction is null || !faction.PrimaryKey.IsValid)
-            return !FactionFilterIsWhitelist;
+            return true;
         int pk = faction.PrimaryKey.Key;
         for (int i = 0; i < FactionFilter.Length; ++i)
             if (FactionFilter[i].Key == pk)
@@ -177,7 +186,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public bool IsCurrentMapAllowed()
     {
         if (MapFilter.NullOrEmpty())
-            return !MapFilterIsWhitelist;
+            return true;
         PrimaryKey map = MapScheduler.Current;
         for (int i = 0; i < MapFilter.Length; ++i)
         {
@@ -834,7 +843,7 @@ public interface IClothingJar
 {
     ClothingType Type { get; set; }
 }
-public interface IKitItem : ICloneable
+public interface IKitItem : ICloneable, IComparable
 {
     public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state);
 }
@@ -886,6 +895,25 @@ public class AssetRedirectItem : IItemJar, IAssetRedirect, IKitItem
     public object Clone() => new AssetRedirectItem(this);
     public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
         TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
+
+    public int CompareTo(object obj)
+    {
+        if (obj is IKitItem kitItem)
+        {
+            if (kitItem is IItemJar jar)
+            {
+                if (jar is not IAssetRedirect r)
+                    return -1;
+                return Page != jar.Page ? Page.CompareTo(jar.Page) : RedirectType.CompareTo(r.RedirectType);
+            }
+            if (kitItem is IClothingJar)
+            {
+                return Page is Page.Primary or Page.Secondary ? -1 : 1;
+            }
+        }
+
+        return -1;
+    }
 }
 public class AssetRedirectClothing : IClothingJar, IAssetRedirect, IKitItem
 {
@@ -905,6 +933,23 @@ public class AssetRedirectClothing : IClothingJar, IAssetRedirect, IKitItem
     public object Clone() => new AssetRedirectClothing(this);
     public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
         TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
+    public int CompareTo(object obj)
+    {
+        if (obj is IKitItem kitItem)
+        {
+            if (kitItem is IClothingJar cjar)
+            {
+                if (Type != cjar.Type)
+                    return Type.CompareTo(cjar.Type);
+            }
+            if (kitItem is IItemJar jar)
+            {
+                return jar.Page is Page.Primary or Page.Secondary ? 1 : -1;
+            }
+        }
+
+        return -1;
+    }
 }
 public class PageItem : IItemJar, IItem, IKitItem
 {
@@ -974,6 +1019,24 @@ public class PageItem : IItemJar, IItem, IKitItem
     }
     public PageItem() { }
     public object Clone() => new PageItem(this);
+    public int CompareTo(object obj)
+    {
+        if (obj is IKitItem kitItem)
+        {
+            if (kitItem is IItemJar jar)
+            {
+                if (jar is not IItem r)
+                    return 1;
+                return Page != jar.Page ? Page.CompareTo(jar.Page) : jar.Y == Y ? X.CompareTo(jar.X) : Y.CompareTo(jar.Y);
+            }
+            if (kitItem is IClothingJar)
+            {
+                return Page is Page.Primary or Page.Secondary ? -1 : 1;
+            }
+        }
+
+        return -1;
+    }
     public const string COLUMN_PK = "pk";
     public const string COLUMN_GUID = "Item";
     public const string COLUMN_X = "X";
@@ -1106,6 +1169,24 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
         state = Array.Empty<byte>();
         return null;
     }
+    public int CompareTo(object obj)
+    {
+        if (obj is IKitItem kitItem)
+        {
+            if (kitItem is IClothingJar cjar)
+            {
+                if (Type != cjar.Type)
+                    return Type.CompareTo(cjar.Type);
+                return 0;
+            }
+            if (kitItem is IItemJar jar)
+            {
+                return jar.Page is Page.Primary or Page.Secondary ? 1 : -1;
+            }
+        }
+
+        return -1;
+    }
 }
 
 /// <summary>Max field character limit: <see cref="KitEx.SquadLevelMaxCharLimit"/>.</summary>
@@ -1154,6 +1235,7 @@ public enum KitType : byte
     Loadout
 }
 
+[Translatable]
 /// <summary>Max field character limit: <see cref="KitEx.RedirectTypeCharLimit"/>.</summary>
 public enum RedirectType : byte
 {
@@ -1165,24 +1247,41 @@ public enum RedirectType : byte
     Mask,
     Backpack,
     Glasses,
+    [Translatable("Ammo Supplies")]
     AmmoSupply,
+    [Translatable("Building Supplies")]
     BuildSupply,
+    [Translatable("Rally Point")]
     RallyPoint,
+    [Translatable("FOB Radio")]
     Radio,
     ZoneBlocker,
+    [Translatable("Ammo Bag")]
     AmmoBag,
+    [Translatable("Ammo Crate")]
     AmmoCrate,
+    [Translatable("Repair Station")]
     RepairStation,
+    [Translatable("FOB Bunker")]
     Bunker,
     VehicleBay,
+    [Translatable("Entrenching Tool")]
     EntrenchingTool,
     UAV,
+    [Translatable("Built Repair Station")]
     RepairStationBuilt,
+    [Translatable("Built Ammo Crate")]
     AmmoCrateBuilt,
+    [Translatable("Built FOB Bunker")]
     BunkerBuilt,
     Cache,
     RadioDamaged,
-    LaserDesignator
+    [Translatable("Laser Designator")]
+    LaserDesignator,
+    StandardAmmoIcon,
+    StandardMeleeIcon,
+    StandardGrenadeIcon,
+    StandardSmokeGrenadeIcon,
 }
 public enum Page : byte
 {

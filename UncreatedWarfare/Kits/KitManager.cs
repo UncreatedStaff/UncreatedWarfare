@@ -3,8 +3,10 @@ using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -30,7 +32,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Kits;
 // todo add delays to kits
-public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync
+public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync, IGameTickListener, IPlayerDisconnectListener
 {
     public static readonly KitMenuUI MenuUI = new KitMenuUI();
     public override bool AwaitLoad => true;
@@ -44,14 +46,15 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         OnItemAdded   += OnKitUpdated;
         OnKitAccessChanged += OnKitAccessChangedIntl;
     }
-    public override Task PostLoad(CancellationToken token)
+    public override async Task PostLoad(CancellationToken token)
     {
         PlayerLife.OnPreDeath += OnPreDeath;
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.PlayerJoined += OnPlayerJoined;
         EventDispatcher.PlayerLeaving += OnPlayerLeaving;
         OnItemsRefreshed += OnItemsRefreshedIntl;
-        return base.PostLoad(token);
+        //await MigrateOldKits(token).ConfigureAwait(false);
+        await base.PostLoad(token).ConfigureAwait(false);
     }
     private void OnItemsRefreshedIntl()
     {
@@ -76,13 +79,14 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
         });
     }
-    public override Task PreUnload(CancellationToken token)
+    public override async Task PreUnload(CancellationToken token)
     {
         EventDispatcher.PlayerLeaving -= OnPlayerLeaving;
         EventDispatcher.PlayerJoined -= OnPlayerJoined;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         PlayerLife.OnPreDeath -= OnPreDeath;
-        return base.PreUnload(token);
+        await SaveAllPlayerFavorites(token).ConfigureAwait(false);
+        await base.PreUnload(token).ConfigureAwait(false);
     }
     public static KitManager? GetSingletonQuick() => Data.Is(out IKitRequests r) ? r.KitManager : null;
     public static float GetDefaultTeamLimit(Class @class) => @class switch
@@ -1675,7 +1679,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     }
     public async Task RefreshFavorites(UCPlayer player, bool @lock, CancellationToken token = default)
     {
-        token.CombineIfNeeded(player.DisconnectToken);
+        token.CombineIfNeeded(player.DisconnectToken, UCWarfare.UnloadCancel);
         if (@lock)
             await player.PurchaseSync.WaitAsync(token);
         try
@@ -1687,6 +1691,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 {
                     player.KitMenuData.FavoriteKits.Add(reader.GetInt32(0));
                 }, token).ConfigureAwait(false);
+            MenuUI.OnFavoritesRefreshed(player);
             player.KitMenuData.FavoritesDirty = false;
         }
         finally
@@ -1694,6 +1699,75 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             if (@lock)
                 player.PurchaseSync.Release();
         }
+    }
+    void IGameTickListener.Tick()
+    {
+        if (Data.Gamemode.EveryMinute)
+        {
+            UCWarfare.RunTask(SaveAllPlayerFavorites, ctx: "Save all players' favorite kits.");
+        }
+    }
+    private async Task SaveAllPlayerFavorites(CancellationToken token)
+    {
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers.ToArray())
+            {
+                if (player.KitMenuData is { FavoritesDirty: true, FavoriteKits: { } fk })
+                {
+                    await SaveFavorites(player, fk, token).ConfigureAwait(false);
+                    token.ThrowIfCancellationRequested();
+                }
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+    }
+    void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
+    {
+        if (player.KitMenuData is { FavoritesDirty: true, FavoriteKits: { } fk })
+        {
+            UCWarfare.RunTask(async () =>
+            {
+                CancellationToken token = UCWarfare.UnloadCancel;
+                await WriteWaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    await SaveFavorites(player, fk, token).ConfigureAwait(false);
+                    token.ThrowIfCancellationRequested();
+                }
+                finally
+                {
+                    WriteRelease();
+                }
+            });
+        }
+    }
+    internal async Task SaveFavorites(UCPlayer player, List<PrimaryKey> favoriteKits, CancellationToken token = default)
+    {
+        token.CombineIfNeeded(UCWarfare.UnloadCancel);
+        object[] args = new object[favoriteKits.Count + 1];
+        args[0] = player.Steam64;
+        StringBuilder sb = new StringBuilder("(");
+        for (int i = 0; i < favoriteKits.Count; ++i)
+        {
+            args[i + 1] = favoriteKits[i].Key;
+            if (i != 0)
+                sb.Append("),(");
+            sb.Append("@0,@").Append(i + 1);
+        }
+
+        sb.Append(");");
+
+        if (args.Length <= 1)
+            return;
+        await Sql.NonQueryAsync($"DELETE FROM `{TABLE_FAVORITES}` WHERE `{COLUMN_FAVORITE_PLAYER}`=@0;" +
+                                F.StartBuildOtherInsertQueryNoUpdate(TABLE_FAVORITES,
+                                    COLUMN_FAVORITE_PLAYER, COLUMN_EXT_PK) + sb, args, token).ConfigureAwait(false);
+        player.KitMenuData.FavoritesDirty = false;
     }
     #region Sql
     // ReSharper disable InconsistentNaming
@@ -2387,13 +2461,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         return item;
     }
     #endregion
-
 #if DEBUG // Migrating old kits
     public async Task MigrateOldKits(CancellationToken token = default)
     {
         Dictionary<int, OldKit> kits = new Dictionary<int, OldKit>(256);
         int rows = 0;
-        await Sql.QueryAsync("SELECT * FROM `kit_data`;", null, reader =>
+        // todo actually import loadouts later, too much work rn
+        await Sql.QueryAsync("SELECT * FROM `kit_data` WHERE `IsLoadout` != 1;", null, reader =>
         {
             OldKit kit = new OldKit
             {
@@ -2610,7 +2684,9 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     };
                     newKit.FactionFilterIsWhitelist = true;
                 }
-                else if (faction.FactionId.Equals(FactionInfo.USA, StringComparison.OrdinalIgnoreCase))
+                else if (faction.FactionId.Equals(FactionInfo.USA, StringComparison.OrdinalIgnoreCase) ||
+                         faction.FactionId.Equals(FactionInfo.Canada, StringComparison.OrdinalIgnoreCase) ||
+                         faction.FactionId.Equals(FactionInfo.USMC, StringComparison.OrdinalIgnoreCase))
                 {
                     newKit.FactionFilter = new PrimaryKey[]
                     {
@@ -2619,7 +2695,9 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     };
                     newKit.FactionFilterIsWhitelist = false;
                 }
-                else if (faction.FactionId.Equals(FactionInfo.Russia, StringComparison.OrdinalIgnoreCase) || faction.FactionId.Equals(FactionInfo.MEC, StringComparison.OrdinalIgnoreCase))
+                else if (faction.FactionId.Equals(FactionInfo.Russia, StringComparison.OrdinalIgnoreCase) ||
+                         faction.FactionId.Equals(FactionInfo.Soviet, StringComparison.OrdinalIgnoreCase) ||
+                         faction.FactionId.Equals(FactionInfo.MEC, StringComparison.OrdinalIgnoreCase))
                 {
                     newKit.FactionFilter = new PrimaryKey[]
                     {
@@ -2724,7 +2802,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                                 : row.Type;
                             F.AppendPropertyList(builder, index, 3);
                         }
-                        builder.Append("; ");
+                        builder.Append(';');
                         rows = await Data.AdminSql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
                         builder.Clear();
                         builder.Append(@base);
@@ -2819,11 +2897,9 @@ public static class KitEx
     }
     public static string GetFlagIcon(this FactionInfo? faction)
     {
-        if (faction == null)
-            return string.Empty;
-        return faction.TMProSpriteIndex.HasValue
-            ? ("<sprite index=" + faction.TMProSpriteIndex.Value.ToString() + "/>")
-            : "<sprite index=0/>";
+        if (faction is not { TMProSpriteIndex: { } })
+            return "<sprite index=0/>";
+        return "<sprite index=" + faction.TMProSpriteIndex.Value.ToString(Data.AdminLocale) + "/>";
     }
     public static char GetIcon(this Class @class)
     {

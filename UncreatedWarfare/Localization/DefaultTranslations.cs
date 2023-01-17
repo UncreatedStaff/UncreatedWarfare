@@ -629,7 +629,7 @@ internal static class T
     public static readonly Translation<Kit> KitAccessRevokedDm  = new Translation<Kit>("<#a0ad8e>Your access to <#fff>{0}</color> was revoked.", Kit.IdFormat);
     public static readonly Translation<string, Kit, string> KitPropertySet    = new Translation<string, Kit, string>("<#a0ad8e>Set <#aaa>{0}</color> on kit <#fff>{1}</color> to <#aaa><uppercase>{2}</uppercase></color>.", arg1Fmt: Kit.IdFormat);
     public static readonly Translation<string> KitNameTaken                   = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> already exists.");
-    public static readonly Translation<string> KitNotFound                    = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> doesn't exists.");
+    public static readonly Translation<string> KitNotFound                    = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> doesn't exist.");
     public static readonly Translation<string> KitPropertyNotFound            = new Translation<string>("<#ff8c69>Kits don't have a <#eee>{0}</color> property.");
     public static readonly Translation<string> KitPropertyProtected           = new Translation<string>("<#ff8c69><#eee>{0}</color> can not be changed on kits.");
     public static readonly Translation<IPlayer, Kit> KitAlreadyHasAccess      = new Translation<IPlayer, Kit>("<#ff8c69>{0} already has access to <#fff>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Kit.IdFormat);

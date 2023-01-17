@@ -22,7 +22,7 @@ public static class PlayerManager
     // auto added on join and detroyed on leave
     public static readonly Type[] PlayerComponentTypes =
     {
-        typeof(Kits.KitMenuUIComponent)
+
     };
 
     public static readonly List<UCPlayer> OnlinePlayers;
