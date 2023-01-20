@@ -76,6 +76,7 @@ public sealed class KitCommand : AsyncCommand
                         if (kit == null)
                             goto @new;
                         kit.Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true);
+                        kit.ItemListCache = null;
                         kit.UpdateLastEdited(ctx.CallerID);
                         ctx.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + kit.Id + ".");
                         await proxy.SaveItem(token).ConfigureAwait(false);
