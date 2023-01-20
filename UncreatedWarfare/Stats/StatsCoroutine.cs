@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using UnityEngine;
 

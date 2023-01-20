@@ -541,16 +541,23 @@ public static class EventFunctions
             Data.PlaytimeComponents.Add(ucplayer.Steam64, pt);
             Task.Run(async () =>
             {
+                L.LogDebug("Entered async portion.");
                 await ucplayer.PurchaseSync.WaitAsync().ConfigureAwait(false);
+                L.LogDebug("Entered psync portion.");
                 await UCWarfare.ToUpdate();
                 try
                 {
                     await Data.Gamemode.OnPlayerJoined(ucplayer, default).ConfigureAwait(false);
                 }
+                catch (OperationCanceledException)
+                {
+                    L.LogDebug("Player disconnected mid player-init.");
+                }
                 catch (Exception ex)
                 {
-                    L.LogError("Error initalizing player: " + ucplayer);
+                    L.LogError("Error initializing player: " + ucplayer);
                     L.LogError(ex);
+                    L.LogError(ex.ToString());
                 }
                 finally
                 {

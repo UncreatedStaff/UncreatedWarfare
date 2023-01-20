@@ -211,7 +211,7 @@ public static class Data
         Singletons.OnSingletonUnloaded += OnSingletonUnloaded;
         Singletons.OnSingletonReloaded += OnSingletonReloaded;
 
-
+         
         /* CREATE DIRECTORIES */
         L.Log("Validating directories...", ConsoleColor.Magenta);
         F.CheckDir(Paths.BaseDirectory, out _, true);

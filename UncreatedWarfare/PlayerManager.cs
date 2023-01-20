@@ -18,6 +18,13 @@ namespace Uncreated.Warfare;
 
 public static class PlayerManager
 {
+
+    // auto added on join and detroyed on leave
+    public static readonly Type[] PlayerComponentTypes =
+    {
+
+    };
+
     public static readonly List<UCPlayer> OnlinePlayers;
     private static readonly Dictionary<ulong, UCPlayer> _dict;
     internal static List<KeyValuePair<ulong, CancellationTokenSource>> PlayerConnectCancellationTokenSources = new List<KeyValuePair<ulong, CancellationTokenSource>>(Provider.queueSize);
@@ -129,6 +136,12 @@ public static class PlayerManager
                 break;
             }
         }
+
+        Component[] compBuffer = new Component[PlayerComponentTypes.Length];
+        for (int i = 0; i < PlayerComponentTypes.Length; ++i)
+        {
+            compBuffer[i] = player.gameObject.AddComponent(PlayerComponentTypes[i]);
+        }
         UCPlayer ucplayer = new UCPlayer(
             player.channel.owner.playerID.steamID,
             player,
@@ -137,6 +150,7 @@ public static class PlayerManager
             save.IsOtherDonator,
             src ?? new CancellationTokenSource()
         );
+
         Data.OriginalPlayerNames.Remove(ucplayer.Steam64);
 
 
@@ -144,6 +158,22 @@ public static class PlayerManager
         lock (_dict)
         {
             _dict.Add(ucplayer.Steam64, ucplayer);
+        }
+
+        for (int i = 0; i < compBuffer.Length; ++i)
+        {
+            if (compBuffer[i] is IPlayerComponent pc)
+            {
+                pc.Player = ucplayer;
+                try
+                {
+                    pc.Init();
+                }
+                catch (Exception ex)
+                {
+                    L.LogError(ex, method: pc.GetType().Name.ToUpperInvariant() + ".INIT");
+                }
+            }
         }
 
         SquadManager.OnPlayerJoined(ucplayer, save.SquadName);
@@ -163,7 +193,11 @@ public static class PlayerManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         player.SetOffline();
-
+        for (int i = 0; i < PlayerComponentTypes.Length; ++i)
+        {
+            if (player.Player.TryGetComponent(PlayerComponentTypes[i], out Component comp))
+                UnityEngine.Object.Destroy(comp);
+        }
         OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == player.Steam64);
         lock (_dict)
         {
@@ -268,4 +302,10 @@ public static class PlayerManager
             context.Reply(SendPlayerOnlineStatus, target, PlayerTool.getSteamPlayer(target) is not null);
         }
     }
+}
+
+internal interface IPlayerComponent
+{
+    public UCPlayer Player { get; set; }
+    public void Init();
 }

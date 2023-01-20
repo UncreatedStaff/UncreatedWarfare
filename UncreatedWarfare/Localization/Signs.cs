@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
@@ -673,17 +674,6 @@ public class Signs : BaseSingleton, ILevelStartListener
 
         return string.Empty;
     }
-    public static string QuickFormat(string input, string? val)
-    {
-        int ind = input.IndexOf("{0}", StringComparison.Ordinal);
-        if (ind != -1)
-        {
-            if (string.IsNullOrEmpty(val))
-                return input.Substring(0, ind) + input.Substring(ind + 3, input.Length - ind - 3);
-            return input.Substring(0, ind) + val + input.Substring(ind + 3, input.Length - ind - 3);
-        }
-        return input;
-    }
     public static void SetSignTextServerOnly(InteractableSign sign, string text)
     {
 #if DEBUG
@@ -811,7 +801,7 @@ public class Signs : BaseSingleton, ILevelStartListener
             VehicleData? data;
             if (spawn != null && (data = spawn.Vehicle?.Item) != null)
             {
-                return QuickFormat(Localization.TranslateVBS(spawn, data, language,
+                return Util.QuickFormat(Localization.TranslateVBS(spawn, data, language,
                     TeamManager.GetFactionSafe(_base) ?? TeamManager.GetFactionInfo(data.Faction)), data.GetCostLine(player));
             }
             return Sign.text;
@@ -834,7 +824,7 @@ public class Signs : BaseSingleton, ILevelStartListener
             VehicleData? data;
             if (spawn != null && (data = spawn.Vehicle?.Item) != null)
             {
-                return QuickFormat(text, data.GetCostLine(player));
+                return Util.QuickFormat(text, data.GetCostLine(player));
             }
             return text;
         }

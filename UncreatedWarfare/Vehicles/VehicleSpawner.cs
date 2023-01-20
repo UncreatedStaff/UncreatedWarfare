@@ -28,7 +28,6 @@ using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using UnityEngine.PlayerLoop;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Vehicles;
@@ -1550,7 +1549,7 @@ public class VehicleSpawn : IListItem
             NetId id = drop.interactable.GetNetId();
             while (set.MoveNext())
             {
-                string val2 = Signs.QuickFormat(val, data.GetCostLine(set.Next));
+                string val2 = Util.QuickFormat(val, data.GetCostLine(set.Next));
                 Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Player.channel.owner.transportConnection, val2);
             }
         }
@@ -1568,7 +1567,7 @@ public class VehicleSpawn : IListItem
         ulong team = player.GetTeam();
         string val = Localization.TranslateVBS(spawn, data, lang, TeamManager.GetFactionSafe(team) ?? TeamManager.GetFactionInfo(data.Faction));
         UCPlayer? pl = UCPlayer.FromSteamPlayer(player);
-        string val2 = Signs.QuickFormat(val, pl == null ? string.Empty : data.GetCostLine(pl));
+        string val2 = Util.QuickFormat(val, pl == null ? string.Empty : data.GetCostLine(pl));
         Data.SendChangeText.Invoke(drop.interactable.GetNetId(), ENetReliability.Unreliable, player.transportConnection, val2);
     }
     public override string ToString() => $"#{PrimaryKey}, Bay key: {StructureKey}, Vehicle key: {VehicleKey}, " +

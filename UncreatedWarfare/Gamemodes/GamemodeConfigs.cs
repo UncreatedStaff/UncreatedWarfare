@@ -8,6 +8,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
@@ -162,6 +163,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(418)]
     [JsonPropertyName("ui_buffs")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIBuffs { get; set; }
+
+    [Sync(419, OnPullMethod = nameof(OnUIKitMenuUpdated))]
+    [JsonPropertyName("ui_kit_menu")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> UIKitMenu { get; set; }
 
     [Sync(450, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_toast_info")]
@@ -785,6 +790,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         UIToastMedium = new JsonAssetReference<EffectAsset>("5f695955f0da4d19adacac39140da797");
         UIToastLarge = new JsonAssetReference<EffectAsset>("9de82ffea13946b391090eb918bf3991");
         UIToastWin = new JsonAssetReference<EffectAsset>("1f3ce50c120042c390f5c42522bd0fcd");
+        UIKitMenu = new JsonAssetReference<EffectAsset>("c0155ea486d8427d9c70541abc875e78");
         EffectMarkerAmmo = new JsonAssetReference<EffectAsset>("827b0c00724b466d8d33633fe2a7743a");
         EffectMarkerRepair = new JsonAssetReference<EffectAsset>("bcfda6fb871f42cd88597c8ac5f7c424");
         EffectMarkerRadio = new JsonAssetReference<EffectAsset>("bc6f0e7d5d9340f39ca4968bc3f7a132");
@@ -911,6 +917,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         #endregion
     }
     private void OnUIToastUpdated() => UCPlayerData.ReloadToastIDs();
+    private void OnUIKitMenuUpdated() => KitManager.MenuUI.LoadFromConfig(UIKitMenu);
     private void OnUIToastWinUpdated() => Gamemode.WinToastUI.LoadFromConfig(UIToastWin);
     private void OnUIActionMenuUpdated() => ActionManager.ActionMenuUI.LoadFromConfig(UIActionMenu);
     private void OnUILoadingUpdated() => UCPlayer.LoadingUI.LoadFromConfig(UILoading);

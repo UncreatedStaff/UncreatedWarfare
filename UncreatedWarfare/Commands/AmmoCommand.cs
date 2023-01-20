@@ -19,7 +19,7 @@ namespace Uncreated.Warfare.Commands;
 
 public class AmmoCommand : AsyncCommand
 {
-    public AmmoCommand() : base("ammo", EAdminType.MEMBER) { }
+    public AmmoCommand() : base("ammo", EAdminType.MEMBER, sync: true) { }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG

@@ -1,17 +1,14 @@
 ﻿using HarmonyLib;
+using JetBrains.Annotations;
 using SDG.Unturned;
+using StackCleaner;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
-using JetBrains.Annotations;
-using StackCleaner;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine.Assertions;
@@ -30,12 +27,12 @@ public static class L
     private static ICommandInputOutput? _defaultIOHandler;
     private delegate void OutputToConsole(string value, ConsoleColor color);
     private static OutputToConsole? _outputToConsoleMethod;
-    private static bool _advColorOutput;
     private static readonly StackTraceCleaner Cleaner = new StackTraceCleaner(new StackCleanerConfiguration()
     {
         ColorFormatting = StackColorFormatType.ExtendedANSIColor,
-        Colors = Color32Config.Default,
-        IncludeNamespaces = false
+        Colors = UnityColor32Config.Default,
+        IncludeNamespaces = false,
+        IncludeFileData = true
     });
     internal static void Init()
     {
@@ -85,36 +82,6 @@ public static class L
                 CommandWindow.LogError("Error patching Logs.printLine.");
                 CommandWindow.LogError(ex);
             }
-
-            return;
-            try
-            {
-                Type? type = _defaultIOHandler?.GetType();
-                if (typeof(ThreadedConsoleInputOutput).IsAssignableFrom(type))
-                {
-                    // transpile consoleMain
-                    MethodInfo? target = typeof(ThreadedConsoleInputOutput).GetMethod("consoleMain", BindingFlags.Instance | BindingFlags.NonPublic);
-                    if (target != null)
-                    {
-                        Harmony.Patches.Patcher.Patch(target, transpiler: new HarmonyMethod(typeof(L).GetMethod(nameof(ThreadedConsoleWriteTranspiler))));
-                        _advColorOutput = true;
-                    }
-                }
-                else
-                {
-                    MethodInfo? target = typeof(ConsoleInputOutputBase).GetMethod("outputToConsole", BindingFlags.Instance | BindingFlags.NonPublic);
-                    if (target != null)
-                    {
-                        Harmony.Patches.Patcher.Patch(target, prefix: new HarmonyMethod(typeof(L).GetMethod(nameof(BasicConsoleWritePatch))));
-                        _advColorOutput = true;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                CommandWindow.LogError("Error patching Logs.printLine.");
-                CommandWindow.LogError(ex);
-            }
         }
         catch (Exception ex)
         {
@@ -128,86 +95,7 @@ public static class L
     private static void TestColoredConsole()
     {
         Assert.IsNotNull(_outputToConsoleMethod);
-        Assert.IsTrue(_advColorOutput);
         Assert.IsNotNull(_defaultIOHandler);
-    }
-
-    private static IEnumerable<CodeInstruction> ThreadedConsoleWriteTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
-    {
-        MethodInfo? clrSetter = typeof(Console).GetProperty(nameof(Console.ForegroundColor), BindingFlags.Static | BindingFlags.Public)?.GetSetMethod(false);
-        MethodInfo? writeMethod = typeof(Console).GetMethod(nameof(Console.Write), BindingFlags.Static | BindingFlags.Public, null, CallingConventions.Any, new Type[] { typeof(string) }, null);
-        MethodInfo? writeLineMethod = typeof(Console).GetMethod(nameof(Console.WriteLine), BindingFlags.Static | BindingFlags.Public, null, CallingConventions.Any, new Type[] { typeof(string) }, null);
-        Type? t1 = Type.GetType(
-                "SDG.Unturned.ThreadedConsoleInputOutput+PendingOutput, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
-                false);
-        FieldInfo? clrField = t1?.GetField("color", BindingFlags.Instance | BindingFlags.NonPublic);
-        FieldInfo? valField = t1?.GetField("value", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (writeLineMethod == null || writeMethod == null || clrSetter == null || clrField == null || valField == null)
-        {
-            LogWarning("Failed to find a necessary method or field to transpile consoleMain.");
-            foreach (CodeInstruction instruction in instructions)
-                yield return instruction;
-            yield break;
-        }
-
-        bool patching = false;
-        bool patched = false;
-        Label lbl2 = generator.DefineLabel();
-        foreach (CodeInstruction instruction in instructions)
-        {
-            if (!patched && instruction.Calls(writeMethod))
-            {
-                patching = true;
-                yield return new CodeInstruction(OpCodes.Ldc_I4, 1 << 31);
-                yield return new CodeInstruction(OpCodes.And);
-                Label lbl = generator.DefineLabel();
-                yield return new CodeInstruction(OpCodes.Brtrue, lbl);
-
-                yield return new CodeInstruction(OpCodes.Ldloc_1);
-                yield return new CodeInstruction(OpCodes.Ldfld, clrField);
-                yield return new CodeInstruction(OpCodes.Call, clrSetter);
-
-                yield return new CodeInstruction(OpCodes.Ldloc_1);
-                yield return new CodeInstruction(OpCodes.Ldfld, valField);
-                yield return new CodeInstruction(OpCodes.Call, writeLineMethod);
-
-                yield return new CodeInstruction(OpCodes.Br_S, lbl2);
-
-                generator.MarkLabel(lbl);
-                yield return new CodeInstruction(OpCodes.Ldloc_1);
-                yield return new CodeInstruction(OpCodes.Ldfld, clrField);
-                yield return new CodeInstruction(OpCodes.Ldc_I4, ~(1 << 31));
-                yield return new CodeInstruction(OpCodes.And);
-                yield return new CodeInstruction(OpCodes.Call, clrSetter);
-
-                yield return new CodeInstruction(OpCodes.Ldloc_1);
-                yield return new CodeInstruction(OpCodes.Ldfld, valField);
-                yield return new CodeInstruction(OpCodes.Call, writeMethod);
-
-                generator.MarkLabel(lbl2);
-                patched = true;
-            }
-            else if (patching)
-            {
-                if (instruction.opcode == OpCodes.Ldarg_0) patching = false;
-            }
-            else yield return instruction;
-        }
-    }
-
-    private const ConsoleColor NoNewlineMask = (ConsoleColor)(1 << 31);
-    private static void BasicConsoleWritePatch(string value, ConsoleColor color)
-    {
-        if ((color & NoNewlineMask) != 0)
-        {
-            Console.ForegroundColor = color & ~NoNewlineMask;
-            Console.Write(value);
-        }
-        else
-        {
-            Console.ForegroundColor = color;
-            Console.WriteLine(value);
-        }
     }
     private static void PrintLinePatch(string message)
     {
@@ -219,7 +107,7 @@ public static class L
         }
     }
 
-    /// <summary>Indents the log by <paramref name="amount"/> spaces until the returned <see cref="IDisposable"/> is disposed of. Doesn't apply to <see cref="LogError(Exception, ConsoleColor, string, string, int)"/></summary>
+    /// <summary>Indents the log by <paramref name="amount"/> spaces until the returned <see cref="IDisposable"/> is disposed of. Doesn't apply to <see cref="LogError(string,ConsoleColor,string)"/></summary>
     /// <remarks><code>using LogIndent log = IndentLog(2);</code></remarks>
     public static IDisposable IndentLog(uint amount) => new LogIndent(amount);
     private readonly struct LogIndent : IDisposable
@@ -361,30 +249,30 @@ public static class L
     {
         if (!UCWarfare.IsLoaded)
             Logging.LogException(ex, cleanStack);
-        else WriteExceptionIntl(ex, cleanStack, _indention, method);
+        else
+        {
+            WriteExceptionIntl(ex, cleanStack, _indention, method);
+        }
     }
 
     private static readonly char[] TrimChars = { '\n', '\r' };
     private static readonly char[] SplitChars = { '\n' };
     private static void WriteExceptionIntl(Exception ex, bool cleanStack, int indent, string? method = null)
     {
-#if false
-        AddLine(ex.ToString(), ConsoleColor.Red);
-        return;
-#endif
         string ind = indent == 0 ? string.Empty : new string(' ', indent);
         bool inner = false;
         if (indent == 0)
             Monitor.Enter(_log);
         try
         {
-            for (; ex != null; ex = ex.InnerException!)
+            while (ex != null)
             {
                 if (inner)
                 {
                     AddLine(string.Empty, ConsoleColor.Red);
                 }
                 AddLine(ind + (inner ? "Inner Exception: " : ((string.IsNullOrEmpty(method) ? string.Empty : ("[" + method!.ToUpper() + "] ")) + "Exception: ")) + ex.GetType().Name, ConsoleColor.Red);
+                AddLine(ind + (ex.Message ?? "No message"), ConsoleColor.DarkRed);
                 if (ex is TypeLoadException t)
                 {
                     AddLine(ind + "Type: " + t.TypeName, ConsoleColor.DarkRed);
@@ -405,24 +293,20 @@ public static class L
                         WriteExceptionIntl(ex2, cleanStack, indent + 1);
                     }
                 }
-                AddLine(ind + (ex.Message ?? "No message"), ConsoleColor.DarkRed);
                 if (ex.StackTrace != null)
                 {
                     if (cleanStack)
                     {
-                        StackTrace trace = new StackTrace(ex, true);
-                        string str = Cleaner.GetString(trace);
+                        string str = Cleaner.GetString(ex);
                         AddLine(str, ConsoleColor.DarkGray);
                     }
-                    else
-                    {
-                        AddLine(indent != 0
-                            ? string.Join(Environment.NewLine, ex.StackTrace.Split(SplitChars).Select(x => ind + x.Trim(TrimChars)))
-                            : ex.StackTrace, ConsoleColor.DarkGray);
-                    }
+                    
+                    AddLine(indent != 0
+                        ? string.Join(Environment.NewLine, ex.StackTrace.Split(SplitChars).Select(x => ind + x.Trim(TrimChars)))
+                        : ex.StackTrace, ConsoleColor.DarkGray);
                 }
-                if (ex is AggregateException) break;
-
+                if (ex is AggregateException) break; ;
+                ex = ex.InnerException!;
                 inner = true;
             }
             _log.Flush();
@@ -432,43 +316,6 @@ public static class L
             if (indent == 0)
                 Monitor.Exit(_log);
         }
-    }
-    public static void WriteCleanStack(Exception ex, bool color = true) => WriteCleanStack(new StackTrace(ex, true), color, 0);
-    public static void WriteCleanStack(StackTrace trace, bool color = true) => WriteCleanStack(trace, color, 0);
-    public static void WriteCleanStack(StackTrace trace, bool color, int indent)
-    {
-        ConsoleColor old = Console.ForegroundColor;
-        List<Logging.ColorSpan>? clr = color ? new List<Logging.ColorSpan>(trace.FrameCount * 12) : null;
-        string str = Logging.CleanStack(trace, out bool someHidden, indent, clr);
-        if (color)
-        {
-            int index = 0;
-            for (int i = 0; i < clr!.Count; ++i)
-            {
-                Logging.ColorSpan current = clr[i];
-                if (current.Index > index)
-                    Console.Write(str.Substring(index, current.Index - index));
-                index = current.Index;
-                Console.ForegroundColor = current.Color;
-            }
-            if (str.Length > index)
-                Console.Write(str.Substring(index, str.Length - index));
-            Console.WriteLine();
-        }
-        else
-        {
-            Console.WriteLine(str);
-        }
-        if (someHidden)
-        {
-            if (color)
-                Console.ForegroundColor = ConsoleColor.Yellow;
-
-            Console.WriteLine();
-            Console.WriteLine("Some lines hidden for readability.");
-        }
-
-        Console.ForegroundColor = old;
     }
     internal static void RunCommand(string command)
     {
