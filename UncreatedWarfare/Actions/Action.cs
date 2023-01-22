@@ -71,16 +71,28 @@ public class Action
     }
     public void Start()
     {
-        if (_component == null || InitialPosition == null)
+        L.Log("BREAKPOINT 0");
+
+        if (_component == null)
             return;
+
+        if (Origin != EActionOrigin.FOLLOW_CALLER && InitialPosition == null)
+            return;
+
+        L.Log("BREAKPOINT 1");
 
         if (CheckValid != null && !CheckValid())
             return;
 
+        L.Log("BREAKPOINT 2");
+
         _component.Initialize(this);
-            
+
+        
+
         if (!CooldownManager.HasCooldown(Caller, CooldownType.AnnounceAction, out _, ViewerEffect.Guid))
         {
+            L.Log("BREAKPOINT 3");
             Announce();
             CooldownManager.StartCooldown(Caller, CooldownType.AnnounceAction, 5, ViewerEffect.Guid);
         }
@@ -109,14 +121,18 @@ public class Action
                 Tips.TryGiveTip(player, 5, _toast, Caller.NickName);
         }
 
-        ulong t = Caller.GetTeam();
+        SayTeam(Caller, _chatMessage);
+    }
+    public static void SayTeam(UCPlayer caller, Translation<Color> chatMessage)
+    {
+        ulong t = caller.GetTeam();
         Color t1 = Teams.TeamManager.GetTeamColor(t);
 
         foreach (LanguageSet set in LanguageSet.OnTeam(t))
         {
-            string t2 = _chatMessage.Translate(set.Language, t1);
+            string t2 = chatMessage.Translate(set.Language, t1);
             while (set.MoveNext())
-                ChatManager.serverSendMessage(t2, Palette.AMBIENT, Caller.SteamPlayer, set.Next.SteamPlayer, EChatMode.SAY, null, true);
+                ChatManager.serverSendMessage(t2, Palette.AMBIENT, caller.SteamPlayer, set.Next.SteamPlayer, EChatMode.SAY, null, true);
         }
     }
     public delegate bool CheckValidHandler();

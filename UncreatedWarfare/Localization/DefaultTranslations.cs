@@ -1738,6 +1738,8 @@ internal static class T
     public static readonly Translation<string> AirSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs air support.", TranslationFlags.UnityUI);
     public static readonly Translation<Color> ArmorSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting armor support!", TranslationFlags.NoColorOptimization);
     public static readonly Translation<string> ArmorSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs armor support.", TranslationFlags.UnityUI);
+    public static readonly Translation<Color> ThankYouChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Thank you!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Color> SorryChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Sorry.", TranslationFlags.NoColorOptimization);
     public static readonly Translation AttackToast = new Translation("<#a1998d>Attack the marked position.", TranslationFlags.UnityUI);
     public static readonly Translation DefendToast = new Translation("<#a1998d>Defend the marked position.", TranslationFlags.UnityUI);
     public static readonly Translation MoveToast = new Translation("<#a1998d>Move to the marked position.", TranslationFlags.UnityUI);
