@@ -35,6 +35,11 @@ public class ActionManager : BaseSingleton
         ActionMenuUI.AirSupport.OnClicked += SuppliesBuild;
         ActionMenuUI.ArmorSupport.OnClicked += SuppliesAmmo;
 
+        ActionMenuUI.Attack.OnClicked += Attack;
+        ActionMenuUI.Defend.OnClicked += Defend;
+        ActionMenuUI.Move.OnClicked += Move;
+        ActionMenuUI.Build.OnClicked += Build;
+
         ActionMenuUI.Cancel.OnClicked += Cancel;
         Singleton = this;
     }
@@ -54,6 +59,11 @@ public class ActionManager : BaseSingleton
         ActionMenuUI.SuppliesAmmo.OnClicked -= SuppliesAmmo;
         ActionMenuUI.AirSupport.OnClicked -= SuppliesBuild;
         ActionMenuUI.ArmorSupport.OnClicked -= SuppliesAmmo;
+
+        ActionMenuUI.Attack.OnClicked -= Attack;
+        ActionMenuUI.Defend.OnClicked -= Defend;
+        ActionMenuUI.Move.OnClicked -= Move;
+        ActionMenuUI.Build.OnClicked -= Build;
 
         ActionMenuUI.Cancel.OnClicked -= Cancel;
     }
