@@ -70,7 +70,7 @@ public class Tips : BaseSingleton
     }
     private static void GiveTip(UCPlayer player, string translation)
     {
-        ToastMessage.QueueMessage(player, new ToastMessage(translation, EToastMessageSeverity.TIP));
+        ToastMessage.QueueMessage(player, new ToastMessage(translation, ToastMessageSeverity.Tip));
     }
 }
 public class Tip

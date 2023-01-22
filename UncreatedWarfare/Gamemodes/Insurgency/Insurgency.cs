@@ -373,9 +373,9 @@ public class Insurgency :
         foreach (UCPlayer player in PlayerManager.OnlinePlayers)
         {
             if (player.GetTeam() == AttackingTeam)
-                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.CacheDiscoveredAttack, player, cache.ClosestLocation), EToastMessageSeverity.BIG));
+                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.CacheDiscoveredAttack, player, cache.ClosestLocation), ToastMessageSeverity.Big));
             else if (player.GetTeam() == DefendingTeam)
-                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.CacheDiscoveredDefense, player), EToastMessageSeverity.BIG));
+                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.CacheDiscoveredDefense, player), ToastMessageSeverity.Big));
         }
         for (int i = 0; i < Caches.Count; i++)
         {
@@ -447,7 +447,7 @@ public class Insurgency :
         {
             foreach (LanguageSet set in LanguageSet.OnTeam(DefendingTeam))
             {
-                ToastMessage msg = new ToastMessage(T.CacheSpawnedDefense.Translate(set.Language), EToastMessageSeverity.BIG);
+                ToastMessage msg = new ToastMessage(T.CacheSpawnedDefense.Translate(set.Language), ToastMessageSeverity.Big);
                 while (set.MoveNext())
                     ToastMessage.QueueMessage(set.Next, msg);
             }
@@ -524,9 +524,9 @@ public class Insurgency :
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
                 if (player.GetTeam() == AttackingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(T.CacheDestroyedAttack.Translate(player), string.Empty, EToastMessageSeverity.BIG));
+                    ToastMessage.QueueMessage(player, new ToastMessage(T.CacheDestroyedAttack.Translate(player), string.Empty, ToastMessageSeverity.Big));
                 else if (player.GetTeam() == DefendingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(T.CacheDestroyedDefense.Translate(player), string.Empty, EToastMessageSeverity.BIG));
+                    ToastMessage.QueueMessage(player, new ToastMessage(T.CacheDestroyedDefense.Translate(player), string.Empty, ToastMessageSeverity.Big));
             }
 
             if (ActiveCachesCount == 0)

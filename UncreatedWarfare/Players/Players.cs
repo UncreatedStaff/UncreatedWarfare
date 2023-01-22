@@ -9,8 +9,8 @@ namespace Uncreated.Players;
 
 public struct PlayerNames : IPlayer
 {
-    public static readonly PlayerNames Nil = new PlayerNames() { CharacterName = string.Empty, NickName = string.Empty, PlayerName = string.Empty, Steam64 = 0 };
-    public static readonly PlayerNames Console = new PlayerNames() { CharacterName = "Console", NickName = "Console", PlayerName = "Console", Steam64 = 0 };
+    public static readonly PlayerNames Nil = new PlayerNames { CharacterName = string.Empty, NickName = string.Empty, PlayerName = string.Empty, Steam64 = 0 };
+    public static readonly PlayerNames Console = new PlayerNames { CharacterName = "Console", NickName = "Console", PlayerName = "Console", Steam64 = 0 };
     public ulong Steam64;
     public string PlayerName;
     public string CharacterName;
@@ -51,20 +51,20 @@ public struct PlayerNames : IPlayer
         this.Steam64 = player.channel.owner.playerID.steamID.m_SteamID;
         WasFound = true;
     }
-    public static void Write(ByteWriter W, PlayerNames N)
+    public static void Write(ByteWriter writer, PlayerNames obj)
     {
-        W.Write(N.Steam64);
-        W.Write(N.PlayerName);
-        W.Write(N.CharacterName);
-        W.Write(N.NickName);
+        writer.Write(obj.Steam64);
+        writer.Write(obj.PlayerName);
+        writer.Write(obj.CharacterName);
+        writer.Write(obj.NickName);
     }
-    public static PlayerNames Read(ByteReader R) =>
+    public static PlayerNames Read(ByteReader reader) =>
         new PlayerNames
         {
-            Steam64 = R.ReadUInt64(),
-            PlayerName = R.ReadString(),
-            CharacterName = R.ReadString(),
-            NickName = R.ReadString()
+            Steam64 = reader.ReadUInt64(),
+            PlayerName = reader.ReadString(),
+            CharacterName = reader.ReadString(),
+            NickName = reader.ReadString()
         };
     public override string ToString() => PlayerName;
     public static bool operator ==(PlayerNames left, PlayerNames right) => left.Steam64 == right.Steam64;
@@ -72,58 +72,6 @@ public struct PlayerNames : IPlayer
     public override bool Equals(object obj) => obj is PlayerNames pn && this.Steam64 == pn.Steam64;
     public override int GetHashCode() => Steam64.GetHashCode();
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => new OfflinePlayer(in this).Translate(language, format, target, ref flags);
-}
-public struct ToastMessage
-{
-    public readonly EToastMessageSeverity Severity;
-    private readonly long time;
-    public readonly string Message1;
-    public readonly string? Message2;
-    public readonly string? Message3;
-    public const float FULL_TOAST_TIME = 12f;
-    public const float MINI_TOAST_TIME = 4f;
-    public const float BIG_TOAST_TIME = 5.5f;
-    public readonly uint InstanceID;
-    private static uint _lastInstId;
-    public static bool operator ==(ToastMessage left, ToastMessage right) => left.time == right.time && left.Message1 == right.Message1;
-    public static bool operator !=(ToastMessage left, ToastMessage right) => left.time != right.time || left.Message1 != right.Message1;
-    public override int GetHashCode() => time.GetHashCode() / 2 + Message1.GetHashCode() / 2;
-    public override bool Equals(object obj) => obj is ToastMessage msg && msg.time == time && msg.Message1 == Message1;
-    public ToastMessage(string message1, EToastMessageSeverity severity)
-    {
-        this.time = DateTime.Now.Ticks;
-        this.Message1 = message1;
-        this.Message2 = null;
-        this.Message3 = null;
-        this.Severity = severity;
-        InstanceID = ++_lastInstId;
-    }
-    public ToastMessage(string message1, string message2, EToastMessageSeverity severity) : this(message1, severity)
-    {
-        this.Message2 = message2;
-    }
-    public ToastMessage(string message1, string message2, string message3, EToastMessageSeverity severity) : this(message1, message2, severity)
-    {
-        this.Message3 = message3;
-    }
-    public static void QueueMessage(UCPlayer player, ToastMessage message, bool priority = false) => QueueMessage(player.Player, message, priority);
-    public static void QueueMessage(SteamPlayer player, ToastMessage message, bool priority = false) => QueueMessage(player.player, message, priority);
-    public static void QueueMessage(Player player, ToastMessage message, bool priority = false)
-    {
-        if (F.TryGetPlayerData(player, out Warfare.Components.UCPlayerData c))
-            c.QueueMessage(message, priority);
-    }
-}
-public enum EToastMessageSeverity : byte
-{
-    INFO = 0,
-    WARNING = 1,
-    SEVERE = 2,
-    MINI = 3,
-    MEDIUM = 4,
-    BIG = 5,
-    PROGRESS = 6,
-    TIP = 7
 }
 public sealed class UCPlayerEvents : IDisposable
 {
@@ -146,48 +94,48 @@ public sealed class UCPlayerEvents : IDisposable
 }
 public sealed class UCPlayerKeys : IDisposable
 {
-    private static readonly int KEY_COUNT = 10 + ControlsSettings.NUM_PLUGIN_KEYS;
+    private static readonly int KeyCount = 10 + ControlsSettings.NUM_PLUGIN_KEYS;
 
-    private static readonly KeyDown?[] _downEvents = new KeyDown?[KEY_COUNT];
-    private static readonly KeyUp?[] _upEvents = new KeyUp?[KEY_COUNT];
-    private static readonly bool[] eventMask = new bool[KEY_COUNT];
-    private static bool anySubs = false;
+    private static readonly KeyDown?[] DownEvents = new KeyDown?[KeyCount];
+    private static readonly KeyUp?[] UpEvents = new KeyUp?[KeyCount];
+    private static readonly bool[] EventMask = new bool[KeyCount];
+    private static bool _anySubs;
 
     public readonly UCPlayer Player;
-    private bool[] lastKeys = new bool[KEY_COUNT];
-    private float[] keyDownTimes = new float[KEY_COUNT];
-    private bool first = true;
-    private bool disposed;
+    private bool[] _lastKeys = new bool[KeyCount];
+    private float[] _keyDownTimes = new float[KeyCount];
+    private bool _first = true;
+    private bool _disposed;
     public UCPlayerKeys(UCPlayer player)
     {
         Player = player;
-        if (Player.Player.input.keys.Length != KEY_COUNT)
+        if (Player.Player.input.keys.Length != KeyCount)
             throw new InvalidOperationException("Nelson changed the amount of keys in PlayerInput!");
         float time = Time.realtimeSinceStartup;
-        for (int i = 0; i < KEY_COUNT; ++i)
-            keyDownTimes[i] = time;
+        for (int i = 0; i < KeyCount; ++i)
+            _keyDownTimes[i] = time;
     }
     public bool IsKeyDown(PlayerKey key)
     {
         CheckKey(key);
-        return !disposed && Player.Player.input.keys[(int)key];
+        return !_disposed && Player.Player.input.keys[(int)key];
     }
     public static void SubscribeKeyUp(KeyUp action, PlayerKey key)
     {
         if (action == null) return;
-        anySubs = true;
+        _anySubs = true;
         CheckKey(key);
-        ref KeyUp? d = ref _upEvents[(int)key];
-        eventMask[(int)key] = true;
+        ref KeyUp? d = ref UpEvents[(int)key];
+        EventMask[(int)key] = true;
         d += action;
     }
     public static void SubscribeKeyDown(KeyDown action, PlayerKey key)
     {
         if (action == null) return;
-        anySubs = true;
+        _anySubs = true;
         CheckKey(key);
-        ref KeyDown? d = ref _downEvents[(int)key];
-        eventMask[(int)key] = true;
+        ref KeyDown? d = ref DownEvents[(int)key];
+        EventMask[(int)key] = true;
         d += action;
     }
 #nullable disable
@@ -195,7 +143,7 @@ public sealed class UCPlayerKeys : IDisposable
     {
         if (action == null) return;
         CheckKey(key);
-        ref KeyUp d = ref _upEvents[(int)key];
+        ref KeyUp d = ref UpEvents[(int)key];
         if (d != null)
             d -= action;
         CheckAnySubs();
@@ -204,7 +152,7 @@ public sealed class UCPlayerKeys : IDisposable
     {
         if (action == null) return;
         CheckKey(key);
-        ref KeyDown d = ref _downEvents[(int)key];
+        ref KeyDown d = ref DownEvents[(int)key];
         if (d != null)
             d -= action;
         CheckAnySubs();
@@ -213,73 +161,73 @@ public sealed class UCPlayerKeys : IDisposable
     private static void CheckKey(PlayerKey key)
     {
 #pragma warning disable CS0618
-        if (key == PlayerKey.Reserved || (int)key < 0 || (int)key >= KEY_COUNT)
+        if (key == PlayerKey.Reserved || (int)key < 0 || (int)key >= KeyCount)
             throw new ArgumentOutOfRangeException(nameof(key), key.ToString() + " doesn't match a valid key.");
 #pragma warning restore CS0618
     }
     private static void CheckAnySubs()
     {
-        anySubs = false;
-        for (int i = 0; i < _upEvents.Length; ++i)
+        _anySubs = false;
+        for (int i = 0; i < UpEvents.Length; ++i)
         {
-            if (_upEvents[i] != null)
+            if (UpEvents[i] != null)
             {
-                anySubs = true;
-                eventMask[i] = true;
+                _anySubs = true;
+                EventMask[i] = true;
             }
             else
-                eventMask[i] = false;
+                EventMask[i] = false;
         }
-        for (int i = 0; i < _downEvents.Length; ++i)
+        for (int i = 0; i < DownEvents.Length; ++i)
         {
-            if (_downEvents[i] != null)
+            if (DownEvents[i] != null)
             {
-                anySubs = true;
-                eventMask[i] = true;
+                _anySubs = true;
+                EventMask[i] = true;
             }
         }
     }
     internal void Simulate()
     {
-        if (disposed) return;
+        if (_disposed) return;
         bool[] keys = Player.Player.input.keys;
-        if (first || !anySubs)
+        if (_first || !_anySubs)
         {
-            for (int i = 0; i < KEY_COUNT; ++i)
-                this.lastKeys[i] = keys[i];
-            first = false;
+            for (int i = 0; i < KeyCount; ++i)
+                this._lastKeys[i] = keys[i];
+            _first = false;
         }
         else
         {
-            for (int i = 0; i < KEY_COUNT; ++i)
+            for (int i = 0; i < KeyCount; ++i)
             {
                 bool st = keys[i];
-                if (eventMask[i])
+                if (EventMask[i])
                 {
-                    bool ost = this.lastKeys[i];
+                    bool ost = this._lastKeys[i];
                     if (st == ost) continue;
                     if (st)
                     {
-                        EventDispatcher.OnKeyDown(Player, (PlayerKey)i, _downEvents[i]);
-                        keyDownTimes[i] = Time.realtimeSinceStartup;
+                        EventDispatcher.OnKeyDown(Player, (PlayerKey)i, DownEvents[i]);
+                        _keyDownTimes[i] = Time.realtimeSinceStartup;
                     }
                     else
                     {
-                        EventDispatcher.OnKeyUp(Player, (PlayerKey)i, Time.realtimeSinceStartup - keyDownTimes[i], _upEvents[i]);
+                        EventDispatcher.OnKeyUp(Player, (PlayerKey)i, Time.realtimeSinceStartup - _keyDownTimes[i], UpEvents[i]);
                     }
                 }
-                this.lastKeys[i] = st;
+                this._lastKeys[i] = st;
             }
         }
     }
     public void Dispose()
     {
-        if (!disposed)
+        if (!_disposed)
         {
-            lastKeys = null!;
-            keyDownTimes = null!;
-            first = false;
-            disposed = true;
+            _lastKeys = null!;
+            _keyDownTimes = null!;
+            _first = false;
+            _disposed = true;
         }
     }
 }

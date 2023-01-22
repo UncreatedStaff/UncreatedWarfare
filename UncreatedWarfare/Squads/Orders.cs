@@ -28,7 +28,7 @@ public static class Orders
             while (set.MoveNext())
             {
                 order.SendUI(set.Next);
-                ToastMessage.QueueMessage(set.Next, new ToastMessage(msg, EToastMessageSeverity.MEDIUM));
+                ToastMessage.QueueMessage(set.Next, new ToastMessage(msg, ToastMessageSeverity.Medium));
             }
         }
 
@@ -218,7 +218,7 @@ public class Order : MonoBehaviour, ITranslationArgument
 #endif
         if (!IsActive) return;
 
-        ToastMessage toast = new ToastMessage("ORDER CANCELLED".Colorize("c7b3a5"), EToastMessageSeverity.MINI);
+        ToastMessage toast = new ToastMessage("ORDER CANCELLED".Colorize("c7b3a5"), ToastMessageSeverity.Mini);
 
         foreach (UCPlayer player in Squad.Members)
         {
@@ -238,7 +238,7 @@ public class Order : MonoBehaviour, ITranslationArgument
 #endif
         if (!IsActive) return;
 
-        ToastMessage toast = new ToastMessage("ORDER TIMED OUT".Colorize("c7b3a5"), EToastMessageSeverity.MINI);
+        ToastMessage toast = new ToastMessage("ORDER TIMED OUT".Colorize("c7b3a5"), ToastMessageSeverity.Mini);
 
         foreach (UCPlayer player in Squad.Members)
         {

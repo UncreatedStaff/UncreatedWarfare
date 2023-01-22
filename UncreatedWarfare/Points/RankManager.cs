@@ -385,7 +385,7 @@ public static class RankManager
                 if (Assets.find(nextRank.QuestID) is QuestAsset quest)
                 {
                     e.Player.Player.quests.ServerRemoveQuest(quest);
-                    ToastMessage.QueueMessage(e.Player, new ToastMessage("Quest complete: " + quest.questName, EToastMessageSeverity.BIG));
+                    ToastMessage.QueueMessage(e.Player, new ToastMessage("Quest complete: " + quest.questName, ToastMessageSeverity.Big));
                     OnPlayerJoin(e.Player);
                 }
             }

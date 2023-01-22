@@ -1115,7 +1115,6 @@ public class DebugCommand : AsyncCommand
         ctx.Defer();
     }
 #if DEBUG
-
     private async Task testfield(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertRanByPlayer();

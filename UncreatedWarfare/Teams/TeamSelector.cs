@@ -192,7 +192,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             Chat.Broadcast(LanguageSet.Where(x => x.GetTeam() == team && x.Steam64 != id), T.TeamJoinAnnounce, TeamManager.GetFactionSafe(team)!, player);
 
             CooldownManager.StartCooldown(player, CooldownType.ChangeTeams, TeamManager.TeamSwitchCooldown);
-            ToastMessage.QueueMessage(player, new ToastMessage(string.Empty, Data.Gamemode.DisplayName, EToastMessageSeverity.BIG));
+            ToastMessage.QueueMessage(player, new ToastMessage(string.Empty, Data.Gamemode.DisplayName, ToastMessageSeverity.Big));
 
             if (Data.Gamemode is IJoinedTeamListener tl)
                 tl.OnJoinTeam(player, team);

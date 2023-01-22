@@ -111,7 +111,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
         ToastMessage.QueueMessage(player, new ToastMessage(
             T.EnteredEnemyTerritory.Translate(player, Mathf.RoundToInt(Config.GeneralAMCKillTime.Value).GetTimeFromSeconds(player)),
-            EToastMessageSeverity.WARNING));
+            ToastMessageSeverity.Warning));
         player.Player.StartCoroutine(PlayerMainCampingCoroutine(player));
     }
     private IEnumerator PlayerMainCampingCoroutine(UCPlayer player)

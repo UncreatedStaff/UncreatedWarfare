@@ -852,7 +852,7 @@ public static class OffenseManager
 
             string lang = Localization.GetLang(target.Steam64);
             ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDMOperator.Translate(T.WarnSuccessDMOperator.Translate(lang),
-                lang, reason, target, target.GetTeam(), T.WarnSuccessDMOperator.Flags | TranslationFlags.UnityUI), EToastMessageSeverity.WARNING));
+                lang, reason, target, target.GetTeam(), T.WarnSuccessDMOperator.Flags | TranslationFlags.UnityUI), ToastMessageSeverity.Warning));
 
             target.SendChat(T.WarnSuccessDMOperator, reason);
         }
@@ -867,7 +867,7 @@ public static class OffenseManager
 
             string lang = Localization.GetLang(target.Steam64);
             ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDM.Translate(T.WarnSuccessDM.Translate(lang),
-                lang, caller2, reason, target, target.GetTeam(), T.WarnSuccessDM.Flags | TranslationFlags.UnityUI), EToastMessageSeverity.WARNING));
+                lang, caller2, reason, target, target.GetTeam(), T.WarnSuccessDM.Flags | TranslationFlags.UnityUI), ToastMessageSeverity.Warning));
 
             target.SendChat(T.WarnSuccessDM, caller2, reason);
         }

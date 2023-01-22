@@ -204,8 +204,8 @@ public static class Points
                 string number = Localization.Translate(key, player, Math.Abs(amount));
                 ToastMessage.QueueMessage(player,
                     !string.IsNullOrEmpty(parameters.Message)
-                        ? new ToastMessage(number + "\n" + parameters.Message!.Colorize("adadad"), EToastMessageSeverity.MINI)
-                        : new ToastMessage(number, EToastMessageSeverity.MINI));
+                        ? new ToastMessage(number + "\n" + parameters.Message!.Colorize("adadad"), ToastMessageSeverity.Mini)
+                        : new ToastMessage(number, ToastMessageSeverity.Mini));
 
                 if (!parameters.IsPurchase && player.Player.TryGetPlayerData(out UCPlayerData c))
                 {
@@ -364,8 +364,8 @@ public static class Points
 
                         ToastMessage.QueueMessage(player,
                             !string.IsNullOrEmpty(parameters.Message)
-                                ? new ToastMessage(number + "\n" + parameters.Message!.Colorize("adadad"), EToastMessageSeverity.MINI)
-                                : new ToastMessage(number, EToastMessageSeverity.MINI));
+                                ? new ToastMessage(number + "\n" + parameters.Message!.Colorize("adadad"), ToastMessageSeverity.Mini)
+                                : new ToastMessage(number, ToastMessageSeverity.Mini));
                         UpdateXPUI(player);
                     }
                 }
@@ -404,13 +404,13 @@ public static class Points
                 {
                     ToastMessage.QueueMessage(player,
                         new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Rank.Name.ToUpper(),
-                            EToastMessageSeverity.BIG));
+                            ToastMessageSeverity.Big));
                 }
                 else if (player.Rank.Level < oldRank.Level)
                 {
                     ToastMessage.QueueMessage(player,
                         new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Rank.Name.ToUpper(),
-                            EToastMessageSeverity.BIG));
+                            ToastMessageSeverity.Big));
                 }
                 else goto skipUpdates;
                 Signs.UpdateAllSigns(player);

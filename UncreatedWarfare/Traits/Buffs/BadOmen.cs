@@ -107,7 +107,7 @@ public class BadOmen : Buff
     }
     private static void WarnPlayer(UCPlayer player, float timeLeft)
     {
-        ToastMessage msg = new ToastMessage(T.BadOmenMortarWarning.Translate(player, timeLeft), EToastMessageSeverity.SEVERE);
+        ToastMessage msg = new ToastMessage(T.BadOmenMortarWarning.Translate(player, timeLeft), ToastMessageSeverity.Severe);
         ToastMessage.QueueMessage(player, msg, true);
         L.Log("Warning " + player.Name.PlayerName + " for incoming mortar " + timeLeft + " seconds out.");
         player.Player.StartCoroutine(WarnTimer(player, timeLeft, msg));
