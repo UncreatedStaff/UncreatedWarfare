@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.Traits.Buffs;
 public class BadOmen : Buff
 {
     private static TraitData? DATA;
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(BadOmen),
         NameTranslations = new TranslationList("Bad Omen"),
@@ -24,7 +24,7 @@ public class BadOmen : Buff
         Icon = "¯",
         EffectDuration = 600,
         Cooldown = 1200,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 6 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 6 } },
         EffectDistributedToSquad = false,
         Data = "15" // max notice given in seconds
     };
@@ -34,7 +34,7 @@ public class BadOmen : Buff
     {
         if (onStart)
         {
-            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _maxNotice))
+            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.AdminLocale, out _maxNotice))
                 _maxNotice = 15f;
 
             _squadMaxNotice = Data.EffectDistributedToSquad

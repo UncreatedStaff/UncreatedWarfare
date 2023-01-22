@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.FOBs;
@@ -37,9 +38,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
 {
     private VehicleSpawner _vehicleSpawner;
     private VehicleBay _vehicleBay;
-    private VehicleSigns _vehicleSigns;
-    private FOBManager _FOBManager;
-    private RequestSigns _requestSigns;
+    private FOBManager _fobManager;
     private KitManager _kitManager;
     private ReviveManager _reviveManager;
     private SquadManager _squadManager;
@@ -48,11 +47,11 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     private HardpointLeaderboard? _endScreen;
     private TraitManager _traitManager;
     private ActionManager _actionManager;
-    public int _objIndex = -1;
-    private float nextObjectivePickTime;
-    private ulong objectiveOwner;
+    private int _objIndex = -1;
+    private float _nextObjectivePickTime;
+    private ulong _objectiveOwner;
     private bool _isScreenUp;
-    public override EGamemode GamemodeType => EGamemode.HARDPOINT;
+    public override GamemodeType GamemodeType => GamemodeType.Hardpoint;
     public override string DisplayName => "Hardpoint";
     public override bool EnableAMC => true;
     public override bool ShowOFPUI => true;
@@ -61,25 +60,23 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     public override bool UseTeamSelector => true;
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
-    public Flag Objective => _rotation[_objIndex];
-    Flag? IFlagObjectiveGamemode.Objective => _objIndex < 0 || _objIndex >= _rotation.Count ? null : _rotation[_objIndex];
+    public Flag Objective => FlagRotation[_objIndex];
+    Flag? IFlagObjectiveGamemode.Objective => _objIndex < 0 || _objIndex >= FlagRotation.Count ? null : FlagRotation[_objIndex];
     public int ObjectiveIndex => _objIndex;
     public bool IsScreenUp => _isScreenUp;
     public HardpointTracker WarstatsTracker => _gameStats;
     HardpointTracker IImplementsLeaderboard<HardpointPlayerStats, HardpointTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     Leaderboard<HardpointPlayerStats, HardpointTracker>? IImplementsLeaderboard<HardpointPlayerStats, HardpointTracker>.Leaderboard => _endScreen;
-    object IGameStats.GameStats => _gameStats;
+    IStatTracker IGameStats.GameStats => _gameStats;
     /// <summary>0 = clear, 1 = t1, 2 = t2, 3 = contested</summary>
-    public ulong ObjectiveState => objectiveOwner;
-    Flag? IFlagTeamObjectiveGamemode.ObjectiveTeam1 => Objective;
-    Flag? IFlagTeamObjectiveGamemode.ObjectiveTeam2 => Objective;
+    public ulong ObjectiveState => _objectiveOwner;
+    Flag IFlagTeamObjectiveGamemode.ObjectiveTeam1 => Objective;
+    Flag IFlagTeamObjectiveGamemode.ObjectiveTeam2 => Objective;
     int IFlagTeamObjectiveGamemode.ObjectiveT1Index => _objIndex;
     int IFlagTeamObjectiveGamemode.ObjectiveT2Index => _objIndex;
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
-    public VehicleSigns VehicleSigns => _vehicleSigns;
-    public FOBManager FOBManager => _FOBManager;
-    public RequestSigns RequestSigns => _requestSigns;
+    public FOBManager FOBManager => _fobManager;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
@@ -87,52 +84,51 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     public TraitManager TraitManager => _traitManager;
     public ActionManager ActionManager => _actionManager;
     public Hardpoint() : base(nameof(Hardpoint), 0.25f) { }
-    protected override Task PreInit()
+    protected override Task PreInit(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         _objIndex = -1;
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _reviveManager);
         AddSingletonRequirement(ref _vehicleBay);
-        AddSingletonRequirement(ref _FOBManager);
+        AddSingletonRequirement(ref _fobManager);
         AddSingletonRequirement(ref _structureSaver);
-        AddSingletonRequirement(ref _vehicleSigns);
-        AddSingletonRequirement(ref _requestSigns);
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
-        return base.PreInit();
+        return base.PreInit(token);
     }
     public override void LoadRotation()
     {
-        if (_allFlags == null || _allFlags.Count == 0)
+        if (AllFlags == null || AllFlags.Count == 0)
             throw new InvalidOperationException("No flags are loaded to path with.");
 
         LoadFlagsIntoRotation();
-        if (_rotation.Count < 1)
+        if (FlagRotation.Count < 1)
         {
             L.LogError("No flags were put into rotation!!");
         }
 
         PickObjective(true);
-        Chat.Broadcast(T.HardpointFirstObjective, Objective, nextObjectivePickTime - Time.realtimeSinceStartup);
+        Chat.Broadcast(T.HardpointFirstObjective, Objective, _nextObjectivePickTime - Time.realtimeSinceStartup);
 
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             SendListUI(PlayerManager.OnlinePlayers[i]);
     }
     protected override void EventLoopAction()
     {
-        if (State == EState.ACTIVE && nextObjectivePickTime < Time.realtimeSinceStartup)
+        if (State == State.Active && _nextObjectivePickTime < Time.realtimeSinceStartup)
         {
             PickObjective(false);
-            Chat.Broadcast(T.HardpointObjectiveChanged, Objective, nextObjectivePickTime - Time.realtimeSinceStartup);
+            Chat.Broadcast(T.HardpointObjectiveChanged, Objective, _nextObjectivePickTime - Time.realtimeSinceStartup);
         }
         base.EventLoopAction();
     }
     private void PickObjective(bool first)
     {
-        float oldTime = nextObjectivePickTime;
+        float oldTime = _nextObjectivePickTime;
         float v = 0f;
         if (Config.HardpointObjectiveChangeTimeTolerance != 0)
         {
@@ -140,32 +136,32 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             if (UnityEngine.Random.value < 0.5f)
                 v = -v;
         }
-        nextObjectivePickTime = Time.realtimeSinceStartup + Config.HardpointObjectiveChangeTime + v;
-        if (State == EState.STAGING)
-            nextObjectivePickTime += StagingSeconds;
-        objectiveOwner = 0ul;
+        _nextObjectivePickTime = Time.realtimeSinceStartup + Config.HardpointObjectiveChangeTime + v;
+        if (State == State.Staging)
+            _nextObjectivePickTime += StagingSeconds;
+        _objectiveOwner = 0ul;
         int old = _objIndex;
-        int highest = _rotation.Count;
+        int highest = FlagRotation.Count;
         if (!first)
             --highest;
         int newobj = UnityEngine.Random.Range(0, highest);
         if (!first && newobj >= old)
             ++newobj;
-        if (newobj < 0 || newobj >= _rotation.Count)
+        if (newobj < 0 || newobj >= FlagRotation.Count)
         {
-            L.LogError("Failed to pick a valid objective!!! (picked " + newobj + " out of " + _rotation.Count + " loaded flags).");
+            L.LogError("Failed to pick a valid objective!!! (picked " + newobj + " out of " + FlagRotation.Count + " loaded flags).");
             if (first)
-                throw new SingletonLoadException(ESingletonLoadType.LOAD, this, "Failed to pick a valid objective.");
+                throw new SingletonLoadException(SingletonLoadType.Load, this, "Failed to pick a valid objective.");
             else
             {
-                nextObjectivePickTime = oldTime;
+                _nextObjectivePickTime = oldTime;
                 return;
             }
         }
         _objIndex = newobj;
         if (!first)
         {
-            StopUsingPoint(_rotation[old]);
+            StopUsingPoint(FlagRotation[old]);
             UpdateListUI(old);
             UpdateListUI(newobj);
             TicketManager.UpdateUI();
@@ -188,39 +184,39 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     private void LoadFlagsIntoRotation()
     {
         ResetFlags();
-        _onFlag.Clear();
+        OnFlagDict.Clear();
 
         do
         {
-            _rotation.Clear();
-            if (!ObjectivePathing.TryPath(_rotation))
+            FlagRotation.Clear();
+            if (!ObjectivePathing.TryPath(FlagRotation))
             {
                 L.LogError("Failed to path...");
                 throw new InvalidOperationException("Invalid pathing data entered.");
             }
         }
-        while (_rotation.Count > Config.HardpointFlagAmount + Config.HardpointFlagTolerance && _rotation.Count < Config.HardpointFlagAmount - Config.HardpointFlagTolerance);
+        while (FlagRotation.Count > Config.HardpointFlagAmount + Config.HardpointFlagTolerance && FlagRotation.Count < Config.HardpointFlagAmount - Config.HardpointFlagTolerance);
     }
     private void OnObjectiveStateUpdated(ulong oldState)
     {
         UpdateListUI(_objIndex);
-        switch (objectiveOwner)
+        switch (_objectiveOwner)
         {
             case 1ul:
             case 2ul:
-                L.LogDebug("Owner Changed: " + objectiveOwner + " for " + Objective.Name + ".");
-                FactionInfo faction = TeamManager.GetFaction(objectiveOwner);
-                ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + faction.GetName(L.DEFAULT));
+                L.LogDebug("Owner Changed: " + _objectiveOwner + " for " + Objective.Name + ".");
+                FactionInfo faction = TeamManager.GetFaction(_objectiveOwner);
+                ActionLog.Add(ActionLogType.TeamCapturedObjective, Objective.Name + " - " + faction.GetName(L.Default));
                 Chat.Broadcast(T.HardpointObjectiveStateCaptured, Objective, faction);
                 break;
             case 3ul:
                 L.LogDebug("Contested: " + Objective.Name + ".");
-                ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + "CONTESTED");
+                ActionLog.Add(ActionLogType.TeamCapturedObjective, Objective.Name + " - " + "CONTESTED");
                 Chat.Broadcast(T.HardpointObjectiveStateContested, Objective);
                 break;
             default:
                 L.LogDebug("Cleared: " + Objective.Name + ".");
-                ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, Objective.Name + " - " + "CLEAR");
+                ActionLog.Add(ActionLogType.TeamCapturedObjective, Objective.Name + " - " + "CLEAR");
                 if (oldState is 1ul or 2ul)
                     Chat.Broadcast(T.HardpointObjectiveStateLost, Objective, TeamManager.GetFaction(oldState));
                 else
@@ -235,24 +231,16 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         flag.Discover(2);
         base.InitFlag(flag);
     }
-    public override void OnJoinTeam(UCPlayer player, ulong team)
+    protected override void InitUI(UCPlayer player)
     {
-        KitManager.TryGiveKitOnJoinTeam(player);
-        _gameStats.OnPlayerJoin(player);
-        if (IsScreenUp && _endScreen != null)
-            _endScreen.OnPlayerJoined(player);
-        else
-        {
-            TicketManager.SendUI(player);
-            SendListUI(player);
-        }
-        base.OnJoinTeam(player, team);
+        SendListUI(player);
     }
-    public override Task DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         _objIndex = -1;
         StartCoroutine(EndGameCoroutine(winner));
-        return base.DeclareWin(winner);
+        return base.DeclareWin(winner, token);
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
@@ -267,7 +255,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
 
         _endScreen = gameObject.AddComponent<HardpointLeaderboard>();
         _endScreen.OnLeaderboardExpired = OnShouldStartNewGame;
-        _endScreen.SetShutdownConfig(shutdownAfterGame, shutdownMessage);
+        _endScreen.SetShutdownConfig(ShouldShutdownAfterGame, ShutdownMessage);
         _isScreenUp = true;
         _endScreen.StartLeaderboard(winner, _gameStats);
     }
@@ -283,12 +271,13 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             _endScreen = null!;
         }
         _isScreenUp = false;
-        Task.Run(EndGame);
+        UCWarfare.RunTask(EndGame, UCWarfare.UnloadCancel, ctx: "Starting next gamemode.");
     }
-    private void EvaluatePointsOverride(Flag flag, bool overrideInactiveCheck) { }
+    private static void EvaluatePointsOverride(Flag flag, bool overrideInactiveCheck) { }
     protected override void PlayerEnteredFlagRadius(Flag flag, Player player) { }
-    protected override Task PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         _gameStats.Reset();
         CTFUI.ClearCaptureUI();
         RallyManager.WipeAllRallies();
@@ -297,7 +286,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             SpawnBlockers();
             StartStagingPhase(Config.HardpointStagingPhaseSeconds);
         }
-        return base.PostGameStarting(isOnLoad);
+        return base.PostGameStarting(isOnLoad, token);
     }
     protected override void EndStagingPhase()
     {
@@ -307,7 +296,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     protected override void PlayerLeftFlagRadius(Flag flag, Player player) { }
     protected override void FlagCheck()
     {
-        if (_objIndex < 0 || _objIndex >= _rotation.Count || State != EState.ACTIVE)
+        if (_objIndex < 0 || _objIndex >= FlagRotation.Count || State != State.Active)
             return;
 
         Flag f = this.Objective;
@@ -321,24 +310,24 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     }
     private void UpdateObjectiveState()
     {
-        if (_objIndex < 0 || _objIndex >= _rotation.Count || State != EState.ACTIVE)
+        if (_objIndex < 0 || _objIndex >= FlagRotation.Count || State != State.Active)
             return;
-        ulong old = objectiveOwner;
-        objectiveOwner = ConventionalIsContested(Objective, out ulong winner) ? 3ul : winner;
-        if (old != objectiveOwner)
+        ulong old = _objectiveOwner;
+        _objectiveOwner = ConventionalIsContested(Objective, out ulong winner) ? 3ul : winner;
+        if (old != _objectiveOwner)
         {
             OnObjectiveStateUpdated(old);
         }
     }
-    protected override void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag) { }
-    protected override void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag) { }
+    protected override void FlagOwnerChanged(ulong oldOwner, ulong newOwner, Flag flag) { }
+    protected override void FlagPointsChanged(float newPts, float oldPts, Flag flag) { }
     public override bool IsAttackSite(ulong team, Flag flag) => flag == Objective;
     public override bool IsDefenseSite(ulong team, Flag flag) => flag == Objective;
     protected override bool TimeToEvaluatePoints() => false;
     public void UpdateListUI(int index)
     {
         if (index < 0) return;
-        if (_rotation.Count <= index)
+        if (FlagRotation.Count <= index)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
@@ -350,7 +339,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             return;
         }
         bool obj = index == _objIndex;
-        string s1 = $"<color=#{(obj ? GetObjectiveColor() : UCWarfare.GetColorHex("undiscovered_flag"))}>{_rotation[index].ShortName}</color>";
+        string s1 = $"<color=#{(obj ? GetObjectiveColor() : UCWarfare.GetColorHex("undiscovered_flag"))}>{FlagRotation[index].ShortName}</color>";
         string s2 = obj ? $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Config.UIIconAttack}</color>" : string.Empty;
         foreach (LanguageSet set in LanguageSet.All())
         {
@@ -375,14 +364,14 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         string c3 = GetObjectiveColor();
         for (int i = 0; i < CTFUI.ListUI.Parents.Length; i++)
         {
-            if (_rotation.Count <= i)
+            if (FlagRotation.Count <= i)
             {
                 CTFUI.ListUI.Parents[i].SetVisibility(c, false);
             }
             else
             {
                 CTFUI.ListUI.Parents[i].SetVisibility(c, true);
-                Flag flag = _rotation[i];
+                Flag flag = FlagRotation[i];
                 if (i == _objIndex)
                 {
                     CTFUI.ListUI.Names[i].SetText(c, $"<color=#{c3}>{flag.Name}</color>");
@@ -396,7 +385,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         }
     }
     private string GetObjectiveColor()
-        => objectiveOwner switch
+        => _objectiveOwner switch
     {
         1 => TeamManager.Team1ColorHex,
         2 => TeamManager.Team2ColorHex,
@@ -409,23 +398,24 @@ public class HardpointTicketProvider : BaseTicketProvider
 {
     public override void GetDisplayInfo(ulong team, out string message, out string tickets, out string bleed)
     {
-        tickets = (team switch { 1 => Manager.Team1Tickets, 2 => Manager.Team2Tickets, _ => 0 }).ToString(Data.Locale);
+        tickets = (team switch { 1 => Manager.Team1Tickets, 2 => Manager.Team2Tickets, _ => 0 }).ToString(Data.LocalLocale);
         Flag? obj = (Data.Gamemode as IFlagObjectiveGamemode)?.Objective;
-        TranslationFlags flg = (team == 1 
-                                   ? TranslationFlags.Team1 
-                                   : (team == 2 
-                                       ? TranslationFlags.Team2 
-                                       : 0)) | TranslationFlags.UnityUI;
-        message = obj is null ? string.Empty : ("Objective: " + (obj as ITranslationArgument).Translate(L.DEFAULT, Flag.COLOR_SHORT_NAME_FORMAT, null, ref flg));
+        TranslationFlags flg = (team switch
+        {
+            1 => TranslationFlags.Team1,
+            2 => TranslationFlags.Team2,
+            _ => 0
+        }) | TranslationFlags.UnityUI;
+        message = obj is null ? string.Empty : ("Objective: " + (obj as ITranslationArgument).Translate(L.Default, Flag.COLOR_SHORT_NAME_FORMAT, null, ref flg));
         int bld = GetTeamBleed(team);
-        bleed = bld == 0 ? string.Empty : bld.ToString(Data.Locale);
+        bleed = bld == 0 ? string.Empty : bld.ToString(Data.LocalLocale);
     }
     public override int GetTeamBleed(ulong team) => Data.Gamemode is not Hardpoint hp || hp.ObjectiveState >= team ? 0 : -1;
     public override void OnGameStarting(bool isOnLoaded) => Manager.Team1Tickets = Manager.Team2Tickets = Gamemode.Config.HardpointStartingTickets;
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
     {
         if (oldValue > 0 && newValue <= 0)
-            _ = Data.Gamemode.DeclareWin(TeamManager.Other(team));
+            UCWarfare.RunTask(Data.Gamemode.DeclareWin, TeamManager.Other(team), default, ctx: "Lose game, tickets reached 0.");
     }
     public override void Tick()
     {

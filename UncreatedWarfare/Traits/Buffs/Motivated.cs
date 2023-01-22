@@ -5,14 +5,14 @@ using Uncreated.Warfare.Squads;
 namespace Uncreated.Warfare.Traits.Buffs;
 
 /// <summary>
-/// Shovel buildables at 2x speed. Does not stack with squadmates or with combat engineer (you can not have this while having a <see cref="EClass.COMBAT_ENGINEER"/> kit).
+/// Shovel buildables at 2x speed. Does not stack with squadmates or with combat engineer (you can not have this while having a <see cref="Class.CombatEngineer"/> kit).
 /// </summary>
 public sealed class Motivated : Buff
 {
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(Motivated),
-        ClassList = new EClass[] { EClass.COMBAT_ENGINEER },
+        ClassList = new Class[] { Class.CombatEngineer },
         ClassListIsBlacklist = true,
         NameTranslations = new TranslationList("Motivated"),
         DescriptionTranslations = new TranslationList("Build like a combat engineer.\n<#f0a31c>2x Speed</color>"),
@@ -22,7 +22,7 @@ public sealed class Motivated : Buff
         Icon = "ª",
         Cooldown = 900,
         EffectDuration = 300,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 4 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 4 } },
         EffectDistributedToSquad = true,
         Data = "2"
     };
@@ -78,7 +78,7 @@ public sealed class Motivated : Buff
     {
         if (onStart)
         {
-            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
+            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.AdminLocale, out _multiplier))
                 _multiplier = 2f;
 
             _squadMultiplier = (_multiplier - 1) * (TargetPlayer.IsSquadLeader() ? Data.SquadLeaderDistributedMultiplier : Data.SquadDistributedMultiplier) + 1;

@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Traits.Buffs;
 // rewrite: only crewmen get the buff and it stays until they leave the vehicle
 public class AceArmor : Buff
 {
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(AceArmor),
         NameTranslations = new TranslationList("Ace Armor"),

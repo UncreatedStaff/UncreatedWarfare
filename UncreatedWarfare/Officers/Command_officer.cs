@@ -9,8 +9,8 @@ using Uncreated.Warfare.Point;
 namespace Uncreated.Warfare.Commands;
 public class OfficerCommand : AsyncCommand
 {
-    private const string SYNTAX = "/officer <discharge|setrank> <player> [value] [team = current team]";
-    private const string HELP = "Promotes or demotes a player to an officer rank.";
+    private const string Syntax = "/officer <discharge|setrank> <player> [value] [team = current team]";
+    private const string Help = "Promotes or demotes a player to an officer rank.";
 
     public OfficerCommand() : base("officer", EAdminType.MODERATOR) { }
 
@@ -21,7 +21,7 @@ public class OfficerCommand : AsyncCommand
 #endif
         ctx.AssertOnDuty();
 
-        ctx.AssertArgs(1, SYNTAX + " - " + HELP);
+        ctx.AssertArgs(1, Syntax + " - " + Help);
 
         if (ctx.MatchParameter(0, "setrank", "set"))
         {
@@ -51,10 +51,11 @@ public class OfficerCommand : AsyncCommand
                 }
                 else
                 {
-                    PlayerNames name = await F.GetPlayerOriginalNamesAsync(steam64, token).ThenToUpdate(token);
+                    PlayerNames name = await F.GetPlayerOriginalNamesAsync(steam64, token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
                     ctx.Reply(T.OfficerChangedRankFeedback, name, Ranks.RankManager.GetRank(level), Teams.TeamManager.GetFactionSafe(team)!);
                 }
-                ctx.LogAction(EActionLogType.SET_OFFICER_RANK, steam64.ToString(Data.Locale) + " to " + level + " on team " + Teams.TeamManager.TranslateName(team, 0));
+                ctx.LogAction(ActionLogType.SetOfficerRank, steam64.ToString(Data.AdminLocale) + " to " + level + " on team " + Teams.TeamManager.TranslateName(team, 0));
             }
             else throw ctx.SendCorrectUsage("/officer set <player> <rank> [team = current team]");
         }
@@ -68,11 +69,13 @@ public class OfficerCommand : AsyncCommand
             if (ctx.TryGet(1, out ulong steam64, out UCPlayer? onlinePlayer))
             {
                 OfficerStorage.DischargeOfficer(steam64);
-                ctx.Reply(T.OfficerDischargedFeedback, onlinePlayer as IPlayer ?? (await F.GetPlayerOriginalNamesAsync(steam64, token).ThenToUpdate(token)));
-                ctx.LogAction(EActionLogType.DISCHARGE_OFFICER, steam64.ToString(Data.Locale));
+                IPlayer names = onlinePlayer as IPlayer ?? await F.GetPlayerOriginalNamesAsync(steam64, token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
+                ctx.Reply(T.OfficerDischargedFeedback, names);
+                ctx.LogAction(ActionLogType.DischargeOfficer, steam64.ToString(Data.AdminLocale));
             }
             else throw ctx.SendPlayerNotFound();
         }
-        else throw ctx.SendCorrectUsage(SYNTAX);
+        else throw ctx.SendCorrectUsage(Syntax);
     }
 }

@@ -6,10 +6,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Networking;
+using Uncreated.SQL;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Stats;
@@ -108,12 +110,12 @@ public static class StatsManager
             WarfareTeam.IO.WriteTo(Team2Stats, t2);
         }
     }
-    const int TICK_SPEED_MINS = 5;
+    const int BackupTickSpeedMins = 5;
     public static void BackupTick()
     {
-        if (_minsCounter > TICK_SPEED_MINS - 1)
+        if (_minsCounter > BackupTickSpeedMins - 1)
             _minsCounter = 0;
-        if (_minsCounter != TICK_SPEED_MINS - 1)
+        if (_minsCounter != BackupTickSpeedMins - 1)
         {
             _minsCounter++;
             return;
@@ -135,7 +137,7 @@ public static class StatsManager
             if (UCWarfare.Config.Debug)
                 L.Log("[WEAPON] Backed up: " + (Assets.find(EAssetType.ITEM, Weapons[_weaponCounter].ID) is ItemAsset asset ?
                     (asset.itemName + " - " + Weapons[_weaponCounter].KitID) :
-                    (Weapons[_weaponCounter].ID.ToString() + " - " + Weapons[_weaponCounter].KitID)));
+                    (Weapons[_weaponCounter].ID.ToString(Data.AdminLocale) + " - " + Weapons[_weaponCounter].KitID)));
         }
         if (Vehicles.Count > 0)
         {
@@ -143,7 +145,7 @@ public static class StatsManager
             if (UCWarfare.Config.Debug)
                 L.Log("[VEHICLE] Backed up: " + (Assets.find(EAssetType.VEHICLE, Vehicles[_vehicleCounter].ID) is VehicleAsset asset ?
                     asset.vehicleName :
-                    Vehicles[_vehicleCounter].ID.ToString()));
+                    Vehicles[_vehicleCounter].ID.ToString(Data.AdminLocale)));
         }
         if (Kits.Count > 0)
         {
@@ -332,7 +334,7 @@ public static class StatsManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = Path.Combine(VehiclesDirectory, id.ToString(Data.Locale) + ".dat");
+        string dir = Path.Combine(VehiclesDirectory, id.ToString(Data.AdminLocale) + ".dat");
         for (int i = 0; i < Vehicles.Count; i++)
         {
             if (Vehicles[i].ID == id)
@@ -366,7 +368,7 @@ public static class StatsManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + ".dat");
+        string dir = Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + ".dat");
         for (int i = 0; i < OnlinePlayers.Count; i++)
         {
             if (OnlinePlayers[i].Steam64 == s64)
@@ -434,7 +436,7 @@ public static class StatsManager
 #endif
         if (!Directory.Exists(StatsDirectory))
             Directory.CreateDirectory(StatsDirectory);
-        string dir = Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + ".dat");
+        string dir = Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + ".dat");
         if (!OnlinePlayers.Exists(x => x.Steam64 == s64))
         {
             if (File.Exists(dir))
@@ -446,22 +448,11 @@ public static class StatsManager
                 else
                 {
                     // copy to new file appended with _corrupt
-                    byte[] bytes;
-                    using (FileStream fs = new FileStream(dir, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    {
-                        bytes = new byte[fs.Length];
-                        fs.Read(bytes, 0, bytes.Length);
-                        fs.Close();
-                        fs.Dispose();
-                    }
-                    using (FileStream fs = new FileStream(Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + "_corrupt.dat"),
-                               FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
-                    {
-                        fs.Write(bytes, 0, bytes.Length);
-                        fs.Close();
-                        fs.Dispose();
-                    }
-                    L.LogWarning("Failed to read " + s64.ToString(Data.Locale) + "'s stat file, creating a backup and resetting it.");
+                    L.LogWarning("Failed to read " + s64.ToString(Data.AdminLocale) + "'s stat file, creating a backup and resetting it.");
+
+                    string p2 = Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + "_corrupt.dat");
+                    File.Delete(p2);
+                    File.Move(dir, p2);
                     WarfareStats reset = new WarfareStats()
                     {
                         DATA_VERSION = WarfareStats.CURRENT_DATA_VERSION,
@@ -474,7 +465,7 @@ public static class StatsManager
             }
             else
             {
-                WarfareStats reset = new WarfareStats()
+                WarfareStats reset = new WarfareStats
                 {
                     DATA_VERSION = WarfareStats.CURRENT_DATA_VERSION,
                     Kits = new List<WarfareStats.KitData>(),
@@ -492,13 +483,12 @@ public static class StatsManager
 #endif
         WarfareStats? stats = OnlinePlayers.FirstOrDefault(x => x.Steam64 == s64);
         if (stats == null) return;
-        WarfareStats.IO.WriteTo(stats, Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + ".dat"));
+        WarfareStats.IO.WriteTo(stats, Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + ".dat"));
         NetCalls.BackupStats.NetInvoke(stats);
         OnlinePlayers.Remove(stats);
     }
     private static void OnPlayerDied(PlayerDied e)
     {
-        Kit kit;
         if (e.Killer is not null)
         {
             if (e.WasTeamkill)
@@ -522,7 +512,7 @@ public static class StatsManager
                     for (int f = 0; f < fg.Rotation.Count; f++)
                     {
                         Gamemodes.Flags.Flag flag = fg.Rotation[f];
-                        if (flag.ZoneData.IsInside(kilPos))
+                        if (flag.PlayerInRange(kilPos))
                         {
                             def = flag.IsContested(out ulong winner) || winner != e.KillerTeam;
                             atk = !def;
@@ -530,34 +520,68 @@ public static class StatsManager
                         }
                     }
                 }
-                if (KitManager.HasKit(e.Killer, out kit))
+                if (e.Killer.HasKit || !string.IsNullOrEmpty(e.KillerKitName))
                 {
-                    ModifyStats(e.Killer.Steam64, s =>
+                    Kit? kit = e.KillerKitName != null ? KitManager.GetSingletonQuick()?.FindKitNoLock(e.KillerKitName, true)?.Item : e.Killer.ActiveKit?.Item;
+                    if (kit != null)
                     {
-                        s.Kills++;
-                        WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == e.KillerTeam);
-                        if (kitData == default)
+                        ModifyStats(e.Killer.Steam64, s =>
                         {
-                            kitData = new WarfareStats.KitData() { KitID = kit.Name, Team = (byte)e.KillerTeam, Kills = 1 };
-                            if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH)
-                                kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + e.KillDistance) / ++kitData.AverageGunKillDistanceCounter;
-                            s.Kits.Add(kitData);
-                        }
-                        else
+                            s.Kills++;
+                            WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID.Equals(kit.Id, StringComparison.OrdinalIgnoreCase) && k.Team == e.KillerTeam);
+                            if (kitData == default)
+                            {
+                                kitData = new WarfareStats.KitData { KitID = kit.Id, Team = (byte)e.KillerTeam, Kills = 1 };
+                                if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH)
+                                    kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + e.KillDistance) / ++kitData.AverageGunKillDistanceCounter;
+                                s.Kits.Add(kitData);
+                            }
+                            else
+                            {
+                                kitData.Kills++;
+                                if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH)
+                                    kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + e.KillDistance) / ++kitData.AverageGunKillDistanceCounter;
+                            }
+                            if (atk)
+                            {
+                                s.KillsWhileAttackingFlags++;
+                            }
+                            else if (def)
+                            {
+                                s.KillsWhileDefendingFlags++;
+                            }
+                        }, false);
+                        if (!e.PrimaryAssetIsVehicle && Assets.find(e.PrimaryAsset) is ItemAsset asset)
                         {
-                            kitData.Kills++;
-                            if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH)
-                                kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + e.KillDistance) / ++kitData.AverageGunKillDistanceCounter;
+                            ModifyWeapon(asset.id, kit.Id, x =>
+                            {
+                                x.Kills++;
+                                switch (e.Limb)
+                                {
+                                    case ELimb.SKULL:
+                                        x.SkullKills++;
+                                        break;
+                                    case ELimb.SPINE or ELimb.LEFT_FRONT or ELimb.RIGHT_FRONT or ELimb.LEFT_BACK or ELimb.RIGHT_BACK:
+                                        x.BodyKills++;
+                                        break;
+                                    case ELimb.LEFT_HAND or ELimb.RIGHT_HAND or ELimb.LEFT_ARM or ELimb.RIGHT_ARM:
+                                        x.BodyKills++;
+                                        break;
+                                    case ELimb.LEFT_FOOT or ELimb.RIGHT_FOOT or ELimb.LEFT_LEG or ELimb.RIGHT_LEG:
+                                        x.LegKills++;
+                                        break;
+                                }
+                                x.AverageKillDistance = (x.AverageKillDistance * x.AverageKillDistanceCounter + e.KillDistance) / ++x.AverageKillDistanceCounter;
+                            }, true);
+                            ModifyKit(kit.Id, k =>
+                            {
+                                k.Kills++;
+                                if (e.Cause == EDeathCause.GUN)
+                                    k.AverageGunKillDistance =
+                                        (k.AverageGunKillDistance * k.AverageGunKillDistanceCounter + e.KillDistance) / ++k.AverageGunKillDistanceCounter;
+                            }, true);
                         }
-                        if (atk)
-                        {
-                            s.KillsWhileAttackingFlags++;
-                        }
-                        else if (def)
-                        {
-                            s.KillsWhileDefendingFlags++;
-                        }
-                    }, false);
+                    }
                 }
                 else
                     ModifyStats(e.Killer.Steam64, s =>
@@ -567,64 +591,32 @@ public static class StatsManager
                         else if (def) s.KillsWhileDefendingFlags++;
                     }, false);
 
-                if (e.KitName is not null && KitManager.KitExists(e.KitName, out kit) && !e.PrimaryAssetIsVehicle && Assets.find(e.PrimaryAsset) is ItemAsset asset)
-                {
-                    ModifyWeapon(asset.id, kit.Name, x =>
-                    {
-                        x.Kills++;
-                        switch (e.Limb)
-                        {
-                            case ELimb.SKULL:
-                                x.SkullKills++;
-                                break;
-                            case ELimb.SPINE or ELimb.LEFT_FRONT or ELimb.RIGHT_FRONT or ELimb.LEFT_BACK or ELimb.RIGHT_BACK:
-                                x.BodyKills++;
-                                break;
-                            case ELimb.LEFT_HAND or ELimb.RIGHT_HAND or ELimb.LEFT_ARM or ELimb.RIGHT_ARM:
-                                x.BodyKills++;
-                                break;
-                            case ELimb.LEFT_FOOT or ELimb.RIGHT_FOOT or ELimb.LEFT_LEG or ELimb.RIGHT_LEG:
-                                x.LegKills++;
-                                break;
-                        }
-                        x.AverageKillDistance = (x.AverageKillDistance * x.AverageKillDistanceCounter + e.KillDistance) / ++x.AverageKillDistanceCounter;
-                    }, true);
-                    ModifyKit(kit.Name, k =>
-                    {
-                        k.Kills++;
-                        if (e.Cause == EDeathCause.GUN)
-                            k.AverageGunKillDistance =
-                                (k.AverageGunKillDistance * k.AverageGunKillDistanceCounter + e.KillDistance) / ++k.AverageGunKillDistanceCounter;
-                    }, true);
-                }
             }
         }
 
         Task.Run(() => Data.DatabaseManager.AddDeath(e.Player.Steam64, e.DeadTeam));
         ModifyTeam(e.DeadTeam, t => t.Deaths++, false);
-        if (KitManager.HasKit(e.Player, out kit))
+        Kit? kit2 = e.PlayerKitName != null ? KitManager.GetSingletonQuick()?.FindKitNoLock(e.PlayerKitName, true)?.Item : e.Player.ActiveKit?.Item;
+        if (kit2 != null)
         {
             ModifyStats(e.Player.Steam64, s =>
             {
                 s.Deaths++;
-                WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == e.DeadTeam);
+                WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit2.Id && k.Team == e.DeadTeam);
                 if (kitData == default)
                 {
-                    kitData = new WarfareStats.KitData() { KitID = kit.Name, Team = (byte)e.DeadTeam, Deaths = 1 };
+                    kitData = new WarfareStats.KitData { KitID = kit2.Id, Team = (byte)e.DeadTeam, Deaths = 1 };
                     s.Kits.Add(kitData);
                 }
-                else
-                {
-                    kitData.Deaths++;
-                }
+                else kitData.Deaths++;
             }, false);
             ItemJar? primary = e.Player.Player.inventory.items[0].items.FirstOrDefault();
             ItemJar? secondary = e.Player.Player.inventory.items[1].items.FirstOrDefault();
             if (primary != null)
-                ModifyWeapon(primary.item.id, kit.Name, x => x.Deaths++, true);
+                ModifyWeapon(primary.item.id, kit2.Id, x => x.Deaths++, true);
             if (secondary != null && (primary == null || primary.item.id != secondary.item.id)) // prevents 2 of the same gun from counting twice
-                ModifyWeapon(secondary.item.id, kit.Name, x => x.Deaths++, true);
-            ModifyKit(kit.Name, k => k.Deaths++, true);
+                ModifyWeapon(secondary.item.id, kit2.Id, x => x.Deaths++, true);
+            ModifyKit(kit2.Id, k => k.Deaths++, true);
         }
         else
             ModifyStats(e.Player.Steam64, s => s.Deaths++, false);
@@ -634,37 +626,27 @@ public static class StatsManager
     {
         ModifyTeam(capturedTeam, t => t.FlagsCaptured++, false);
         ModifyTeam(lostTeam, t => t.FlagsLost++, false);
-        List<string> kits = new List<string>(flag.Team1TotalPlayers + flag.Team2TotalPlayers);
-        if (capturedTeam == 1)
+        List<int> kits = new List<int>(flag.Team1TotalPlayers + flag.Team2TotalPlayers);
+        List<UCPlayer> c = capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2;
+        List<UCPlayer> l = capturedTeam == 1 ? flag.PlayersOnFlagTeam2 : flag.PlayersOnFlagTeam1;
+        for (int p = 0; p < c.Count; p++)
         {
-            for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
+            UCPlayer pl = c[p];
+            ModifyStats(pl.Steam64, s => s.FlagsCaptured++, false);
+            SqlItem<Kit>? kit = pl.ActiveKit;
+            if (kit?.Item != null && !kits.Contains(kit.PrimaryKey))
             {
-                ModifyStats(flag.PlayersOnFlagTeam1[p].Steam64, s => s.FlagsCaptured++, false);
-                if (KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out Kit kit) && !kits.Contains(kit.Name))
+                string? name = kit.Item?.Id;
+                if (name != null)
                 {
-                    ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
-                    kits.Add(kit.Name);
-                }
-            }
-            if (flag.IsObj(2))
-                for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
-                    ModifyStats(flag.PlayersOnFlagTeam2[p].Steam64, s => s.FlagsLost++, false);
-        }
-        else if (capturedTeam == 2)
-        {
-            if (flag.IsObj(1))
-                for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
-                    ModifyStats(flag.PlayersOnFlagTeam1[p].Steam64, s => s.FlagsLost++, false);
-            for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
-            {
-                ModifyStats(flag.PlayersOnFlagTeam2[p].Steam64, s => s.FlagsCaptured++, false);
-                if (KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out Kit kit) && !kits.Contains(kit.Name))
-                {
-                    ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
-                    kits.Add(kit.Name);
+                    ModifyKit(name, k => k.FlagsCaptured++, true);
+                    kits.Add(kit.PrimaryKey);
                 }
             }
         }
+        if (flag.IsObj(TeamManager.Other(capturedTeam)))
+            for (int p = 0; p < l.Count; p++)
+                ModifyStats(l[p].Steam64, s => s.FlagsLost++, false);
     }
 
     public static class NetCalls
@@ -704,8 +686,8 @@ public static class StatsManager
         [NetCall(ENetCall.FROM_SERVER, 2000)]
         internal static void ReceiveRequestPlayerData(MessageContext context, ulong player)
         {
-            bool online = Provider.clients.Exists(x => x.playerID.steamID.m_SteamID == player);
-            string dir = Path.Combine(StatsDirectory, player.ToString() + ".dat");
+            bool online = UCPlayer.FromID(player) is { IsOnline: true };
+            string dir = Path.Combine(StatsDirectory, player.ToString(Data.AdminLocale) + ".dat");
             if (WarfareStats.IO.ReadFrom(dir, out WarfareStats stats))
             {
                 context.Reply(SendPlayerData, stats, online);
@@ -713,15 +695,30 @@ public static class StatsManager
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2002)]
-        internal static void ReceiveRequestKitData(MessageContext context, string kitId)
+        internal static async Task ReceiveRequestKitData(MessageContext context, string kitId)
         {
-            EClass @class = EClass.NONE;
+            Class @class = Class.None;
             string sname = kitId;
-            if (KitManager.KitExists(kitId, out Kit kit2))
+            KitManager? manager = KitManager.GetSingletonQuick();
+            if (manager != null)
             {
-                @class = kit2.Class;
-                if (!kit2.SignTexts.TryGetValue(L.DEFAULT, out sname))
-                    sname = kit2.SignTexts.Count > 0 ? kit2.SignTexts.Values.ElementAt(0) : kitId;
+                SqlItem<Kit>? kit2 = await manager.FindKit(kitId).ConfigureAwait(false);
+                if (kit2 is not null)
+                {
+                    await kit2.Enter().ConfigureAwait(false);
+                    try
+                    {
+                        if (kit2.Item != null)
+                        {
+                            @class = kit2.Item.Class;
+                            sname = kit2.Item.GetDisplayName();
+                        }
+                    }
+                    finally
+                    {
+                        kit2.Release();
+                    }
+                }
             }
             string dir = Path.Combine(KitsDirectory, kitId + ".dat");
             if (WarfareKit.IO.ReadFrom(dir, out WarfareKit kit))
@@ -740,22 +737,33 @@ public static class StatsManager
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2006)]
-        internal static void ReceiveRequestWeaponData(MessageContext context, ushort weaponid, string kitId)
+        internal static async Task ReceiveRequestWeaponData(MessageContext context, ushort weaponid, string kitId)
         {
             string dir = WeaponsDirectory + GetWeaponName(weaponid, kitId);
             if (WarfareWeapon.IO.ReadFrom(dir, out WarfareWeapon weapon))
             {
                 string name = Assets.find(EAssetType.ITEM, weaponid) is ItemAsset asset ? asset.itemName : weaponid.ToString();
-                string kitname;
-                if (KitManager.KitExists(kitId, out Kit kit))
+                string kitname = kitId;
+                KitManager? manager = KitManager.GetSingletonQuick();
+                if (manager != null)
                 {
-                    if (!kit.SignTexts.TryGetValue(L.DEFAULT, out kitname))
+                    SqlItem<Kit>? kit2 = await manager.FindKit(kitId).ConfigureAwait(false);
+                    if (kit2 is not null)
                     {
-                        kitname = kit.SignTexts.Count > 0 ? kit.SignTexts.Values.ElementAt(0) : kitId;
+                        await kit2.Enter().ConfigureAwait(false);
+                        try
+                        {
+                            if (kit2.Item != null)
+                            {
+                                kitname = kit2.Item.GetDisplayName();
+                            }
+                        }
+                        finally
+                        {
+                            kit2.Release();
+                        }
                     }
                 }
-                else
-                    kitname = kitId;
                 context.Reply(SendWeaponData, weapon, name, kitname);
             }
         }
@@ -770,44 +778,86 @@ public static class StatsManager
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2010)]
-        internal static void ReceiveRequestKitList(MessageContext context)
-            => context.Reply(SendKitList, KitManager.GetKitsWhere(k => !k.IsLoadout).Select(k => k.Name).ToArray());
+        internal static async Task ReceiveRequestKitList(MessageContext context)
+        {
+            KitManager? manager = KitManager.GetSingletonQuick();
+            if (manager != null)
+            {
+                await manager.WaitAsync().ConfigureAwait(false);
+                List<string> kits = new List<string>();
+                try
+                {
+                    for (int i = 0; i < manager.Items.Count; ++i)
+                    {
+                        SqlItem<Kit> it = manager.Items[i];
+                        if (it.Item != null && it.Item.Type != KitType.Loadout)
+                            kits.Add(it.Item.Id);
+                    }
+                    context.Reply(SendKitList, kits.ToArray());
+                }
+                finally
+                {
+                    manager.Release();
+                }
+            }
+            else
+                context.Reply(SendKitList, Array.Empty<string>());
+        }
 
         [NetCall(ENetCall.FROM_SERVER, 2012)]
         internal static void ReceiveRequestTeamData(MessageContext context) => context.Reply(SendTeams, Team1Stats, Team2Stats);
 
         [NetCall(ENetCall.FROM_SERVER, 2020)]
-        internal static void ReceiveWeaponRequest(MessageContext context, ushort weapon)
+        internal static async Task ReceiveWeaponRequest(MessageContext context, ushort weapon)
         {
             if (!Directory.Exists(WeaponsDirectory)) SendWeapons.NetInvoke(Array.Empty<WarfareWeapon>(), string.Empty, Array.Empty<string>());
             string[] files = Directory.GetFiles(WeaponsDirectory, $"{weapon}*.dat");
-            List<WarfareWeapon> weapons = new List<WarfareWeapon>();
-            List<string> kitnames = new List<string>();
-            for (int i = 0; i < files.Length; i++)
+            string itemName = Assets.find(EAssetType.ITEM, weapon) is ItemAsset asset ? asset.itemName : weapon.ToString(Data.AdminLocale);
+            KitManager? manager = KitManager.GetSingletonQuick();
+            if (manager != null)
             {
-                if (WarfareWeapon.IO.ReadFrom(files[i], out WarfareWeapon w))
+                await manager.WaitAsync().ConfigureAwait(false);
+                List<string> kitnames = new List<string>();
+                List<WarfareWeapon> weapons = new List<WarfareWeapon>();
+                try
                 {
-                    weapons.Add(w);
-                    string kitname = w.KitID;
-                    if (KitManager.KitExists(w.KitID, out Kit kit))
-                        if (!kit.SignTexts.TryGetValue(L.DEFAULT, out kitname))
-                            if (kit.SignTexts.Count > 0)
-                                kitname = kit.SignTexts.Values.ElementAt(0);
-                    kitnames.Add(kitname);
+                    for (int i = 0; i < files.Length; i++)
+                    {
+                        if (WarfareWeapon.IO.ReadFrom(files[i], out WarfareWeapon w))
+                        {
+                            weapons.Add(w);
+                            SqlItem<Kit>? kit2 = await manager.FindKit(w.KitID).ConfigureAwait(false);
+                            kitnames.Add(kit2?.Item?.GetDisplayName() ?? w.KitID);
+                        }
+                    }
+                    context.Reply(SendWeapons, weapons.ToArray(), itemName, kitnames.ToArray());
+                }
+                finally
+                {
+                    manager.Release();
                 }
             }
-            context.Reply(SendWeapons, weapons.ToArray(), Assets.find(EAssetType.ITEM, weapon) is ItemAsset asset ? asset.itemName : weapon.ToString(Data.Locale), kitnames.ToArray());
+            else
+            {
+                WarfareWeapon[] weapons2 = Weapons.Where(x => x.ID == weapon).ToArray();
+                string[] names = new string[weapons2.Length];
+                for (int i = 0; i < weapons2.Length; ++i)
+                    names[i] = string.Empty;
+                context.Reply(SendWeapons, weapons2, itemName, names);
+            }
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2025)]
         internal static void ReceiveRequestEveryWeapon(MessageContext context)
         {
-            string[] weaponnames = new string[Weapons.Count];
+            WarfareWeapon[] allWeapons = Weapons.ToArray();
+            string[] weaponnames = new string[allWeapons.Length];
             for (int i = 0; i < weaponnames.Length; i++)
             {
-                weaponnames[i] = Assets.find(EAssetType.ITEM, Weapons[i].ID) is ItemAsset asset ? asset.itemName : Weapons[i].ID.ToString();
+                weaponnames[i] = Assets.find(EAssetType.ITEM, allWeapons[i].ID) is ItemAsset asset ? asset.itemName : allWeapons[i].ID.ToString();
             }
-            context.Reply(SendEveryWeapon, Weapons.ToArray(), weaponnames);
+
+            context.Reply(SendEveryWeapon, allWeapons, weaponnames);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2026)]
@@ -833,33 +883,46 @@ public static class StatsManager
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2027)]
-        internal static void ReceiveRequestEveryKit(MessageContext context)
+        internal static async Task ReceiveRequestEveryKit(MessageContext context)
         {
-            string[] kitnames = new string[Kits.Count];
-            byte[] classes = new byte[Kits.Count];
-            for (int i = 0; i < kitnames.Length; i++)
+            WarfareKit[] allkits = Kits.ToArray();
+            string[] kitnames = new string[allkits.Length];
+            byte[] classes = new byte[kitnames.Length];
+            KitManager? manager = KitManager.GetSingletonQuick();
+            if (manager != null)
             {
-                if (KitManager.KitExists(Kits[i].KitID, out Kit kit))
+                await manager.WaitAsync().ConfigureAwait(false);
+                try
                 {
-                    classes[i] = (byte)kit.Class;
-                    kitnames[i] = Kits[i].KitID;
-                    if (!kit.SignTexts.TryGetValue(L.DEFAULT, out kitnames[i]))
-                        if (kit.SignTexts.Count > 0)
-                            kitnames[i] = kit.SignTexts.Values.ElementAt(0);
+                    for (int i = 0; i < allkits.Length; i++)
+                    {
+                        SqlItem<Kit>? k = manager.FindKitNoLock(allkits[i].KitID, true);
+                        if (k?.Item != null)
+                        {
+                            classes[i] = (byte)k.Item.Class;
+                            kitnames[i] = k.Item.GetDisplayName();
+                        }
+                    }
+                }
+                finally
+                {
+                    manager.Release();
                 }
             }
-            context.Reply(SendEveryKit, Kits.ToArray(), kitnames, classes);
+
+            context.Reply(SendEveryKit, allkits, kitnames, classes);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2028)]
         internal static void ReceiveRequestEveryVehicle(MessageContext context)
         {
-            string[] vehiclenames = new string[Vehicles.Count];
-            for (int i = 0; i < vehiclenames.Length; i++)
+            WarfareVehicle[] vehs = Vehicles.ToArray();
+            string[] vehiclenames = new string[vehs.Length];
+            for (int i = 0; i < vehs.Length; i++)
             {
-                vehiclenames[i] = Assets.find(EAssetType.VEHICLE, Weapons[i].ID) is VehicleAsset asset ? asset.vehicleName : Vehicles[i].ID.ToString();
+                vehiclenames[i] = Assets.find(EAssetType.VEHICLE, vehs[i].ID) is VehicleAsset asset ? asset.vehicleName : vehs[i].ID.ToString();
             }
-            context.Reply(SendEveryVehicle, Vehicles.ToArray(), vehiclenames);
+            context.Reply(SendEveryVehicle, vehs, vehiclenames);
         }
 
         private static WarfareWeapon[] ReadWeaponArray(ByteReader reader)

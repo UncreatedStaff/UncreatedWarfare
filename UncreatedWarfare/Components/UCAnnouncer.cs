@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Singletons;
@@ -82,7 +83,7 @@ public class UCAnnouncer : MonoBehaviour, IReloadableSingleton
     bool IUncreatedSingleton.AwaitLoad => false;
     bool IUncreatedSingleton.IsLoading => false;
     bool IUncreatedSingleton.IsUnloading => false;
-    Task IReloadableSingleton.ReloadAsync() => throw new NotImplementedException();
-    Task IUncreatedSingleton.LoadAsync() => throw new NotImplementedException();
-    Task IUncreatedSingleton.UnloadAsync() => throw new NotImplementedException();
+    Task IReloadableSingleton.ReloadAsync(CancellationToken token) => throw new NotImplementedException();
+    Task IUncreatedSingleton.LoadAsync(CancellationToken token) => throw new NotImplementedException();
+    Task IUncreatedSingleton.UnloadAsync(CancellationToken token) => throw new NotImplementedException();
 }

@@ -9,9 +9,12 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Harmony;
 
+// ReSharper disable InconsistentNaming
+// ReSharper disable UnusedMember.Local
+// ReSharper disable UnusedParameter.Local
+
 public static partial class Patches
 {
-    // ReSharper disable InconsistentNaming
     [HarmonyPatch]
     public class VehiclePatches
     {
@@ -38,15 +41,15 @@ public static partial class Patches
                     {
                         if (VehicleData.IsEmplacement(data.Type))
                         {
-                            if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
+                            if (!VehicleSpawner.TryGetFirstNonDriverSeat(__instance, out seat))
                             {
                                 __result = false;
                                 return;
                             }
                         }
-                        else if (data.Type == EVehicleType.JET)
+                        else if (data.Type == VehicleType.Jet)
                         {
-                            if (VehicleBay.CountCrewmen(__instance, data) >= 2)
+                            if (VehicleSpawner.CountCrewmen(__instance, data) >= 2)
                             {
                                 __result = false;
                                 return;
@@ -55,17 +58,17 @@ public static partial class Patches
 
                         UCPlayer? owner = UCPlayer.FromCSteamID(__instance.lockedOwner);
 
-                        if (data.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
+                        if (data.RequiredClass != Class.None) // vehicle requires crewman or pilot
                         {
                             if (enterer.KitClass == data.RequiredClass) // for crewman trying to enter a crewed vehicle
                             {
                                 if (seat == 0)
                                 {
-                                    bool canEnterDriverSeat = owner is null || enterer == owner || VehicleBay.IsOwnerInVehicle(__instance, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || (owner!.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2));
+                                    bool canEnterDriverSeat = owner is null || enterer == owner || VehicleSpawner.IsOwnerInVehicle(__instance, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || (owner!.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2));
 
                                     if (!canEnterDriverSeat)
                                     {
-                                        if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
+                                        if (!VehicleSpawner.TryGetFirstNonDriverSeat(__instance, out seat))
                                         {
                                             if (owner!.Squad == null)
                                                 enterer.SendChat(T.VehicleWaitForOwner, owner);
@@ -79,7 +82,7 @@ public static partial class Patches
                             }
                             else // for non crewman trying to enter a crewed vehicle
                             {
-                                if (!VehicleBay.TryGetFirstNonCrewSeat(__instance, data, out seat))
+                                if (!VehicleSpawner.TryGetFirstNonCrewSeat(__instance, data, out seat))
                                 {
                                     enterer.SendChat(T.VehicleNoPassengerSeats);
                                     __result = false;
@@ -95,11 +98,11 @@ public static partial class Patches
                                     enterer == owner ||
                                     (owner.Squad != null && owner.Squad.Members.Contains(enterer)) ||
                                     (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2) ||
-                                    (data.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(__instance.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, __instance.lockedGroup.m_SteamID) != null);
+                                    (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(__instance.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, __instance.lockedGroup.m_SteamID) != null);
 
                                 if (!canEnterDriverSeat)
                                 {
-                                    if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
+                                    if (!VehicleSpawner.TryGetFirstNonDriverSeat(__instance, out seat))
                                     {
                                         if (owner!.Squad == null)
                                             enterer.SendChat(T.VehicleWaitForOwner, owner);

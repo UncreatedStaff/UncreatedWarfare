@@ -33,10 +33,10 @@ public class SalvageStructureRequested : BreakablePlayerEvent, IBuildableDestroy
         this._region = region;
         this._x = x;
         this._y = y;
-        if (save is not null)
+        _save = save;
+        if (save?.Manager is not null)
         {
-            _save = save;
-            save.EnterSync();
+            save.Manager.WriteWait();
             try
             {
                 if (save.Item != null)
@@ -47,7 +47,7 @@ public class SalvageStructureRequested : BreakablePlayerEvent, IBuildableDestroy
             }
             finally
             {
-                save.Release();
+                save.Manager.WriteRelease();
             }
         }
     }

@@ -1,9 +1,13 @@
-﻿using SDG.Unturned;
+﻿using HarmonyLib;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
@@ -34,6 +38,7 @@ public static class EventDispatcher
     public static event EventDelegate<PlaceBarricadeRequested> BarricadePlaceRequested;
     public static event EventDelegate<BarricadePlaced> BarricadePlaced;
     public static event EventDelegate<LandmineExploding> LandmineExploding;
+    public static event EventDelegate<SignTextChanged> SignTextChanged;
 
     public static event EventDelegate<StructureDestroyed> StructureDestroyed;
     public static event EventDelegate<SalvageStructureRequested> SalvageStructureRequested;
@@ -49,11 +54,14 @@ public static class EventDispatcher
     public static event EventDelegate<ProjectileSpawned> ProjectileExploded;
 
     public static event EventDelegate<PlayerPending> PlayerPending;
+    public static event AsyncEventDelegate<PlayerPending> PlayerPendingAsync;
     public static event EventDelegate<PlayerJoined> PlayerJoined;
     public static event EventDelegate<PlayerEvent> PlayerLeaving;
     public static event EventDelegate<BattlEyeKicked> PlayerBattlEyeKicked;
     public static event EventDelegate<PlayerDied> PlayerDied;
     public static event EventDelegate<GroupChanged> GroupChanged;
+    public static event EventDelegate<PlayerInjured> PlayerInjuring;
+    public static event EventDelegate<PlayerEvent> PlayerInjured;
     public static event EventDelegate<PlayerEvent> UIRefreshRequested;
     internal static void SubscribeToAll()
     {
@@ -108,6 +116,7 @@ public static class EventDispatcher
         {
             @delegate.Invoke(request);
         }
+        catch (ControlException) { }
         catch (Exception ex)
         {
             try
@@ -117,6 +126,34 @@ public static class EventDispatcher
                     name = i.Name;
             }
             catch (MemberAccessException) { }
+            L.LogError("EventDispatcher ran into an error invoking: " + name, method: name);
+            L.LogError(ex, method: name);
+        }
+    }
+    private static async Task TryInvoke<TState>(AsyncEventDelegate<TState> @delegate, TState request, string name, CancellationToken token = default, bool mainThread = true) where TState : EventState
+    {
+        try
+        {
+            if (mainThread && !UCWarfare.IsMainThread)
+            {
+                await UCWarfare.ToUpdate();
+                ThreadUtil.assertIsGameThread();
+            }
+
+            await @delegate.Invoke(request, token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch (ControlException) { }
+        catch (Exception ex)
+        {
+            try
+            {
+                MethodInfo? i = @delegate.Method;
+                if (i is not null)
+                    name = i.FullDescription();
+            }
+            catch (MemberAccessException) { }
+
             L.LogError("EventDispatcher ran into an error invoking: " + name, method: name);
             L.LogError(ex, method: name);
         }
@@ -236,7 +273,7 @@ public static class EventDispatcher
         if (BarricadeDestroyed == null) return;
         UCPlayer? instigator = barricade.model.TryGetComponent(out BarricadeComponent component) ? UCPlayer.FromID(component.LastDamager) : null;
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? barricadeSave = saver?.GetSaveItemSync(barricade.instanceID, EStructType.BARRICADE);
+        SqlItem<SavedStructure>? barricadeSave = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
 
         BarricadeDestroyed args = new BarricadeDestroyed(instigator, barricade, barricadeData, region, x, y, plant, barricadeSave);
         foreach (EventDelegate<BarricadeDestroyed> inv in BarricadeDestroyed.GetInvocationList().Cast<EventDelegate<BarricadeDestroyed>>())
@@ -586,7 +623,7 @@ public static class EventDispatcher
         UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
         if (player == null) return;
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(structure.instanceID, EStructType.STRUCTURE);
+        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(structure.instanceID, StructType.Structure);
         StructureRegion? region = null;
         if (Regions.tryGetCoordinate(structure.model.position, out byte x, out byte y))
             StructureManager.tryGetRegion(x, y, out region);
@@ -603,7 +640,7 @@ public static class EventDispatcher
     private static void StructureManagerOnDamageStructureRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
         if (!shouldAllow) return;
-        if (OffenseManager.IsValidSteam64ID(instigatorSteamID))
+        if (OffenseManager.IsValidSteam64Id(instigatorSteamID))
             DestroyerComponent.AddOrUpdate(structureTransform.gameObject, instigatorSteamID.m_SteamID);
 
         if (DamageStructureRequested == null) return;
@@ -611,7 +648,7 @@ public static class EventDispatcher
         if (drop == null) return;
         UCPlayer? player = UCPlayer.FromCSteamID(instigatorSteamID);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, EStructType.STRUCTURE);
+        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
         StructureRegion? region = null;
         if (Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
             StructureManager.tryGetRegion(x, y, out region);
@@ -632,7 +669,7 @@ public static class EventDispatcher
         if (StructureDestroyed == null) return;
         UCPlayer? player = UCPlayer.FromID(instigator);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, EStructType.STRUCTURE);
+        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
         StructureRegion? region = null;
         if (Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
             StructureManager.tryGetRegion(x, y, out region);
@@ -644,5 +681,104 @@ public static class EventDispatcher
             TryInvoke(inv, args, nameof(StructureDestroyed));
         }
     }
+    internal static void InvokeOnInjuringPlayer(PlayerInjuring args)
+    {
+        if (PlayerInjuring == null) return;
+        foreach (EventDelegate<PlayerInjuring> inv in PlayerInjuring.GetInvocationList().Cast<EventDelegate<PlayerInjuring>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(PlayerInjuring));
+        }
+    }
+    internal static void InvokeOnPlayerInjured(PlayerInjured args)
+    {
+        if (PlayerInjured == null) return;
+        foreach (EventDelegate<PlayerInjured> inv in PlayerInjured.GetInvocationList().Cast<EventDelegate<PlayerInjured>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(PlayerInjured));
+        }
+    }
+    internal static bool InvokeOnAsyncPrePlayerConnect(SteamPending player)
+    {
+        if (PlayerPendingAsync == null)
+            return false;
+        ulong s64 = player.playerID.steamID.m_SteamID;
+        PlayerSave.TryReadSaveFile(s64, out PlayerSave? save);
+        PlayerPending args = new PlayerPending(player, save, true, string.Empty);
+        CancellationTokenSource? src = null;
+        for (int i = 0; i < PlayerManager.PlayerConnectCancellationTokenSources.Count; ++i)
+        {
+            KeyValuePair<ulong, CancellationTokenSource> kvp = PlayerManager.PlayerConnectCancellationTokenSources[i];
+            if (kvp.Key == s64)
+            {
+                src = kvp.Value;
+                break;
+            }
+        }
+        
+        UCWarfare.RunTask(InvokePrePlayerConnectAsync, args, src == null ? CancellationToken.None : src.Token,
+            ctx: "Player connecting: {" + player.playerID.steamID.m_SteamID.ToString(Data.AdminLocale) + "} [" + player.playerID.playerName + "].");
+        return true;
+    }
+    private static async Task InvokePrePlayerConnectAsync(PlayerPending args, CancellationToken token = default)
+    {
+        await UCWarfare.I.PlayerJoinLock.WaitAsync(token);
+        try
+        {
+            if (PlayerPendingAsync == null) goto exit;
+            foreach (AsyncEventDelegate<PlayerPending> inv in PlayerPendingAsync.GetInvocationList()
+                         .Cast<AsyncEventDelegate<PlayerPending>>())
+            {
+                if (!args.CanContinue) break;
+                await TryInvoke(inv, args, nameof(PlayerPendingAsync), token).ConfigureAwait(true);
+                if (PlayerPendingAsync == null) goto exit;
+            }
+
+            await UCWarfare.ToUpdate(token);
+            ThreadUtil.assertIsGameThread();
+            if (args.CanContinue)
+            {
+                if (args.PendingPlayer.canAcceptYet)
+                {
+                    EventPatches.Accept = args.Steam64;
+                    Provider.accept(args.PendingPlayer);
+                    EventPatches.Accept = 0ul;
+                }
+            }
+            else
+                Provider.reject(args.PendingPlayer.transportConnection, ESteamRejection.PLUGIN,
+                    args.RejectReason ?? "An unknown error occured.");
+
+            exit: EventPatches.Accepted.Remove(args.Steam64);
+        }
+        finally
+        {
+            UCWarfare.I.PlayerJoinLock.Release();
+        }
+    }
+    internal static void InvokeOnSignTextChanged(InteractableSign sign)
+    {
+        if (SignTextChanged == null) return;
+        BarricadeDrop? drop = UCBarricadeManager.GetSignFromInteractable(sign);
+        if (drop == null)
+            return;
+        UCPlayer? player = null;
+        if (drop.model.TryGetComponent(out BarricadeComponent comp) && comp.EditTick >= UCWarfare.I.Debugger.Updates)
+            player = UCPlayer.FromID(comp.LastEditor);
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
+        BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out BarricadeRegion region);
+        SignTextChanged args = new SignTextChanged(player, drop, region, x, y, plant, save);
+        foreach (EventDelegate<SignTextChanged> inv in SignTextChanged.GetInvocationList().Cast<EventDelegate<SignTextChanged>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(SignTextChanged));
+        }
+    }
 }
 public delegate void EventDelegate<in TState>(TState e) where TState : EventState;
+public delegate Task AsyncEventDelegate<in TState>(TState e, CancellationToken token = default) where TState : EventState;
+
+/// <summary>Meant purely to break execution.</summary>
+public class ControlException : Exception { }

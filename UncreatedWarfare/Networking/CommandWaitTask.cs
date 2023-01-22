@@ -76,7 +76,7 @@ public class CommandWaiter : CustomYieldInstruction
             }
             else if (aw.commandType is not null)
             {
-                if (player.Steam64 == aw.player.Steam64 && aw.timeoutCoroutine != null && aw.commandType.IsAssignableFrom(command.GetType()))
+                if (player.Steam64 == aw.player.Steam64 && aw.timeoutCoroutine != null && aw.commandType.IsInstanceOfType(command))
                 {
                     aw.Receive(true);
                     return;

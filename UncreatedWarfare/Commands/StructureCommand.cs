@@ -5,19 +5,17 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 public class StructureCommand : AsyncCommand
 {
-    private const string SYNTAX = "/structure <save|remove|examine|pop|set>";
-    private const string HELP = "Managed saved structures.";
+    private const string Syntax = "/structure <save|remove|examine|pop|set>";
+    private const string Help = "Managed saved structures.";
 
     public StructureCommand() : base("structure", EAdminType.MEMBER)
     {
@@ -31,9 +29,9 @@ public class StructureCommand : AsyncCommand
 #endif
         ctx.AssertRanByPlayer();
 
-        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 
-        ctx.AssertArgs(1, SYNTAX);
+        ctx.AssertArgs(1, Syntax);
 
         ctx.Defer();
         
@@ -50,12 +48,13 @@ public class StructureCommand : AsyncCommand
 
             if (ctx.TryGetTarget(out StructureDrop structure))
             {
-                (SqlItem<SavedStructure> item, bool isNew) = await saver.AddStructure(structure, token).ThenToUpdate(token);
-                
+                (SqlItem<SavedStructure> item, bool isNew) = await saver.AddStructure(structure, token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
+
                 if (isNew && item.Item != null)
                 {
                     ctx.Reply(T.StructureSaved, item.Item);
-                    ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
+                    ctx.LogAction(ActionLogType.SaveStructure,
                         $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {item.Item.Position:0:##} ({item.Item.InstanceID})");
                 }
                 else if (item.Item != null)
@@ -65,12 +64,13 @@ public class StructureCommand : AsyncCommand
             }
             else if (ctx.TryGetTarget(out BarricadeDrop barricade))
             {
-                (SqlItem<SavedStructure> item, bool isNew) = await saver.AddBarricade(barricade, token).ThenToUpdate(token);
+                (SqlItem<SavedStructure> item, bool isNew) = await saver.AddBarricade(barricade, token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
 
                 if (isNew && item.Item != null)
                 {
                     ctx.Reply(T.StructureSaved, item.Item);
-                    ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
+                    ctx.LogAction(ActionLogType.SaveStructure,
                         $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {item.Item.Position:0:##} ({item.Item.InstanceID})");
                 }
                 else if (item.Item != null)
@@ -92,9 +92,10 @@ public class StructureCommand : AsyncCommand
                 if (item?.Item != null)
                 {
                     SavedStructure oldItem = item.Item;
-                    await item.Delete(token).ThenToUpdate(token);
+                    await item.Delete(token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
 
-                    ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                    ctx.LogAction(ActionLogType.UnsaveStructure,
                         $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID})");
                     ctx.Reply(T.StructureUnsaved, oldItem);
                 }
@@ -110,9 +111,10 @@ public class StructureCommand : AsyncCommand
                 if (item?.Item != null)
                 {
                     SavedStructure oldItem = item.Item;
-                    await item.Delete(token).ThenToUpdate(token);
-                    
-                    ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                    await item.Delete(token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
+
+                    ctx.LogAction(ActionLogType.UnsaveStructure,
                         $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID})");
                     ctx.Reply(T.StructureUnsaved, oldItem);
                 }
@@ -130,9 +132,9 @@ public class StructureCommand : AsyncCommand
 
             if (ctx.TryGetTarget(out InteractableVehicle vehicle))
             {
-                VehicleBay.DeleteVehicle(vehicle);
+                VehicleSpawner.DeleteVehicle(vehicle);
 
-                ctx.LogAction(EActionLogType.POP_STRUCTURE,
+                ctx.LogAction(ActionLogType.PopStructure,
                     $"VEHICLE: {vehicle.asset.vehicleName} / {vehicle.asset.id} /" +
                     $" {vehicle.asset.GUID:N} at {vehicle.transform.position:N2} ({vehicle.instanceID})");
                 ctx.Reply(T.StructureDestroyed, vehicle.asset);
@@ -143,17 +145,18 @@ public class StructureCommand : AsyncCommand
                 if (item?.Item != null)
                 {
                     SavedStructure oldItem = item.Item;
-                    await item.Delete(token).ThenToUpdate(token);
-                    ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                    await item.Delete(token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
+                    ctx.LogAction(ActionLogType.UnsaveStructure,
                         $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID}) (Automatically unsaved before destroy)");
                     ctx.Reply(T.StructureUnsaved, oldItem);
                 }
                 else await UCWarfare.ToUpdate(token);
 
                 DestroyStructure(structure, ctx.Caller);
-                ctx.LogAction(EActionLogType.POP_STRUCTURE,
+                ctx.LogAction(ActionLogType.PopStructure,
                     $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
-                    $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2")} ({structure.instanceID})");
+                    $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2", Data.AdminLocale)} ({structure.instanceID})");
             }
             else if (ctx.TryGetTarget(out BarricadeDrop barricade))
             {
@@ -161,18 +164,19 @@ public class StructureCommand : AsyncCommand
                 if (item?.Item != null)
                 {
                     SavedStructure oldItem = item.Item;
-                    await item.Delete(token).ThenToUpdate(token);
+                    await item.Delete(token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
 
-                    ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                    ctx.LogAction(ActionLogType.UnsaveStructure,
                         $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID}) (Autmoatically unsaved before destroy)");
                     ctx.Reply(T.StructureUnsaved, oldItem);
                 }
                 else await UCWarfare.ToUpdate(token);
 
                 DestroyBarricade(barricade, ctx.Caller);
-                ctx.LogAction(EActionLogType.POP_STRUCTURE,
+                ctx.LogAction(ActionLogType.PopStructure,
                     $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
-                    $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2")} ({barricade.instanceID})");
+                    $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2", Data.AdminLocale)} ({barricade.instanceID})");
                 ctx.Defer();
             }
         }
@@ -222,13 +226,13 @@ public class StructureCommand : AsyncCommand
 
                 await UCWarfare.ToUpdate(token);
                 bool saved = data?.Item?.Buildable?.Drop is not null;
-                if (!ctx.TryGet(2, out ulong s64) || s64 != 0 && (!grp && !OffenseManager.IsValidSteam64ID(s64)))
+                if (!ctx.TryGet(2, out ulong s64) || s64 != 0 && (!grp && !Util.IsValidSteam64Id(s64)))
                 {
                     if (ctx.MatchParameter(2, "me"))
                         s64 = grp ? ctx.Caller.Player.quests.groupID.m_SteamID : ctx.CallerID;
                     else throw ctx.SendCorrectUsage("/structure <set|s> <group|owner> <value> - Value must be 'me', '0' or a valid Steam64 ID");
                 }
-                string s64s = s64.ToString(Data.AdminLocale);
+                string str64 = s64.ToString(Data.AdminLocale);
 
                 if (saved)
                 {
@@ -250,7 +254,7 @@ public class StructureCommand : AsyncCommand
                     }
 
                     await UCWarfare.ToUpdate(token);
-                    ctx.LogAction(EActionLogType.SET_SAVED_STRUCTURE_PROPERTY, $"{asset?.itemName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.Item.ItemGuid:N} - SET " + (grp ? "GROUP" : "OWNER") + " >> " + s64s);
+                    ctx.LogAction(ActionLogType.SetSavedStructureProperty, $"{asset?.itemName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.Item.ItemGuid:N} - SET " + (grp ? "GROUP" : "OWNER") + " >> " + str64);
                 }
                 else
                 {
@@ -266,15 +270,15 @@ public class StructureCommand : AsyncCommand
                 {
                     FactionInfo? info = TeamManager.GetFactionSafe(s64);
                     if (info != null)
-                        s64s = info.GetName(ctx.Caller.Language).ColorizeTMPro(info.HexColor);
+                        str64 = info.GetName(ctx.Caller.Language).ColorizeTMPro(info.HexColor);
                 }
-                ctx.Reply(T.StructureSaveSetProperty!, grp ? "Group" : "Owner", asset, s64s);
+                ctx.Reply(T.StructureSaveSetProperty!, grp ? "Group" : "Owner", asset, str64);
             }
             else
                 ctx.SendCorrectUsage("/structure <set|s> <group|owner> <value>");
         }
         else
-            ctx.SendCorrectUsage(SYNTAX);
+            ctx.SendCorrectUsage(Syntax);
     }
 
     private void DestroyBarricade(BarricadeDrop bdrop, UCPlayer player)
@@ -318,18 +322,19 @@ public class StructureCommand : AsyncCommand
         else
         {
             ulong team = vehicle.lockedGroup.m_SteamID.GetTeam();
+            IPlayer names = await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             if (sendurl)
             {
                 player.SteamPlayer.SendSteamURL(
-                    T.StructureExamineLastOwnerPrompt.Translate(player, vehicle.asset,
-                    await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ThenToUpdate(token),
+                    T.StructureExamineLastOwnerPrompt.Translate(player, vehicle.asset, names
+                    ,
                     Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!), vehicle.lockedOwner.m_SteamID);
             }
             else
             {
                 player.SendChat(T.StructureExamineLastOwnerChat,
-                    vehicle.asset,
-                    await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ThenToUpdate(token),
+                    vehicle.asset, names,
                     new OfflinePlayer(vehicle.lockedOwner.m_SteamID), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!);
             }
         }
@@ -346,17 +351,16 @@ public class StructureCommand : AsyncCommand
                 return;
             }
 
+            IPlayer names = await F.GetPlayerOriginalNamesAsync(data.owner, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             if (sendurl)
             {
-                player.channel.owner.SendSteamURL(
-                    T.StructureExamineLastOwnerPrompt.Translate(player.channel.owner.playerID.steamID.m_SteamID, data.barricade.asset,
-                        await F.GetPlayerOriginalNamesAsync(data.owner, token).ThenToUpdate(token), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
+                player.channel.owner.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player.channel.owner.playerID.steamID.m_SteamID, data.barricade.asset,
+                        names, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
             }
             else
             {
-                player.SendChat(T.StructureExamineLastOwnerChat,
-                    data.barricade.asset,
-                    await F.GetPlayerOriginalNamesAsync(data.owner, token).ThenToUpdate(token),
+                player.SendChat(T.StructureExamineLastOwnerChat, data.barricade.asset, names,
                     new OfflinePlayer(data.owner), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!);
             }
         }
@@ -376,18 +380,16 @@ public class StructureCommand : AsyncCommand
                 player.SendChat(T.StructureExamineNotExaminable);
                 return;
             }
+            IPlayer names = await F.GetPlayerOriginalNamesAsync(data.owner, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             if (sendurl)
             {
-                player.channel.owner.SendSteamURL(
-                    T.StructureExamineLastOwnerPrompt.Translate(player.channel.owner.playerID.steamID.m_SteamID, data.structure.asset,
-                        await F.GetPlayerOriginalNamesAsync(data.owner, token).ThenToUpdate(token),
+                player.channel.owner.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player.channel.owner.playerID.steamID.m_SteamID, data.structure.asset, names,
                         Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
             }
             else
             {
-                player.SendChat(T.StructureExamineLastOwnerChat,
-                    data.structure.asset,
-                    await F.GetPlayerOriginalNamesAsync(data.owner, token).ThenToUpdate(token),
+                player.SendChat(T.StructureExamineLastOwnerChat, data.structure.asset, names,
                     new OfflinePlayer(data.owner), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!);
             }
         }

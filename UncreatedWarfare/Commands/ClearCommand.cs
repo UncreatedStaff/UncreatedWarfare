@@ -1,8 +1,8 @@
-﻿using System;
-using SDG.Unturned;
-using System.Threading.Tasks;
+﻿using SDG.Unturned;
+using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Vehicles;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -10,18 +10,18 @@ namespace Uncreated.Warfare.Commands;
 
 public class ClearCommand : Command
 {
-    private const string SYNTAX = "/clear <inventory|items|vehicles|structures> [player for inventory]";
-    private const string HELP = "Either clears a player's inventory or wipes items, vehicles, or structures and barricades from the map.";
+    private const string Syntax = "/clear <inventory|items|vehicles|structures> [player for inventory]";
+    private const string Help = "Either clears a player's inventory or wipes items, vehicles, or structures and barricades from the map.";
     public ClearCommand() : base("clear", EAdminType.MODERATOR) { }
     public override void Execute(CommandInteraction ctx)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ctx.AssertArgs(1, SYNTAX);
+        ctx.AssertArgs(1, Syntax);
 
         if (ctx.MatchParameter(0, "help"))
-            throw ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
+            throw ctx.SendCorrectUsage(Syntax + " - " + Help);
 
         if (ctx.MatchParameter(0, "inventory", "inv"))
         {
@@ -30,7 +30,7 @@ public class ClearCommand : Command
                 if (pl is not null)
                 {
                     Kits.UCInventoryManager.ClearInventory(pl);
-                    ctx.LogAction(EActionLogType.CLEAR_INVENTORY, "CLEARED INVENTORY OF " + pl.Steam64.ToString(Data.Locale));
+                    ctx.LogAction(ActionLogType.ClearInventory, "CLEARED INVENTORY OF " + pl.Steam64.ToString(Data.AdminLocale));
                     ctx.Reply(T.ClearInventoryOther, pl);
                 }
                 else throw ctx.Reply(T.PlayerNotFound);
@@ -40,47 +40,41 @@ public class ClearCommand : Command
             else
             {
                 Kits.UCInventoryManager.ClearInventory(ctx.Caller);
-                ctx.LogAction(EActionLogType.CLEAR_INVENTORY, "CLEARED PERSONAL INVENTORY");
+                ctx.LogAction(ActionLogType.ClearInventory, "CLEARED PERSONAL INVENTORY");
                 ctx.Reply(T.ClearInventorySelf);
             }
         }
         else if (ctx.MatchParameter(0, "items", "item", "i"))
         {
             ClearItems();
-            ctx.LogAction(EActionLogType.CLEAR_ITEMS);
+            ctx.LogAction(ActionLogType.ClearItems);
             ctx.Reply(T.ClearItems);
         }
         else if (ctx.MatchParameter(0, "vehicles", "vehicle", "v"))
         {
             WipeVehiclesAndRespawn();
-            ctx.LogAction(EActionLogType.CLEAR_VEHICLES);
+            ctx.LogAction(ActionLogType.ClearVehicles);
             ctx.Reply(T.ClearVehicles);
         }
         else if (ctx.MatchParameter(0, "structures", "structure", "struct") ||
                  ctx.MatchParameter(0, "barricades", "barricade", "b") || ctx.MatchParameter(0, "s"))
         {
             Data.Gamemode.ReplaceBarricadesAndStructures();
-            ctx.LogAction(EActionLogType.CLEAR_STRUCTURES);
+            ctx.LogAction(ActionLogType.ClearStructures);
             ctx.Reply(T.ClearStructures);
         }
-        else throw ctx.SendCorrectUsage(SYNTAX);
+        else throw ctx.SendCorrectUsage(Syntax);
     }
     public static void WipeVehicles()
     {
-        if (VehicleSpawner.Loaded)
-        {
-            VehicleBay.DeleteAllVehiclesFromWorld();
-        }
-        else
-        {
-            VehicleManager.askVehicleDestroyAll();
-        }
+        VehicleSpawner.DeleteAllVehiclesFromWorld();
     }
     public static void WipeVehiclesAndRespawn()
     {
         WipeVehicles();
-        if (VehicleSpawner.Loaded)
-            Task.Run(() => Util.TryWrap(VehicleSpawner.RespawnAllVehicles()));
+        
+        if (Data.Is(out IVehicles vgm))
+            UCWarfare.RunTask(vgm.VehicleSpawner.RespawnAllVehicles, ctx: "Wipe and respawn all vehicles.");
     }
     public static void ClearItems()
     {

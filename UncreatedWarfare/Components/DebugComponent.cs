@@ -4,25 +4,27 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
 internal class DebugComponent : MonoBehaviour
 {
+    public uint Updates;
     private float _startRt;
     private float _lastDt;
     private float _lastFixed;
-    private float frmRt;
-    private float avgFrameRate;
-    private uint updates;
+    private float _frmRt;
+    private float _avgFrameRate;
     private float _maxUpdateSpeed;
     private float _maxFixedUpdateSpeed;
-    private int ttlBytesPlayers;
-    private int ttlBytesPending;
-    private int ttlBytesOther;
-    private readonly Queue<UCPlayer> PingUpdates = new Queue<UCPlayer>(48);
-    private readonly List<UCPlayer> Lagging = new List<UCPlayer>(48);
-    private readonly List<ulong> Lagged = new List<ulong>(96);
+    private int _ttlBytesPlayers;
+    private int _ttlBytesPending;
+    private int _ttlBytesOther;
+    private readonly Queue<UCPlayer> _pingUpdates = new Queue<UCPlayer>(48);
+    private readonly List<UCPlayer> _lagging = new List<UCPlayer>(48);
+    private readonly List<ulong> _lagged = new List<ulong>(96);
+    [UsedImplicitly]
     private void Start()
     {
         Reset();
@@ -39,7 +41,7 @@ internal class DebugComponent : MonoBehaviour
         try
         {
             Harmony.Patches.Patcher.Patch(typeof(Provider).Assembly.GetType("SDG.Unturned.NetMessages", true, false).GetMethod("ReceiveMessageFromClient", BindingFlags.Static | BindingFlags.Public),
-                postfix: new HarmonyMethod(typeof(DebugComponent).GetMethod("ReceiveClientMessagePostfix", BindingFlags.Static | BindingFlags.NonPublic)));
+                postfix: new HarmonyMethod(typeof(DebugComponent).GetMethod(nameof(ReceiveClientMessagePostfix), BindingFlags.Static | BindingFlags.NonPublic)));
         }
         catch (Exception ex)
         {
@@ -49,43 +51,46 @@ internal class DebugComponent : MonoBehaviour
     }
     public void Reset()
     {
-        Lagging.RemoveAll(x => !x.IsOnline);
-        if (updates > 0)
+        _lagging.RemoveAll(x => !x.IsOnline);
+        if (Updates > 0)
             Dump();
-        updates = 0;
+        Updates = 0;
         _startRt = Time.realtimeSinceStartup;
         _lastFixed = _startRt;
-        frmRt = 1f / Application.targetFrameRate;
-        _maxUpdateSpeed = frmRt * 1.75f;
+        _frmRt = 1f / Application.targetFrameRate;
+        _maxUpdateSpeed = _frmRt * 1.75f;
         _maxFixedUpdateSpeed = Time.fixedDeltaTime * 1.75f;
-        ttlBytesPlayers = 0;
-        ttlBytesOther = 0;
-        ttlBytesPending = 0;
-        Lagged.Clear();
+        _ttlBytesPlayers = 0;
+        _ttlBytesOther = 0;
+        _ttlBytesPending = 0;
+        _lagged.Clear();
     }
+    [UsedImplicitly]
     private void Update()
     {
-        avgFrameRate = (avgFrameRate * updates + Time.deltaTime) / ++updates;
+        _avgFrameRate = (_avgFrameRate * Updates + Time.deltaTime) / ++Updates;
         _lastDt = Time.deltaTime;
-#if !DEBUG
+#if DEBUG
         if (_lastDt > _maxUpdateSpeed && Level.isLoaded)
-            L.LogWarning("Update took " + _lastDt.ToString("F6", Data.Locale) + " seconds, higher than the max: " + _maxUpdateSpeed.ToString("F3", Data.Locale) + "!!", ConsoleColor.Yellow);
+            L.LogWarning("Update took " + _lastDt.ToString("F6", Data.AdminLocale) + " seconds, higher than the max: " + _maxUpdateSpeed.ToString("F3", Data.AdminLocale) + "!!", ConsoleColor.Yellow);
 #endif
     }
+    [UsedImplicitly]
     private void FixedUpdate()
     {
         float t = Time.realtimeSinceStartup;
-#if !DEBUG
+#if DEBUG
         if (t - _lastFixed > _maxFixedUpdateSpeed && Level.isLoaded)
-            L.LogWarning("FixedUpdate took " + (t - _lastFixed).ToString("F6", Data.Locale) + " seconds, higher than the max: " + _maxFixedUpdateSpeed.ToString("F3", Data.Locale) + "!!", ConsoleColor.Yellow);
+            L.LogWarning("FixedUpdate took " + (t - _lastFixed).ToString("F6", Data.AdminLocale) + " seconds, higher than the max: " + _maxFixedUpdateSpeed.ToString("F3", Data.AdminLocale) + "!!", ConsoleColor.Yellow);
 #endif
         _lastFixed = t;
     }
+    [UsedImplicitly]
     private void LateUpdate()
     {
-        while (PingUpdates.Count > 0)
+        while (_pingUpdates.Count > 0)
         {
-            UCPlayer pl = PingUpdates.Dequeue();
+            UCPlayer pl = _pingUpdates.Dequeue();
             if (!pl.IsOnline) continue;
             if (pl.Player.TryGetPlayerData(out UCPlayerData data))
                 AnalyzePing(pl, data);
@@ -105,15 +110,12 @@ internal class DebugComponent : MonoBehaviour
             total += pings[i];
         float mean = total / size;
         total = 0f;
-        float d;
         for (int i = 0; i < size; ++i)
         {
-            d = pings[i] - mean;
+            float d = pings[i] - mean;
             total += d < 0 ? -d : d;//d * d;
         }
         float avgDifference = total / size;//Mathf.Sqrt(total);
-        float dif;
-
         float lastPing;
         if (size < 2)
             lastPing = latest;
@@ -125,10 +127,6 @@ internal class DebugComponent : MonoBehaviour
             lastPing = data.PingBuffer[ind - 1];
         }
         lastPing -= latest;
-        if (data.LastAvgPingDifference == 0)
-            dif = avgDifference;
-        else
-            dif = data.LastAvgPingDifference - avgDifference;
         data.LastAvgPingDifference = avgDifference;
         if (size > 16) // sufficient data
         {
@@ -145,35 +143,35 @@ internal class DebugComponent : MonoBehaviour
     }
     private void RecoverFromLag(UCPlayer player)
     {
-        for (int i = Lagging.Count - 1; i >= 0; --i)
+        for (int i = _lagging.Count - 1; i >= 0; --i)
         {
-            UCPlayer pl = Lagging[i];
+            UCPlayer pl = _lagging[i];
             if (pl.Steam64 == player.Steam64 || !pl.IsOnline)
-                Lagging.RemoveAtFast(i);
+                _lagging.RemoveAtFast(i);
         }
         L.LogWarning("Lag settled for " + player.CharacterName + ".", ConsoleColor.Yellow);
     }
     private void StartLag(UCPlayer player)
     {
-        for (int i = Lagging.Count - 1; i >= 0; --i)
+        for (int i = _lagging.Count - 1; i >= 0; --i)
         {
-            UCPlayer pl = Lagging[i];
+            UCPlayer pl = _lagging[i];
             if (!pl.IsOnline)
-                Lagging.RemoveAtFast(i);
+                _lagging.RemoveAtFast(i);
             else if (pl.Steam64 == player.Steam64)
                 goto inList;
         }
-        Lagging.Add(player);
-        for (int i = 0; i < Lagged.Count; ++i)
+        _lagging.Add(player);
+        for (int i = 0; i < _lagged.Count; ++i)
         {
-            if (Lagged[i] == player.Steam64)
+            if (_lagged[i] == player.Steam64)
                 goto inList;
         }
 
-        Lagged.Add(player.Steam64);
+        _lagged.Add(player.Steam64);
     inList:
         L.LogWarning("Lag detected from " + player.CharacterName + ".", ConsoleColor.Yellow);
-        if (Provider.clients.Count >= 3 ? (float)Lagging.Count / Provider.clients.Count > 0.6f : Lagging.Count >= 1)
+        if (Provider.clients.Count >= 3 ? (float)_lagging.Count / Provider.clients.Count > 0.6f : _lagging.Count >= 1)
         {
             L.LogWarning("A lot of players are lagging, lag spike detected.", ConsoleColor.Yellow);
             Dump();
@@ -183,22 +181,22 @@ internal class DebugComponent : MonoBehaviour
     {
         float t = Time.realtimeSinceStartup;
         float ttlSeconds = t - _startRt;
-        L.Log("Debug output for the last " + ttlSeconds.ToString("F3", Data.Locale) + " seconds.");
+        L.Log("Debug output for the last " + ttlSeconds.ToString("F3", Data.AdminLocale) + " seconds.");
         using IDisposable indent = L.IndentLog(2);
-        L.Log("Updates: " + updates.ToString(Data.Locale));
-        L.Log("Average framerate: " + (1f / avgFrameRate).ToString(Data.Locale) + " FPS (target: " + Application.targetFrameRate + " FPS)");
-        if (ttlBytesPlayers > 0)
-            L.Log($"Network usage verified players:     {ttlBytesPlayers.ToString(Data.Locale)} bytes ({(ttlBytesPlayers / ttlSeconds).ToString("F2", Data.Locale)} B/s)");
-        if (ttlBytesPending > 0)
-            L.Log($"Network usage pending players:      {ttlBytesPending.ToString(Data.Locale)} bytes ({(ttlBytesPending / ttlSeconds).ToString("F2", Data.Locale)} B/s)");
-        if (ttlBytesOther > 0)
-            L.Log($"Network usage non-players:          {ttlBytesOther.ToString(Data.Locale)} bytes ({(ttlBytesOther / ttlSeconds).ToString("F2", Data.Locale)} B/s)");
-        if (Lagged.Count > 0)
-            L.Log(Lagged.Count + " Players lagged, currently " + Lagging.Count + " lagging.");
+        L.Log("Updates: " + Updates.ToString(Data.AdminLocale));
+        L.Log("Average framerate: " + (1f / _avgFrameRate).ToString(Data.AdminLocale) + " FPS (target: " + Application.targetFrameRate + " FPS)");
+        if (_ttlBytesPlayers > 0)
+            L.Log($"Network usage verified players:     {_ttlBytesPlayers.ToString(Data.AdminLocale)} bytes ({(_ttlBytesPlayers / ttlSeconds).ToString("F2", Data.AdminLocale)} B/s)");
+        if (_ttlBytesPending > 0)
+            L.Log($"Network usage pending players:      {_ttlBytesPending.ToString(Data.AdminLocale)} bytes ({(_ttlBytesPending / ttlSeconds).ToString("F2", Data.AdminLocale)} B/s)");
+        if (_ttlBytesOther > 0)
+            L.Log($"Network usage non-players:          {_ttlBytesOther.ToString(Data.AdminLocale)} bytes ({(_ttlBytesOther / ttlSeconds).ToString("F2", Data.AdminLocale)} B/s)");
+        if (_lagged.Count > 0)
+            L.Log(_lagged.Count + " Players lagged, currently " + _lagging.Count + " lagging.");
     }
     private void OnPingUpdated(UCPlayer player)
     {
-        PingUpdates.Enqueue(player);
+        _pingUpdates.Enqueue(player);
     }
     private static void LagPostfix(float value, SteamPlayer __instance)
     {
@@ -216,7 +214,6 @@ internal class DebugComponent : MonoBehaviour
             UCWarfare.I.Debugger.OnMessageReceived(transportConnection, packet, offset, size);
         }
     }
-
     private void OnMessageReceived(ITransportConnection transportConnection, byte[] packet, int offset, int size)
     {
         SteamPlayerID? owner = null;
@@ -242,10 +239,10 @@ internal class DebugComponent : MonoBehaviour
         if (owner is not null)
         {
             if (pending)
-                ttlBytesPending += size;
+                _ttlBytesPending += size;
             else
-                ttlBytesPlayers += size;
+                _ttlBytesPlayers += size;
         }
-        else ttlBytesOther += size;
+        else _ttlBytesOther += size;
     }
 }

@@ -5,11 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using MySqlConnector;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -18,17 +20,22 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+using Types = SDG.Unturned.Types;
 
 namespace Uncreated.Warfare;
 
 public static class F
 {
+    private static readonly char[] ignore = { '.', ',', '&', '-', '_' };
+    private static readonly char[] splits = { ' ' };
     public const string COLUMN_LANGUAGE = "Language";
     public const string COLUMN_VALUE = "Value";
     public static bool IsMono { get; } = Type.GetType("Mono.Runtime") != null;
@@ -78,7 +85,7 @@ public static class F
             rtn = color;
         else
             rtn = f2.Substring(7); // 7 is "color=#" length
-        return !int.TryParse(rtn, NumberStyles.HexNumber, Data.Locale, out _) ? UCWarfare.GetColorHex("default") : rtn;
+        return !int.TryParse(rtn, NumberStyles.HexNumber, Data.AdminLocale, out _) ? UCWarfare.GetColorHex("default") : rtn;
     }
     public static string MakeRemainder(this string[] array, int startIndex = 0, int length = -1, string deliminator = " ")
     {
@@ -243,8 +250,8 @@ public static class F
         ulong team = player.GetTeam();
         return team switch
         {
-            1 => TeamManager.Team1Main.Center3D,
-            2 => TeamManager.Team2Main.Center3D,
+            1 => TeamManager.Team1Main.Spawn3D,
+            2 => TeamManager.Team2Main.Spawn3D,
             _ => TeamManager.LobbySpawn
         };
     }
@@ -258,15 +265,10 @@ public static class F
         team = player.GetTeam();
         return team switch
         {
-            1 => TeamManager.Team1Main.Center3D,
-            2 => TeamManager.Team2Main.Center3D,
+            1 => TeamManager.Team1Main.Spawn3D,
+            2 => TeamManager.Team2Main.Spawn3D,
             _ => TeamManager.LobbySpawn
         };
-    }
-    public static Vector3 GetBaseSpawn(this ulong playerID, out ulong team)
-    {
-        team = playerID.GetTeamFromPlayerSteam64ID();
-        return !Data.Is<ITeams>(out _) ? TeamManager.LobbySpawn : team.GetBaseSpawnFromTeam();
     }
     public static Vector3 GetBaseSpawnFromTeam(this ulong team)
     {
@@ -277,8 +279,8 @@ public static class F
 
         return team switch
         {
-            1 => TeamManager.Team1Main.Center3D,
-            2 => TeamManager.Team2Main.Center3D,
+            1 => TeamManager.Team1Main.Spawn3D,
+            2 => TeamManager.Team2Main.Spawn3D,
             _ => TeamManager.LobbySpawn
         };
     }
@@ -327,6 +329,17 @@ public static class F
         if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
             return h.point.y + above;
         return defaultY;
+    }
+    public static bool TryGetHeight(float x, float z, out float height, float add = 0f)
+    {
+        if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+        {
+            height = h.point.y + add;
+            return true;
+        }
+
+        height = 0f;
+        return false;
     }
     public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
     {
@@ -484,21 +497,18 @@ public static class F
             success = pt != null;
             return pt;
         }
-        else if (player == null || player.transform == null)
+        if (player == null || player.transform == null)
         {
             success = false;
             return null;
         }
-        else if (player.transform.TryGetComponent(out UCPlayerData playtimeObj))
+        if (player.transform.TryGetComponent(out UCPlayerData playtimeObj))
         {
             success = true;
             return playtimeObj;
         }
-        else
-        {
-            success = false;
-            return null;
-        }
+        success = false;
+        return null;
     }
     public static UCPlayerData? GetPlayerData(this CSteamID player, out bool success)
     {
@@ -570,21 +580,6 @@ public static class F
             }
         }
     }
-    [Obsolete("Use UCPlayer.Name instead.")]
-    public static PlayerNames GetPlayerOriginalNames(UCPlayer player) => player.Name;
-    [Obsolete("Use UCPlayer.Name instead.")]
-    public static PlayerNames GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
-    [Obsolete("Use UCPlayer.Name instead.")]
-    public static PlayerNames GetPlayerOriginalNames(Player player)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        UCPlayer? pl = UCPlayer.FromPlayer(player);
-        if (pl != null)
-            return pl.Name;
-        return new PlayerNames(player);
-    }
     public static PlayerNames GetPlayerName(ulong player)
     {
         if (player == 0) return PlayerNames.Console;
@@ -602,7 +597,7 @@ public static class F
         {
             if (!ex.Message.Equals("Not connected", StringComparison.Ordinal))
                 throw;
-            string tname = player.ToString(Data.Locale);
+            string tname = player.ToString(Data.AdminLocale);
             return new PlayerNames { Steam64 = player, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
         }
     }
@@ -612,7 +607,7 @@ public static class F
         if (pl != null)
             return new ValueTask<PlayerNames>(pl.Name);
 
-        return OffenseManager.IsValidSteam64ID(player)
+        return Util.IsValidSteam64Id(player)
             ? new ValueTask<PlayerNames>(Data.DatabaseManager.GetUsernamesAsync(player, token))
             : new ValueTask<PlayerNames>(PlayerNames.Nil);
     }
@@ -669,7 +664,7 @@ public static class F
         if (!Data.Is<ITeams>(out _)) return innerText;
         return team switch
         {
-            TeamManager.ZOMBIE_TEAM_ID => $"<color=#{UCWarfare.GetColorHex("death_zombie_name_color")}>{innerText}</color>",
+            TeamManager.ZombieTeamID => $"<color=#{UCWarfare.GetColorHex("death_zombie_name_color")}>{innerText}</color>",
             TeamManager.Team1ID => $"<color=#{TeamManager.Team1ColorHex}>{innerText}</color>",
             TeamManager.Team2ID => $"<color=#{TeamManager.Team2ColorHex}>{innerText}</color>",
             TeamManager.AdminID => $"<color=#{TeamManager.AdminColorHex}>{innerText}</color>",
@@ -693,8 +688,8 @@ public static class F
                 success = false;
                 if (unloadIfFail)
                 {
-                    _ = Gamemode.FailToLoadGame(ex);
-                    throw new SingletonLoadException(ESingletonLoadType.LOAD, null, ex);
+                    UCWarfare.RunTask(Gamemode.FailToLoadGame, ex, ctx: "Checking directory \"" + path + "\" failed, unloading game.");
+                    throw new SingletonLoadException(SingletonLoadType.Load, null, ex);
                 }
             }
         }
@@ -715,38 +710,36 @@ public static class F
         player.SendURL(message, $"https://steamcommunity.com/profiles/{s64}/");
     public static void SendURL(this SteamPlayer player, string message, string url)
     {
-        if (player == default || url == default) return;
+        if (player == null || url == null) return;
         player.player.sendBrowserRequest(message, url);
     }
     public static bool CanStandAtLocation(Vector3 source) => PlayerStance.hasStandingHeightClearanceAtPosition(source);
-    public static string GetClosestLocation(Vector3 point)
+    public static string GetClosestLocationName(Vector3 point)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        int index = GetClosestLocationIndex(point);
-        return index == -1 ? string.Empty : ((LocationNode)LevelNodes.nodes[index]).name;
+        LocationDevkitNode? node = GetClosestLocation(point);
+        return node == null ? new GridLocation(in point).ToString() : node.locationName;
     }
-    public static int GetClosestLocationIndex(Vector3 point)
+    public static LocationDevkitNode? GetClosestLocation(Vector3 point)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        IReadOnlyList<LocationDevkitNode> list = LocationDevkitNodeSystem.Get().GetAllNodes();
         int index = -1;
         float smallest = -1f;
-        for (int i = 0; i < LevelNodes.nodes.Count; i++)
+        for (int i = 0; i < list.Count; ++i)
         {
-            if (LevelNodes.nodes[i] is LocationNode node)
+            float amt = (point - list[i].transform.position).sqrMagnitude;
+            if (smallest < 0f || amt < smallest)
             {
-                float amt = (point - node.point).sqrMagnitude;
-                if (smallest < 0f || amt < smallest)
-                {
-                    index = i;
-                    smallest = amt;
-                }
+                index = i;
+                smallest = amt;
             }
         }
-        return index;
+
+        if (index == -1)
+            return null;
+        return list[index];
     }
     public static void NetInvoke(this NetCall call)
     {
@@ -883,6 +876,18 @@ public static class F
         }
         return false;
     }
+    public static TAsset? GetAsset<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference) where TAsset : Asset
+    {
+        if (reference.ValidReference(out TAsset asset))
+            return asset;
+        return null;
+    }
+    public static TAsset? GetAsset<TAsset>(this JsonAssetReference<TAsset>? reference) where TAsset : Asset
+    {
+        if (reference.ValidReference(out TAsset asset))
+            return asset;
+        return null;
+    }
     public static bool ValidReference<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, out Guid guid) where TAsset : Asset
     {
         if (reference is not null && reference.HasValue && reference.Value.Exists)
@@ -972,6 +977,17 @@ public static class F
     public static bool MatchGuid<TAsset>(this JsonAssetReference<TAsset>? reference, JsonAssetReference<TAsset>? match) where TAsset : Asset
     {
         return reference.ValidReference(out Guid guid) && match.ValidReference(out Guid guid2) && guid == guid2;
+    }
+    public static bool AnyMapsContainGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? config, Guid guid) where TAsset : Asset
+    {
+        if (config is null) return false;
+        foreach(JsonAssetReference<TAsset>? asset in config.Values)
+        {
+            if (asset.MatchGuid(guid))
+                return true;
+        }
+
+        return false;
     }
     public static string RemoveColorTag(string questName)
     {
@@ -1097,7 +1113,7 @@ public static class F
                 oldSt = new byte[sizeof(ulong) * 2 + 1];
             Buffer.BlockCopy(BitConverter.GetBytes(o), 0, oldSt, 0, sizeof(ulong));
             Buffer.BlockCopy(BitConverter.GetBytes(g), 0, oldSt, sizeof(ulong), sizeof(ulong));
-            if (sign.text.StartsWith(Signs.PREFIX, StringComparison.Ordinal) && Data.SendUpdateBarricadeState != null && BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
+            if (sign.text.StartsWith(Signs.Prefix, StringComparison.Ordinal) && Data.SendUpdateBarricadeState != null && BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
             {
                 BarricadeManager.updateState(drop.model, oldSt, oldSt.Length);
                 drop.ReceiveUpdateState(oldSt);
@@ -1109,7 +1125,7 @@ public static class F
                     if (plant != ushort.MaxValue || Regions.checkArea(x, y, pl.Player.movement.region_x,
                             pl.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
                     {
-                        byte[] text = System.Text.Encoding.UTF8.GetBytes(Signs.GetClientText(sign.text, pl, sign));
+                        byte[] text = System.Text.Encoding.UTF8.GetBytes(Signs.GetClientText(drop, pl));
                         int txtLen = Math.Min(text.Length, byte.MaxValue - 17);
                         if (state == null || state.Length != txtLen + 17)
                         {
@@ -1179,19 +1195,7 @@ public static class F
                     state = oldSt;
                     break;
             }
-            bool diff = state.Length != oldSt.Length;
-            if (!diff && state != oldSt)
-            {
-                for (int i = 0; i < state.Length; ++i)
-                {
-                    if (state[i] != oldSt[i])
-                    {
-                        diff = true;
-                        break;
-                    }
-                }
-            }
-            if (diff)
+            if (!state.CompareBytes(oldSt))
             {
                 BarricadeManager.updateReplicatedState(drop.model, state, state.Length);
             }
@@ -1233,6 +1237,42 @@ public static class F
     {
         return Mathf.Abs(left.x - right.x) < tolerance &&
                Mathf.Abs(left.y - right.y) < tolerance;
+    }
+    public static bool AlmostEquals(this float left, float right, float tolerance = 0.05f)
+    {
+        return Mathf.Abs(left - right) < tolerance;
+    }
+    public static Schema GetForeignKeyListSchema(string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, string foreignTableName, string foreignTablePkColumn, bool hasPk = false, bool oneToOne = false, bool nullable = false, bool unique = false, string pkName = "pk")
+    {
+        Schema.Column[] columns = new Schema.Column[hasPk ? 3 : 2];
+
+        int index = 0;
+        if (hasPk)
+        {
+            columns[0] = new Schema.Column(pkName, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true
+            };
+        }
+        else index = -1;
+        columns[++index] = new Schema.Column(pkColumn, SqlTypes.INCREMENT_KEY)
+        {
+            PrimaryKey = !hasPk && oneToOne,
+            AutoIncrement = !hasPk && oneToOne,
+            ForeignKey = true,
+            ForeignKeyColumn = primaryTablePkColumn,
+            ForeignKeyTable = primaryTableName
+        };
+        columns[++index] = new Schema.Column(valueColumn, SqlTypes.INCREMENT_KEY)
+        {
+            Nullable = nullable,
+            UniqueKey = unique,
+            ForeignKey = true,
+            ForeignKeyColumn = foreignTablePkColumn,
+            ForeignKeyTable = foreignTableName
+        };
+        return new Schema(tableName, columns, false, typeof(PrimaryKey));
     }
     public static Schema GetListSchema<T>(string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, bool hasPk = false, bool oneToOne = false, int length = -1, bool nullable = false, bool unique = false, string pkName = "pk")
     {
@@ -1342,7 +1382,6 @@ public static class F
         };
         return new Schema(tableName, columns, false, type);
     }
-
     public static Schema GetTranslationListSchema(string tableName, string pkColumn, string mainTable, string mainPkColumn, int length)
     {
         return new Schema(tableName, new Schema.Column[]
@@ -1360,39 +1399,353 @@ public static class F
             new Schema.Column(COLUMN_VALUE, "varchar(" + length.ToString(CultureInfo.InvariantCulture) + ")")
         }, false, typeof(KeyValuePair<string, string>));
     }
+    public static void ReadToTranslationList(MySqlDataReader reader, TranslationList list, int colOffset = 0)
+    {
+        if (list is null)
+            throw new ArgumentNullException(nameof(list));
+        string lang = reader.GetString(colOffset + 1).ToLowerInvariant();
+        if (list.ContainsKey(lang))
+        {
+            L.LogWarning("Duplicate language entry found for TranslationList with entry #" + reader.GetInt32(0) +
+                         " (" + reader.GetColumnSchema().FirstOrDefault()?.ColumnName + "). " +
+                         "Value (\"" + reader.GetString(colOffset + 2) + "\") is being ignored.");
+        }
+        else list.Add(lang, reader.GetString(colOffset + 2));
+    }
+    public static ItemJarData[] GetItemsFromStorageState(ItemStorageAsset storage, byte[] state, out ItemDisplayData? displayData, PrimaryKey parent, bool clientState = false)
+    {
+        if (!Level.isLoaded)
+            throw new Exception("Level not loaded.");
+        ThreadUtil.assertIsGameThread();
+        if (state.Length < 17)
+        {
+            displayData = null;
+            return Array.Empty<ItemJarData>();
+        }
+        Block block = new Block(state);
+        block.step += sizeof(ulong) * 2;
+        ItemJarData[] rtn;
+        if (!clientState)
+        {
+            int ct = block.readByte();
+            rtn = new ItemJarData[ct];
+            for (int i = 0; i < ct; ++i)
+            {
+                if (BarricadeManager.version > 7)
+                {
+                    object[] objArray = block.read(Types.BYTE_TYPE, Types.BYTE_TYPE, Types.BYTE_TYPE, Types.UINT16_TYPE, Types.BYTE_TYPE, Types.BYTE_TYPE, Types.BYTE_ARRAY_TYPE);
+                    Guid guid = Assets.find(EAssetType.ITEM, (ushort)objArray[3]) is ItemAsset asset ? asset.GUID : new Guid((ushort)objArray[3], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    rtn[i] = new ItemJarData(PrimaryKey.NotAssigned, parent, guid,
+                        (byte)objArray[0], (byte)objArray[1], (byte)objArray[2], (byte)objArray[4], (byte)objArray[5],
+                        (byte[])objArray[6]);
+                }
+                else
+                {
+                    object[] objArray = block.read(Types.BYTE_TYPE, Types.BYTE_TYPE, Types.UINT16_TYPE, Types.BYTE_TYPE, Types.BYTE_TYPE, Types.BYTE_ARRAY_TYPE);
+                    Guid guid = Assets.find(EAssetType.ITEM, (ushort)objArray[2]) is ItemAsset asset ? asset.GUID : new Guid((ushort)objArray[2], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    rtn[i] = new ItemJarData(PrimaryKey.NotAssigned, parent, guid,
+                        (byte)objArray[0], (byte)objArray[1], 0, (byte)objArray[3], (byte)objArray[4],
+                        (byte[])objArray[5]);
+                }
+            }
+        }
+        else rtn = Array.Empty<ItemJarData>();
 
-    public static ConfiguredTaskAwaitable ThenToUpdate(this Task task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
-    public static ConfiguredTaskAwaitable<T> ThenToUpdate<T>(this Task<T> task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
-    public static ConfiguredTaskAwaitable ThenToUpdate(this ValueTask task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
-    public static ConfiguredTaskAwaitable<T> ThenToUpdate<T>(this ValueTask<T> task, CancellationToken token = default)
-        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
-    private static async Task ThenToUpdateIntl(Task task, CancellationToken token = default)
-    {
-        await task.ConfigureAwait(false);
-        if (!UCWarfare.IsMainThread)
-            await UCWarfare.ToUpdate(token);
+        if (storage.isDisplay)
+        {
+            if (clientState)
+            {
+                object[] objArray = block.read(Types.UINT16_TYPE, Types.BYTE_TYPE, Types.BYTE_ARRAY_TYPE, Types.UINT16_TYPE, Types.UINT16_TYPE, Types.STRING_TYPE, Types.STRING_TYPE, Types.BYTE_TYPE);
+                displayData = new ItemDisplayData(parent, (ushort)objArray[3], (ushort)objArray[4], (byte)objArray[7], (string)objArray[5], (string)objArray[6]);
+            }
+            else
+            {
+                ushort skin = block.readUInt16();
+                ushort mythic = block.readUInt16();
+                string? tags;
+                string? dynProps;
+                if (BarricadeManager.version > 12)
+                {
+                    tags = block.readString();
+                    if (tags.Length == 0)
+                        tags = null;
+                    dynProps = block.readString();
+                    if (dynProps.Length == 0)
+                        dynProps = null;
+                }
+                else
+                {
+                    tags = null;
+                    dynProps = null;
+                }
+                byte rot = BarricadeManager.version > 8 ? block.readByte() : (byte)0;
+                displayData = new ItemDisplayData(parent, skin, mythic, rot, tags, dynProps);
+            }
+        }
+        else displayData = null;
+
+        return rtn;
     }
-    private static async Task<T> ThenToUpdateIntl<T>(Task<T> task, CancellationToken token = default)
+    internal static void AppendPropertyList(StringBuilder builder, int startIndex, int length)
     {
-        T result = await task.ConfigureAwait(false);
-        if (!UCWarfare.IsMainThread)
-            await UCWarfare.ToUpdate(token);
+        if (startIndex != 0)
+            builder.Append(',');
+        builder.Append('(');
+        for (int j = startIndex; j < startIndex + length; ++j)
+        {
+            if (j != startIndex)
+                builder.Append(',');
+            builder.Append('@').Append(j);
+        }
+        builder.Append(')');
+    }
+    internal static void AppendPropertyList(StringBuilder builder, int startIndex, int length, int i)
+    {
+        if (i != 0)
+            builder.Append(',');
+        builder.Append('(');
+        for (int j = startIndex; j < startIndex + length; ++j)
+        {
+            if (j != startIndex)
+                builder.Append(',');
+            builder.Append('@').Append(j);
+        }
+        builder.Append(')');
+    }
+    public static bool NullOrEmpty<T>(this ICollection<T>? collection)
+    {
+        return collection == null || collection.Count == 0;
+    }
+    public static int StringSearch<T>(IReadOnlyList<T> collection, Func<T, string?> selector, string input, bool equalsOnly = false)
+    {
+        if (input == null)
+            return -1;
+
+        for (int i = 0; i < collection.Count; ++i)
+        {
+            if (string.Equals(selector(collection[i]), input, StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+        if (!equalsOnly)
+        {
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? n = selector(collection[i]);
+                if (n != null && n.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
+                    return i;
+            }
+
+            string[] inSplits = input.Split(splits);
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? name = selector(collection[i]);
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                    return i;
+            }
+        }
+
+        return -1;
+    }
+    public static void StringSearch<T>(IReadOnlyList<T> collection, IList<T> output, Func<T, string?> selector, string input, bool equalsOnly = false)
+    {
+        if (input == null)
+            return;
+
+        for (int i = 0; i < collection.Count; ++i)
+        {
+            if (string.Equals(selector(collection[i]), input, StringComparison.OrdinalIgnoreCase))
+                output.Add(collection[i]);
+        }
+        if (!equalsOnly)
+        {
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? n = selector(collection[i]);
+                if (n != null && n.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
+                    output.Add(collection[i]);
+            }
+
+            string[] inSplits = input.Split(splits);
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? name = selector(collection[i]);
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                    output.Add(collection[i]);
+            }
+        }
+    }
+    public static string ActionLogDisplay(this Asset asset) =>
+        $"{asset.FriendlyName} / {asset.id.ToString(Data.AdminLocale)} / {asset.GUID:N}";
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="type"/> is not a valid value.</exception>
+    public static EItemType GetItemType(this ClothingType type) => type switch
+    {
+        ClothingType.Shirt => EItemType.SHIRT,
+        ClothingType.Pants => EItemType.PANTS,
+        ClothingType.Vest => EItemType.VEST,
+        ClothingType.Hat => EItemType.HAT,
+        ClothingType.Mask => EItemType.MASK,
+        ClothingType.Backpack => EItemType.BACKPACK,
+        ClothingType.Glasses => EItemType.GLASSES,
+        _ => throw new ArgumentOutOfRangeException(nameof(type))
+    };
+    public static T[] CloneArray<T>(T[] source) where T : ICloneable
+    {
+        if (source == null)
+            return null!;
+        if (source.Length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[source.Length];
+        for (int i = 0; i < result.Length; ++i)
+            result[i] = (T)source[i].Clone();
         return result;
     }
-    private static async Task ThenToUpdateIntl(ValueTask task, CancellationToken token = default)
+    public static T[] CloneStructArray<T>(T[] source) where T : struct
     {
-        await task.ConfigureAwait(false);
-        if (!UCWarfare.IsMainThread)
-            await UCWarfare.ToUpdate(token);
-    }
-    private static async Task<T> ThenToUpdateIntl<T>(ValueTask<T> task, CancellationToken token = default)
-    {
-        T result = await task.ConfigureAwait(false);
-        if (!UCWarfare.IsMainThread)
-            await UCWarfare.ToUpdate(token);
+        if (source == null)
+            return null!;
+        if (source.Length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[source.Length];
+        Array.Copy(source, result, source.Length);
         return result;
+    }
+    public static bool ServerTrackQuest(this UCPlayer player, QuestAsset quest)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (player is not { IsOnline: true })
+            return false;
+        QuestAsset current = player.Player.quests.GetTrackedQuest();
+        if (current == quest)
+            return false;
+
+        player.Player.quests.ServerAddQuest(quest);
+        return true;
+    }
+    public static void CombineIfNeeded(this ref CancellationToken token, CancellationToken other)
+    {
+        if (token == other)
+            return;
+        token = token.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(token, other).Token : token;
+    }
+    public static void CombineIfNeeded(this ref CancellationToken token, CancellationToken other1, CancellationToken other2)
+    {
+        if (token.CanBeCanceled)
+        {
+            if (other1.CanBeCanceled)
+            {
+                if (other1 == other2)
+                {
+                    if (token == other1)
+                        return;
+
+                    token = other2.CanBeCanceled
+                        ? CancellationTokenSource.CreateLinkedTokenSource(token).Token : token;
+                    return;
+                }
+                token = other2.CanBeCanceled
+                    ? CancellationTokenSource.CreateLinkedTokenSource(token, other1, other2).Token
+                    : CancellationTokenSource.CreateLinkedTokenSource(token, other1).Token;
+            }
+            else
+            {
+                if (token == other2)
+                    return;
+
+                token = other2.CanBeCanceled
+                    ? CancellationTokenSource.CreateLinkedTokenSource(token, other2).Token : token;
+            }
+        }
+        else
+        {
+            if (other1.CanBeCanceled)
+            {
+                if (other1 == other2)
+                {
+                    token = other1;
+                }
+                else
+                {
+                    token = other2.CanBeCanceled
+                        ? CancellationTokenSource.CreateLinkedTokenSource(other1, other2).Token : other1;
+                }
+            }
+            else if (other2.CanBeCanceled)
+            {
+                if (token == other2)
+                    return;
+                token = other2;
+            }
+        }
+    }
+
+    /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>[,`<paramref name="columnPk"/>`]) VALUES (parameters[,LAST_INSERT_ID(@pk)]) ON DUPLICATE KEY UPDATE (<paramref name="columns"/>,`<paramref name="columnPk"/>`=LAST_INSERT_ID(`<paramref name="columnPk"/>`);<br/>SET @pk := (SELECT LAST_INSERT_ID() as `pk`);<br/>SELECT @pk</summary>
+    public static string BuildInitialInsertQuery(string table, string columnPk, bool hasPk, string? extPk, string[]? deleteTables, params string[] columns)
+    {
+        return "INSERT INTO `" + table + "` (" + SqlTypes.ColumnList(columns) +
+            (hasPk ? $",`{columnPk}`" : string.Empty) +
+            ") VALUES (" + SqlTypes.ParameterList(0, columns.Length) +
+            (hasPk ? ",LAST_INSERT_ID(@" + columns.Length.ToString(Data.AdminLocale) + ")" : string.Empty) +
+            ") ON DUPLICATE KEY UPDATE " +
+            SqlTypes.ColumnUpdateList(0, columns) +
+            $",`{columnPk}`=LAST_INSERT_ID(`{columnPk}`);" +
+            "SET @pk := (SELECT LAST_INSERT_ID() as `pk`);" + (hasPk && extPk != null && deleteTables != null ? GetDeleteText(deleteTables, extPk, columns.Length) : string.Empty) +
+            " SELECT @pk;";
+    }
+    private static string GetDeleteText(string[] deleteTables, string columnPk, int pk)
+    {
+        StringBuilder sb = new StringBuilder(deleteTables.Length * 15);
+        for (int i = 0; i < deleteTables.Length; ++i)
+            sb.Append("DELETE FROM `").Append(deleteTables[i]).Append("` WHERE `").Append(columnPk).Append("`=@").Append(pk.ToString(Data.AdminLocale)).Append(';');
+        return sb.ToString();
+    }
+    /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>) VALUES (parameters);</summary>
+    public static string BuildOtherInsertQueryNoUpdate(string table, params string[] columns)
+    {
+        return $"INSERT INTO `{table}` (" +
+               SqlTypes.ColumnList(columns) +
+               ") VALUES (" + SqlTypes.ParameterList(0, columns.Length) + ");";
+    }
+    /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>) VALUES </summary>
+    public static string StartBuildOtherInsertQueryNoUpdate(string table, params string[] columns)
+    {
+        return $"INSERT INTO `{table}` (" + SqlTypes.ColumnList(columns) + ") VALUES ";
+    }
+    /// <summary>INSERT INTO `<paramref name="table"/>` (<paramref name="columns"/>) VALUES (parameters) ON DUPLICATE KEY UPDATE (<paramref name="columns"/> without first column);</summary>
+    /// <remarks>Assumes pk is first column.</remarks>
+    public static string BuildOtherInsertQueryUpdate(string table, params string[] columns)
+    {
+        return $"INSERT INTO `{table}` (" +
+               SqlTypes.ColumnList(columns) +
+               ") VALUES (" + SqlTypes.ParameterList(0, columns.Length) + ") ON DUPLICATE KEY UPDATE " + 
+               SqlTypes.ColumnUpdateList(1, 1, columns) + ";";
+    }
+    /// <summary> ON DUPLICATE KEY UPDATE (<paramref name="columns"/> without first column);</summary>
+    /// <remarks>Assumes pk is first column.</remarks>
+    public static string EndBuildOtherInsertQueryUpdate(params string[] columns)
+    {
+        return " ON DUPLICATE KEY UPDATE " + SqlTypes.ColumnUpdateList(1, 1, columns) + ";";
+    }
+    /// <summary>SELECT <paramref name="columns"/> FROM `<paramref name="table"/>` WHERE `<paramref name="checkColumnEquals"/>`=@<paramref name="parameter"/>;</summary>
+    public static string BuildSelectWhere(string table, string checkColumnEquals, int parameter, params string[] columns)
+    {
+        return "SELECT " + SqlTypes.ColumnList(columns) +
+               $" FROM `{table}` WHERE `{checkColumnEquals}`=@" + parameter.ToString(Data.AdminLocale) + ";";
+    }
+    /// <summary>SELECT <paramref name="columns"/> FROM `<paramref name="table"/>` WHERE `<paramref name="checkColumnEquals"/>`=@<paramref name="parameter"/> LIMIT 1;</summary>
+    public static string BuildSelectWhereLimit1(string table, string checkColumnEquals, int parameter, params string[] columns)
+    {
+        return "SELECT " + SqlTypes.ColumnList(columns) +
+               $" FROM `{table}` WHERE `{checkColumnEquals}`=@" + parameter.ToString(Data.AdminLocale) + " LIMIT 1;";
+    }
+    /// <summary>SELECT <paramref name="columns"/> FROM `<paramref name="table"/>`;</summary>
+    public static string BuildSelect(string table, params string[] columns)
+    {
+        return "SELECT " + SqlTypes.ColumnList(columns) + $" FROM `{table}`;";
+    }
+    public static Task<int> DeleteItem(MySqlDatabase data, PrimaryKey pk, string tableMain, string columnPk, CancellationToken token = default)
+    {
+        if (!pk.IsValid)
+            throw new ArgumentException("If item is null, pk must have a value to delete the item.", nameof(pk));
+        return data.NonQueryAsync($"DELETE FROM `{tableMain}` WHERE `{columnPk}`=@0;", new object[] { pk.Key }, token);
     }
 }

@@ -5,12 +5,12 @@ using Uncreated.Warfare.Squads;
 namespace Uncreated.Warfare.Traits.Buffs;
 
 /// <summary>
-/// Increases the accuracy of ground AA.
+/// Increases the influence that flares have on heat-seeking missiles.
 /// </summary>
 public class Superheated : Buff
 {
     private static TraitData? DATA;
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(Superheated),
         NameTranslations = new TranslationList("Superheated"),
@@ -18,12 +18,12 @@ public class Superheated : Buff
         CreditCost = 600,
         RequireSquadLeader = false,
         RequireSquad = false,
-        ClassList = new EClass[] { EClass.PILOT },
+        ClassList = new Class[] { Class.Pilot },
         ClassListIsBlacklist = false,
         Icon = "£",
         Cooldown = 900,
         EffectDuration = 600,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 7 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 7 } },
         EffectDistributedToSquad = false,
         Data = "0.2"
     };
@@ -34,7 +34,7 @@ public class Superheated : Buff
     {
         if (onStart)
         {
-            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
+            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.AdminLocale, out _multiplier))
                 _multiplier = 0.2f;
 
             _squadMultiplier = Data.EffectDistributedToSquad
@@ -86,6 +86,6 @@ public class Superheated : Buff
             }
         }
 
-        return max == -1f ? 1f : (1 + max);
+        return max < 0f ? 1f : (1 + max);
     }
 }

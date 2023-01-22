@@ -8,15 +8,13 @@ public interface IRevives : IGamemode
 {
     Revives.ReviveManager ReviveManager { get; }
 }
-public interface IVehicles : IStructureSaving, IGamemode
+public interface IVehicles : IStructureSaving
 {
     Vehicles.VehicleBay VehicleBay { get; }
     Vehicles.VehicleSpawner VehicleSpawner { get; }
-    Vehicles.VehicleSigns VehicleSigns { get; }
 }
 public interface IKitRequests : IGamemode
 {
-    Kits.RequestSigns RequestSigns { get; }
     Kits.KitManager KitManager { get; }
 }
 public interface ISquads : ITeams
@@ -39,7 +37,7 @@ public interface ITickets : IGamemode
 }
 public interface IGameStats : IGamemode
 {
-    object GameStats { get; }
+    IStatTracker GameStats { get; }
 }
 public interface IFlagRotation : IGamemode
 {

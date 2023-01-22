@@ -14,10 +14,10 @@ public partial class Conquest
     {
         int amt = Config.ConquestPointCount;
 
-        if (_rotation is null)
-            _rotation = new List<Flag>(amt);
+        if (FlagRotation is null)
+            FlagRotation = new List<Flag>(amt);
         else
-            _rotation.Clear();
+            FlagRotation.Clear();
 
         if (amt < 3 || amt % 2 == 0)
             throw new InvalidOperationException(
@@ -30,20 +30,20 @@ public partial class Conquest
         do
         {
             int id = ObjectivePathing.PickWeightedAdjacency(adj1);
-            flag = _allFlags.FirstOrDefault(x => x.ID == id);
+            flag = AllFlags.FirstOrDefault(x => x.ID == id);
         }
         while (flag is null && ++ct < adj1.Length);
 
         if (flag is null)
             throw new InvalidOperationException("No valid adjacencies on team 1.");
         --amt;
-        _rotation.Add(flag);
+        FlagRotation.Add(flag);
         AdjacentFlagData[] adj2 = TeamManager.Team2Main.Data.Adjacencies;
         ct = 0;
         do
         {
             int id = ObjectivePathing.PickWeightedAdjacency(adj2);
-            flag = _allFlags.FirstOrDefault(x => x.ID == id);
+            flag = AllFlags.FirstOrDefault(x => x.ID == id);
         }
         while (flag is null && ++ct < adj2.Length);
 
@@ -53,35 +53,35 @@ public partial class Conquest
         Flag? l2Flag = null;
         if (amt > 1)
         {
-            Flag[] l2 = _allFlags.OrderBy(x => Vector2.Distance(x.Position2D, TeamManager.Team1Main.Center)).Where(x =>
+            Flag[] l2 = AllFlags.OrderBy(x => Vector2.Distance(x.Position2D, TeamManager.Team1Main.Center)).Where(x =>
             {
-                if (x == flag || x == _rotation[0]) return false;
+                if (x == flag || x == FlagRotation[0]) return false;
                 for (int i = 0; i < adj1.Length; ++i)
                 {
                     ref AdjacentFlagData d = ref adj1[i];
-                    if (d.flag_id == x.ID)
+                    if (d.PrimaryKey.Key == x.ID)
                         return false;
                 }
                 return true;
-            }).Take(Math.Max(3, _allFlags.Count / 3)).ToArray();
+            }).Take(Math.Max(3, AllFlags.Count / 3)).ToArray();
 
             if (l2.Length > 0)
             {
                 --amt;
                 l2Flag = l2[Random.Range(0, l2.Length)];
-                _rotation.Add(l2Flag);
+                FlagRotation.Add(l2Flag);
             }
-            l2 = _allFlags.OrderBy(x => Vector2.Distance(x.Position2D, TeamManager.Team2Main.Center)).Where(x =>
+            l2 = AllFlags.OrderBy(x => Vector2.Distance(x.Position2D, TeamManager.Team2Main.Center)).Where(x =>
             {
-                if (x == flag || x == l2Flag || x == _rotation[0]) return false;
+                if (x == flag || x == l2Flag || x == FlagRotation[0]) return false;
                 for (int i = 0; i < adj2.Length; ++i)
                 {
                     ref AdjacentFlagData d = ref adj2[i];
-                    if (d.flag_id == x.ID)
+                    if (d.PrimaryKey.Key == x.ID)
                         return false;
                 }
                 return true;
-            }).Take(Math.Max(3, _allFlags.Count / 3)).ToArray();
+            }).Take(Math.Max(3, AllFlags.Count / 3)).ToArray();
             if (l2.Length > 0)
             {
                 --amt;
@@ -91,7 +91,7 @@ public partial class Conquest
         }
 
         // gets the flags in the center of the map.
-        Flag?[] f = _allFlags.OrderBy(x => Vector2.Distance(x.Position2D, Vector2.zero)).Take(Math.Max(Math.Max(amt, 5), _allFlags.Count / 2)).ToArray();
+        Flag?[] f = AllFlags.OrderBy(x => Vector2.Distance(x.Position2D, Vector2.zero)).Take(Math.Max(Math.Max(amt, 5), AllFlags.Count / 2)).ToArray();
 
         if (f.Length <= amt)
         {
@@ -102,9 +102,9 @@ public partial class Conquest
         for (int i = 0; i < f.Length; ++i)
         {
             Flag? fl = f[i];
-            if (fl == l2Flag || fl == flag || fl == _rotation[0] || (_rotation.Count > 1 && fl == _rotation[1])) fl = null;
-            for (int j = 0; j < _rotation.Count; ++j)
-                if (_rotation[j] == fl)
+            if (fl == l2Flag || fl == flag || fl == FlagRotation[0] || (FlagRotation.Count > 1 && fl == FlagRotation[1])) fl = null;
+            for (int j = 0; j < FlagRotation.Count; ++j)
+                if (FlagRotation[j] == fl)
                     goto br;
 
             continue;
@@ -125,23 +125,23 @@ public partial class Conquest
             } while (f2 is null && ++ct < f.Length);
             if (f2 is not null)
             {
-                _rotation.Add(f2);
+                FlagRotation.Add(f2);
             }
         }
 
         if (l2Flag is not null)
         {
-            _rotation.Add(l2Flag);
+            FlagRotation.Add(l2Flag);
         }
-        _rotation.Add(flag);
+        FlagRotation.Add(flag);
 
-        if (_rotation.Count % 2 == 0)
-            _rotation.RemoveAt(_rotation.Count / 2);
+        if (FlagRotation.Count % 2 == 0)
+            FlagRotation.RemoveAt(FlagRotation.Count / 2);
 
-        for (int i = 0; i < _rotation.Count; ++i)
+        for (int i = 0; i < FlagRotation.Count; ++i)
         {
-            Flag flag1 = _rotation[i];
-            flag1.index = i;
+            Flag flag1 = FlagRotation[i];
+            flag1.Index = i;
             InitFlag(flag1);
         }
     }

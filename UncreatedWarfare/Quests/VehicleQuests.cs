@@ -7,12 +7,12 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Quests.Types;
 
-[QuestData(EQuestType.DESTROY_VEHICLES)]
+[QuestData(Quests.QuestType.DestroyVehicles)]
 public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, DestroyVehiclesQuest.State, DestroyVehiclesQuest>
 {
     public DynamicIntegerValue VehicleCount;
-    public DynamicEnumValue<EVehicleType> VehicleType = new DynamicEnumValue<EVehicleType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
-    public DynamicAssetValue<VehicleAsset> VehicleIDs = new DynamicAssetValue<VehicleAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
+    public DynamicEnumValue<VehicleType> VehicleType = new DynamicEnumValue<VehicleType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
+    public DynamicAssetValue<VehicleAsset> VehicleIDs = new DynamicAssetValue<VehicleAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -25,18 +25,18 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
         else if (propertyname.Equals("vehicle_type", StringComparison.Ordinal))
         {
             if (!reader.TryReadEnumValue(out VehicleType))
-                VehicleType = new DynamicEnumValue<EVehicleType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+                VehicleType = new DynamicEnumValue<VehicleType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
         }
         else if (propertyname.Equals("vehicle_count", StringComparison.Ordinal))
         {
             if (!reader.TryReadAssetValue(out VehicleIDs))
-                VehicleIDs = new DynamicAssetValue<VehicleAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
+                VehicleIDs = new DynamicAssetValue<VehicleAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
         }
     }
     public struct State : IQuestState<Tracker, DestroyVehiclesQuest>
     {
         public IDynamicValue<int>.IChoice VehicleCount;
-        internal DynamicEnumValue<EVehicleType>.Choice VehicleType;
+        internal DynamicEnumValue<VehicleType>.Choice VehicleType;
         public DynamicAssetValue<VehicleAsset>.Choice VehicleIDs;
         public IDynamicValue<int>.IChoice FlagValue => VehicleCount;
         public bool IsEligable(UCPlayer player) => true;
@@ -51,7 +51,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
             if (prop.Equals("vehicle_count", StringComparison.Ordinal))
                 VehicleCount = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("vehicle_type", StringComparison.Ordinal))
-                VehicleType = DynamicEnumValue<EVehicleType>.ReadChoiceIntl(ref reader);
+                VehicleType = DynamicEnumValue<VehicleType>.ReadChoiceIntl(ref reader);
             else if (prop.Equals("vehicle_ids", StringComparison.Ordinal))
                 VehicleIDs = DynamicAssetValue<VehicleAsset>.ReadChoice(ref reader);
         }
@@ -65,7 +65,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
     public class Tracker : BaseQuestTracker, INotifyVehicleDestroyed
     {
         private readonly int VehicleCount;
-        internal readonly DynamicEnumValue<EVehicleType>.Choice VehicleType;
+        internal readonly DynamicEnumValue<VehicleType>.Choice VehicleType;
         private readonly DynamicAssetValue<VehicleAsset>.Choice VehicleIDs;
         private readonly string translationCache1;
         private readonly string translationCache2;
@@ -127,7 +127,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
         }
         protected override string Translate(bool forAsset)
         {
-            if (VehicleIDs.Behavior == EChoiceBehavior.ALLOW_ALL && VehicleIDs.ValueType == EDynamicValueType.ANY)
+            if (VehicleIDs.Behavior == ChoiceBehavior.Inclusive && VehicleIDs.ValueType == DynamicValueType.Wildcard)
                 return QuestData!.Translate(forAsset, _player, _vehDest, VehicleCount, translationCache1);
             else
                 return QuestData!.Translate(forAsset, _player, _vehDest, VehicleCount, translationCache2);
@@ -140,12 +140,12 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
     }
 }
 
-[QuestData(EQuestType.DRIVE_DISTANCE)]
+[QuestData(Quests.QuestType.DriveDistance)]
 public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, DriveDistanceQuest.State, DriveDistanceQuest>
 {
     public DynamicIntegerValue Amount;
-    public DynamicAssetValue<VehicleAsset> Vehicles = new DynamicAssetValue<VehicleAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
-    public DynamicEnumValue<EVehicleType> VehicleType = new DynamicEnumValue<EVehicleType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+    public DynamicAssetValue<VehicleAsset> Vehicles = new DynamicAssetValue<VehicleAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
+    public DynamicEnumValue<VehicleType> VehicleType = new DynamicEnumValue<VehicleType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -158,18 +158,18 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
         else if (propertyname.Equals("vehicle_type", StringComparison.Ordinal))
         {
             if (!reader.TryReadEnumValue(out VehicleType))
-                VehicleType = new DynamicEnumValue<EVehicleType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+                VehicleType = new DynamicEnumValue<VehicleType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
         }
         else if (propertyname.Equals("vehicle_ids", StringComparison.Ordinal))
         {
             if (!reader.TryReadAssetValue(out Vehicles))
-                Vehicles = new DynamicAssetValue<VehicleAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
+                Vehicles = new DynamicAssetValue<VehicleAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
         }
     }
     public struct State : IQuestState<Tracker, DriveDistanceQuest>
     {
         public IDynamicValue<int>.IChoice Amount;
-        internal DynamicEnumValue<EVehicleType>.Choice VehicleTypes;
+        internal DynamicEnumValue<VehicleType>.Choice VehicleTypes;
         public DynamicAssetValue<VehicleAsset>.Choice Vehicles;
         public IDynamicValue<int>.IChoice FlagValue => Amount;
         public bool IsEligable(UCPlayer player) => true;
@@ -184,7 +184,7 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
             if (prop.Equals("distance", StringComparison.Ordinal))
                 Amount = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("vehicle_type", StringComparison.Ordinal))
-                VehicleTypes = DynamicEnumValue<EVehicleType>.ReadChoiceIntl(ref reader);
+                VehicleTypes = DynamicEnumValue<VehicleType>.ReadChoiceIntl(ref reader);
             else if (prop.Equals("vehicle_ids", StringComparison.Ordinal))
                 Vehicles = DynamicAssetValue<VehicleAsset>.ReadChoice(ref reader);
         }
@@ -199,7 +199,7 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
     {
         private readonly float Distance = 0;
         private readonly DynamicAssetValue<VehicleAsset>.Choice Vehicles;
-        private readonly DynamicEnumValue<EVehicleType>.Choice VehicleType;
+        private readonly DynamicEnumValue<VehicleType>.Choice VehicleType;
         private readonly string translationCache1;
         private readonly string translationCache2;
         private float _travelled;
@@ -225,19 +225,19 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
         }
 
         private uint lastInstID = 0;
-        private EVehicleType lastType;
+        private VehicleType lastType;
         public void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, Components.VehicleComponent vehicle)
         {
             if (_player.Steam64 == lastDriver && Vehicles.IsMatch(vehicle.Vehicle.asset.GUID))
             {
-                if (!(VehicleType.ValueType != EDynamicValueType.ANY && VehicleType.Behavior != EChoiceBehavior.ALLOW_ALL) && lastInstID != vehicle.Vehicle.instanceID)
+                if (!(VehicleType.ValueType != DynamicValueType.Wildcard && VehicleType.Behavior != ChoiceBehavior.Inclusive) && lastInstID != vehicle.Vehicle.instanceID)
                 {
                     lastInstID = vehicle.Vehicle.instanceID;
                     VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSync(vehicle.Vehicle.asset.GUID);
                     if (data != null)
                         lastType = data.Type;
                     else
-                        lastType = EVehicleType.NONE;
+                        lastType = Warfare.Vehicles.VehicleType.None;
                 }
                 if (VehicleType.IsMatch(lastType))
                 {
@@ -251,7 +251,7 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
         }
         protected override string Translate(bool forAsset)
         {
-            if (Vehicles.Behavior == EChoiceBehavior.ALLOW_ALL && Vehicles.ValueType == EDynamicValueType.ANY)
+            if (Vehicles.Behavior == ChoiceBehavior.Inclusive && Vehicles.ValueType == DynamicValueType.Wildcard)
                 return QuestData!.Translate(forAsset, _player, _travelled, Distance, translationCache1);
             else
                 return QuestData!.Translate(forAsset, _player, _travelled, Distance, translationCache2);
@@ -263,12 +263,12 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
         }
     }
 }
-[QuestData(EQuestType.TRANSPORT_PLAYERS)]
+[QuestData(Quests.QuestType.TransportPlayers)]
 public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker, TransportPlayersQuest.State, TransportPlayersQuest>
 {
     public DynamicIntegerValue Amount;
-    public DynamicAssetValue<VehicleAsset> Vehicles = new DynamicAssetValue<VehicleAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
-    public DynamicEnumValue<EVehicleType> VehicleType = new DynamicEnumValue<EVehicleType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+    public DynamicAssetValue<VehicleAsset> Vehicles = new DynamicAssetValue<VehicleAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
+    public DynamicEnumValue<VehicleType> VehicleType = new DynamicEnumValue<VehicleType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -281,19 +281,19 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
         else if (propertyname.Equals("vehicle_type", StringComparison.Ordinal))
         {
             if (!reader.TryReadEnumValue(out VehicleType))
-                VehicleType = new DynamicEnumValue<EVehicleType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+                VehicleType = new DynamicEnumValue<VehicleType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
         }
         else if (propertyname.Equals("vehicle_ids", StringComparison.Ordinal))
         {
             if (!reader.TryReadAssetValue(out Vehicles))
-                Vehicles = new DynamicAssetValue<VehicleAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
+                Vehicles = new DynamicAssetValue<VehicleAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
         }
     }
     public struct State : IQuestState<Tracker, TransportPlayersQuest>
     {
         public IDynamicValue<int>.IChoice Amount;
         public DynamicAssetValue<VehicleAsset>.Choice Vehicles;
-        public IDynamicValue<EVehicleType>.IChoice VehicleTypes;
+        public IDynamicValue<VehicleType>.IChoice VehicleTypes;
         public IDynamicValue<int>.IChoice FlagValue => Amount;
         public bool IsEligable(UCPlayer player) => true;
         public void Init(TransportPlayersQuest data)
@@ -307,7 +307,7 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
             if (prop.Equals("distance", StringComparison.Ordinal))
                 Amount = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("vehicle_type", StringComparison.Ordinal))
-                VehicleTypes = DynamicEnumValue<EVehicleType>.ReadChoice(ref reader);
+                VehicleTypes = DynamicEnumValue<VehicleType>.ReadChoice(ref reader);
             else if (prop.Equals("vehicle_ids", StringComparison.Ordinal))
                 Vehicles = DynamicAssetValue<VehicleAsset>.ReadChoice(ref reader);
         }
@@ -322,7 +322,7 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
     {
         private readonly float Distance = 0;
         private readonly DynamicAssetValue<VehicleAsset>.Choice Vehicles;
-        private readonly IDynamicValue<EVehicleType>.IChoice VehicleType;
+        private readonly IDynamicValue<VehicleType>.IChoice VehicleType;
         private float _travelled;
         protected override bool CompletedCheck => _travelled >= Distance;
         public override short FlagValue => (short)_travelled;
@@ -344,19 +344,19 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
         }
 
         private uint lastInstID;
-        private EVehicleType lastType;
+        private VehicleType lastType;
         public void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, Components.VehicleComponent vehicle)
         {
             if (_player.Steam64 == lastDriver && Vehicles.IsMatch(vehicle.Vehicle.asset.GUID))
             {
-                if (!(VehicleType.ValueType != EDynamicValueType.ANY && VehicleType.Behavior != EChoiceBehavior.ALLOW_ALL) && lastInstID != vehicle.Vehicle.instanceID)
+                if (!(VehicleType.ValueType != DynamicValueType.Wildcard && VehicleType.Behavior != ChoiceBehavior.Inclusive) && lastInstID != vehicle.Vehicle.instanceID)
                 {
                     lastInstID = vehicle.Vehicle.instanceID;
                     VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSync(vehicle.Vehicle.asset.GUID);
                     if (data != null)
                         lastType = data.Type;
                     else
-                        lastType = EVehicleType.NONE;
+                        lastType = Warfare.Vehicles.VehicleType.None;
                 }
                 if (VehicleType.IsMatch(lastType))
                 {

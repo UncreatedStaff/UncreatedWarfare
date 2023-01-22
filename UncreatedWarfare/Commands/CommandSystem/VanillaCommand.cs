@@ -10,10 +10,13 @@ public sealed class VanillaCommand : IExecutableCommand, IComparable<VanillaComm
 {
     private readonly SDG.Unturned.Command _cmd;
     private readonly EAdminType _allowedUsers;
+    SemaphoreSlim? IExecutableCommand.Semaphore { get; set; }
     string IExecutableCommand.CommandName => _cmd.command;
     EAdminType IExecutableCommand.AllowedPermissions => _allowedUsers;
+    bool IExecutableCommand.ExecuteAsynchronously => false;
     int IExecutableCommand.Priority => 0;
     IReadOnlyList<string>? IExecutableCommand.Aliases => null;
+    bool IExecutableCommand.Synchronize => false;
     public VanillaCommand(SDG.Unturned.Command cmd)
     {
         _cmd = cmd;
@@ -26,16 +29,12 @@ public sealed class VanillaCommand : IExecutableCommand, IComparable<VanillaComm
 
         return ctx.Caller.PermissionCheck(_allowedUsers, PermissionComparison.AtLeast);
     }
-    Task IExecutableCommand.Execute(CommandInteraction interaction, CancellationToken token)
+
+    void IExecutableCommand.Execute(CommandInteraction interaction)
     {
-#if DEBUG
-        ThreadUtil.assertIsGameThread();
-#endif
-        if (token.IsCancellationRequested)
-            return Task.FromCanceled(token);
         _cmd.check(interaction.CallerCSteamID, _cmd.command, string.Join("/", interaction.Parameters));
-        return Task.CompletedTask;
     }
+    Task IExecutableCommand.Execute(CommandInteraction interaction, CancellationToken token) => throw new NotImplementedException();
     CommandInteraction IExecutableCommand.SetupCommand(UCPlayer? caller, string[] args, string message, bool keepSlash)
     {
         if (!keepSlash && args.Length > 0)

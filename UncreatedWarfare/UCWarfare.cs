@@ -5,8 +5,11 @@ using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Networking;
@@ -42,8 +45,9 @@ public delegate void VoidDelegate();
 public class UCWarfare : MonoBehaviour
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
-    public static readonly Version Version = new Version(2, 7, 1, 1);
+    public static readonly Version Version = new Version(3, 0, 0, 0);
     private readonly SystemConfig _config = new SystemConfig();
+    private readonly List<UCTask> _tasks = new List<UCTask>(16);
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
     public Coroutine? StatsRoutine;
@@ -55,6 +59,12 @@ public class UCWarfare : MonoBehaviour
     public HomebaseClientComponent? NetClient;
     public bool CoroutineTiming = false;
     private DateTime _nextRestartTime;
+    internal volatile bool ProcessTasks = true;
+    private Task? _earlyLoadTask;
+    private readonly CancellationTokenSource _unloadCancellationTokenSource = new CancellationTokenSource();
+    public readonly SemaphoreSlim PlayerJoinLock = new SemaphoreSlim(0, 1);
+    public bool FullyLoaded { get; private set; }
+    public static CancellationToken UnloadCancel => IsLoaded ? I._unloadCancellationTokenSource.Token : CancellationToken.None;
     public static int Season => Version.Major;
     public static bool IsLoaded => I is not null;
     public static SystemConfigData Config => I is null ? throw new SingletonUnloadedException(typeof(UCWarfare)) : I._config.Data;
@@ -62,19 +72,32 @@ public class UCWarfare : MonoBehaviour
     [UsedImplicitly]
     private void Awake()
     {
-        if (I != null) throw new SingletonLoadException(ESingletonLoadType.LOAD, null, new Exception("Uncreated Warfare is already loaded."));
+        if (I != null) throw new SingletonLoadException(SingletonLoadType.Load, null, new Exception("Uncreated Warfare is already loaded."));
         I = this;
+        FullyLoaded = false;
     }
     [UsedImplicitly]
-    private void Start() => EarlyLoad();
-    private void EarlyLoad()
+    private void Start() => _earlyLoadTask = Task.Run( async () =>
+    {
+        try
+        {
+            await ToUpdate();
+            await EarlyLoad(UnloadCancel).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Error in early load!");
+            L.LogError(ex);
+            Provider.shutdown();
+        }
+    });
+    private async Task EarlyLoad(CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         L.Log("Started loading - Uncreated Warfare version " + Version + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
               "Please stop using this plugin now.", ConsoleColor.Green);
-
         /* INITIALIZE UNCREATED NETWORKING */
         Logging.OnLogInfo += L.NetLogInfo;
         Logging.OnLogWarning += L.NetLogWarning;
@@ -84,6 +107,8 @@ public class UCWarfare : MonoBehaviour
         NetFactory.Reflect(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
 
         L.Log("Registering Commands: ", ConsoleColor.Magenta);
+
+        TeamManager.SetupConfig();
 
         OffenseManager.Init();
 
@@ -100,8 +125,10 @@ public class UCWarfare : MonoBehaviour
         StartCoroutine(RestartIn(seconds));
 
         new PermissionSaver();
-
-        TeamManager.SetupConfig();
+        await Data.LoadSQL(token).ConfigureAwait(false);
+        await ItemIconProvider.DownloadConfig(token).ConfigureAwait(false);
+        await TeamManager.ReloadFactions(token).ConfigureAwait(false);
+        await ToUpdate(token);
 
         /* LOAD LOCALIZATION ASSETS */
         L.Log("Loading Localization and Color Data...", ConsoleColor.Magenta);
@@ -131,10 +158,9 @@ public class UCWarfare : MonoBehaviour
 
         if (Config.EnableSync)
             gameObject.AddComponent<ConfigSync>();
-        gameObject.AddComponent<ActionLogger>();
+        gameObject.AddComponent<ActionLog>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
-
 
         if (Config.EnableSync)
             ConfigSync.Reflect();
@@ -146,9 +172,8 @@ public class UCWarfare : MonoBehaviour
         if (!Config.DisableDailyQuests)
             Quests.DailyQuests.EarlyLoad();
 
-        ActionLogger.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.Locale)}");
+        ActionLog.Add(ActionLogType.ServerStartup, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
     }
-
     internal void InitNetClient()
     {
         if (NetClient != null)
@@ -168,14 +193,19 @@ public class UCWarfare : MonoBehaviour
             NetClient.Init(Config.TCPSettings.TCPServerIP, Config.TCPSettings.TCPServerPort, Config.TCPSettings.TCPServerIdentity);
         }
     }
-
     private void OnVerifyPacketMade(ref VerifyPacket packet)
     {
         packet = new VerifyPacket(packet.Identity, packet.SecretKey, packet.ApiVersion, packet.TimezoneOffset, Config.Currency, Config.RegionKey, Version);
     }
-    public async Task LoadAsync()
+    public async Task LoadAsync(CancellationToken token)
     {
-        await ToUpdate();
+        if (_earlyLoadTask != null && !_earlyLoadTask.IsCompleted)
+        {
+            await _earlyLoadTask.ConfigureAwait(false);
+            await ToUpdate(token);
+            _earlyLoadTask = null;
+        }
+        else await ToUpdate(token);
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -186,15 +216,15 @@ public class UCWarfare : MonoBehaviour
         try
         {
             /* DATA CONSTRUCTION */
-            await Data.LoadVariables();
+            await Data.LoadVariables(token);
         }
         catch (Exception ex)
         {
             L.LogError("Startup error");
             L.LogError(ex);
-            throw new SingletonLoadException(ESingletonLoadType.LOAD, null, ex);
+            throw new SingletonLoadException(SingletonLoadType.Load, null, ex);
         }
-        await ToUpdate();
+        await ToUpdate(token);
 
         /* START STATS COROUTINE */
         StatsRoutine = StartCoroutine(StatsCoroutine.StatsRoutine());
@@ -207,20 +237,17 @@ public class UCWarfare : MonoBehaviour
         F.CheckDir(Data.Paths.VehicleStorage, out _, true);
         ZonePlayerComponent.UIInit();
 
-        Data.ZoneProvider.Reload();
-        Data.ZoneProvider.Save();
-
         Solver = gameObject.AddComponent<Projectiles.ProjectileSolver>();
 
-        Announcer = await Data.Singletons.LoadSingletonAsync<UCAnnouncer>();
-        await ToUpdate();
+        Announcer = await Data.Singletons.LoadSingletonAsync<UCAnnouncer>(token: token);
+        await ToUpdate(token);
 
         Data.ExtraPoints = JSONMethods.LoadExtraPoints();
         //L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
         if (Data.Gamemode != null)
         {
-            await Data.Gamemode.OnLevelReady();
-            await ToUpdate();
+            await Data.Gamemode.OnLevelReady(token).ConfigureAwait(false);
+            await ToUpdate(token);
         }
 
 #if DEBUG
@@ -244,7 +271,15 @@ public class UCWarfare : MonoBehaviour
         Provider.modeConfigData.Barricades.Decay_Time = 0;
         Provider.modeConfigData.Structures.Decay_Time = 0;
 
+        if (!Level.info.configData.Has_Global_Electricity)
+        {
+            L.LogWarning("Level does not have global electricity enabled, electrical grid effects will not work!");
+            Data.UseElectricalGrid = false;
+        }
+
         UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
+        FullyLoaded = true;
+        PlayerJoinLock.Release();
     }
     private IEnumerator<WaitForSecondsRealtime> RestartIn(float seconds)
     {
@@ -355,19 +390,7 @@ public class UCWarfare : MonoBehaviour
         player.OnLanguageChanged();
         EventDispatcher.InvokeUIRefreshRequest(player);
         UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
-        foreach (BarricadeRegion region in BarricadeManager.regions)
-        {
-            foreach (BarricadeDrop drop in region.drops)
-            {
-                if (drop.interactable is InteractableSign sign)
-                {
-                    if (VehicleSpawner.Loaded && VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn))
-                        spawn.UpdateSign(player);
-                    else if (sign.text.StartsWith(Signs.PREFIX))
-                        Signs.BroadcastSignUpdate(drop);
-                }
-            }
-        }
+        Signs.UpdateAllSigns(ucplayer);
         if (ucplayer == null) return;
         if (Data.Is<TeamCTF>(out _))
         {
@@ -414,9 +437,224 @@ public class UCWarfare : MonoBehaviour
     private static Queue<LevelLoadTask.LevelLoadResult>? _levelLoadRequests;
     internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests => _threadActionRequests ??= new Queue<MainThreadTask.MainThreadResult>(4);
     internal static Queue<LevelLoadTask.LevelLoadResult> LevelLoadRequests => _levelLoadRequests ??= new Queue<LevelLoadTask.LevelLoadResult>(4);
-    public static MainThreadTask ToUpdate(CancellationToken token = default) => new MainThreadTask(false, token);
-    public static MainThreadTask SkipFrame(CancellationToken token = default) => new MainThreadTask(true, token);
+    public static MainThreadTask ToUpdate(CancellationToken token = default) => IsMainThread ? MainThreadTask.CompletedNoSkip : new MainThreadTask(false, token);
+    public static MainThreadTask SkipFrame(CancellationToken token = default) => IsMainThread ? MainThreadTask.CompletedSkip : new MainThreadTask(true, token);
     public static LevelLoadTask ToLevelLoad(CancellationToken token = default) => new LevelLoadTask(token);
+
+    // 'fire and forget' functions that will report errors once the task completes.
+
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T1, T2, T3>(Func<T1, T2, T3, CancellationToken, Task> task, T1 arg1, T2 arg2, T3 arg3, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    {
+        Task t;
+        try
+        {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
+            t = task(arg1, arg2, arg3, token);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T1, T2, T3>(Func<T1, T2, T3, Task> task, T1 arg1, T2 arg2, T3 arg3, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    {
+        Task t;
+        try
+        {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
+            t = task(arg1, arg2, arg3);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T1, T2>(Func<T1, T2, CancellationToken, Task> task, T1 arg1, T2 arg2, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    {
+        Task t;
+        try
+        {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
+            t = task(arg1, arg2, token);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T1, T2>(Func<T1, T2, Task> task, T1 arg1, T2 arg2, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    {
+        Task t;
+        try
+        {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
+            t = task(arg1, arg2);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T>(Func<T, CancellationToken, Task> task, T arg1, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    {
+        Task t;
+        try
+        {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
+            t = task(arg1, token);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask<T>(Func<T, Task> task, T arg1, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    {
+        Task t;
+        try
+        {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
+            t = task(arg1);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask(Func<CancellationToken, Task> task, CancellationToken token = default, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    {
+        Task t;
+        try
+        {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
+            t = task(default);
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask(Func<Task> task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    {
+        Task t;
+        try
+        {
+            L.LogDebug("Running task " + (ctx ?? member) + ".");
+            t = task();
+            RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
+        }
+        catch (Exception e)
+        {
+            t = Task.FromException(e);
+            if (string.IsNullOrEmpty(ctx))
+                ctx = member;
+            else
+                ctx += " Member: " + member;
+            RegisterErroredTask(t, ctx);
+        }
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    public static void RunTask(Task task, string? ctx = null, [CallerMemberName] string member = "", [CallerFilePath] string fp = "", bool awaitOnUnload = false, int timeout = 180000)
+    {
+        if (!IsLoaded)
+            throw new SingletonUnloadedException(typeof(UCWarfare));
+
+        member = fp + " :: " + member;
+
+        if (string.IsNullOrEmpty(ctx))
+            ctx = member;
+        else
+            ctx += " Member: " + member;
+        if (task.IsCanceled)
+        {
+            L.LogDebug("Task cancelled: \"" + ctx + "\".");
+            return;
+        }
+        if (task.IsFaulted)
+        {
+            RegisterErroredTask(task, ctx);
+            return;
+        }
+        if (task.IsCompleted)
+        {
+            L.LogDebug("Task completed without awaiting: \"" + ctx + "\".");
+            return;
+        }
+        L.LogDebug("Adding task \"" + ctx + "\".");
+        I._tasks.Add(new UCTask(task, ctx, awaitOnUnload
+#if DEBUG
+            , timeout
+#endif
+        ));
+    }
+    private static void RegisterErroredTask(Task task, string? ctx)
+    {
+        AggregateException? ex = task.Exception;
+        if (ex is null)
+        {
+            L.LogError("A registered task has failed without exception!" + (string.IsNullOrEmpty(ctx) ? string.Empty : (" Context: " + ctx)));
+        }
+        else
+        {
+            if (ex.InnerExceptions.All(x => x is OperationCanceledException))
+            {
+                L.LogDebug("A registered task was cancelled." + (string.IsNullOrEmpty(ctx) ? string.Empty : (" Context: " + ctx)));
+                return;
+            }
+            L.LogError("A registered task has failed!" + (string.IsNullOrEmpty(ctx) ? string.Empty : (" Context: " + ctx)));
+            L.LogError(ex);
+        }
+    }
     public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
     public static void RunOnMainThread(System.Action action) => RunOnMainThread(action, false, default);
     public static void RunOnMainThread(System.Action action, CancellationToken token) => RunOnMainThread(action, false, token);
@@ -434,7 +672,7 @@ public class UCWarfare : MonoBehaviour
         }
     }
     /// <summary>Continues to run main thread operations in between spins so that calls to <see cref="ToUpdate"/> are not blocked.</summary>
-    public static bool SpinWaitUntil(Func<bool> condition, int millisecondsTimeout = -1)
+    public static bool SpinWaitUntil(Func<bool> condition, int millisecondsTimeout = -1, CancellationToken token = default)
     {
         if (!IsMainThread)
             return SpinWait.SpinUntil(condition, millisecondsTimeout);
@@ -445,6 +683,8 @@ public class UCWarfare : MonoBehaviour
         SpinWait spinWait = new SpinWait();
         while (!condition())
         {
+            if (token.IsCancellationRequested)
+                throw new OperationCanceledException(token);
             if (millisecondsTimeout == 0)
                 return false;
             spinWait.SpinOnce();
@@ -460,6 +700,45 @@ public class UCWarfare : MonoBehaviour
         ProcessQueues();
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             PlayerManager.OnlinePlayers[i].Update();
+        if (ProcessTasks)
+        {
+#if DEBUG
+            DateTime now = _tasks.Count > 0 ? DateTime.UtcNow : default;
+#endif
+            for (int i = _tasks.Count - 1; i >= 0; --i)
+            {
+                UCTask task = _tasks[i];
+#if DEBUG
+                double sec = (now - task.StartTime).TotalSeconds;
+#endif
+                if (!task.Task.IsCompleted)
+                {
+#if DEBUG
+                    if (task.TimeoutMs >= 0 && sec > task.TimeoutMs)
+                    {
+                        L.LogDebug($"Task not completed after a long time ({sec} seconds)." + (string.IsNullOrEmpty(task.Context) ? string.Empty : (" Context: " + task.Context)));
+                    }
+#endif
+                    continue;
+                }
+                if (task.Task.IsCanceled)
+                {
+                    L.LogDebug("Task cancelled." + (string.IsNullOrEmpty(task.Context) ? string.Empty : (" Context: " + task.Context)));
+                }
+                else if (task.Task.IsFaulted)
+                {
+                    RegisterErroredTask(task.Task, task.Context);
+                }
+                if (task.Task.IsCompleted)
+                {
+                    _tasks.RemoveAtFast(i);
+#if DEBUG
+                    L.LogDebug("Task complete in " + sec.ToString("0.#", Data.AdminLocale) + " seconds." + (string.IsNullOrEmpty(task.Context) ? string.Empty : (" Context: " + task.Context)));
+#endif
+                    return;
+                }
+            }
+        }
     }
     private static void ProcessQueues()
     {
@@ -472,7 +751,7 @@ public class UCWarfare : MonoBehaviour
                 {
                     res = _threadActionRequests.Dequeue();
                     res.Task.Token.ThrowIfCancellationRequested();
-                    res.continuation();
+                    res.Continuation();
                 }
                 catch (OperationCanceledException) { L.LogDebug("Execution on update cancelled."); }
                 catch (Exception ex)
@@ -516,35 +795,71 @@ public class UCWarfare : MonoBehaviour
         Nexus.UnloadNow();
         throw new SingletonUnloadedException(typeof(UCWarfare));
     }
-    public async Task UnloadAsync()
+    internal async Task LetTasksUnload(CancellationToken token)
+    {
+        while (_tasks.Count > 0)
+        {
+            UCTask task = _tasks[0];
+            if (task.AwaitOnUnload && !task.Task.IsCompleted)
+            {
+                L.LogDebug("Letting task \"" + (task.Context ?? "null") + "\" finish for up to 10 seconds before unloading...");
+                try
+                {
+                    await Task.WhenAny(task.Task, Task.Delay(10000, token));
+                }
+                catch
+                {
+                    RegisterErroredTask(task.Task, task.Context);
+                    continue;
+                }
+                if (!task.Task.IsCompleted)
+                {
+                    L.LogWarning("Task \"" + (task.Context ?? "null") + "\" did not complete after 10 seconds of waiting.");
+                }
+                else L.LogDebug("  ... Done");
+            }
+            _tasks.RemoveAt(0);
+        }
+    }
+
+    public async Task UnloadAsync(CancellationToken token)
     {
         ThreadUtil.assertIsGameThread();
 #if DEBUG
         IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        FullyLoaded = false;
         try
         {
+            ProcessTasks = false;
             if (StatsRoutine != null)
             {
                 StopCoroutine(StatsRoutine);
                 StatsRoutine = null;
             }
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
+
             L.Log("Unloading Uncreated Warfare", ConsoleColor.Magenta);
+            await LetTasksUnload(token).ConfigureAwait(false);
             if (Data.Singletons is not null)
             {
-                await Data.Singletons.UnloadSingletonAsync(Data.DeathTracker, false);
+                await Data.Singletons.UnloadSingletonAsync(Data.DeathTracker, false, token: token);
                 Data.DeathTracker = null!;
-                await Data.Singletons.UnloadSingletonAsync(Data.Gamemode);
-                Data.Gamemode = null!;
                 if (Announcer != null)
                 {
-                    await Data.Singletons.UnloadSingletonAsync(Announcer);
+                    await Data.Singletons.UnloadSingletonAsync(Announcer, token: token);
                     Announcer = null!;
                 }
-
-                await ToUpdate();
+                if (Data.Gamemode != null)
+                {
+                    Data.Gamemode.IsPendingCancel = true;
+                    await Data.Singletons.UnloadSingletonAsync(Data.Gamemode, token: token);
+                    Data.Gamemode = null!;
+                }
             }
+
+            await LetTasksUnload(token).ConfigureAwait(false);
+            await ToUpdate(token);
 
             ThreadUtil.assertIsGameThread();
             if (Solver != null)
@@ -564,15 +879,28 @@ public class UCWarfare : MonoBehaviour
             {
                 try
                 {
-                    await Data.DatabaseManager.CloseAsync();
+                    await Data.DatabaseManager.CloseAsync(token);
                     Data.DatabaseManager.Dispose();
                 }
                 finally
                 {
                     Data.DatabaseManager = null!;
                 }
-                await ToUpdate();
             }
+            if (Data.RemoteSQL != null)
+            {
+                try
+                {
+                    await Data.RemoteSQL.CloseAsync(token);
+                    Data.RemoteSQL.Dispose();
+                }
+                finally
+                {
+                    Data.RemoteSQL = null!;
+                }
+            }
+            await LetTasksUnload(token).ConfigureAwait(false);
+            await ToUpdate(token);
             ThreadUtil.assertIsGameThread();
             L.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
@@ -601,7 +929,7 @@ public class UCWarfare : MonoBehaviour
             }
             for (int i = 0; i < StatsManager.OnlinePlayers.Count; i++)
             {
-                WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.Locale) + ".dat");
+                WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.AdminLocale) + ".dat");
             }
         }
         catch (Exception ex)
@@ -609,10 +937,11 @@ public class UCWarfare : MonoBehaviour
             L.LogError("Error unloading: ");
             L.LogError(ex);
         }
+
         if (Data.Singletons != null)
         {
-            await Data.Singletons.UnloadAllAsync();
-            await ToUpdate();
+            await Data.Singletons.UnloadAllAsync(token);
+            await ToUpdate(token);
             ThreadUtil.assertIsGameThread();
         }
         L.Log("Warfare unload complete", ConsoleColor.Blue);
@@ -620,7 +949,7 @@ public class UCWarfare : MonoBehaviour
         profiler.Dispose();
         F.SaveProfilingData();
 #endif
-        await Task.Delay(1000);
+        await Task.Delay(1000, token);
     }
     public static Color GetColor(string key)
     {
@@ -636,7 +965,6 @@ public class UCWarfare : MonoBehaviour
         else if (Data.ColorsHex.TryGetValue("default", out color)) return color;
         else return @"ffffff";
     }
-
     public static void ShutdownIn(string reason, ulong instigator, int seconds)
     {
         I.StartCoroutine(ShutdownIn2(reason, instigator, seconds));
@@ -646,9 +974,11 @@ public class UCWarfare : MonoBehaviour
         for (int i = 0; i < Provider.clients.Count; ++i)
             Provider.kick(Provider.clients[i].playerID.steamID, "Intentional Shutdown: " + reason);
 
-        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+        VehicleSpawner? bay = Data.Singletons.GetSingleton<VehicleSpawner>();
         if (bay != null && bay.IsLoaded)
-            bay.AbandonAllVehicles();
+        {
+            bay.AbandonAllVehicles(false);
+        }
 
         if (CanUseNetCall)
         {
@@ -681,6 +1011,30 @@ public class UCWarfare : MonoBehaviour
         yield return new WaitForSeconds(1f);
         ShutdownInAwaitUnload(2, reason);
     }
+    private readonly struct UCTask
+    {
+        public readonly Task Task;
+        public readonly string? Context;
+        public readonly bool AwaitOnUnload;
+#if DEBUG
+        public readonly int TimeoutMs;
+        public readonly DateTime StartTime;
+#endif
+        public UCTask(Task task, string context, bool awaitOnUnload
+#if DEBUG
+            , int timeout
+#endif
+            )
+        {
+            Task = task;
+            Context = context;
+            AwaitOnUnload = awaitOnUnload;
+#if DEBUG
+            TimeoutMs = timeout;
+            StartTime = DateTime.UtcNow;
+#endif
+        }
+    }
 }
 
 public class UCWarfareNexus : IModuleNexus
@@ -690,8 +1044,14 @@ public class UCWarfareNexus : IModuleNexus
     void IModuleNexus.initialize()
     {
         CommandWindow.Log("Initializing UCWarfareNexus...");
-        Thread.Sleep(1000);
-        Data.LoadColoredConsole();
+        try
+        {
+            L.Init();
+        }
+        catch (Exception ex)
+        {
+            Logging.LogException(ex);
+        }
         Level.onPostLevelLoaded += OnLevelLoaded;
         UCWarfare.Nexus = this;
         GameObject go = new GameObject("UCWarfare " + UCWarfare.Version);
@@ -709,8 +1069,8 @@ public class UCWarfareNexus : IModuleNexus
     {
         try
         {
-            await UCWarfare.I.LoadAsync().ConfigureAwait(false);
-            await UCWarfare.ToUpdate();
+            await UCWarfare.I.LoadAsync(UCWarfare.UnloadCancel).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(UCWarfare.UnloadCancel);
             Loaded = true;
         }
         catch (Exception ex)
@@ -723,8 +1083,8 @@ public class UCWarfareNexus : IModuleNexus
             {
                 try
                 {
-                    await UCWarfare.I.UnloadAsync().ConfigureAwait(false);
-                    await UCWarfare.ToUpdate();
+                    await UCWarfare.I.UnloadAsync(CancellationToken.None).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(CancellationToken.None);
                 }
                 catch (Exception e)
                 {
@@ -740,7 +1100,7 @@ public class UCWarfareNexus : IModuleNexus
             if (ex is SingletonLoadException)
                 throw;
             else
-                throw new SingletonLoadException(ESingletonLoadType.LOAD, null, ex);
+                throw new SingletonLoadException(SingletonLoadType.Load, null, ex);
         }
     }
 
@@ -772,8 +1132,8 @@ public class UCWarfareNexus : IModuleNexus
     {
         try
         {
-            await UCWarfare.I.UnloadAsync().ConfigureAwait(false);
-            await UCWarfare.ToUpdate();
+            await UCWarfare.I.UnloadAsync(CancellationToken.None).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(CancellationToken.None);
             if (UCWarfare.I.gameObject != null)
             {
                 UnityEngine.Object.Destroy(UCWarfare.I.gameObject);
@@ -786,7 +1146,7 @@ public class UCWarfareNexus : IModuleNexus
             if (ex is SingletonLoadException)
                 throw;
             else
-                throw new SingletonLoadException(ESingletonLoadType.UNLOAD, null, ex);
+                throw new SingletonLoadException(SingletonLoadType.Unload, null, ex);
         }
     }
     void IModuleNexus.shutdown()
@@ -795,4 +1155,42 @@ public class UCWarfareNexus : IModuleNexus
         if (!UCWarfare.IsLoaded) return;
         Unload().Wait();
     }
+}
+
+[Conditional("DEBUG")]
+[AttributeUsage(AttributeTargets.Method, Inherited = true, AllowMultiple = true)]
+internal sealed class OperationTestAttribute : Attribute
+{
+    public string? DisplayName { get; set; }
+    public float? ArgumentSingle { get; }
+    public double? ArgumentDouble { get; }
+    public decimal? ArgumentDecimal { get; }
+    public long? ArgumentInt64 { get; }
+    public ulong? ArgumentUInt64 { get; }
+    public int? ArgumentInt32 { get; }
+    public uint? ArgumentUInt32 { get; }
+    public short? ArgumentInt16 { get; }
+    public ushort? ArgumentUInt16 { get; }
+    public sbyte? ArgumentInt8 { get; }
+    public byte? ArgumentUInt8 { get; }
+    public bool? ArgumentBoolean { get; }
+    public string? ArgumentString { get; }
+    public Type? ArgumentType { get; }
+    public Type[]? IgnoreExceptions { get; set; }
+    /// <summary>Just run it, check exceptions only.</summary>
+    public OperationTestAttribute() { }
+    public OperationTestAttribute(long arg) { ArgumentInt64 = arg; }
+    public OperationTestAttribute(ulong arg) { ArgumentUInt64 = arg; }
+    public OperationTestAttribute(int arg) { ArgumentInt32 = arg; }
+    public OperationTestAttribute(uint arg) { ArgumentUInt32 = arg; }
+    public OperationTestAttribute(short arg) { ArgumentInt16 = arg; }
+    public OperationTestAttribute(ushort arg) { ArgumentUInt16 = arg; }
+    public OperationTestAttribute(sbyte arg) { ArgumentInt8 = arg; }
+    public OperationTestAttribute(byte arg) { ArgumentUInt8 = arg; }
+    public OperationTestAttribute(bool arg) { ArgumentBoolean = arg; }
+    public OperationTestAttribute(float arg) { ArgumentSingle = arg; }
+    public OperationTestAttribute(double arg) { ArgumentDouble = arg; }
+    public OperationTestAttribute(decimal arg) { ArgumentDecimal = arg; }
+    public OperationTestAttribute(string arg) { ArgumentString = arg; }
+    public OperationTestAttribute(Type arg) { ArgumentType = arg; }
 }

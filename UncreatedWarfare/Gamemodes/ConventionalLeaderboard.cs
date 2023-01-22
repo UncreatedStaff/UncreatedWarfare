@@ -48,7 +48,7 @@ public abstract class ConventionalLeaderboard<Stats, StatTracker> : Leaderboard<
         }
         catch (Exception ex)
         {
-            L.LogError("Error sending " + this.GetType().Name + " to " + player.Steam64.ToString(Data.Locale) + ".");
+            L.LogError("Error sending " + this.GetType().Name + " to " + player.Steam64.ToString(Data.AdminLocale) + ".");
             L.LogError(ex);
         }
     }

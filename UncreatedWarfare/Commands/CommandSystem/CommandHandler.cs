@@ -15,37 +15,52 @@ using UnityEngine;
 namespace Uncreated.Warfare.Commands.CommandSystem;
 public static class CommandHandler
 {
-    public const int MILLISECONDS_COMMAND_MAX_TIMEOUT_AT_GAME_END = 11000;
+    public const int CommandMaxTimeoutAtGameEndMs = 11000;
     private static readonly List<IExecutableCommand> Commands = new List<IExecutableCommand>(8);
     public static readonly IReadOnlyList<IExecutableCommand> RegisteredCommands;
     private static readonly char[] Prefixes = { '/', '@', '\\' };
     private static readonly char[] ContinueArgChars = { '\'', '"', '`', '“', '”', '‘', '’' };
-    private const int MAX_ARG_COUNT = 16;
-    private static readonly ArgumentInfo[] ArgBuffer = new ArgumentInfo[MAX_ARG_COUNT];
+    private const int MaxArgCount = 16;
+    private static readonly ArgumentInfo[] ArgBuffer = new ArgumentInfo[MaxArgCount];
     internal static CancellationTokenSource GlobalCommandCancel = new CancellationTokenSource();
     internal static List<CommandInteraction> ActiveCommands = new List<CommandInteraction>(8);
-    internal static bool TryingToCancel = false;
+    internal static bool TryingToCancel;
     static CommandHandler()
     {
         RegisteredCommands = Commands.AsReadOnly();
         ChatManager.onCheckPermissions += OnChatProcessing;
         CommandWindow.onCommandWindowInputted += OnCommandInput;
     }
-
+    private static readonly List<KeyValuePair<KeyValuePair<UCPlayer?, bool>, string>> PendingMessages = new List<KeyValuePair<KeyValuePair<UCPlayer?, bool>, string>>(32);
     public static async Task LetCommandsFinish()
     {
         TryingToCancel = true;
-        GlobalCommandCancel.CancelAfter(MILLISECONDS_COMMAND_MAX_TIMEOUT_AT_GAME_END);
+        GlobalCommandCancel.CancelAfter(CommandMaxTimeoutAtGameEndMs);
         foreach (CommandInteraction intx in ActiveCommands.ToList())
         {
             if (intx.Task != null && !intx.Task.IsCompleted)
             {
-                await intx.Task.ConfigureAwait(false);
+                try
+                {
+                    await intx.Task.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) { }
             }
         }
 
         GlobalCommandCancel = new CancellationTokenSource();
+        await UCWarfare.ToUpdate(GlobalCommandCancel.Token);
         TryingToCancel = false;
+        for (int i = 0; i < PendingMessages.Count; i++)
+        {
+            KeyValuePair<KeyValuePair<UCPlayer?, bool>, string> msg = PendingMessages[i];
+            if (msg.Key.Key == null || msg.Key.Key.IsOnline)
+            {
+                CheckRunCommand(msg.Key.Key, msg.Value, msg.Key.Value);
+            }
+        }
+
+        PendingMessages.Clear();
     }
     private static void OnChatProcessing(SteamPlayer player, string text, ref bool shouldExecuteCommand, ref bool shouldList)
     {
@@ -63,7 +78,6 @@ public static class CommandHandler
         Commands.Clear();
         RegisterVanillaCommands();
         Type t = typeof(IExecutableCommand);
-        Type v = typeof(VanillaCommand);
         foreach (Type cmdType in Assembly.GetCallingAssembly().GetTypes().Where(x => !x.IsAbstract && !x.IsGenericType && !x.IsSpecialName && !x.IsNested && t.IsAssignableFrom(x)))
         {
             if (cmdType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance).Any(x => x.GetParameters().Length == 0))
@@ -103,7 +117,16 @@ public static class CommandHandler
         }
 
         Commands.Add(cmd);
-    regCmd:
+
+        regCmd:
+        if (cmd.Synchronize)
+        {
+            if (cmd.ExecuteAsynchronously)
+                cmd.Semaphore = new SemaphoreSlim(1, 1);
+            else
+                L.LogWarning("Synchronous commands can not use Semaphores to synchronize access: " + cmd.GetType().FullName + ".");
+        }
+
         if (cmd is VanillaCommand)
             L.Log("Command /" + name.ToLower() + " registered from Unturned.", ConsoleColor.DarkGray);
         else
@@ -125,18 +148,44 @@ public static class CommandHandler
             _ => EAdminType.VANILLA_ADMIN,
         };
     }
+    internal static void OnLog(string message)
+    {
+        ActiveCommands.FindLast(x => x.Command is VanillaCommand)?.ReplyString("<#bfb9ac>" + message + "</color>");
+    }
+    private static void RunCommand(int index, UCPlayer? player, string[] args, string message, bool keepSlash)
+    {
+        IExecutableCommand cmd = Commands[index];
+        CommandInteraction interaction = cmd.SetupCommand(player, args, message, keepSlash);
+        ActiveCommands.Add(interaction);
+        if (cmd.ExecuteAsynchronously)
+        {
+            UCWarfare.RunTask(interaction.ExecuteCommandAsync, ctx: (player == null ? "Console" : player.Steam64.ToString(Data.AdminLocale)) + " executing /" + cmd.CommandName + " with " + args.Length + " args.");
+        }
+        else
+        {
+            interaction.ExecuteCommandSync();
+        }
+    }
+    
+    private static void OnCommandInput(string text, ref bool shouldExecuteCommand)
+    {
+        if (shouldExecuteCommand && CheckRunCommand(null, text, false))
+            shouldExecuteCommand = false;
+    }
+    private struct ArgumentInfo
+    {
+        public int Start;
+        public int End;
+    }
     private static unsafe bool CheckRunCommand(UCPlayer? player, string message, bool requirePrefix)
     {
         ThreadUtil.assertIsGameThread();
         if (TryingToCancel)
         {
-            if (player != null)
-                player.SendChat(T.ErrorCommandCancelled);
-            else
-                L.Log(T.ErrorCommandCancelled.Translate(L.DEFAULT));
+            PendingMessages.Add(new KeyValuePair<KeyValuePair<UCPlayer?, bool>, string>(new KeyValuePair<UCPlayer?, bool>(player, requirePrefix), message));
             return true;
         }
-            
+
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -156,7 +205,7 @@ public static class CommandHandler
                 if (!foundPrefix && requirePrefix)
                 {
                     if (c == ' ') continue;
-                    for (int j = 0; j < ContinueArgChars.Length; ++j)
+                    for (int j = 0; j < Prefixes.Length; ++j)
                     {
                         if (c == Prefixes[j])
                         {
@@ -179,7 +228,7 @@ public static class CommandHandler
                         }
                     }
                     cmdStart = i;
-                    c:
+                c:
                     continue;
                 }
 
@@ -248,9 +297,9 @@ public static class CommandHandler
                             goto c;
                     }
                     goto n;
-                    c:
+                c:
                     continue;
-                    n:
+                n:
                     if (argCt != -1)
                     {
                         ref ArgumentInfo info2 = ref ArgBuffer[argCt];
@@ -258,7 +307,7 @@ public static class CommandHandler
                             info2.End = i - 1;
                     }
                     if (i == len - 1) break;
-                    if (argCt >= MAX_ARG_COUNT - 1)
+                    if (argCt >= MaxArgCount - 1)
                         goto runCommand;
                     ref ArgumentInfo info = ref ArgBuffer[++argCt];
                     info.End = -1;
@@ -266,7 +315,7 @@ public static class CommandHandler
                 }
                 continue;
 
-                contArgChr:
+            contArgChr:
                 if (inArg)
                 {
                     ref ArgumentInfo info = ref ArgBuffer[argCt];
@@ -287,7 +336,7 @@ public static class CommandHandler
                         }
                     }
                     if (i == len - 1) break;
-                    if (argCt >= MAX_ARG_COUNT - 1)
+                    if (argCt >= MaxArgCount - 1)
                         goto runCommand;
                     ref ArgumentInfo info = ref ArgBuffer[++argCt];
                     info.Start = i + 1;
@@ -295,7 +344,7 @@ public static class CommandHandler
                     inArg = true;
                 }
                 continue;
-                getCommand:
+            getCommand:
                 for (int k = 0; k < Commands.Count; ++k)
                 {
                     string c2 = Commands[k].CommandName;
@@ -410,50 +459,28 @@ public static class CommandHandler
             RunCommand(cmdInd, player, args, message, message[message.Length - 1] == '\\');
         }
         return true;
-        notCommand:
+    notCommand:
         return false;
-    }
-    internal static void OnLog(string message)
-    {
-        ActiveCommands.FindLast(x => x.Command is VanillaCommand)?.ReplyString("<#bfb9ac>" + message + "</color>");
-    }
-    private static void RunCommand(int index, UCPlayer? player, string[] args, string message, bool keepSlash)
-    {
-        IExecutableCommand cmd = Commands[index];
-        CommandInteraction interaction = cmd.SetupCommand(player, args, message, keepSlash);
-        ActiveCommands.Add(interaction);
-        Task.Run(interaction.ExecuteCommand);
-    }
-    
-    private static void OnCommandInput(string text, ref bool shouldExecuteCommand)
-    {
-        if (shouldExecuteCommand && CheckRunCommand(null, text, false))
-            shouldExecuteCommand = false;
-    }
-    private struct ArgumentInfo
-    {
-        public int Start;
-        public int End;
     }
 }
 public abstract class BaseCommandInteraction : Exception
 {
     public readonly IExecutableCommand Command;
-    protected bool responded;
-    public bool Responded => responded;
+    public bool Responded { get; protected set; }
     protected BaseCommandInteraction(IExecutableCommand cmd, string message) : base(message)
     {
         this.Command = cmd;
     }
     internal virtual void MarkComplete()
     {
-        responded = true;
+        Responded = true;
     }
 }
 
 /// <summary>Provides helpful information and helper functions relating to the currently executing command.</summary>
 public sealed class CommandInteraction : BaseCommandInteraction
 {
+    public const string Default = "-";
     internal Task? Task;
     private readonly ContextData _ctx;
     private int _offset;
@@ -475,7 +502,49 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
 
     public string? this[int index] => Get(index);
-    internal async Task ExecuteCommand()
+    internal void ExecuteCommandSync()
+    {
+        if (Command.CheckPermission(this))
+        {
+            try
+            {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking("Execute command: " + Command.CommandName);
+#endif
+                Command.Execute(this);
+#if DEBUG
+                profiler.Dispose();
+#endif
+                CommandHandler.ActiveCommands.Remove(this);
+                if (!Responded)
+                {
+                    Reply(T.UnknownError);
+                    MarkComplete();
+                }
+
+                if (Caller is not null)
+                    CommandWaiter.OnCommandExecuted(Caller, Command);
+            }
+            catch (BaseCommandInteraction i)
+            {
+                i.MarkComplete();
+                if (Caller is not null)
+                    CommandWaiter.OnCommandExecuted(Caller, Command);
+            }
+            catch (Exception ex)
+            {
+                Reply(T.UnknownError);
+                MarkComplete();
+                L.LogError(ex);
+            }
+        }
+        else
+        {
+            Reply(T.NoPermissions);
+            MarkComplete();
+        }
+    }
+    internal async Task ExecuteCommandAsync()
     {
         bool rem = false;
         try
@@ -492,27 +561,48 @@ public sealed class CommandInteraction : BaseCommandInteraction
 #if DEBUG
                     using IDisposable profiler = ProfilingUtils.StartTracking("Execute command: " + Command.CommandName);
 #endif
-                    await (Task = Command.Execute(this, CommandHandler.GlobalCommandCancel.Token)).ConfigureAwait(false);
-                    CommandHandler.ActiveCommands.Remove(this);
-                    rem = true;
-#if DEBUG
-                    profiler.Dispose();
-#endif
-                    if (CommandHandler.TryingToCancel)
-                        return;
-                    if (!UCWarfare.IsMainThread)
-                        await UCWarfare.ToUpdate();
-                    if (CommandHandler.TryingToCancel)
-                        return;
-
-                    if (!Responded)
+                    if (Command.Synchronize)
+                        await Command.Semaphore!.WaitAsync().ConfigureAwait(false);
+                    try
                     {
-                        Reply(T.UnknownError);
-                        MarkComplete();
+                        await (Task = Command.Execute(this,
+                                (Caller is null || !Caller.IsOnline
+                                    ? CommandHandler.GlobalCommandCancel
+                                    : CancellationTokenSource.CreateLinkedTokenSource(CommandHandler.GlobalCommandCancel.Token, Caller.DisconnectToken)).Token)
+                            ).ConfigureAwait(false);
                     }
+                    finally
+                    {
+                        try
+                        {
+#if DEBUG
+                            profiler.Dispose();
+#endif
+                            CommandHandler.ActiveCommands.Remove(this);
+                        }
+                        finally
+                        {
+                            if (Command.Synchronize)
+                                Command.Semaphore!.Release();
+                        }
+                        rem = true;
+                        if (!CommandHandler.TryingToCancel)
+                        {
+                            if (!UCWarfare.IsMainThread)
+                                await UCWarfare.ToUpdate();
+                            if (!CommandHandler.TryingToCancel)
+                            {
+                                if (!Responded)
+                                {
+                                    Reply(T.UnknownError);
+                                    MarkComplete();
+                                }
 
-                    if (Caller is not null)
-                        CommandWaiter.OnCommandExecuted(Caller, Command);
+                                if (Caller is not null)
+                                    CommandWaiter.OnCommandExecuted(Caller, Command);
+                            }
+                        }
+                    }
                 }
                 catch (TaskCanceledException)
                 {
@@ -545,7 +635,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             {
                 if (!UCWarfare.IsMainThread)
                     await UCWarfare.ToUpdate();
-                Reply(T.UnknownError);
+                Reply(T.NoPermissions);
                 MarkComplete();
             }
         }
@@ -557,7 +647,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     public Exception Defer()
     {
-        responded = true;
+        Responded = true;
         return this;
     }
     /// <summary>Zero based. Checks if the argument at index <paramref name="position"/> exists.</summary>
@@ -584,7 +674,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
-        return Parameters[parameter].Equals(value, StringComparison.OrdinalIgnoreCase);
+        return Parameters[parameter].Equals(value, StringComparison.InvariantCultureIgnoreCase);
     }
     /// <summary>Zero based, compare the value of argument <paramref name="parameter"/> with <paramref name="value"/> and <paramref name="alternate"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
@@ -594,7 +684,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         string v = Parameters[parameter];
-        return v.Equals(value, StringComparison.OrdinalIgnoreCase) || v.Equals(alternate, StringComparison.OrdinalIgnoreCase);
+        return v.Equals(value, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate, StringComparison.InvariantCultureIgnoreCase);
     }
     /// <summary>Zero based, compare the value of argument <paramref name="parameter"/> with <paramref name="value"/>, <paramref name="alternate1"/>, and <paramref name="alternate2"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
@@ -604,7 +694,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         string v = Parameters[parameter];
-        return v.Equals(value, StringComparison.OrdinalIgnoreCase) || v.Equals(alternate1, StringComparison.OrdinalIgnoreCase) || v.Equals(alternate2, StringComparison.OrdinalIgnoreCase);
+        return v.Equals(value, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate1, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate2, StringComparison.InvariantCultureIgnoreCase);
     }
     /// <summary>Zero based, compare the value of argument <paramref name="parameter"/> with all <paramref name="alternates"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
@@ -616,7 +706,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         string v = Parameters[parameter];
         for (int i = 0; i < alternates.Length; ++i)
         {
-            if (v.Equals(alternates[i], StringComparison.OrdinalIgnoreCase))
+            if (v.Equals(alternates[i], StringComparison.InvariantCultureIgnoreCase))
                 return true;
         }
         return false;
@@ -632,8 +722,8 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     public string? GetRange(int start, int length = -1)
     {
-        start += _offset;
         if (length == 1) return Get(start);
+        start += _offset;
         if (start < 0 || start >= _ctx.ArgumentCount)
             return null;
         if (start == _ctx.ArgumentCount - 1)
@@ -679,7 +769,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return int.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return int.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out byte value)
     {
@@ -689,7 +779,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out short value)
     {
@@ -699,7 +789,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return short.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return short.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out sbyte value)
     {
@@ -709,7 +799,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out Guid value)
     {
@@ -729,7 +819,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out ushort value)
     {
@@ -739,7 +829,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out ulong value)
     {
@@ -749,7 +839,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGetTeam(int parameter, out ulong value)
     {
@@ -761,24 +851,24 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
 
         string p = GetParamForParse(parameter);
-        if (ulong.TryParse(p, NumberStyles.Number, Warfare.Data.Locale, out value))
+        if (ulong.TryParse(p, NumberStyles.Number, Warfare.Data.LocalLocale, out value))
         {
             return value is > 0 and < 4;
         }
-        if (p.Equals(Teams.TeamManager.Team1Code, StringComparison.OrdinalIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.Team1Name, StringComparison.OrdinalIgnoreCase) || p.Equals("t1", StringComparison.OrdinalIgnoreCase))
+        if (p.Equals(Teams.TeamManager.Team1Code, StringComparison.InvariantCultureIgnoreCase) ||
+                 p.Equals(Teams.TeamManager.Team1Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t1", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 1ul;
             return true;
         }
-        if (p.Equals(Teams.TeamManager.Team2Code, StringComparison.OrdinalIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.Team2Name, StringComparison.OrdinalIgnoreCase) || p.Equals("t2", StringComparison.OrdinalIgnoreCase))
+        if (p.Equals(Teams.TeamManager.Team2Code, StringComparison.InvariantCultureIgnoreCase) ||
+                 p.Equals(Teams.TeamManager.Team2Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t2", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 2ul;
             return true;
         }
-        if (p.Equals(Teams.TeamManager.AdminCode, StringComparison.OrdinalIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.AdminName, StringComparison.OrdinalIgnoreCase) || p.Equals("t3", StringComparison.OrdinalIgnoreCase))
+        if (p.Equals(Teams.TeamManager.AdminCode, StringComparison.InvariantCultureIgnoreCase) ||
+                 p.Equals(Teams.TeamManager.AdminName, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t3", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 3ul;
             return true;
@@ -794,7 +884,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return float.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value) && !float.IsNaN(value) && !float.IsInfinity(value);
+        return float.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value) && !float.IsNaN(value) && !float.IsInfinity(value);
     }
     public bool TryGet(int parameter, out double value)
     {
@@ -804,7 +894,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return double.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return double.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     public bool TryGet(int parameter, out decimal value)
     {
@@ -814,7 +904,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+        return decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
     // the ref ones are so you can count on your already existing variable not being overwritten
     public bool TryGetRef<TEnum>(int parameter, ref TEnum value) where TEnum : unmanaged, Enum
@@ -840,7 +930,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (int.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out int value2))
+        if (int.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out int value2))
         {
             value = value2;
             return true;
@@ -855,7 +945,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out byte value2))
+        if (byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out byte value2))
         {
             value = value2;
             return true;
@@ -870,7 +960,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out sbyte value2))
+        if (sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out sbyte value2))
         {
             value = value2;
             return true;
@@ -900,7 +990,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out uint value2))
+        if (uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out uint value2))
         {
             value = value2;
             return true;
@@ -915,7 +1005,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out ushort value2))
+        if (ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out ushort value2))
         {
             value = value2;
             return true;
@@ -930,7 +1020,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out ulong value2))
+        if (ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out ulong value2))
         {
             value = value2;
             return true;
@@ -945,7 +1035,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (float.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out float value2) && !float.IsNaN(value2) && !float.IsInfinity(value2))
+        if (float.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out float value2) && !float.IsNaN(value2) && !float.IsInfinity(value2))
         {
             value = value2;
             return true;
@@ -960,7 +1050,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (double.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out double value2) && !double.IsNaN(value2) && !double.IsInfinity(value2))
+        if (double.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out double value2) && !double.IsNaN(value2) && !double.IsInfinity(value2))
         {
             value = value2;
             return true;
@@ -975,7 +1065,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out decimal value2))
+        if (decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out decimal value2))
         {
             value = value2;
             return true;
@@ -993,7 +1083,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
 
         string s = GetParamForParse(parameter);
-        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
+        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && Util.IsValidSteam64Id(steam64))
         {
             onlinePlayer = UCPlayer.FromID(steam64);
             return true;
@@ -1018,7 +1108,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
 
         string s = GetParamForParse(parameter);
-        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
+        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && Util.IsValidSteam64Id(steam64))
         {
             foreach (UCPlayer player in selection)
             {
@@ -1040,19 +1130,19 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     /// <summary>Get an asset based on a <see cref="Guid"/> search, <see cref="ushort"/> search, then <see cref="Asset.FriendlyName"/> search.</summary>
     /// <typeparam name="TAsset"><see cref="Asset"/> type to find.</typeparam>
-    /// <param name="length">Set to 1 to only get one parameter (default), set to -1 to get any remaining parameters.</param>
+    /// <param name="len">Set to 1 to only get one parameter (default), set to -1 to get any remaining parameters.</param>
     /// <param name="multipleResultsFound"><see langword="true"/> if <paramref name="allowMultipleResults"/> is <see langword="false"/> and multiple results were found.</param>
     /// <param name="allowMultipleResults">Set to <see langword="false"/> to make the function return <see langword="false"/> if multiple results are found. <paramref name="asset"/> will still be set.</param>
     /// <returns><see langword="true"/> If a <typeparamref name="TAsset"/> is found or multiple are found and <paramref name="allowMultipleResults"/> is <see langword="true"/>.</returns>
     public bool TryGet<TAsset>(int parameter, out TAsset asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Func<TAsset, bool>? selector = null) where TAsset : Asset
     {
-        if (!TryGetRange(parameter, out string p, remainder ? -1 : len))
+        if (!TryGetRange(parameter, out string p, remainder ? -1 : len) || p.Length == 0)
         {
             multipleResultsFound = false;
             asset = null!;
             return false;
         }
-        if ((remainder || parameter == ArgumentCount - 1) && p.EndsWith("\\"))
+        if ((remainder || parameter == ArgumentCount - 1) && p[p.Length - 1] == '\\')
             p = p.Substring(0, p.Length - 1);
         if (Guid.TryParse(p, out Guid guid))
         {
@@ -1085,7 +1175,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             {
                 for (int i = 0; i < assets.Length; ++i)
                 {
-                    if (assets[i].FriendlyName.Equals(p, StringComparison.OrdinalIgnoreCase))
+                    if (assets[i].FriendlyName.Equals(p, StringComparison.InvariantCultureIgnoreCase))
                     {
                         asset = assets[i];
                         multipleResultsFound = false;
@@ -1094,7 +1184,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
                 }
                 for (int i = 0; i < assets.Length; ++i)
                 {
-                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.OrdinalIgnoreCase) != -1)
+                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.InvariantCultureIgnoreCase) != -1)
                     {
                         asset = assets[i];
                         multipleResultsFound = false;
@@ -1107,7 +1197,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
                 List<TAsset> results = new List<TAsset>(16);
                 for (int i = 0; i < assets.Length; ++i)
                 {
-                    if (assets[i].FriendlyName.Equals(p, StringComparison.OrdinalIgnoreCase))
+                    if (assets[i].FriendlyName.Equals(p, StringComparison.InvariantCultureIgnoreCase))
                     {
                         results.Add(assets[i]);
                     }
@@ -1126,7 +1216,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
                 }
                 for (int i = 0; i < assets.Length; ++i)
                 {
-                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.OrdinalIgnoreCase) != -1)
+                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.InvariantCultureIgnoreCase) != -1)
                     {
                         results.Add(assets[i]);
                     }
@@ -1257,9 +1347,9 @@ public sealed class CommandInteraction : BaseCommandInteraction
         player = (info.player == null ? null : UCPlayer.FromPlayer(info.player))!;
         return player != null && player.IsOnline;
     }
-    public void LogAction(EActionLogType type, string? data = null)
+    public void LogAction(ActionLogType type, string? data = null)
     {
-        ActionLogger.Add(type, data, CallerID);
+        ActionLog.Add(type, data, CallerID);
     }
     public bool HasPermission(EAdminType level, PermissionComparison comparison = PermissionComparison.AtLeast)
     {
@@ -1345,8 +1435,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public Exception SendUnknownError() => Reply(T.UnknownError);
     public Exception SendNoPermission() => Reply(T.NoPermissions);
     public Exception SendPlayerNotFound() => Reply(T.PlayerNotFound);
-    public Exception SendCorrectUsage(string usage)
-                                            => Reply(T.CorrectUsage, usage);
+    public Exception SendCorrectUsage(string usage) => Reply(T.CorrectUsage, usage);
     public Exception ReplyString(string message, Color color)
     {
         if (message is null) throw new ArgumentNullException(nameof(message));
@@ -1358,7 +1447,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, color);
-        responded = true;
+        Responded = true;
 
         return this;
     }
@@ -1372,7 +1461,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, Util.GetColor(color));
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception ReplyString(string message, string hex)
@@ -1386,7 +1475,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, hex);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception ReplyString(string message)
@@ -1399,7 +1488,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply(Translation translation)
@@ -1407,14 +1496,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, out Color color);
+            string message = translation.Translate(L.Default, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
             Caller.SendChat(translation);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T>(Translation<T> translation, T arg)
@@ -1422,14 +1511,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg, out Color color);
+            string message = translation.Translate(L.Default, arg, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
             Caller.SendChat(translation, arg);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2>(Translation<T1, T2> translation, T1 arg1, T2 arg2)
@@ -1437,14 +1526,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
             Caller.SendChat(translation, arg1, arg2);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3>(Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
@@ -1452,14 +1541,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4>(Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
@@ -1467,14 +1556,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5>(Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
@@ -1482,14 +1571,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6>(Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
@@ -1497,14 +1586,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7>(Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
@@ -1512,14 +1601,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
@@ -1527,14 +1616,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
@@ -1542,14 +1631,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-        responded = true;
+        Responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
@@ -1557,18 +1646,21 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, out Color color);
+            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
-        responded = true;
+        Responded = true;
         return this;
     }
-
-    public struct ContextData
+    public IFormatProvider GetLocale()
+    {
+        return IsConsole ? Warfare.Data.AdminLocale : Localization.GetLocale(Localization.GetLang(CallerID));
+    }
+    public readonly struct ContextData
     {
         public readonly UCPlayer Caller;
         public readonly bool IsConsole;

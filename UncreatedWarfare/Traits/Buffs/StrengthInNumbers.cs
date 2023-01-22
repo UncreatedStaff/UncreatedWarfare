@@ -8,12 +8,12 @@ using UnityEngine;
 namespace Uncreated.Warfare.Traits.Buffs;
 
 /// <summary>
-/// Decrease those affected's deployment cooldown by 25% (* by .75).
+/// Increases player armor by 10% when fighting near the rest of their squad.
 /// </summary>
 public class StrengthInNumbers : Buff
 {
     private static TraitData? DATA;
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(StrengthInNumbers),
         NameTranslations = new TranslationList("Strength in\nNumbers"),
@@ -26,7 +26,7 @@ public class StrengthInNumbers : Buff
         Icon = "¦",
         Cooldown = 330,
         EffectDuration = 300,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 2 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 2 } },
         EffectDistributedToSquad = true,
         // half of armor increase is base, other half is multiplied by nearby squadmembers count
         Data = "250,0.1" // distance threshold, armor increase % (from 0)
@@ -125,12 +125,12 @@ public class StrengthInNumbers : Buff
     {
         if (onStart)
         {
-            string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(dataSplitChars, StringSplitOptions.RemoveEmptyEntries);
+            string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(DataSplitChars, StringSplitOptions.RemoveEmptyEntries);
             if (datas.Length > 0)
             {
-                float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.Locale, out _distance);
+                float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.AdminLocale, out _distance);
                 if (datas.Length > 1)
-                    float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.Locale, out _armorMultiplier);
+                    float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.AdminLocale, out _armorMultiplier);
             }
 
             if (_distance == -1f)

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
@@ -35,13 +36,13 @@ public class VehicleData : ITranslationArgument, IListItem
     [CommandSettable]
     public float Cooldown;
     [CommandSettable]
-    public EBranch Branch;
+    public Branch Branch;
     [CommandSettable]
-    public EClass RequiredClass;
+    public Class RequiredClass;
     [CommandSettable]
     public int RearmCost;
     [CommandSettable]
-    public EVehicleType Type;
+    public VehicleType Type;
     [CommandSettable]
     public bool RequiresSL;
     [CommandSettable]
@@ -52,16 +53,15 @@ public class VehicleData : ITranslationArgument, IListItem
     public float AbandonValueLossSpeed = 0.125f;
     [CommandSettable]
     public int Map = -1;
-    public BaseUnlockRequirement[] UnlockRequirements;
+    public UnlockRequirement[] UnlockRequirements;
     public Guid[] Items;
     public Delay[] Delays;
+    [JsonConverter(typeof(ByteArrayConverter))]
     public byte[] CrewSeats;
     public MetaSave? Metadata;
     [JsonIgnore]
     public PrimaryKey PrimaryKey { get; set; }
-    [JsonIgnore]
-    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleGuid == VehicleID);
-    // for backwards compatability
+    // for JSON backwards compatability
     public ulong Team
     {
         get
@@ -80,7 +80,6 @@ public class VehicleData : ITranslationArgument, IListItem
             };
         }
     }
-
     public VehicleData(Guid vehicleID)
     {
         VehicleID = vehicleID;
@@ -93,17 +92,17 @@ public class VehicleData : ITranslationArgument, IListItem
         {
             Name = va.name;
             if (va.engine == EEngine.PLANE || va.engine == EEngine.HELICOPTER || va.engine == EEngine.BLIMP)
-                Branch = EBranch.AIRFORCE;
+                Branch = Branch.Airforce;
             else if (va.engine == EEngine.BOAT)
-                Branch = (EBranch)5; // navy
+                Branch = Branch.Navy;
             else
-                Branch = EBranch.DEFAULT;
+                Branch = Branch.Infantry;
         }
-        else Branch = EBranch.DEFAULT;
-        RequiredClass = EClass.NONE;
-        UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
+        else Branch = Branch.Default;
+        RequiredClass = Class.None;
+        UnlockRequirements = Array.Empty<UnlockRequirement>();
         RearmCost = 3;
-        Type = EVehicleType.NONE;
+        Type = VehicleType.None;
         RequiresSL = false;
         UnlockLevel = 0;
         Items = Array.Empty<Guid>();
@@ -116,15 +115,15 @@ public class VehicleData : ITranslationArgument, IListItem
         Name = string.Empty;
         VehicleID = Guid.Empty;
         Team = 0;
-        UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
+        UnlockRequirements = Array.Empty<UnlockRequirement>();
         RespawnTime = 600;
         TicketCost = 0;
         CreditCost = 0;
         Cooldown = 0;
-        Branch = EBranch.DEFAULT;
-        RequiredClass = EClass.NONE;
+        Branch = Branch.Default;
+        RequiredClass = Class.None;
         RearmCost = 3;
-        Type = EVehicleType.NONE;
+        Type = VehicleType.None;
         RequiresSL = false;
         UnlockLevel = 0;
         Items = Array.Empty<Guid>();
@@ -136,13 +135,13 @@ public class VehicleData : ITranslationArgument, IListItem
                                                                                       // intentional is null check
     public static bool CanTransport(VehicleData data, InteractableVehicle vehicle) => vehicle is not null && CanTransport(data, vehicle.passengers.Length);
     public static bool CanTransport(VehicleData data, int passengerCt) => !IsEmplacement(data.Type) && data.CrewSeats.Length < passengerCt;
-    public static bool IsGroundVehicle(EVehicleType type) => !IsAircraft(type);
-    public static bool IsArmor(EVehicleType type) => type is EVehicleType.APC or EVehicleType.IFV or EVehicleType.MBT or EVehicleType.SCOUT_CAR;
-    public static bool IsLogistics(EVehicleType type) => type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT;
-    public static bool IsAircraft(EVehicleType type) => type is EVehicleType.HELI_TRANSPORT or EVehicleType.HELI_ATTACK or EVehicleType.JET;
-    public static bool IsAssaultAircraft(EVehicleType type) => type is EVehicleType.HELI_ATTACK or EVehicleType.JET;
-    public static bool IsEmplacement(EVehicleType type) => type is EVehicleType.HMG or EVehicleType.ATGM or EVehicleType.AA or EVehicleType.MORTAR;
-    public bool HasDelayType(EDelayType type) => Delay.HasDelayType(Delays, type);
+    public static bool IsGroundVehicle(VehicleType type) => !IsAircraft(type);
+    public static bool IsArmor(VehicleType type) => type is VehicleType.APC or VehicleType.IFV or VehicleType.MBT or VehicleType.ScoutCar;
+    public static bool IsLogistics(VehicleType type) => type is VehicleType.LogisticsGround or VehicleType.TransportAir;
+    public static bool IsAircraft(VehicleType type) => type is VehicleType.TransportAir or VehicleType.AttackHeli or VehicleType.Jet;
+    public static bool IsAssaultAircraft(VehicleType type) => type is VehicleType.AttackHeli or VehicleType.Jet;
+    public static bool IsEmplacement(VehicleType type) => type is VehicleType.HMG or VehicleType.ATGM or VehicleType.AA or VehicleType.Mortar;
+    public bool HasDelayType(DelayType type) => Delay.HasDelayType(Delays, type);
     public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
     public bool IsCrewSeat(byte seat)
     {
@@ -158,21 +157,20 @@ public class VehicleData : ITranslationArgument, IListItem
         }
         return false;
     }
-    public List<VehicleSpawn> GetSpawners() => EnumerateSpawns.ToList();
     public void SaveMetaData(InteractableVehicle vehicle)
     {
         List<VBarricade>? barricades = null;
-        List<KitItem>? trunk = null;
+        List<PageItem>? trunk = null;
 
         if (vehicle.trunkItems.items.Count > 0)
         {
-            trunk = new List<KitItem>();
+            trunk = new List<PageItem>();
 
             foreach (ItemJar jar in vehicle.trunkItems.items)
             {
                 if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
                 {
-                    trunk.Add(new KitItem(
+                    trunk.Add(new PageItem(
                         asset.GUID,
                         jar.x,
                         jar.y,
@@ -208,7 +206,7 @@ public class VehicleData : ITranslationArgument, IListItem
         {
             for (int i = 0; i < UnlockRequirements.Length; i++)
             {
-                BaseUnlockRequirement req = UnlockRequirements[i];
+                UnlockRequirement req = UnlockRequirements[i];
                 if (req.CanAccess(ucplayer))
                     continue;
                 return req.GetSignText(ucplayer);
@@ -232,9 +230,9 @@ public class VehicleData : ITranslationArgument, IListItem
 public class MetaSave
 {
     public List<VBarricade>? Barricades;
-    public List<KitItem>? TrunkItems;
+    public List<PageItem>? TrunkItems;
     public MetaSave() { }
-    public MetaSave(List<VBarricade>? barricades, List<KitItem>? trunkItems)
+    public MetaSave(List<VBarricade>? barricades, List<PageItem>? trunkItems)
     {
         Barricades = barricades;
         TrunkItems = trunkItems;
@@ -261,7 +259,7 @@ public class VBarricade : IListSubItem
     }
     public PrimaryKey LinkedKey { get; set; }
     public PrimaryKey PrimaryKey { get; set; }
-    internal VBarricade() { }
+    public VBarricade() { }
     public VBarricade(Guid barricadeID, ushort health, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, string state)
     {
         BarricadeID = barricadeID;
@@ -287,6 +285,8 @@ public class VBarricade : IListSubItem
         Metadata = state;
     }
 
+    // ReSharper disable InconsistentNaming
+
     public const string COLUMN_PK = "pk";
     public const string COLUMN_GUID = "Item";
     public const string COLUMN_HEALTH = "Health";
@@ -311,6 +311,8 @@ public class VBarricade : IListSubItem
     public const string COLUMN_DISPLAY_TAGS = "Tags";
     public const string COLUMN_DISPLAY_DYNAMIC_PROPS = "DynamicProps";
     public const string COLUMN_DISPLAY_ROT = "Rotation";
+
+    // ReSharper restore InconsistentNaming
     public static Schema[] GetDefaultSchemas(string tableName, string tableItemsName, string tableDisplayDataName, string fkColumn, string mainTable, string mainPkColumn, bool includeHealth = true, bool oneToOne = false)
     {
         if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
@@ -339,7 +341,7 @@ public class VBarricade : IListSubItem
             ForeignKeyColumn = mainPkColumn,
             ForeignKeyTable = mainTable
         };
-        columns[++index] = new Schema.Column(COLUMN_GUID, SqlTypes.GUID);
+        columns[++index] = new Schema.Column(COLUMN_GUID, SqlTypes.GUID_STRING);
         if (includeHealth)
         {
             columns[++index] = new Schema.Column(COLUMN_HEALTH, SqlTypes.USHORT)
@@ -391,7 +393,7 @@ public class VBarricade : IListSubItem
                 ForeignKeyColumn = oneToOne ? fkColumn : COLUMN_PK,
                 ForeignKeyTable = tableName
             },
-            new Schema.Column(COLUMN_ITEM_GUID, SqlTypes.GUID),
+            new Schema.Column(COLUMN_ITEM_GUID, SqlTypes.GUID_STRING),
             new Schema.Column(COLUMN_ITEM_AMOUNT, SqlTypes.BYTE),
             new Schema.Column(COLUMN_ITEM_QUALITY, SqlTypes.BYTE),
             new Schema.Column(COLUMN_ITEM_POS_X, SqlTypes.BYTE),
@@ -403,33 +405,32 @@ public class VBarricade : IListSubItem
     }
 }
 
-/// <summary>Max field character limit: <see cref="VehicleData.VEHICLE_TYPE_MAX_CHAR_LIMIT"/>.</summary>
 [Translatable("Vehicle Type")]
-public enum EVehicleType
+public enum VehicleType
 {
     [Translatable("Unknown")]
-    NONE,
+    None,
     [Translatable(LanguageAliasSet.RUSSIAN, "Хамви")]
     [Translatable(LanguageAliasSet.SPANISH, "Humvee")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Humvee")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Humvee")]
     [Translatable(LanguageAliasSet.POLISH, "Humvee")]
-    HUMVEE,
+    Humvee,
     [Translatable(LanguageAliasSet.RUSSIAN, "Транспорт")]
     [Translatable(LanguageAliasSet.SPANISH, "Transporte")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Transport")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Transporte")]
     [Translatable(LanguageAliasSet.POLISH, "Humvee")]
     [Translatable("Transport Truck")]
-    TRANSPORT,
-    SCOUT_CAR,
+    TransportGround,
+    ScoutCar,
     [Translatable(LanguageAliasSet.RUSSIAN, "Логистический")]
     [Translatable(LanguageAliasSet.SPANISH, "Logistico")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Camion")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Logística")]
     [Translatable(LanguageAliasSet.POLISH, "Transport Logistyczny")]
     [Translatable("Logistics Truck")]
-    LOGISTICS,
+    LogisticsGround,
     [Translatable(LanguageAliasSet.RUSSIAN, "БТР")]
     [Translatable(LanguageAliasSet.SPANISH, "APC")]
     [Translatable(LanguageAliasSet.ROMANIAN, "TAB")]
@@ -455,76 +456,61 @@ public enum EVehicleType
     [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
     [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
     [Translatable("Transport Heli")]
-    HELI_TRANSPORT,
+    TransportAir,
     [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
     [Translatable(LanguageAliasSet.SPANISH, "Helicoptero")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
     [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
     [Translatable("Attack Heli")]
-    HELI_ATTACK,
+    AttackHeli,
     [Translatable(LanguageAliasSet.RUSSIAN, "реактивный")]
     [Translatable("Jet")]
-    JET,
+    Jet,
     [Translatable(LanguageAliasSet.RUSSIAN, "Размещение")]
     [Translatable(LanguageAliasSet.SPANISH, "Emplazamiento")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Amplasament")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Emplacamento")]
     [Translatable(LanguageAliasSet.POLISH, "Fortyfikacja")]
     [Obsolete("Use the individual emplacement types instead.", true)]
-    EMPLACEMENT,
+    Emplacement,
     [Translatable(LanguageAliasSet.RUSSIAN, "зенитный")]
-    [Translatable(LanguageAliasSet.SPANISH, "")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
     [Translatable("Anti-Aircraft")]
     AA,
     [Translatable(LanguageAliasSet.RUSSIAN, "Тяжелый пулемет")]
-    [Translatable(LanguageAliasSet.SPANISH, "")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
     [Translatable("Heavy Machine Gun")]
     HMG,
     [Translatable(LanguageAliasSet.RUSSIAN, "противотанковая ракета")]
-    [Translatable(LanguageAliasSet.SPANISH, "")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
     [Translatable("ATGM")]
     ATGM,
     [Translatable(LanguageAliasSet.RUSSIAN, "Миномет")]
     [Translatable(LanguageAliasSet.SPANISH, "Mortero")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
     [Translatable("Mortar")]
-    MORTAR
+    Mortar
 }
 
 /// <summary>Max field character limit: <see cref="Delay.DELAY_TYPE_MAX_CHAR_LIMIT"/>.</summary>
-public enum EDelayType
+public enum DelayType
 {
-    NONE = 0,
-    TIME = 1,
+    None = 0,
+    Time = 1,
     /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
-    FLAG = 2,
+    Flag = 2,
     /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
-    FLAG_PERCENT = 3,
-    OUT_OF_STAGING = 4
+    FlagPercentage = 3,
+    OutOfStaging = 4
 }
 [JsonConverter(typeof(DelayConverter))]
 public struct Delay : IJsonReadWrite
 {
     public const int DELAY_TYPE_MAX_CHAR_LIMIT = 16;
-    public static readonly Delay Nil = new Delay(EDelayType.NONE, float.NaN, null);
+    public static readonly Delay Nil = new Delay(DelayType.None, float.NaN, null);
     [JsonIgnore]
     public bool IsNil => float.IsNaN(Value);
-    public EDelayType Type;
+    public DelayType Type;
     public string? Gamemode;
     public float Value;
-    public Delay(EDelayType type, float value, string? gamemode = null)
+    public Delay(DelayType type, float value, string? gamemode = null)
     {
         this.Type = type;
         this.Value = value;
@@ -532,7 +518,9 @@ public struct Delay : IJsonReadWrite
     }
     public override string ToString() =>
         $"{Type} Delay, {(string.IsNullOrEmpty(Gamemode) ? "any" : Gamemode)} " +
-        $"gamemode{(Type == EDelayType.NONE || Type == EDelayType.OUT_OF_STAGING ? string.Empty : $" Value: {Value}")}";
+        $"gamemode{(!UsesValue(Type) ? string.Empty : $" Value: {Value}")}";
+
+    public static bool UsesValue(DelayType type) => type is not DelayType.None and not DelayType.OutOfStaging;
     public void WriteJson(Utf8JsonWriter writer)
     {
         writer.WriteNumber(nameof(Type), (int)Type);
@@ -546,30 +534,30 @@ public struct Delay : IJsonReadWrite
             string? prop = reader.GetString();
             if (reader.Read() && prop != null)
             {
-                switch (prop)
+                if (prop.Equals(nameof(Type), StringComparison.OrdinalIgnoreCase))
                 {
-                    case nameof(Type):
-                        if (reader.TryGetInt32(out int i))
-                            Type = (EDelayType)i;
-                        break;
-                    case nameof(Gamemode):
-                        if (reader.TokenType == JsonTokenType.Null) Gamemode = null;
-                        else Gamemode = reader.GetString();
-                        break;
-                    case nameof(Value):
-                        reader.TryGetSingle(out Value);
-                        break;
+                    if (reader.TryGetInt32(out int i))
+                        Type = (DelayType)i;
+                }
+                else if (prop.Equals(nameof(Gamemode), StringComparison.OrdinalIgnoreCase))
+                {
+                    if (reader.TokenType == JsonTokenType.Null) Gamemode = null;
+                    else Gamemode = reader.GetString();
+                }
+                else if (prop.Equals(nameof(Value), StringComparison.OrdinalIgnoreCase))
+                {
+                    reader.TryGetSingle(out Value);
                 }
             }
         }
     }
-    public static void AddDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
+    public static void AddDelay(ref Delay[] delays, DelayType type, float value, string? gamemode = null)
     {
         int index = -1;
         for (int i = 0; i < delays.Length; i++)
         {
             ref Delay del = ref delays[i];
-            if (del.Type == type && del.Value == value && (del.Gamemode == gamemode || (string.IsNullOrEmpty(del.Gamemode) && string.IsNullOrEmpty(gamemode))))
+            if (del.Type == type && Math.Abs(del.Value - value) < float.Epsilon && (del.Gamemode == gamemode || (string.IsNullOrEmpty(del.Gamemode) && string.IsNullOrEmpty(gamemode))))
             {
                 index = i;
                 break;
@@ -591,7 +579,7 @@ public struct Delay : IJsonReadWrite
             }
         }
     }
-    public static bool RemoveDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
+    public static bool RemoveDelay(ref Delay[] delays, DelayType type, float value, string? gamemode = null)
     {
         if (delays.Length == 0) return false;
         int index = -1;
@@ -613,7 +601,7 @@ public struct Delay : IJsonReadWrite
         Array.Copy(old, index + 1, delays, index, old.Length - index - 1);
         return true;
     }
-    public static bool HasDelayType(Delay[] delays, EDelayType type)
+    public static bool HasDelayType(Delay[] delays, DelayType type)
     {
         string gm = Data.Gamemode.Name;
         for (int i = 0; i < delays.Length; i++)
@@ -624,7 +612,7 @@ public struct Delay : IJsonReadWrite
         }
         return false;
     }
-    public static bool IsDelayedType(Delay[] delays, EDelayType type, ulong team)
+    public static bool IsDelayedType(Delay[] delays, DelayType type, ulong team)
     {
         string gm = Data.Gamemode.Name;
         for (int i = 0; i < delays.Length; i++)
@@ -650,21 +638,21 @@ public struct Delay : IJsonReadWrite
             {
                 switch (type)
                 {
-                    case EDelayType.NONE:
+                    case DelayType.None:
                         return false;
-                    case EDelayType.TIME:
+                    case DelayType.Time:
                         if (TimeDelayed(ref del))
                             return true;
                         break;
-                    case EDelayType.FLAG:
+                    case DelayType.Flag:
                         if (FlagDelayed(ref del, team))
                             return true;
                         break;
-                    case EDelayType.FLAG_PERCENT:
+                    case DelayType.FlagPercentage:
                         if (FlagPercentDelayed(ref del, team))
                             return true;
                         break;
-                    case EDelayType.OUT_OF_STAGING:
+                    case DelayType.OutOfStaging:
                         if (StagingDelayed(ref del))
                             return true;
                         break;
@@ -708,14 +696,14 @@ public struct Delay : IJsonReadWrite
             if (universal && anyVal) continue;
             switch (del.Type)
             {
-                case EDelayType.NONE:
+                case DelayType.None:
                     if (!universal)
                     {
                         delay = del;
                         isNoneYet = true;
                     }
                     break;
-                case EDelayType.TIME:
+                case DelayType.Time:
                     if ((!universal || !isNoneYet) && TimeDelayed(ref del))
                     {
                         delay = del;
@@ -723,7 +711,7 @@ public struct Delay : IJsonReadWrite
                         anyVal = true;
                     }
                     break;
-                case EDelayType.FLAG:
+                case DelayType.Flag:
                     if ((!universal || !isNoneYet) && FlagDelayed(ref del, team))
                     {
                         delay = del;
@@ -731,7 +719,7 @@ public struct Delay : IJsonReadWrite
                         anyVal = true;
                     }
                     break;
-                case EDelayType.FLAG_PERCENT:
+                case DelayType.FlagPercentage:
                     if ((!universal || !isNoneYet) && FlagPercentDelayed(ref del, team))
                     {
                         delay = del;
@@ -739,7 +727,7 @@ public struct Delay : IJsonReadWrite
                         anyVal = true;
                     }
                     break;
-                case EDelayType.OUT_OF_STAGING:
+                case DelayType.OutOfStaging:
                     if ((!universal || !isNoneYet) && StagingDelayed(ref del))
                     {
                         delay = del;
@@ -789,7 +777,7 @@ public struct Delay : IJsonReadWrite
         }
         return false;
     }
-    private static bool StagingDelayed(ref Delay delay) => Data.Is(out IStagingPhase sp) && sp.State == EState.STAGING;
+    private static bool StagingDelayed(ref Delay delay) => Data.Is(out IStagingPhase sp) && sp.State == State.Staging;
     private static int GetHighestObjectiveIndex(ulong team, IFlagTeamObjectiveGamemode gm)
     {
         if (team == 1)
@@ -843,7 +831,7 @@ public struct Delay : IJsonReadWrite
             ForeignKeyColumn = mainPkColumn,
             ForeignKeyTable = mainTable
         };
-        columns[++index] = new Schema.Column(COLUMN_TYPE, "varchar(" + DELAY_TYPE_MAX_CHAR_LIMIT + ")");
+        columns[++index] = new Schema.Column(COLUMN_TYPE, SqlTypes.Enum(DelayType.None));
         columns[++index] = new Schema.Column(COLUMN_VALUE, SqlTypes.FLOAT)
         {
             Nullable = true
@@ -853,6 +841,65 @@ public struct Delay : IJsonReadWrite
             Nullable = true
         };
         return new Schema(tableName, columns, false, typeof(Delay));
+    }
+}
+internal sealed class ByteArrayConverter : JsonConverter<byte[]>
+{
+    public override byte[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return null;
+            case JsonTokenType.String:
+                string str = reader.GetString()!;
+                try
+                {
+                    return Convert.FromBase64String(str);
+                }
+                catch (FormatException ex)
+                {
+                    throw new JsonException("Unexpected token: Non-Base64 String.", ex);
+                }
+            case JsonTokenType.Number:
+                if (reader.TryGetByte(out byte b))
+                    return new byte[] { b };
+                throw new JsonException("Unexpected token: Number > 255 or < 0.");
+            case JsonTokenType.False:
+                return new byte[1];
+            case JsonTokenType.True:
+                return new byte[] { 1 };
+            case JsonTokenType.StartArray:
+                List<byte> bytes = new List<byte>(8);
+                while (reader.Read() && reader.TokenType == JsonTokenType.Number)
+                {
+                    if (reader.TryGetByte(out byte val))
+                        bytes.Add(val);
+                    else throw new JsonException("Invalid number in array[" + bytes.Count + "]");
+                }
+                return bytes.ToArray();
+            default:
+                throw new JsonException("Unexpected token: " + reader.TokenType + " when reading byte array.");
+        }
+    }
+    public override void Write(Utf8JsonWriter writer, byte[] value, JsonSerializerOptions options)
+    {
+        if (value is null)
+        {
+            writer.WriteNullValue();
+            return;
+        }
+        writer.WriteStartArray();
+        JsonWriterOptions options2 = writer.Options;
+        if (value.Length < 12 && options2.Indented)
+            JsonEx.SetOptions(writer, options2 with { Indented = false });
+        for (int i = 0; i < value.Length; ++i)
+        {
+            writer.WriteNumberValue(value[i]);
+        }
+        if (value.Length < 12 && options2.Indented)
+            JsonEx.SetOptions(writer, options2);
+        writer.WriteEndArray();
     }
 }
 public sealed class DelayConverter : JsonConverter<Delay>

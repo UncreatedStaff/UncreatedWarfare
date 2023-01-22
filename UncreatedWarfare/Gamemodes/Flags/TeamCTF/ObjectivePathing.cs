@@ -33,30 +33,30 @@ public static class ObjectivePathing
 
         float ttl = 0f;
         for (int i = 0; i < t1adjacencies.Length; ++i)
-            ttl += t1adjacencies[i].weight;
+            ttl += t1adjacencies[i].Weight;
         float pick = UnityEngine.Random.Range(0, ttl);
         ttl = 0f;
         int id = -1;
         for (int i = 0; i < t1adjacencies.Length; ++i)
         {
             ref AdjacentFlagData d = ref t1adjacencies[i];
-            ttl += d.weight;
+            ttl += d.Weight;
             if (pick <= ttl)
             {
-                id = d.flag_id;
+                id = d.PrimaryKey;
                 break;
             }
         }
 
         if (id == -1)
-            id = t1adjacencies[t1adjacencies.Length - 1].flag_id;
+            id = t1adjacencies[t1adjacencies.Length - 1].PrimaryKey;
 
         int c = -1;
         Flag last;
         while (!TryGetFlag(id, selection, out last))
         {
             if (++c < t1adjacencies.Length)
-                id = t1adjacencies[c].flag_id;
+                id = t1adjacencies[c].PrimaryKey;
             else break;
         }
         if (last is null)
@@ -66,19 +66,19 @@ public static class ObjectivePathing
         }
 
         output.Add(last);
-        last.index = 0;
+        last.Index = 0;
 
         while (true)
         {
-            AdjacentFlagData[] adjs = last.ZoneData.Data.Adjacencies;
+            AdjacentFlagData[] adjs = last.Adjacencies;
             int lid = last.ID;
             float t2MainWeight = 0f;
             for (int i = 0; i < t2adjacencies.Length; ++i)
             {
                 ref AdjacentFlagData d = ref t2adjacencies[i];
-                if (d.flag_id == lid)
+                if (d.PrimaryKey.Key == lid)
                 {
-                    t2MainWeight = d.weight;
+                    t2MainWeight = d.Weight;
                     break;
                 }
             }
@@ -96,7 +96,7 @@ public static class ObjectivePathing
                     ref AdjacentFlagData d = ref adjs[i];
                     for (int j = 0; j < output.Count; ++j)
                     {
-                        if (output[j].ID == d.flag_id)
+                        if (output[j].ID == d.PrimaryKey.Key)
                         {
                             filter[i] = true;
                             break;
@@ -104,7 +104,7 @@ public static class ObjectivePathing
                     }
 
                     if (!filter[i])
-                        ttl += d.weight;
+                        ttl += d.Weight;
                 }
 
                 if (ttl == t2MainWeight)
@@ -122,10 +122,10 @@ public static class ObjectivePathing
                 {
                     if (filter[i]) continue;
                     ref AdjacentFlagData d = ref adjs[i];
-                    ttl += d.weight;
+                    ttl += d.Weight;
                     if (pick <= ttl)
                     {
-                        id = d.flag_id;
+                        id = d.PrimaryKey;
                         break;
                     }
                 }
@@ -138,7 +138,7 @@ public static class ObjectivePathing
                             L.LogWarning("Got stuck at flag ID " + lid + " trying to find the next flag.");
                         goto closeLoop;
                     }
-                    id = adjs[ind].flag_id;
+                    id = adjs[ind].PrimaryKey;
                 }
                 if (!TryGetFlag(id, selection, out last))
                 {
@@ -147,12 +147,12 @@ public static class ObjectivePathing
                     goto closeLoop;
                 }
 
-                last.index = output.Count;
+                last.Index = output.Count;
                 output.Add(last);
             }
         }
 
-    closeLoop:
+        closeLoop:
         return true;
     }
     public static bool TryGetFlag(int id, List<Flag> selection, out Flag flag)
@@ -172,23 +172,23 @@ public static class ObjectivePathing
     {
         float ttl = 0f;
         for (int i = 0; i < adj.Length; ++i)
-            ttl += adj[i].weight;
+            ttl += adj[i].Weight;
         float pick = UnityEngine.Random.Range(0, ttl);
         ttl = 0f;
         int id = -1;
         for (int i = 0; i < adj.Length; ++i)
         {
             ref AdjacentFlagData d = ref adj[i];
-            ttl += d.weight;
+            ttl += d.Weight;
             if (pick <= ttl)
             {
-                id = d.flag_id;
+                id = d.PrimaryKey;
                 break;
             }
         }
 
         if (id == -1)
-            id = adj[adj.Length - 1].flag_id;
+            id = adj[adj.Length - 1].PrimaryKey;
 
         return id;
     }

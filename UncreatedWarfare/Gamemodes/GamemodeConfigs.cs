@@ -8,6 +8,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
@@ -88,6 +89,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(201)]
     [JsonPropertyName("item_entrenching_tool")]
     public RotatableConfig<JsonAssetReference<ItemMeleeAsset>> ItemEntrenchingTool { get; set; }
+
+    [Sync(202)]
+    [JsonPropertyName("item_laser_designator")]
+    public RotatableConfig<JsonAssetReference<ItemMeleeAsset>> ItemLaserDesignator { get; set; }
     #endregion
 
     #region UI and Effects (401 to 600)
@@ -159,6 +164,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("ui_buffs")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIBuffs { get; set; }
 
+    [Sync(419, OnPullMethod = nameof(OnUIKitMenuUpdated))]
+    [JsonPropertyName("ui_kit_menu")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> UIKitMenu { get; set; }
+
     [Sync(450, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_toast_info")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastInfo { get; set; }
@@ -202,6 +211,70 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(459, OnPullMethod = nameof(OnUILoadingUpdated))]
     [JsonPropertyName("ui_loading")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UILoading { get; set; }
+
+    [Sync(475)]
+    [JsonPropertyName("effect_spotted_marker_infantry")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerInfantry { get; set; }
+
+    [Sync(476)]
+    [JsonPropertyName("effect_spotted_marker_fob")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerFOB { get; set; }
+
+    [Sync(477)]
+    [JsonPropertyName("effect_spotted_marker_aa")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerAA { get; set; }
+
+    [Sync(478)]
+    [JsonPropertyName("effect_spotted_marker_apc")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerAPC { get; set; }
+
+    [Sync(479)]
+    [JsonPropertyName("effect_spotted_marker_atgm")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerATGM { get; set; }
+
+    [Sync(480)]
+    [JsonPropertyName("effect_spotted_marker_attack_heli")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerAttackHeli { get; set; }
+
+    [Sync(481)]
+    [JsonPropertyName("effect_spotted_marker_hmg")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerHMG { get; set; }
+
+    [Sync(482)]
+    [JsonPropertyName("effect_spotted_marker_humvee")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerHumvee { get; set; }
+
+    [Sync(483)]
+    [JsonPropertyName("effect_spotted_marker_ifv")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerIFV { get; set; }
+
+    [Sync(484)]
+    [JsonPropertyName("effect_spotted_marker_jet")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerJet { get; set; }
+
+    [Sync(485)]
+    [JsonPropertyName("effect_spotted_marker_mbt")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerMBT { get; set; }
+
+    [Sync(486)]
+    [JsonPropertyName("effect_spotted_marker_mortar")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerMortar { get; set; }
+
+    [Sync(487)]
+    [JsonPropertyName("effect_spotted_marker_scout_car")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerScoutCar { get; set; }
+
+    [Sync(488)]
+    [JsonPropertyName("effect_spotted_marker_transport_air")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerTransportAir { get; set; }
+
+    [Sync(489)]
+    [JsonPropertyName("effect_spotted_marker_logistics_ground")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerLogisticsGround { get; set; }
+
+    [Sync(490)]
+    [JsonPropertyName("effect_spotted_marker_transport_ground")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerTransportGround { get; set; }
 
     [Sync(500)]
     [JsonPropertyName("effect_marker_ammo")]
@@ -421,6 +494,7 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("general_uav_radius")]
     public RotatableConfig<float> GeneralUAVRadius { get; set; }
 
+    /// <summary>In sq m per second.</summary>
     [Sync(606)]
     [JsonPropertyName("general_uav_scan_speed")]
     public RotatableConfig<float> GeneralUAVScanSpeed { get; set; }
@@ -685,6 +759,7 @@ public sealed class GamemodeConfigData : JSONConfigData
 
         #region Items
         ItemEntrenchingTool = new JsonAssetReference<ItemMeleeAsset>("6cee2662e8884d7bad3a5d743f8222da");
+        ItemLaserDesignator = new JsonAssetReference<ItemMeleeAsset>("3879d9014aca4a17b3ed749cf7a9283e");
         #endregion
 
         #region UI and Effects
@@ -715,6 +790,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         UIToastMedium = new JsonAssetReference<EffectAsset>("5f695955f0da4d19adacac39140da797");
         UIToastLarge = new JsonAssetReference<EffectAsset>("9de82ffea13946b391090eb918bf3991");
         UIToastWin = new JsonAssetReference<EffectAsset>("1f3ce50c120042c390f5c42522bd0fcd");
+        UIKitMenu = new JsonAssetReference<EffectAsset>("c0155ea486d8427d9c70541abc875e78");
         EffectMarkerAmmo = new JsonAssetReference<EffectAsset>("827b0c00724b466d8d33633fe2a7743a");
         EffectMarkerRepair = new JsonAssetReference<EffectAsset>("bcfda6fb871f42cd88597c8ac5f7c424");
         EffectMarkerRadio = new JsonAssetReference<EffectAsset>("bc6f0e7d5d9340f39ca4968bc3f7a132");
@@ -772,7 +848,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         GeneralLeaderboardTime = 30f;
         GeneralUAVStartDelay = 15f;
         GeneralUAVRadius = 350f;
-        GeneralUAVScanSpeed = 1f;
+        GeneralUAVScanSpeed = 38484.51f;
         GeneralUAVAliveTime = 60f;
         GeneralAllowCraftingAmmo = true;
         GeneralAllowCraftingRepair = true;
@@ -841,6 +917,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         #endregion
     }
     private void OnUIToastUpdated() => UCPlayerData.ReloadToastIDs();
+    private void OnUIKitMenuUpdated() => KitManager.MenuUI.LoadFromConfig(UIKitMenu);
     private void OnUIToastWinUpdated() => Gamemode.WinToastUI.LoadFromConfig(UIToastWin);
     private void OnUIActionMenuUpdated() => ActionManager.ActionMenuUI.LoadFromConfig(UIActionMenu);
     private void OnUILoadingUpdated() => UCPlayer.LoadingUI.LoadFromConfig(UILoading);

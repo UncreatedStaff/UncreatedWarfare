@@ -12,6 +12,10 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
+// ReSharper disable InconsistentNaming
+// ReSharper disable UnusedMember.Local
+// ReSharper disable UnusedParameter.Local
+
 namespace Uncreated.Warfare.Harmony;
 
 public static partial class Patches
@@ -25,7 +29,7 @@ public static partial class Patches
         /// <summary>
         /// Postfix of <see cref="UseableGun.project(Vector3, Vector3, ItemBarrelAsset, ItemMagazineAsset)"/> to predict mortar hits.
         /// </summary>
-        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+        [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
         [HarmonyPatch(typeof(UseableGun), "project")]
         [HarmonyPostfix]
         private static void OnPostProjected(Vector3 origin, Vector3 direction, ItemBarrelAsset barrelAsset, ItemMagazineAsset magazineAsset, UseableGun __instance)
@@ -73,7 +77,7 @@ public static partial class Patches
 
         // SDG.Unturned.Bumper
         /// <summary>Adds the id of the vehicle that hit the player to their pt component.</summary>
-        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+        [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
         [HarmonyPatch(typeof(Bumper), "OnTriggerEnter")]
         [HarmonyPrefix]
         private static bool TriggerEnterBumper(Collider other, InteractableVehicle ___vehicle)
@@ -106,7 +110,7 @@ public static partial class Patches
             return true;
         }
 
-        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+        [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
         [UsedImplicitly]
         private static void OnPreProject(UseableGun gun, ItemMagazineAsset magazine)
         {
@@ -122,7 +126,7 @@ public static partial class Patches
         {
             private readonly static MethodInfo info = typeof(DeathsPatches).GetMethod("OnPreProject", BindingFlags.Static | BindingFlags.NonPublic);
 
-            [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+            [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
                 foreach (CodeInstruction instruction in instructions)

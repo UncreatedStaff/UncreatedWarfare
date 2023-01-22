@@ -4,16 +4,16 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
-public class CircleZone : Zone
+public sealed class CircleZone : Zone
 {
+    private const float Spacing = 18f; // every 5 degrees
     private readonly float _radius;
     /// <summary>
     /// Radius of the circle zone.
     /// </summary>
     public float Radius => _radius;
-    private const float SPACING = 18f; // every 5 degrees
     /// <inheritdoc/>
-    internal CircleZone(ref ZoneModel data) : base(ref data)
+    internal CircleZone(in ZoneModel data) : base(in data)
     {
         if (data.UseMapCoordinates)
         {
@@ -25,11 +25,11 @@ public class CircleZone : Zone
         }
         GetParticleSpawnPoints(out _, out _);
         float r2 = _radius * 2;
-        _boundArea = r2 * r2;
-        _bounds = new Vector4(Center.x - _radius, Center.y - _radius, Center.x + _radius, Center.y + _radius);
+        BoundArea = r2 * r2;
+        Bound = new Vector4(Center.x - _radius, Center.y - _radius, Center.x + _radius, Center.y + _radius);
         SucessfullyParsed = true;
     }
-    public static void CalculateParticleSpawnPoints(out Vector2[] points, float radius, Vector2 center, float spacing = SPACING)
+    public static void CalculateParticleSpawnPoints(out Vector2[] points, float radius, Vector2 center, float spacing = Spacing)
     {
         float pi2F = 2f * Mathf.PI;
         float circumference = pi2F * radius;
@@ -38,7 +38,7 @@ public class CircleZone : Zone
         int canfit = (int)Mathf.Floor(answer);
         if (remainder != 0)
         {
-            if (remainder < SPACING / 2)            // extend all others
+            if (remainder < Spacing / 2)            // extend all others
                 spacing = circumference / canfit;
             else                                    // add one more and subtend all others
                 spacing = circumference / ++canfit;
@@ -56,9 +56,9 @@ public class CircleZone : Zone
     {
         corners = Array.Empty<Vector2>();
         center = Center;
-        if (_particleSpawnPoints != null) return _particleSpawnPoints;
-        CalculateParticleSpawnPoints(out _particleSpawnPoints, _radius, Center);
-        return _particleSpawnPoints;
+        if (ParticleSpawnPoints != null) return ParticleSpawnPoints;
+        CalculateParticleSpawnPoints(out ParticleSpawnPoints, _radius, Center);
+        return ParticleSpawnPoints;
     }
     /// <inheritdoc/>
     public override bool IsInside(Vector2 location)
@@ -96,20 +96,9 @@ public class CircleZone : Zone
     {
         get
         {
-            ZoneBuilder zb = new ZoneBuilder()
-            {
-                ZoneType = EZoneType.CIRCLE,
-                MinHeight = MinHeight,
-                MaxHeight = MaxHeight,
-                Name = Name,
-                ShortName = ShortName,
-                Adjacencies = Data.Adjacencies,
-                Id = Id,
-                UseMapCoordinates = false,
-                X = Center.x,
-                Z = Center.y,
-                UseCase = Data.UseCase
-            };
+            ZoneBuilder zb = base.Builder;
+            zb.ZoneData.X = Center.x;
+            zb.ZoneData.Z = Center.y;
             zb.ZoneData.Radius = _radius;
             return zb;
         }

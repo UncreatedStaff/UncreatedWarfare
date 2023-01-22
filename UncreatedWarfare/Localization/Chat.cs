@@ -492,7 +492,7 @@ public static class Chat
         if (translation is null) throw new ArgumentNullException(nameof(translation));
 
         if (Data.Languages is null || !Data.Languages.TryGetValue(player.Steam64, out lang))
-            lang = L.DEFAULT;
+            lang = L.Default;
 
         value = translation.Translate(lang, out textColor);
     }

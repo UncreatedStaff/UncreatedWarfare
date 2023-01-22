@@ -84,16 +84,16 @@ public class Order : MonoBehaviour, ITranslationArgument
     public Translation Message { get; private set; }
     public object[]? Formatting { get; private set; }
     public int TimeLeft { get; private set; }
-    public string MinutesLeft => Mathf.CeilToInt(TimeLeft / 60F).ToString(Data.Locale);
+    public string MinutesLeft => Mathf.CeilToInt(TimeLeft / 60f).ToString(Data.LocalLocale);
     public string RewardLevel { get; private set; }
     public int RewardXP { get; private set; }
     public int RewardTW { get; private set; }
     public bool IsActive { get; private set; }
     public Flag? Flag { get; private set; }
 
-    private OrderCondition Condition;
+    private OrderCondition _condition;
 
-    private Coroutine loop;
+    private Coroutine _loop;
 
     public void Initialize(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, Translation message, Flag? flag = null, object[]? formatting = null)
     {
@@ -148,15 +148,18 @@ public class Order : MonoBehaviour, ITranslationArgument
                 break;
         }
 
-        if (RewardTW < 50) RewardLevel = "Low".Colorize("999999");
-        else if (RewardTW >= 50 && RewardTW < 90) RewardLevel = "Medium".Colorize("e0b4a2");
-        else if (RewardTW >= 90 && RewardTW < 120) RewardLevel = "High".Colorize("f5dfa6");
-        else if (RewardTW >= 120) RewardLevel = "Very High".Colorize("ffe4b3");
+        RewardLevel = RewardTW switch
+        {
+            < 50 => "Low".Colorize("999999"),
+            >= 50 and < 90 => "Medium".Colorize("e0b4a2"),
+            >= 90 and < 120 => "High".Colorize("f5dfa6"),
+            >= 120 => "Very High".Colorize("ffe4b3")
+        };
 
-        Condition = new OrderCondition(type, squad, marker);
+        _condition = new OrderCondition(type, squad, marker);
         IsActive = true;
 
-        loop = StartCoroutine(Tick());
+        _loop = StartCoroutine(Tick());
 
     }
     public void Fulfill()
@@ -175,17 +178,17 @@ public class Order : MonoBehaviour, ITranslationArgument
             case EOrder.BUILDFOB:
                 foreach (UCPlayer player in Squad.Members)
                 {
-                    ActionLogger.Add(EActionLogType.FUFILLED_ORDER, "BUILD FOB AT " + Marker.ToString("N2"), player);
+                    ActionLog.Add(ActionLogType.FufilledOrder, "BUILD FOB AT " + Marker.ToString("N2"), player);
                     GiveReward(player);
                     HideUI(player);
                 }
                 break;
             case EOrder.MOVE:
-                foreach (UCPlayer player in Condition.FullfilledPlayers)
+                foreach (UCPlayer player in _condition.FullfilledPlayers)
                 {
                     if (player.IsOnline)
                     {
-                        ActionLogger.Add(EActionLogType.FUFILLED_ORDER, "MOVE TO " + Marker.ToString("N2"), player);
+                        ActionLog.Add(ActionLogType.FufilledOrder, "MOVE TO " + Marker.ToString("N2"), player);
                         GiveReward(player);
                         HideUI(player);
                     }
@@ -280,8 +283,8 @@ public class Order : MonoBehaviour, ITranslationArgument
             {
                 if (Type == EOrder.MOVE)
                 {
-                    Condition.UpdateData();
-                    if (Condition.Check())
+                    _condition.UpdateData();
+                    if (_condition.Check())
                         Fulfill();
                     yield break;
                 }
@@ -314,29 +317,24 @@ public class Order : MonoBehaviour, ITranslationArgument
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         // TODO: Clear UI
-        StopCoroutine(loop);
+        StopCoroutine(_loop);
         Destroy(this);
     }
 
     [FormatDisplay("Message")]
-    public const string MESSAGE_FORMAT = "m";
+    public const string FormatMessage = "m";
     [FormatDisplay("Type (" + nameof(EOrder) + ")")]
-    public const string TYPE_FORMAT = "t";
+    public const string FormatType = "t";
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        if (format is null || format.Equals(MESSAGE_FORMAT, StringComparison.Ordinal))
-        {
+        if (format is null || format.Equals(FormatMessage, StringComparison.Ordinal))
             goto end;
-        }
-        else if (format.Equals(TYPE_FORMAT, StringComparison.Ordinal))
-        {
+        if (format.Equals(FormatType, StringComparison.Ordinal))
             return Localization.TranslateEnum(Type, language);
-        }
-    end:
+        end:
         if (Formatting is null || Formatting.Length == 0)
             return Message.Translate(language);
-        else
-            return Message.TranslateUnsafe(language, Formatting, target, targetTeam: Squad.Team);
+        return Message.TranslateUnsafe(language, Formatting, target, targetTeam: Squad.Team);
     }
 }
 

@@ -148,7 +148,7 @@ namespace Uncreated.Warfare.Squads
                         BarricadeManager.destroyBarricade(drop2, x, y, ushort.MaxValue);
                 }
 
-                ActionLogger.Add(EActionLogType.PLACED_RALLY, "AT " + drop.model.position.ToString("F1"), squad.Leader);
+                ActionLog.Add(ActionLogType.PlacedRally, "AT " + drop.model.position.ToString("F1"), squad.Leader);
 
                 RallyPoint rallypoint = new RallyPoint(drop, squad);
                 rallypoint.Drop.model.transform.gameObject.AddComponent<RallyComponent>().Initialize(rallypoint);
@@ -215,7 +215,7 @@ namespace Uncreated.Warfare.Squads
             AwaitingPlayers = new List<UCPlayer>(6);
             IsActive = true;
             Timer = SquadManager.Config.RallyTimer;
-            NearestLocation = F.GetClosestLocation(drop.model.position);
+            NearestLocation = F.GetClosestLocationName(drop.model.position);
         }
 
         public void UpdateUIForAwaitingPlayers()
@@ -256,7 +256,7 @@ namespace Uncreated.Warfare.Squads
             if (!player.IsOnline || player.Player.life.isDead || player.Player.movement.getVehicle() != null)
                 return;
 
-            ActionLogger.Add(EActionLogType.TELEPORTED_TO_RALLY, "AT " + Drop.model.position.ToString() + " PLACED BY " + Squad.Leader.Steam64.ToString(), player);
+            ActionLog.Add(ActionLogType.TeleportedToRally, "AT " + Drop.model.position.ToString() + " PLACED BY " + Squad.Leader.Steam64.ToString(), player);
 
             player.Player.teleportToLocation(new Vector3(Drop.model.position.x, Drop.model.position.y + RallyManager.TELEPORT_HEIGHT_OFFSET, Drop.model.position.z), Drop.model.rotation.eulerAngles.y);
 

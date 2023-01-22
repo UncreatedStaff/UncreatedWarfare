@@ -8,7 +8,7 @@ namespace Uncreated.Warfare.Traits.Buffs;
 /// </summary>
 public class SelfRevive : Buff
 {
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(SelfRevive),
         NameTranslations = new TranslationList("Self-Revive"),
@@ -17,7 +17,7 @@ public class SelfRevive : Buff
         Icon = "¢",
         Cooldown = 600,
         LastsUntilDeath = true,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 8 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 8 } },
         EffectDistributedToSquad = false,
         Data = "5" // self revive cooldown after being downed
     };
@@ -25,7 +25,7 @@ public class SelfRevive : Buff
     public float Cooldown;
     protected override void StartEffect(bool onStart)
     {
-        if (onStart && (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out Cooldown)))
+        if (onStart && (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.AdminLocale, out Cooldown)))
             Cooldown = 5f;
         base.StartEffect(onStart);
     }

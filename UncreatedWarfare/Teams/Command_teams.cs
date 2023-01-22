@@ -29,7 +29,7 @@ public class TeamsCommand : Command
         if (!teamgm.UseTeamSelector || teamgm.TeamSelector is null)
             throw ctx.SendGamemodeError();
 
-        if (!ctx.Caller.OnDuty() && CooldownManager.HasCooldown(ctx.Caller, ECooldownType.CHANGE_TEAMS, out Cooldown cooldown))
+        if (!ctx.Caller.OnDuty() && CooldownManager.HasCooldown(ctx.Caller, CooldownType.ChangeTeams, out Cooldown cooldown))
         {
             ctx.Reply(T.TeamsCooldown, cooldown);
             return;

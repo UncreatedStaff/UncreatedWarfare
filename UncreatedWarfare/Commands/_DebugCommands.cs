@@ -1,4 +1,5 @@
-﻿using SDG.NetTransport;
+﻿using HarmonyLib;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections;
@@ -13,17 +14,21 @@ using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Squads.Commander;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -32,11 +37,9 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Commands;
 
-#pragma warning disable IDE1006 // Naming Styles
 public class DebugCommand : AsyncCommand
-#pragma warning restore IDE1006 // Naming Styles
 {
-    public DebugCommand() : base("test", EAdminType.MEMBER)
+    public DebugCommand() : base("test", EAdminType.MEMBER, sync: true)
     {
         AddAlias("dev");
         AddAlias("tests");
@@ -115,7 +118,8 @@ public class DebugCommand : AsyncCommand
                         if (team is > 0 and < 3)
                         {
                             await Data.DatabaseManager.AddXP(player, team, amount, token).ConfigureAwait(false);
-                            PlayerNames name = await F.GetPlayerOriginalNamesAsync(player, token).ThenToUpdate(token);
+                            PlayerNames name = await F.GetPlayerOriginalNamesAsync(player, token).ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(token);
 
                             ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                         }
@@ -132,7 +136,8 @@ public class DebugCommand : AsyncCommand
                     await XPParameters
                         .WithTranslation(onlinePlayer, team, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, amount)
                         .Award(token)
-                        .ThenToUpdate(token);
+                        .ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
                     ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> " +
                                     $"to {(ctx.IsConsole ? onlinePlayer.Name.PlayerName : onlinePlayer.Name.CharacterName)}.");
                 }
@@ -165,8 +170,8 @@ public class DebugCommand : AsyncCommand
                         if (team is > 0 and < 3)
                         {
                             await Data.DatabaseManager.AddCredits(player, team, amount, token).ConfigureAwait(false);
-                            PlayerNames name = await Data.DatabaseManager.GetUsernamesAsync(player, token).ThenToUpdate(token);
-                            
+                            PlayerNames name = await Data.DatabaseManager.GetUsernamesAsync(player, token).ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(token);
                             ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                         }
                         else
@@ -179,8 +184,8 @@ public class DebugCommand : AsyncCommand
                 {
                     if (team is < 1 or > 2)
                         team = onlinePlayer.GetTeam();
-                    await Points.AwardCreditsAsync(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, token: token)
-                        .ThenToUpdate(token);
+                    await Points.AwardCreditsAsync(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, token: token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
                     ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> " +
                                     $"to {(ctx.IsConsole ? onlinePlayer.Name.PlayerName : onlinePlayer.Name.CharacterName)}.");
                 }
@@ -213,7 +218,7 @@ public class DebugCommand : AsyncCommand
             }
             else
             {
-                flag.CapT1(Flag.MAX_POINTS - flag.Points - 1);
+                flag.CapT1(Flag.MaxPoints - flag.Points - 1);
             }
         }
         else if (team == 2)
@@ -224,7 +229,7 @@ public class DebugCommand : AsyncCommand
             }
             else
             {
-                flag.CapT2(Flag.MAX_POINTS - flag.Points - 2);
+                flag.CapT2(Flag.MaxPoints - flag.Points - 2);
             }
         }
         else ctx.SendGamemodeError();
@@ -243,7 +248,7 @@ public class DebugCommand : AsyncCommand
             ctx.Reply(T.NotOnCaptureTeam);
             return;
         }
-        _ = Data.Gamemode.DeclareWin(team);
+        UCWarfare.RunTask(Data.Gamemode.DeclareWin, team, ctx: "/test quickwin executed for " + team + ".");
     }
     private void savemanyzones(CommandInteraction ctx)
     {
@@ -261,9 +266,13 @@ public class DebugCommand : AsyncCommand
         {
             zones.Clear();
             ReloadCommand.ReloadFlags();
-            fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
-            ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, true, true, false, false, true, Path.Combine(directory, "zonearea_" + i.ToString(Data.Locale)));
-            L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+            fg.Rotation.ForEach(x =>
+            {
+                if (x.ZoneData.Item is { } z)
+                    zones.Add(z);
+            });
+            ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, true, true, false, false, true, Path.Combine(directory, "zonearea_" + i.ToString(Data.AdminLocale)));
+            L.Log("Done with " + (i + 1).ToString(Data.LocalLocale) + '/' + times.ToString(Data.LocalLocale));
         }
     }
     private void savemanygraphs(CommandInteraction ctx)
@@ -281,8 +290,8 @@ public class DebugCommand : AsyncCommand
         for (int i = 0; i < times; i++)
         {
             ObjectivePathing.TryPath(rot);
-            ZoneDrawing.DrawZoneMap(fg.LoadedFlags, rot, Path.Combine(directory, "zonegraph_" + i.ToString(Data.Locale)));
-            L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+            ZoneDrawing.DrawZoneMap(fg.LoadedFlags, rot, Path.Combine(directory, "zonegraph_" + i.ToString(Data.AdminLocale)));
+            L.Log("Done with " + (i + 1).ToString(Data.LocalLocale) + '/' + times.ToString(Data.LocalLocale));
             rot.Clear();
         }
     }
@@ -291,13 +300,12 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.STAFF);
 
         ctx.AssertRanByPlayer();
-        ctx.AssertGamemode(out IFlagRotation fg);
 
         Vector3 pos = ctx.Caller.Position;
         if (pos == Vector3.zero) return;
-        Flag? flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos));
-        string txt = $"Position: <#ff9999>({pos.x.ToString("0.##", Data.Locale)}, {pos.y.ToString("0.##", Data.Locale)}, {pos.z.ToString("0.##", Data.Locale)})</color>. " +
-                     $"Yaw: <#ff9999>{ctx.Caller.Player.transform.eulerAngles.y.ToString("0.##", Data.Locale)}</color>.";
+        Flag? flag = Data.Is(out IFlagRotation fg) ? fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos)) : null;
+        string txt = $"Position: <#ff9999>({pos.x.ToString("0.##", Data.LocalLocale)}, {pos.y.ToString("0.##", Data.LocalLocale)}, {pos.z.ToString("0.##", Data.LocalLocale)}) @ {new GridLocation(ctx.Caller.Position)}</color>. " +
+                     $"Yaw: <#ff9999>{ctx.Caller.Player.transform.eulerAngles.y.ToString("0.##", Data.LocalLocale)}°</color>.";
         if (flag is null)
             ctx.ReplyString(txt);
         else
@@ -310,7 +318,7 @@ public class DebugCommand : AsyncCommand
         ctx.AssertRanByPlayer();
 
         InteractableSign? sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(ctx.Caller.Player.look);
-        if (sign == null) ctx.ReplyString($"You're not looking at a sign");
+        if (sign == null) ctx.ReplyString("You're not looking at a sign");
         else
         {
             if (!ctx.IsConsole)
@@ -334,6 +342,9 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         ctx.AssertGamemode(out IFlagRotation fg);
+        ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
+        if (singleton == null)
+            throw ctx.SendGamemodeError();
         bool all = true;
         bool extra = true;
         bool path = true;
@@ -363,14 +374,14 @@ public class DebugCommand : AsyncCommand
         List<Zone> zones = new List<Zone>();
         if (all)
         {
-            zones.AddRange(extra
-                ? Data.ZoneProvider.Zones
-                : Data.ZoneProvider.Zones.Where(x => x.Data.UseCase == EZoneUseCase.FLAG));
+            zones.AddRange((extra
+                ? singleton.Items.Select(x => x.Item).Where(x => x is not null)
+                : singleton.Items.Where(x => x.Item is { } item && item.Data.UseCase == ZoneUseCase.Flag).Select(x => x.Item))!);
         }
         else
-            zones.AddRange(fg.Rotation.Select(x => x.ZoneData));
+            zones.AddRange(fg.Rotation.Select(x => x.ZoneData.Item).Where(x => x != null)!);
         ctx.ReplyString("Picture has to generate, wait a few seconds then check " + Path.Combine(Data.Paths.FlagStorage, "zonearea.png") + ".");
-        ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "ZONEAREA");
+        ctx.LogAction(ActionLogType.BuildZoneMap, "ZONEAREA");
         ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, path, range, drawIn, drawAngles, true);
     }
     private void drawzone(CommandInteraction ctx)
@@ -378,8 +389,6 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         ctx.AssertGamemode(out IFlagRotation fg);
-        Zone zone;
-        string zoneName;
         Vector3 pos = ctx.Caller.Position;
         if (pos == Vector3.zero) return;
         Flag? flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(pos));
@@ -388,13 +397,13 @@ public class DebugCommand : AsyncCommand
             ctx.Reply(T.ZoneNoResultsLocation);
             return;
         }
-        else
-        {
-            zone = flag.ZoneData;
-            zoneName = flag.Name;
-        }
+        Zone? zone = flag.ZoneData.Item;
+        string zoneName = flag.Name;
+        if (zone is null)
+            throw ctx.Reply(T.ZoneNoResultsLocation);
+
         List<Zone> zones = new List<Zone>(1) { zone };
-        ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "DRAWZONE");
+        ctx.LogAction(ActionLogType.BuildZoneMap, "DRAWZONE");
         ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, false, true, false, true, true, Path.Combine(Data.Paths.FlagStorage, "zonerange_" + zoneName));
     }
     private void drawgraph(CommandInteraction ctx)
@@ -403,7 +412,7 @@ public class DebugCommand : AsyncCommand
 
         ctx.AssertGamemode(out IFlagRotation fg);
 
-        ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "DRAWGRAPH");
+        ctx.LogAction(ActionLogType.BuildZoneMap, "DRAWGRAPH");
         ZoneDrawing.DrawZoneMap(fg.LoadedFlags, fg.Rotation, null);
     }
     private void rotation(CommandInteraction ctx)
@@ -431,7 +440,6 @@ public class DebugCommand : AsyncCommand
             ctx.AssertPermissions(EAdminType.STAFF);
             player = ctx.Caller;
         }
-        bool shouldAllow = true;
         DamagePlayerParameters p = new DamagePlayerParameters(player.Player)
         {
             cause = EDeathCause.KILL,
@@ -443,7 +451,7 @@ public class DebugCommand : AsyncCommand
             killer = player == ctx.Caller ? Steamworks.CSteamID.Nil : player.CSteamID,
             times = 1f
         };
-        revive.ReviveManager.InjurePlayer(ref shouldAllow, ref p, player == ctx.Caller ? null : player.SteamPlayer);
+        revive.ReviveManager.InjurePlayer(in p, player == ctx.Caller ? null : player.SteamPlayer);
         ctx.ReplyString($"Injured {(player == ctx.Caller ? "you" : player.CharacterName)}.");
     }
     private void clearui(CommandInteraction ctx)
@@ -479,29 +487,31 @@ public class DebugCommand : AsyncCommand
             ctx.SendCorrectUsage(PLAYER_SAVE_USAGE);
             return;
         }
-        if (ctx.TryGet(0, out ulong player, out UCPlayer? onlinePlayer))
+        if (ctx.TryGet(0, out ulong player, out _))
         {
             if (PlayerManager.HasSave(player, out PlayerSave save))
             {
                 if (ctx.TryGet(2, out string value) && ctx.TryGet(1, out string property))
                 {
-                    ESetFieldResult result = PlayerManager.SetProperty(save, ref property, value);
+                    SetPropertyResult result = SettableUtil<PlayerSave>.SetProperty(save, property, value, out MemberInfo? info);
+                    if (info?.Name != null)
+                        property = info.Name;
                     switch (result)
                     {
-                        case ESetFieldResult.SUCCESS:
-                            PlayerNames names = onlinePlayer is not null ? onlinePlayer.Name :
-                                await F.GetPlayerOriginalNamesAsync(player, token).ThenToUpdate(token);
+                        case SetPropertyResult.Success:
+                            PlayerNames names = await F.GetPlayerOriginalNamesAsync(player, token).ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(token);
                             ctx.ReplyString($"Set {property} in {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}'s playersave to {value}.");
                             break;
-                        case ESetFieldResult.FIELD_NOT_FOUND:
-                            ctx.ReplyString($"Couldn't find a field by the name {property.ToProperCase()} in PlayerSave.");
+                        case SetPropertyResult.PropertyNotFound:
+                            ctx.ReplyString($"Couldn't find a field by the name {property} in PlayerSave.");
                             break;
-                        case ESetFieldResult.FIELD_PROTECTED:
+                        case SetPropertyResult.PropertyProtected:
                             ctx.ReplyString($"Unable to set {property}, it's missing the JsonSettable attribute.");
                             break;
-                        case ESetFieldResult.FIELD_NOT_SERIALIZABLE:
-                        case ESetFieldResult.INVALID_INPUT:
-                            ctx.ReplyString($"Couldn't parse {value} as a valid value for {property}.");
+                        case SetPropertyResult.TypeNotSettable:
+                        case SetPropertyResult.ParseFailure:
+                            ctx.ReplyString($"Couldn't parse {value} as a valid value for {property} (" + (info?.GetMemberType() is { } type ? type.Name : "String") + ").");
                             break;
                         default:
                             ctx.SendUnknownError();
@@ -532,23 +542,23 @@ public class DebugCommand : AsyncCommand
             Type? newGamemode = Gamemode.FindGamemode(gamemodeName);
             if (newGamemode is not null)
             {
-                if (Data.Is(out IStagingPhase gm) && gm.State == EState.STAGING)
+                if (Data.Is(out IStagingPhase gm) && gm.State == State.Staging)
                 {
-                    ctx.ReplyString($"Skipped staging phase.");
+                    ctx.ReplyString("Skipped staging phase.");
                     gm.SkipStagingPhase();
                 }
                 else
                     ctx.Defer();
-                Task.Run(async () =>
+                UCWarfare.RunTask(async () =>
                 {
                     await UCWarfare.ToUpdate();
                     if (newGamemode == Data.Gamemode?.GetType())
                     {
-                        await Data.Singletons.ReloadSingletonAsync(Gamemode.GAMEMODE_RELOAD_KEY);
+                        await Data.Singletons.ReloadSingletonAsync(Gamemode.GamemodeReloadKey);
                         await UCWarfare.ToUpdate();
                         ctx.ReplyString($"Successfully reloaded {newGamemode.Name}.");
                     }
-                    else if (await Gamemode.TryLoadGamemode(newGamemode))
+                    else if (await Gamemode.TryLoadGamemode(newGamemode, default))
                     {
                         await UCWarfare.ToUpdate();
                         ctx.ReplyString($"Successfully loaded {newGamemode.Name}.");
@@ -558,7 +568,7 @@ public class DebugCommand : AsyncCommand
                         await UCWarfare.ToUpdate();
                         ctx.ReplyString($"Failed to load {newGamemode.Name}.");
                     }
-                });
+                }, ctx: "/test gamemode executed for type " + newGamemode.Name + ".");
             }
             else
                 ctx.ReplyString($"Gamemode not found: {gamemodeName}.");
@@ -571,10 +581,7 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         Data.TrackStats = !Data.TrackStats;
-        if (Data.TrackStats)
-            ctx.ReplyString($"Re-enabled stat tracking.");
-        else
-            ctx.ReplyString("Disabled stat tracking.");
+        ctx.ReplyString(Data.TrackStats ? "Re-enabled stat tracking." : "Disabled stat tracking.");
     }
     private void destroyblocker(CommandInteraction ctx)
     {
@@ -596,10 +603,8 @@ public class DebugCommand : AsyncCommand
                 }
             }
         }
-        if (ct == 0)
-            ctx.ReplyString("Couldn't find any zone blockers.");
-        else
-            ctx.ReplyString($"Destroyed {ct} zone blocked{ct.S()}");
+
+        ctx.ReplyString(ct == 0 ? "Couldn't find any zone blockers." : $"Destroyed {ct} zone blocked{ct.S()}");
     }
     private void skipstaging(CommandInteraction ctx)
     {
@@ -607,14 +612,14 @@ public class DebugCommand : AsyncCommand
 
         ctx.AssertGamemode(out IStagingPhase gm);
 
-        if (gm.State == EState.STAGING)
+        if (gm.State == State.Staging)
         {
             gm.SkipStagingPhase();
             ctx.ReplyString("Skipped staging phase.");
         }
         else
         {
-            ctx.ReplyString($"Staging phase is not active.");
+            ctx.ReplyString("Staging phase is not active.");
         }
     }
     private void resetlobby(CommandInteraction ctx)
@@ -664,20 +669,20 @@ public class DebugCommand : AsyncCommand
             BarricadeDrop? bd = BarricadeManager.FindBarricadeByRootTransform(t);
             if (bd != null)
             {
-                ctx.ReplyString($"Barricade {bd.asset.itemName}: #{bd.instanceID.ToString(Data.Locale)}");
+                ctx.ReplyString($"Barricade {bd.asset.itemName}: #{bd.instanceID.ToString(Data.LocalLocale)}");
                 return;
             }
             StructureDrop? dp = StructureManager.FindStructureByRootTransform(t);
             if (dp != null)
             {
-                ctx.ReplyString($"Structure {dp.asset.itemName}: #{dp.instanceID.ToString(Data.Locale)}");
+                ctx.ReplyString($"Structure {dp.asset.itemName}: #{dp.instanceID.ToString(Data.LocalLocale)}");
                 return;
             }
             for (int i = 0; i < VehicleManager.vehicles.Count; i++)
             {
                 if (VehicleManager.vehicles[i].transform == t)
                 {
-                    ctx.ReplyString($"Vehicle {VehicleManager.vehicles[i].asset.vehicleName}: #{VehicleManager.vehicles[i].instanceID.ToString(Data.Locale)}");
+                    ctx.ReplyString($"Vehicle {VehicleManager.vehicles[i].asset.vehicleName}: #{VehicleManager.vehicles[i].instanceID.ToString(Data.LocalLocale)}");
                     return;
                 }
             }
@@ -690,14 +695,14 @@ public class DebugCommand : AsyncCommand
                         LevelObject obj = LevelObjects.objects[b, b2][i];
                         if (obj.transform == t)
                         {
-                            ctx.ReplyString($"Vehicle {VehicleManager.vehicles[i].asset.vehicleName}: #{VehicleManager.vehicles[i].instanceID.ToString(Data.Locale)}");
+                            ctx.ReplyString($"Vehicle {VehicleManager.vehicles[i].asset.vehicleName}: #{VehicleManager.vehicles[i].instanceID.ToString(Data.LocalLocale)}");
                             return;
                         }
                     }
                 }
             }
         }
-        ctx.ReplyString($"You must be looking at a barricade, structure, vehicle, or object.");
+        ctx.ReplyString("You must be looking at a barricade, structure, vehicle, or object.");
     }
     private void fakereport(CommandInteraction ctx)
     {
@@ -741,7 +746,7 @@ public class DebugCommand : AsyncCommand
 
         ctx.AssertRanByPlayer();
 
-        if (ctx.TryGet(0, out EQuestType type))
+        if (ctx.TryGet(0, out QuestType type))
         {
             for (int i = 0; i < QuestManager.RegisteredTrackers.Count; i++)
             {
@@ -774,13 +779,8 @@ public class DebugCommand : AsyncCommand
 
         if (ctx.TryGetRange(0, out string text) && ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
         {
-            if (!RequestSigns.Loaded || !RequestSigns.SignExists(sign, out _))
-            {
-                BarricadeManager.ServerSetSignText(sign, text.Replace("\\n", "\n"));
-                Signs.BroadcastSignUpdate(drop);
-            }
-            else
-                ctx.ReplyString("Unable to set text on a request sign. Not supported.");
+            BarricadeManager.ServerSetSignText(sign, text.Replace("\\n", "\n"));
+            Signs.BroadcastSignUpdate(drop);
         }
     }
 #if DEBUG
@@ -809,7 +809,6 @@ public class DebugCommand : AsyncCommand
             }
         }
     }
-
     private void gettime(CommandInteraction ctx)
     {
         ctx.AssertArgs(1, "/test gettime <timestr>");
@@ -863,7 +862,7 @@ public class DebugCommand : AsyncCommand
         RaycastHit[] results = new RaycastHit[16];
         yield return new WaitForSeconds(5f);
         //Array.ForEach(veh.transform.gameObject.GetComponentsInChildren<Collider>(), x => UnityEngine.Object.Destroy(x));
-        while (veh != null)
+        while (veh.isActiveAndEnabled)
         {
             const float TIME = 0.1f;
             yield return new WaitForSeconds(TIME);
@@ -932,13 +931,11 @@ public class DebugCommand : AsyncCommand
         }
         else throw ctx.ReplyString("Debugger is not active.");
     }
-
     private void translationtest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
-        ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.Kit!);
+        ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.ActiveKit?.Item!);
     }
-
     private void quest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
@@ -947,32 +944,31 @@ public class DebugCommand : AsyncCommand
         {
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
-                ctx.Caller.Player.quests.sendAddQuest(asset.id);
-                ctx.ReplyString("Added quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+                ctx.Caller.Player.quests.ServerAddQuest(asset);
+                ctx.ReplyString("<#9fa1a6>Added quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
-            else ctx.ReplyString("Quest not found.");
+            else ctx.ReplyString("<#ff8c69>Quest not found.");
         }
         else if (ctx.MatchParameter(0, "track"))
         {
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
-                ctx.Caller.Player.quests.sendTrackQuest(asset.id);
-                ctx.ReplyString("Tracked quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+                ctx.Caller.ServerTrackQuest(asset);
+                ctx.ReplyString("<#9fa1a6>Tracked quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
-            else ctx.ReplyString("Quest not found.");
+            else ctx.ReplyString("<#ff8c69>Quest not found.");
         }
         else if (ctx.MatchParameter(0, "remove"))
         {
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
-                ctx.Caller.Player.quests.sendRemoveQuest(asset.id);
-                ctx.ReplyString("Removed quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+                ctx.Caller.Player.quests.ServerRemoveQuest(asset);
+                ctx.ReplyString("<#9fa1a6>Removed quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
-            else ctx.ReplyString("Quest not found.");
+            else ctx.ReplyString("<#ff8c69>Quest not found.");
         }
-        else ctx.ReplyString("Syntax: /test quest <add|track|remove> <id>");
+        else ctx.SendCorrectUsage("/test quest <add|track|remove> <id>");
     }
-
     private void flag(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
@@ -1014,23 +1010,21 @@ public class DebugCommand : AsyncCommand
         }
         ctx.ReplyString("Syntax: /test flag <set|get|remove> <flag> [value]");
     }
-
     private void findasset(CommandInteraction ctx)
     {
         if (ctx.TryGet(0, out Guid guid))
         {
-            ctx.ReplyString("Asset: " + (Assets.find(guid)?.FriendlyName ?? "null"));
+            ctx.ReplyString("<#9fa1a6>Asset: " + (Assets.find(guid)?.FriendlyName ?? "null"));
         }
         else if (ctx.TryGet(0, out ushort us) && ctx.TryGet(1, out EAssetType type))
         {
-            ctx.ReplyString("Asset: " + (Assets.find(type, us)?.FriendlyName ?? "null"));
+            ctx.ReplyString("<#9fa1a6>Asset: " + (Assets.find(type, us)?.FriendlyName ?? "null"));
         }
         else
         {
-            ctx.ReplyString("Please use a <GUID> or <uhort, type>");
+            ctx.ReplyString("<#ff8c69>Please use a <GUID> or <uhort, type>");
         }
     }
-
     private void traits(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1040,7 +1034,7 @@ public class DebugCommand : AsyncCommand
         ctx.AssertRanByPlayer();
 
         L.Log("Traits: ");
-        using (IDisposable d = L.IndentLog(1))
+        using (L.IndentLog(1))
         {
             for (int i = 0; i < ctx.Caller.ActiveTraits.Count; ++i)
             {
@@ -1057,7 +1051,6 @@ public class DebugCommand : AsyncCommand
               ", " + (ctx.Caller.ActiveBuffs[4]?.GetType().Name ?? "null") +
               ", " + (ctx.Caller.ActiveBuffs[5]?.GetType().Name ?? "null") + " ]");
     }
-
     private void sendui(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1080,7 +1073,6 @@ public class DebugCommand : AsyncCommand
             ctx.ReplyString("Syntax: /test sendui <id> [key]");
         }
     }
-
     private void advancedelays(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1088,35 +1080,32 @@ public class DebugCommand : AsyncCommand
         if (ctx.TryGet(0, out float seconds))
         {
             Data.Gamemode.AdvanceDelays(seconds);
-            ctx.ReplyString("Advanced delays by " + seconds.ToString("0.##", Data.Locale) + " seconds.");
+            ctx.ReplyString("Advanced delays by " + seconds.ToString("0.##", Data.LocalLocale) + " seconds.");
         }
         else
             ctx.SendCorrectUsage("/test advancedelays <seconds>.");
     }
-
     private void listcooldowns(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
         L.Log("Cooldowns for " + ctx.Caller.Name.PlayerName + ":");
         using IDisposable d = L.IndentLog(1);
-        foreach (Cooldown cooldown in CooldownManager.Singleton.cooldowns.Where(x => x.player.Steam64 == ctx.Caller.Steam64))
+        foreach (Cooldown cooldown in CooldownManager.Singleton.Cooldowns.Where(x => x.player.Steam64 == ctx.Caller.Steam64))
         {
             L.Log($"{cooldown.type}: {cooldown.Timeleft:hh\\:mm\\:ss}, {(cooldown.data is null || cooldown.data.Length == 0 ? "NO DATA" : string.Join(";", cooldown.data))}");
         }
     }
-
     private void giveuav(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
         bool isMarker = ctx.Caller.Player.quests.isMarkerPlaced;
         Vector3 pos = isMarker ? ctx.Caller.Player.quests.markerPosition : ctx.Caller.Player.transform.position;
-        pos = pos with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(pos, 0f) + UAV.GROUND_HEIGHT_OFFSET) };
+        pos = pos with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(pos, 0f) + UAV.GroundHeightOffset) };
         UAV.GiveUAV(ctx.Caller.GetTeam(), ctx.Caller, ctx.Caller, isMarker, pos);
         ctx.Defer();
     }
-
     private void requestuav(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1125,50 +1114,124 @@ public class DebugCommand : AsyncCommand
         UAV.RequestUAV(ctx.Caller);
         ctx.Defer();
     }
+#if DEBUG
 
+    private async Task testfield(CommandInteraction ctx, CancellationToken token)
+    {
+        ctx.AssertRanByPlayer();
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        ctx.AssertGamemode(out IVehicles vehicles);
+        ulong other = TeamManager.Other(ctx.Caller.GetTeam());
+        //FactionInfo? other = TeamManager.GetFactionSafe(oteam);
+        if (other is not 1ul and not 2ul)
+            throw ctx.Reply(T.NotOnCaptureTeam);
+        VehicleData[] data;
+        vehicles.VehicleBay.WriteWait();
+        try
+        {
+            data = vehicles.VehicleBay.Items
+                .Select(x => x.Item)
+                .Where(x => x is { Branch: Branch.Default or Branch.Infantry or Branch.Armor }).ToArray()!;
+        }
+        finally
+        {
+            vehicles.VehicleBay.WriteRelease();
+        }
+
+        Vector3 st = ctx.Caller.Position;
+        Quaternion rot = Quaternion.Euler(Vector3.zero);
+        const int size = 480;
+        const int offset = 24;
+        const int sections = size / 2 / offset;
+        for (int x = -sections; x <= sections; ++x)
+        {
+            for (int z = -sections; z <= sections; ++z)
+            {
+                Vector3 pos = new Vector3(st.x + x * offset, st.y, st.z + z * offset);
+                float h = LevelGround.getHeight(pos);
+                if (h <= 0f)
+                    continue;
+                pos = pos with { y = h + 10f };
+                VehicleData veh = data[UnityEngine.Random.Range(0, data.Length)];
+                if (VehicleData.IsEmplacement(veh.Type) && Assets.find(veh.VehicleID) is VehicleAsset asset)
+                {
+                    BuildableComponent.SpawnImplacement(asset, pos, Vector3.zero, 0ul, other, Guid.Empty);
+                }
+                else
+                {
+                    await VehicleSpawner.SpawnLockedVehicle(veh.VehicleID, pos, rot, groupOwner: other, token: token);
+                }
+                await Task.Delay(25, token);
+                await UCWarfare.ToUpdate(token);
+            }
+        }
+
+        ctx.ReplyString("Spawned " + (sections * sections * 4) + " vehicles.");
+    }
+#endif
     private async Task squad(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
 
+        KitManager? manager = KitManager.GetSingletonQuick();
         ulong team = ctx.Caller.GetTeam();
-        string kitname = team == 1 ? "ussql1" : "mesql1";
-        if (!KitManager.KitExists(kitname, out Kit kit))
-            throw ctx.SendUnknownError();
+        if (manager != null)
+        {
+            SqlItem<Kit>? sql = await manager.FindKit(team == 1 ? "ussql1" : "mesql1", token).ConfigureAwait(false);
+            if (sql?.Item == null)
+                ctx.SendUnknownError();
+            else
+                await manager.GiveKit(ctx.Caller, sql, token).ConfigureAwait(false);
+        }
 
-        KitManager.GiveKit(ctx.Caller, kit);
         if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader != ctx.Caller)
         {
             SquadManager.CreateSquad(ctx.Caller, team);
         }
-
-        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
-        if (bay != null && bay.IsLoaded && VehicleSpawner.Loaded)
+        
+        if (Data.Is(out IVehicles vgm))
         {
-            Vehicles.VehicleSpawn? logi;
-            await bay.WaitAsync(token).ConfigureAwait(false);
+            SqlItem<Vehicles.VehicleSpawn>? logi;
+            await vgm.VehicleBay.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                await UCWarfare.ToUpdate();
-                Vector3 pos = ctx.Caller.Position;
-                logi = bay.Items
-                    .Where(x => x.Item != null && (x.Item.Team == team || x.Item.Team == 0) && x.Item.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT)
-                    .SelectMany(x => VehicleSpawner.Spawners
-                        .Where(y => y.VehicleGuid == x.Item!.VehicleID && y.HasLinkedVehicle(out _) && y.LinkedSign?.SignInteractable != null))
-                    .OrderBy(x => (pos - x.LinkedSign!.SignInteractable!.transform.position).sqrMagnitude)
-                    .FirstOrDefault();
+                await vgm.VehicleSpawner.WaitAsync(token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
+                try
+                {
+                    vgm.VehicleSpawner.WriteWait();
+                    try
+                    {
+                        Vector3 pos = ctx.Caller.Position;
+                        logi = vgm.VehicleBay.Items
+                            .Where(x => x.Item != null && (x.Item.Team == team || x.Item.Team == 0) && x.Item.Type is VehicleType.LogisticsGround or VehicleType.TransportAir)
+                            .SelectMany(x => vgm.VehicleSpawner.Items
+                                .Where(y => y.Item?.Vehicle?.Item is { } v && v.VehicleID == x.Item!.VehicleID && y.Item.HasLinkedVehicle(out _) && y.Item?.Sign?.Item == null))
+                            .OrderBy(x => (pos - x.Item!.Sign!.Item!.Buildable!.Model.position).sqrMagnitude)
+                            .FirstOrDefault();
+                    }
+                    finally
+                    {
+                        vgm.VehicleSpawner.WriteRelease();
+                    }
+                }
+                finally
+                {
+                    vgm.VehicleSpawner.Release();
+                }
             }
             finally
             {
-                bay.Release();
+                vgm.VehicleBay.Release();
             }
-            if (logi == null)
+            if (logi?.Item is null)
             {
                 ctx.ReplyString("No logistics vehicle nearby to request.", Color.red);
             }
-            else if (logi.HasLinkedVehicle(out InteractableVehicle veh))
+            else if (logi.Item.HasLinkedVehicle(out InteractableVehicle veh))
             {
-                SqlItem<VehicleData>? data = await bay.GetDataProxy(logi.VehicleGuid, token).ConfigureAwait(false);
+                SqlItem<VehicleData>? data = logi.Item.Vehicle;
                 if (data?.Item == null)
                 {
                     await UCWarfare.ToUpdate();
@@ -1179,7 +1242,7 @@ public class DebugCommand : AsyncCommand
                     await data.Enter(token).ConfigureAwait(false);
                     try
                     {
-                        await UCWarfare.ToUpdate();
+                        await UCWarfare.ToUpdate(token);
                         RequestCommand.GiveVehicle(ctx.Caller, veh, data.Item);
                     }
                     finally
@@ -1190,9 +1253,271 @@ public class DebugCommand : AsyncCommand
             }
         }
         else throw ctx.SendGamemodeError();
-        if (Data.Gamemode.State == EState.STAGING)
+        if (Data.Gamemode.State == State.Staging)
         {
             Data.Gamemode.SkipStagingPhase();
         }
     }
+    private void effect(CommandInteraction ctx)
+    {
+        ctx.AssertRanByPlayer();
+        ctx.AssertPermissions(EAdminType.MODERATOR);
+        const string usage = "/test effect [clear] <name/id/guid> (for UI only - [key : int16] [arg0 : str] [arg1 : str] [arg2 : str] [arg3 : str] )";
+        ctx.AssertHelpCheck(0, usage);
+        ctx.AssertArgs(0, usage);
+        EffectAsset asset;
+        if (ctx.MatchParameter(0, "clear", "remove", "delete"))
+        {
+            ctx.AssertArgs(1, usage);
+            if (ctx.MatchParameter(1, "all", "*", "any"))
+                asset = null!;
+            else if (!ctx.TryGet(1, out asset, out _, allowMultipleResults: true))
+                throw ctx.ReplyString($"<#ff8c69>Can't find an effect with the term: <#ddd>{ctx.Get(1)}</color>.");
+            if (asset == null)
+            {
+                Data.SendEffectClearAll.Invoke(ENetReliability.Reliable, ctx.Caller.Connection);
+                throw ctx.ReplyString("<#9fa1a6>Cleared all effects.");
+            }
+            EffectManager.ClearEffectByGuid(asset.GUID, ctx.Caller.Connection);
+            throw ctx.ReplyString($"<#9fa1a6>Cleared all {asset.name} effects.");
+        }
+        if (!ctx.TryGet(0, out asset, out _, allowMultipleResults: true))
+            throw ctx.ReplyString($"<#ff8c69>Can't find an effect with the term: <#ddd>{ctx.Get(0)}</color>.");
+        short key = ctx.MatchParameter(1, "-", "_") || !ctx.TryGet(1, out short s) ? (short)0 : s;
+        if (asset.effect != null)
+        {
+            if (asset.effect.CompareTag("UI"))
+            {
+                switch (ctx.ArgumentCount)
+                {
+                    case 3:
+                        EffectManager.sendUIEffect(asset.id, key, ctx.Caller.Connection, true, ctx.Get(2));
+                        throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{ctx.Get(2)}\".");
+                    case 4:
+                        EffectManager.sendUIEffect(asset.id, key, ctx.Caller.Connection, true, ctx.Get(2), ctx.Get(3));
+                        throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{ctx.Get(2)}\", {{1}} = \"{ctx.Get(3)}\".");
+                    case 5:
+                        EffectManager.sendUIEffect(asset.id, key, ctx.Caller.Connection, true, ctx.Get(2), ctx.Get(3), ctx.Get(4));
+                        throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{ctx.Get(2)}\", {{1}} = \"{ctx.Get(3)}\", {{2}} = \"{ctx.Get(4)}\".");
+                    default:
+                        if (ctx.ArgumentCount < 3)
+                        {
+                            EffectManager.sendUIEffect(asset.id, key, ctx.Caller.Connection, true);
+                            throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you with no arguments.");
+                        }
+                        EffectManager.sendUIEffect(asset.id, key, ctx.Caller.Connection, true, ctx.Get(2), ctx.Get(3), ctx.Get(4), ctx.Get(5));
+                        throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you with {{0}} = \"{ctx.Get(2)}\", {{1}} = \"{ctx.Get(3)}\", {{2}} = \"{ctx.Get(4)}\", {{3}} = \"{ctx.Get(5)}\".");
+                }
+            }
+            F.TriggerEffectReliable(asset, ctx.Caller.Connection, ctx.Caller.Position);
+            throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you at {ctx.Caller.Position.ToString("0.##", Localization.GetLocale(ctx))}." + (ctx.HasArg(1) ? " To spawn as UI instead, the effect must have the \"UI\" tag in unity." : string.Empty));
+        }
+        throw ctx.ReplyString($"<#ff8c69>{asset.name}'s effect property hasn't been set. Possibly the effect was set up incorrectly.");
+    }
+    private void watchdogtest(CommandInteraction ctx)
+    {
+        ctx.AssertRanByConsole();
+        ctx.ReplyString("Starting...");
+        UCWarfare.RunTask(async () =>
+        {
+            ctx.ReplyString("0 sec / 240 sec");
+            for (int i = 0; i < 24; ++i)
+            {
+                await Task.Delay(10000);
+                ctx.ReplyString(((i + 1) * 10).ToString(Data.AdminLocale) + " sec / 240 sec");
+            }
+        });
+    }
+#if DEBUG
+    private void migrateoldkits(CommandInteraction ctx)
+    {
+        ctx.AssertRanByConsole();
+
+        KitManager? manager = Data.Singletons.GetSingleton<KitManager>();
+        if (manager is not { IsLoaded: true })
+            throw ctx.SendGamemodeError();
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await manager.MigrateOldKits().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                L.LogError(ex);
+            }
+        });
+        ctx.Defer();
+    }
+#endif
+
+#if DEBUG
+    private void runtests(CommandInteraction ctx)
+    {
+        ctx.AssertRanByConsole();
+
+        string? typeName = ctx.Get(0);
+        string? methodName = ctx.Get(1);
+        ctx.AssertHelpCheck(0, "/test [type : str] [method : str]");
+        ctx.ReplyString("<#9fa1a6>Running tests (type: " + (typeName ?? "[any]") + ", method: " + (methodName ?? "[any]") + ").");
+        Task.Run(async () =>
+        {
+            try
+            {
+                Type[] types = typeof(UCWarfare).Assembly.GetTypes();
+                for (int i = 0; i < types.Length; ++i)
+                {
+                    Type type = types[i];
+                    if (!string.IsNullOrEmpty(typeName) && !type.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    MethodInfo[] methods = type.GetMethods(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (methods.Length < 0) continue;
+                    bool one = false;
+                    bool isSingleton = false;
+                    foreach (MethodInfo method in methods)
+                    {
+                        if (!string.IsNullOrEmpty(methodName) && !method.Name.Equals(methodName, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        OperationTestAttribute[] attrs = Attribute.GetCustomAttributes(method, typeof(OperationTestAttribute)).Cast<OperationTestAttribute>().ToArray();
+                        if (attrs.Length < 1) continue;
+                        object? target = null;
+                        if (!method.IsStatic)
+                        {
+                            if (!one)
+                            {
+                                isSingleton = typeof(IUncreatedSingleton).IsAssignableFrom(type);
+                                one = true;
+                            }
+                            if (!isSingleton)
+                            {
+                                L.LogWarning("Can't run an instance method on a non-singleton object: " + method.FullDescription() + ".");
+                                continue;
+                            }
+
+                            IUncreatedSingleton? singleton = Data.Singletons.GetSingleton(type);
+                            if (singleton is null)
+                            {
+                                L.LogWarning("Can't find a singleton of type " + type.Name + " to run an instance method on: " + method.FullDescription() + ".");
+                                continue;
+                            }
+
+                            target = singleton;
+                        }
+                        string? disp2 = null;
+                        ParameterInfo[] parameters = method.GetParameters();
+                        for (int a = 0; a < attrs.Length; ++a)
+                        {
+                            OperationTestAttribute attr = attrs[a];
+                            string? disp = attr.DisplayName;
+                            if (disp is null)
+                            {
+                                disp = disp2 ?? method.Name;
+                                if (disp2 is null)
+                                    L.LogDebug("\n[INFO]  " + disp, ConsoleColor.DarkCyan);
+                            }
+                            else if (disp2 is null)
+                            {
+                                L.LogDebug("\n[INFO]  " + disp, ConsoleColor.DarkCyan);
+                                disp2 = disp;
+                            }
+                            object[] @params;
+                            bool cancel = false;
+                            if (parameters.Length != 1)
+                            {
+                                if (parameters.Length == 0)
+                                {
+                                    @params = Array.Empty<object>();
+                                    goto exe;
+                                }
+                                if (parameters.Length == 2)
+                                    cancel = parameters[1].ParameterType == typeof(CancellationToken);
+                                if (!cancel)
+                                {
+                                    L.LogWarning(" 🗴 Test method " + disp + " \"" + method.FullDescription() + "\" does not have a valid signature for test #" + a + ".");
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                cancel = parameters[0].ParameterType == typeof(CancellationToken);
+                            }
+                            if (attr.ArgumentInt64.HasValue) @params = new object[] { attr.ArgumentInt64.Value };
+                            else if (attr.ArgumentUInt64.HasValue) @params = new object[] { attr.ArgumentUInt64.Value };
+                            else if (attr.ArgumentInt32.HasValue) @params = new object[] { attr.ArgumentInt32.Value };
+                            else if (attr.ArgumentUInt32.HasValue) @params = new object[] { attr.ArgumentUInt32.Value };
+                            else if (attr.ArgumentInt16.HasValue) @params = new object[] { attr.ArgumentInt16.Value };
+                            else if (attr.ArgumentUInt16.HasValue) @params = new object[] { attr.ArgumentUInt16.Value };
+                            else if (attr.ArgumentInt8.HasValue) @params = new object[] { attr.ArgumentInt8.Value };
+                            else if (attr.ArgumentUInt8.HasValue) @params = new object[] { attr.ArgumentUInt8.Value };
+                            else if (attr.ArgumentSingle.HasValue) @params = new object[] { attr.ArgumentSingle.Value };
+                            else if (attr.ArgumentDouble.HasValue) @params = new object[] { attr.ArgumentDouble.Value };
+                            else if (attr.ArgumentDecimal.HasValue) @params = new object[] { attr.ArgumentDecimal.Value };
+                            else if (attr.ArgumentBoolean.HasValue) @params = new object[] { attr.ArgumentBoolean.Value };
+                            else if (attr.ArgumentString != null) @params = new object[] { attr.ArgumentString };
+                            else if (attr.ArgumentType != null) @params = new object[] { attr.ArgumentType };
+                            else
+                            {
+                                @params = Array.Empty<object>();
+                                goto exe;
+                            }
+
+                            if (cancel)
+                                Util.AddToArray(ref @params!, CancellationToken.None);
+
+                            Type type1 = @params[0].GetType();
+                            if (!type1.IsAssignableFrom(parameters[0].ParameterType))
+                            {
+                                L.LogWarning(" 🗴 Test method " + disp + " \"" + method.FullDescription() + "\" does not have a valid signature for test #" + a +
+                                             ": " + method.ReturnType.Name + " (" + type1.Name + ").");
+                                continue;
+                            }
+                            exe:
+                            try
+                            {
+                                object? result = method.Invoke(target, @params);
+                                if (result is Task task && !task.IsCompleted)
+                                {
+                                    await task.ConfigureAwait(false);
+                                    Type taskType = task.GetType();
+                                    if (taskType.IsGenericType)
+                                    {
+                                        result = taskType.GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)?.GetValue(task);
+                                    }
+                                    if (result != null)
+                                        L.Log(" ✓ " + disp + " test " + a + " completed async with result \"" + result + "\".", ConsoleColor.Green);
+                                    else
+                                        L.Log(" ✓ " + disp + " test " + a + " completed async.", ConsoleColor.Green);
+                                }
+                                else if (result != null)
+                                {
+                                    L.Log(" ✓ " + disp + " test " + a + " completed with result \"" + result + "\".", ConsoleColor.Green);
+                                }
+                                else
+                                {
+                                    L.Log(" ✓ " + disp + " test " + a + " completed.", ConsoleColor.Green);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                if (ex is OperationCanceledException)
+                                    L.LogWarning(" " + disp + " " + method.FullDescription() + " test " + a + " was cancelled.");
+                                else
+                                {
+                                    L.LogError(" " + disp + " " + method.FullDescription() + " test " + a + " failed with exception:");
+                                    L.LogError(ex);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error running tests:");
+                L.LogError(ex);
+            }
+        });
+    }
+#endif
 }

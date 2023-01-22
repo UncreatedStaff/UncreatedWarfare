@@ -5,17 +5,17 @@ using System.Linq;
 using System.Text.Json;
 
 namespace Uncreated.Warfare.Quests;
-/// <summary>Stores information about a <see cref="EQuestType"/> of quest. Isn't necessarily constant, some can have varients that are used for daily quests.
+/// <summary>Stores information about a <see cref="Quests.QuestType"/> of quest. Isn't necessarily constant, some can have varients that are used for daily quests.
 /// Rank and kit quests should overridden with a set <see cref="IQuestState{TTracker, TDataNew}"/>.</summary>
 public abstract class BaseQuestData : ITranslationArgument
 {
-    private EQuestType _type;
+    private QuestType _type;
     private Dictionary<string, string> _translations;
     private RewardExpression[] _rewardExpressions;
     public bool CanBeDailyQuest = true;
     public abstract IEnumerable<IQuestPreset> Presets { get; }
     public abstract int TickFrequencySeconds { get; }
-    public EQuestType QuestType { get => _type; internal set => _type = value; }
+    public QuestType QuestType { get => _type; internal set => _type = value; }
     public Dictionary<string, string> Translations { get => _translations; internal set => _translations = value; }
     public virtual bool ResetOnGameEnd => false;
     public IQuestReward[] EvaluateRewards(in IQuestState state)
@@ -46,7 +46,7 @@ public abstract class BaseQuestData : ITranslationArgument
             L.LogWarning("No translations for " + QuestType.ToString() + " quest.");
             return QuestType.ToString() + " - " + string.Join("|", formatting);
         }
-        if (Translations.TryGetValue(language, out string v) || (!language.Equals(L.DEFAULT, StringComparison.Ordinal) && Translations.TryGetValue(L.DEFAULT, out v)))
+        if (Translations.TryGetValue(language, out string v) || (!language.Equals(L.Default, StringComparison.Ordinal) && Translations.TryGetValue(L.Default, out v)))
         {
             try
             {
@@ -61,7 +61,7 @@ public abstract class BaseQuestData : ITranslationArgument
         return string.Join(", ", formatting);
     }
     public string Translate(bool forAsset, UCPlayer? player, params object[]? formatting) =>
-        Translate(forAsset, player is not null && Data.Languages.TryGetValue(player.Steam64, out string language) ? language : L.DEFAULT, formatting);
+        Translate(forAsset, player is not null && Data.Languages.TryGetValue(player.Steam64, out string language) ? language : L.Default, formatting);
     public abstract void OnPropertyRead(string propertyname, ref Utf8JsonReader reader);
     public abstract BaseQuestTracker? CreateTracker(UCPlayer player);
     public abstract IQuestState GetState();
@@ -93,7 +93,7 @@ public abstract class BaseQuestData : ITranslationArgument
         }
     }
     public abstract IQuestPreset CreateRandomPreset(ushort flag = 0);
-    [FormatDisplay("Quest Type (" + nameof(EQuestType) + ")")]
+    [FormatDisplay("Quest Type (" + nameof(Quests.QuestType) + ")")]
     public const string TYPE_FORMAT = "t";
 
     [FormatDisplay(typeof(QuestAsset), "Quest Name")]
@@ -235,13 +235,13 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                                 if (reader.TokenType == JsonTokenType.StartObject)
                                 {
                                     IQuestReward? reward = null;
-                                    EQuestRewardType type = EQuestRewardType.NONE;
+                                    QuestRewardType type = QuestRewardType.None;
                                     while (reader.Read())
                                     {
                                         if (reader.TokenType == JsonTokenType.PropertyName)
                                         {
                                             string prop2 = reader.GetString()!;
-                                            if (type == EQuestRewardType.NONE && prop2.Equals("type", StringComparison.OrdinalIgnoreCase))
+                                            if (type == QuestRewardType.None && prop2.Equals("type", StringComparison.OrdinalIgnoreCase))
                                             {
                                                 if (reader.Read())
                                                 {
@@ -458,4 +458,6 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
             Rewards[i].GiveReward(_player, this);
         }
     }
+
+    public override string ToString() => GetDisplayString(false);
 }

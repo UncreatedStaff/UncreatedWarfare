@@ -1,45 +1,55 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using Uncreated.Framework;
 using Uncreated.Json;
-using Uncreated.Warfare.Configuration;
+using Uncreated.SQL;
 
-namespace Uncreated.Warfare.Gamemodes.Flags
+namespace Uncreated.Warfare.Gamemodes.Flags;
+
+public struct AdjacentFlagData : IJsonReadWrite, IListItem
 {
-    public struct AdjacentFlagData : IJsonReadWrite
+    [JsonPropertyName("flag_id")]
+    public int LegacyFlagId
     {
-        public int flag_id;
-        public float weight;
-        public AdjacentFlagData(int flagId, float weight = 1f)
-        {
-            this.flag_id = flagId;
-            this.weight = weight;
-        }
+        get => PrimaryKey.Key;
+        set => PrimaryKey = value;
+    }
 
-        public void ReadJson(ref Utf8JsonReader reader)
+    [JsonIgnore]
+    public PrimaryKey PrimaryKey { get; set; }
+
+    [JsonPropertyName("weight")]
+    public float Weight;
+    public AdjacentFlagData(int flagId, float weight = 1f)
+    {
+        this.PrimaryKey = flagId;
+        this.Weight = weight;
+    }
+
+    public void ReadJson(ref Utf8JsonReader reader)
+    {
+        while (reader.Read())
         {
-            while (reader.Read())
+            if (reader.TokenType == JsonTokenType.EndObject) return;
+            if (reader.TokenType == JsonTokenType.PropertyName)
             {
-                if (reader.TokenType == JsonTokenType.EndObject) return;
-                if (reader.TokenType == JsonTokenType.PropertyName)
+                string prop = reader.GetString()!;
+                if (!reader.Read()) return;
+                switch (prop)
                 {
-                    string prop = reader.GetString()!;
-                    if (!reader.Read()) return;
-                    switch (prop)
-                    {
-                        case nameof(flag_id):
-                            this.flag_id = reader.GetInt32();
-                            break;
-                        case nameof(weight):
-                            this.weight = (float)reader.GetDecimal();
-                            break;
-                    }
+                    case "flag_id":
+                        this.PrimaryKey = reader.GetInt32();
+                        break;
+                    case "weight":
+                        this.Weight = (float)reader.GetDecimal();
+                        break;
                 }
             }
         }
-        public void WriteJson(Utf8JsonWriter writer)
-        {
-            writer.WriteProperty(nameof(flag_id), flag_id);
-            writer.WriteProperty(nameof(weight), weight);
-        }
+    }
+    public void WriteJson(Utf8JsonWriter writer)
+    {
+        writer.WriteProperty("flag_id", PrimaryKey);
+        writer.WriteProperty("weight", Weight);
     }
 }

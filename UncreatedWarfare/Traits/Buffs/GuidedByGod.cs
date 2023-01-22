@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Traits.Buffs;
 public class GuidedByGod : Buff
 {
     private static TraitData? DATA;
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(GuidedByGod),
         NameTranslations = new TranslationList("Guided by God"),
@@ -18,12 +18,12 @@ public class GuidedByGod : Buff
         CreditCost = 500,
         RequireSquadLeader = false,
         RequireSquad = false,
-        ClassList = new EClass[] { EClass.PILOT },
+        ClassList = new Class[] { Class.Pilot },
         ClassListIsBlacklist = true,
         Icon = "£",
         Cooldown = 1200,
         EffectDuration = 600,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 5 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 5 } },
         EffectDistributedToSquad = false,
         Data = "0.15"
     };
@@ -34,7 +34,7 @@ public class GuidedByGod : Buff
     {
         if (onStart)
         {
-            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
+            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.AdminLocale, out _multiplier))
                 _multiplier = 0.15f;
 
             _squadMultiplier = Data.EffectDistributedToSquad
@@ -74,6 +74,6 @@ public class GuidedByGod : Buff
             }
         }
 
-        return max == -1f ? 1f : (1 + max);
+        return max < 0f ? 1f : (1 + max);
     }
 }

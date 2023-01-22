@@ -25,7 +25,7 @@ public class HealCommand : Command
             onlinePlayer.Player.life.sendRevive();
 
             if (Data.Is(out IRevives rev))
-                rev.ReviveManager.RevivePlayer(ctx.Caller);
+                rev.ReviveManager.RevivePlayer(onlinePlayer);
 
             ctx.Reply(T.HealPlayer, onlinePlayer);
         }

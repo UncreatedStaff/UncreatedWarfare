@@ -9,7 +9,7 @@ using Uncreated.Framework;
 
 namespace Uncreated.Warfare.Quests.Types;
 
-[QuestData(EQuestType.BUILD_FOBS)]
+[QuestData(QuestType.BuildFOBs)]
 public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQuest.State, BuildFOBsQuest>
 {
     public DynamicIntegerValue BuildCount;
@@ -82,7 +82,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
         }
     }
 }
-[QuestData(EQuestType.BUILD_FOBS_NEAR_OBJECTIVES)]
+[QuestData(QuestType.BuildFOBsNearObjectives)]
 public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker, BuildFOBsNearObjQuest.State, BuildFOBsNearObjQuest>
 {
     public DynamicIntegerValue BuildCount;
@@ -196,7 +196,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
         }
     }
 }
-[QuestData(EQuestType.BUILD_FOB_ON_ACTIVE_OBJECTIVE)]
+[QuestData(QuestType.BuildFOBOnActiveObjective)]
 public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, BuildFOBsOnObjQuest.State, BuildFOBsOnObjQuest>
 {
     public DynamicIntegerValue BuildCount;
@@ -296,7 +296,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
         }
     }
 }
-[QuestData(EQuestType.DELIVER_SUPPLIES)]
+[QuestData(QuestType.DeliverSupplies)]
 public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, DeliverSuppliesQuest.State, DeliverSuppliesQuest>
 {
     public DynamicIntegerValue SupplyCount;
@@ -369,12 +369,12 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
     }
     public enum ESupplyType : byte { AMMO, BUILD }
 }
-[QuestData(EQuestType.SHOVEL_BUILDABLES)]
+[QuestData(QuestType.ShovelBuildables)]
 public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQuest.State, HelpBuildQuest>
 {
     public DynamicIntegerValue Amount;
-    public DynamicAssetValue<ItemBarricadeAsset> BaseIDs = new DynamicAssetValue<ItemBarricadeAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
-    public DynamicEnumValue<EBuildableType> BuildableType = new DynamicEnumValue<EBuildableType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+    public DynamicAssetValue<ItemBarricadeAsset> BaseIDs = new DynamicAssetValue<ItemBarricadeAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
+    public DynamicEnumValue<EBuildableType> BuildableType = new DynamicEnumValue<EBuildableType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -387,12 +387,12 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         else if (propertyname.Equals("buildable_type", StringComparison.Ordinal))
         {
             if (!reader.TryReadEnumValue(out BuildableType))
-                BuildableType = new DynamicEnumValue<EBuildableType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+                BuildableType = new DynamicEnumValue<EBuildableType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
         }
         else if (propertyname.Equals("base_ids", StringComparison.Ordinal))
         {
             if (!reader.TryReadAssetValue(out BaseIDs))
-                BaseIDs = new DynamicAssetValue<ItemBarricadeAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
+                BaseIDs = new DynamicAssetValue<ItemBarricadeAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
         }
     }
     public struct State : IQuestState<Tracker, HelpBuildQuest>
@@ -470,7 +470,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         }
     }
 }
-[QuestData(EQuestType.TEAMMATES_DEPLOY_ON_FOB)]
+[QuestData(QuestType.TeammatesDeployOnFOB)]
 public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State, FOBUseQuest>
 {
     public DynamicIntegerValue UseCount;

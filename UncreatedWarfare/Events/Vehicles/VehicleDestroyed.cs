@@ -2,16 +2,13 @@
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Vehicles;
-using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Events.Vehicles;
 public class VehicleDestroyed : EventState
 {
     private readonly InteractableVehicle _vehicle;
-    private readonly VehicleBayComponent? _vehicleSpawnComponent;
     private readonly VehicleComponent? _component;
     private readonly SpottedComponent? _spotter;
-    private readonly VehicleSpawn? _vehicleSpawn;
     private readonly VehicleData? _vehicleData;
     private readonly UCPlayer? _lockedOwner;
     private readonly UCPlayer? _instigator;
@@ -21,10 +18,8 @@ public class VehicleDestroyed : EventState
     private readonly ulong _lastDriverId;
     private readonly ulong _lockedTeam;
     public InteractableVehicle Vehicle => _vehicle;
-    public VehicleBayComponent? SpawnComponent => _vehicleSpawnComponent;
     public VehicleComponent? Component => _component;
     public SpottedComponent? Spotter => _spotter;
-    public VehicleSpawn? Spawn => _vehicleSpawn;
     public VehicleData? VehicleData => _vehicleData;
     public UCPlayer? Owner => _lockedOwner;
     public UCPlayer? Instigator => _instigator;
@@ -64,7 +59,5 @@ public class VehicleDestroyed : EventState
             _lastDriver = _instigator = UCPlayer.FromPlayer(vehicle.passengers[0].player.player);
             _lastDriverId = _lastDriver is null ? 0 : _lastDriver.Steam64;
         }
-        if (VehicleSpawner.Loaded && VehicleSpawner.HasLinkedSpawn(_vehicle.instanceID, out _vehicleSpawn))
-            _vehicleSpawnComponent = _vehicleSpawn.Component;
     }
 }

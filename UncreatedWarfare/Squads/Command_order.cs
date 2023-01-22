@@ -74,14 +74,14 @@ public class OrderCommand : Command
                         switch (type)
                         {
                             case EOrder.ATTACK or EOrder.DEFEND:
-                                ctx.LogAction(EActionLogType.CREATED_ORDER, Localization.TranslateEnum(type, 0) + " " + marker.ToString("N2"));
+                                ctx.LogAction(ActionLogType.CreatedOrder, Localization.TranslateEnum(type, 0) + " " + marker.ToString("N2"));
                                 switch (Data.Gamemode)
                                 {
                                     case null:
                                         throw ctx.SendGamemodeError();
                                     case IFlagRotation rot:
                                         Vector2 mkr = new Vector2(marker.x, marker.z);
-                                        Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.ZoneData.IsInside(mkr));
+                                        Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.PlayerInRange(mkr));
                                         if (flag is null)
                                             goto default;
                                         formatting = new object[] { flag };
@@ -134,7 +134,7 @@ public class OrderCommand : Command
                                             message = T.OrderUIDefendNearArea;
                                         break;
                                 }
-                                ctx.LogAction(EActionLogType.CREATED_ORDER, (type is EOrder.ATTACK ? "ATTACK" : "DEFEND") + " AT " + marker.ToString("N2"));
+                                ctx.LogAction(ActionLogType.CreatedOrder, (type is EOrder.ATTACK ? "ATTACK" : "DEFEND") + " AT " + marker.ToString("N2"));
                                 break;
                             case EOrder.BUILDFOB:
                                 ctx.AssertGamemode<IFOBs>();
@@ -151,7 +151,7 @@ public class OrderCommand : Command
                                             throw ctx.SendGamemodeError();
                                         case IFlagRotation rot:
                                             Vector2 mkr = new Vector2(marker.x, marker.z);
-                                            Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.ZoneData.IsInside(mkr));
+                                            Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.PlayerInRange(mkr));
                                             // flag is not discovered or is taken
                                             if (flag is null || flag.IsFull(Teams.TeamManager.Other(team)))
                                                 goto default;
@@ -185,7 +185,7 @@ public class OrderCommand : Command
                                             break;
                                     }
 
-                                    ctx.LogAction(EActionLogType.CREATED_ORDER, "BUILD A FOB AT " + marker.ToString("N2"));
+                                    ctx.LogAction(ActionLogType.CreatedOrder, "BUILD A FOB AT " + marker.ToString("N2"));
                                 }
                                 break;
                             case EOrder.MOVE:
@@ -205,7 +205,7 @@ public class OrderCommand : Command
                                             throw ctx.SendGamemodeError();
                                         case IFlagRotation rot:
                                             Vector2 mkr = new Vector2(marker.x, marker.z);
-                                            Flag flag = rot.Rotation.Find(f => f.ZoneData.IsInside(mkr));
+                                            Flag flag = rot.Rotation.Find(f => f.PlayerInRange(mkr));
                                             // flag is not discovered or is taken
                                             if (flag is null || !flag.Discovered(team))
                                                 goto default;
@@ -238,7 +238,7 @@ public class OrderCommand : Command
                                             message = T.OrderUIMoveNearArea;
                                             break;
                                     }
-                                    ctx.LogAction(EActionLogType.CREATED_ORDER, "MOVE TO " + marker.ToString("N2"));
+                                    ctx.LogAction(ActionLogType.CreatedOrder, "MOVE TO " + marker.ToString("N2"));
 
                                 }
                                 else throw ctx.Reply(T.OrderSquadTooClose, squad);

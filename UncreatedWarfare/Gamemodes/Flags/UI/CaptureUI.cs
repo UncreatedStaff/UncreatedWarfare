@@ -1,4 +1,5 @@
-﻿using SDG.NetTransport;
+﻿using System;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -25,17 +26,19 @@ public class CaptureUI : UnturnedUI
             return;
         }
         GetColors(p.Team, p.Type, out string backcolor, out string forecolor);
-        string translation = p.Type is EFlagStatus.BLANK ? string.Empty : Localization.TranslateEnum(p.Type, player.channel.owner.playerID.steamID.m_SteamID);
+        string lang = Localization.GetLang(player.channel.owner.playerID.steamID.m_SteamID);
+        string translation = p.Type is EFlagStatus.BLANK ? string.Empty : Localization.TranslateEnum(p.Type, lang);
         ITransportConnection c = player.channel.owner.transportConnection;
         string desc = new string(Gamemode.Config.UICircleFontCharacters[CTFUI.FromMax(p.Points)], 1);
+        IFormatProvider locale = Localization.GetLocale(lang);
         if (p.Type is not EFlagStatus.BLANK or EFlagStatus.DONT_DISPLAY && Gamemode.Config.UICaptureShowPointCount)
-            translation += " (" + p.Points.ToString(Data.Locale) + "/" + Flag.MAX_POINTS.ToString(Data.Locale) + ")";
+            translation += " (" + p.Points.ToString(locale) + "/" + Flag.MaxPoints.ToString(locale) + ")";
 
         SendToPlayer(c, "<color=#" + forecolor + ">" + translation + "</color>", "<color=#" + forecolor + ">" + desc + "</color>", backcolor);
         if (Gamemode.Config.UICaptureEnablePlayerCount && p.Flag is not null)
         {
-            T1Count.SetText(c, "<color=#ffffff>" + p.Flag.Team1TotalCappers.ToString(Data.Locale) + "</color>");
-            T2Count.SetText(c, "<color=#ffffff>" + p.Flag.Team2TotalCappers.ToString(Data.Locale) + "</color>");
+            T1Count.SetText(c, "<color=#ffffff>" + p.Flag.Team1TotalCappers.ToString(locale) + "</color>");
+            T2Count.SetText(c, "<color=#ffffff>" + p.Flag.Team2TotalCappers.ToString(locale) + "</color>");
             T1CountIcon.SetText(c, "<color=#" + TeamManager.GetTeamHexColor(1) + ">" + Gamemode.Config.UIIconPlayer + "</color>");
             T2CountIcon.SetText(c, "<color=#" + TeamManager.GetTeamHexColor(2) + ">" + Gamemode.Config.UIIconPlayer + "</color>");
         }
@@ -49,12 +52,12 @@ public class CaptureUI : UnturnedUI
     {
         if (type is EFlagStatus.LOSING)
             team = TeamManager.Other(team);
-        const float DARKNESS = 0.3f;
+        const float darkness = 0.3f;
         if (type is EFlagStatus.CAPTURING or EFlagStatus.CLEARING or EFlagStatus.LOSING)
         {
             forecolor = TeamManager.GetTeamHexColor(team);
             Color tc = TeamManager.GetTeamColor(team);
-            backcolor = ColorUtility.ToHtmlStringRGB(new Color(tc.r * DARKNESS, tc.g * DARKNESS, tc.b * DARKNESS, 1f));
+            backcolor = ColorUtility.ToHtmlStringRGB(new Color(tc.r * darkness, tc.g * darkness, tc.b * darkness, 1f));
         }
         else
         {
@@ -67,7 +70,7 @@ public class CaptureUI : UnturnedUI
                 _ => "nocap"
             });
             forecolor = ColorUtility.ToHtmlStringRGB(c);
-            backcolor = ColorUtility.ToHtmlStringRGB(new Color(c.r * DARKNESS, c.g * DARKNESS, c.b * DARKNESS, 1f));
+            backcolor = ColorUtility.ToHtmlStringRGB(new Color(c.r * darkness, c.g * darkness, c.b * darkness, 1f));
         }
     }
 
@@ -86,7 +89,7 @@ public class CaptureUI : UnturnedUI
             if (flag is not null && type is EFlagStatus.CAPTURING or EFlagStatus.LOSING or EFlagStatus.CONTESTED or EFlagStatus.CLEARING or EFlagStatus.IN_VEHICLE)
                 Points = Mathf.RoundToInt(flag.Points);
             else
-                Points = Mathf.RoundToInt(Flag.MAX_POINTS);
+                Points = Mathf.RoundToInt(Flag.MaxPoints);
         }
     }
 }

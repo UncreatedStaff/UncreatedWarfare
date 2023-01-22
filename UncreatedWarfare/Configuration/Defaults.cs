@@ -5,13 +5,14 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Maps;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
 
 partial class JSONMethods
 {
-    public static readonly List<ZoneModel> DefaultZones;
+    internal static readonly List<ZoneModel> DefaultZones;
     static JSONMethods()
     {
         DefaultZones = new List<ZoneModel>(8);
@@ -19,11 +20,12 @@ partial class JSONMethods
         {
             Id = 1,
             Name = "Ammo Hill",
-            X = -82.4759521f,
-            Z = 278.999451f,
-            ZoneType = EZoneType.RECTANGLE,
-            UseCase = EZoneUseCase.FLAG
+            ZoneType = ZoneType.Rectangle,
+            UseCase = ZoneUseCase.Flag,
+            Map = MapScheduler.Current
         };
+        mdl.ZoneData.X = -82.4759521f;
+        mdl.ZoneData.Z = 278.999451f;
         mdl.ZoneData.SizeX = 97.5f;
         mdl.ZoneData.SizeZ = 70.3125f;
         mdl.Adjacencies = new AdjacentFlagData[]
@@ -39,10 +41,11 @@ partial class JSONMethods
             Id = 2,
             Name = "Hilltop Encampment",
             ShortName = "Hilltop",
-            X = 241.875f,
-            Z = 466.171875f,
-            ZoneType = EZoneType.POLYGON,
-            UseCase = EZoneUseCase.FLAG
+            SpawnX = 241.875f,
+            SpawnZ = 466.171875f,
+            ZoneType = ZoneType.Polygon,
+            UseCase = ZoneUseCase.Flag,
+            Map = MapScheduler.Current
         };
         mdl.ZoneData.Points = new Vector2[]
         {
@@ -64,10 +67,11 @@ partial class JSONMethods
             Id = 3,
             Name = "FOB Papanov",
             ShortName = "Papanov",
-            X = 706.875f,
-            Z = 711.328125f,
-            ZoneType = EZoneType.POLYGON,
-            UseCase = EZoneUseCase.FLAG
+            SpawnX = 706.875f,
+            SpawnZ = 711.328125f,
+            ZoneType = ZoneType.Polygon,
+            UseCase = ZoneUseCase.Flag,
+            Map = MapScheduler.Current
         };
         mdl.ZoneData.Points = new Vector2[]
         {
@@ -87,11 +91,12 @@ partial class JSONMethods
         {
             Id = 4,
             Name = "Verto",
-            X = 1649,
-            Z = 559,
-            ZoneType = EZoneType.POLYGON,
+            SpawnX = 1649,
+            SpawnZ = 559,
+            ZoneType = ZoneType.Polygon,
             UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
+            UseCase = ZoneUseCase.Flag,
+            Map = MapScheduler.Current
         };
         mdl.ZoneData.Points = new Vector2[]
         {
@@ -120,12 +125,13 @@ partial class JSONMethods
         {
             Id = 5,
             Name = "Hill 123",
-            X = 1657.5f,
-            Z = 885.5f,
-            ZoneType = EZoneType.CIRCLE,
+            ZoneType = ZoneType.Circle,
             UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
+            UseCase = ZoneUseCase.Flag,
+            Map = MapScheduler.Current
         };
+        mdl.ZoneData.X = 1657.5f;
+        mdl.ZoneData.Z = 885.5f;
         mdl.ZoneData.Radius = 43.5f;
         mdl.Adjacencies = new AdjacentFlagData[]
         {
@@ -138,12 +144,13 @@ partial class JSONMethods
         {
             Id = 6,
             Name = "Hill 13",
-            X = 1354,
-            Z = 1034.5f,
-            ZoneType = EZoneType.CIRCLE,
+            ZoneType = ZoneType.Circle,
             UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
+            UseCase = ZoneUseCase.Flag,
+            Map = MapScheduler.Current
         };
+        mdl.ZoneData.X = 1354f;
+        mdl.ZoneData.Z = 1034.5f;
         mdl.ZoneData.Radius = 47;
         mdl.Adjacencies = new AdjacentFlagData[]
         {
@@ -159,10 +166,11 @@ partial class JSONMethods
             Id = 7,
             Name = "Mining Headquarters",
             ShortName = "Mining HQ",
-            X = 49.21875f,
-            Z = -202.734375f,
-            ZoneType = EZoneType.POLYGON,
-            UseCase = EZoneUseCase.FLAG
+            SpawnX = 49.21875f,
+            SpawnZ = -202.734375f,
+            ZoneType = ZoneType.Polygon,
+            UseCase = ZoneUseCase.Flag,
+            Map = MapScheduler.Current
         };
         mdl.ZoneData.Points = new Vector2[]
         {
@@ -189,12 +197,13 @@ partial class JSONMethods
             Id = 8,
             Name = "OP Fortress",
             ShortName = "Fortress",
-            X = 375.5f,
-            Z = 913f,
-            ZoneType = EZoneType.CIRCLE,
+            ZoneType = ZoneType.Circle,
             UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
+            UseCase = ZoneUseCase.Flag,
+            Map = MapScheduler.Current
         };
+        mdl.ZoneData.X = 375.5f;
+        mdl.ZoneData.Z = 913f;
         mdl.ZoneData.Radius = 47;
         mdl.ValidateRead();
         DefaultZones.Add(mdl);
@@ -203,11 +212,12 @@ partial class JSONMethods
         {
             Id = 9,
             Name = "Dylym",
-            X = 1849f,
-            Z = 1182.5f,
-            ZoneType = EZoneType.POLYGON,
+            SpawnX = 1849f,
+            SpawnZ = 1182.5f,
+            ZoneType = ZoneType.Polygon,
             UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
+            UseCase = ZoneUseCase.Flag,
+            Map = MapScheduler.Current
         };
         mdl.ZoneData.Points = new Vector2[]
         {
@@ -232,12 +242,13 @@ partial class JSONMethods
         {
             Id = 990,
             Name = "Lobby",
-            X = 713.1f,
-            Z = -991,
-            ZoneType = EZoneType.RECTANGLE,
+            ZoneType = ZoneType.Rectangle,
             UseMapCoordinates = false,
-            UseCase = EZoneUseCase.LOBBY
+            UseCase = ZoneUseCase.Lobby,
+            Map = MapScheduler.Current
         };
+        mdl.ZoneData.X = 713.1f;
+        mdl.ZoneData.Z = -991f;
         mdl.ZoneData.SizeX = 12.2f;
         mdl.ZoneData.SizeZ = 12;
         mdl.ValidateRead();
@@ -248,11 +259,12 @@ partial class JSONMethods
             Id = 991,
             Name = "USA Main Base",
             ShortName = "US Main",
-            X = 1853,
-            Z = 1874,
-            ZoneType = EZoneType.POLYGON,
+            SpawnX = 1853,
+            SpawnZ = 1874,
+            ZoneType = ZoneType.Polygon,
             UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T1_MAIN
+            UseCase = ZoneUseCase.Team1Main,
+            Map = MapScheduler.Current
         };
         mdl.ZoneData.Points = new Vector2[]
         {
@@ -278,12 +290,13 @@ partial class JSONMethods
             Id = 992,
             Name = "USA AMC",
             ShortName = "US AMC",
-            X = 1692f,
-            Z = 1825.3884f,
-            ZoneType = EZoneType.RECTANGLE,
+            ZoneType = ZoneType.Rectangle,
             UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T1_AMC
+            UseCase = ZoneUseCase.Team1MainCampZone,
+            Map = MapScheduler.Current
         };
+        mdl.ZoneData.X = 1692f;
+        mdl.ZoneData.Z = 1825.3884f;
         mdl.ZoneData.SizeX = 712;
         mdl.ZoneData.SizeZ = 443.2332f;
         mdl.ValidateRead();
@@ -294,11 +307,12 @@ partial class JSONMethods
             Id = 993,
             Name = "Russian Main Base",
             ShortName = "RU Main",
-            X = 196,
-            Z = 113,
-            ZoneType = EZoneType.POLYGON,
+            SpawnX = 196,
+            SpawnZ = 113,
+            ZoneType = ZoneType.Polygon,
             UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T2_MAIN
+            UseCase = ZoneUseCase.Team2Main,
+            Map = MapScheduler.Current
         };
         mdl.ZoneData.Points = new Vector2[]
         {
@@ -325,12 +339,13 @@ partial class JSONMethods
             Id = 994,
             Name = "Russian AMC Zone",
             ShortName = "RU AMC",
-            X = 275,
-            Z = 234.6833f,
-            ZoneType = EZoneType.RECTANGLE,
+            ZoneType = ZoneType.Rectangle,
             UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T2_AMC
+            UseCase = ZoneUseCase.Team2MainCampZone,
+            Map = MapScheduler.Current
         };
+        mdl.ZoneData.X = 275;
+        mdl.ZoneData.Z = 234.6833f;
         mdl.ZoneData.SizeX = 550;
         mdl.ZoneData.SizeZ = 469.3665f;
         mdl.ValidateRead();
@@ -341,9 +356,9 @@ partial class JSONMethods
         new Point3D("lobby_spawn", 713.1f, 39f, -991)
     };
 
-    private const string T1_COLOR_PH = "%t1%";
-    private const string T2_COLOR_PH = "%t2%";
-    private const string T3_COLOR_PH = "%t3%";
+    private const string Team1ColorPlaceholder = "%t1%";
+    private const string Team2ColorPlaceholder = "%t2%";
+    private const string Team3ColorPlaceholder = "%t3%";
     public static readonly Dictionary<string, string> DefaultColors = new Dictionary<string, string>()
     {
         { "default", "ffffff" },
@@ -354,8 +369,8 @@ partial class JSONMethods
         { "undiscovered_flag", "696969" },
         { "team_count_ui_color_team_1", "ffffff" },
         { "team_count_ui_color_team_2", "ffffff" },
-        { "team_count_ui_color_team_1_icon", T1_COLOR_PH },
-        { "team_count_ui_color_team_2_icon", T2_COLOR_PH },
+        { "team_count_ui_color_team_1_icon", Team1ColorPlaceholder },
+        { "team_count_ui_color_team_2_icon", Team2ColorPlaceholder },
         { "default_fob_color", "54e3ff" },
         { "no_bunker_fob_color", "696969" },
         { "enemy_nearby_fob_color", "ff8754" },
@@ -413,7 +428,6 @@ partial class JSONMethods
         { "vbs_active", "ff9933" },
         { "vbs_ready", "33cc33" },
     };
-    public static List<Kit> DefaultKits = new List<Kit> { };
     public static readonly List<LanguageAliasSet> DefaultLanguageAliasSets = new List<LanguageAliasSet>
     {
         new LanguageAliasSet(LanguageAliasSet.ENGLISH, "English", new string[] { "english", "enus", "en", "us", "inglés", "inglesa", "ingles",
@@ -478,6 +492,7 @@ public class Base64Converter : JsonConverter<byte[]>
                 }
                 throw new JsonException("Failed to get byte reading byte[].");
             }
+            return bytes.ToArray();
         }
         else if (reader.TokenType == JsonTokenType.Null)
             return null;

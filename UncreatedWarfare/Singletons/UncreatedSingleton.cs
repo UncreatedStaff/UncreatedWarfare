@@ -8,6 +8,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Singletons;
@@ -19,8 +20,8 @@ public interface IUncreatedSingleton
     bool IsLoaded { get; }
     bool IsLoading { get; }
     bool IsUnloading { get; }
-    Task LoadAsync();
-    Task UnloadAsync();
+    Task LoadAsync(CancellationToken token);
+    Task UnloadAsync(CancellationToken token);
     void Load();
     void Unload();
 }
@@ -30,7 +31,7 @@ public interface ILevelStartListener
 }
 public interface ILevelStartListenerAsync
 {
-    Task OnLevelReady();
+    Task OnLevelReady(CancellationToken token);
 }
 public interface IQuestCompletedHandler
 {
@@ -40,7 +41,7 @@ public interface IQuestCompletedHandler
 public interface IQuestCompletedHandlerAsync
 {
     /// <returns>Whether the quest was handled and execution should be stopped.</returns>
-    Task OnQuestCompleted(QuestCompleted e);
+    Task OnQuestCompleted(QuestCompleted e, CancellationToken token);
 }
 
 public interface IQuestCompletedListener
@@ -49,7 +50,7 @@ public interface IQuestCompletedListener
 }
 public interface IQuestCompletedListenerAsync
 {
-    Task OnQuestCompleted(QuestCompleted e);
+    Task OnQuestCompleted(QuestCompleted e, CancellationToken token);
 }
 
 public interface ITimeSyncListener
@@ -72,7 +73,7 @@ public interface IStagingPhaseOverListener
 }
 public interface IDeclareWinListenerAsync
 {
-    Task OnWinnerDeclared(ulong winner);
+    Task OnWinnerDeclared(ulong winner, CancellationToken token);
 }
 public interface IGameStartListener
 {
@@ -80,11 +81,19 @@ public interface IGameStartListener
 }
 public interface IGameStartListenerAsync
 {
-    Task OnGameStarting(bool isOnLoad);
+    Task OnGameStarting(bool isOnLoad, CancellationToken token);
 }
 public interface IFlagCapturedListener
 {
     void OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner);
+}
+public interface ICacheDiscoveredListener
+{
+    void OnCacheDiscovered(Components.Cache cache);
+}
+public interface ICacheDestroyedListener
+{
+    void OnCacheDestroyed(Components.Cache cache);
 }
 public interface ICraftingSettingsOverride
 {
@@ -105,7 +114,7 @@ public interface IPlayerConnectListener
 }
 public interface IPlayerConnectListenerAsync
 {
-    Task OnPlayerConnecting(UCPlayer player);
+    Task OnPlayerConnecting(UCPlayer player, CancellationToken token);
 }
 public interface IPlayerPostInitListener
 {
@@ -113,11 +122,15 @@ public interface IPlayerPostInitListener
 }
 public interface IPlayerPostInitListenerAsync
 {
-    Task OnPostPlayerInit(UCPlayer player);
+    Task OnPostPlayerInit(UCPlayer player, CancellationToken token);
 }
 public interface IJoinedTeamListener
 {
     void OnJoinTeam(UCPlayer player, ulong team);
+}
+public interface IJoinedTeamListenerAsync
+{
+    Task OnJoinTeamAsync(UCPlayer player, ulong team, CancellationToken token);
 }
 public interface IPlayerPreInitListener
 {
@@ -125,7 +138,7 @@ public interface IPlayerPreInitListener
 }
 public interface IPlayerPreInitListenerAsync
 {
-    Task OnPrePlayerInit(UCPlayer player, bool wasAlreadyOnline);
+    Task OnPrePlayerInit(UCPlayer player, bool wasAlreadyOnline, CancellationToken token);
 }
 public interface IPlayerDeathListener
 {
@@ -136,7 +149,7 @@ public interface IReloadableSingleton : IUncreatedSingleton
 {
     string? ReloadKey { get; }
     void Reload();
-    Task ReloadAsync();
+    Task ReloadAsync(CancellationToken token);
 }
 public abstract class BaseAsyncSingleton : IUncreatedSingleton
 {
@@ -150,20 +163,20 @@ public abstract class BaseAsyncSingleton : IUncreatedSingleton
     public abstract bool AwaitLoad { get; }
     public void Load() => throw new NotImplementedException();
     public void Unload() => throw new NotImplementedException();
-    public abstract Task LoadAsync();
-    public abstract Task UnloadAsync();
-    async Task IUncreatedSingleton.LoadAsync()
+    public abstract Task LoadAsync(CancellationToken token);
+    public abstract Task UnloadAsync(CancellationToken token);
+    async Task IUncreatedSingleton.LoadAsync(CancellationToken token)
     {
         _isLoading = true;
-        await LoadAsync();
+        await LoadAsync(token);
         _isLoading = false;
         _isLoaded = true;
     }
-    async Task IUncreatedSingleton.UnloadAsync()
+    async Task IUncreatedSingleton.UnloadAsync(CancellationToken token)
     {
         _isUnloading = true;
         _isLoaded = false;
-        await UnloadAsync();
+        await UnloadAsync(token);
         _isUnloading = false;
     }
     /// <exception cref="SingletonUnloadedException"/>
@@ -185,20 +198,20 @@ public abstract class BaseAsyncSingletonComponent : MonoBehaviour, IUncreatedSin
     public abstract bool AwaitLoad { get; }
     public void Load() => throw new NotImplementedException();
     public void Unload() => throw new NotImplementedException();
-    public abstract Task LoadAsync();
-    public abstract Task UnloadAsync();
-    async Task IUncreatedSingleton.LoadAsync()
+    public abstract Task LoadAsync(CancellationToken token);
+    public abstract Task UnloadAsync(CancellationToken token);
+    async Task IUncreatedSingleton.LoadAsync(CancellationToken token)
     {
         _isLoading = true;
-        await LoadAsync();
+        await LoadAsync(token);
         _isLoading = false;
         _isLoaded = true;
     }
-    async Task IUncreatedSingleton.UnloadAsync()
+    async Task IUncreatedSingleton.UnloadAsync(CancellationToken token)
     {
         _isUnloading = true;
         _isLoaded = false;
-        await UnloadAsync();
+        await UnloadAsync(token);
         _isUnloading = false;
     }
     /// <exception cref="SingletonUnloadedException"/>
@@ -216,15 +229,15 @@ public abstract class BaseAsyncReloadSingleton : BaseAsyncSingleton, IReloadable
         this.ReloadKey = reloadKey;
     }
     public void Reload() => throw new NotImplementedException();
-    public abstract Task ReloadAsync();
-    async Task IReloadableSingleton.ReloadAsync()
+    public abstract Task ReloadAsync(CancellationToken token);
+    async Task IReloadableSingleton.ReloadAsync(CancellationToken token)
     {
         _isLoaded = false;
-        await ReloadAsync();
+        await ReloadAsync(token);
     }
 }
 
-public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadableSingleton where TItem : class, IListItem, new()
+public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadableSingleton where TItem : class, IListItem
 {
     private volatile bool _isLoading;
     private volatile bool _isUnloading;
@@ -237,7 +250,7 @@ public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadabl
     string IReloadableSingleton.ReloadKey => ReloadKey!;
     protected ListSqlSingleton(Schema[] schemas) : base(schemas) { }
     protected ListSqlSingleton(string reloadKey, Schema[] schemas) : base(reloadKey, schemas) { }
-    public async Task ReloadAsync()
+    public async Task ReloadAsync(CancellationToken token)
     {
         Task task;
         if (_isLoading || _isUnloading)
@@ -246,55 +259,55 @@ public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadabl
         {
             _isLoaded = false;
             _isUnloading = true;
-            task = PreUnload();
+            task = PreUnload(token);
             if (!task.IsCompleted)
                 await task;
-            await UnloadAll().ConfigureAwait(false);
-            task = PostUnload();
+            await UnloadAll(token).ConfigureAwait(false);
+            task = PostUnload(token);
             if (!task.IsCompleted)
                 await task;
             _isUnloading = false;
         }
         _isLoading = true;
-        task = PreLoad();
+        task = PreLoad(token);
         if (!task.IsCompleted)
             await task;
-        await Init().ConfigureAwait(false);
-        task = PostLoad();
+        await Init(token).ConfigureAwait(false);
+        task = PostLoad(token);
         if (!task.IsCompleted)
             await task;
-        task = PostReload();
+        task = PostReload(token);
         if (!task.IsCompleted)
             await task;
         _isLoading = false;
         _isLoaded = true;
     }
-    public async Task LoadAsync()
+    public async Task LoadAsync(CancellationToken token)
     {
         if (_isLoading || _isUnloading)
             throw new InvalidOperationException("Already loading or unloading.");
         _isLoading = true;
-        Task task = PreLoad();
+        Task task = PreLoad(token);
         if (!task.IsCompleted)
             await task;
-        await Init().ConfigureAwait(false);
-        task = PostLoad();
+        await Init(token).ConfigureAwait(false);
+        task = PostLoad(token);
         if (!task.IsCompleted)
             await task;
         _isLoading = false;
         _isLoaded = true;
     }
-    public async Task UnloadAsync()
+    public async Task UnloadAsync(CancellationToken token)
     {
         if (_isLoading || _isUnloading)
             throw new InvalidOperationException("Already loading or unloading.");
         _isLoaded = false;
         _isUnloading = true;
-        Task task = PreUnload();
+        Task task = PreUnload(token);
         if (!task.IsCompleted)
             await task;
-        await UnloadAll().ConfigureAwait(false);
-        task = PostUnload();
+        await UnloadAll(token).ConfigureAwait(false);
+        task = PostUnload(token);
         if (!task.IsCompleted)
             await task;
         _isUnloading = false;
@@ -303,15 +316,15 @@ public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadabl
     public void Load() => throw new NotImplementedException();
     public void Unload() => throw new NotImplementedException();
     /// <remarks>No base.</remarks>
-    public virtual Task PreLoad() => Task.CompletedTask;
+    public virtual Task PreLoad(CancellationToken token) => Task.CompletedTask;
     /// <remarks>No base.</remarks>
-    public virtual Task PostLoad() => Task.CompletedTask;
+    public virtual Task PostLoad(CancellationToken token) => Task.CompletedTask;
     /// <remarks>No base.</remarks>
-    public virtual Task PreUnload() => Task.CompletedTask;
+    public virtual Task PreUnload(CancellationToken token) => Task.CompletedTask;
     /// <remarks>No base.</remarks>
-    public virtual Task PostUnload() => Task.CompletedTask;
+    public virtual Task PostUnload(CancellationToken token) => Task.CompletedTask;
     /// <remarks>No base.</remarks>
-    public virtual Task PostReload() => Task.CompletedTask;
+    public virtual Task PostReload(CancellationToken token) => Task.CompletedTask;
     /// <exception cref="SingletonUnloadedException"/>
     internal void AssertLoadedIntl()
     {
@@ -338,8 +351,8 @@ public abstract class BaseSingleton : IUncreatedSingleton
     }
     public abstract void Load();
     public abstract void Unload();
-    public Task LoadAsync() => throw new NotImplementedException();
-    public Task UnloadAsync() => throw new NotImplementedException();
+    public Task LoadAsync(CancellationToken token) => throw new NotImplementedException();
+    public Task UnloadAsync(CancellationToken token) => throw new NotImplementedException();
     void IUncreatedSingleton.Load()
     {
         _isLoading = true;
@@ -374,8 +387,8 @@ public abstract class BaseSingletonComponent : MonoBehaviour, IUncreatedSingleto
     }
     public abstract void Load();
     public abstract void Unload();
-    public Task LoadAsync() => throw new NotImplementedException();
-    public Task UnloadAsync() => throw new NotImplementedException();
+    public Task LoadAsync(CancellationToken token) => throw new NotImplementedException();
+    public Task UnloadAsync(CancellationToken token) => throw new NotImplementedException();
     void IUncreatedSingleton.Load()
     {
         _isLoading = true;
@@ -399,7 +412,7 @@ public abstract class BaseReloadSingleton : BaseSingleton, IReloadableSingleton
         this.ReloadKey = reloadKey;
     }
     public abstract void Reload();
-    public Task ReloadAsync() => throw new NotImplementedException();
+    public Task ReloadAsync(CancellationToken token) => throw new NotImplementedException();
     void IReloadableSingleton.Reload()
     {
         _isLoaded = false;
@@ -437,9 +450,9 @@ public abstract class ListSingleton<TData> : JSONSaver<TData>, IReloadableSingle
     public virtual void Reload() { }
     public abstract void Load();
     public abstract void Unload();
-    public Task LoadAsync() => throw new NotImplementedException();
-    public Task UnloadAsync() => throw new NotImplementedException();
-    public Task ReloadAsync() => throw new NotImplementedException();
+    public Task LoadAsync(CancellationToken token) => throw new NotImplementedException();
+    public Task UnloadAsync(CancellationToken token) => throw new NotImplementedException();
+    public Task ReloadAsync(CancellationToken token) => throw new NotImplementedException();
     void IReloadableSingleton.Reload()
     {
         _isLoading = true;

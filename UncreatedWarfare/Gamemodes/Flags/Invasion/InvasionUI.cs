@@ -88,7 +88,7 @@ public static class InvasionUI
                 {
                     if (flag.Points > 0)
                     {
-                        if (flag.Points < Flag.MAX_POINTS)
+                        if (flag.Points < Flag.MaxPoints)
                         {
                             return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
                         }
@@ -159,7 +159,7 @@ public static class InvasionUI
                 {
                     if (flag.Points < 0)
                     {
-                        if (flag.Points > -Flag.MAX_POINTS)
+                        if (flag.Points > -Flag.MaxPoints)
                         {
                             return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
                         }

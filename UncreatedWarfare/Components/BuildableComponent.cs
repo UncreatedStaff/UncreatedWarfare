@@ -56,7 +56,7 @@ public class BuildableComponent : MonoBehaviour
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EfobRadius.FULL, Foundation.GetServersideData().group.GetTeam());
-        if (fob == null && Buildable.Type != EBuildableType.RADIO && (builder.KitClass is not EClass.COMBAT_ENGINEER || Buildable.Type is not EBuildableType.FORTIFICATION))
+        if (fob == null && Buildable.Type != EBuildableType.RADIO && (builder.KitClass is not Class.CombatEngineer || Buildable.Type is not EBuildableType.FORTIFICATION))
         {
             builder.SendChat(T.BuildTickNotInRadius);
             return;
@@ -86,7 +86,7 @@ public class BuildableComponent : MonoBehaviour
                 }
                 break;
         }
-        float amount = builder.KitClass == EClass.COMBAT_ENGINEER ? 2f : 1f;
+        float amount = builder.KitClass == Class.CombatEngineer ? 2f : 1f;
 
         amount = Mathf.Max(builder.ShovelSpeedMultiplier, amount);
 
@@ -142,7 +142,7 @@ public class BuildableComponent : MonoBehaviour
                 FOB? fob = FOB.GetNearestFOB(structure.model.position, EfobRadius.SHORT, data.group);
                 if (fob != null)
                 {
-                    transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.FOB, data.group.GetTeam());
+                    transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.Spotted.FOB, data.group.GetTeam());
 
                     fob.UpdateBunker(structure);
 
@@ -168,36 +168,12 @@ public class BuildableComponent : MonoBehaviour
             else
                 L.LogWarning($"Emplacement {vehicleasset.FriendlyName}'s ammo id is not a valid item.");
 
-            Quaternion rotation = Foundation.model.rotation;
-            rotation.eulerAngles = new Vector3(rotation.eulerAngles.x + 90, rotation.eulerAngles.y, rotation.eulerAngles.z);
-            InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleasset.id, new Vector3(data.point.x, data.point.y + 1, data.point.z), rotation);
-
+            Buildable.Emplacement.BaseBarricade.ValidReference(out Guid guid);
+            InteractableVehicle vehicle = SpawnImplacement(vehicleasset, Foundation.model.transform.position, Foundation.model.rotation.eulerAngles, data.owner, data.group, guid);
             structureName = vehicle.asset.vehicleName;
 
-            BuiltBuildableComponent comp = transform.gameObject.AddComponent<BuiltBuildableComponent>();
+            BuiltBuildableComponent comp = vehicle.transform.gameObject.AddComponent<BuiltBuildableComponent>();
             comp.Initialize(vehicle, Buildable, PlayerHits);
-
-            if (vehicle.asset.canBeLocked)
-            {
-                CSteamID owner = new CSteamID(data.owner);
-                CSteamID group = new CSteamID(data.group);
-                vehicle.tellLocked(owner, group, true);
-
-                VehicleManager.ReceiveVehicleLockState(vehicle.instanceID, owner, group, true);
-            }
-
-            if (Buildable.Emplacement.BaseBarricade != Guid.Empty)
-            {
-                if (Assets.find(Buildable.Emplacement.BaseBarricade) is not ItemBarricadeAsset emplacementBase)
-                {
-                    L.LogWarning("Emplacement base was not a valid barricade.");
-                }
-                else
-                {
-                    Barricade barricade = new Barricade(emplacementBase);
-                    BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
-                }
-            }
         }
         if (Gamemode.Config.EffectBuildSuccess.ValidReference(out EffectAsset effect))
             F.TriggerEffectReliable(effect, EffectManager.MEDIUM, data.point);
@@ -215,7 +191,7 @@ public class BuildableComponent : MonoBehaviour
                     : entry.Value * Points.XPConfig.ShovelXP;
 
                 Points.AwardXP(player, Mathf.CeilToInt(amount), structureName.ToUpper() + " BUILT");
-                ActionLogger.Add(EActionLogType.HELP_BUILD_BUILDABLE, $"{Foundation.asset.itemName} / {Foundation.asset.id} / {Foundation.asset.GUID:N} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.Locale)}%", player);
+                ActionLog.Add(ActionLogType.HelpBuildBuildable, $"{Foundation.asset.itemName} / {Foundation.asset.id} / {Foundation.asset.GUID:N} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.AdminLocale)}%", player);
                 if (contribution > 1f / 3f)
                     QuestManager.OnBuildableBuilt(player, Buildable);
             }
@@ -225,6 +201,27 @@ public class BuildableComponent : MonoBehaviour
             BarricadeManager.destroyBarricade(Foundation, x, y, ushort.MaxValue);
         }
         Destroy(this);
+    }
+    internal static InteractableVehicle SpawnImplacement(VehicleAsset vehicleAsset, Vector3 position, Vector3 rotation, ulong owner, ulong group, Guid baseBarricade = default)
+    {
+        Quaternion qrotation = Quaternion.Euler(new Vector3(rotation.x, rotation.y, rotation.z));
+        InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleAsset.id, new Vector3(position.x, position.y + 1, position.z), qrotation);
+
+        if (vehicle.asset.canBeLocked)
+        {
+            CSteamID cowner = new CSteamID(owner);
+            CSteamID cgroup = new CSteamID(group);
+            vehicle.tellLocked(cowner, cgroup, true);
+
+            VehicleManager.ReceiveVehicleLockState(vehicle.instanceID, cowner, cgroup, true);
+        }
+
+        if (baseBarricade != default && Assets.find(baseBarricade) is ItemBarricadeAsset emplacementBase)
+        {
+            Barricade barricade = new Barricade(emplacementBase);
+            BarricadeManager.dropNonPlantedBarricade(barricade, position, qrotation, owner, group);
+        }
+        return vehicle;
     }
     public void Destroy()
     {
@@ -376,7 +373,10 @@ public class BuildableComponent : MonoBehaviour
                 return false;
             }
 
-            if (placer == null || (placer.KitClass != EClass.COMBAT_ENGINEER || !buildable.Foundation.ValidReference(out Guid foundGuid) || !KitManager.KitExists(placer.KitName, out Kit kit) || !kit.Items.Exists(i => i.Id == foundGuid)))
+            if (placer is not { KitClass: Class.CombatEngineer } ||
+                !buildable.Foundation.ValidReference(out Guid foundGuid) ||
+                !placer.HasKit ||
+                !placer.ActiveKit!.Item!.ContainsItem(foundGuid))
             {
                 if (fob == null)
                 {

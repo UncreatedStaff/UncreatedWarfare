@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using JetBrains.Annotations;
 using Uncreated.SQL;
 using UnityEngine;
 
@@ -13,7 +14,7 @@ internal class MapScheduler : MonoBehaviour
     internal static MapScheduler Instance;
 
     // todo
-    internal static readonly Schema MAPS_TABLE = new Schema("map_data", new Schema.Column[]
+    internal static readonly Schema MapsTable = new Schema("map_data", new Schema.Column[]
     {
         new Schema.Column("MapId", SqlTypes.INT)
         {
@@ -27,44 +28,48 @@ internal class MapScheduler : MonoBehaviour
     public static int Current => Instance is null ? -1 : Instance._map;
     // active map
     private int _map = -1;
-    private const int STATIC_MAP = 3;
 
     /* MAP DATA */
-    private static readonly List<MapData> mapRotation = new List<MapData>()
+    private static readonly List<MapData> MapRotation = new List<MapData>
     {
         new MapData("Fool's Road",      new ulong[] { 2407566267, 2407740920 }, removeChildren: new ulong[] { 2407566267 }),
         new MapData("Goose Bay",        new ulong[] { 2301006771 }),
         new MapData("Nuijamaa",         new ulong[] { 2557112412 }),
         new MapData("Gulf of Aqaba",    new ulong[] { 2726964335 }),
-        new MapData("S3 Map",           new ulong[] { 0 }),
+        new MapData("S3 Uncreated",     new ulong[] { 2407740920 }),
     };
 
     /* MAP NAMES */
-    public static readonly string FoolsRoad = mapRotation[0].Name;
-    public static readonly string GooseBay = mapRotation[1].Name;
-    public static readonly string Nuijamaa = mapRotation[2].Name;
-    public static readonly string GulfOfAqaba = mapRotation[3].Name;
-    public static readonly string S3Map = mapRotation[4].Name;
+    public static readonly string FoolsRoad     = MapRotation[0].Name;
+    public static readonly string GooseBay      = MapRotation[1].Name;
+    public static readonly string Nuijamaa      = MapRotation[2].Name;
+    public static readonly string GulfOfAqaba   = MapRotation[3].Name;
+    public static readonly string S3Map         = MapRotation[4].Name;
 
-    private static List<ulong> originalMods;
-    private static List<ulong> originalIgnoreChildren;
+    // Map to load if rotation is undefined
+    private static readonly string DefaultMap = GulfOfAqaba;
 
+    private static List<ulong> _originalMods;
+    private static List<ulong> _originalIgnoreChildren;
+    public static int MapCount => MapRotation.Count;
+
+    [UsedImplicitly]
     void Awake()
     {
         if (Instance != null)
             Destroy(Instance);
         Instance = this;
         WorkshopDownloadConfig config = WorkshopDownloadConfig.getOrLoad();
-        originalMods = config.File_IDs;
-        originalIgnoreChildren = config.Ignore_Children_File_IDs;
-        LoadMap(STATIC_MAP);
+        _originalMods = config.File_IDs;
+        _originalIgnoreChildren = config.Ignore_Children_File_IDs;
+        TryLoadMap(DefaultMap);
     }
 
     public bool TryLoadMap(string name)
     {
-        for (int i = 0; i < mapRotation.Count; ++i)
+        for (int i = 0; i < MapRotation.Count; ++i)
         {
-            MapData d = mapRotation[i];
+            MapData d = MapRotation[i];
             if (d.Name.Equals(name, StringComparison.Ordinal))
             {
                 LoadMap(i);
@@ -75,7 +80,7 @@ internal class MapScheduler : MonoBehaviour
     }
     private void LoadMap(int index)
     {
-        MapData d = mapRotation[index];
+        MapData d = MapRotation[index];
         if (Level.info != null)
         {
             // trigger restart or something idk
@@ -86,8 +91,8 @@ internal class MapScheduler : MonoBehaviour
             L.Log("Selected " + d.Name + " to load.", ConsoleColor.Blue);
             Provider.map = d.Name;
             WorkshopDownloadConfig config = WorkshopDownloadConfig.getOrLoad();
-            config.File_IDs = originalMods.ToList();
-            config.Ignore_Children_File_IDs = originalIgnoreChildren.ToList();
+            config.File_IDs = _originalMods.ToList();
+            config.Ignore_Children_File_IDs = _originalIgnoreChildren.ToList();
             for (int i = 0; i < d.AddMods.Length; ++i)
             {
                 ulong mod = d.AddMods[i];
@@ -120,12 +125,12 @@ internal class MapScheduler : MonoBehaviour
             if (d.RemoveChildren is not null)
                 config.Ignore_Children_File_IDs.AddRange(d.RemoveChildren);
 
-            DirectoryInfo info = new DirectoryInfo(Path.Combine(Application.dataPath, "..", "Servers", Provider.serverID, "Workshop", "Steam", "content", Provider.APP_ID.m_AppId.ToString(Data.Locale)));
+            DirectoryInfo info = new DirectoryInfo(Path.Combine(Application.dataPath, "..", "Servers", Provider.serverID, "Workshop", "Steam", "content", Provider.APP_ID.m_AppId.ToString(Data.AdminLocale)));
             if (info.Exists)
             {
                 foreach (DirectoryInfo modFolder in info.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
                 {
-                    if (!ulong.TryParse(modFolder.Name, NumberStyles.Number, Data.Locale, out ulong mod))
+                    if (!ulong.TryParse(modFolder.Name, NumberStyles.Number, Data.AdminLocale, out ulong mod))
                         continue;
                     for (int i = 0; i < config.File_IDs.Count; ++i)
                     {

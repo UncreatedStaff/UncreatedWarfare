@@ -69,7 +69,7 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
         IsDiscovered = false;
         Vector3 pos = Position;
         _gc = new GridLocation(in pos);
-        _cl = F.GetClosestLocation(pos);
+        _cl = F.GetClosestLocationName(pos);
 
         if (Data.Is(out IFlagRotation fg))
         {

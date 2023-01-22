@@ -1,12 +1,12 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Json;
-using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Maps;
 [JsonConverter(typeof(RotatableConfigConverterFactory))]
@@ -18,6 +18,7 @@ public class RotatableConfig<T> : IReadWrite, INotifyValueUpdate
     private static readonly List<MapValue> _mapValueCache = new List<MapValue>(8);
     private static readonly bool isNullableClass = !type.IsValueType;
     private static readonly bool isNullableStruct = type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+    public IEnumerable<T?> Values => _vals.Select(x => x._val);
     private MapValue[] _vals;
     private bool _isNull;
     private bool _isDefaulted;

@@ -13,7 +13,7 @@ public static class UCBarricadeManager
     internal static readonly List<RegionCoordinate> RegionBuffer = new List<RegionCoordinate>(48);
     public static BarricadeDrop? GetSignFromInteractable(InteractableSign sign)
         => BarricadeManager.FindBarricadeByRootTransform(sign.transform);
-    public static BarricadeDrop? GetBarricadeFromPosition(Vector3 pos, float tolerance = 0.05f)
+    public static BarricadeDrop? GetBarricadeFromPosition(Guid guid, Vector3 pos, float tolerance = 0.05f)
     {
         if (Regions.tryGetCoordinate(pos, out byte x, out byte y))
         {
@@ -22,15 +22,18 @@ public static class UCBarricadeManager
             {
                 for (int i = 0; i < region.drops.Count; ++i)
                 {
-                    if (region.drops[i].model.position == pos)
-                        return region.drops[i];
+                    BarricadeDrop drop = region.drops[i];
+                    if (drop.asset.GUID == guid && drop.model.position == pos)
+                        return drop;
                 }
             }
             else
             {
                 tolerance = tolerance < 0 ? -tolerance : tolerance;
-                foreach (BarricadeDrop drop in region.drops)
+                for (int i = 0; i < region.drops.Count; i++)
                 {
+                    BarricadeDrop drop = region.drops[i];
+                    if (drop.asset.GUID != guid) continue;
                     Vector3 pos2 = drop.model.position - pos;
                     if (pos2.x > -tolerance && pos2.x < tolerance &&
                         pos2.y > -tolerance && pos2.y < tolerance &&
@@ -43,25 +46,80 @@ public static class UCBarricadeManager
         }
         return null;
     }
-    public static StructureDrop? GetStructureFromPosition(Vector3 pos, float tolerance = 0.05f)
+    public static StructureDrop? GetStructureFromPosition(Guid guid, Vector3 pos, float tolerance = 0.05f)
     {
         if (Regions.tryGetCoordinate(pos, out byte x, out byte y))
         {
             StructureRegion region = StructureManager.regions[x, y];
             if (tolerance == 0f)
             {
-                foreach (StructureDrop drop in region.drops)
+                for (int i = 0; i < region.drops.Count; i++)
                 {
-                    if (drop.model.position == pos)
+                    StructureDrop drop = region.drops[i];
+                    if (drop.asset.GUID == guid && drop.model.position == pos)
                         return drop;
                 }
             }
             else
             {
                 tolerance = tolerance < 0 ? -tolerance : tolerance;
-                foreach (StructureDrop drop in region.drops)
+                for (int i = 0; i < region.drops.Count; i++)
                 {
+                    StructureDrop drop = region.drops[i];
+                    if (drop.asset.GUID != guid) continue;
                     Vector3 pos2 = drop.model.position - pos;
+                    if (pos2.x > -tolerance && pos2.x < tolerance &&
+                        pos2.y > -tolerance && pos2.y < tolerance &&
+                        pos2.z > -tolerance && pos2.z < tolerance)
+                    {
+                        return drop;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector3 GetPosition(this LevelObject @object)
+    {
+        if (@object.transform == null)
+        {
+            if (@object.placeholderTransform == null)
+            {
+                if (@object.skybox == null)
+                {
+                    return @object.interactable == null
+                        ? new Vector3(float.NaN, float.NaN, float.NaN)
+                        : @object.interactable.transform.position;
+                }
+                return @object.skybox.position;
+            }
+            return @object.placeholderTransform.position;
+        }
+        return @object.transform.position;
+    }
+    public static LevelObject? GetObjectFromPosition(Guid guid, Vector3 pos, float tolerance = 0.05f)
+    {
+        if (!float.IsNaN(pos.x) && !float.IsNaN(pos.y) && !float.IsNaN(pos.z) && Regions.tryGetCoordinate(pos, out byte x, out byte y))
+        {
+            List<LevelObject> region = LevelObjects.objects[x, y];
+            if (tolerance == 0f)
+            {
+                for (int i = 0; i < region.Count; i++)
+                {
+                    LevelObject drop = region[i];
+                    if (drop.asset.GUID == guid && drop.GetPosition() == pos)
+                        return drop;
+                }
+            }
+            else
+            {
+                tolerance = tolerance < 0 ? -tolerance : tolerance;
+                for (int i = 0; i < region.Count; i++)
+                {
+                    LevelObject drop = region[i];
+                    if (drop.asset.GUID != guid) continue;
+                    Vector3 pos2 = drop.GetPosition() - pos;
                     if (pos2.x > -tolerance && pos2.x < tolerance &&
                         pos2.y > -tolerance && pos2.y < tolerance &&
                         pos2.z > -tolerance && pos2.z < tolerance)
@@ -202,7 +260,7 @@ public static class UCBarricadeManager
             return list;
         }
     }
-    public static int CountBarricadesWhere(float range, Vector3 origin, Predicate<BarricadeDrop> predicate)
+    public static int CountBarricadesWhere(float range, Vector3 origin, Predicate<BarricadeDrop> predicate, int max = -1)
     {
         lock (RegionBuffer)
         {
@@ -219,13 +277,42 @@ public static class UCBarricadeManager
                 foreach (BarricadeDrop barricade in region.drops)
                 {
                     if (predicate.Invoke(barricade))
-                        ++rtn;
+                    {
+                        if (max <= ++rtn && max > 0)
+                            return rtn;
+                    }
                 }
             }
             return rtn;
         }
     }
-    public static int CountBarricadesWhere(Predicate<BarricadeDrop> predicate)
+    public static int CountStructuresWhere(float range, Vector3 origin, Predicate<StructureDrop> predicate, int max = -1)
+    {
+        lock (RegionBuffer)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            RegionBuffer.Clear();
+            int rtn = 0;
+            Regions.getRegionsInRadius(origin, range, RegionBuffer);
+            for (int r = 0; r < RegionBuffer.Count; r++)
+            {
+                RegionCoordinate rc = RegionBuffer[r];
+                StructureRegion region = StructureManager.regions[rc.x, rc.y];
+                foreach (StructureDrop barricade in region.drops)
+                {
+                    if (predicate.Invoke(barricade))
+                    {
+                        if (max <= ++rtn && max > 0)
+                            return rtn;
+                    }
+                }
+            }
+            return rtn;
+        }
+    }
+    public static int CountBarricadesWhere(Predicate<BarricadeDrop> predicate, int max = -1)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -239,7 +326,34 @@ public static class UCBarricadeManager
                 foreach (BarricadeDrop barricade in region.drops)
                 {
                     if (predicate.Invoke(barricade))
-                        ++rtn;
+                    {
+                        if (max <= ++rtn && max > 0)
+                            return rtn;
+                    }
+                }
+            }
+        }
+
+        return rtn;
+    }
+    public static int CountStructuresWhere(Predicate<StructureDrop> predicate, int max = -1)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        int rtn = 0;
+        for (int x = 0; x < Regions.WORLD_SIZE; x++)
+        {
+            for (int y = 0; y < Regions.WORLD_SIZE; y++)
+            {
+                StructureRegion region = StructureManager.regions[x, y];
+                foreach (StructureDrop barricade in region.drops)
+                {
+                    if (predicate.Invoke(barricade))
+                    {
+                        if (max <= ++rtn && max > 0)
+                            return rtn;
+                    }
                 }
             }
         }
@@ -697,26 +811,243 @@ public static class UCBarricadeManager
         }
         return null;
     }
+    public static LevelObject? FindObject(uint instanceID, Vector3 expectedPosition)
+    {
+        if (LevelObjects.objects == null)
+            throw new InvalidOperationException("LevelObjects has not yet been initialized.");
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        bool f = false;
+        byte x1 = byte.MaxValue, y1 = byte.MaxValue;
+        if (!float.IsNaN(expectedPosition.x) && !float.IsNaN(expectedPosition.y) && !float.IsNaN(expectedPosition.z) &&
+            Regions.tryGetCoordinate(expectedPosition, out x1, out y1))
+        {
+            f = true;
+            LevelObject? drop = ScanObjectRegion(instanceID, x1, y1);
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 - 1), y1);
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 + 1), y1);
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(instanceID, x1, (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(instanceID, x1, (byte)(y1 + 1));
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 - 1), (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 - 1), (byte)(y1 + 1));
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 + 1), (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 + 1), (byte)(y1 + 1));
+            if (drop != null) return drop;
+        }
+        for (int x = 0; x < Regions.WORLD_SIZE; ++x)
+        {
+            for (int y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                if (f && x - x1 is -1 or 0 or 1 && y - y1 is -1 or 0 or 1)
+                    continue;
+                List<LevelObject> region = LevelObjects.objects[x, y];
+                for (int i = 0; i < region.Count; i++)
+                {
+                    if (region[i].instanceID == instanceID)
+                        return region[i];
+                }
+            }
+        }
+        return default;
+    }
+    public static LevelObject? FindObject(Transform transform)
+    {
+        if (LevelObjects.objects == null)
+            throw new InvalidOperationException("LevelObjects has not yet been initialized.");
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        bool f = false;
+        Vector3 expectedPosition = transform.position;
+        if (Regions.tryGetCoordinate(expectedPosition, out byte x1, out byte y1))
+        {
+            f = true;
+            LevelObject? drop = ScanObjectRegion(transform, x1, y1);
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(transform, (byte)(x1 - 1), y1);
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(transform, (byte)(x1 + 1), y1);
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(transform, x1, (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(transform, x1, (byte)(y1 + 1));
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(transform, (byte)(x1 - 1), (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(transform, (byte)(x1 - 1), (byte)(y1 + 1));
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(transform, (byte)(x1 + 1), (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanObjectRegion(transform, (byte)(x1 + 1), (byte)(y1 + 1));
+            if (drop != null) return drop;
+        }
+        for (int x = 0; x < Regions.WORLD_SIZE; ++x)
+        {
+            for (int y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                if (f && x - x1 is -1 or 0 or 1 && y - y1 is -1 or 0 or 1)
+                    continue;
+                List<LevelObject> region = LevelObjects.objects[x, y];
+                for (int i = 0; i < region.Count; i++)
+                {
+                    if (transform == region[i].transform)
+                        return region[i];
+                }
+            }
+        }
+        return default;
+    }
+    public static LevelObject? FindObject(uint instanceID)
+    {
+        if (LevelObjects.objects == null)
+            throw new InvalidOperationException("LevelObjects has not yet been initialized.");
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        for (int x = 0; x < Regions.WORLD_SIZE; x++)
+        {
+            for (int y = 0; y < Regions.WORLD_SIZE; y++)
+            {
+                List<LevelObject> region = LevelObjects.objects[x, y];
+                for (int i = 0; i < region.Count; i++)
+                {
+                    if (region[i].instanceID == instanceID)
+                        return region[i];
+                }
+            }
+        }
+        return null;
+    }
+    public static LevelObject? FindObject(uint instanceID, Vector3 expectedPosition, Guid guid)
+    {
+        if (LevelObjects.objects == null)
+            throw new InvalidOperationException("LevelObjects has not yet been initialized.");
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        bool f = false;
+        byte x1 = byte.MaxValue, y1 = byte.MaxValue;
+        if (!float.IsNaN(expectedPosition.x) && !float.IsNaN(expectedPosition.y) && !float.IsNaN(expectedPosition.z) &&
+            Regions.tryGetCoordinate(expectedPosition, out x1, out y1))
+        {
+            f = true;
+            LevelObject? drop = ScanObjectRegion(instanceID, x1, y1);
+            if (drop != null) return drop.GUID == guid ? drop : null;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 - 1), y1);
+            if (drop != null) return drop.GUID == guid ? drop : null;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 + 1), y1);
+            if (drop != null) return drop.GUID == guid ? drop : null;
+            drop = ScanObjectRegion(instanceID, x1, (byte)(y1 - 1));
+            if (drop != null) return drop.GUID == guid ? drop : null;
+            drop = ScanObjectRegion(instanceID, x1, (byte)(y1 + 1));
+            if (drop != null) return drop.GUID == guid ? drop : null;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 - 1), (byte)(y1 - 1));
+            if (drop != null) return drop.GUID == guid ? drop : null;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 - 1), (byte)(y1 + 1));
+            if (drop != null) return drop.GUID == guid ? drop : null;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 + 1), (byte)(y1 - 1));
+            if (drop != null) return drop.GUID == guid ? drop : null;
+            drop = ScanObjectRegion(instanceID, (byte)(x1 + 1), (byte)(y1 + 1));
+            if (drop != null) return drop.GUID == guid ? drop : null;
+        }
+        for (int x = 0; x < Regions.WORLD_SIZE; ++x)
+        {
+            for (int y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                if (f && x - x1 is -1 or 0 or 1 && y - y1 is -1 or 0 or 1)
+                    continue;
+                List<LevelObject> region = LevelObjects.objects[x, y];
+                for (int i = 0; i < region.Count; i++)
+                {
+                    if (region[i].instanceID == instanceID)
+                        return region[i].GUID == guid ? region[i] : null;
+                }
+            }
+        }
+        return default;
+    }
+    public static LevelObject? FindObject(uint instanceID, Guid guid)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        for (int x = 0; x < Regions.WORLD_SIZE; x++)
+        {
+            for (int y = 0; y < Regions.WORLD_SIZE; y++)
+            {
+                List<LevelObject> region = LevelObjects.objects[x, y];
+                for (int i = 0; i < region.Count; i++)
+                {
+                    if (region[i].instanceID == instanceID)
+                        return region[i];
+                }
+            }
+        }
+        return null;
+    }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static BarricadeDrop? ScanBarricadeRegion(uint instanceID, byte x, byte y)
     {
-        if (x < 0 || y < 0 || x > Regions.WORLD_SIZE || y > Regions.WORLD_SIZE)
+        if (x > Regions.WORLD_SIZE || y > Regions.WORLD_SIZE)
             return null;
         BarricadeRegion region = BarricadeManager.regions[x, y];
-        foreach (BarricadeDrop drop in region.drops)
-            if (drop.instanceID == instanceID)
-                return drop;
+        for (int i = 0; i < region.drops.Count; i++)
+        {
+            if (region.drops[i].instanceID == instanceID)
+                return region.drops[i];
+        }
+
         return null;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static StructureDrop? ScanStructureRegion(uint instanceID, byte x, byte y)
     {
-        if (x < 0 || y < 0 || x > Regions.WORLD_SIZE || y > Regions.WORLD_SIZE)
+        if (x > Regions.WORLD_SIZE || y > Regions.WORLD_SIZE)
             return null;
         StructureRegion region = StructureManager.regions[x, y];
-        foreach (StructureDrop drop in region.drops)
-            if (drop.instanceID == instanceID)
-                return drop;
+        for (int i = 0; i < region.drops.Count; i++)
+        {
+            if (region.drops[i].instanceID == instanceID)
+                return region.drops[i];
+        }
+
+        return null;
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static LevelObject? ScanObjectRegion(uint instanceID, byte x, byte y)
+    {
+        if (x > Regions.WORLD_SIZE || y > Regions.WORLD_SIZE)
+            return null;
+        List<LevelObject> region = LevelObjects.objects[x, y];
+        for (int i = 0; i < region.Count; i++)
+        {
+            if (region[i].instanceID == instanceID)
+                return region[i];
+        }
+
+        return null;
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static LevelObject? ScanObjectRegion(Transform transform, byte x, byte y)
+    {
+        if (x > Regions.WORLD_SIZE || y > Regions.WORLD_SIZE)
+            return null;
+        List<LevelObject> region = LevelObjects.objects[x, y];
+        for (int i = 0; i < region.Count; i++)
+        {
+            if (transform == region[i].transform)
+                return region[i];
+        }
+
         return null;
     }
     public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius)

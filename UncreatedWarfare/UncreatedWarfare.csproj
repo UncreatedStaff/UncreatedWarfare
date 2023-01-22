@@ -3,8 +3,7 @@
     <TargetFramework>net481</TargetFramework>
     <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
     <Product>Uncreated Warfare</Product>
-    <OutputPath>C:\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Bin</OutputPath>
-	<Version>2.7.0.0</Version>
+	<Version>3.0.0.0</Version>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
@@ -24,25 +23,30 @@
     <PackageTags>Plugin</PackageTags>
     <NeutralLanguage>en-US</NeutralLanguage>
     <RootNamespace>Uncreated.Warfare</RootNamespace>
-    <AssemblyVersion>2.7.0.0</AssemblyVersion>
-    <FileVersion>2.7.0.0</FileVersion>
+    <AssemblyVersion>3.0.0.0</AssemblyVersion>
+    <FileVersion>3.0.0.0</FileVersion>
     <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <BaseOutputPath>C:\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Bin</BaseOutputPath>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
   </PropertyGroup>
   <PropertyGroup>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Title>Uncreated Warfare</Title>
+    <IsPublishable>False</IsPublishable>
+    <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugType>full</DebugType>
+    <DebugType>portable</DebugType>
     <WarningLevel>5</WarningLevel>
-    <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
+    <DefineConstants>$(DefineConstants)TRACE;UNITY_ASSERTIONS</DefineConstants>
+    <NoWarn>1701;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
+    <DebugType>portable</DebugType>
     <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
+    <NoWarn>1701;1702,1591,1587,1711,1735,1573,1574,1570,1584,1658</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Command_blank.txt" />
@@ -62,6 +66,9 @@
     </Reference>
     <Reference Include="SDG.NetTransport">
       <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\SDG.NetTransport.dll</HintPath>
+    </Reference>
+    <Reference Include="StackCleaner">
+      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\StackCleaner.dll</HintPath>
     </Reference>
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -100,6 +107,6 @@
     <PackageReference Include="System.Text.Json" Version="6.0.4" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="SETLOCAL&#xD;&#xA;SET &quot;sourcedir=$(OutDir)&#xD;&#xA;FOR %25%25a IN (&quot;%25sourcedir%25\*&quot;) DO IF /i NOT &quot;%25%25~nxa&quot;==&quot;$(ProjectName).dll&quot; DEL &quot;%25%25a&quot;&#xD;&#xA;FOR %25%25a IN (&quot;%25sourcedir%25\..\..\..\Uncreated\Warfare\Lang\en-us\*&quot;) DO DEL &quot;%25%25a&quot; " />
+    <Exec Command="SET &quot;sourcedir=$(OutDir)&#xD;&#xA;XCOPY /v /y &quot;%25sourcedir%25\$(ProjectName).dll*&quot; &quot;C:\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Bin\$(ProjectName).dll*&quot;&#xD;&#xA;XCOPY /v /y &quot;%25sourcedir%25\$(ProjectName).pdb*&quot; &quot;C:\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Bin\$(ProjectName).pdb*&quot;&#xD;&#xA;XCOPY /v /y &quot;%25sourcedir%25\$(ProjectName).xml*&quot; &quot;C:\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Bin\$(ProjectName).xml*&quot;&#xD;&#xA;FOR %25%25a IN (&quot;C:\SteamCMD\steamapps\common\U3DS\Uncreated\Warfare\Lang\en-us\*&quot;) DO DEL &quot;%25%25a&quot; " />
   </Target>
 </Project>

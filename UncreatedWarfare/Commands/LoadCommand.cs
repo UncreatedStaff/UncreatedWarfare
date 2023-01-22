@@ -100,7 +100,7 @@ public class LoadCommand : AsyncCommand
                                 {
                                     c.StartForceLoadSupplies(ctx.Caller, type, amount);
 
-                                    ctx.LogAction(EActionLogType.LOAD_SUPPLIES, type.ToString() + " x" + amount);
+                                    ctx.LogAction(ActionLogType.LoadSupplies, type.ToString() + " x" + amount);
                                     ctx.Defer();
                                 }
                                 else throw ctx.Reply(T.LoadAlreadyLoading);

@@ -9,7 +9,7 @@ namespace Uncreated.Warfare.Traits.Buffs;
 public class Ghost : Buff
 {
     private static TraitData? DATA;
-    public static TraitData DEFAULT_DATA = new TraitData()
+    public static TraitData DefaultData = new TraitData()
     {
         TypeName = nameof(Ghost),
         NameTranslations = new TranslationList("Ghost"),
@@ -17,12 +17,12 @@ public class Ghost : Buff
         CreditCost = 500,
         RequireSquadLeader = false,
         RequireSquad = false,
-        ClassList = new EClass[] { EClass.PILOT, EClass.CREWMAN },
+        ClassList = new Class[] { Class.Pilot, Class.Crewman },
         ClassListIsBlacklist = true,
         Icon = "£",
         Cooldown = 900,
         EffectDuration = 600,
-        UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 5 } },
+        UnlockRequirements = new UnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 5 } },
         EffectDistributedToSquad = false,
         Data = string.Empty
     };

@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -12,24 +13,26 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTracker, TeamCTFTicketProvider>
 {
     public override string DisplayName => "Advance and Secure";
-    public override EGamemode GamemodeType => EGamemode.TEAM_CTF;
+    public override GamemodeType GamemodeType => GamemodeType.TeamCTF;
     public TeamCTF() : base(nameof(TeamCTF), Config.AASEvaluateTime) { }
-    protected override Task PostDispose()
+    protected override Task PostDispose(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         foreach (SteamPlayer player in Provider.clients)
         {
             CTFUI.ClearFlagList(player.transportConnection);
         }
         CTFUI.CaptureUI.ClearFromAllPlayers();
-        return base.PostDispose();
+        return base.PostDispose(token);
     }
-    protected override Task PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         SpawnBlockers();
         StartStagingPhase(Config.AASStagingTime);
-        return base.PostGameStarting(isOnLoad);
+        return base.PostGameStarting(isOnLoad, token);
     }
     protected override void EndStagingPhase()
     {
@@ -55,10 +58,10 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
     public override void OnGroupChanged(GroupChanged e)
     {
         CTFUI.ClearFlagList(e.Player);
-        if (_onFlag.TryGetValue(e.Player.Steam64, out int id))
+        if (OnFlagDict.TryGetValue(e.Player.Steam64, out int id))
         {
-            CaptureUIParameters p = CTFUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
-                                                                          ?? _rotation[0], e.Player.Player.movement.getVehicle() != null);
+            CaptureUIParameters p = CTFUI.RefreshStaticUI(e.NewTeam, FlagRotation.FirstOrDefault(x => x.ID == id)
+                                                                          ?? FlagRotation[0], e.Player.Player.movement.getVehicle() != null);
             CTFUI.CaptureUI.Send(e.Player, in p);
         }
         CTFUI.SendFlagList(e.Player);

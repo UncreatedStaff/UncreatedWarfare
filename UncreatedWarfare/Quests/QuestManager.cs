@@ -89,7 +89,6 @@ public static class QuestManager
             {
                 if (preset.Key == key && preset.Team == 0)
                 {
-                    IQuestState state = preset.State;
                     BaseQuestTracker? tr = Quests[i].GetTracker(player, preset);
                     if (tr == null)
                     {
@@ -241,7 +240,7 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ActionLogger.Add(EActionLogType.START_QUEST, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
+        ActionLog.Add(ActionLogType.StartQuest, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (!tracker.IsDailyQuest && tracker.Flag != 0)
         {
             tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
@@ -257,7 +256,7 @@ public static class QuestManager
         {
             L.LogDebug(tracker.Player!.Name.PlayerName + " finished a quest: " + tracker.GetDisplayString());
         }
-        ActionLogger.Add(EActionLogType.COMPLETE_QUEST, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
+        ActionLog.Add(ActionLogType.CompleteQuest, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
         {
             if (!UCWarfare.Config.DisableDailyQuests)
@@ -267,7 +266,7 @@ public static class QuestManager
         else
         {
             QuestCompleted args = new QuestCompleted(tracker);
-            Task.Run(async () =>
+            UCWarfare.RunTask(async () =>
             {
                 await UCWarfare.ToUpdate();
                 if (tracker.PresetKey != default)
@@ -275,13 +274,17 @@ public static class QuestManager
                     if (tracker.Player!.CompletedQuests == null)
                         GetCompletedQuests(tracker.Player);
                     tracker.Player.CompletedQuests!.Add(tracker.PresetKey);
-                    await Data.Gamemode.HandleQuestCompleted(args);
+                    await Data.Gamemode.HandleQuestCompleted(args, default);
                 }
 
                 if (args.GiveRewards)
                     tracker.TryGiveRewards();
-                await Data.Gamemode.OnQuestCompleted(args);
-            });
+                await Data.Gamemode.OnQuestCompleted(args, default);
+#if DEBUG
+            }, ctx: "Calling quest completed for " + tracker + "."); // translation takes a bit of time for these so only do this on debug
+#else
+            }, ctx: "Calling quest completed.");
+#endif
         }
     }
     public static void OnQuestUpdated(BaseQuestTracker tracker, bool skipFlagUpdate = false)
@@ -293,7 +296,7 @@ public static class QuestManager
         {
             L.LogDebug(tracker.Player!.Name.PlayerName + " updated a quest: " + tracker.GetDisplayString());
         }
-        ActionLogger.Add(EActionLogType.MAKE_QUEST_PROGRESS, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
+        ActionLog.Add(ActionLogType.MakeQuestProgress, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
         {
             if (!UCWarfare.Config.DisableDailyQuests)
@@ -331,10 +334,12 @@ public static class QuestManager
     }
 
     #region read/write
-    public static readonly Dictionary<EQuestType, Type> QuestTypes = new Dictionary<EQuestType, Type>(32);
+    public static readonly Dictionary<QuestType, Type> QuestTypes = new Dictionary<QuestType, Type>(32);
+    private static bool reflected;
     /// <summary>Registers all the <see cref="QuestDataAttribute"/>'s to <see cref="QuestTypes"/>.</summary>
     public static void InitTypesReflector()
     {
+        if (reflected) return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -348,17 +353,18 @@ public static class QuestManager
             types = e.Types;
         }
 
-        foreach (Type type in types.Where<Type>(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
+        foreach (Type type in types.Where(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {
             QuestDataAttribute? attribute = type.GetCustomAttributes().OfType<QuestDataAttribute>().FirstOrDefault();
-            if (attribute != null && attribute.Type != EQuestType.INVALID && !QuestTypes.ContainsKey(attribute.Type))
+            if (attribute != null && attribute.Type != QuestType.Invalid && !QuestTypes.ContainsKey(attribute.Type))
                 QuestTypes.Add(attribute.Type, type);
         }
 
         QuestRewards.LoadTypes(types);
+        reflected = true;
     }
     /// <summary>Creates an instance of the provided <paramref name="type"/>. Pulls from <see cref="QuestTypes"/>. <see cref="InitTypesReflector"/> should be ran before use.</summary>
-    public static BaseQuestData? GetQuestData(EQuestType type)
+    public static BaseQuestData? GetQuestData(QuestType type)
     {
         if (QuestTypes.TryGetValue(type, out Type result))
         {
@@ -380,7 +386,7 @@ public static class QuestManager
         L.LogError("Failed to create a quest object of type " + type);
         return null;
     }
-    /// <summary>Read function to parse a quest data with quest type <paramref name="type"/>.</summary>
+    /// <summary>Read function to parse a quest data.</summary>
     public static BaseQuestData? ReadQuestData(ref Utf8JsonReader reader)
     {
 #if DEBUG
@@ -401,7 +407,7 @@ public static class QuestManager
                 {
                     if (!reader.Read()) return quest;
                     string? typeValue = reader.GetString()!;
-                    if (typeValue != null && Enum.TryParse(typeValue, true, out EQuestType type))
+                    if (typeValue != null && Enum.TryParse(typeValue, true, out QuestType type))
                     {
                         quest = GetQuestData(type);
                     }
@@ -514,8 +520,8 @@ public static class QuestManager
             }
         }
     }
-    private static string GetSavePath(ulong steam64, Guid key, ulong team) => Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", steam64.ToString(Data.Locale) +
-                                                                              "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale), "Quests", team + "_" + key.ToString("N") + ".json");
+    private static string GetSavePath(ulong steam64, Guid key, ulong team) => Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", steam64.ToString(Data.AdminLocale) +
+                                                                              "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale), "Quests", team + "_" + key.ToString("N") + ".json");
     public static void SaveProgress(BaseQuestTracker t, ulong team)
     {
         if (t.PresetKey == default) return;
@@ -601,8 +607,8 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        string folder = Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", player.Steam64.ToString(Data.Locale) +
-                        "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale), "Quests") + Path.DirectorySeparatorChar;
+        string folder = Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", player.Steam64.ToString(Data.AdminLocale) +
+                        "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale), "Quests") + Path.DirectorySeparatorChar;
         if (!Directory.Exists(folder))
         {
             Directory.CreateDirectory(folder);

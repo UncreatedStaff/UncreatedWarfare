@@ -9,7 +9,7 @@ using Uncreated.Json;
 namespace Uncreated.Warfare.Quests.Types;
 
 
-[QuestData(EQuestType.CAPTURE_OBJECTIVES)]
+[QuestData(QuestType.CaptureObjectives)]
 public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Tracker, CaptureObjectivesQuest.State, CaptureObjectivesQuest>
 {
     public DynamicIntegerValue ObjectiveCount;
@@ -86,11 +86,11 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
     }
 }
 
-[QuestData(EQuestType.XP_IN_GAMEMODE)]
+[QuestData(QuestType.XPInGamemode)]
 public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGamemodeQuest.State, XPInGamemodeQuest>
 {
     public DynamicIntegerValue XPCount;
-    public DynamicEnumValue<EGamemode> Gamemode;
+    public DynamicEnumValue<GamemodeType> Gamemode;
     public DynamicIntegerValue NumberOfGames;
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
@@ -104,7 +104,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
         else if (propertyname.Equals("gamemode", StringComparison.Ordinal))
         {
             if (!reader.TryReadEnumValue(out Gamemode))
-                Gamemode = new DynamicEnumValue<EGamemode>(new EnumRange<EGamemode>(EGamemode.TEAM_CTF, EGamemode.INSURGENCY), EChoiceBehavior.ALLOW_ONE);
+                Gamemode = new DynamicEnumValue<GamemodeType>(new EnumRange<GamemodeType>(GamemodeType.TeamCTF, GamemodeType.Insurgency), ChoiceBehavior.Selective);
         }
         else if (propertyname.Equals("game_count", StringComparison.Ordinal))
         {
@@ -115,7 +115,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
     public struct State : IQuestState<Tracker, XPInGamemodeQuest>
     {
         public IDynamicValue<int>.IChoice XPCount;
-        internal DynamicEnumValue<EGamemode>.Choice Gamemode;
+        internal DynamicEnumValue<GamemodeType>.Choice Gamemode;
         public IDynamicValue<int>.IChoice GameCount;
         public IDynamicValue<int>.IChoice FlagValue => GameCount;
         public bool IsEligable(UCPlayer player) => true;
@@ -130,7 +130,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
             if (prop.Equals("xp_goal", StringComparison.Ordinal))
                 XPCount = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("gamemode", StringComparison.Ordinal))
-                Gamemode = DynamicEnumValue<EGamemode>.ReadChoiceIntl(ref reader);
+                Gamemode = DynamicEnumValue<GamemodeType>.ReadChoiceIntl(ref reader);
             else if (prop.Equals("game_count", StringComparison.Ordinal))
                 GameCount = DynamicIntegerValue.ReadChoice(ref reader);
         }
@@ -144,7 +144,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
     public class Tracker : BaseQuestTracker, INotifyGameOver, INotifyGainedXP
     {
         private readonly int XPCount = 0;
-        private readonly DynamicEnumValue<EGamemode>.Choice Gamemode;
+        private readonly DynamicEnumValue<GamemodeType>.Choice Gamemode;
         private readonly int GameCount = 0;
         private int _currentXp;
         private int _gamesCompleted;
@@ -212,7 +212,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
         }
     }
 }
-[QuestData(EQuestType.TEAMMATES_DEPLOY_ON_RALLY)]
+[QuestData(QuestType.TeammatesDeployOnRally)]
 public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.State, RallyUseQuest>
 {
     public DynamicIntegerValue UseCount;
@@ -285,12 +285,12 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
         }
     }
 }
-[QuestData(EQuestType.WIN_GAMEMODE)]
+[QuestData(QuestType.WinGamemode)]
 public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamemodeQuest.State, WinGamemodeQuest>
 {
-    private const EGamemode MAX_GAMEMODE = EGamemode.INSURGENCY;
+    private const GamemodeType MAX_GAMEMODE = GamemodeType.Insurgency;
     public DynamicIntegerValue WinCount;
-    public DynamicEnumValue<EGamemode> Gamemode = new DynamicEnumValue<EGamemode>(new EnumRange<EGamemode>(EGamemode.TEAM_CTF, MAX_GAMEMODE), EChoiceBehavior.ALLOW_ONE);
+    public DynamicEnumValue<GamemodeType> Gamemode = new DynamicEnumValue<GamemodeType>(new EnumRange<GamemodeType>(GamemodeType.TeamCTF, MAX_GAMEMODE), ChoiceBehavior.Selective);
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -298,7 +298,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
         if (propertyname.Equals("gamemode", StringComparison.Ordinal))
         {
             if (!reader.TryReadEnumValue(out Gamemode))
-                Gamemode = new DynamicEnumValue<EGamemode>(new EnumRange<EGamemode>(EGamemode.TEAM_CTF, MAX_GAMEMODE), EChoiceBehavior.ALLOW_ONE);
+                Gamemode = new DynamicEnumValue<GamemodeType>(new EnumRange<GamemodeType>(GamemodeType.TeamCTF, MAX_GAMEMODE), ChoiceBehavior.Selective);
         }
         else if (propertyname.Equals("wins", StringComparison.Ordinal))
         {
@@ -310,7 +310,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
     {
         [RewardField("w")]
         public IDynamicValue<int>.IChoice Wins;
-        public IDynamicValue<EGamemode>.IChoice Gamemode;
+        public IDynamicValue<GamemodeType>.IChoice Gamemode;
         public IDynamicValue<int>.IChoice FlagValue => Wins;
         public void Init(WinGamemodeQuest data)
         {
@@ -322,7 +322,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
             if (prop.Equals("gamemode", StringComparison.Ordinal))
-                Gamemode = DynamicEnumValue<EGamemode>.ReadChoice(ref reader);
+                Gamemode = DynamicEnumValue<GamemodeType>.ReadChoice(ref reader);
             else if (prop.Equals("wins", StringComparison.Ordinal))
                 Wins = DynamicIntegerValue.ReadChoice(ref reader);
         }
@@ -334,7 +334,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
     }
     public class Tracker : BaseQuestTracker, INotifyGameOver
     {
-        public readonly IDynamicValue<EGamemode>.IChoice Gamemode;
+        public readonly IDynamicValue<GamemodeType>.IChoice Gamemode;
         public readonly int WinCount;
         private int _wins;
         protected override bool CompletedCheck => _wins >= WinCount;
@@ -369,12 +369,12 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
                         {
                             if (st2.stats[i] is ITeamPresenceStats tps)
                             {
-                                if (st2.GetPresence(tps, winner) > Gamemodes.Gamemode.MATCH_PRESENT_THRESHOLD)
+                                if (st2.GetPresence(tps, winner) > Gamemodes.Gamemode.MatchPresentThreshold)
                                     award = true;
                             }
                             else if (st2.stats[i] is IPresenceStats ps)
                             {
-                                if (st2.GetPresence(ps) > Gamemodes.Gamemode.MATCH_PRESENT_THRESHOLD && Data.Gamemode.IsWinner(_player))
+                                if (st2.GetPresence(ps) > Gamemodes.Gamemode.MatchPresentThreshold && Data.Gamemode.IsWinner(_player))
                                     award = true;
                             }
                             break;
@@ -400,7 +400,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
     }
 }
 
-[QuestData(EQuestType.NEUTRALIZE_FLAGS)]
+[QuestData(QuestType.NeutralizeFlags)]
 public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, NeutralizeFlagsQuest.State, NeutralizeFlagsQuest>
 {
     public DynamicIntegerValue Neutralizations;

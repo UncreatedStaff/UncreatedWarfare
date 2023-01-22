@@ -35,19 +35,19 @@ public class ConfigSync : MonoBehaviour
     private static readonly InstanceGetter<MethodInfo, MethodInfo>? getDynamicMethodOwner;
     private static bool savePending = false;
     private static bool hasReflected = false;
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+    [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
     void Start()
     {
         Instance = this;
     }
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+    [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
     void OnDestroy()
     {
         if (Instance == this)
             Instance = null;
     }
     private bool _sendPending = false;
-    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+    [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
     void LateUpdate()
     {
         if (savePending)
@@ -1230,7 +1230,7 @@ public sealed class PropertyValue : IReadWrite
         ConfigSync.ConfigSyncInst.Property? propData = ConfigSync.GetPropertyData(ParentSyncId, SyncId, out ConfigSync.ConfigSyncInst? parent);
         return
             $"Property: {parent?.Type.Name ?? "<unknown-type>"}.{propData?.PropertyInfo.Name ?? "<unknown-property>"}, Timestamp: {Timestamp:G} UTC, " +
-            $"Value: {(Value is null ? "{null}" : Translation.ToString(Value, L.DEFAULT, null, null, TranslationFlags.NoColorOptimization))}";
+            $"Value: {(Value is null ? "{null}" : Translation.ToString(Value, L.Default, null, null, TranslationFlags.NoColorOptimization))}";
     }
 }
 

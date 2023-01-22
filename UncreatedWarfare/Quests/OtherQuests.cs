@@ -8,7 +8,7 @@ using Uncreated.Networking;
 namespace Uncreated.Warfare.Quests.Types;
 
 
-[QuestData(EQuestType.DISCORD_KEY_SET_BOOL)]
+[QuestData(QuestType.DiscordKeyBinary)]
 public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, DiscordKeySetQuest.State, DiscordKeySetQuest>
 {
     public DynamicStringValue ItemDisplayName;
@@ -135,7 +135,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
     }
 }
 
-[QuestData(EQuestType.PLACEHOLDER)]
+[QuestData(QuestType.Placeholder)]
 public class PlaceholderQuest : BaseQuestData<PlaceholderQuest.Tracker, PlaceholderQuest.State, PlaceholderQuest>
 {
     public override int TickFrequencySeconds => 0;

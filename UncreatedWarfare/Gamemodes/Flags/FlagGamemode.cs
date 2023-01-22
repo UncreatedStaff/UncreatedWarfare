@@ -3,44 +3,51 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
 public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 {
-    protected List<Flag> _rotation = new List<Flag>();
-    protected List<Flag> _allFlags = new List<Flag>();
-    public Dictionary<ulong, int> _onFlag = new Dictionary<ulong, int>();
-    public List<Flag> Rotation => _rotation;
-    public List<Flag> LoadedFlags => _allFlags;
-    public Dictionary<ulong, int> OnFlag => _onFlag;
+    protected List<Flag> FlagRotation = new List<Flag>();
+    protected List<Flag> AllFlags = new List<Flag>();
+    public Dictionary<ulong, int> OnFlagDict = new Dictionary<ulong, int>();
+    public List<Flag> Rotation => FlagRotation;
+    public List<Flag> LoadedFlags => AllFlags;
+    public Dictionary<ulong, int> OnFlag => OnFlagDict;
     public virtual bool AllowPassengersToCapture => false;
-    protected FlagGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
+    public virtual ElectricalGridBehaivor ElectricalGridBehavior => ElectricalGridBehaivor.EnabledWhenInRotation;
+    protected FlagGamemode(string name, float eventLoopSpeed) : base(name, eventLoopSpeed)
     { }
     protected abstract bool TimeToEvaluatePoints();
-    protected override Task PostDispose()
+    protected override Task PostDispose(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         ResetFlags();
-        _onFlag.Clear();
-        _rotation.Clear();
-        return base.PostDispose();
+        OnFlagDict.Clear();
+        FlagRotation.Clear();
+        return base.PostDispose(token);
     }
-    protected override Task OnReady()
+    protected override Task OnReady(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         LoadAllFlags();
-        return base.OnReady();
+        return base.OnReady(token);
     }
-    protected override Task PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         LoadRotation();
-        return base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad, token);
     }
     protected override void EventLoopAction()
     {
@@ -49,9 +56,9 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     protected virtual void FlagCheck()
     {
-        for (int i = 0; i < _rotation.Count; i++)
+        for (int i = 0; i < FlagRotation.Count; i++)
         {
-            Flag f = _rotation[i];
+            Flag f = FlagRotation[i];
             if (f == null) continue;
             f.GetUpdatedPlayers(out List<Player> newPlayers, out List<Player> departingPlayers);
             foreach (Player player in departingPlayers)
@@ -72,44 +79,52 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Data.ZoneProvider.Reload();
         TeamManager.OnReloadFlags();
-        _allFlags.Clear();
-        _allFlags.Capacity = Data.ZoneProvider.Zones.Count;
-        for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
+        int c = AllFlags.Count == 0 ? 48 : AllFlags.Count;
+        AllFlags.Clear();
+        AllFlags.Capacity = c;
+        ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
+        if (singleton == null) throw new SingletonUnloadedException(typeof(ZoneList));
+        singleton.WriteWait();
+        try
         {
-            if (Data.ZoneProvider.Zones[i].Data.UseCase == EZoneUseCase.FLAG)
+            for (int i = 0; i < singleton.Items.Count; ++i)
             {
-                _allFlags.Add(new Flag(Data.ZoneProvider.Zones[i], this) { index = -1 });
+                if (singleton[i] is { Item.Data.UseCase: ZoneUseCase.Flag } proxy)
+                    AllFlags.Add(new Flag(proxy, this) { Index = -1 });
             }
         }
-        _allFlags.Sort((a, b) => a.ID.CompareTo(b.ID));
+        finally
+        {
+            singleton.WriteRelease();
+        }
+        AllFlags.Sort((a, b) => a.ID.CompareTo(b.ID));
     }
     public virtual void OnEvaluate()
     { }
     public void LoadAllFlags()
     {
         ConvertFlags();
-        L.Log("Loaded " + _allFlags.Count.ToString(Data.Locale) + " flags into memory and cleared any existing old flags.", ConsoleColor.Magenta);
+        L.Log("Loaded " + AllFlags.Count.ToString(Data.AdminLocale) + " flags into memory and cleared any existing old flags.", ConsoleColor.Magenta);
     }
     public virtual void PrintFlagRotation()
     {
-        StringBuilder sb = new StringBuilder(_rotation.Count.ToString(Data.Locale) + " flags:\n");
-        for (int i = 0; i < _rotation.Count; i++)
+        StringBuilder sb = new StringBuilder(FlagRotation.Count.ToString(Data.AdminLocale) + " flags:\n");
+        for (int i = 0; i < FlagRotation.Count; i++)
         {
-            sb.Append(i.ToString(Data.Locale) + ") " + _rotation[i].Name);
-            if (_rotation[i].DiscoveredT1) sb.Append(" T1");
-            if (_rotation[i].DiscoveredT2) sb.Append(" T2");
-            if (i != _rotation.Count - 1) sb.Append('\n');
+            sb.Append(i.ToString(Data.AdminLocale) + ") " + FlagRotation[i].Name);
+            if (FlagRotation[i].DiscoveredT1) sb.Append(" T1");
+            if (FlagRotation[i].DiscoveredT2) sb.Append(" T2");
+            if (i != FlagRotation.Count - 1) sb.Append('\n');
         }
         L.Log(sb.ToString(), ConsoleColor.Green);
     }
     public abstract void LoadRotation();
     protected virtual void EvaluatePoints()
     {
-        if (_state == EState.ACTIVE)
-            for (int i = 0; i < _rotation.Count; i++)
-                _rotation[i].EvaluatePoints();
+        if (_state == State.Active)
+            for (int i = 0; i < FlagRotation.Count; i++)
+                FlagRotation[i].EvaluatePoints();
     }
     public virtual void InitFlag(Flag flag)
     {
@@ -120,7 +135,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     public virtual void ResetFlags()
     {
-        foreach (Flag flag in _rotation)
+        foreach (Flag flag in FlagRotation)
         {
             flag.OnPlayerEntered -= PlayerEnteredFlagRadius;
             flag.OnPlayerLeft -= PlayerLeftFlagRadius;
@@ -128,7 +143,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
             flag.OnPointsChanged -= FlagPointsChanged;
             flag.ResetFlag();
         }
-        _rotation.Clear();
+        FlagRotation.Clear();
     }
     protected virtual void RemovePlayerFromFlag(ulong playerId, Player? player, Flag flag)
     {
@@ -137,9 +152,9 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #endif
         if (flag == null)
             return;
-        if (_onFlag.TryGetValue(playerId, out int fid) && fid == flag.ID)
+        if (OnFlagDict.TryGetValue(playerId, out int fid) && fid == flag.ID)
         {
-            _onFlag.Remove(playerId);
+            OnFlagDict.Remove(playerId);
             if (player != null)
                 flag.ExitPlayer(player);
         }
@@ -149,32 +164,32 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (_onFlag.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out int fid))
+        if (OnFlagDict.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out int fid))
         {
             if (fid != flag.ID)
             {
-                Flag? oldFlag = _rotation.FirstOrDefault(f => f.ID == fid);
-                if (oldFlag == null) _onFlag.Remove(player.channel.owner.playerID.steamID.m_SteamID);
+                Flag? oldFlag = FlagRotation.FirstOrDefault(f => f.ID == fid);
+                if (oldFlag == null) OnFlagDict.Remove(player.channel.owner.playerID.steamID.m_SteamID);
                 else RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, oldFlag); // remove the player from their old flag first in the case of teleporting from one flag to another.
-                _onFlag.Add(player.channel.owner.playerID.steamID.m_SteamID, flag.ID);
+                OnFlagDict.Add(player.channel.owner.playerID.steamID.m_SteamID, flag.ID);
             }
         }
-        else _onFlag.Add(player.channel.owner.playerID.steamID.m_SteamID, flag.ID);
+        else OnFlagDict.Add(player.channel.owner.playerID.steamID.m_SteamID, flag.ID);
         flag.EnterPlayer(player);
     }
     protected abstract void PlayerEnteredFlagRadius(Flag flag, Player player);
     protected abstract void PlayerLeftFlagRadius(Flag flag, Player player);
-    protected abstract void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag);
-    protected abstract void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag);
+    protected abstract void FlagOwnerChanged(ulong oldOwner, ulong newOwner, Flag flag);
+    protected abstract void FlagPointsChanged(float newPts, float oldPts, Flag flag);
     public abstract bool IsAttackSite(ulong team, Flag flag);
     public abstract bool IsDefenseSite(ulong team, Flag flag);
     internal override string DumpState()
     {
         StringBuilder flags = new StringBuilder();
-        for (int f = 0; f < _rotation.Count; f++)
+        for (int f = 0; f < FlagRotation.Count; f++)
         {
             if (f == 0) flags.Append('\n');
-            Flag flag = _rotation[f];
+            Flag flag = FlagRotation[f];
             flags.Append(flag.Name).Append("\nOwner: ").Append(flag.Owner).Append(" Players: \n1: ")
                 .Append(string.Join(",", flag.PlayersOnFlagTeam1.Select(x => x.Name.PlayerName))).Append("\n2: ")
                 .Append(string.Join(",", flag.PlayersOnFlagTeam2.Select(x => x.Name.PlayerName)))
@@ -191,27 +206,150 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
             winner = 0;
             return false;
         }
-        else if (t1 == t2)
+        if (t1 == t2)
             winner = Intimidation.CheckSquadsForContestBoost(flag);
         else if (t1 == 0 && t2 > 0)
             winner = 2;
         else if (t2 == 0 && t1 > 0)
             winner = 1;
         else if (t1 > t2)
-        {
-            if (t1 - Config.AASRequiredCapturingPlayerDifference >= t2)
-                winner = 1;
-            else
-                winner = Intimidation.CheckSquadsForContestBoost(flag);
-        }
+            winner = t1 - Config.AASRequiredCapturingPlayerDifference >= t2 ? 1ul : Intimidation.CheckSquadsForContestBoost(flag);
         else
-        {
-            if (t2 - Config.AASRequiredCapturingPlayerDifference >= t1)
-                winner = 2;
-            else
-                winner = Intimidation.CheckSquadsForContestBoost(flag);
-        }
+            winner = t2 - Config.AASRequiredCapturingPlayerDifference >= t1 ? 2ul : Intimidation.CheckSquadsForContestBoost(flag);
 
         return winner == 0;
+    }
+    internal virtual bool IsBarricadeObjectEnabled(BarricadeDrop drop)
+    {
+        Vector3 pos = drop.model.position;
+        switch (ElectricalGridBehavior)
+        {
+            case ElectricalGridBehaivor.AllEnabled: return true;
+            case ElectricalGridBehaivor.EnabledWhenInRotation:
+                if (Rotation != null)
+                {
+                    for (int i = 0; i < Rotation.Count; ++i)
+                    {
+                        if (Rotation[i].PlayerInRange(pos))
+                            return true;
+                    }
+                }
+                goto default;
+            case ElectricalGridBehaivor.EnabledWhenObjective:
+                if (this is IFlagObjectiveGamemode obj1)
+                {
+                    Flag? flag = obj1.Objective;
+                    if (flag != null && flag.PlayerInRange(pos))
+                        return true;
+                }
+                else if (this is IFlagTeamObjectiveGamemode obj2)
+                {
+                    Flag? flag = obj2.ObjectiveTeam1;
+                    if (flag != null && flag.PlayerInRange(pos))
+                        return true;
+                    flag = obj2.ObjectiveTeam2;
+                    if (flag != null && flag.PlayerInRange(pos))
+                        return true;
+                }
+                goto default;
+            default:
+                return false;
+        }
+    }
+    internal virtual bool IsPowerObjectEnabled(InteractableObject obj)
+    {
+        switch (ElectricalGridBehavior)
+        {
+            case ElectricalGridBehaivor.AllEnabled:
+                return true;
+            case ElectricalGridBehaivor.EnabledWhenInRotation:
+                if (Rotation != null)
+                {
+                    for (int i = 0; i < Rotation.Count; ++i)
+                    {
+                        GridObject[]? grid = Rotation[i].ZoneData?.Item?.Data.GridObjects;
+                        if (grid is not { Length: > 0 })
+                            continue;
+                        if (CheckFlag(grid))
+                            return true;
+                    }
+                }
+                break;
+            case ElectricalGridBehaivor.EnabledWhenObjective:
+                if (this is IFlagObjectiveGamemode obj1)
+                {
+                    GridObject[]? grid = obj1.Objective?.ZoneData?.Item?.Data.GridObjects;
+                    if (grid is { Length: > 0 })
+                        if (CheckFlag(grid))
+                            return true;
+                }
+                else if (this is IFlagTeamObjectiveGamemode obj2)
+                {
+                    GridObject[]? grid = obj2.ObjectiveTeam1?.ZoneData?.Item?.Data.GridObjects;
+                    if (grid is { Length: > 0 })
+                        if (CheckFlag(grid))
+                            return true;
+                    grid = obj2.ObjectiveTeam2?.ZoneData?.Item?.Data.GridObjects;
+                    if (grid is { Length: > 0 })
+                        if (CheckFlag(grid))
+                            return true;
+                }
+                break;
+        }
+        return false;
+        bool CheckFlag(GridObject[] grid)
+        {
+            GameObject go = obj.gameObject;
+            for (int g = 0; g < grid.Length; ++g)
+            {
+                GridObject @object = grid[g];
+                GameObject? obj2 = @object.Object?.transform.gameObject;
+                if (obj2 == go)
+                    return true;
+            }
+
+            return false;
+        }
+    }
+    protected virtual void OnObjectiveChangedPowerHandler(Flag? oldObj, Flag? newObj)
+    {
+        if (ElectricalGridBehavior != ElectricalGridBehaivor.EnabledWhenObjective)
+            return;
+        GridObject[]? arr = oldObj?.ZoneData?.Item?.Data.GridObjects;
+        if (arr is { Length: > 0 })
+        {
+            SetPowerForAllInGrid(arr, false);
+        }
+        arr = newObj?.ZoneData?.Item?.Data.GridObjects;
+        if (arr is { Length: > 0 })
+        {
+            SetPowerForAllInGrid(arr, true);
+        }
+    }
+    protected virtual void OnRotationUpdated()
+    {
+        // todo
+    }
+    private void SetPowerForAllInGrid(GridObject[] arr, bool state)
+    {
+        for (int i = 0; i < arr.Length; ++i)
+        {
+            if (arr[i].Object is { interactable: { } inx } && inx != null)
+            {
+                if (inx.objectAsset.interactability == EObjectInteractability.BINARY_STATE &&
+                    inx.objectAsset.interactabilityHint is EObjectInteractabilityHint.SWITCH or EObjectInteractabilityHint.FIRE or EObjectInteractabilityHint.GENERATOR)
+                {
+                    ObjectManager.forceObjectBinaryState(inx.transform, state);
+                }
+                inx.updateWired(false);
+            }
+        }
+    }
+    public enum ElectricalGridBehaivor : byte
+    {
+        Disabled,
+        AllEnabled,
+        EnabledWhenObjective,
+        EnabledWhenInRotation
     }
 }

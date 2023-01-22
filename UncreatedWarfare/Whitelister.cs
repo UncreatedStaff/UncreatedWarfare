@@ -13,8 +13,8 @@ using UnityEngine;
 namespace Uncreated.Warfare;
 public class Whitelister : ListSingleton<WhitelistItem>
 {
-    private static Whitelister Singleton;
-    public static bool Loaded => Singleton.IsLoaded<Whitelister, WhitelistItem>();
+    private static Whitelister _singleton;
+    public static bool Loaded => _singleton.IsLoaded<Whitelister, WhitelistItem>();
     public Whitelister() : base("whitelist", Path.Combine(Data.Paths.KitsStorage, "whitelist.json"))
     {
     }
@@ -26,12 +26,12 @@ public class Whitelister : ListSingleton<WhitelistItem>
         StructureDrop.OnSalvageRequested_Global += OnStructureSalvageRequested;
         StructureManager.onDeployStructureRequested += OnStructurePlaceRequested;
         BarricadeManager.onModifySignRequested += OnEditSignRequest;
-        Singleton = this;
+        _singleton = this;
     }
 
     public override void Unload()
     {
-        Singleton = null!;
+        _singleton = null!;
         BarricadeManager.onModifySignRequested -= OnEditSignRequest;
         StructureManager.onDeployStructureRequested -= OnStructurePlaceRequested;
         StructureDrop.OnSalvageRequested_Global -= OnStructureSalvageRequested;
@@ -52,38 +52,35 @@ public class Whitelister : ListSingleton<WhitelistItem>
             shouldAllow = false;
         }
     }
-    private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, ItemData itemData, ref bool shouldAllow)
+    private void OnItemPickup(Player pl, byte x, byte y, uint instanceID, byte toX, byte toY, byte toRot, byte toPage, ItemData itemData, ref bool shouldAllow)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer? player = UCPlayer.FromPlayer(P);
+        UCPlayer? player = UCPlayer.FromPlayer(pl);
 
         if (player is null || player.OnDuty())
             return;
-        WhitelistItem whitelistedItem;
-        bool isWhitelisted;
         if (Assets.find(EAssetType.ITEM, itemData.item.id) is not ItemAsset a)
         {
             L.LogError("Unknown asset on item " + itemData.item.id.ToString());
             shouldAllow = false;
             return;
         }
-        else
-            isWhitelisted = IsWhitelisted(a.GUID, out whitelistedItem);
-        if (to_page == PlayerInventory.STORAGE && !isWhitelisted)
+        bool isWhitelisted = IsWhitelisted(a.GUID, out WhitelistItem whitelistedItem);
+
+        if (toPage == PlayerInventory.STORAGE && !isWhitelisted)
         {
             shouldAllow = false;
             return;
         }
 
-        if (KitManager.HasKit(player, out Kit kit))
+        Kit? kit = player.ActiveKit?.Item;
+        if (kit != null)
         {
-            int itemCount = UCInventoryManager.CountItems(player.Player, itemData.item.id);
+            int itemCount = UCInventoryManager.CountItems(player.Player, a.GUID);
 
-            int allowedItems = kit.Items.Count(k => k.Id == a.GUID);
-            if (allowedItems == 0)
-                allowedItems = kit.Clothes.Count(k => k.Id == a.GUID);
+            int allowedItems = kit.Items.Count(k => k is IItem i && i.Item == a.GUID || k is IBaseItem c && c.Item == a.GUID);
 
             int max = isWhitelisted ? Math.Max(allowedItems, whitelistedItem.Amount) : allowedItems;
 
@@ -119,7 +116,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             shouldAllow = false;
             player.SendChat(T.WhitelistNoKit);
         }
-        if (EventFunctions.droppeditems.TryGetValue(P.channel.owner.playerID.steamID.m_SteamID, out List<uint> instances))
+        if (EventFunctions.droppeditems.TryGetValue(pl.channel.owner.playerID.steamID.m_SteamID, out List<uint> instances))
         {
             if (instances != null)
                 instances.Remove(instanceID);
@@ -162,7 +159,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
         UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
         if (player == null || player.OnDuty())
             return;
-        SDG.Unturned.StructureData data = structure.GetServersideData();
+        StructureData data = structure.GetServersideData();
         if (IsWhitelisted(data.structure.asset.GUID, out _))
             return;
 
@@ -181,6 +178,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             player.SendChat(T.ProhibitedSignEditing);
         }
     }
+    // ReSharper disable InconsistentNaming
     internal void OnBarricadePlaceRequested(
         Barricade barricade,
         ItemBarricadeAsset asset,
@@ -193,6 +191,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
         ref ulong group,
         ref bool shouldAllow)
     {
+        // ReSharper restore InconsistentNaming
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -206,29 +205,27 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 player.SendChat(T.WhitelistProhibitedPlace, asset);
                 return;
             }
-            if (KitManager.HasKit(player.CSteamID, out Kit kit))
+
+            Kit? kit = player.ActiveKit?.Item;
+            if (kit != null)
             {
                 if (IsWhitelisted(barricade.asset.GUID, out _))
-                {
                     return;
-                }
-                else
+
+                int allowedCount = kit.Items.Count(k => k is IItem i && i.Item == barricade.asset.GUID);
+
+                if (allowedCount > 0)
                 {
-                    int allowedCount = kit.Items.Where(k => k.Id == barricade.asset.GUID).Count();
+                    // todo delete old barricades not sure what happened to that system
+                    int placedCount = UCBarricadeManager.CountBarricadesWhere(b => b.GetServersideData().owner == player.Steam64 && b.asset.GUID == barricade.asset.GUID, allowedCount);
 
-                    if (allowedCount > 0)
+                    if (placedCount >= allowedCount)
                     {
-                        int placedCount = UCBarricadeManager.CountBarricadesWhere(b => b.asset.GUID == barricade.asset.GUID && b.GetServersideData().owner == player.Steam64);
-
-                        if (placedCount >= allowedCount)
-                        {
-                            shouldAllow = false;
-                            player.SendChat(T.WhitelistProhibitedPlaceAmt, allowedCount, asset);
-                            return;
-                        }
-                        else
-                            return;
+                        shouldAllow = false;
+                        player.SendChat(T.WhitelistProhibitedPlaceAmt, allowedCount, asset);
                     }
+
+                    return;
                 }
             }
 
@@ -241,6 +238,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             L.LogError(ex);
         }
     }
+    // ReSharper disable InconsistentNaming
     private void OnStructurePlaceRequested(
         Structure structure,
         ItemStructureAsset asset,
@@ -253,6 +251,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
         ref bool shouldAllow
         )
     {
+        // ReSharper restore InconsistentNaming
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -266,14 +265,25 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 player.SendChat(T.WhitelistProhibitedPlace, asset);
                 return;
             }
-            if (KitManager.HasKit(player.CSteamID, out Kit kit))
+            Kit? kit = player.ActiveKit?.Item;
+            if (kit != null)
             {
-                if (kit.Items.Exists(k => k.Id == structure.asset.GUID))
-                {
+                if (IsWhitelisted(structure.asset.GUID, out _))
                     return;
-                }
-                else if (IsWhitelisted(structure.asset.GUID, out _))
+
+                int allowedCount = kit.Items.Count(k => k is IItem i && i.Item == structure.asset.GUID);
+
+                if (allowedCount > 0)
                 {
+                    // todo delete old barricades not sure what happened to that system
+                    int placedCount = UCBarricadeManager.CountStructuresWhere(s => s.GetServersideData().owner == player.Steam64 && s.asset.GUID == structure.asset.GUID, allowedCount);
+
+                    if (placedCount >= allowedCount)
+                    {
+                        shouldAllow = false;
+                        player.SendChat(T.WhitelistProhibitedPlaceAmt, allowedCount, asset);
+                    }
+
                     return;
                 }
             }
@@ -287,33 +297,33 @@ public class Whitelister : ListSingleton<WhitelistItem>
             L.LogError(ex);
         }
     }
-    public static void AddItem(Guid ID, byte amount = 255)
+    public static void AddItem(Guid guid, byte amount = 255)
     {
-        Singleton.AssertLoaded<Whitelister, WhitelistItem>();
-        Singleton.AddObjectToSave(new WhitelistItem(ID, amount));
+        _singleton.AssertLoaded<Whitelister, WhitelistItem>();
+        _singleton.AddObjectToSave(new WhitelistItem(guid, amount));
     }
-    public static void RemoveItem(Guid ID)
+    public static void RemoveItem(Guid guid)
     {
-        Singleton.AssertLoaded<Whitelister, WhitelistItem>();
-        Singleton.RemoveWhere(i => i.Item == ID);
-    }
-
-    public static void SetAmount(Guid ID, ushort newAmount)
-    {
-        Singleton.AssertLoaded<Whitelister, WhitelistItem>();
-        Singleton.UpdateObjectsWhere(i => i.Item == ID, i => i.Amount = newAmount);
+        _singleton.AssertLoaded<Whitelister, WhitelistItem>();
+        _singleton.RemoveWhere(i => i.Item == guid);
     }
 
-    public static bool IsWhitelisted(Guid itemID, out WhitelistItem item)
+    public static void SetAmount(Guid guid, ushort newAmount)
     {
-        Singleton.AssertLoaded<Whitelister, WhitelistItem>();
-        return Singleton.ObjectExists(w => w.Item == itemID, out item);
+        _singleton.AssertLoaded<Whitelister, WhitelistItem>();
+        _singleton.UpdateObjectsWhere(i => i.Item == guid, i => i.Amount = newAmount);
     }
-    internal static bool IsWhitelistedFast(Guid itemID)
+
+    public static bool IsWhitelisted(Guid guid, out WhitelistItem item)
     {
-        for (int i = 0; i < Singleton.Count; ++i)
+        _singleton.AssertLoaded<Whitelister, WhitelistItem>();
+        return _singleton.ObjectExists(w => w.Item == guid, out item);
+    }
+    internal static bool IsWhitelistedFast(Guid guid)
+    {
+        for (int i = 0; i < _singleton.Count; ++i)
         {
-            if (Singleton[i].Item == itemID)
+            if (_singleton[i].Item == guid)
                 return true;
         }
         return false;

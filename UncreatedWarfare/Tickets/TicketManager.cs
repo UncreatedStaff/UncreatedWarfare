@@ -10,7 +10,7 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets;
 
-public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartListener, IGameTickListener
+public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartListener, IGameTickListener, IFlagCapturedListener, IFlagNeutralizedListener
 {
     public static TicketManager Singleton;
     public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
@@ -79,7 +79,7 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
     }
     void IGameTickListener.Tick()
     {
-        if (Data.Gamemode.State == EState.ACTIVE && Provider != null)
+        if (Data.Gamemode != null && Data.Gamemode.State == State.Active && Provider != null)
         {
             Provider.Tick();
         }
@@ -117,10 +117,15 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
         Provider.UpdateUI(1ul);
         Provider.UpdateUI(2ul);
     }
-    public void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
+    void IFlagCapturedListener.OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
         if (Provider is IFlagCapturedListener cl)
             cl.OnFlagCaptured(flag, capturedTeam, lostTeam);
+    }
+    void IFlagNeutralizedListener.OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
+    {
+        if (Provider is IFlagNeutralizedListener cl)
+            cl.OnFlagNeutralized(flag, capturedTeam, lostTeam);
     }
     private void OnPlayerDeath(PlayerDied e)
     {

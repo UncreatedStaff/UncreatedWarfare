@@ -1,404 +1,255 @@
-﻿using SDG.Unturned;
+﻿using MySqlConnector;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Transactions;
 using Uncreated.Encoding;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.SQL;
+using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Kits;
 
-public class Kit : ITranslationArgument, ICloneable
+public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
 {
-    public const int CAPACITY = 256;
-    internal int PrimaryKey = -1;
-    public string Name;
-    [CommandSettable]
-    public EClass Class;
-    [CommandSettable]
-    public EBranch Branch;
-    [CommandSettable]
-    public ulong Team;
-    public BaseUnlockRequirement[] UnlockRequirements;
-    public Skillset[] Skillsets;
-    [CommandSettable]
-    public ushort CreditCost;
-    [CommandSettable]
-    public ushort UnlockLevel;
-    [CommandSettable]
-    public bool IsPremium;
-    [CommandSettable]
-    public float PremiumCost;
-    [CommandSettable]
-    public bool IsLoadout;
-    [CommandSettable]
-    public float TeamLimit;
-    [CommandSettable]
-    public float Cooldown;
-    [CommandSettable]
-    public bool Disabled;
-    [CommandSettable]
-    public ESquadLevel SquadLevel;
-    public List<KitItem> Items;
-    public List<KitClothing> Clothes;
-    public Dictionary<string, string> SignTexts;
-    [CommandSettable]
-    public string Weapons;
-    public Kit(string name)
+    public PrimaryKey PrimaryKey { get; set; }
+    public PrimaryKey FactionKey { get; set; }
+    public string Id { get; set; }
+    public Class Class { get; set; }
+    public Branch Branch { get; set; }
+    public KitType Type { get; set; }
+    public bool Disabled { get; set; }
+    public bool MapFilterIsWhitelist { get; set; }
+    public bool FactionFilterIsWhitelist { get; set; }
+    public int Season { get; set; }
+    public float RequestCooldown { get; set; }
+    public float TeamLimit { get; set; }
+    public int CreditCost { get; set; }
+    public decimal PremiumCost { get; set; }
+    public SquadLevel SquadLevel { get; set; }
+    public TranslationList SignText { get; set; }
+    public IKitItem[] Items { get; set; }
+    public UnlockRequirement[] UnlockRequirements { get; set; }
+    public Skillset[] Skillsets { get; set; }
+    public PrimaryKey[] FactionFilter { get; set; }
+    public PrimaryKey[] MapFilter { get; set; }
+    public PrimaryKey[] RequestSigns { get; set; }
+    public string? WeaponText { get; set; }
+    public DateTimeOffset CreatedTimestamp { get; set; }
+    public ulong Creator { get; set; }
+    public DateTimeOffset LastEditedTimestamp { get; set; }
+    public ulong LastEditor { get; set; }
+    [JsonIgnore]
+    internal List<KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>>? ItemListCache { get; set; }
+
+    [JsonIgnore]
+    internal string? ClothingSetCache { get; set; }
+    public FactionInfo? Faction
     {
-        Name = name;
-        Items = new List<KitItem>();
-        Clothes = new List<KitClothing>();
-        Class = EClass.NONE;
-        Branch = EBranch.DEFAULT;
-        Team = 0;
-        UnlockRequirements = new BaseUnlockRequirement[0];
-        Skillsets = new Skillset[0];
-        CreditCost = 0;
-        UnlockLevel = 0;
-        IsPremium = false;
-        PremiumCost = 0;
-        IsLoadout = false;
-        TeamLimit = 1;
-        Cooldown = 0;
-        SignTexts = new Dictionary<string, string> { { L.DEFAULT, "Default" } };
-        Weapons = string.Empty;
-        Disabled = false;
-        SquadLevel = ESquadLevel.MEMBER;
+        get => FactionKey.IsValid ? TeamManager.GetFactionInfo(FactionKey) : null;
+        set
+        {
+            if (value is null)
+                FactionKey = PrimaryKey.NotAssigned;
+            else if (!value.PrimaryKey.IsValid)
+                throw new ArgumentException("Invalid faction provided, no key set.", nameof(value));
+            else FactionKey = value.PrimaryKey;
+        }
     }
-    public Kit() : this("default") { }
-    public Kit(string kitName, List<KitItem> items, List<KitClothing> clothing)
+    /// <summary>Checks that the kit is publicly available and has a vaild class (not None or Unarmed).</summary>
+    public bool IsPublicKit => Type == KitType.Public && Class > Class.Unarmed;
+
+    /// <summary>Elite kit or loadout.</summary>
+    public bool IsPaid => Type is KitType.Elite or KitType.Loadout;
+    /// <summary>Checks disabled status, season, map blacklist, faction blacklist. Checks both active teams, use <see cref="IsRequestable(ulong)"/> to check for a certain team.</summary>
+    public bool Requestable => !Disabled && (Season >= UCWarfare.Season || Season < 1) &&
+                             IsCurrentMapAllowed() &&
+                             (IsFactionAllowed(TeamManager.Team1Faction) || IsFactionAllowed(TeamManager.Team2Faction));
+    /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
+    public bool IsRequestable(ulong team) => team is not 1ul and not 2ul ? Requestable : (!Disabled && (Season >= UCWarfare.Season || Season < 1) &&
+                             IsCurrentMapAllowed() &&
+                             IsFactionAllowed(TeamManager.GetFaction(team)));
+    /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
+    public bool IsRequestable(FactionInfo? faction) => faction is null ? Requestable : (!Disabled && (Season >= UCWarfare.Season || Season < 1) &&
+                                                                               IsCurrentMapAllowed() &&
+                                                                               IsFactionAllowed(faction));
+    public Kit(string id, Class @class, Branch branch, KitType type, SquadLevel squadLevel, FactionInfo? faction)
     {
-        Name = kitName;
-        Items = items ?? new List<KitItem>();
-        Clothes = clothing ?? new List<KitClothing>();
-        Class = EClass.NONE;
-        Branch = EBranch.DEFAULT;
-        Team = 0;
-        UnlockRequirements = new BaseUnlockRequirement[0];
-        Skillsets = new Skillset[0];
-        CreditCost = 0;
-        UnlockLevel = 0;
-        IsPremium = false;
-        PremiumCost = 0;
-        IsLoadout = false;
-        TeamLimit = 1;
-        Cooldown = 0;
-        SignTexts = new Dictionary<string, string> { { L.DEFAULT, kitName.ToProperCase() } };
-        Weapons = string.Empty;
+        Faction = faction;
+        Id = id;
+        Class = @class;
+        Branch = branch;
+        Type = type;
+        SquadLevel = squadLevel;
+        SignText = new TranslationList(id);
+        Items = Array.Empty<IKitItem>();
+        UnlockRequirements = Array.Empty<UnlockRequirement>();
+        Skillsets = Array.Empty<Skillset>();
+        FactionFilter = Array.Empty<PrimaryKey>();
+        MapFilter = Array.Empty<PrimaryKey>();
+        RequestSigns = Array.Empty<PrimaryKey>();
+        Season = UCWarfare.Season;
+        TeamLimit = KitManager.GetDefaultTeamLimit(@class);
+        RequestCooldown = KitManager.GetDefaultRequestCooldown(@class);
+        CreatedTimestamp = LastEditedTimestamp = DateTime.UtcNow;
+        /* DEFAULTS *
+        FactionFilterIsWhitelist = false;
+        MapFilterIsWhitelist = false;
         Disabled = false;
-        SquadLevel = ESquadLevel.MEMBER;
+        CreditCost = 0;
+        PremiumCost = 0m;
+        WeaponText = null;
+        */
     }
-    public void ApplyTo(Kit kit)
+    public Kit(string id, Kit copy)
     {
-        kit.Class = Class;
-        kit.Branch = Branch;
-        kit.Team = Team;
-        kit.Items = new List<KitItem>(Items.Select(x => (KitItem)x.Clone()));
-        kit.Clothes = new List<KitClothing>(Clothes.Select(x => (KitClothing)x.Clone()));
-        kit.UnlockRequirements = new BaseUnlockRequirement[UnlockRequirements.Length];
+        FactionKey = copy.FactionKey;
+        Id = id;
+        Class = copy.Class;
+        Branch = copy.Branch;
+        Type = copy.Type;
+        SquadLevel = copy.SquadLevel;
+        SignText = (TranslationList)copy.SignText.Clone();
+        Items = F.CloneArray(copy.Items);
+        UnlockRequirements = F.CloneArray(copy.UnlockRequirements);
+        Skillsets = F.CloneStructArray(copy.Skillsets);
+        FactionFilter = F.CloneStructArray(copy.FactionFilter);
+        MapFilter = F.CloneStructArray(copy.MapFilter);
+        RequestSigns = Array.Empty<PrimaryKey>();
+        Season = copy.Season;
+        TeamLimit = copy.TeamLimit;
+        RequestCooldown = copy.RequestCooldown;
+        FactionFilterIsWhitelist = copy.FactionFilterIsWhitelist;
+        MapFilterIsWhitelist = copy.MapFilterIsWhitelist;
+        Disabled = copy.Disabled;
+        CreditCost = copy.CreditCost;
+        PremiumCost = copy.PremiumCost;
+        WeaponText = copy.WeaponText;
+        CreatedTimestamp = DateTime.UtcNow;
+        LastEditedTimestamp = copy.LastEditedTimestamp;
+        LastEditor = copy.LastEditor;
+    }
+    public Kit(ulong loadoutOwner, char loadout, Class @class, string? displayName, FactionInfo? faction)
+    {
+        Faction = faction;
+        Id = loadoutOwner.ToString(Data.AdminLocale) + "_" + new string(loadout, 1);
+        Class = @class;
+        Branch = KitManager.GetDefaultBranch(@class);
+        Type = KitType.Loadout;
+        SquadLevel = SquadLevel.Member;
+        SignText = displayName == null ? new TranslationList() : new TranslationList(displayName);
+        Items = Array.Empty<IKitItem>();
+        UnlockRequirements = Array.Empty<UnlockRequirement>();
+        Skillsets = Array.Empty<Skillset>();
+        FactionFilter = Array.Empty<PrimaryKey>();
+        MapFilter = Array.Empty<PrimaryKey>();
+        RequestSigns = Array.Empty<PrimaryKey>();
+        Season = UCWarfare.Season;
+        TeamLimit = KitManager.GetDefaultTeamLimit(@class);
+        RequestCooldown = KitManager.GetDefaultRequestCooldown(@class);
+        PremiumCost = UCWarfare.Config.LoadoutCost;
+        CreatedTimestamp = LastEditedTimestamp = DateTime.UtcNow;
+        /* DEFAULTS *
+        FactionFilterIsWhitelist = false;
+        MapFilterIsWhitelist = false;
+        Disabled = false;
+        CreditCost = 0;
+        WeaponText = null;
+        */
+    }
+    public Kit() { }
+    public bool IsFactionAllowed(FactionInfo? faction)
+    {
+        if (faction == TeamManager.Team1Faction && Faction == TeamManager.Team2Faction ||
+            faction == TeamManager.Team2Faction && Faction == TeamManager.Team1Faction)
+            return false;
+        if (FactionFilter.NullOrEmpty() || faction is null || !faction.PrimaryKey.IsValid)
+            return true;
+        int pk = faction.PrimaryKey.Key;
+        for (int i = 0; i < FactionFilter.Length; ++i)
+            if (FactionFilter[i].Key == pk)
+                return FactionFilterIsWhitelist;
+
+        return !FactionFilterIsWhitelist;
+    }
+    public bool IsCurrentMapAllowed()
+    {
+        if (MapFilter.NullOrEmpty())
+            return true;
+        PrimaryKey map = MapScheduler.Current;
+        for (int i = 0; i < MapFilter.Length; ++i)
+        {
+            if (MapFilter[i].Key == map.Key)
+                return MapFilterIsWhitelist;
+        }
+
+        return !MapFilterIsWhitelist;
+    }
+    public bool MeetsUnlockRequirements(UCPlayer player)
+    {
+        if (UnlockRequirements is not { Length: > 0 }) return false;
         for (int i = 0; i < UnlockRequirements.Length; ++i)
-            kit.UnlockRequirements[i] = (BaseUnlockRequirement)UnlockRequirements[i].Clone();
-        kit.Skillsets = new Skillset[Skillsets.Length];
-        Array.Copy(Skillsets, kit.Skillsets, Skillsets.Length);
-        kit.CreditCost = CreditCost;
-        kit.UnlockLevel = UnlockLevel;
-        kit.IsPremium = IsPremium;
-        kit.PremiumCost = PremiumCost;
-        kit.IsLoadout = IsLoadout;
-        kit.TeamLimit = TeamLimit;
-        kit.Cooldown = Cooldown;
-        kit.Disabled = Disabled;
-        kit.SquadLevel = SquadLevel;
-        kit.SignTexts = new Dictionary<string, string>(SignTexts);
-    }
-    public object Clone()
-    {
-        Kit clone = new Kit(false)
         {
-            Name = Name
-        };
-        ApplyTo(clone);
-        return clone;
-    }
-    /// <summary>empty constructor</summary>
-    public Kit(bool dummy) { }
-    public string GetDisplayName()
-    {
-        if (SignTexts is null) return Name;
-        if (SignTexts.TryGetValue(L.DEFAULT, out string val))
-            return val ?? Name;
-        if (SignTexts.Count > 0)
-            return SignTexts.FirstOrDefault().Value ?? Name;
-        return Name;
-    }
-    public static Kit?[] ReadMany(ByteReader R)
-    {
-        Kit?[] kits = new Kit[R.ReadInt32()];
-        for (int i = 0; i < kits.Length; i++)
-        {
-            kits[i] = Read(R);
+            if (!UnlockRequirements[i].CanAccess(player))
+                return false;
         }
-        return kits;
-    }
-    public static Kit? Read(ByteReader R)
-    {
-        if (R.ReadUInt8() == 1) return null;
-        Kit kit = new Kit(true);
-        kit.PrimaryKey = R.ReadInt32();
-        kit.Name = R.ReadString();
-        ushort itemCount = R.ReadUInt16();
-        ushort clothesCount = R.ReadUInt16();
-        List<KitItem> items = new List<KitItem>(itemCount);
-        List<KitClothing> clothes = new List<KitClothing>(clothesCount);
-        for (int i = 0; i < itemCount; i++)
-        {
-            items.Add(new KitItem()
-            {
-                Id = R.ReadGUID(),
-                Amount = R.ReadUInt8(),
-                Page = R.ReadUInt8(),
-                X = R.ReadUInt8(),
-                Y = R.ReadUInt8(),
-                Rotation = R.ReadUInt8(),
-                Metadata = R.ReadBytes() ?? new byte[0]
-            });
-        }
-        for (int i = 0; i < clothesCount; i++)
-        {
-            clothes.Add(new KitClothing()
-            {
-                Id = R.ReadGUID(),
-                Type = R.ReadEnum<EClothingType>()
-            });
-        }
-        kit.Items = items;
-        kit.Clothes = clothes;
-        kit.Branch = R.ReadEnum<EBranch>();
-        kit.Class = R.ReadEnum<EClass>();
-        kit.Cooldown = R.ReadFloat();
-        kit.IsPremium = R.ReadBool();
-        kit.IsLoadout = R.ReadBool();
-        kit.PremiumCost = R.ReadFloat();
-        kit.Team = R.ReadUInt64();
-        kit.TeamLimit = R.ReadFloat();
-        kit.CreditCost = R.ReadUInt16();
-        kit.UnlockLevel = R.ReadUInt16();
-        kit.Disabled = R.ReadBool();
-        kit.SquadLevel = R.ReadEnum<ESquadLevel>();
-        return kit;
-    }
-    public static void WriteMany(ByteWriter W, Kit?[] kits)
-    {
-        W.Write(kits.Length);
-        for (int i = 0; i < kits.Length; i++)
-            Write(W, kits[i]);
-    }
-    public static void Write(ByteWriter W, Kit? kit)
-    {
-        if (kit == null)
-        {
-            W.Write((byte)1);
-            return;
-        }
-        else W.Write((byte)0);
-        W.Write(kit.PrimaryKey);
-        W.Write(kit.Name);
-        W.Write((ushort)kit.Items.Count);
-        W.Write((ushort)kit.Clothes.Count);
-        for (int i = 0; i < kit.Items.Count; i++)
-        {
-            KitItem item = kit.Items[i];
-            W.Write(item.Id);
-            W.Write(item.Amount);
-            W.Write(item.Page);
-            W.Write(item.X);
-            W.Write(item.Y);
-            W.Write(item.Rotation);
-            W.Write(item.Metadata);
-        }
-        for (int i = 0; i < kit.Clothes.Count; i++)
-        {
-            KitClothing clothing = kit.Clothes[i];
-            W.Write(clothing.Id);
-            W.Write(clothing.Type);
-        }
-        W.Write(kit.Branch);
-        W.Write(kit.Class);
-        W.Write(kit.Cooldown);
-        W.Write(kit.IsPremium);
-        W.Write(kit.IsLoadout);
-        W.Write(kit.PremiumCost);
-        W.Write(kit.Team);
-        W.Write(kit.TeamLimit);
-        W.Write(kit.CreditCost);
-        W.Write(kit.UnlockLevel);
-        W.Write(kit.Disabled);
-        W.Write(kit.SquadLevel);
-    }
-    public void AddSimpleLevelUnlock(int level)
-    {
-        int index = -1;
-        for (int i = 0; i < UnlockRequirements.Length; i++)
-        {
-            BaseUnlockRequirement unlock = UnlockRequirements[i];
-            if (unlock is LevelUnlockRequirement unlockLevel)
-            {
-                unlockLevel.UnlockLevel = level;
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-        {
-            LevelUnlockRequirement unlock = new LevelUnlockRequirement();
-            unlock.UnlockLevel = level;
-            BaseUnlockRequirement[] old = UnlockRequirements;
-            UnlockRequirements = new BaseUnlockRequirement[old.Length + 1];
-            if (old.Length > 0)
-            {
-                Array.Copy(old, 0, UnlockRequirements, 0, old.Length);
-                UnlockRequirements[UnlockRequirements.Length - 1] = unlock;
-            }
-            else
-            {
-                UnlockRequirements[0] = unlock;
-            }
-        }
-    }
-    public void AddUnlockRequirement(BaseUnlockRequirement req)
-    {
-        int index = -1;
-        for (int i = 0; i < UnlockRequirements.Length; i++)
-        {
-            BaseUnlockRequirement unlock = UnlockRequirements[i];
-            if (req == unlock)
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-        {
-            BaseUnlockRequirement[] old = UnlockRequirements;
-            UnlockRequirements = new BaseUnlockRequirement[old.Length + 1];
-            if (old.Length > 0)
-            {
-                Array.Copy(old, 0, UnlockRequirements, 0, old.Length);
-                UnlockRequirements[UnlockRequirements.Length - 1] = req;
-            }
-            else
-            {
-                UnlockRequirements[0] = req;
-            }
-        }
-    }
-    public bool RemoveLevelUnlock()
-    {
-        if (UnlockRequirements.Length == 0) return false;
-        int index = -1;
-        for (int i = 0; i < UnlockRequirements.Length; i++)
-        {
-            LevelUnlockRequirement unlock = new LevelUnlockRequirement();
-            if (unlock is LevelUnlockRequirement unlockLevel)
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) return false;
-        BaseUnlockRequirement[] old = UnlockRequirements;
-        UnlockRequirements = new BaseUnlockRequirement[old.Length - 1];
-        if (old.Length == 1) return true;
-        if (index != 0)
-            Array.Copy(old, 0, UnlockRequirements, 0, index);
-        Array.Copy(old, index + 1, UnlockRequirements, index, old.Length - index - 1);
+
         return true;
     }
-    public void AddSkillset(Skillset set)
+    public string GetDisplayName(string language = L.Default)
     {
-        int index = -1;
-        for (int i = 0; i < Skillsets.Length; i++)
-        {
-            ref Skillset skillset = ref Skillsets[i];
-            if (skillset == set)
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-        {
-            Skillset[] old = Skillsets;
-            Skillsets = new Skillset[old.Length + 1];
-            if (old.Length > 0)
-            {
-                Array.Copy(old, 0, Skillsets, 0, old.Length);
-                Skillsets[Skillsets.Length - 1] = set;
-            }
-            else
-            {
-                Skillsets[0] = set;
-            }
-        }
+        if (SignText is null) return Id;
+        if (SignText.TryGetValue(language, out string val))
+            return val ?? Id;
+        if (SignText.Count > 0)
+            return SignText.FirstOrDefault().Value ?? Id;
+        return Id;
     }
-    public bool RemoveSkillset(Skillset set)
+    public void Write(ByteWriter writer)
     {
-        if (Skillsets.Length == 0) return false;
-        int index = -1;
-        for (int i = 0; i < Skillsets.Length; i++)
-        {
-            ref Skillset skillset = ref Skillsets[i];
-            if (skillset == set)
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) return false;
-        Skillset[] old = Skillsets;
-        Skillsets = new Skillset[old.Length - 1];
-        if (old.Length == 1) return true;
-        if (index != 0)
-            Array.Copy(old, 0, Skillsets, 0, index);
-        Array.Copy(old, index + 1, Skillsets, index, old.Length - index - 1);
-        return true;
+        throw new NotImplementedException(); // todo
     }
+    public void Read(ByteReader reader)
+    {
+        throw new NotImplementedException(); // todo
+    }
+
     [FormatDisplay("Kit Id")]
-    public const string ID_FORMAT = "i";
+    public const string IdFormat = "i";
     [FormatDisplay("Display Name")]
-    public const string DISPLAY_NAME_FORMAT = "d";
-    [FormatDisplay("Class (" + nameof(EClass) + ")")]
-    public const string CLASS_FORMAT = "c";
+    public const string DisplayNameFormat = "d";
+    [FormatDisplay("Class (" + nameof(Kits.Class) + ")")]
+    public const string ClassFormat = "c";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is not null)
         {
-            if (format.Equals(ID_FORMAT, StringComparison.Ordinal))
-                return Name;
-            else if (format.Equals(CLASS_FORMAT, StringComparison.Ordinal))
+            if (format.Equals(IdFormat, StringComparison.Ordinal))
+                return Id;
+            if (format.Equals(ClassFormat, StringComparison.Ordinal))
                 return Localization.TranslateEnum(Class, language);
         }
-        if (SignTexts.TryGetValue(language, out string dspTxt))
-            return dspTxt;
 
-        return SignTexts.Values.FirstOrDefault() ?? Name;
+        return GetDisplayName(language);
     }
+
+    public object Clone() => new Kit(Id, this);
 }
+[JsonConverter(typeof(SkillsetConverter))]
 public readonly struct Skillset : IEquatable<Skillset>
 {
-    public readonly EPlayerSpeciality Speciality;
-    public readonly EPlayerOffense Offense;
-    public readonly EPlayerDefense Defense;
-    public readonly EPlayerSupport Support;
-
-    public static readonly Skillset[] DEFAULT_SKILLSETS = new Skillset[]
+    public static readonly Skillset[] DefaultSkillsets =
     {
         new Skillset(EPlayerOffense.SHARPSHOOTER, 7),
         new Skillset(EPlayerOffense.PARKOUR, 2),
@@ -406,60 +257,74 @@ public readonly struct Skillset : IEquatable<Skillset>
         new Skillset(EPlayerOffense.CARDIO, 5),
         new Skillset(EPlayerDefense.VITALITY, 5),
     };
-    public readonly int SpecialityIndex => (int)Speciality;
-    public readonly int SkillIndex => Speciality switch
-    {
-        EPlayerSpeciality.OFFENSE => (int)Offense,
-        EPlayerSpeciality.DEFENSE => (int)Defense,
-        EPlayerSpeciality.SUPPORT => (int)Support,
-        _ => -1
-    };
-    public readonly int Level;
-    public Skillset(EPlayerOffense skill, int level)
+
+    public readonly EPlayerSpeciality Speciality;
+    public readonly byte Level;
+    public readonly byte SkillIndex;
+    public EPlayerOffense Offense => (EPlayerOffense)SkillIndex;
+    public EPlayerDefense Defense => (EPlayerDefense)SkillIndex;
+    public EPlayerSupport Support => (EPlayerSupport)SkillIndex;
+    public byte SpecialityIndex => (byte)Speciality;
+    public Skillset(EPlayerOffense skill, byte level)
     {
         Speciality = EPlayerSpeciality.OFFENSE;
-        Offense = skill;
+        SkillIndex = (byte)skill;
         Level = level;
-        Defense = default;
-        Support = default;
     }
-    public Skillset(EPlayerDefense skill, int level)
+    public Skillset(EPlayerDefense skill, byte level)
     {
         Speciality = EPlayerSpeciality.DEFENSE;
-        Defense = skill;
+        SkillIndex = (byte)skill;
         Level = level;
-        Offense = default;
-        Support = default;
     }
-    public Skillset(EPlayerSupport skill, int level)
+    public Skillset(EPlayerSupport skill, byte level)
     {
         Speciality = EPlayerSpeciality.SUPPORT;
-        Support = skill;
+        SkillIndex = (byte)skill;
         Level = level;
-        Offense = default;
-        Defense = default;
+    }
+
+    internal Skillset(EPlayerSpeciality specialty, byte skill, byte level)
+    {
+        Speciality = specialty;
+        SkillIndex = skill;
+        Level = level;
     }
     public static Skillset Read(ByteReader reader)
     {
         EPlayerSpeciality speciality = (EPlayerSpeciality)reader.ReadUInt8();
         byte val = reader.ReadUInt8();
-        int level = reader.ReadUInt8();
+        byte level = reader.ReadUInt8();
         return speciality switch
         {
-            EPlayerSpeciality.SUPPORT => new Skillset((EPlayerSupport)val, level),
-            EPlayerSpeciality.DEFENSE => new Skillset((EPlayerDefense)val, level),
-            EPlayerSpeciality.OFFENSE => new Skillset((EPlayerOffense)val, level),
+            EPlayerSpeciality.SUPPORT or EPlayerSpeciality.DEFENSE or EPlayerSpeciality.OFFENSE => new Skillset(speciality, val, level),
             _ => throw new Exception("Invalid value of specialty while reading skillset.")
         };
     }
     public static void Write(ByteWriter writer, Skillset skillset)
     {
         writer.Write((byte)skillset.Speciality);
-        writer.Write((byte)skillset.SkillIndex);
-        writer.Write((byte)skillset.Level);
+        writer.Write(skillset.SkillIndex);
+        writer.Write(skillset.Level);
     }
-    public readonly void ServerSet(UCPlayer player) =>
+    public void ServerSet(UCPlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
         player.Player.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, Level);
+    }
+    /// <exception cref="FormatException"/>
+    public static Skillset Read(MySqlDataReader reader, int colOffset = 0)
+    {
+        string type = reader.GetString(colOffset + 1);
+        byte level = reader.GetByte(colOffset + 2);
+        if (Enum.TryParse(type, true, out EPlayerOffense offense))
+            return new Skillset(offense, level);
+        if (Enum.TryParse(type, true, out EPlayerDefense defense))
+            return new Skillset(defense, level);
+        if (Enum.TryParse(type, true, out EPlayerSupport support))
+            return new Skillset(support, level);
+        throw new FormatException("Unable to find valid skill for skillset: \"" + type + "\" at level " + level + ".");
+    }
     public static Skillset Read(ref Utf8JsonReader reader)
     {
         bool valFound = false;
@@ -468,7 +333,7 @@ public readonly struct Skillset : IEquatable<Skillset>
         EPlayerOffense offense = default;
         EPlayerDefense defense = default;
         EPlayerSupport support = default;
-        int level = -1;
+        byte level = 255;
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
         {
             string? property = reader.GetString();
@@ -504,7 +369,7 @@ public readonly struct Skillset : IEquatable<Skillset>
                         }
                         break;
                     case "level":
-                        if (reader.TryGetInt32(out level))
+                        if (reader.TryGetByte(out level))
                         {
                             lvlFound = true;
                         }
@@ -527,7 +392,7 @@ public readonly struct Skillset : IEquatable<Skillset>
         L.Log("Error parsing skillset.");
         return default;
     }
-    public static void Write(Utf8JsonWriter writer, ref Skillset skillset)
+    public static void Write(Utf8JsonWriter writer, in Skillset skillset)
     {
         switch (skillset.Speciality)
         {
@@ -547,70 +412,46 @@ public readonly struct Skillset : IEquatable<Skillset>
     private bool EqualsHelper(in Skillset skillset, bool compareLevel)
     {
         if (compareLevel && skillset.Level != Level) return false;
-        if (skillset.Speciality == Speciality)
-        {
-            switch (Speciality)
-            {
-                case EPlayerSpeciality.OFFENSE:
-                    return skillset.Offense == Offense;
-                case EPlayerSpeciality.DEFENSE:
-                    return skillset.Defense == Defense;
-                case EPlayerSpeciality.SUPPORT:
-                    return skillset.Support == Support;
-            }
-        }
-        return false;
+        return skillset.Speciality == Speciality && skillset.SkillIndex == SkillIndex;
     }
     public override string ToString()
     {
         return Speciality switch
         {
-            EPlayerSpeciality.OFFENSE => "Offense: " + Offense.ToString(),
-            EPlayerSpeciality.DEFENSE => "Defense: " + Defense.ToString(),
-            EPlayerSpeciality.SUPPORT => "Support: " + Support.ToString(),
-            _ => "Invalid object."
-        };
+            EPlayerSpeciality.OFFENSE => "Offense: " + Offense,
+            EPlayerSpeciality.DEFENSE => "Defense: " + Defense,
+            EPlayerSpeciality.SUPPORT => "Support: " + Support,
+            _ => "Invalid speciality #" + SkillIndex.ToString(Data.AdminLocale)
+        } + " at level " + Level.ToString(Data.AdminLocale) + ".";
     }
     public override int GetHashCode()
     {
         int hashCode = 1232939970;
-        hashCode = hashCode * -1521134295 + Speciality.GetHashCode();
-        hashCode = hashCode * -1521134295 + Level.GetHashCode();
-        switch (Speciality)
-        {
-            case EPlayerSpeciality.OFFENSE:
-                hashCode = hashCode * -1521134295 + Offense.GetHashCode();
-                break;
-            case EPlayerSpeciality.DEFENSE:
-                hashCode = hashCode * -1521134295 + Defense.GetHashCode();
-                break;
-            case EPlayerSpeciality.SUPPORT:
-                hashCode = hashCode * -1521134295 + Support.GetHashCode();
-                break;
-        }
+        hashCode *= -1521134295 + Speciality.GetHashCode();
+        hashCode *= -1521134295 + Level.GetHashCode();
+        hashCode *= -1521134295 + SkillIndex;
         return hashCode;
     }
     public bool Equals(Skillset other) => EqualsHelper(in other, true);
     public bool TypeEquals(in Skillset skillset) => EqualsHelper(in skillset, false);
     public static void SetDefaultSkills(UCPlayer player)
     {
-        player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
-        player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 2);
-        player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 1);
-        player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
-        player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
+        player.EnsureSkillsets(Array.Empty<Skillset>());
     }
     public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(in b, true);
     public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(in b, true);
     public const string COLUMN_PK = "pk";
-    public const string COLUMN_TYPE = "Type";
     public const string COLUMN_SKILL = "Skill";
     public const string COLUMN_LEVEL = "Level";
+
+    private static readonly string SkillEnumName = "enum('" + string.Join("','",
+        typeof(EPlayerOffense).GetEnumNames().Concat(typeof(EPlayerDefense).GetEnumNames())
+            .Concat(typeof(EPlayerSupport).GetEnumNames())) + "')";
     public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool oneToOne = false, bool hasPk = false)
     {
         if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Foreign key column may not be the same as \"" + COLUMN_PK + "\".", nameof(fkColumn));
-        int ct = 4;
+        int ct = 3;
         if (!oneToOne && hasPk)
             ++ct;
         Schema.Column[] columns = new Schema.Column[ct];
@@ -632,34 +473,34 @@ public readonly struct Skillset : IEquatable<Skillset>
             ForeignKeyColumn = mainPkColumn,
             ForeignKeyTable = mainTable
         };
-        columns[++index] = new Schema.Column(COLUMN_TYPE, SqlTypes.BYTE);
-        columns[++index] = new Schema.Column(COLUMN_SKILL, SqlTypes.BYTE);
+        columns[++index] = new Schema.Column(COLUMN_SKILL, SkillEnumName);
         columns[++index] = new Schema.Column(COLUMN_LEVEL, SqlTypes.BYTE);
         return new Schema(tableName, columns, false, typeof(Skillset));
     }
 }
+
 [JsonConverter(typeof(UnlockRequirementConverter))]
-public abstract class BaseUnlockRequirement : ICloneable
+public abstract class UnlockRequirement : ICloneable
 {
-    private static bool hasReflected = false;
+    private static readonly Dictionary<int, KeyValuePair<Type, string[]>> Types = new Dictionary<int, KeyValuePair<Type, string[]>>(4);
+    private static bool _hasReflected;
     private static void Reflect()
     {
-        types.Clear();
-        foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(typeof(BaseUnlockRequirement).IsAssignableFrom))
+        Types.Clear();
+        foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(typeof(UnlockRequirement).IsAssignableFrom))
         {
-            if (Attribute.GetCustomAttribute(type, typeof(UnlockRequirementAttribute)) is UnlockRequirementAttribute att && !types.ContainsKey(att.Type))
+            if (Attribute.GetCustomAttribute(type, typeof(UnlockRequirementAttribute)) is UnlockRequirementAttribute att && !Types.ContainsKey(att.Type))
             {
-                types.Add(att.Type, new KeyValuePair<Type, string[]>(type, att.Properties));
+                Types.Add(att.Type, new KeyValuePair<Type, string[]>(type, att.Properties));
             }
         }
-        hasReflected = true;
+        _hasReflected = true;
     }
-    private static readonly Dictionary<int, KeyValuePair<Type, string[]>> types = new Dictionary<int, KeyValuePair<Type, string[]>>(4);
     public abstract bool CanAccess(UCPlayer player);
-    public static BaseUnlockRequirement? Read(ref Utf8JsonReader reader)
+    public static UnlockRequirement? Read(ref Utf8JsonReader reader)
     {
-        if (!hasReflected) Reflect();
-        BaseUnlockRequirement? t = null;
+        if (!_hasReflected) Reflect();
+        UnlockRequirement? t = null;
         while (reader.TokenType == JsonTokenType.PropertyName || (reader.Read() && reader.TokenType == JsonTokenType.PropertyName))
         {
             string? property = reader.GetString();
@@ -667,13 +508,13 @@ public abstract class BaseUnlockRequirement : ICloneable
             {
                 if (t == null)
                 {
-                    foreach (KeyValuePair<int, KeyValuePair<Type, string[]>> propertyList in types)
+                    foreach (KeyValuePair<int, KeyValuePair<Type, string[]>> propertyList in Types)
                     {
                         for (int i = 0; i < propertyList.Value.Value.Length; i++)
                         {
                             if (property.Equals(propertyList.Value.Value[i], StringComparison.OrdinalIgnoreCase))
                             {
-                                t = Activator.CreateInstance(propertyList.Value.Key) as BaseUnlockRequirement;
+                                t = Activator.CreateInstance(propertyList.Value.Key) as UnlockRequirement;
                                 goto done;
                             }
                         }
@@ -695,7 +536,13 @@ public abstract class BaseUnlockRequirement : ICloneable
         }
         return t;
     }
-    public static void Write(Utf8JsonWriter writer, BaseUnlockRequirement requirement)
+    public static UnlockRequirement? Read(MySqlDataReader reader, int colOffset = 0)
+    {
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(reader.GetString(colOffset + 1));
+        Utf8JsonReader reader2 = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+        return Read(ref reader2);
+    }
+    public static void Write(Utf8JsonWriter writer, UnlockRequirement requirement)
     {
         requirement.WriteProperties(writer);
     }
@@ -734,22 +581,37 @@ public abstract class BaseUnlockRequirement : ICloneable
             ForeignKeyTable = mainTable
         };
         columns[++index] = new Schema.Column(COLUMN_JSON, SqlTypes.STRING_255);
-        return new Schema(tableName, columns, false, typeof(BaseUnlockRequirement));
+        return new Schema(tableName, columns, false, typeof(UnlockRequirement));
+    }
+    public virtual Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    {
+        L.LogWarning("Unhandled kit requirement type: " + GetType().Name);
+        return ctx.SendUnknownError();
+    }
+    public virtual Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    {
+        L.LogWarning("Unhandled vehicle requirement type: " + GetType().Name);
+        return ctx.SendUnknownError();
+    }
+    public virtual Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    {
+        L.LogWarning("Unhandled trait requirement type: " + GetType().Name);
+        return ctx.SendUnknownError();
     }
 }
-public class UnlockRequirementConverter : JsonConverter<BaseUnlockRequirement>
+public class UnlockRequirementConverter : JsonConverter<UnlockRequirement>
 {
-    public override BaseUnlockRequirement? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        => BaseUnlockRequirement.Read(ref reader);
-    public override void Write(Utf8JsonWriter writer, BaseUnlockRequirement value, JsonSerializerOptions options)
+    public override UnlockRequirement? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        => UnlockRequirement.Read(ref reader);
+    public override void Write(Utf8JsonWriter writer, UnlockRequirement value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        BaseUnlockRequirement.Write(writer, value);
+        UnlockRequirement.Write(writer, value);
         writer.WriteEndObject();
     }
 }
 [UnlockRequirement(1, "unlock_level")]
-public class LevelUnlockRequirement : BaseUnlockRequirement
+public class LevelUnlockRequirement : UnlockRequirement
 {
     public int UnlockLevel = -1;
     public override bool CanAccess(UCPlayer player)
@@ -784,9 +646,23 @@ public class LevelUnlockRequirement : BaseUnlockRequirement
     {
         writer.Write(UnlockLevel);
     }
+
+    public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    {
+        return ctx.Reply(T.RequestKitLowLevel, RankData.GetRankName(UnlockLevel));
+    }
+    public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    {
+        return ctx.Reply(T.RequestVehicleMissingLevels, RankData.GetRankName(UnlockLevel));
+    }
+    public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    {
+        RankData data = new RankData(Points.GetLevelXP(UnlockLevel));
+        return ctx.Reply(T.RequestTraitLowLevel, trait, data);
+    }
 }
 [UnlockRequirement(2, "unlock_rank")]
-public class RankUnlockRequirement : BaseUnlockRequirement
+public class RankUnlockRequirement : UnlockRequirement
 {
     public int UnlockRank = -1;
     public override bool CanAccess(UCPlayer player)
@@ -820,18 +696,39 @@ public class RankUnlockRequirement : BaseUnlockRequirement
     {
         writer.Write(UnlockRank);
     }
+
+    public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    {
+        ref Ranks.RankData data = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
+        if (!success)
+            L.LogWarning("Invalid rank order in kit requirement: " + (kit?.Id ?? string.Empty) + " :: " + UnlockRank + ".");
+        return ctx.Reply(T.RequestKitLowRank, data);
+    }
+    public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    {
+        ref Ranks.RankData rankData = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
+        if (!success)
+            L.LogWarning("Invalid rank order in vehicle requirement: " + data.VehicleID + " :: " + UnlockRank + ".");
+        return ctx.Reply(T.RequestVehicleRankIncomplete, rankData);
+    }
+    public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    {
+        ref Ranks.RankData data = ref Ranks.RankManager.GetRank(UnlockRank, out bool success);
+        if (!success)
+            L.LogWarning("Invalid rank order in trait requirement: " + trait.TypeName + " :: " + UnlockRank + ".");
+        return ctx.Reply(T.RequestTraitLowRank, trait, data);
+    }
 }
 [UnlockRequirement(3, "unlock_presets", "quest_id")]
-public class QuestUnlockRequirement : BaseUnlockRequirement
+public class QuestUnlockRequirement : UnlockRequirement
 {
     public Guid QuestID;
     public Guid[] UnlockPresets = Array.Empty<Guid>();
     public override bool CanAccess(UCPlayer player)
     {
-        QuestManager.QuestComplete(player, QuestID);
         for (int i = 0; i < UnlockPresets.Length; i++)
         {
-            if (!QuestManager.QuestComplete(player, UnlockPresets[i]))
+            if (!player.QuestComplete(UnlockPresets[i]))
                 return false;
         }
         return true;
@@ -881,14 +778,17 @@ public class QuestUnlockRequirement : BaseUnlockRequirement
     }
     public override object Clone()
     {
-        QuestUnlockRequirement req = new QuestUnlockRequirement() { QuestID = QuestID };
-        req.UnlockPresets = new Guid[UnlockPresets.Length];
+        QuestUnlockRequirement req = new QuestUnlockRequirement
+        {
+            QuestID = QuestID,
+            UnlockPresets = new Guid[UnlockPresets.Length]
+        };
         Array.Copy(UnlockPresets, req.UnlockPresets, UnlockPresets.Length);
         return req;
     }
     protected override void Read(ByteReader reader)
     {
-        QuestID = reader.ReadGUID();
+        QuestID = reader.ReadGuid();
         UnlockPresets = reader.ReadGuidArray();
     }
     protected override void Write(ByteWriter writer)
@@ -896,9 +796,36 @@ public class QuestUnlockRequirement : BaseUnlockRequirement
         writer.Write(QuestID);
         writer.Write(UnlockPresets);
     }
-}
 
-[AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+    public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
+    {
+        if (Assets.find(QuestID) is QuestAsset asset)
+        {
+            ctx.Caller.Player.quests.ServerAddQuest(asset);
+            return ctx.Reply(T.RequestKitQuestIncomplete, asset);
+        }
+        return ctx.Reply(T.RequestKitQuestIncomplete, null!);
+    }
+    public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
+    {
+        if (Assets.find(QuestID) is QuestAsset asset)
+        {
+            ctx.Caller.Player.quests.ServerAddQuest(asset);
+            return ctx.Reply(T.RequestVehicleQuestIncomplete, asset);
+        }
+        return ctx.Reply(T.RequestVehicleQuestIncomplete, null!);
+    }
+    public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
+    {
+        if (Assets.find(QuestID) is QuestAsset asset)
+        {
+            ctx.Caller.Player.quests.ServerAddQuest(asset);
+            return ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
+        }
+        return ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);
+    }
+}
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class UnlockRequirementAttribute : Attribute
 {
     public string[] Properties => _properties;
@@ -912,10 +839,144 @@ public sealed class UnlockRequirementAttribute : Attribute
     private readonly string[] _properties;
     private readonly int _type;
 }
-public class KitItem : ICloneable
+public interface IClothingJar
 {
+    ClothingType Type { get; set; }
+}
+public interface IKitItem : ICloneable, IComparable
+{
+    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state);
+}
+public interface IItemJar
+{
+    byte X { get; set; }
+    byte Y { get; set; }
+    byte Rotation { get; set; }
+    Page Page { get; set; }
+}
+public interface IAssetRedirect
+{
+    RedirectType RedirectType { get; set; }
+}
+public interface IBaseItem
+{
+    Guid Item { get; set; }
+    [JsonConverter(typeof(Base64Converter))]
+    byte[] State { get; set; }
+}
+public interface IItem : IBaseItem
+{
+    byte Amount { get; set; }
+}
+public class AssetRedirectItem : IItemJar, IAssetRedirect, IKitItem
+{
+    public RedirectType RedirectType { get; set; }
+    public byte X { get; set; }
+    public byte Y { get; set; }
+    public byte Rotation { get; set; }
+    public Page Page { get; set; }
+    public AssetRedirectItem() { }
+    public AssetRedirectItem(RedirectType redirectType, byte x, byte y, byte rotation, Page page)
+    {
+        RedirectType = redirectType;
+        X = x;
+        Y = y;
+        Rotation = rotation;
+        Page = page;
+    }
+    public AssetRedirectItem(AssetRedirectItem copy)
+    {
+        RedirectType = copy.RedirectType;
+        X = copy.X;
+        Y = copy.Y;
+        Rotation = copy.Rotation;
+        Page = copy.Page;
+    }
+    public object Clone() => new AssetRedirectItem(this);
+    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
+        TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
+
+    public int CompareTo(object obj)
+    {
+        if (obj is IKitItem kitItem)
+        {
+            if (kitItem is IItemJar jar)
+            {
+                if (jar is not IAssetRedirect r)
+                    return -1;
+                return Page != jar.Page ? Page.CompareTo(jar.Page) : RedirectType.CompareTo(r.RedirectType);
+            }
+            if (kitItem is IClothingJar)
+            {
+                return Page is Page.Primary or Page.Secondary ? -1 : 1;
+            }
+        }
+
+        return -1;
+    }
+}
+public class AssetRedirectClothing : IClothingJar, IAssetRedirect, IKitItem
+{
+    public RedirectType RedirectType { get; set; }
+    public ClothingType Type { get; set; }
+    public AssetRedirectClothing() { }
+    public AssetRedirectClothing(RedirectType redirectType, ClothingType type)
+    {
+        RedirectType = redirectType;
+        Type = type;
+    }
+    public AssetRedirectClothing(AssetRedirectClothing copy)
+    {
+        RedirectType = copy.RedirectType;
+        Type = copy.Type;
+    }
+    public object Clone() => new AssetRedirectClothing(this);
+    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
+        TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
+    public int CompareTo(object obj)
+    {
+        if (obj is IKitItem kitItem)
+        {
+            if (kitItem is IClothingJar cjar)
+            {
+                if (Type != cjar.Type)
+                    return Type.CompareTo(cjar.Type);
+            }
+            if (kitItem is IItemJar jar)
+            {
+                return jar.Page is Page.Primary or Page.Secondary ? 1 : -1;
+            }
+        }
+
+        return -1;
+    }
+}
+public class PageItem : IItemJar, IItem, IKitItem
+{
+    private Guid _item;
+#if DEBUG
+    private bool _isLegacyRedirect;
+    private RedirectType _legacyRedirect;
+    public RedirectType? LegacyRedirect => _isLegacyRedirect ? _legacyRedirect : null;
+#endif
+
     [JsonPropertyName("id")]
-    public Guid Id { get; set; }
+    public Guid Item
+    {
+        get => _item;
+        set
+        {
+            _item = value;
+#if DEBUG
+#pragma warning disable CS0612
+            TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+#pragma warning restore CS0612
+            if (_legacyRedirect == RedirectType.None)
+                _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, false);
+            _isLegacyRedirect = _legacyRedirect != RedirectType.None;
+#endif
+        }
+    }
 
     [JsonPropertyName("x")]
     public byte X { get; set; }
@@ -927,28 +988,55 @@ public class KitItem : ICloneable
     public byte Rotation { get; set; }
 
     [JsonPropertyName("page")]
-    public byte Page { get; set; }
+    public Page Page { get; set; }
 
     [JsonPropertyName("amount")]
     public byte Amount { get; set; }
 
     [JsonPropertyName("metadata")]
     [JsonConverter(typeof(Base64Converter))]
-    public byte[] Metadata { get; set; }
-
-    [JsonConstructor]
-    public KitItem(Guid id, byte x, byte y, byte rotation, byte[] metadata, byte amount, byte page)
+    public byte[] State { get; set; }
+    
+    public PageItem(Guid item, byte x, byte y, byte rotation, byte[] state, byte amount, Page page)
     {
-        this.Id = id;
+        this.Item = item;
         this.X = x;
         this.Y = y;
         this.Rotation = rotation;
-        this.Metadata = metadata;
-        this.Amount = amount;
         this.Page = page;
+        this.Amount = amount;
+        this.State = state;
     }
-    public KitItem() { }
-    public object Clone() => new KitItem(Id, X, Y, Rotation, Metadata, Amount, Page);
+    public PageItem(PageItem copy)
+    {
+        Item = copy.Item;
+        X = copy.X;
+        Y = copy.Y;
+        Rotation = copy.Rotation;
+        Page = copy.Page;
+        Amount = copy.Amount;
+        State = copy.State;
+    }
+    public PageItem() { }
+    public object Clone() => new PageItem(this);
+    public int CompareTo(object obj)
+    {
+        if (obj is IKitItem kitItem)
+        {
+            if (kitItem is IItemJar jar)
+            {
+                if (jar is not IItem r)
+                    return 1;
+                return Page != jar.Page ? Page.CompareTo(jar.Page) : jar.Y == Y ? X.CompareTo(jar.X) : Y.CompareTo(jar.Y);
+            }
+            if (kitItem is IClothingJar)
+            {
+                return Page is Page.Primary or Page.Secondary ? -1 : 1;
+            }
+        }
+
+        return -1;
+    }
     public const string COLUMN_PK = "pk";
     public const string COLUMN_GUID = "Item";
     public const string COLUMN_X = "X";
@@ -957,7 +1045,7 @@ public class KitItem : ICloneable
     public const string COLUMN_PAGE = "Page";
     public const string COLUMN_AMOUNT = "Amount";
     public const string COLUMN_METADATA = "Metadata";
-    public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool includePage = true, bool oneToOne = false, bool hasPk = false)
+    public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool guidString, bool includePage = true, bool oneToOne = false, bool hasPk = false)
     {
         if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Foreign key column may not be the same as \"" + COLUMN_PK + "\".", nameof(fkColumn));
@@ -985,7 +1073,7 @@ public class KitItem : ICloneable
             ForeignKeyColumn = mainPkColumn,
             ForeignKeyTable = mainTable
         };
-        columns[++index] = new Schema.Column(COLUMN_GUID, SqlTypes.GUID);
+        columns[++index] = new Schema.Column(COLUMN_GUID, guidString ? SqlTypes.GUID_STRING : SqlTypes.GUID);
         columns[++index] = new Schema.Column(COLUMN_X, SqlTypes.BYTE);
         columns[++index] = new Schema.Column(COLUMN_Y, SqlTypes.BYTE);
         columns[++index] = new Schema.Column(COLUMN_ROTATION, SqlTypes.BYTE);
@@ -993,109 +1081,270 @@ public class KitItem : ICloneable
             columns[++index] = new Schema.Column(COLUMN_PAGE, SqlTypes.BYTE);
         columns[++index] = new Schema.Column(COLUMN_AMOUNT, SqlTypes.BYTE);
         columns[++index] = new Schema.Column(COLUMN_METADATA, SqlTypes.BYTES_255);
-        return new Schema(tableName, columns, false, typeof(KitItem));
+        return new Schema(tableName, columns, false, typeof(PageItem));
+    }
+
+    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
+    {
+#if DEBUG
+        if (_isLegacyRedirect)
+            return TeamManager.GetRedirectInfo(_legacyRedirect, kit.Faction, targetTeam, out state, out amount);
+#endif
+        if (Assets.find(Item) is ItemAsset item)
+        {
+            amount = Amount < 1 ? item.amount : Amount;
+            state = State is null ? item.getState(EItemOrigin.ADMIN) : Util.CloneBytes(State);
+            return item;
+        }
+
+        state = Array.Empty<byte>();
+        amount = default;
+        return null;
     }
 }
-public class KitClothing : ICloneable
+public class ClothingItem : IClothingJar, IBaseItem, IKitItem
 {
+    private Guid _item;
+#if DEBUG
+    private bool _isLegacyRedirect;
+    private RedirectType _legacyRedirect;
+    public RedirectType? LegacyRedirect => _isLegacyRedirect ? _legacyRedirect : null;
+#endif
+
     [JsonPropertyName("id")]
-    public Guid Id { get; set; }
+    public Guid Item
+    {
+        get => _item;
+        set
+        {
+            _item = value;
+#if DEBUG
+#pragma warning disable CS0612
+            TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+#pragma warning restore CS0612
+            if (_legacyRedirect == RedirectType.None)
+                _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, true);
+            _isLegacyRedirect = _legacyRedirect != RedirectType.None;
+#endif
+        }
+    }
 
     [JsonPropertyName("type")]
-    public EClothingType Type { get; set; }
+    public ClothingType Type { get; set; }
 
-    [JsonConstructor]
-    public KitClothing(Guid id, EClothingType type)
+    [JsonPropertyName("metadata")]
+    [JsonConverter(typeof(Base64Converter))]
+    public byte[] State { get; set; }
+    
+    public ClothingItem(Guid id, ClothingType type, byte[] state)
     {
-        this.Id = id;
+        this.Item = id;
         this.Type = type;
+        this.State = state ?? Array.Empty<byte>();
     }
-    public KitClothing() { }
 
-    public object Clone() => new KitClothing(Id, Type);
+    public ClothingItem(ClothingItem copy)
+    {
+        Item = copy.Item;
+        Type = copy.Type;
+        State = copy.State;
+    }
+
+    public ClothingItem() { }
+
+    public object Clone() => new ClothingItem(this);
+    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
+    {
+        amount = 1;
+#if DEBUG
+        if (_isLegacyRedirect)
+            return TeamManager.GetRedirectInfo(_legacyRedirect, kit.Faction, targetTeam, out state, out amount);
+#endif
+        if (Assets.find(Item) is ItemAsset item)
+        {
+            state = State.NullOrEmpty() ? item.getState(EItemOrigin.ADMIN) : Util.CloneBytes(State);
+            return item;
+        }
+
+        state = Array.Empty<byte>();
+        return null;
+    }
+    public int CompareTo(object obj)
+    {
+        if (obj is IKitItem kitItem)
+        {
+            if (kitItem is IClothingJar cjar)
+            {
+                if (Type != cjar.Type)
+                    return Type.CompareTo(cjar.Type);
+                return 0;
+            }
+            if (kitItem is IItemJar jar)
+            {
+                return jar.Page is Page.Primary or Page.Secondary ? 1 : -1;
+            }
+        }
+
+        return -1;
+    }
 }
 
-/// <summary>Max field character limit: <see cref="KitEx.SQUAD_LEVEL_MAX_CHAR_LIMIT"/>.</summary>
+/// <summary>Max field character limit: <see cref="KitEx.SquadLevelMaxCharLimit"/>.</summary>
 [Translatable("Squad Level")]
-public enum ESquadLevel : byte
+public enum SquadLevel : byte
 {
     [Translatable("Member")]
-    MEMBER = 0,
+    Member = 0,
     [Translatable("Commander")]
-    COMMANDER = 4
+    Commander = 4
 }
-/// <summary>Max field character limit: <see cref="KitEx.BRANCH_MAX_CHAR_LIMIT"/>.</summary>
+
+/// <summary>Max field character limit: <see cref="KitEx.BranchMaxCharLimit"/>.</summary>
 [Translatable("Branch")]
-public enum EBranch : byte
+public enum Branch : byte
 {
-    DEFAULT,
-    INFANTRY,
-    ARMOR,
+    Default,
+    Infantry,
+    Armor,
     [Translatable("Air Force")]
-    AIRFORCE,
+    Airforce,
     [Translatable("Special Ops")]
-    SPECOPS,
-    NAVY
+    SpecOps,
+    Navy
 }
-/// <summary>Max field character limit: <see cref="KitEx.CLOTHING_MAX_CHAR_LIMIT"/>.</summary>
-public enum EClothingType : byte
+
+/// <summary>Max field character limit: <see cref="KitEx.ClothingMaxCharLimit"/>.</summary>
+public enum ClothingType : byte
 {
-    SHIRT,
-    PANTS,
-    VEST,
-    HAT,
-    MASK,
-    BACKPACK,
-    GLASSES
+    Shirt,
+    Pants,
+    Vest,
+    Hat,
+    Mask,
+    Backpack,
+    Glasses
 }
-/// <summary>Max field character limit: <see cref="KitEx.CLASS_MAX_CHAR_LIMIT"/>.</summary>
+
+/// <summary>Max field character limit: <see cref="KitEx.TypeMaxCharLimit"/>.</summary>
+[Translatable("Kit Type")]
+public enum KitType : byte
+{
+    Public,
+    Elite,
+    Special,
+    Loadout
+}
+
+[Translatable]
+/// <summary>Max field character limit: <see cref="KitEx.RedirectTypeCharLimit"/>.</summary>
+public enum RedirectType : byte
+{
+    None = 255,
+    Shirt = 0,
+    Pants,
+    Vest,
+    Hat,
+    Mask,
+    Backpack,
+    Glasses,
+    [Translatable("Ammo Supplies")]
+    AmmoSupply,
+    [Translatable("Building Supplies")]
+    BuildSupply,
+    [Translatable("Rally Point")]
+    RallyPoint,
+    [Translatable("FOB Radio")]
+    Radio,
+    ZoneBlocker,
+    [Translatable("Ammo Bag")]
+    AmmoBag,
+    [Translatable("Ammo Crate")]
+    AmmoCrate,
+    [Translatable("Repair Station")]
+    RepairStation,
+    [Translatable("FOB Bunker")]
+    Bunker,
+    VehicleBay,
+    [Translatable("Entrenching Tool")]
+    EntrenchingTool,
+    UAV,
+    [Translatable("Built Repair Station")]
+    RepairStationBuilt,
+    [Translatable("Built Ammo Crate")]
+    AmmoCrateBuilt,
+    [Translatable("Built FOB Bunker")]
+    BunkerBuilt,
+    Cache,
+    RadioDamaged,
+    [Translatable("Laser Designator")]
+    LaserDesignator,
+    StandardAmmoIcon,
+    StandardMeleeIcon,
+    StandardGrenadeIcon,
+    StandardSmokeGrenadeIcon,
+}
+public enum Page : byte
+{
+    Primary = 0,
+    Secondary = 1,
+    Hands = 2,
+    Backpack = 3,
+    Vest = 4,
+    Shirt = 5,
+    Pants = 6,
+    Storage = 7,
+    Area = 8
+}
+/// <summary>Max field character limit: <see cref="KitEx.ClassMaxCharLimit"/>.</summary>
 [JsonConverter(typeof(ClassConverter))]
 [Translatable("Kit Class")]
-public enum EClass : byte
+public enum Class : byte
 {
-    NONE = 0, //0
+    None = 0,
     [Translatable(LanguageAliasSet.RUSSIAN, "Безоружный")]
     [Translatable(LanguageAliasSet.SPANISH, "Desarmado")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Neinarmat")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Desarmado")]
     [Translatable(LanguageAliasSet.POLISH, "Nieuzbrojony")]
-    UNARMED = 1,
+    Unarmed = 1,
     [Translatable("Squad Leader")]
     [Translatable(LanguageAliasSet.RUSSIAN, "Лидер отряда")]
     [Translatable(LanguageAliasSet.SPANISH, "Líder De Escuadrón")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Lider de Echipa")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Líder de Esquadrão")]
     [Translatable(LanguageAliasSet.POLISH, "Dowódca Oddziału")]
-    SQUADLEADER = 2,
+    Squadleader = 2,
     [Translatable(LanguageAliasSet.RUSSIAN, "Стрелок")]
     [Translatable(LanguageAliasSet.SPANISH, "Fusilero")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Puscas")]
     [Translatable(LanguageAliasSet.POLISH, "Strzelec")]
-    RIFLEMAN = 3,
+    Rifleman = 3,
     [Translatable(LanguageAliasSet.RUSSIAN, "Медик")]
     [Translatable(LanguageAliasSet.SPANISH, "Médico")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Medic")]
     [Translatable(LanguageAliasSet.POLISH, "Medyk")]
-    MEDIC = 4,
+    Medic = 4,
     [Translatable(LanguageAliasSet.RUSSIAN, "Нарушитель")]
     [Translatable(LanguageAliasSet.SPANISH, "Brechador")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Breacher")]
     [Translatable(LanguageAliasSet.POLISH, "Wyłamywacz")]
-    BREACHER = 5,
+    Breacher = 5,
     [Translatable(LanguageAliasSet.RUSSIAN, "Солдат с автоматом")]
     [Translatable(LanguageAliasSet.SPANISH, "Fusilero Automático")]
     [Translatable(LanguageAliasSet.SPANISH, "Puscas Automat")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Fuzileiro Automobilístico")]
     [Translatable(LanguageAliasSet.POLISH, "Strzelec Automatyczny")]
-    AUTOMATIC_RIFLEMAN = 6,
+    [Translatable(LanguageAliasSet.ENGLISH, "Automatic Rifleman")]
+    AutomaticRifleman = 6,
     [Translatable(LanguageAliasSet.RUSSIAN, "Гренадёр")]
     [Translatable(LanguageAliasSet.SPANISH, "Granadero")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Grenadier")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Granadeiro")]
     [Translatable(LanguageAliasSet.POLISH, "Grenadier")]
-    GRENADIER = 7,
+    Grenadier = 7,
     [Translatable(LanguageAliasSet.ROMANIAN, "Mitralior")]
-    MACHINE_GUNNER = 8,
+    [Translatable(LanguageAliasSet.ENGLISH, "Machine Gunner")]
+    MachineGunner = 8,
     [Translatable("LAT")]
     [Translatable(LanguageAliasSet.RUSSIAN, "Лёгкий противотанк")]
     [Translatable(LanguageAliasSet.SPANISH, "Anti-Tanque Ligero")]
@@ -1109,72 +1358,79 @@ public enum EClass : byte
     [Translatable(LanguageAliasSet.SPANISH, "Tirador Designado")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Lunetist-Usor")]
     [Translatable(LanguageAliasSet.POLISH, "Zwiadowca")]
-    MARKSMAN = 11,
+    Marksman = 11,
     [Translatable(LanguageAliasSet.RUSSIAN, "Снайпер")]
     [Translatable(LanguageAliasSet.SPANISH, "Francotirador")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Lunetist")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Franco-Atirador")]
     [Translatable(LanguageAliasSet.POLISH, "Snajper")]
-    SNIPER = 12,
+    Sniper = 12,
     [Translatable("Anti-personnel Rifleman")]
     [Translatable(LanguageAliasSet.RUSSIAN, "Противопехотный")]
     [Translatable(LanguageAliasSet.SPANISH, "Fusilero Anti-Personal")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Puscas Anti-Personal")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Antipessoal")]
     [Translatable(LanguageAliasSet.POLISH, "Strzelec Przeciw-Piechotny")]
-    AP_RIFLEMAN = 13,
+    APRifleman = 13,
     [Translatable(LanguageAliasSet.RUSSIAN, "Инженер")]
     [Translatable(LanguageAliasSet.SPANISH, "Ingeniero")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Inginer")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Engenheiro")]
     [Translatable(LanguageAliasSet.POLISH, "Inżynier")]
-    COMBAT_ENGINEER = 14,
+    [Translatable(LanguageAliasSet.ENGLISH, "Combat Engineer")]
+    CombatEngineer = 14,
     [Translatable(LanguageAliasSet.RUSSIAN, "Механик-водитель")]
     [Translatable(LanguageAliasSet.SPANISH, "Tripulante")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Echipaj")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Tripulante")]
     [Translatable(LanguageAliasSet.POLISH, "Załogant")]
-    CREWMAN = 15,
+    Crewman = 15,
     [Translatable(LanguageAliasSet.RUSSIAN, "Пилот")]
     [Translatable(LanguageAliasSet.SPANISH, "Piloto")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Pilot")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Piloto")]
     [Translatable(LanguageAliasSet.POLISH, "Pilot")]
-    PILOT = 16,
+    Pilot = 16,
     [Translatable("Special Ops")]
     [Translatable(LanguageAliasSet.SPANISH, "Op. Esp.")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Trupe Speciale")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Op. Esp.")]
     [Translatable(LanguageAliasSet.POLISH, "Specjalista")]
-    SPEC_OPS = 17
+    SpecOps = 17,
+    // increment ClassConverter.MaxClass if adding another field!
 }
-
-public sealed class ClassConverter : JsonConverter<EClass>
+public sealed class ClassConverter : JsonConverter<Class>
 {
-    private const EClass MAX_CLASS = EClass.SPEC_OPS;
-    public override EClass Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    internal const Class MaxClass = Class.SpecOps;
+    public override Class Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType == JsonTokenType.Number)
+        switch (reader.TokenType)
         {
-            if (reader.TryGetByte(out byte b))
-                return (EClass)b;
-            throw new JsonException("Invalid EClass value.");
+            case JsonTokenType.Null:
+                return Class.None;
+            case JsonTokenType.Number:
+                if (reader.TryGetByte(out byte b))
+                    return (Class)b;
+                throw new JsonException("Invalid Class value.");
+            case JsonTokenType.String:
+                string val = reader.GetString()!;
+                if (KitEx.TryParseClass(val, out Class @class))
+                    return @class;
+                throw new JsonException("Invalid Class value.");
+            default:
+                throw new JsonException("Invalid token for Class parameter.");
         }
-        else if (reader.TokenType == JsonTokenType.Null)
-            return EClass.NONE;
-        else if (reader.TokenType == JsonTokenType.String)
-        {
-            if (Enum.TryParse(reader.GetString()!, true, out EClass rtn))
-                return rtn;
-            throw new JsonException("Invalid EClass value.");
-        }
-        throw new JsonException("Invalid token for EClass parameter.");
     }
-    public override void Write(Utf8JsonWriter writer, EClass value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, Class value, JsonSerializerOptions options)
     {
-        if (value >= EClass.NONE && value <= MAX_CLASS)
+        if (value >= Class.None && value <= MaxClass)
             writer.WriteStringValue(value.ToString());
         else
             writer.WriteNumberValue((byte)value);
     }
+}
+public sealed class SkillsetConverter : JsonConverter<Skillset>
+{
+    public override Skillset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => Skillset.Read(ref reader);
+    public override void Write(Utf8JsonWriter writer, Skillset value, JsonSerializerOptions options) => Skillset.Write(writer, in value);
 }

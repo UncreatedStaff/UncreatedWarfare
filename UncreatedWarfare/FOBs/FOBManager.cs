@@ -406,7 +406,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         if (!fob.IsWipedByAuthority)
         {
-            if (killer != null && killerteam != 0 && killerteam != team && Data.Gamemode.State == EState.ACTIVE && Data.Is(out IGameStats w) && w.GameStats is IFobsTracker ft)
+            if (killer != null && killerteam != 0 && killerteam != team && Data.Gamemode.State == State.Active && Data.Is(out IGameStats w) && w.GameStats is IFobsTracker ft)
             // doesnt count destroying fobs after game ends
             {
                 if (killer.Player.TryGetPlayerData(out UCPlayerData c) && c.stats is IFOBStats f)
@@ -937,7 +937,7 @@ public class SpecialFOB : IFOB, IDeployable
     public SpecialFOB(string name, Vector3 point, ulong team, string color, bool disappearAroundEnemies)
     {
         _name = name;
-        _cl = F.GetClosestLocation(point);
+        _cl = F.GetClosestLocationName(point);
 
         if (Data.Is(out IFlagRotation fg))
         {
@@ -985,7 +985,7 @@ public class SpecialFOB : IFOB, IDeployable
     }
     void IDeployable.OnDeploy(UCPlayer player, bool chat)
     {
-        ActionLogger.Add(EActionLogType.DEPLOY_TO_LOCATION, "SPECIAL FOB " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
+        ActionLog.Add(ActionLogType.DeployToLocation, "SPECIAL FOB " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
         if (chat)
             player.SendChat(T.DeploySuccess, this);
     }
@@ -1341,21 +1341,21 @@ public class BuildableData : ITranslationArgument
         {
             if (Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vasset))
             {
-                if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+                if (format is not null && format.Equals(T.FormatRarityColor))
                     return Localization.Colorize(ItemTool.getRarityColorUI(vasset.rarity).Hex(), Translation.Pluralize(vasset.vehicleName, flags), flags);
                 else
                     return Translation.Pluralize(vasset.vehicleName, flags);
             }
             if (Emplacement.BaseBarricade.ValidReference(out asset))
             {
-                if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+                if (format is not null && format.Equals(T.FormatRarityColor))
                     return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Translation.Pluralize(asset.itemName, flags), flags);
                 else
                     return Translation.Pluralize(asset.itemName, flags);
             }
             if (Emplacement.Ammo.ValidReference(out ItemAsset iasset))
             {
-                if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+                if (format is not null && format.Equals(T.FormatRarityColor))
                     return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), Translation.Pluralize(iasset.itemName, flags), flags);
                 else
                     return Translation.Pluralize(iasset.itemName, flags);
@@ -1364,7 +1364,7 @@ public class BuildableData : ITranslationArgument
 
         if (BuildableBarricade.ValidReference(out asset) || Foundation.ValidReference(out asset))
         {
-            if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+            if (format is not null && format.Equals(T.FormatRarityColor))
                 return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Translation.Pluralize(asset.itemName, flags), flags);
             else
                 return Translation.Pluralize(asset.itemName, flags);

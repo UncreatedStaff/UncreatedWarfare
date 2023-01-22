@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Events;
@@ -17,15 +18,14 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch;
 
+// todo make use tickets instead, would just make more sense
 public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISquads, IRevives, ITeamScore, ITraits
 {
     protected TraitManager _traitManager;
     protected ActionManager _actionManager;
     protected VehicleSpawner _vehicleSpawner;
     protected VehicleBay _vehicleBay;
-    protected VehicleSigns _vehicleSigns;
     protected FOBManager _FOBManager;
-    protected RequestSigns _requestSigns;
     protected KitManager _kitManager;
     protected ReviveManager _reviveManager;
     protected SquadManager _squadManager;
@@ -44,9 +44,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public override bool ShowOFPUI => true;
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
-    public VehicleSigns VehicleSigns => _vehicleSigns;
     public FOBManager FOBManager => _FOBManager;
-    public RequestSigns RequestSigns => _requestSigns;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
@@ -55,23 +53,22 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public ActionManager ActionManager => _actionManager;
     public int Team1Score => _t1score;
     public int Team2Score => _t2score;
-    protected int _t1score = 0;
-    protected int _t2score = 0;
-    protected override Task PreInit()
+    protected int _t1score;
+    protected int _t2score;
+    protected override Task PreInit(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
-        AddSingletonRequirement(ref _requestSigns);
-        AddSingletonRequirement(ref _vehicleSigns);
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _reviveManager);
         AddSingletonRequirement(ref _FOBManager);
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
-        return base.PreInit();
+        return base.PreInit(token);
     }
     public override void Subscribe()
     {
@@ -83,11 +80,12 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         EventDispatcher.PlayerDied -= OnDeath;
         base.Unsubscribe();
     }
-    public override Task DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
         StartCoroutine(EndGameCoroutine());
-        return base.DeclareWin(winner);
+        return base.DeclareWin(winner, token);
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine()
     {
@@ -98,18 +96,25 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
-        Task.Run(EndGame);
+        UCWarfare.RunTask(EndGame, UCWarfare.UnloadCancel, ctx: "Starting next gamemode.");
     }
+
+    protected override void InitUI(UCPlayer player)
+    {
+        OnScoreUpdated();
+    }
+
     private void OnScoreUpdated()
     {
-        // todo update ui?
+        // todo make this use a ticket provider instead
     }
-    protected override Task PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {
         _t1score = 0;
         _t2score = 0;
-        return base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad, token);
     }
+    
     private void OnDeath(PlayerDied e)
     {
         if (e.Killer is not null)

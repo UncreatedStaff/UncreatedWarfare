@@ -29,9 +29,9 @@ internal static class PatchUtil
             return null!;
         }
     }
-    internal static void PatchMethod(Delegate original, Delegate? prefix = null, Delegate? postfix = null, Delegate? transpiler = null, Delegate? finalizer = null)
+    internal static bool PatchMethod(Delegate original, Delegate? prefix = null, Delegate? postfix = null, Delegate? transpiler = null, Delegate? finalizer = null)
     {
-        if (original is null || (prefix is null && postfix is null && transpiler is null && finalizer is null)) return;
+        if (original is null || (prefix is null && postfix is null && transpiler is null && finalizer is null)) return false;
         try
         {
             MethodInfo? originalInfo = original.Method;
@@ -42,12 +42,12 @@ internal static class PatchUtil
             if (originalInfo is null)
             {
                 L.LogError("Error getting method info for patching.");
-                return;
+                return false;
             }
             if (prefixInfo is null && postfixInfo is null && transpilerInfo is null && finalizerInfo is null)
             {
                 L.LogError("Error getting method info for patching " + originalInfo.FullDescription());
-                return;
+                return false;
             }
             if (prefix is not null && prefixInfo is null)
                 L.LogError("Error getting prefix info for patching " + originalInfo.FullDescription());
@@ -57,22 +57,33 @@ internal static class PatchUtil
                 L.LogError("Error getting transpiler info for patching " + originalInfo.FullDescription());
             if (finalizer is not null && finalizerInfo is null)
                 L.LogError("Error getting finalizer info for patching " + originalInfo.FullDescription());
-            PatchMethod(originalInfo, prefixInfo, postfixInfo, transpilerInfo, finalizerInfo);
+            return PatchMethod(originalInfo, prefixInfo, postfixInfo, transpilerInfo, finalizerInfo);
         }
         catch (MemberAccessException ex)
         {
             L.LogError("Error getting method info for patching.");
             L.LogError(ex);
+            return false;
         }
     }
-    internal static void PatchMethod(MethodInfo original, MethodInfo? prefix = null, MethodInfo? postfix = null, MethodInfo? transpiler = null, MethodInfo? finalizer = null)
+    internal static bool PatchMethod(MethodInfo? original, MethodInfo? prefix = null, MethodInfo? postfix = null, MethodInfo? transpiler = null, MethodInfo? finalizer = null)
+    {
+        bool fail = false;
+        PatchMethod(original, ref fail, prefix, postfix, transpiler, finalizer);
+        return fail;
+    }
+    internal static void PatchMethod(MethodInfo? original, ref bool fail, MethodInfo? prefix = null, MethodInfo? postfix = null, MethodInfo? transpiler = null, MethodInfo? finalizer = null)
     {
         if ((prefix is null && postfix is null && transpiler is null && finalizer is null))
+        {
+            fail = true;
             return;
+        }
         if (original is null)
         {
             MethodInfo m = prefix ?? postfix ?? transpiler ?? finalizer!;
             L.LogError("Failed to find original method for patch " + m.FullDescription() + ".");
+            fail = true;
             return;
         }
 
@@ -88,6 +99,7 @@ internal static class PatchUtil
         {
             L.LogError("Error patching " + original.FullDescription());
             L.LogError(ex);
+            fail = true;
         }
     }
 }

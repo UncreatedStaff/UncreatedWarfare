@@ -173,7 +173,7 @@ public class FOB : IFOB, IDeployable
         {
             return IsBleeding
                 ? string.Empty
-                : Build.ToString(Data.Locale).Colorize("d4c49d") + " " + Ammo.ToString(Data.Locale).Colorize("b56e6e");
+                : Build.ToString(Data.LocalLocale).Colorize("d4c49d") + " " + Ammo.ToString(Data.LocalLocale).Colorize("b56e6e");
         }
     }
     public BarricadeDrop? RepairStation
@@ -221,7 +221,7 @@ public class FOB : IFOB, IDeployable
         Build = 0;
 
         _gc = new GridLocation(Position);
-        _cl = F.GetClosestLocation(Position);
+        _cl = F.GetClosestLocationName(Position);
 
         if (Data.Is(out IFlagRotation fg))
         {
@@ -288,7 +288,7 @@ public class FOB : IFOB, IDeployable
                     {
                         int xp = Points.XPConfig.UnloadSuppliesXP;
 
-                        if (creator.KitClass == EClass.PILOT)
+                        if (creator.KitClass == Class.Pilot)
                         {
                             xp *= 2;
                         }
@@ -366,7 +366,7 @@ public class FOB : IFOB, IDeployable
                         {
                             int xp = Points.XPConfig.UnloadSuppliesXP;
 
-                            if (player.KitClass == EClass.PILOT)
+                            if (player.KitClass == Class.Pilot)
                             {
                                 xp *= 2;
                             }
@@ -559,7 +559,7 @@ public class FOB : IFOB, IDeployable
 #endif
         float amount = 30;
 
-        if (builder.KitClass == EClass.COMBAT_ENGINEER)
+        if (builder.KitClass == Class.CombatEngineer)
             amount *= 2;
         if (Gamemode.Config.EffectDig.ValidReference(out EffectAsset effect))
             F.TriggerEffectReliable(effect, EffectManager.MEDIUM, builder.Position);
@@ -760,7 +760,7 @@ public class FOB : IFOB, IDeployable
     }
     void IDeployable.OnDeploy(UCPlayer player, bool chat)
     {
-        ActionLogger.Add(EActionLogType.DEPLOY_TO_LOCATION, "FOB BUNKER " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
+        ActionLog.Add(ActionLogType.DeployToLocation, "FOB BUNKER " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
         if (chat)
             player.SendChat(T.DeploySuccess, this);
     }

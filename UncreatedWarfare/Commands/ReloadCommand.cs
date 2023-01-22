@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices.ComTypes;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -10,22 +10,18 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
-public class ReloadCommand : Command
+public class ReloadCommand : AsyncCommand
 {
-    public const string SYNTAX = "/reload [help|module]";
-    public const string HELP = "Reload certain parts of UCWarfare.";
+    public const string Syntax = "/reload [help|module]";
+    public const string Help = "Reload certain parts of UCWarfare.";
     public static event VoidDelegate OnTranslationsReloaded;
     public static event VoidDelegate OnFlagsReloaded;
-
-    public const string RELOAD_ALL_PERMISSION = "uc.reload.all";
 
     public static Dictionary<string, IConfiguration> ReloadableConfigs = new Dictionary<string, IConfiguration>();
 
@@ -33,13 +29,13 @@ public class ReloadCommand : Command
     {
 
     }
-    public override void Execute(CommandInteraction ctx)
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
         if (!ctx.IsConsole && !ctx.Caller.IsAdmin)
             ctx.AssertOnDuty();
 
         if (!ctx.TryGet(0, out string module))
-            throw ctx.SendCorrectUsage(SYNTAX);
+            throw ctx.SendCorrectUsage(Syntax);
 
         if (module.Equals("help", StringComparison.OrdinalIgnoreCase))
             throw ctx.SendNotImplemented();
@@ -48,52 +44,43 @@ public class ReloadCommand : Command
         {
             ReloadTranslations();
             ctx.Reply(T.ReloadedTranslations);
-            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "TRANSLATIONS");
+            ctx.LogAction(ActionLogType.ReloadComponent, "TRANSLATIONS");
         }
         else if (module.Equals("flags", StringComparison.OrdinalIgnoreCase))
         {
-            if (Data.Is<IFlagRotation>())
-            {
-                ReloadFlags();
-                ctx.Reply(T.ReloadedFlags);
-                ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "FLAGS");
-            }
-            else ctx.Reply(T.ReloadFlagsInvalidGamemode);
+            ReloadFlags();
+            ctx.Reply(T.ReloadedFlags);
+            ctx.LogAction(ActionLogType.ReloadComponent, "FLAGS");
         }
         else if (module.Equals("permissions", StringComparison.OrdinalIgnoreCase))
         {
             ReloadPermissions();
             ctx.Reply(T.ReloadedPermissions);
-            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "PERMISSIONS");
-        }
-        else if (module.Equals("factions", StringComparison.OrdinalIgnoreCase))
-        {
-            ReloadFactions(ctx);
-            ctx.Defer();
-            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "FACTIONS");
+            ctx.LogAction(ActionLogType.ReloadComponent, "PERMISSIONS");
         }
         else if (module.Equals("colors", StringComparison.OrdinalIgnoreCase))
         {
             ReloadColors();
             ctx.Reply(T.ReloadedGeneric, "colors");
-            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "COLORS");
+            ctx.LogAction(ActionLogType.ReloadComponent, "COLORS");
         }
         else if (module.Equals("tcp", StringComparison.OrdinalIgnoreCase))
         {
             ReloadTCPServer();
             ctx.Reply(T.ReloadedTCP);
-            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "TCP SERVER");
+            ctx.LogAction(ActionLogType.ReloadComponent, "TCP SERVER");
         }
         else if (module.Equals("sql", StringComparison.OrdinalIgnoreCase))
         {
             ReloadSQLServer(ctx);
-            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "MYSQL CONNECTION");
+            ctx.LogAction(ActionLogType.ReloadComponent, "MYSQL CONNECTION");
         }
-        else if (module.Equals("teams", StringComparison.OrdinalIgnoreCase))
+        else if (module.Equals("teams", StringComparison.OrdinalIgnoreCase) || module.Equals("factions", StringComparison.OrdinalIgnoreCase))
         {
+            await TeamManager.ReloadFactions(token).ConfigureAwait(false);
             TeamManager.SetupConfig();
             ctx.Reply(T.ReloadedGeneric, "teams and factions");
-            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "TEAMS & FACTIONS");
+            ctx.LogAction(ActionLogType.ReloadComponent, "TEAMS & FACTIONS");
         }
         else if (module.Equals("all", StringComparison.OrdinalIgnoreCase))
         {
@@ -106,7 +93,7 @@ public class ReloadCommand : Command
                 config.Value.Reload();
 
             ctx.Reply(T.ReloadedAll);
-            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "ALL");
+            ctx.LogAction(ActionLogType.ReloadComponent, "ALL");
         }
         else
         {
@@ -115,23 +102,18 @@ public class ReloadCommand : Command
             {
                 config.Reload();
                 ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
-                ctx.LogAction(EActionLogType.RELOAD_COMPONENT, module.ToUpperInvariant());
+                ctx.LogAction(ActionLogType.ReloadComponent, module.ToUpperInvariant());
             }
             else
             {
-                ctx.Defer();
-                Task.Run(async () =>
-                {
-                    IReloadableSingleton? reloadable = await Data.Singletons.ReloadSingletonAsync(module);
-                    await UCWarfare.ToUpdate();
-                    if (reloadable is null)
-                        ctx.SendCorrectUsage(SYNTAX);
-                    else
-                    {
-                        ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
-                        ctx.LogAction(EActionLogType.RELOAD_COMPONENT, module.ToUpperInvariant());
-                    }
-                });
+                IReloadableSingleton? reloadable = await Data.Singletons.ReloadSingletonAsync(module, token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
+
+                if (reloadable is null)
+                    throw ctx.SendCorrectUsage(Syntax);
+
+                ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
+                ctx.LogAction(ActionLogType.ReloadComponent, module.ToUpperInvariant());
             }
         }
     }
@@ -214,9 +196,19 @@ public class ReloadCommand : Command
             if (Data.Gamemode is FlagGamemode flaggm)
                 flaggm.LoadAllFlags();
             else
-                Data.ZoneProvider.Reload();
+            {
+                ZoneList? zl = Data.Singletons.GetSingleton<ZoneList>();
+                if (zl != null)
+                {
+                    UCWarfare.RunTask(async () =>
+                    {
+                        await zl.DownloadAll();
+                        await UCWarfare.ToUpdate();
+                        TeamManager.OnReloadFlags();
+                    }, ctx: "Reload flags");
+                }
+            }
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
-            TeamManager.OnReloadFlags();
             OnFlagsReloaded?.Invoke();
         }
         catch (Exception ex)
@@ -231,35 +223,12 @@ public class ReloadCommand : Command
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         KitManager manager = SingletonEx.AssertAndGet<KitManager>();
-        Task.Run(async () =>
+        UCWarfare.RunTask(async () =>
         {
-            await manager.ReloadKits();
+            await manager.DownloadAll();
             await UCWarfare.ToUpdate();
-            if (RequestSigns.Loaded)
-            {
-                RequestSigns.UpdateAllSigns();
-            }
-            if (!KitManager.KitExists(TeamManager.Team1UnarmedKit, out _))
-                L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(TeamManager.Team2UnarmedKit, out _))
-                L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(TeamManager.DefaultKit, out _))
-                L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
-        });
-    }
-    internal static void ReloadFactions(CommandInteraction? ctx)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        Task.Run(async () =>
-        {
-            await TeamManager.ReloadFactions().ConfigureAwait(false);
-            if (ctx != null)
-            {
-                await UCWarfare.ToUpdate();
-                ctx.Reply(T.ReloadedGeneric, "factions");
-            }
+            Signs.UpdateKitSigns(null, null);
+            Signs.UpdateLoadoutSigns(null);
         });
     }
     internal static void ReloadAllConfigFiles()

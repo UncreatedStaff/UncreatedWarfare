@@ -3,8 +3,10 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.SQL;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using UnityEngine;
@@ -29,6 +31,20 @@ public class Reporter : MonoBehaviour
                 return data[i].CustomReport(message, reporter);
         }
         return null;
+    }
+    public Report? CreateReport(ulong reporter, ulong violator, string message, EReportType type)
+    {
+        return type switch
+        {
+            EReportType.CHAT_ABUSE => CreateChatAbuseReport(reporter, violator, message),
+            EReportType.VOICE_CHAT_ABUSE => CreateVoiceChatAbuseReport(reporter, violator, message),
+            EReportType.SOLOING_VEHICLE => CreateSoloingReport(reporter, violator, message),
+            EReportType.WASTING_ASSETS => CreateWastingAssetsReport(reporter, violator, message),
+            EReportType.INTENTIONAL_TEAMKILL => CreateIntentionalTeamkillReport(reporter, violator, message),
+            EReportType.GREIFING_FOBS => CreateGreifingFOBsReport(reporter, violator, message),
+            EReportType.CHEATING => CreateCheatingReport(reporter, violator, message),
+            _ => CreateReport(reporter, violator, message),
+        };
     }
     public ChatAbuseReport? CreateChatAbuseReport(ulong reporter, ulong violator, string message)
     {
@@ -241,7 +257,7 @@ public class Reporter : MonoBehaviour
             }
         }
     }
-    internal void OnVehicleRequest(ulong player, Guid vehicle, uint bayInstID)
+    internal void OnVehicleRequest(ulong player, Guid vehicle, PrimaryKey spawn)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -252,7 +268,7 @@ public class Reporter : MonoBehaviour
             {
                 data[i].recentRequests.Add(new VehicleLifeData()
                 {
-                    bayInstId = bayInstID,
+                    spawnKey = spawn,
                     died = false,
                     lifeTime = 0,
                     requestTime = Time.realtimeSinceStartup,
@@ -262,12 +278,12 @@ public class Reporter : MonoBehaviour
             }
         }
     }
-    internal void OnVehicleDied(ulong owner, uint bayInstId, ulong killer, Guid vehicle, Guid weapon, EDamageOrigin origin, bool tk)
+    internal void OnVehicleDied(ulong owner, PrimaryKey spawnKey, ulong killer, Guid vehicle, Guid weapon, EDamageOrigin origin, bool tk)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (bayInstId != uint.MaxValue)
+        if (spawnKey.IsValid)
         {
             for (int i = 0; i < data.Count; ++i)
             {
@@ -277,7 +293,7 @@ public class Reporter : MonoBehaviour
                     for (int j = 0; j < playerData.recentRequests.Count; j++)
                     {
                         VehicleLifeData data = playerData.recentRequests[j];
-                        if (data.bayInstId == bayInstId && !data.died)
+                        if (data.spawnKey.Key == spawnKey.Key && !data.died)
                         {
                             data.died = true;
                             playerData.recentRequests[j] = data;
@@ -337,12 +353,12 @@ public class Reporter : MonoBehaviour
         });
     }
     /// <summary>Slow, use rarely.</summary>
-    public ulong RecentPlayerNameCheck(string name, UCPlayer.ENameSearchType type)
+    public ulong RecentPlayerNameCheck(string name, UCPlayer.NameSearch type)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (type == UCPlayer.ENameSearchType.CHARACTER_NAME)
+        if (type == UCPlayer.NameSearch.CharacterName)
         {
             foreach (PlayerData current in data.OrderBy(x => x.characterName.Length))
             {
@@ -361,7 +377,7 @@ public class Reporter : MonoBehaviour
             }
             return 0;
         }
-        else if (type == UCPlayer.ENameSearchType.NICK_NAME)
+        else if (type == UCPlayer.NameSearch.NickName)
         {
             foreach (PlayerData current in data.OrderBy(x => x.nickName.Length))
             {
@@ -380,7 +396,7 @@ public class Reporter : MonoBehaviour
             }
             return 0;
         }
-        else if (type == UCPlayer.ENameSearchType.PLAYER_NAME)
+        else if (type == UCPlayer.NameSearch.PlayerName)
         {
             foreach (PlayerData current in data.OrderBy(x => x.playerName.Length))
             {
@@ -399,7 +415,7 @@ public class Reporter : MonoBehaviour
             }
             return 0;
         }
-        else return RecentPlayerNameCheck(name, UCPlayer.ENameSearchType.CHARACTER_NAME);
+        else return RecentPlayerNameCheck(name, UCPlayer.NameSearch.CharacterName);
     }
     internal void OnPlayerChat(ulong player, string message)
     {
@@ -693,7 +709,7 @@ public class Reporter : MonoBehaviour
     private struct VehicleLifeData
     {
         public Guid vehicle;
-        public uint bayInstId;
+        public PrimaryKey spawnKey;
         public float requestTime;
         public float lifeTime;
         public bool died;
@@ -731,5 +747,20 @@ public class Reporter : MonoBehaviour
         /// <summary>T1: report <br>T2: isOnline</br></summary>
         public static readonly NetCallRaw<Report?, bool> SendReportInvocation = new NetCallRaw<Report?, bool>(4000, Report.ReadReport, null, Report.WriteReport!, null, 256);
         public static readonly NetCall<bool, string> ReceiveInvocationResponse = new NetCall<bool, string>(4001, 78);
+        public static readonly NetCall<ulong, ulong, string, EReportType> RequestReport = new NetCall<ulong, ulong, string, EReportType>(4002);
+
+        [NetCall(ENetCall.FROM_SERVER, 4002)]
+        private static async Task<StandardErrorCode> ReceiveReportRequest(MessageContext ctx, ulong player, ulong admin, string message, EReportType type)
+        {
+            if (!UCWarfare.IsLoaded)
+                return StandardErrorCode.ModuleNotLoaded;
+            await UCWarfare.ToUpdate();
+            if (Data.Reporter != null)
+            {
+                Report? rep = Data.Reporter.CreateReport(admin, player, message, type);
+                return StandardErrorCode.ModuleNotLoaded;
+            }
+            return StandardErrorCode.ModuleNotLoaded;
+        }
     }
 }

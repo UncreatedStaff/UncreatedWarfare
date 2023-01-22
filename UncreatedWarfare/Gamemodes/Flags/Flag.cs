@@ -3,6 +3,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
@@ -11,12 +12,12 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
 public delegate void DiscoveryDelegate(ulong team);
-public class Flag : IDisposable, ITranslationArgument, IObjective
+public class Flag : IDisposable, IObjective
 {
     public delegate void EvaluatePointsDelegate(Flag flag, bool overrideInactiveCheck = false);
     public delegate bool IsContestedDelegate(Flag flag, out ulong winner);
-    public int index = -1;
-    public const float MAX_POINTS = 64f;
+    public int Index = -1;
+    public const float MaxPoints = 64f;
     public AdjacentFlagData[] Adjacencies;
     public static float CaptureMultiplier = 1.0f;
     private Vector3 _position;
@@ -31,15 +32,15 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
     private ulong _owner = 0;
     public List<UCPlayer> PlayersOnFlagTeam1;
     public int Team1TotalPlayers;
-    public EvaluatePointsDelegate? EvaluatePointsOverride = null;
-    public IsContestedDelegate? IsContestedOverride = null;
+    public EvaluatePointsDelegate? EvaluatePointsOverride;
+    public IsContestedDelegate? IsContestedOverride;
     public int Team1TotalCappers;
     public List<UCPlayer> PlayersOnFlagTeam2;
     public int Team2TotalPlayers;
     public int Team2TotalCappers;
     private float _points;
-    protected bool _discovered1;
-    protected bool _discovered2;
+    protected bool Discovered1;
+    protected bool Discovered2;
     public bool HasBeenCapturedT1;
     public bool HasBeenCapturedT2;
     private ulong _lastOwner;
@@ -53,7 +54,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
     public event OwnerChangedDelegate OnOwnerChanged;
 
     public List<UCPlayer> PlayersOnFlag { get; private set; }
-    public Zone ZoneData { get; protected set; }
+    public SqlItem<Zone> ZoneData { get; protected set; }
     public IFlagRotation Manager { get; protected set; }
     public int ObjectivePlayerCount
     {
@@ -140,37 +141,13 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
     public bool IsAnObj { get => T1Obj || T2Obj; }
     public bool DiscoveredT1
     {
-        get => _discovered1;
-        protected set
-        {
-            if (value == true && _discovered1 == false)
-            {
-                _discovered1 = true;
-                return;
-            }
-            if (value == false && _discovered1 == true)
-            {
-                _discovered1 = false;
-                return;
-            }
-        }
+        get => Discovered1;
+        protected set => Discovered1 = value;
     }
     public bool DiscoveredT2
     {
-        get => _discovered2;
-        protected set
-        {
-            if (value == true && _discovered2 == false)
-            {
-                _discovered2 = true;
-                return;
-            }
-            if (value == false && _discovered2 == true)
-            {
-                _discovered2 = false;
-                return;
-            }
-        }
+        get => Discovered2;
+        protected set => Discovered2 = value;
     }
     public ulong LastOwner => _lastOwner;
     public void ResetFlag()
@@ -254,28 +231,28 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer[] _prevPlayers = PlayersOnFlag.ToArray();
+        UCPlayer[] prevPlayers = PlayersOnFlag.ToArray();
         RecalcCappers();
         newPlayers = new List<Player>(2);
         departedPlayers = new List<Player>(2);
         for (int i = 0; i < PlayersOnFlag.Count; i++)
         {
             UCPlayer player = PlayersOnFlag[i];
-            for (int j = 0; j < _prevPlayers.Length; j++)
-                if (player.Steam64 == _prevPlayers[j].Steam64)
+            for (int j = 0; j < prevPlayers.Length; j++)
+                if (player.Steam64 == prevPlayers[j].Steam64)
                     goto done;
             newPlayers.Add(player);
-        done:;
+            done:;
         }
-        for (int i = 0; i < _prevPlayers.Length; i++)
+        for (int i = 0; i < prevPlayers.Length; i++)
         {
-            UCPlayer player = _prevPlayers[i];
+            UCPlayer player = prevPlayers[i];
             for (int j = 0; j < PlayersOnFlag.Count; j++)
                 if (player.Steam64 == PlayersOnFlag[j].Steam64)
                     goto done;
             if (player.IsOnline)
                 departedPlayers.Add(player);
-        done:;
+            done:;
         }
     }
     public void SetPoints(float value, bool skipEvent = false, bool skipDeltaPoints = false)
@@ -283,43 +260,43 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        float OldPoints = _points;
-        if (value > MAX_POINTS) _points = MAX_POINTS;
-        else if (value < -MAX_POINTS) _points = -MAX_POINTS;
+        float oldPts = _points;
+        if (value > MaxPoints) _points = MaxPoints;
+        else if (value < -MaxPoints) _points = -MaxPoints;
         else _points = value;
         if (!skipDeltaPoints)
-            LastDeltaPoints = _points - OldPoints;
+            LastDeltaPoints = _points - oldPts;
         if (!skipEvent)
-            OnPointsChanged?.Invoke(_points, OldPoints, this);
+            OnPointsChanged?.Invoke(_points, oldPts, this);
     }
-    public Flag(Zone zone, IFlagRotation manager)
+    public Flag(SqlItem<Zone> zone, IFlagRotation manager)
     {
         this.Manager = manager;
-        this._id = zone.Id;
-        this._x = zone.Center.x;
-        this._y = zone.Center3D.y;
-        this._z = zone.Center.y;
+        Zone? z = zone.Item;
+        if (z is null)
+            throw new ArgumentNullException(nameof(zone));
+        this._id = z.Id;
+        this._x = z.Spawn.x;
+        this._y = z.Spawn3D.y;
+        this._z = z.Spawn.y;
         this._position2d = new Vector2(_x, _z);
         this._position = new Vector3(_x, _y, _z);
-        this._name = zone.Name;
-        if (string.IsNullOrEmpty(zone.ShortName))
-            this._shortName = _name;
-        else
-            this._shortName = zone.ShortName!;
+        this._name = z.Name;
+        this._shortName = string.IsNullOrEmpty(z.ShortName) ? _name : z.ShortName!;
         this._color = UCWarfare.GetColorHex("default");
         this._owner = 0;
         PlayersOnFlag = new List<UCPlayer>(48);
         PlayersOnFlagTeam1 = new List<UCPlayer>(24);
         PlayersOnFlagTeam2 = new List<UCPlayer>(24);
         this.ZoneData = zone;
-        this.Adjacencies = zone.Data.Adjacencies;
+        this.Adjacencies = z.Data.Adjacencies;
     }
     public bool IsFriendly(SteamPlayer player) => IsFriendly(player.player.quests.groupID.m_SteamID);
     public bool IsFriendly(Player player) => IsFriendly(player.quests.groupID.m_SteamID);
     public bool IsFriendly(CSteamID groupID) => IsFriendly(groupID.m_SteamID);
     public bool IsFriendly(ulong groupID) => groupID == _owner;
-    public bool PlayerInRange(Vector3 position) => ZoneData.IsInside(position);
-    public bool PlayerInRange(Vector2 position) => ZoneData.IsInside(position);
+    public bool PlayerInRange(Vector3 position) => ZoneData is { Item: { } z } && z.IsInside(position);
+    public bool PlayerInRange(Vector2 position) => ZoneData is { Item: { } z } && z.IsInside(position);
     public bool PlayerInRange(SteamPlayer player) => PlayerInRange(player.player.transform.position);
     public bool PlayerInRange(Player player) => PlayerInRange(player.transform.position);
     public void EnterPlayer(Player player)
@@ -340,16 +317,16 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
         float amt = Points + amount;
         if (Points > 0 && amt < 0 || Points < 0 && amt > 0) // if sign will be changing
             amt = 0;
-        if (amt >= MAX_POINTS)
+        if (amt >= MaxPoints)
             CapT1();
-        else if (amt <= -MAX_POINTS)
+        else if (amt <= -MaxPoints)
             CapT2();
         else
             SetPoints(amt);
     }
     public void CapT1()
     {
-        SetPoints(MAX_POINTS);
+        SetPoints(MaxPoints);
         SetOwner(1);
     }
     public void CapT2(float amount)
@@ -361,22 +338,22 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
         float amt = Points - amount;
         if (Points > 0 && amt < 0 || Points < 0 && amt > 0) // if sign will be changing
             amt = 0;
-        if (amt >= MAX_POINTS)
+        if (amt >= MaxPoints)
             CapT1();
-        else if (amt <= -MAX_POINTS)
+        else if (amt <= -MaxPoints)
             CapT2();
         else
             SetPoints(amt);
     }
     public void CapT2()
     {
-        SetPoints(-MAX_POINTS);
+        SetPoints(-MaxPoints);
         SetOwner(2);
     }
     public bool IsFull(ulong team)
     {
-        if (team == 1) return Points >= MAX_POINTS;
-        else if (team == 2) return Points <= -MAX_POINTS;
+        if (team == 1) return Points >= MaxPoints;
+        else if (team == 2) return Points <= -MaxPoints;
         else return false;
     }
     public void Cap(ulong team, float amount)
@@ -402,8 +379,8 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
     {
         return team switch
         {
-            1 => _discovered1,
-            2 => _discovered2,
+            1 => Discovered1,
+            2 => Discovered2,
             3 => true,
             _ => false
         };
@@ -495,7 +472,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             EvaluatePointsOverride(this, overrideInactiveCheck);
             return;
         }
-        if (Manager.State == EState.ACTIVE || overrideInactiveCheck)
+        if (Manager.State == State.Active || overrideInactiveCheck)
         {
             if (IsAnObj)
             {

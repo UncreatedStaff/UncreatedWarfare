@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Json;
 using Uncreated.Players;
@@ -22,6 +23,7 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
@@ -36,41 +38,37 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency;
 
 public class Insurgency :
     TicketGamemode<InsurgencyTicketProvider>,
-    ITeams,
     IFOBs,
     IVehicles,
     IKitRequests,
     IRevives,
     ISquads,
     IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>,
-    ITickets,
     IStagingPhase,
     IAttackDefense,
     IGameStats,
     ITraits
 {
-    protected VehicleSpawner _vehicleSpawner;
-    protected VehicleBay _vehicleBay;
-    protected VehicleSigns _vehicleSigns;
-    protected FOBManager _FOBManager;
-    protected RequestSigns _requestSigns;
-    protected KitManager _kitManager;
-    protected ReviveManager _reviveManager;
-    protected SquadManager _squadManager;
-    protected StructureSaver _structureSaver;
-    protected InsurgencyTracker _gameStats;
-    protected InsurgencyLeaderboard _endScreen;
-    protected TraitManager _traitManager;
-    protected ActionManager _actionManager;
-    protected ulong _attackTeam;
-    protected ulong _defendTeam;
+    private VehicleSpawner _vehicleSpawner;
+    private VehicleBay _vehicleBay;
+    private FOBManager _fobManager;
+    private KitManager _kitManager;
+    private ReviveManager _reviveManager;
+    private SquadManager _squadManager;
+    private StructureSaver _structureSaver;
+    private InsurgencyTracker _gameStats;
+    private InsurgencyLeaderboard _endScreen;
+    private TraitManager _traitManager;
+    private ActionManager _actionManager;
+    private ulong _attackTeam;
+    private ulong _defendTeam;
     public int IntelligencePoints;
     public List<CacheData> Caches;
     public List<SerializableTransform> CacheSpawns;
-    private List<Vector3> SeenCaches;
-    public bool _isScreenUp;
+    private List<Vector3> _seenCaches;
+    private bool _isScreenUp;
     public override string DisplayName => "Insurgency";
-    public override EGamemode GamemodeType => EGamemode.INVASION;
+    public override GamemodeType GamemodeType => GamemodeType.Invasion;
     public override bool EnableAMC => true;
     public override bool ShowOFPUI => true;
     public override bool ShowXPUI => true;
@@ -80,9 +78,7 @@ public class Insurgency :
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;
     public VehicleBay VehicleBay => _vehicleBay;
-    public VehicleSigns VehicleSigns => _vehicleSigns;
-    public FOBManager FOBManager => _FOBManager;
-    public RequestSigns RequestSigns => _requestSigns;
+    public FOBManager FOBManager => _fobManager;
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
@@ -99,26 +95,26 @@ public class Insurgency :
     public bool IsScreenUp => _isScreenUp;
     InsurgencyTracker IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     Leaderboard<InsurgencyPlayerStats, InsurgencyTracker> IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.Leaderboard => _endScreen;
-    object IGameStats.GameStats => _gameStats;
+    IStatTracker IGameStats.GameStats => _gameStats;
     public Insurgency() : base("Insurgency", 0.25F) { }
-    protected override Task PreInit()
+    protected override Task PreInit(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _reviveManager);
         AddSingletonRequirement(ref _vehicleBay);
-        AddSingletonRequirement(ref _FOBManager);
+        AddSingletonRequirement(ref _fobManager);
         AddSingletonRequirement(ref _structureSaver);
-        AddSingletonRequirement(ref _vehicleSigns);
-        AddSingletonRequirement(ref _requestSigns);
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
-        return base.PreInit();
+        return base.PreInit(token);
     }
-    protected override Task PostInit()
+    protected override Task PostInit(CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         string file = Path.Combine(Data.Paths.MapStorage, "insurgency_caches.json");
         if (File.Exists(file))
         {
@@ -192,10 +188,11 @@ public class Insurgency :
             }
         }
 
-        return base.PostInit();
+        return base.PostInit(token);
     }
-    protected override Task PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         _gameStats.Reset();
 
         _attackTeam = (ulong)UnityEngine.Random.Range(1, 3);
@@ -206,15 +203,16 @@ public class Insurgency :
 
         CachesDestroyed = 0;
         Caches = new List<CacheData>();
-        SeenCaches = new List<Vector3>();
+        _seenCaches = new List<Vector3>();
 
         CachesLeft = UnityEngine.Random.Range(Config.InsurgencyMinStartingCaches, Config.InsurgencyMaxStartingCaches + 1);
         for (int i = 0; i < CachesLeft; i++)
             Caches.Add(new CacheData());
-        return base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad, token);
     }
-    protected override Task PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
+        token.CombineIfNeeded(UnloadToken);
         RallyManager.WipeAllRallies();
 
         SpawnNewCache();
@@ -223,15 +221,15 @@ public class Insurgency :
         else
             SpawnBlockerOnT2();
         StartStagingPhase(Config.InsurgencyStagingTime);
-        return base.PostGameStarting(isOnLoad);
+        return base.PostGameStarting(isOnLoad, token);
     }
-    public override Task DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner, CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         StartCoroutine(EndGameCoroutine(winner));
-        return base.DeclareWin(winner);
+        return base.DeclareWin(winner, token);
     }
     private IEnumerator<WaitForSeconds> TryDiscoverFirstCache()
     {
@@ -258,7 +256,7 @@ public class Insurgency :
 
         _endScreen = UCWarfare.I.gameObject.AddComponent<InsurgencyLeaderboard>();
         _endScreen.OnLeaderboardExpired = OnShouldStartNewGame;
-        _endScreen.SetShutdownConfig(shutdownAfterGame, shutdownMessage);
+        _endScreen.SetShutdownConfig(ShouldShutdownAfterGame, ShutdownMessage);
         _isScreenUp = true;
         _endScreen.StartLeaderboard(winner, _gameStats);
     }
@@ -273,7 +271,7 @@ public class Insurgency :
             Destroy(_endScreen);
         }
         _isScreenUp = false;
-        Task.Run(EndGame);
+        UCWarfare.RunTask(EndGame, UCWarfare.UnloadCancel, ctx: "Starting next gamemode.");
     }
     protected override void EventLoopAction()
     {
@@ -295,52 +293,9 @@ public class Insurgency :
         }
         base.OnPlayerDeath(e);
     }
-    public override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    protected override void InitUI(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (!KitManager.KitExists(player.KitName, out Kit kit) || kit.IsLimited(out _, out _, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out _, out _, player.GetTeam())))
-        {
-            if (!KitManager.TryGiveRiflemanKit(player))
-                KitManager.TryGiveUnarmedKit(player);
-        }
-        if (!AllowCosmetics)
-            player.SetCosmeticStates(false);
-
-        if (UCWarfare.Config.ModifySkillLevels)
-            Skillset.SetDefaultSkills(player);
-
-        StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
-        StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-        return base.PlayerInit(player, wasAlreadyOnline);
-    }
-    public override void OnJoinTeam(UCPlayer player, ulong newTeam)
-    {
-        OnPlayerJoinedTeam(player);
-        base.OnJoinTeam(player, newTeam);
-    }
-    private void OnPlayerJoinedTeam(UCPlayer player)
-    {
-        ulong team = player.GetTeam();
-        PlayerNames names = player.Name;
-        if (string.IsNullOrEmpty(player.KitName) && team is > 0 and < 3)
-        {
-            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
-                KitManager.GiveKit(player, unarmed);
-            else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
-            else L.LogWarning("Unable to give " + names.PlayerName + " a kit.");
-        }
-        _gameStats.OnPlayerJoin(player);
-        if (IsScreenUp && _endScreen != null)
-        {
-            _endScreen.OnPlayerJoined(player);
-        }
-        else
-        {
-            InsurgencyUI.SendCacheList(player);
-            TicketManager.SendUI(player);
-        }
+        InsurgencyUI.SendCacheList(player);
     }
     public override void OnGroupChanged(GroupChanged e)
     {
@@ -434,8 +389,12 @@ public class Insurgency :
 
         cache.SpawnAttackIcon();
 
+        for (int i = 0; i < Singletons.Count; ++i)
+        {
+            if (Singletons[i] is ICacheDiscoveredListener f)
+                f.OnCacheDiscovered(cache);
+        }
         TicketManager.UpdateUI(AttackingTeam);
-        VehicleSigns.OnFlagCaptured();
     }
     public void SpawnNewCache(bool message = false)
     {
@@ -444,8 +403,8 @@ public class Insurgency :
 #endif
         SerializableTransform[] viableSpawns = CacheSpawns
             .Where(c1 =>
-                !SeenCaches.Contains(c1.Position) &&
-                SeenCaches
+                !_seenCaches.Contains(c1.Position) &&
+                _seenCaches
                     .All(c => (c1.Position - c).sqrMagnitude > Math.Pow(300, 2)
                     )
                 )
@@ -482,7 +441,7 @@ public class Insurgency :
             d2.Activate(cache);
 
 
-        SeenCaches.Add(transform.Position);
+        _seenCaches.Add(transform.Position);
 
         if (message)
         {
@@ -554,11 +513,11 @@ public class Insurgency :
             .Where(x => x.GetTeam() == _attackTeam && (x.player.transform.position - cache.Position).sqrMagnitude < 10000f)
             .Select(x => x.playerID.steamID.m_SteamID).ToArray());
 
-        ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(AttackingTeam, 0) + " DESTROYED CACHE");
+        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(AttackingTeam, 0) + " DESTROYED CACHE");
 
         if (CachesLeft == 0)
         {
-            DeclareWin(AttackingTeam);
+            UCWarfare.RunTask(DeclareWin, AttackingTeam, UCWarfare.UnloadCancel, ctx: "Caches destroyed, attackers (team " + AttackingTeam + ") win.");
         }
         else
         {
@@ -610,7 +569,12 @@ public class Insurgency :
         }
         TicketManager.UpdateUI(1);
         TicketManager.UpdateUI(2);
-        VehicleSigns.OnFlagCaptured();
+
+        for (int i = 0; i < Singletons.Count; ++i)
+        {
+            if (Singletons[i] is ICacheDestroyedListener f)
+                f.OnCacheDestroyed(cache);
+        }
     }
     public override void ShowStagingUI(UCPlayer player)
     {
@@ -635,7 +599,10 @@ public class Insurgency :
             DestoryBlockerOnT2();
         StartCoroutine(TryDiscoverFirstCache());
     }
-
+    internal override bool CanRefillAmmoAt(ItemBarricadeAsset barricade)
+    {
+        return base.CanRefillAmmoAt(barricade) || Config.BarricadeInsurgencyCache.MatchGuid(barricade.GUID);
+    }
     internal void AddCacheSpawn(SerializableTransform transform)
     {
         CacheSpawns.Add(transform);
@@ -658,25 +625,25 @@ public class Insurgency :
         string img2 = TeamManager.Team2Faction.FlagImageURL;
         foreach (LanguageSet set in LanguageSet.All())
         {
-            string t1tickets;
-            string t2tickets;
+            string t1Tickets;
+            string t2Tickets;
             if (AttackingTeam == 1)
             {
-                t1tickets = T.WinUIValueTickets.Translate(set.Language, TicketManager.Team1Tickets);
+                t1Tickets = T.WinUIValueTickets.Translate(set.Language, TicketManager.Team1Tickets);
                 if (TicketManager.Team1Tickets <= 0)
-                    t1tickets = t1tickets.Colorize("969696");
-                t2tickets = T.WinUIValueCaches.Translate(set.Language, CachesLeft);
+                    t1Tickets = t1Tickets.Colorize("969696");
+                t2Tickets = T.WinUIValueCaches.Translate(set.Language, CachesLeft);
                 if (CachesLeft <= 0)
-                    t2tickets = t2tickets.Colorize("969696");
+                    t2Tickets = t2Tickets.Colorize("969696");
             }
             else
             {
-                t1tickets = T.WinUIValueCaches.Translate(set.Language, CachesLeft);
+                t1Tickets = T.WinUIValueCaches.Translate(set.Language, CachesLeft);
                 if (CachesLeft <= 0)
-                    t1tickets = t1tickets.Colorize("969696");
-                t2tickets = T.WinUIValueTickets.Translate(set.Language, TicketManager.Team2Tickets);
+                    t1Tickets = t1Tickets.Colorize("969696");
+                t2Tickets = T.WinUIValueTickets.Translate(set.Language, TicketManager.Team2Tickets);
                 if (TicketManager.Team2Tickets <= 0)
-                    t2tickets = t2tickets.Colorize("969696");
+                    t2Tickets = t2Tickets.Colorize("969696");
             }
             string header = T.WinUIHeaderWinner.Translate(set.Language, TeamManager.GetFactionSafe(winner)!);
             while (set.MoveNext())
@@ -685,8 +652,8 @@ public class Insurgency :
                 ITransportConnection c = set.Next.Connection;
                 WinToastUI.Team1Flag.SetImage(c, img1);
                 WinToastUI.Team2Flag.SetImage(c, img2);
-                WinToastUI.Team1Tickets.SetText(c, t1tickets);
-                WinToastUI.Team2Tickets.SetText(c, t2tickets);
+                WinToastUI.Team1Tickets.SetText(c, t1Tickets);
+                WinToastUI.Team2Tickets.SetText(c, t2Tickets);
                 WinToastUI.Header.SetText(c, header);
             }
         }
@@ -888,7 +855,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     public override void GetDisplayInfo(ulong team, out string message, out string tickets, out string bleed)
     {
         int b = GetTeamBleed(team);
-        bleed = b == 0 ? string.Empty : b.ToString(Data.Locale);
+        bleed = b == 0 ? string.Empty : b.ToString(Data.LocalLocale);
         // todo translations
         if (Data.Is(out Insurgency ins))
         {
@@ -926,16 +893,28 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
                 break;
         }
     }
+
+    public override void OnPlayerDeath(PlayerDied e)
+    {
+        if (!Data.Is(out Insurgency ins)) return;
+        if (e.DeadTeam != ins.AttackingTeam)
+            return;
+        if (e.DeadTeam == 1ul)
+            --Manager.Team1Tickets;
+        else if (e.DeadTeam == 2ul)
+            --Manager.Team2Tickets;
+    }
+
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
     {
         if (Data.Is(out Insurgency ins) && ins.DefendingTeam == team)
             throw new InvalidOperationException("Tried to change tickets of defending team during Insurgency.");
         if (oldValue > 0 && newValue <= 0)
-            _ = Data.Gamemode.DeclareWin(TeamManager.Other(team));
+            UCWarfare.RunTask(Data.Gamemode.DeclareWin, TeamManager.Other(team), default, ctx: "Lose game, attacker's tickets reached 0.");
     }
     public override void Tick()
     {
-        if (!Data.Gamemode.EveryXSeconds(20f) || !Data.Is(out Insurgency ins)) return;
+        if (Data.Gamemode == null || !Data.Gamemode.EveryXSeconds(20f) || !Data.Is(out Insurgency ins)) return;
         for (int i = 0; i < ins.ActiveCaches.Count; i++)
         {
             Insurgency.CacheData cache = ins.ActiveCaches[i];
