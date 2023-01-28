@@ -628,11 +628,11 @@ public static class TeamManager
     {
         FactionInfo? faction = GetFactionInfo(search);
         if (faction != null) return faction;
-        int index = F.StringSearch(_factions, x => x.Name, search);
+        int index = F.StringIndexOf(_factions, x => x.Name, search);
         if (index != -1) return _factions[index];
-        index = F.StringSearch(_factions, x => x.Abbreviation, search);
+        index = F.StringIndexOf(_factions, x => x.Abbreviation, search);
         if (index != -1) return _factions[index];
-        index = F.StringSearch(_factions, x => x.ShortName, search);
+        index = F.StringIndexOf(_factions, x => x.ShortName, search);
         return index != -1 ? _factions[index] : null;
     }
     internal static void ResetLocations()
@@ -1403,7 +1403,8 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     [FormatDisplay("Colored Abbreviation")]
     public const string FormatColorAbbreviation = "ac";
 
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null)
         {

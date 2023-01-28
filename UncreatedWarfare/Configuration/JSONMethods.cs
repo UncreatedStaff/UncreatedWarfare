@@ -349,6 +349,8 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
     public string key;
     public string display_name;
     public string[] values;
+    [JsonPropertyName("requires_imgui")]
+    public bool RequiresIMGUI;
     [JsonConstructor]
     public LanguageAliasSet(string key, string display_name, string[] values)
     {
@@ -371,6 +373,8 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
                     this.key = reader.GetString()!;
                 else if (prop == nameof(display_name))
                     this.display_name = reader.GetString()!;
+                else if (prop == "imgui")
+                    this.RequiresIMGUI = reader.TokenType != JsonTokenType.Null && reader.GetBoolean();
                 else if (prop == nameof(values) && reader.TokenType == JsonTokenType.StartArray)
                 {
                     List<string> tlist = new List<string>(24);
@@ -391,7 +395,8 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
     public const string FormatDisplayName = "d";
     [FormatDisplay("Key Code")]
     public const string FormatKey = "k";
-    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null && format.Equals(FormatKey, StringComparison.Ordinal))
             return key;
@@ -403,6 +408,7 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
         writer.WriteProperty(nameof(key), key);
         writer.WriteProperty(nameof(display_name), display_name);
         writer.WritePropertyName(nameof(values));
+        writer.WriteProperty("imgui", RequiresIMGUI);
         writer.WriteStartArray();
         for (int i = 0; i < values.Length; i++)
         {

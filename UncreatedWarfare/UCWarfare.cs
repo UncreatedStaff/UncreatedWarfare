@@ -389,42 +389,38 @@ public class UCWarfare : MonoBehaviour
 #endif
         player.OnLanguageChanged();
         EventDispatcher.InvokeUIRefreshRequest(player);
-        UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
-        Signs.UpdateAllSigns(ucplayer);
-        if (ucplayer == null) return;
+        Signs.UpdateAllSigns(player);
         if (Data.Is<TeamCTF>(out _))
         {
-            CTFUI.SendFlagList(ucplayer);
+            CTFUI.SendFlagList(player);
         }
         else if (Data.Is<Invasion>(out _))
         {
-            InvasionUI.SendFlagList(ucplayer);
+            InvasionUI.SendFlagList(player);
         }
         else if (Data.Is<Insurgency>())
         {
-            InsurgencyUI.SendCacheList(ucplayer);
+            InsurgencyUI.SendCacheList(player);
         }
         if (Data.Is<ISquads>(out _))
         {
-            if (ucplayer.Squad == null)
-                SquadManager.SendSquadList(ucplayer);
+            if (player.Squad == null)
+                SquadManager.SendSquadList(player);
             else
             {
-                SquadManager.SendSquadMenu(ucplayer, ucplayer.Squad);
-                SquadManager.UpdateMemberList(ucplayer.Squad);
-                if (RallyManager.HasRally(ucplayer.Squad, out RallyPoint p))
-                    p.ShowUIForPlayer(ucplayer);
+                SquadManager.SendSquadMenu(player, player.Squad);
+                SquadManager.UpdateMemberList(player.Squad);
+                if (RallyManager.HasRally(player.Squad, out RallyPoint p))
+                    p.ShowUIForPlayer(player);
             }
         }
         if (Data.Is<IFOBs>(out _))
-            FOBManager.SendFOBList(ucplayer);
+            FOBManager.SendFOBList(player);
         if (Data.Gamemode.ShowXPUI)
-            Points.UpdateXPUI(ucplayer);
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-        {
-            if (PlayerManager.OnlinePlayers[i].Player.TryGetComponent(out ZonePlayerComponent comp))
-                comp.ReloadLang();
-        }
+            Points.UpdateXPUI(player);
+
+        if (player.Player.TryGetComponent(out ZonePlayerComponent comp))
+            comp.ReloadLang();
 
         if (TraitManager.Loaded)
         {

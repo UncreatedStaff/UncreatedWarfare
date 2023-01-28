@@ -3,6 +3,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -94,15 +95,17 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private bool _lastMuted;
     private float _multCache = 1f;
     private string? _lang;
+    private CultureInfo? _locale;
     private EAdminType? _pLvl;
     private RankData? _rank;
     private PlayerNames _cachedName;
-    public UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc)
+    public UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save)
     {
         Steam64 = steamID.m_SteamID;
         Squad = null;
         Player = player;
         CSteamID = steamID;
+        Save = save;
         if (!Data.OriginalPlayerNames.TryGetValue(Steam64, out _cachedName))
             _cachedName = new PlayerNames(player);
         else Data.OriginalPlayerNames.Remove(Steam64);
@@ -140,7 +143,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         NickName,
         PlayerName
     }
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is null) goto end;
         if (format.Equals(CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
@@ -170,6 +174,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool HasKit => ActiveKit?.Item is not null;
     bool IEquatable<UCPlayer>.Equals(UCPlayer other) => other == this || other.Steam64 == Steam64; 
     public SteamPlayer SteamPlayer => Player.channel.owner;
+    public PlayerSave Save { get; }
     public Player Player { get; internal set; }
     public CSteamID CSteamID { get; internal set; }
     public ITransportConnection Connection => Player.channel.owner.transportConnection!;
@@ -179,6 +184,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool IsTeam1 => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
     public bool IsTeam2 => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
     public string Language => _lang ??= Localization.GetLang(Steam64);
+    public CultureInfo Culture => _locale ??= LanguageAliasSet.GetCultureInfo(Language);
     public bool IsTalking => !_lastMuted && _isTalking && IsOnline;
     public bool IsLeaving => _isLeaving;
     public bool IsOnline => _isOnline;
@@ -775,7 +781,12 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         _rank = new RankData((int)xp);
         CachedCredits = (int)credits;
     }
-    internal void OnLanguageChanged() => _lang = null;
+    internal void OnLanguageChanged()
+    {
+        _lang = null;
+        _locale = null;
+    }
+
     private class EqualityComparer : IEqualityComparer<UCPlayer>
     {
         bool IEqualityComparer<UCPlayer>.Equals(UCPlayer x, UCPlayer y) => x == y || x.Steam64 == y.Steam64;
@@ -810,7 +821,8 @@ public struct OfflinePlayer : IPlayer
     {
         _names = await F.GetPlayerOriginalNamesAsync(_s64).ConfigureAwait(false);
     }
-    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is null) goto end;
 
@@ -863,14 +875,14 @@ public class UCPlayerLocale // todo implement
 
 public class PlayerSave
 {
-    public const uint CURRENT_DATA_VERSION = 1;
+    public const uint DataVersion = 2;
     public readonly ulong Steam64;
     [CommandSettable]
     public ulong Team;
     [CommandSettable]
-    public string KitName;
+    public string? KitName;
     [CommandSettable]
-    public string SquadName;
+    public string? SquadName;
     [CommandSettable]
     public bool HasQueueSkip;
     [CommandSettable]
@@ -879,6 +891,8 @@ public class PlayerSave
     public bool ShouldRespawnOnJoin;
     [CommandSettable]
     public bool IsOtherDonator;
+    [CommandSettable]
+    public bool IMGUI;
     public PlayerSave(ulong s64)
     {
         this.Steam64 = s64;
@@ -887,6 +901,17 @@ public class PlayerSave
         SquadName = string.Empty;
         HasQueueSkip = false;
         LastGame = 0;
+        ShouldRespawnOnJoin = false;
+        IsOtherDonator = false;
+    }
+    public PlayerSave(UCPlayer player)
+    {
+        this.Steam64 = player.Steam64;
+        Team = player.GetTeam();
+        KitName = player.ActiveKit?.Item?.Id;
+        SquadName = player.Squad?.Name;
+        HasQueueSkip = false;
+        LastGame = Data.Gamemode == null ? 0 : Data.Gamemode.GameID;
         ShouldRespawnOnJoin = false;
         IsOtherDonator = false;
     }
@@ -921,7 +946,7 @@ public class PlayerSave
     public static void WriteToSaveFile(PlayerSave save)
     {
         Block block = new Block();
-        block.writeUInt32(CURRENT_DATA_VERSION);
+        block.writeUInt32(DataVersion);
         block.writeByte((byte)save.Team);
         block.writeString(save.KitName);
         block.writeString(save.SquadName);
@@ -929,12 +954,25 @@ public class PlayerSave
         block.writeInt64(save.LastGame);
         block.writeBoolean(save.ShouldRespawnOnJoin);
         block.writeBoolean(save.IsOtherDonator);
+        block.writeBoolean(save.IMGUI);
         ServerSavedata.writeBlock(GetPath(save.Steam64), block);
     }
-    public static bool HasPlayerSave(ulong player) => ServerSavedata.fileExists(GetPath(player));
+    public static bool HasPlayerSave(ulong player)
+    {
+        return PlayerManager.FromID(player) is not null || ServerSavedata.fileExists(GetPath(player));
+    }
+
     public static bool TryReadSaveFile(ulong player, out PlayerSave save)
     {
+        UCPlayer? pl = PlayerManager.FromID(player);
         string path = GetPath(player);
+        if (pl?.Save != null)
+        {
+            save = pl.Save;
+            if (!ServerSavedata.fileExists(path))
+                WriteToSaveFile(save);
+            return true;
+        }
         if (!ServerSavedata.fileExists(path))
         {
             save = null!;
@@ -952,6 +990,10 @@ public class PlayerSave
             save.LastGame = block.readInt64();
             save.ShouldRespawnOnJoin = block.readBoolean();
             save.IsOtherDonator = block.readBoolean();
+            if (dv > 1)
+            {
+                save.IMGUI = block.readBoolean();
+            }
         }
         else
         {

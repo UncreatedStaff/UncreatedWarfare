@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -713,7 +714,8 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
     public const string FormatOrderLevel = "lo";
     [FormatDisplay("Colored Order with L-Prefix")]
     public const string FormatColorOrderLevel = "lco";
-    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null && !format.Equals(FormatName, StringComparison.Ordinal))
         {

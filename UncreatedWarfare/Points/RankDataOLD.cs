@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
 
@@ -214,7 +215,8 @@ public readonly struct RankData : ITranslationArgument
     public const string FormatAbbreviation = "a";
     [FormatDisplay("Name")]
     public const string FormatName = "n";
-    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null)
         {

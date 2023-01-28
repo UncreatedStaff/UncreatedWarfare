@@ -206,7 +206,7 @@ internal static class T
     public static readonly Translation<ItemAsset> ProhibitedStoring = new Translation<ItemAsset>("<#fa9e9e>You are not allowed to store {0}.", FormatRarityColor + FormatPlural);
     
     [TranslationData(SectionPlayers, "Sent when a player tries to point or mark while not a squad leader.")]
-    public static readonly Translation MarkerNotInSquad = new Translation("<#fa9e9e>Only your squad can see markers, you must be a squad leader to use this feature. Create a squad with <color=#cedcde>/squad create</color> to use this feature.");
+    public static readonly Translation MarkerNotInSquad = new Translation("<#fa9e9e>Only your squad can see markers. Create a squad with <color=#cedcde>/squad create</color> to use this feature.");
     
     [TranslationData(SectionPlayers, "Sent on a SEVERE toast when the player enters enemy territory.", "Seconds until death")]
     public static readonly Translation<string> EnteredEnemyTerritory = new Translation<string>("Too close to enemy base! You will die in <#cedcde>{0}</color>!", TranslationFlags.UnityUI);
@@ -584,6 +584,16 @@ internal static class T
     
     [TranslationData(SectionLanguages, "Output from /lang <language> when the language isn't found.", "Input language")]
     public static readonly Translation<string> LanguageNotFound          = new Translation<string>("<#dd1111>We don't have translations for <#e6e3d5>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations.", LanguageAliasSet.FormatDisplayName);
+
+    [TranslationData(SectionLanguages, "Tells the player that IMGUI is recommended for this language and how to enable it (part 1).", "Language id")]
+    public static readonly Translation<LanguageAliasSet> IMGUITip1       = new Translation<LanguageAliasSet>("<#f53b3b>{0} recommends using IMGUI mode. do <#fff>/options imgui true</color>...");
+    [TranslationData(SectionLanguages, "Tells the player that IMGUI is recommended for this language and how to enable it (part 2).")]
+    public static readonly Translation IMGUITip2                         = new Translation("<#f53b3b>... go to your steam launch options and add <#fff>-Glazier IMGUI</color> to them.");
+
+    [TranslationData(SectionLanguages, "Tells the player that IMGUI is not recommended for this language and how to enable it (part 1).", "Language id")]
+    public static readonly Translation<LanguageAliasSet> NoIMGUITip1     = new Translation<LanguageAliasSet>("<#f53b3b>{0} recommends not using IMGUI mode. do <#fff>/options imgui false</color>...");
+    [TranslationData(SectionLanguages, "Tells the player that IMGUI is not recommended for this language and how to enable it (part 2).")]
+    public static readonly Translation NoIMGUITip2 = new Translation("<#f53b3b>... go to your steam launch options and remove <#fff>-Glazier IMGUI</color>.");
     #endregion
 
     #region Toasts
@@ -663,7 +673,7 @@ internal static class T
     public static readonly Translation SquadUnlockedSquad           = new Translation("<#999e90>You <#fff>unlocked</color> your squad.");
     public static readonly Translation<Squad> SquadPromoted         = new Translation<Squad>("<#999e90>You're now the <#cedcde>sqauad leader</color> of {0}.", Squad.FormatColorName);
     public static readonly Translation<Squad> SquadKicked           = new Translation<Squad>("<#ae8f8f>You were kicked from {0} squad.", Squad.FormatColorName);
-    public static readonly Translation<string> SquadNotFound        = new Translation<string>("<#ae8f8f>Failed to find a squad called <#c$neutral$>\"{0}\"</color>. You can also use the first letter of the squad name.");
+    public static readonly Translation<string> SquadNotFound        = new Translation<string>("<#ae8f8f>Failed to find a squad called \"<#c$neutral$>{0}</color>\". You can also use the first letter of the squad name.");
     public static readonly Translation SquadAlreadyInSquad          = new Translation("<#ae8f8f>You're already in a squad.");
     public static readonly Translation SquadNotInSquad              = new Translation("<#ae8f8f>You're not in a squad yet. Use <#ae8f8f>/squad join <squad></color> to join a squad.");
     public static readonly Translation SquadNotSquadLeader          = new Translation("<#ae8f8f>You're not the leader of your squad.");
@@ -808,7 +818,7 @@ internal static class T
     public static readonly Translation DeployAlreadyActive                  = new Translation("<#b5a591>You're already deploying somewhere.");
     public static readonly Translation<Cooldown> DeployInCombat             = new Translation<Cooldown>("<#ffaa42>You are in combat, soldier! You can deploy in another: <#e3987f>{0}</color>.", Cooldown.FormatTimeLong);
     public static readonly Translation DeployInjured                        = new Translation("<#ffaa42>You can not deploy while injured, get a medic to revive you or give up.");
-    public static readonly Translation DeployLobbyRemoved                   = new Translation("<#fae69c>The lobby has been removed, use  <#e3c27f>/teams</color> to switch teams instead.");
+    public static readonly Translation DeployLobbyRemoved                   = new Translation("<#fae69c>The lobby has been removed, use <#e3c27f>/teams</color> to switch teams instead.");
     #endregion
 
     #region Ammo
@@ -2084,6 +2094,19 @@ internal static class T
     // spec ops
     [TranslationData(SectionKitMenuUI, "Label that goes in front of night vision kills for Special Ops in kit stats.")]
     public static readonly Translation KitMenuUISpecOpsNVGKillsLabel = new Translation("NVG Kills (Night)", TranslationFlags.TMProUI);
+    #endregion
+
+    #region Options
+    private const string SectionOptions = "Options";
+
+    [TranslationData(SectionOptions, "Sent to the caller when the value given for the option is not parsable.", "Option name", "Type expected")]
+    public static readonly Translation<string, Type> OptionsInvalidValue = new Translation<string, Type>("<#ff8c69>Expected a <#ddd>{1}</color> value for option <#ddd>{0}</color>.");
+
+    [TranslationData(SectionOptions, "Sent to the caller when the value given for the option is already set.", "Option name", "Value of option")]
+    public static readonly Translation<string, string> OptionsAlreadySet = new Translation<string, string>("<#ff8c69>Option <#ddd>{0}</color> is already set to <#ddd>{1}</color>.");
+
+    [TranslationData(SectionOptions, "Sent to the caller when the value given for the option is set.", "Option name", "Value of option")]
+    public static readonly Translation<string, string> OptionsSet = new Translation<string, string>("<#ff8c69>Option <#ddd>{0}</color> sucessfully set to <#ddd>{1}</color>.");
     #endregion
 
     [FormatDisplay(typeof(object), "Plural")]

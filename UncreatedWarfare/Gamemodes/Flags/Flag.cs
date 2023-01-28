@@ -2,6 +2,7 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -533,6 +534,7 @@ public class Flag : IDisposable, IObjective
     [FormatDisplay(typeof(Zone), "Short Name")]
     public const string SHORT_NAME_DISCOVER_FORMAT = "sd";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target,
+        CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is null) goto end;

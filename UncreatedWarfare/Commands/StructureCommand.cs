@@ -339,7 +339,7 @@ public class StructureCommand : AsyncCommand
             }
         }
     }
-    private async Task ExamineBarricade(BarricadeDrop bdrop, Player player, bool sendurl, CancellationToken token = default)
+    private async Task ExamineBarricade(BarricadeDrop bdrop, UCPlayer player, bool sendurl, CancellationToken token = default)
     {
         ThreadUtil.assertIsGameThread();
         if (bdrop != null)
@@ -355,7 +355,7 @@ public class StructureCommand : AsyncCommand
             await UCWarfare.ToUpdate(token);
             if (sendurl)
             {
-                player.channel.owner.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player.channel.owner.playerID.steamID.m_SteamID, data.barricade.asset,
+                player.SteamPlayer.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player, data.barricade.asset,
                         names, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
             }
             else
@@ -369,7 +369,7 @@ public class StructureCommand : AsyncCommand
             player.SendChat(T.StructureExamineNotExaminable);
         }
     }
-    private async Task ExamineStructure(StructureDrop sdrop, Player player, bool sendurl, CancellationToken token = default)
+    private async Task ExamineStructure(StructureDrop sdrop, UCPlayer player, bool sendurl, CancellationToken token = default)
     {
         ThreadUtil.assertIsGameThread();
         if (sdrop != null)
@@ -384,7 +384,7 @@ public class StructureCommand : AsyncCommand
             await UCWarfare.ToUpdate(token);
             if (sendurl)
             {
-                player.channel.owner.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player.channel.owner.playerID.steamID.m_SteamID, data.structure.asset, names,
+                player.SteamPlayer.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player, data.structure.asset, names,
                         Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
             }
             else

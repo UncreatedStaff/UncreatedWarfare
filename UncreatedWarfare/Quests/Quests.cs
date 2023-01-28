@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 
@@ -99,7 +100,8 @@ public abstract class BaseQuestData : ITranslationArgument
     [FormatDisplay(typeof(QuestAsset), "Quest Name")]
     /// <summary>For <see cref="QuestAsset"/> formatting.</summary>
     public const string COLOR_QUEST_ASSET_FORMAT = "c";
-    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null)
         {

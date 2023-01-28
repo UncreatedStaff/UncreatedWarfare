@@ -198,7 +198,7 @@ public static partial class Patches
                         return false;
                 }
             }
-            else if (mode != EChatMode.GLOBAL || mode != EChatMode.LOCAL || mode != EChatMode.GROUP) return false;
+            else if (mode is not EChatMode.GLOBAL and not EChatMode.LOCAL and not EChatMode.GROUP) return false;
             if (fromUnityEvent)
                 L.Log($"UnityEventMsg {callingPlayer.playerID.steamID}: \"{text}\"", ConsoleColor.DarkCyan);
             ulong team = callingPlayer.GetTeam();
@@ -234,48 +234,79 @@ public static partial class Patches
                 }
             }
 
+            int txtType;
+            string newText;
+            string? imgui = null;
             if (callingPlayer.isAdmin || duty)
-                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: " + text;
+            {
+                txtType = 1;
+                newText = "<#" + Teams.TeamManager.AdminColorHex + ">%SPEAKER%</color>: " + text;
+            }
             else if (caller != null && SquadManager.Loaded && SquadManager.Singleton.Commanders.IsCommander(caller))
-                text = "<color=#" + UCWarfare.GetColorHex("commander") + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", string.Empty);
+            {
+                txtType = 2;
+                newText = "<#" + UCWarfare.GetColorHex("commander") + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", string.Empty);
+            }
             else
-                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(team) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", string.Empty);
-
-            if (mode == EChatMode.GROUP)
-                text = "[T] " + text;
-
+            {
+                txtType = 3;
+                string hx = Teams.TeamManager.GetTeamHexColor(team);
+                newText = "<#" + hx + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", string.Empty);
+            }
+            string GetIMGUIText()
+            {
+                return txtType switch
+                {
+                    1 => "<color=#" + Teams.TeamManager.AdminColorHex + ">%SPEAKER%</color>: " + text,
+                    2 => "<color=#" + UCWarfare.GetColorHex("commander") + ">%SPEAKER%</color>: " + text.Replace('<', '{').Replace('>', '}'),
+                    _ => "<color=#" + Teams.TeamManager.GetTeamHexColor(team) + ">%SPEAKER%</color>: " + text.Replace('<', '{').Replace('>', '}')
+                };
+            }
             if (mode == EChatMode.GLOBAL)
-                ChatManager.serverSendMessage(text, chatted, callingPlayer, mode: EChatMode.GLOBAL, useRichTextFormatting: isRich);
+            {
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                {
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    ChatManager.serverSendMessage(pl.Save.IMGUI ? (imgui ??= GetIMGUIText()) : newText, chatted, callingPlayer,
+                        pl.Player.channel.owner, EChatMode.GLOBAL, useRichTextFormatting: true);
+                }
+            }
             else if (mode == EChatMode.LOCAL)
             {
-                float num = 16384f;
+                const float num = 16384f;
+                Vector3 pos = callingPlayer.player.transform.position;
                 if (caller == null || caller.Squad == null || caller.Squad.Members == null)
                 {
-                    foreach (SteamPlayer client in Provider.clients)
+                    newText = "[A] " + newText;
+                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                     {
-                        if (client.player != null && (double)(client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num)
-                            ChatManager.serverSendMessage("[A] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
+                        UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                        if ((double)(pl.Position - pos).sqrMagnitude < num)
+                            ChatManager.serverSendMessage(pl.Save.IMGUI ? (imgui ??= "[A] " + GetIMGUIText()) : newText, chatted, callingPlayer, pl.Player.channel.owner, EChatMode.LOCAL, useRichTextFormatting: isRich);
                     }
                 }
                 else
                 {
-                    foreach (SteamPlayer client in Provider.clients)
+                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                     {
-                        if (caller.Squad.Members.Exists(x => x.Steam64 == client.playerID.steamID.m_SteamID))
-                            ChatManager.serverSendMessage("[SQ] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
-                        else if (client.player != null && (client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num)
-                            ChatManager.serverSendMessage("[A] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
+                        UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                        if (caller.Squad.ContainsMember(pl))
+                            ChatManager.serverSendMessage("[SQ] " + (pl.Save.IMGUI ? (imgui ??= GetIMGUIText()) : newText), chatted, callingPlayer, pl.Player.channel.owner, EChatMode.LOCAL, useRichTextFormatting: isRich);
+                        else if ((pl.Position - pos).sqrMagnitude < num)
+                            ChatManager.serverSendMessage("[A] "  + (pl.Save.IMGUI ? (imgui ??= GetIMGUIText()) : newText), chatted, callingPlayer, pl.Player.channel.owner, EChatMode.LOCAL, useRichTextFormatting: isRich);
                     }
                 }
             }
             else
             {
-                if (mode != EChatMode.GROUP || callingPlayer.player.quests.groupID == CSteamID.Nil)
+                if (!callingPlayer.player.quests.isMemberOfAGroup)
                     return false;
-                foreach (SteamPlayer client in Provider.clients)
+                newText = "[T] " + newText;
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                 {
-                    if (client.player.quests.isMemberOfSameGroupAs(callingPlayer.player))
-                        ChatManager.serverSendMessage(text, chatted, callingPlayer, client, EChatMode.GROUP, useRichTextFormatting: isRich);
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    if (pl.Player.quests.isMemberOfSameGroupAs(callingPlayer.player))
+                        ChatManager.serverSendMessage(pl.Save.IMGUI ? (imgui ??= "[T] " + GetIMGUIText()) : newText, chatted, callingPlayer, pl.Player.channel.owner, EChatMode.GROUP, useRichTextFormatting: isRich);
                 }
             }
             Data.Reporter?.OnPlayerChat(callingPlayer.playerID.steamID.m_SteamID, text);

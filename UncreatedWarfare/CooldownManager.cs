@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Configuration;
@@ -179,7 +180,8 @@ public class Cooldown : ITranslationArgument
     [FormatDisplay("Short Time (3h 40m)")]
     /// <summary>3h 4m 20s</summary>
     public const string FormatTimeShort = "tl2";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (!string.IsNullOrEmpty(format))
         {

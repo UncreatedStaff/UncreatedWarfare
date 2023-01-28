@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -679,7 +680,8 @@ public class Insurgency :
         {
             Cache = cache;
         }
-        public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => ((ITranslationArgument)Cache).Translate(language, format, target, ref flags);
+        public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+            ref TranslationFlags flags) => ((ITranslationArgument)Cache).Translate(language, format, target, culture, ref flags);
         public bool CheckDeployable(UCPlayer player, CommandInteraction? ctx) => ((IDeployable)Cache).CheckDeployable(player, ctx);
         public bool CheckDeployableTick(UCPlayer player, bool chat) => ((IDeployable)Cache).CheckDeployableTick(player, chat);
         public void OnDeploy(UCPlayer player, bool chat) => ((IDeployable)Cache).OnDeploy(player, chat);

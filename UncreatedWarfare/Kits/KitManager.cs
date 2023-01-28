@@ -194,7 +194,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
-            int index = F.StringSearch(List, x => x.Item?.Id, id, exactMatchOnly);
+            int index = F.StringIndexOf(List, x => x.Item?.Id, id, exactMatchOnly);
             return index == -1 ? null : List[index];
         }
         finally
@@ -241,7 +241,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         WriteWait();
         try
         {
-            int index = F.StringSearch(List, x => x.Item?.Id, id, exactMatchOnly);
+            int index = F.StringIndexOf(List, x => x.Item?.Id, id, exactMatchOnly);
             return index == -1 ? null : List[index];
         }
         finally
@@ -1702,7 +1702,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     }
     void IGameTickListener.Tick()
     {
-        if (Data.Gamemode.EveryMinute)
+        if (Data.Gamemode.EveryMinute && Provider.clients.Count > 0)
         {
             UCWarfare.RunTask(SaveAllPlayerFavorites, ctx: "Save all players' favorite kits.");
         }

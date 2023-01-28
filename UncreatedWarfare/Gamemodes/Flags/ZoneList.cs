@@ -82,7 +82,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>
         WriteWait();
         try
         {
-            int index = F.StringSearch(List, x => x.Item?.Name, name, true);
+            int index = F.StringIndexOf(List, x => x.Item?.Name, name, true);
             if (index < 0)
             {
                 takenName = name;
@@ -102,10 +102,10 @@ public sealed class ZoneList : ListSqlSingleton<Zone>
         WriteWait();
         try
         {
-            int index = F.StringSearch(List, x => x.Item?.Name, term, false);
+            int index = F.StringIndexOf(List, x => x.Item?.Name, term, false);
             if (index < 0)
             {
-                index = F.StringSearch(List, x => x.Item?.ShortName, term, false);
+                index = F.StringIndexOf(List, x => x.Item?.ShortName, term, false);
                 if (index < 0)
                     goto checkPredefs;
             }

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
-using SteamGameServerNetworkingUtils = SDG.Unturned.SteamGameServerNetworkingUtils;
 
 namespace Uncreated.Warfare.Commands.VanillaRework;
 
@@ -37,7 +36,7 @@ public class BanCommand : AsyncCommand
         if (target is not null && target.IsOnline) // player is online
         {
             CSteamID id = target.Player.channel.owner.playerID.steamID;
-            ipv4 = SteamGameServerNetworkingUtils.getIPv4AddressOrZero(id);
+            target.Player.channel.owner.transportConnection.TryGetIPv4Address(out ipv4);
             name = target.Name;
             Provider.requestBanPlayer(Provider.server, id, ipv4, hwids, reason, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration));
         }

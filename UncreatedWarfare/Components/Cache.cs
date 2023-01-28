@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
@@ -172,7 +173,8 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
 
         Destroy(gameObject, 2);
     }
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null)
         {

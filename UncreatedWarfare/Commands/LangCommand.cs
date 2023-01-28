@@ -10,6 +10,7 @@ public class LangCommand : Command
     private const string Syntax = "/lang [current|reset|*language*]";
     private const string Help = "Switch your language to some of our supported languages.";
     public static event LanguageChanged? OnPlayerChangedLanguage;
+
     public LangCommand() : base("lang", EAdminType.MEMBER) { }
 
     public override void Execute(CommandInteraction ctx)
@@ -54,9 +55,7 @@ public class LangCommand : Command
                 if (oldSet.key.Equals(L.Default, StringComparison.Ordinal))
                     throw ctx.Reply(T.LangAlreadySet, set);
 
-                JSONMethods.SetLanguage(ctx.CallerID, L.Default);
-                ctx.LogAction(ActionLogType.ChangeLanguage, oldLang + " >> " + L.Default);
-                OnPlayerChangedLanguage?.Invoke(ctx.Caller, set, oldSet);
+                InvokePlayerChangedLanguage(ctx, set, oldSet);
                 ctx.Reply(T.ResetLanguage, set);
             }
             else throw ctx.Reply(T.LangAlreadySet, set);
@@ -74,15 +73,29 @@ public class LangCommand : Command
             {
                 if (newSet.key.Equals(oldLang, StringComparison.OrdinalIgnoreCase))
                     throw ctx.Reply(T.LangAlreadySet, oldSet);
-
-                JSONMethods.SetLanguage(ctx.CallerID, newSet.key);
-                ctx.LogAction(ActionLogType.ChangeLanguage, oldLang + " >> " + newSet.key);
-                OnPlayerChangedLanguage?.Invoke(ctx.Caller, newSet, oldSet);
+                
+                InvokePlayerChangedLanguage(ctx, newSet, oldSet);
                 ctx.Reply(T.ChangedLanguage, newSet);
             }
             else throw ctx.Reply(T.LanguageNotFound, input);
         }
         else throw ctx.Reply(T.ResetLanguageHow);
+    }
+    private static void InvokePlayerChangedLanguage(CommandInteraction ctx, LanguageAliasSet newSet, LanguageAliasSet oldSet)
+    {
+        JSONMethods.SetLanguage(ctx.CallerID, newSet.key);
+        ctx.LogAction(ActionLogType.ChangeLanguage, oldSet.key + " >> " + newSet.key);
+        if (ctx.Caller.Save.IMGUI && !newSet.RequiresIMGUI)
+        {
+            ctx.Reply(T.NoIMGUITip1, newSet);
+            ctx.Reply(T.NoIMGUITip2);
+        }
+        else if (!ctx.Caller.Save.IMGUI && newSet.RequiresIMGUI)
+        {
+            ctx.Reply(T.IMGUITip1, newSet);
+            ctx.Reply(T.IMGUITip2);
+        }
+        OnPlayerChangedLanguage?.Invoke(ctx.Caller, newSet, oldSet);
     }
 }
 public delegate void LanguageChanged(UCPlayer player, LanguageAliasSet newLanguage, LanguageAliasSet oldLanguage);

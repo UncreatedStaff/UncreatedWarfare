@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.SQL;
@@ -767,7 +768,16 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
 
     public bool IsFull() => Members.Count >= 6;
     public bool IsNotSolo() => Members.Count > 1;
+    public bool ContainsMember(IPlayer player)
+    {
+        for (int i = 0; i < Members.Count; ++i)
+        {
+            if (Members[i].Steam64 == player.Steam64)
+                return true;
+        }
 
+        return false;
+    }
     IEnumerator IEnumerable.GetEnumerator() => Members.GetEnumerator();
     public IEnumerator<ITransportConnection> EnumerateMembers()
     {
@@ -781,7 +791,8 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     [FormatDisplay("Squad Name")]
     public const string FormatName = "n";
 
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) =>
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags) =>
         FormatColorName.Equals(format, StringComparison.Ordinal)
             ? Localization.Colorize(Teams.TeamManager.GetTeamHexColor(Team), Name, flags)
             : Name;

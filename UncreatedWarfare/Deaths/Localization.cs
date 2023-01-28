@@ -264,7 +264,7 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.None, "{0} was pummeled to death."),
                 new DeathTranslation(DeathFlags.Killer, "{1} punched {0} to death."),
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being pummeled."),
-                new DeathTranslation(DeathFlags.Killer, "{0} bled out after being punched by {1}.")
+                new DeathTranslation(DeathFlags.Killer | DeathFlags.Bleeding, "{0} bled out after being punched by {1}.")
             }
         },
         new DeathCause(EDeathCause.ROADKILL)
@@ -417,7 +417,7 @@ internal static class Localization
             Translations = new DeathTranslation[]
             {
                 new DeathTranslation(DeathFlags.None, "{0} was mauled by a zombie."),
-                new DeathTranslation(DeathFlags.None, "{0} bled out after being mauled by a zombie.")
+                new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being mauled by a zombie.")
             }
         },
         new DeathCause()

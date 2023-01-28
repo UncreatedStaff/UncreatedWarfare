@@ -66,21 +66,13 @@ public class TeleportCommand : Command
                         throw ctx.Reply(T.TeleportSelfWaypointSuccess, location);
                     throw ctx.Reply(T.TeleportSelfWaypointObstructed, location);
                 }
-
-                LocationNode? n = null;
+                
                 string input = ctx.GetRange(0)!;
-                foreach (LocationNode node in LevelNodes.nodes.OfType<LocationNode>().OrderBy(node => node.name.Length))
-                {
-                    if (node.name.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
-                    {
-                        n = node;
-                        break;
-                    }
-                }
-
+                LocationDevkitNode? n = F.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes(), loc => loc.locationName, loc => loc.locationName.Length, input);
                 if (n is null)
                     throw ctx.Reply(T.TeleportLocationNotFound, input);
-                if (ctx.Caller.Player.teleportToLocation(new Vector3(n.point.x, F.GetTerrainHeightAt2DPoint(n.point.x, n.point.z, 1f), n.point.z), 0f))
+                pos = n.transform.position;
+                if (ctx.Caller.Player.teleportToLocation(new Vector3(pos.x, F.GetTerrainHeightAt2DPoint(pos.x, pos.z, 1f), pos.z), 0f))
                     throw ctx.Reply(T.TeleportSelfLocationSuccess, n.name);
                 throw ctx.Reply(T.TeleportSelfLocationObstructed, n.name);
             case 2:
@@ -131,20 +123,13 @@ public class TeleportCommand : Command
                             throw ctx.Reply(T.TeleportSelfWaypointSuccess, location);
                         throw ctx.Reply(T.TeleportSelfWaypointObstructed, location);
                     }
-                    n = null;
                     input = ctx.GetRange(1)!;
-                    foreach (LocationNode node in LevelNodes.nodes.OfType<LocationNode>().OrderBy(node => node.name.Length))
-                    {
-                        if (node.name.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
-                        {
-                            n = node;
-                            break;
-                        }
-                    }
+                    n = F.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes(), loc => loc.locationName, loc => loc.locationName.Length, input);
 
                     if (n is null)
                         throw ctx.Reply(T.TeleportLocationNotFound, input);
-                    if (target.Player.teleportToLocation(new Vector3(n.point.x, F.GetTerrainHeightAt2DPoint(n.point.x, n.point.z, 1f), n.point.z), 0f))
+                    pos = n.transform.position;
+                    if (target.Player.teleportToLocation(new Vector3(pos.x, F.GetTerrainHeightAt2DPoint(pos.x, pos.z, 1f), pos.z), 0f))
                     {
                         target.SendChat(T.TeleportSelfLocationSuccess, n.name);
                         throw ctx.Reply(T.TeleportOtherSuccessLocation, target, n.name);
