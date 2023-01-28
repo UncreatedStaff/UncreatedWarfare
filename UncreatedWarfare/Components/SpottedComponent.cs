@@ -432,7 +432,7 @@ public class SpottedComponent : MonoBehaviour
         if (IsActive)
             return;
 
-        ToastMessage.QueueMessage(spotter, new ToastMessage(T.SpottedToast.Translate(spotter), EToastMessageSeverity.MINI), true);
+        ToastMessage.QueueMessage(spotter, new ToastMessage(T.SpottedToast.Translate(spotter), ToastMessageSeverity.Mini), true);
 
         ulong t = spotter.GetTeam();
         Color t1 = Teams.TeamManager.GetTeamColor(t);

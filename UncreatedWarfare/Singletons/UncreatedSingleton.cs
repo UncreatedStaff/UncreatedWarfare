@@ -43,7 +43,6 @@ public interface IQuestCompletedHandlerAsync
     /// <returns>Whether the quest was handled and execution should be stopped.</returns>
     Task OnQuestCompleted(QuestCompleted e, CancellationToken token);
 }
-
 public interface IQuestCompletedListener
 {
     void OnQuestCompleted(QuestCompleted e);
@@ -52,17 +51,14 @@ public interface IQuestCompletedListenerAsync
 {
     Task OnQuestCompleted(QuestCompleted e, CancellationToken token);
 }
-
 public interface ITimeSyncListener
 {
     void TimeSync(float time);
 }
-
 public interface IGameTickListener
 {
     void Tick();
 }
-
 public interface IDeclareWinListener
 {
     void OnWinnerDeclared(ulong winner);
@@ -99,7 +95,6 @@ public interface ICraftingSettingsOverride
 {
     void OnCraftRequested(CraftRequested e);
 }
-
 public interface IFlagNeutralizedListener
 {
     void OnFlagNeutralized(Flag flag, ulong newOwner, ulong oldOwner);

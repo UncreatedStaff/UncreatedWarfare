@@ -1195,9 +1195,9 @@ internal static class T
     #endregion
 
     #region Vehicle Deaths
-    public static readonly Translation<IPlayer, VehicleAsset, string, float> VehicleDestroyed = new Translation<IPlayer, VehicleAsset, string, float>("<#c$death_background$>{0} took out a {1} with a {2} from {3}m away.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, FormatRarityColor, "F0");
-    public static readonly Translation<IPlayer, VehicleAsset> VehicleDestroyedUnknown = new Translation<IPlayer, VehicleAsset>("<#c$death_background$>{0} took out a {1}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, FormatRarityColor);
-    public static readonly Translation<IPlayer, VehicleAsset> VehicleTeamkilled = new Translation<IPlayer, VehicleAsset>("<#c$death_background_teamkill$>{0} blew up a friendly {1}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, FormatRarityColor);
+    public static readonly Translation<IPlayer, VehicleAsset, string, float, string> VehicleDestroyed = new Translation<IPlayer, VehicleAsset, string, float, string>("<#c$death_background$>{0} took out a <#{4}>{1}</color> with a {2} from {3}m away.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, arg2Fmt: "F0");
+    public static readonly Translation<IPlayer, VehicleAsset, string> VehicleDestroyedUnknown = new Translation<IPlayer, VehicleAsset, string>("<#c$death_background$>{0} took out a <#{2}>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, VehicleAsset, string> VehicleTeamkilled = new Translation<IPlayer, VehicleAsset, string>("<#c$death_background_teamkill$>{0} blew up a friendly <#{2}>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     #endregion
 
     #region Officers

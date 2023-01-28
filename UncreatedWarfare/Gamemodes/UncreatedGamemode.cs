@@ -921,7 +921,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public void AnnounceMode()
     {
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-            ToastMessage.QueueMessage(PlayerManager.OnlinePlayers[i], new ToastMessage(string.Empty, DisplayName, EToastMessageSeverity.BIG));
+            ToastMessage.QueueMessage(PlayerManager.OnlinePlayers[i], new ToastMessage(string.Empty, DisplayName, ToastMessageSeverity.Big));
     }
     internal async Task OnPlayerJoined(UCPlayer player, CancellationToken token)
     {

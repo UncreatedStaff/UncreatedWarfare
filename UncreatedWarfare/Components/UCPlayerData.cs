@@ -82,10 +82,10 @@ public class UCPlayerData : MonoBehaviour
         public static readonly ToastMessageInfo Nil = new ToastMessageInfo(0, Guid.Empty, 0, 0f);
         public byte channel;
         public ushort id;
-        public EToastMessageSeverity type;
+        public ToastMessageSeverity type;
         public Guid guid;
         public float time;
-        public ToastMessageInfo(EToastMessageSeverity type, Guid guid, byte channel, float time)
+        public ToastMessageInfo(ToastMessageSeverity type, Guid guid, byte channel, float time)
         {
             this.type = type;
             this.channel = channel;
@@ -123,14 +123,14 @@ public class UCPlayerData : MonoBehaviour
     }
     public static readonly ToastMessageInfo[] TOASTS = new ToastMessageInfo[]
     {
-        new ToastMessageInfo(EToastMessageSeverity.INFO,        Gamemode.Config.UIToastInfo.ValidReference(out Guid guid) ? guid : Guid.Empty, 0, 12f), // info
-        new ToastMessageInfo(EToastMessageSeverity.WARNING,     Gamemode.Config.UIToastWarning.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),   // warning
-        new ToastMessageInfo(EToastMessageSeverity.SEVERE,      Gamemode.Config.UIToastSevere.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),    // error
-        new ToastMessageInfo(EToastMessageSeverity.MINI,        Gamemode.Config.UIToastXP.ValidReference(out guid) ? guid : Guid.Empty, 1, 1.58f),      // xp
-        new ToastMessageInfo(EToastMessageSeverity.MEDIUM,      Gamemode.Config.UIToastMedium.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),   // medium
-        new ToastMessageInfo(EToastMessageSeverity.BIG,         Gamemode.Config.UIToastLarge.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),    // big
-        new ToastMessageInfo(EToastMessageSeverity.PROGRESS,    Gamemode.Config.UIToastProgress.ValidReference(out guid) ? guid : Guid.Empty, 4, 1.6f), // progress
-        new ToastMessageInfo(EToastMessageSeverity.TIP,         Gamemode.Config.UIToastTip.ValidReference(out guid) ? guid : Guid.Empty, 1, 4f),        // tip
+        new ToastMessageInfo(ToastMessageSeverity.Info,        Gamemode.Config.UIToastInfo.ValidReference(out Guid guid) ? guid : Guid.Empty, 0, 12f), // info
+        new ToastMessageInfo(ToastMessageSeverity.Warning,     Gamemode.Config.UIToastWarning.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),   // warning
+        new ToastMessageInfo(ToastMessageSeverity.Severe,      Gamemode.Config.UIToastSevere.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),    // error
+        new ToastMessageInfo(ToastMessageSeverity.Mini,        Gamemode.Config.UIToastXP.ValidReference(out guid) ? guid : Guid.Empty, 1, 1.58f),      // xp
+        new ToastMessageInfo(ToastMessageSeverity.Medium,      Gamemode.Config.UIToastMedium.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),   // medium
+        new ToastMessageInfo(ToastMessageSeverity.Big,         Gamemode.Config.UIToastLarge.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),    // big
+        new ToastMessageInfo(ToastMessageSeverity.Progress,    Gamemode.Config.UIToastProgress.ValidReference(out guid) ? guid : Guid.Empty, 4, 1.6f), // progress
+        new ToastMessageInfo(ToastMessageSeverity.Tip,         Gamemode.Config.UIToastTip.ValidReference(out guid) ? guid : Guid.Empty, 1, 4f),        // tip
     };
     public struct ToastChannel
     {

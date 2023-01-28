@@ -1,6 +1,8 @@
 ﻿
 //#define SHOW_BYTES
 
+using JetBrains.Annotations;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -13,8 +15,6 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
-using SDG.NetTransport;
 using Uncreated.Framework;
 using Uncreated.Homebase.Unturned.Warfare;
 using Uncreated.Networking;
@@ -26,6 +26,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
@@ -240,6 +241,7 @@ public static class Data
 
 
         DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(false, token: token);
+        await Singletons.LoadSingletonAsync<PlayerList>(false, token: token);
         await UCWarfare.ToUpdate(token);
 
         /* REFLECT PRIVATE VARIABLES */

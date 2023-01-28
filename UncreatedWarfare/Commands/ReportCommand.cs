@@ -151,7 +151,7 @@ public class ReportCommand : AsyncCommand
         {
             if (!Data.Languages.TryGetValue(target, out string lang))
                 lang = L.Default;
-            ToastMessage.QueueMessage(targetPl, new ToastMessage(T.ReportNotifyViolatorToast.Translate(lang, typename, UCPlayer.FromID(target)), EToastMessageSeverity.SEVERE));
+            ToastMessage.QueueMessage(targetPl, new ToastMessage(T.ReportNotifyViolatorToast.Translate(lang, typename, UCPlayer.FromID(target)), ToastMessageSeverity.Severe));
             targetPl.SendChat(T.ReportNotifyViolatorMessage1, typename, message);
             targetPl.SendChat(T.ReportNotifyViolatorMessage2);
         }
@@ -271,7 +271,7 @@ public class ReportCommand : AsyncCommand
             string translation = T.ReportNotifyAdmin.Translate(set.Language, reporter, violator, report.Message!, typename);
             while (set.MoveNext())
             {
-                ToastMessage.QueueMessage(set.Next, new ToastMessage(translation, EToastMessageSeverity.INFO));
+                ToastMessage.QueueMessage(set.Next, new ToastMessage(translation, ToastMessageSeverity.Info));
             }
         }
     }

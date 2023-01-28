@@ -521,19 +521,47 @@ public static class Localization
     }
     public static string TranslateEnum<TEnum>(TEnum value, string language)
     {
+        if (value == null)
+            throw new ArgumentNullException(nameof(value));
         if (EnumTranslations.TryGetValue(typeof(TEnum), out Dictionary<string, Dictionary<string, string>> t))
         {
             if (!t.TryGetValue(language, out Dictionary<string, string>? v) &&
                 (L.Default.Equals(language, StringComparison.Ordinal) ||
                  !t.TryGetValue(L.Default, out v)))
                 v = t.Values.FirstOrDefault();
-            string strRep = value!.ToString();
+            string strRep = value.ToString();
             if (v == null || !v.TryGetValue(strRep, out string v2))
                 return strRep.ToProperCase();
             return v2;
         }
-        return value!.ToString().ToProperCase();
+
+        return EnumToStringDynamic(value);
     }
+    private static string EnumNameToStringDynamic(Type type)
+    {
+        string name = type.Name;
+        if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
+            name = name.Substring(1);
+        return name;
+    }
+
+    private static string EnumToStringDynamic(string name)
+    {
+        bool isAlreadyProperCase = false;
+        for (int i = 0; i < name.Length; ++i)
+        {
+            if (char.IsLower(name[i]))
+            {
+                isAlreadyProperCase = true;
+                break;
+            }
+        }
+
+        if (!isAlreadyProperCase)
+            name = name.ToProperCase();
+        return name;
+    }
+    private static string EnumToStringDynamic<TEnum>(TEnum value) => EnumToStringDynamic(value!.ToString());
     public static string TranslateEnum<TEnum>(TEnum value, ulong player)
     {
         if (player != 0 && Data.Languages.TryGetValue(player, out string language))
@@ -552,10 +580,7 @@ public static class Localization
                 return EnumNamePlaceholder.ToProperCase();
             return v2;
         }
-        string name = type.Name;
-        if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
-            name = name.Substring(1);
-        return name;
+        return EnumNameToStringDynamic(type);
     }
     public static string TranslateEnumName<TEnum>(string language) where TEnum : struct, Enum => TranslateEnumName(typeof(TEnum), language);
     public static string TranslateEnumName<TEnum>(ulong player) where TEnum : struct, Enum
@@ -713,7 +738,7 @@ public static class Localization
     }
     private static void WriteEnums(string language, FieldInfo[] fields, Type type, TranslatableAttribute? attr1, string fn, Dictionary<string, string> k2, List<KeyValuePair<Type, List<string>>>? otherlangs)
     {
-        bool isDeafult = L.Default.Equals(language, StringComparison.Ordinal);
+        bool isDefault = L.Default.Equals(language, StringComparison.Ordinal);
         using FileStream stream = new FileStream(fn, FileMode.Create, FileAccess.Write, FileShare.Read);
         Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
         writer.WriteStartObject();
@@ -734,11 +759,9 @@ public static class Localization
             writer.WriteStringValue(name);
             k2.Add(EnumNamePlaceholder, name);
         }
-        else if (isDeafult)
+        else if (isDefault)
         {
-            name = type.Name;
-            if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
-                name = name.Substring(1);
+            name = EnumNameToStringDynamic(type);
             writer.WritePropertyName(EnumNamePlaceholder);
             writer.WriteStringValue(name);
             k2.Add(EnumNamePlaceholder, name);
@@ -750,14 +773,14 @@ public static class Localization
             string? k1 = null;
             TranslatableAttribute[] tas = fields[i].GetCustomAttributes(typeof(TranslatableAttribute)).OfType<TranslatableAttribute>().ToArray();
             if (tas.Length == 0)
-                k1 = isDeafult ? k0.ToProperCase() : null;
+                k1 = isDefault ? EnumToStringDynamic(k0) : null;
             else
             {
                 for (int j = 0; j < tas.Length; ++j)
                 {
                     TranslatableAttribute t = tas[j];
-                    if (((t.Language is null && isDeafult) || (t.Language is not null && t.Language.Equals(language, StringComparison.Ordinal)) && (isDeafult || t.Default != null)))
-                        k1 = t.Default ?? k0.ToProperCase();
+                    if (((t.Language is null && isDefault) || (t.Language is not null && t.Language.Equals(language, StringComparison.Ordinal)) && (isDefault || t.Default != null)))
+                        k1 = t.Default ?? EnumToStringDynamic(k0);
                     else if (otherlangs is not null && t.Language != null)
                     {
                         for (int k = 0; k < otherlangs.Count; ++k)
@@ -774,8 +797,8 @@ public static class Localization
                     }
                     added:;
                 }
-                if (isDeafult)
-                    k1 ??= k0.ToProperCase();
+                if (isDefault)
+                    k1 ??= EnumToStringDynamic(k0);
             }
             if (k1 is not null)
             {

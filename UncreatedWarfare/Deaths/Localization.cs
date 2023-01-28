@@ -4,13 +4,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Uncreated.Framework;
-using Uncreated.Warfare.Configuration;
+using Uncreated.Json;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Uncreated.Json;
 
 namespace Uncreated.Warfare.Deaths;
 internal static class Localization
@@ -26,7 +25,7 @@ internal static class Localization
      */
     private static readonly Dictionary<string, DeathCause[]> DeathTranslations = new Dictionary<string, DeathCause[]>(48);
 
-    private static readonly DeathCause[] DefaultValues = new DeathCause[]
+    private static readonly DeathCause[] DefaultValues =
     {
         new DeathCause(EDeathCause.ACID)
         {
@@ -158,9 +157,9 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out from an infection."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item, "{0} bled out after using a {3}."),
                 new DeathTranslation(DeathFlags.Killer, "{0} died to an infection caused by {1}."),
-                new DeathTranslation(DeathFlags.Item, "{0} died to an infection from {3} caused by {1}."),
-                new DeathTranslation(DeathFlags.Bleeding, "{0} bled out from an infection caused by {1}."),
-                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item, "{0} bled out after {1} used a {3} on them.")
+                new DeathTranslation(DeathFlags.Item | DeathFlags.Killer, "{0} died to an infection from {3} caused by {1}."),
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer, "{0} bled out from an infection caused by {1}."),
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Killer, "{0} bled out after {1} used a {3} on them.")
             }
         },
         new DeathCause(EDeathCause.KILL)
@@ -300,11 +299,11 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide, "{0} bled out after being shot by their own sentry."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item, "{0} bled out after being shot by their {3}."),
                 new DeathTranslation(DeathFlags.Item2, "{0} was shot by a sentry using a {6}."),
-                new DeathTranslation(DeathFlags.Item, "{0} was shot by a {3}'s {6}."),
+                new DeathTranslation(DeathFlags.Item | DeathFlags.Item2, "{0} was shot by a {3}'s {6}."),
                 new DeathTranslation(DeathFlags.Killer | DeathFlags.Item | DeathFlags.Item2, "{0} was shot by {1}'s {3}'s {6}."),
                 new DeathTranslation(DeathFlags.Suicide | DeathFlags.Item2, "{0} was shot by their own sentry's {6}."),
                 new DeathTranslation(DeathFlags.Suicide | DeathFlags.Item | DeathFlags.Item2, "{0} was shot by their own {3}'s {6}."),
-                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item2, "{0} bled out after being shot by a sentry."),
+                new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item2, "{0} bled out after being shot by a sentry's {6}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Item2, "{0} bled out after being shot by a {3}'s {6}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Killer | DeathFlags.Item | DeathFlags.Item2, "{0} bled out after being shot by {1}'s {3}'s {6}."),
                 new DeathTranslation(DeathFlags.Bleeding | DeathFlags.Suicide | DeathFlags.Item2, "{0} bled out after being shot by their own sentry's {6}."),

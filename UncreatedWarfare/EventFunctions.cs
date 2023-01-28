@@ -570,7 +570,7 @@ public static class EventFunctions
                 await UCWarfare.ToUpdate();
                 if (ucplayer.IsOnline)
                     UCPlayer.LoadingUI.ClearFromPlayer(ucplayer.Connection);
-                ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? T.WelcomeMessage : T.WelcomeBackMessage, ucplayer, ucplayer), EToastMessageSeverity.INFO));
+                ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? T.WelcomeMessage : T.WelcomeBackMessage, ucplayer, ucplayer), ToastMessageSeverity.Info));
             });
             ucplayer.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);
             ActionLog.Add(ActionLogType.Connect, $"Players online: {Provider.clients.Count}", ucplayer);
