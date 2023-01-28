@@ -471,6 +471,13 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(559)]
     [JsonPropertyName("ui_icon_locked")]
     public char UIIconLocked { get; set; }
+
+    [Sync(560)]
+    [JsonPropertyName("effect_lock_on_1")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectLockOn1 { get; set; }
+    [Sync(561)]
+    [JsonPropertyName("effect_lock_on_2")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectLockOn2 { get; set; }
     #endregion
 
     #region General Gamemode Config (601 to 900)
@@ -827,6 +834,8 @@ public sealed class GamemodeConfigData : JSONConfigData
         EffectGuidedMissileSound = new JsonAssetReference<EffectAsset>("7b458028c9de4a449c30ed5fc201bd37");
         EffectHeatSeekingMissileNoSound = new JsonAssetReference<EffectAsset>("39abdc11cd68477fa3c9b44aaf299760");
         EffectHeatSeekingMissileSound = new JsonAssetReference<EffectAsset>("5552f714ca744ab7bd0687fba0d541d3");
+        EffectLockOn1 = new JsonAssetReference<EffectAsset>("45d4cf4e11664402b8cce2808a7b8d91");
+        EffectLockOn2 = new JsonAssetReference<EffectAsset>("022fb707288a4e3cb6847fdd242e4092");
         EffectPurchase = new JsonAssetReference<EffectAsset>("5e2a0073025849d39322932d88609777");
         EffectAmmo = new JsonAssetReference<EffectAsset>("03caec479dd2475c92e1c326e1720140");
         EffectBuildSuccess = new JsonAssetReference<EffectAsset>("43c2ae01755540d4b99ce076aa6731eb");

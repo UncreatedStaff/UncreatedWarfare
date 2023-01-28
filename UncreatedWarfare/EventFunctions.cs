@@ -124,10 +124,13 @@ public static class EventFunctions
         const int rayMask = RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE | RayMasks.LARGE |
                              RayMasks.MEDIUM | RayMasks.GROUND | RayMasks.GROUND2;
         const int rayMaskBackup = RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE;
+
+
+        UCPlayer? firer = UCPlayer.FromPlayer(gun.player);
+
         if (gun.isAiming && Gamemode.Config.ItemLaserDesignator.MatchGuid(gun.equippedGunAsset.GUID))
         {
             float grndDist = float.NaN;
-            UCPlayer? pl;
             if (Physics.Raycast(projectile.transform.position, projectile.transform.up, out RaycastHit hit, length,
                     rayMask))
             {
@@ -138,8 +141,8 @@ public static class EventFunctions
                         grndDist = (projectile.transform.position - hit.transform.position).sqrMagnitude;
                     else
                     {
-                        if ((pl = UCPlayer.FromPlayer(gun.player)) is not null)
-                            SpottedComponent.MarkTarget(hit.transform, pl);
+                        if (firer is not null)
+                            SpottedComponent.MarkTarget(hit.transform, firer);
                         return;
                     }
                 }
@@ -159,15 +162,15 @@ public static class EventFunctions
             if (hits.Count == 0) return;
             if (hits.Count == 1)
             {
-                if ((pl = UCPlayer.FromPlayer(gun.player)) is not null)
-                    SpottedComponent.MarkTarget(hits[0].transform, pl);
+                if (firer is not null)
+                    SpottedComponent.MarkTarget(hits[0].transform, firer);
                 return;
             }
             hits.Sort((a, b) => (strtPos - b.point).sqrMagnitude.CompareTo((strtPos - a.point).sqrMagnitude));
             hits.Sort((a, _) => (ELayerMask)a.transform.gameObject.layer is ELayerMask.PLAYER ? -1 : 1);
 
-            if ((pl = UCPlayer.FromPlayer(gun.player)) is not null)
-                SpottedComponent.MarkTarget(hits[0].transform, pl);
+            if (firer is not null)
+                SpottedComponent.MarkTarget(hits[0].transform, firer);
             return;
         }
 
@@ -178,13 +181,13 @@ public static class EventFunctions
         }
 
         if (VehicleBay.Config.TOWMissileWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, gun.player, 90, 0.33f, 800);
+            projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, firer, 90, 0.33f, 800);
         else if (VehicleBay.Config.GroundAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 4, 0.33f);
+            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 150, 5f, 1000, 4, 0.33f);
         else if (VehicleBay.Config.AirAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 10, 0f);
+            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 150, 5f, 1000, 20, 0f);
         else if (VehicleBay.Config.LaserGuidedWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, gun.player, 120, 1.15f, 150, 15, 0.6f);
+            projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, firer, 120, 1.15f, 150, 15, 0.6f);
 
         Patches.DeathsPatches.lastProjected = projectile;
         if (gun.player.TryGetPlayerData(out UCPlayerData c))

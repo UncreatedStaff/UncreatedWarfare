@@ -70,6 +70,14 @@ public class VehicleComponent : MonoBehaviour
         }
         _lastPos = this.transform.position;
 
+        foreach (var passenger in Vehicle.turrets)
+        {
+            if (VehicleBay.Config.GroundAAWeapons.HasID(passenger.turret.itemID))
+                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(400, 800, Gamemode.Config.EffectLockOn1);
+            if (VehicleBay.Config.AirAAWeapons.HasID(passenger.turret.itemID))
+                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(500, Gamemode.Config.EffectLockOn2);
+        }
+
         _countermeasures = new List<Transform>();
     }
     public bool IsType(VehicleType type) => Data?.Item != null && Data.Item.Type == type;
@@ -260,7 +268,7 @@ public class VehicleComponent : MonoBehaviour
                 rigidbody.AddForce(countermeasure.transform.forward * 5, ForceMode.Impulse);
 
                 _countermeasures.Add(countermeasure.transform);
-                HeatSeekingMissileComponent.ActiveCountermeasures.Add(countermeasure.transform);
+                HeatSeekingController.ActiveCountermeasures.Add(countermeasure.transform);
 
                 yield return new WaitForSeconds(0.25f);
             }
@@ -280,7 +288,7 @@ public class VehicleComponent : MonoBehaviour
     {
         foreach (Transform countermeasure in _countermeasures)
         {
-            HeatSeekingMissileComponent.ActiveCountermeasures.RemoveAll(t => t.GetInstanceID() == countermeasure.GetInstanceID());
+            HeatSeekingController.ActiveCountermeasures.RemoveAll(t => t.GetInstanceID() == countermeasure.GetInstanceID());
 
             if (countermeasure.TryGetComponent(out InteractableVehicle vehicle))
             {

@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Components;
 
 internal class LaserGuidedMissileComponent : MonoBehaviour
 {
-    private Player _firer;
+    private UCPlayer _firer;
     private GameObject _projectile;
 
     private Rigidbody _rigidbody;
@@ -35,7 +35,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 
     private bool _isActive;
 
-    public void Initialize(GameObject projectile, Player firer, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float fullGuidanceDelay)
+    public void Initialize(GameObject projectile, UCPlayer firer, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float fullGuidanceDelay)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -62,7 +62,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 
         if (projectile.TryGetComponent(out _rigidbody))
         {
-            InteractableVehicle? vehicle = firer.movement.getVehicle();
+            InteractableVehicle? vehicle = firer.CurrentVehicle;
             if (vehicle != null)
             {
                 foreach (Passenger turret in vehicle.turrets)
@@ -87,7 +87,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
             }
             else
             {
-                _aim = firer.look.aim.transform;
+                _aim = firer.Player.look.aim.transform;
                 _isActive = true;
                 projectile.transform.forward = _aim.forward;
                 _rigidbody.velocity = projectile.transform.forward * projectileSpeed;
@@ -116,7 +116,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 
         foreach (SpottedComponent spotted in SpottedComponent.ActiveMarkers)
         {
-            if (spotted.SpottingTeam == _firer.quests.groupID.m_SteamID && spotted.IsLaserTarget)
+            if (spotted.SpottingTeam == _firer.Player.quests.groupID.m_SteamID && spotted.IsLaserTarget)
             {
                 if ((spotted.transform.position - _projectile.transform.position).sqrMagnitude < _aquisitionRange * _aquisitionRange)
                 {

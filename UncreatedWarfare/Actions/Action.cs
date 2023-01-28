@@ -13,18 +13,19 @@ public class Action
     public readonly List<UCPlayer> Viewers;
     public readonly List<UCPlayer> ToastReceivers;
     public readonly EActionOrigin Origin;
+    public readonly EActionType Type;
     public readonly Vector3? InitialPosition;
     protected readonly int LifeTime;
     protected readonly float UpdateFrequency;
     protected bool SquadWide;
     private readonly ActionComponent _component;
 
-    private readonly Translation<Color> _chatMessage;
-    private readonly Translation<string> _toast;
+    private readonly Translation<Color>? _chatMessage;
+    private readonly Translation? _toast;
 
-    public Action(UCPlayer caller, JsonAssetReference<EffectAsset> viewerEffect, JsonAssetReference<EffectAsset>? callerEffect, IEnumerable<UCPlayer> viewers, float updateFrequency, int lifeTime, EActionOrigin origin, Translation<Color> chatMessage, Translation<string> toast, bool squadWide = false)
-        : this(caller, viewerEffect, callerEffect, viewers, viewers, updateFrequency, lifeTime, origin, chatMessage, toast, squadWide) { }
-    public Action(UCPlayer caller, JsonAssetReference<EffectAsset> viewerEffect, JsonAssetReference<EffectAsset>? callerEffect, IEnumerable<UCPlayer> viewers, IEnumerable<UCPlayer> toastReceivers, float updateFrequency, int lifeTime, EActionOrigin origin, Translation<Color> chatMessage, Translation<string> toast, bool squadWide = false)
+    public Action(UCPlayer caller, JsonAssetReference<EffectAsset> viewerEffect, JsonAssetReference<EffectAsset>? callerEffect, IEnumerable<UCPlayer> viewers, float updateFrequency, int lifeTime, EActionOrigin origin, EActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
+        : this(caller, viewerEffect, callerEffect, viewers, viewers, updateFrequency, lifeTime, origin, type, chatMessage, toast, squadWide) { }
+    public Action(UCPlayer caller, JsonAssetReference<EffectAsset> viewerEffect, JsonAssetReference<EffectAsset>? callerEffect, IEnumerable<UCPlayer> viewers, IEnumerable<UCPlayer> toastReceivers, float updateFrequency, int lifeTime, EActionOrigin origin, EActionType type, Translation<Color>? chatMessage, Translation? toast, bool squadWide = false)
     {
         Caller = caller;
         ViewerEffect = viewerEffect;
@@ -35,6 +36,7 @@ public class Action
         UpdateFrequency = updateFrequency;
         SquadWide = squadWide;
         Origin = origin;
+        Type = type;
         _chatMessage = chatMessage;
         _toast = toast;
 
@@ -60,27 +62,41 @@ public class Action
         if (CallerEffect is not null && !CallerEffect.Exists)
             L.LogWarning("Action could not start: Effect asset not found: " + CallerEffect.Guid);
 
-        Action[] existing = Caller.Player.transform.GetComponents<Action>();
-        foreach (Action component in existing)
+        ActionComponent[] existing = Caller.Player.transform.gameObject.GetComponents<ActionComponent>();
+        L.Log("Existing actions: " + existing.Length);
+        foreach (ActionComponent component in existing)
         {
-            if (component.ViewerEffect.Guid == viewerEffect.Guid)
-                component.Cancel();
+            if (Type == component.Action.Type)
+            {
+                L.Log("     Attempting to cancel a  ction action...");
+                component.Action.Cancel();
+            }
         }
 
         _component = Caller.Player.transform.gameObject.AddComponent<ActionComponent>();
     }
     public void Start()
     {
-        if (_component == null || InitialPosition == null)
+        L.Log("BREAKPOINT 0");
+
+        if (_component == null)
             return;
+
+        if (Origin != EActionOrigin.FOLLOW_CALLER && InitialPosition == null)
+            return;
+
+        L.Log("BREAKPOINT 1");
 
         if (CheckValid != null && !CheckValid())
             return;
 
+        L.Log("BREAKPOINT 2");
+
         _component.Initialize(this);
-            
+
         if (!CooldownManager.HasCooldown(Caller, CooldownType.AnnounceAction, out _, ViewerEffect.Guid))
         {
+            L.Log("BREAKPOINT 3");
             Announce();
             CooldownManager.StartCooldown(Caller, CooldownType.AnnounceAction, 5, ViewerEffect.Guid);
         }
@@ -98,25 +114,45 @@ public class Action
     }
     private void Announce()
     {
+        SayTeam(Caller, _chatMessage);
+
+        if (_toast is null)
+            return;
+
         if (SquadWide && Caller.Squad != null)
         {
             foreach (var player in ToastReceivers)
-                Tips.TryGiveTip(player, 5, _toast, Caller.Squad.Name);
+            {
+                if (_toast is Translation<string> t) // TODO: better way to do account for different types of translations / clean up
+                    Tips.TryGiveTip(player, 5, t, Caller.Squad.Name);
+                else
+                    Tips.TryGiveTip(player, 5, _toast);
+            }
         }
         else
         {
             foreach (var player in ToastReceivers)
-                Tips.TryGiveTip(player, 5, _toast, Caller.NickName);
+            {
+                if (_toast is Translation<string> t)
+                    Tips.TryGiveTip(player, 5, t, Caller.NickName);
+                else
+                    Tips.TryGiveTip(player, 5, _toast);
+            }
         }
+    }
+    public static void SayTeam(UCPlayer caller, Translation<Color>? chatMessage)
+    {
+        if (chatMessage is null)
+            return;
 
-        ulong t = Caller.GetTeam();
+        ulong t = caller.GetTeam();
         Color t1 = Teams.TeamManager.GetTeamColor(t);
 
         foreach (LanguageSet set in LanguageSet.OnTeam(t))
         {
-            string t2 = _chatMessage.Translate(set.Language, t1);
+            string t2 = chatMessage.Translate(set.Language, t1);
             while (set.MoveNext())
-                ChatManager.serverSendMessage(t2, Palette.AMBIENT, Caller.SteamPlayer, set.Next.SteamPlayer, EChatMode.SAY, null, true);
+                ChatManager.serverSendMessage(t2, Palette.AMBIENT, caller.SteamPlayer, set.Next.SteamPlayer, EChatMode.SAY, null, true);
         }
     }
     public delegate bool CheckValidHandler();
@@ -132,6 +168,7 @@ public class Action
     public class ActionComponent : MonoBehaviour
     {
         private Action _action;
+        public Action Action => _action;
 
         public void Initialize(Action action)
         {
@@ -155,6 +192,7 @@ public class Action
             if (_action.Finished != null)
                 _action.Finished();
             Destroy(this);
+            L.Log("DESTROYED ACTION");
         }
 
         private IEnumerator<WaitForSeconds> Loop()
@@ -188,4 +226,11 @@ public enum EActionOrigin
     CALLER_LOOK,
     CALLER_POSITION,
     CALLER_MARKER
+}
+public enum EActionType
+{
+    ORDER,
+    SIMPLE_REQUEST,
+    SQUADLEADER_REQUEST,
+    EMOTE
 }
