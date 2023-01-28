@@ -100,7 +100,7 @@ public class BuildableComponent : MonoBehaviour
 
         if (builder.Player.TryGetPlayerData(out UCPlayerData component))
         {
-            component.QueueMessage(new Players.ToastMessage(Points.GetProgressBar(Hits, Buildable.RequiredHits, 25), Players.EToastMessageSeverity.PROGRESS), true);
+            component.QueueMessage(new ToastMessage(Points.GetProgressBar(Hits, Buildable.RequiredHits, 25), ToastMessageSeverity.Progress), true);
         }
 
         if (PlayerHits.ContainsKey(builder.Steam64))
