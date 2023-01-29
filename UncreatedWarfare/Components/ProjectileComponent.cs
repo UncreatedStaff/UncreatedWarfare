@@ -45,6 +45,7 @@ internal class ProjectileComponent : MonoBehaviour
 
     internal float PredictedImpactTime;
     internal Vector3 PredictedLandingPosition;
+    /*
 #if DEBUG
     private float _lastSpawn;
     [UsedImplicitly]
@@ -59,5 +60,5 @@ internal class ProjectileComponent : MonoBehaviour
             _lastSpawn = time;
         }
     }
-#endif
+#endif*/
 }

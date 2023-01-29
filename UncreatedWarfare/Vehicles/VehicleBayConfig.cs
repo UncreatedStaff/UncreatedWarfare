@@ -4,9 +4,8 @@ using Uncreated.Warfare.Configuration;
 namespace Uncreated.Warfare.Vehicles;
 public class VehicleBayConfig : Config<VehicleBayData>
 {
-    public VehicleBayConfig() : base(Warfare.Data.Paths.VehicleStorage, "config.json") { }
+    public VehicleBayConfig() : base(Warfare.Data.Paths.VehicleStorage, "config.json", "vbconfig") { }
 }
-
 
 public class VehicleBayData : JSONConfigData
 {
@@ -40,8 +39,8 @@ public class VehicleBayData : JSONConfigData
         AirAAWeapons = new JsonAssetReference<ItemGunAsset>[]
         {
             "661a347f5e56406e85510a1b427bc4d6", // F-15 AA
-            "ad70852b3d31401b9001a13d64a13f78",  // Su-34 AA
-            "0b21724b3a1f40e7b88de9484a1733bc",  // Eurofighter Typhoon AA
+            "ad70852b3d31401b9001a13d64a13f78", // Su-34 AA
+            "0b21724b3a1f40e7b88de9484a1733bc", // Eurofighter Typhoon AA
             "d9447148f8aa41f0ad885edd24ac5a02", // J-10 AA
             "0b21724b3a1f40e7b88de9484a1733bc", // JH-7 AA
         };
