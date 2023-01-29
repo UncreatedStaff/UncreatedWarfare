@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using HarmonyLib;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,17 +24,31 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     private InteractableVehicle _vehicle;
     private EffectAsset _effect;
     private UCPlayer? _lastKnownGunner;
+    public List<Transform> Hardpoints { get; set; }
+   
 
     private float _aquisitionTime = 1.5f;
     private float _timeOutTime = 10;
     private float _timeOfAquisition;
     private float _timeOfLastScan;
+    public int _currentHardpoint;
 
     public Transform? LockOnTarget { get; private set; }
     public Vector3 AlternativeTargetPosition { get; private set; }
     public ELockOnMode Status { get; private set; }
 
     public static List<Transform> ActiveCountermeasures = new List<Transform>();
+    public Transform? CycleHardpoint()
+    {
+        if (Hardpoints.Count == 0)
+            return null;
+
+        _currentHardpoint++;
+        if (_currentHardpoint >= Hardpoints.Count)
+            _currentHardpoint = 0;
+
+        return Hardpoints[_currentHardpoint];
+    }
 
 
     private void FixedUpdate()
@@ -50,6 +65,15 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         _vehicle = GetComponentInParent<InteractableVehicle>();
         _horizontalRange = horizontalRange;
         _verticalRange = verticalRange;
+
+        Hardpoints = new List<Transform>();
+        _currentHardpoint = 0;
+        for (int i = 0; i < 8; i++)
+        {
+            var hardpoint = _vehicle.transform.Find("Hardpoint_" + 0);
+            if (hardpoint is not null)
+                Hardpoints.AddItem(hardpoint);
+        }
 
         _effect = lockOnEffect;
 

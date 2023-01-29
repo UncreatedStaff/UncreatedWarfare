@@ -48,6 +48,9 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
                 if (passenger.turretAim.TryGetComponent(out HeatSeekingController controller) && controller.GetGunner(firer.CurrentVehicle) == firer)
                 {
                     _controller = controller;
+                    var hardpoint = _controller.CycleHardpoint();
+                    if (hardpoint is not null)
+                        projectile.transform.position = hardpoint.position;
                     projectile.transform.forward = passenger.turretAim.forward;
                 }
             }
