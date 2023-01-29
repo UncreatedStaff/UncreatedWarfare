@@ -206,7 +206,7 @@ internal static class T
     public static readonly Translation<ItemAsset> ProhibitedStoring = new Translation<ItemAsset>("<#fa9e9e>You are not allowed to store {0}.", FormatRarityColor + FormatPlural);
     
     [TranslationData(SectionPlayers, "Sent when a player tries to point or mark while not a squad leader.")]
-    public static readonly Translation MarkerNotInSquad = new Translation("<#fa9e9e>Only your squad can see markers. Create a squad with <color=#cedcde>/squad create</color> to use this feature.");
+    public static readonly Translation MarkerNotInSquad = new Translation("<#fa9e9e>Only your squad can see markers. Create a squad with <#cedcde>/squad create</color> to use this feature.");
     
     [TranslationData(SectionPlayers, "Sent on a SEVERE toast when the player enters enemy territory.", "Seconds until death")]
     public static readonly Translation<string> EnteredEnemyTerritory = new Translation<string>("Too close to enemy base! You will die in <#cedcde>{0}</color>!", TranslationFlags.UnityUI);

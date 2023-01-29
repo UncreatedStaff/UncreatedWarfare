@@ -13,6 +13,8 @@ using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
 using UnityEngine.Assertions;
+using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
 
 namespace Uncreated.Warfare;
 
@@ -50,7 +52,6 @@ public static class L
                 File.Move(Data.Paths.CurrentLog, n);
             }
             _log = new FileStream(Data.Paths.CurrentLog, FileMode.Create, FileAccess.Write, FileShare.Read);
-            Application.logMessageReceivedThreaded += OnUnityLogMessage;
             try
             {
                 FieldInfo? defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -84,6 +85,25 @@ public static class L
                 CommandWindow.LogError("Error patching Logs.printLine.");
                 CommandWindow.LogError(ex);
             }
+            try
+            {
+                FieldInfo? logger = typeof(Debug).GetField("s_Logger", BindingFlags.Static | BindingFlags.NonPublic);
+                if (logger != null)
+                    logger.SetValue(null, new UCUnityLogger());
+                Log(Debug.unityLogger.GetType().Name);
+            }
+            catch (Exception ex)
+            {
+                CommandWindow.LogError("Failed to set unity logger:");
+                CommandWindow.LogError(ex);
+            }
+            
+            Application.logMessageReceivedThreaded += OnUnityLogMessage;
+            Application.SetStackTraceLogType(LogType.Error, StackTraceLogType.ScriptOnly);
+            Application.SetStackTraceLogType(LogType.Exception, StackTraceLogType.ScriptOnly);
+            Application.SetStackTraceLogType(LogType.Warning, StackTraceLogType.ScriptOnly);
+            Application.SetStackTraceLogType(LogType.Assert, StackTraceLogType.ScriptOnly);
+            Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.ScriptOnly);
         }
         catch (Exception ex)
         {
@@ -98,10 +118,14 @@ public static class L
         {
             case LogType.Assert:
             case LogType.Warning:
+                if (condition.StartsWith("BoxColliders does not support negative scale or size.", StringComparison.Ordinal))
+                    return;
                 LogWarning(condition + Environment.NewLine + stacktrace);
                 break;
             case LogType.Error:
             case LogType.Exception:
+                if (condition.StartsWith("Non-convex MeshCollider", StringComparison.Ordinal))
+                    return;
                 LogError(condition + Environment.NewLine + stacktrace);
                 break;
             default:
@@ -398,6 +422,106 @@ public static class L
         {
             isRequestingLog = state;
         }*/
+    }
+    private class UCUnityLogger : ILogger
+    {
+        public bool IsLogTypeAllowed(LogType logType) => true;
+        public void LogFormat(LogType logType, Object context, string format, params object[] args)
+        {
+            logHandler.LogFormat(logType, context, format, args);
+        }
+        public void Log(LogType logType, object message)
+        {
+            OnUnityLogMessage(message as string ?? message.ToString(), null!, logType);
+        }
+        public void LogException(Exception exception, Object context)
+        {
+            logHandler.LogException(exception, context);
+        }
+        public void Log(LogType logType, object message, Object context)
+        {
+            OnUnityLogMessage(message as string ?? message.ToString(), context.name + " - " + context.GetType().Name, logType);
+        }
+
+        public void Log(LogType logType, string tag, object message)
+        {
+            OnUnityLogMessage(message as string ?? message.ToString(), tag, logType);
+        }
+
+        public void Log(LogType logType, string tag, object message, Object context)
+        {
+            OnUnityLogMessage(message as string ?? message.ToString(), tag + " - " + context.name + " - " + context.GetType().Name, logType);
+        }
+
+        public void Log(object message)
+        {
+            L.Log(message as string ?? message.ToString());
+        }
+
+        public void Log(string tag, object message)
+        {
+            L.Log(message as string ?? message + " - " + tag);
+        }
+
+        public void Log(string tag, object message, Object context)
+        {
+            L.Log(message as string ?? message + " - " + tag + context.name + " - " + context.GetType().Name);
+        }
+
+        public void LogWarning(string tag, object message)
+        {
+            L.LogWarning(message as string ?? message + " - " + tag);
+        }
+
+        public void LogWarning(string tag, object message, Object context)
+        {
+            L.LogWarning(message as string ?? message + " - " + tag + context.name + " - " + context.GetType().Name);
+        }
+
+        public void LogError(string tag, object message)
+        {
+            L.LogError(message as string ?? message + " - " + tag);
+        }
+
+        public void LogError(string tag, object message, Object context)
+        {
+            L.LogError(message as string ?? message + " - " + tag + context.name + " - " + context.GetType().Name);
+        }
+
+        public void LogFormat(LogType logType, string format, params object[] args)
+        {
+            logHandler.LogFormat(logType, null!, format, args);
+        }
+
+        public void LogException(Exception exception)
+        {
+            L.LogError(exception);
+        }
+        public bool logEnabled { get; set; } = true;
+        public LogType filterLogType { get; set; }
+        public ILogHandler logHandler { get; set; } = new UCUnityLogHandler();
+
+        private class UCUnityLogHandler : ILogHandler
+        {
+            public void LogFormat(LogType logType, Object context, string format, params object[] args)
+            {
+                string? str;
+                try
+                {
+                    str = string.Format(format, args);
+                }
+                catch (FormatException)
+                {
+                    str = format + " - " + string.Join("|", args);
+                }
+                OnUnityLogMessage(str, context.name + " - " + context.GetType().Name, logType);
+            }
+            public void LogException(Exception exception, Object context)
+            {
+                L.LogError("Exception in " + context.name + " - " + context.GetType());
+                L.LogError(exception);
+            }
+        }
     }
 }
 

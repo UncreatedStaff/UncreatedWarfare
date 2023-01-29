@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
@@ -7,7 +8,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;

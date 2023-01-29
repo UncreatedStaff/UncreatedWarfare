@@ -75,34 +75,42 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        
-
-        if (_controller.LockOnTarget is null ||
-        !_controller.LockOnTarget.TryGetComponent(out VehicleComponent c) || 
-        c.Vehicle.isDead ||
-        c.Data is null)
+        VehicleComponent c;
+        if (_controller.LockOnTarget != null)
         {
-            L.LogDebug($"Did not send warning:" +
-                $"target={_controller.LockOnTarget} | " +
-                $"component={c} | " +
-                $"targetDead={c?.Vehicle.isDead} | " +
-                $"vehicleData={c?.Data}");
+            if (!_controller.LockOnTarget.TryGetComponent(out c) ||
+                c.Vehicle.isDead ||
+                c.Data is null)
+            {
+                L.LogDebug("Did not send warning:" +
+                           $"target={_controller.LockOnTarget} | " +
+                           $"component={c} | " +
+                           $"targetDead={c?.Vehicle.isDead} | " +
+                           $"vehicleData={c?.Data}");
+                return;
+            }
+        }
+        else
+        {
+            L.LogDebug("Did not send warning, lock on target is null");
             return;
         }
+        
 
-        L.LogDebug($"Warning can be sent");
+        L.LogDebug("Warning can be sent");
 
-        for (byte seat = 0; seat < c.Vehicle.passengers.Length; seat++)
+        if (c.Data is { Item: { } item })
         {
-            if (c.Vehicle.passengers[seat].player != null &&
-                c.Data.Item != null &&
-                c.Data.Item.CrewSeats.Contains(seat))
+            for (byte seat = 0; seat < c.Vehicle.passengers.Length; seat++)
             {
-                ushort effectID = VehicleBay.Config.MissileWarningID;
-                if (seat == 0)
-                    effectID = VehicleBay.Config.MissileWarningDriverID;
+                if (c.Vehicle.passengers[seat].player != null && item.CrewSeats.Contains(seat))
+                {
+                    ushort effectID = VehicleBay.Config.MissileWarningID;
+                    if (seat == 0)
+                        effectID = VehicleBay.Config.MissileWarningDriverID;
 
-                EffectManager.sendUIEffect(effectID, (short)effectID, c.Vehicle.passengers[seat].player.transportConnection, true);
+                    EffectManager.sendUIEffect(effectID, (short)effectID, c.Vehicle.passengers[seat].player.transportConnection, true);
+                }
             }
         }
     }
@@ -111,7 +119,7 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
     private void FixedUpdate()
     {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
 
         _guiderDistance += Time.fixedDeltaTime * _projectileSpeed;
