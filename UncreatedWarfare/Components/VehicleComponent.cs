@@ -73,9 +73,9 @@ public class VehicleComponent : MonoBehaviour
         foreach (var passenger in Vehicle.turrets)
         {
             if (VehicleBay.Config.GroundAAWeapons.HasID(passenger.turret.itemID))
-                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(400, 800, Gamemode.Config.EffectLockOn1);
+                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(450, 1000, Gamemode.Config.EffectLockOn1);
             if (VehicleBay.Config.AirAAWeapons.HasID(passenger.turret.itemID))
-                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(500, Gamemode.Config.EffectLockOn2);
+                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(600, Gamemode.Config.EffectLockOn2);
         }
 
         _countermeasures = new List<Transform>();

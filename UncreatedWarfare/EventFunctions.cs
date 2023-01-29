@@ -185,7 +185,7 @@ public static class EventFunctions
         else if (VehicleBay.Config.GroundAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
             projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 150, 5f, 1000, 4, 0.33f);
         else if (VehicleBay.Config.AirAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 150, 5f, 1000, 20, 0f);
+            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 185, 5f, 1000, 25, 0f);
         else if (VehicleBay.Config.LaserGuidedWeapons.HasGuid(gun.equippedGunAsset.GUID))
             projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, firer, 120, 1.15f, 150, 15, 0.6f);
 
