@@ -476,7 +476,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         }
 
         bool isBuff = typeof(Buff).IsAssignableFrom(trait.Type);
-        if (isBuff && BuffUI.HasBuffRoom(ctx.Caller, false))
+        if (isBuff && !BuffUI.HasBuffRoom(ctx.Caller, false))
             throw ctx.Reply(T.RequestTraitTooManyBuffs);
 
         for (int i = 0; i < trait.UnlockRequirements.Length; i++)
@@ -547,7 +547,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                 return;
             }
 
-            if (isBuff && GetBuffCount(ctx.Caller) > BuffUI.MAX_BUFFS)
+            if (isBuff && GetBuffCount(ctx.Caller) > BuffUI.MaxBuffs)
             {
                 ctx.Caller.SendChat(T.RequestTraitTooManyBuffs);
                 return;

@@ -9,7 +9,7 @@ public abstract class Buff : Trait, IBuff
     public virtual bool IsBlinking => _shouldBlink;
     bool IBuff.Reserved => false;
     UCPlayer IBuff.Player => TargetPlayer;
-    string IBuff.Icon => Data.Icon.HasValue ? Data.Icon.Value : BuffUI.DEFAULT_BUFF_ICON;
+    string IBuff.Icon => Data.Icon.HasValue ? Data.Icon.Value : BuffUI.DefaultBuffIcon;
     public bool IsActivated
     {
         get => _isActivated && !IsAwaitingStagingPhase;

@@ -83,7 +83,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public Coroutine? StorageCoroutine;
     public Ranks.RankStatus[]? RankData;
     public List<SqlItem<Kit>>? AccessibleKits;
-    public IBuff?[] ActiveBuffs = new IBuff?[6];
+    public IBuff?[] ActiveBuffs = new IBuff?[BuffUI.MaxBuffs];
     public List<Trait> ActiveTraits = new List<Trait>(8);
     internal bool _isLeaving;
     internal Action<byte, ItemJar> SendItemRemove;

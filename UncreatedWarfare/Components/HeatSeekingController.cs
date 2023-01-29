@@ -71,8 +71,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         for (int i = 0; i < 8; i++)
         {
             var hardpoint = _vehicle.transform.Find("Hardpoint_" + 0);
-            if (hardpoint is not null)
-                Hardpoints.AddItem(hardpoint);
+            if (hardpoint != null)
+                Hardpoints.Add(hardpoint);
         }
 
         _effect = lockOnEffect;
@@ -84,6 +84,15 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     {
         _vehicle = GetComponentInParent<InteractableVehicle>();
         _horizontalRange = range;
+
+        Hardpoints = new List<Transform>();
+        _currentHardpoint = 0;
+        for (int i = 0; i < 8; i++)
+        {
+            var hardpoint = _vehicle.transform.Find("Hardpoint_" + 0);
+            if (hardpoint != null)
+                Hardpoints.Add(hardpoint);
+        }
 
         _effect = lockOnEffect;
 

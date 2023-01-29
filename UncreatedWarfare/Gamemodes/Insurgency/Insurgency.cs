@@ -14,6 +14,7 @@ using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -928,6 +929,18 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
                     Points.AwardXP(nd, Points.XPConfig.FlagDefendXP, T.XPToastFlagDefenseTick.Translate(nd));
                 }
             }
+        }
+    }
+
+    protected override void OnVehicleDestroyed(VehicleDestroyed e)
+    {
+        if (!Data.Is(out IAttackDefense ins)) return;
+        if (e.VehicleData is not null && e.Team == ins.AttackingTeam)
+        {
+            if (e.Team == 1)
+                TicketManager.Singleton.Team1Tickets -= e.VehicleData.TicketCost;
+            else if (e.Team == 2)
+                TicketManager.Singleton.Team2Tickets -= e.VehicleData.TicketCost;
         }
     }
 }

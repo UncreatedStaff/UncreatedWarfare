@@ -49,7 +49,7 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
                 {
                     _controller = controller;
                     var hardpoint = _controller.CycleHardpoint();
-                    if (hardpoint is not null)
+                    if (hardpoint != null)
                         projectile.transform.position = hardpoint.position;
                     projectile.transform.forward = passenger.turretAim.forward;
                 }

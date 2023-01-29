@@ -40,9 +40,12 @@ public static class Localization
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string Colorize(string hex, string inner, TranslationFlags flags)
     {
-        return (flags & TranslationFlags.SkipColorize) == TranslationFlags.SkipColorize ? inner : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
-            ? (UnityRichTextColorBaseStart + hex + RichTextColorEnd + inner + RichTextColorClosingTag)
-            : (TMProRichTextColorBase + hex + RichTextColorEnd + inner + RichTextColorClosingTag));
+        return (flags & TranslationFlags.SkipColorize) == TranslationFlags.SkipColorize
+            ? inner
+            : (
+                ((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
+                ? (UnityRichTextColorBaseStart + hex + RichTextColorEnd + inner + RichTextColorClosingTag)
+                : (TMProRichTextColorBase + hex + RichTextColorEnd + inner + RichTextColorClosingTag));
     }
     public static string Translate(Translation translation, UCPlayer? player) =>
         Translate(translation, player is null ? 0 : player.Steam64);
@@ -1211,6 +1214,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         this.Players = new List<UCPlayer>(lang == L.Default ? Provider.clients.Count : 2);
         this._index = -1;
         this.Next = null!;
+        IMGUI = false;
     }
     public LanguageSet(string lang, UCPlayer first)
     {
@@ -1218,6 +1222,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         this.Players = new List<UCPlayer>(lang == L.Default ? Provider.clients.Count : 2) { first };
         this._index = -1;
         this.Next = null!;
+        IMGUI = first.Save.IMGUI;
     }
     public void Add(UCPlayer pl) => this.Players.Add(pl);
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
