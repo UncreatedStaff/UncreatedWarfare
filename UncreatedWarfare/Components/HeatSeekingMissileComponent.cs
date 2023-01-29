@@ -18,7 +18,7 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
     //private Player _firer;
     private GameObject _projectile;
     private HeatSeekingController _controller;
-    private Transform _lastKnownTarget;
+    private Transform? _lastKnownTarget;
 
     private Rigidbody _rigidbody;
     private List<Collider> _colliders;
@@ -112,7 +112,17 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
         }
 
         if (_controller.LockOnTarget is not null)
+        {
             _lastKnownTarget = _controller.LockOnTarget;
+        }
+
+        if (_controller.LockOnTarget != null && Vector3.Angle(_projectile.transform.forward, _controller.LockOnTarget.position - _projectile.transform.position) > 90)
+        {
+            _lastKnownTarget = null;
+        }
+
+
+
 
         Vector3 idealDirection;
         float turnDegrees;
@@ -140,7 +150,7 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
         if (timeDifference > 0.05f)
         {
             JsonAssetReference<EffectAsset> id = Gamemode.Config.EffectHeatSeekingMissileNoSound;
-            if (timeDifference > 0.2f)
+            if (timeDifference > 0.4f)
             {
                 id = Gamemode.Config.EffectHeatSeekingMissileSound;
 

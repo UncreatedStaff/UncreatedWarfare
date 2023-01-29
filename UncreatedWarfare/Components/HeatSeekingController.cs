@@ -13,7 +13,7 @@ using Random = UnityEngine.Random;
 namespace Uncreated.Warfare.Components;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles
 {
-    private const float AQUISITION_ANGLE = 50f;
+    private const float AQUISITION_ANGLE = 60f;
     private const float AQUISITION_FREQUENCY = 0.5f;
 
 
