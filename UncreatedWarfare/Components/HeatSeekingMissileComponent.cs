@@ -29,7 +29,7 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
     private float _maxTurnDegrees;
     private float _armingDistance;
     private float _guidanceDelay;
-    private ELockOnMode _startStatus;
+    private bool _lost;
 
     private DateTime _start;
 
@@ -60,7 +60,11 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
         this._aquisitionRange = aquisitionRange;
         this._armingDistance = armingDistance;
         this._guidanceDelay = guidanceDelay;
-        this._startStatus = _controller.Status;
+        if (_controller.Status == ELockOnMode.LOCKED_ON)
+            this._lost = false;
+        else
+            this._lost = true;
+
         this._rigidbody = projectile.GetComponent<Rigidbody>();
         this._colliders = transform.GetComponentsInChildren<Collider>().ToList();
         _colliders.ForEach(c => c.enabled = false);
@@ -75,22 +79,17 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        
 
-        if (_controller.LockOnTarget is null ||
+
+        if (
+        _lost ||
+        _controller.LockOnTarget is null ||
         !_controller.LockOnTarget.TryGetComponent(out VehicleComponent c) || 
         c.Vehicle.isDead ||
         c.Data is null)
         {
-            L.LogDebug($"Did not send warning:" +
-                $"target={_controller.LockOnTarget} | " +
-                $"component={c} | " +
-                $"targetDead={c?.Vehicle.isDead} | " +
-                $"vehicleData={c?.Data}");
             return;
         }
-
-        L.LogDebug($"Warning can be sent");
 
         for (byte seat = 0; seat < c.Vehicle.passengers.Length; seat++)
         {
@@ -129,13 +128,13 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
 
         if (_controller.LockOnTarget != null && Vector3.Angle(_projectile.transform.forward, _controller.LockOnTarget.position - _projectile.transform.position) > 90)
         {
-            _lastKnownTarget = null;
+            _lost = true;
         }
 
         Vector3 idealDirection;
         float turnDegrees;
 
-        if (_lastKnownTarget is null || _startStatus != ELockOnMode.LOCKED_ON)
+        if (_lastKnownTarget is null || _lost)
         {
             idealDirection = _controller.AlternativeTargetPosition - _projectile.transform.position;
             turnDegrees = 0.2f;
