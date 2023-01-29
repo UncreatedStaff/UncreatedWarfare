@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -200,9 +201,10 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         Coroutine = null;
         Destroy(this);
     }
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => Data is null
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags) => Data is null
         ? Translation.Null(flags)
-        : (Data as ITranslationArgument).Translate(language, format, target, ref flags);
+        : (Data as ITranslationArgument).Translate(language, format, target, culture, ref flags);
 }
 
 public class TraitData : ITranslationArgument
@@ -341,7 +343,8 @@ public class TraitData : ITranslationArgument
     [FormatDisplay(typeof(Trait), "Colored Description")]
     [FormatDisplay("Colored Description")]
     public const string FormatColorDescription = "cd";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null && !format.Equals(FormatName, StringComparison.Ordinal))
         {

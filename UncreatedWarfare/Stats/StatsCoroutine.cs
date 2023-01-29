@@ -100,6 +100,7 @@ internal static class StatsCoroutine
                 /* TICK STAT BACKUP */
                 StatsManager.BackupTick();
 
+#if DEBUG
                 long mem = GC.GetTotalMemory(false);
                 L.LogDebug("Memory usage: " + mem);
 
@@ -107,6 +108,7 @@ internal static class StatsCoroutine
                 {
                     UCWarfare.ShutdownNow("Memory error, shutdown to prevent corrupted state.", 0);
                 }
+#endif
             }
             catch (Exception ex)
             {

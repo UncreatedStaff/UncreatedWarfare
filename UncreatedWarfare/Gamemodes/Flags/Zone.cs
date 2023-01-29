@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -274,7 +275,8 @@ public abstract class Zone : IDeployable, IListItem
 
     bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx) => true;
     bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat) => true;
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null && (format.Equals(Flag.SHORT_NAME_FORMAT, StringComparison.Ordinal) ||
                                    format.Equals(Flag.COLOR_SHORT_NAME_FORMAT, StringComparison.Ordinal) ||

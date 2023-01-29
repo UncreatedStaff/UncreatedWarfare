@@ -298,7 +298,10 @@ public class KitMenuUI : UnturnedUI
         if (!player.KitMenuData.IsAlive)
         {
             SendToPlayer(c);
-            SetCachedValues(c);
+            if (player.Language.Equals(L.Default, StringComparison.Ordinal))
+                SetCachedValues(c);
+            else
+                SetCachedValuesToOther(c, player.Language);
             LogicSetTabs[0].SetVisibility(c, true);
             SwitchToTab(player, 0);
         }

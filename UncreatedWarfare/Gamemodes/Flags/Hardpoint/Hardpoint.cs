@@ -406,7 +406,8 @@ public class HardpointTicketProvider : BaseTicketProvider
             2 => TranslationFlags.Team2,
             _ => 0
         }) | TranslationFlags.UnityUI;
-        message = obj is null ? string.Empty : ("Objective: " + (obj as ITranslationArgument).Translate(L.Default, Flag.COLOR_SHORT_NAME_FORMAT, null, ref flg));
+        message = obj is null ? string.Empty : ("Objective: " + (obj as ITranslationArgument).Translate(L.Default, Flag.COLOR_SHORT_NAME_FORMAT,
+            null, Data.LocalLocale, ref flg));
         int bld = GetTeamBleed(team);
         bleed = bld == 0 ? string.Empty : bld.ToString(Data.LocalLocale);
     }

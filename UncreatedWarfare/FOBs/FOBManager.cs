@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
@@ -782,7 +783,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (ListUI.FOBNames.Length > ii)
             {
                 FOB f = FOBList[i];
-                ListUI.FOBNames[ii].SetText(player.Connection, T.FOBUI.Translate(player.Steam64, f, f.GridLocation, f.ClosestLocation));
+                ListUI.FOBNames[ii].SetText(player.Connection, T.FOBUI.Translate(player, f, f.GridLocation, f.ClosestLocation));
                 ListUI.FOBResources[ii].SetText(player.Connection, f.UIResourceString);
             }
         }
@@ -954,7 +955,8 @@ public class SpecialFOB : IFOB, IDeployable
         DisappearAroundEnemies = disappearAroundEnemies;
     }
 
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null)
         {
@@ -1334,40 +1336,44 @@ public class BuildableData : ITranslationArgument
     [JsonPropertyName("emplacementData")]
     public EmplacementData? Emplacement;
 
-    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
     {
         ItemBarricadeAsset asset;
         if (Emplacement is not null)
         {
             if (Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vasset))
             {
+                string plural = Translation.Pluralize(language, culture, vasset.vehicleName, flags);
                 if (format is not null && format.Equals(T.FormatRarityColor))
-                    return Localization.Colorize(ItemTool.getRarityColorUI(vasset.rarity).Hex(), Translation.Pluralize(vasset.vehicleName, flags), flags);
+                    return Localization.Colorize(ItemTool.getRarityColorUI(vasset.rarity).Hex(), plural, flags);
                 else
-                    return Translation.Pluralize(vasset.vehicleName, flags);
+                    return plural;
             }
             if (Emplacement.BaseBarricade.ValidReference(out asset))
             {
+                string plural = Translation.Pluralize(language, culture, asset.itemName, flags);
                 if (format is not null && format.Equals(T.FormatRarityColor))
-                    return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Translation.Pluralize(asset.itemName, flags), flags);
+                    return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), plural, flags);
                 else
-                    return Translation.Pluralize(asset.itemName, flags);
+                    return plural;
             }
             if (Emplacement.Ammo.ValidReference(out ItemAsset iasset))
             {
+                string plural = Translation.Pluralize(language, culture, iasset.itemName, flags);
                 if (format is not null && format.Equals(T.FormatRarityColor))
-                    return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), Translation.Pluralize(iasset.itemName, flags), flags);
+                    return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), plural, flags);
                 else
-                    return Translation.Pluralize(iasset.itemName, flags);
+                    return plural;
             }
         }
 
         if (BuildableBarricade.ValidReference(out asset) || Foundation.ValidReference(out asset))
         {
+            string plural = Translation.Pluralize(language, culture, asset.itemName, flags);
             if (format is not null && format.Equals(T.FormatRarityColor))
-                return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Translation.Pluralize(asset.itemName, flags), flags);
+                return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), plural, flags);
             else
-                return Translation.Pluralize(asset.itemName, flags);
+                return plural;
         }
 
         return Localization.TranslateEnum(Type, language);

@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -218,7 +219,8 @@ public class VehicleData : ITranslationArgument, IListItem
     public const string COLORED_NAME = "cn";
     [FormatDisplay("Vehicle Name")]
     public const string NAME = "n";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         string name = Assets.find(VehicleID) is VehicleAsset va ? va.vehicleName : VehicleID.ToString("N");
         if (format is not null && format.Equals(COLORED_NAME, StringComparison.Ordinal))

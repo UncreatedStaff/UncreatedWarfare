@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Globalization;
 using Uncreated.Encoding;
 using Uncreated.Warfare;
 using Uncreated.Warfare.Events;
@@ -71,7 +72,8 @@ public struct PlayerNames : IPlayer
     public static bool operator !=(PlayerNames left, PlayerNames right) => left.Steam64 != right.Steam64;
     public override bool Equals(object obj) => obj is PlayerNames pn && this.Steam64 == pn.Steam64;
     public override int GetHashCode() => Steam64.GetHashCode();
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => new OfflinePlayer(in this).Translate(language, format, target, ref flags);
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags) => new OfflinePlayer(in this).Translate(language, format, target, culture, ref flags);
 }
 public sealed class UCPlayerEvents : IDisposable
 {

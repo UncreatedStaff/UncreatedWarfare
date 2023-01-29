@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Point;
@@ -325,7 +326,8 @@ public class Order : MonoBehaviour, ITranslationArgument
     public const string FormatMessage = "m";
     [FormatDisplay("Type (" + nameof(EOrder) + ")")]
     public const string FormatType = "t";
-    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is null || format.Equals(FormatMessage, StringComparison.Ordinal))
             goto end;

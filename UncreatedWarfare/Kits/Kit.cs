@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -231,7 +232,8 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public const string DisplayNameFormat = "d";
     [FormatDisplay("Class (" + nameof(Kits.Class) + ")")]
     public const string ClassFormat = "c";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null)
         {

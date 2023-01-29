@@ -29,33 +29,33 @@ public class Translation
         = new Dictionary<string, List<KeyValuePair<Type, FormatDisplayAttribute>>>(32);
 
     private readonly TranslationFlags _flags;
-    private TranslationValue _defaultData;
+    private readonly TranslationValue _defaultData;
     private TranslationValue[]? _data;
-    private TranslationDataAttribute? _attr;
     private bool _init;
     public string Key;
     public int Id;
     public static event Action? OnReload;
     public TranslationFlags Flags => _flags;
     protected string InvalidValue => "Translation Error - " + Key;
-    internal TranslationDataAttribute? AttributeData { get => _attr; set => _attr = value; }
+    internal TranslationDataAttribute? AttributeData { get; set; }
     public Translation(string @default, TranslationFlags flags) : this(@default)
     {
         _flags = flags;
     }
     public Translation(string @default)
     {
-        string def2 = @default;
-        Color clr = ProcessValue(ref def2, out string inner, Flags);
-        _defaultData = new TranslationValue(L.Default, @default, inner, def2, clr);
+        _defaultData = new TranslationValue(L.Default, @default, _flags);
+        ProcessValue(_defaultData, Flags);
     }
     public void RefreshColors()
     {
-        _defaultData = new TranslationValue(in _defaultData, Flags);
+        ProcessValue(_defaultData, Flags);
         if (_data is not null)
         {
             for (int i = 0; i < _data.Length; ++i)
-                _data[i] = new TranslationValue(in _data[i], Flags);
+            {
+                ProcessValue(_data[i], Flags);
+            }
         }
     }
     internal void Init()
@@ -111,17 +111,16 @@ public class Translation
         {
             for (int i = 0; i < _data.Length; ++i)
             {
-                ref TranslationValue v = ref _data[i];
-                if (v.Language.Equals(language, StringComparison.OrdinalIgnoreCase))
+                if (_data[i].Language.Equals(language, StringComparison.OrdinalIgnoreCase))
                 {
-                    v = new TranslationValue(language, value, Flags);
+                    _data[i] = new TranslationValue(language, value, Flags);
                     return;
                 }
             }
 
             TranslationValue[] old = _data;
             _data = new TranslationValue[old.Length + 1];
-            if (language.Equals(L.Default, StringComparison.OrdinalIgnoreCase))
+            if (language.IsDefault())
             {
                 Array.Copy(old, 0, _data, 1, old.Length);
                 _data[0] = new TranslationValue(L.Default, value, Flags);
@@ -139,8 +138,7 @@ public class Translation
         int index = -1;
         for (int i = 0; i < _data.Length; ++i)
         {
-            ref TranslationValue v = ref _data[i];
-            if (v.Language.Equals(language, StringComparison.OrdinalIgnoreCase))
+            if (_data[i].Language.Equals(language, StringComparison.OrdinalIgnoreCase))
             {
                 index = i;
                 break;
@@ -159,7 +157,7 @@ public class Translation
         Array.Copy(old, index + 1, _data, index, old.Length - index - 1);
     }
     public void ClearTranslations() => _data = Array.Empty<TranslationValue>();
-    protected ref TranslationValue this[string language]
+    protected TranslationValue this[string language]
     {
         get
         {
@@ -167,17 +165,18 @@ public class Translation
             {
                 for (int i = 0; i < _data.Length; ++i)
                 {
-                    ref TranslationValue v = ref _data[i];
-                    if (v.Language.Equals(language, StringComparison.OrdinalIgnoreCase))
+                    if (_data[i].Language.Equals(language, StringComparison.OrdinalIgnoreCase))
                     {
-                        return ref v;
+                        return _data[i];
                     }
                 }
             }
-            return ref _defaultData;
+            return _defaultData;
         }
     }
     public static string ToString(object value, string language, string? format, UCPlayer? target, TranslationFlags flags)
+        => ToString(value, language, LanguageAliasSet.GetCultureInfo(language), format, target, flags);
+    public static string ToString(object value, string language, CultureInfo culture, string? format, UCPlayer? target, TranslationFlags flags)
     {
         if (value is null)
             return ToString<object>(value!, language, format, target, flags);
@@ -188,6 +187,9 @@ public class Translation
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ToString<T>(T value, string language, string? format, UCPlayer? target, TranslationFlags flags)
         => ToStringHelperClass<T>.ToString(value, language, format, target, LanguageAliasSet.GetCultureInfo(language), flags);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static string ToString<T>(T value, string language, CultureInfo culture, string? format, UCPlayer? target, TranslationFlags flags)
+        => ToStringHelperClass<T>.ToString(value, language, format, target, culture, flags);
 
     private static readonly Type[] TypeArray1 = { typeof(string), typeof(IFormatProvider) };
     private static readonly Type[] TypeArray2 = { typeof(string) };
@@ -200,40 +202,40 @@ public class Translation
         private static readonly Func<T, string>? ToStringFunc4;
         public static readonly Func<T, bool>? IsOne;
         private static readonly int Type;
-        public static string ToString(T value, string language, string? format, UCPlayer? target, IFormatProvider locale, TranslationFlags flags)
+        public static string ToString(T value, string language, string? format, UCPlayer? target, CultureInfo culture, TranslationFlags flags)
         {
             if (value is null)
                 return Null(flags);
 
             if (value is string str)
-                return CheckCase(Pluralize(str, flags), format);
+                return CheckCase(Pluralize(language, culture, str, flags), format);
 
             str = Type switch
             {
-                1  => ToStringFunc1!(value, format!, locale),
+                1  => ToStringFunc1!(value, format!, culture),
                 2  => ToStringFunc2!(value, format!),
-                3  => ToStringFunc3!(value, locale),
-                4  => Pluralize((value as ITranslationArgument)!.Translate(language, format, target, ref flags), flags),
-                5  => CheckCase(Pluralize((value as UnityEngine.Object)!.name, flags), format),
+                3  => ToStringFunc3!(value, culture),
+                4  => Pluralize(language, culture, (value as ITranslationArgument)!.Translate(language, format, target, culture, ref flags), flags),
+                5  => CheckCase(Pluralize(language, culture, (value as UnityEngine.Object)!.name, flags), format),
                 6  => value is Color clr ? clr.Hex() : value.ToString(),
-                7  => value is CSteamID id ? id.m_SteamID.ToString(format, locale) : value.ToString(),
+                7  => value is CSteamID id ? id.m_SteamID.ToString(format, culture) : value.ToString(),
                 8  => PlayerToString((value as PlayerCaller)!.player, flags, format),
                 9  => PlayerToString((value as Player)!, flags, format),
                 10 => PlayerToString((value as SteamPlayer)!.player, flags, format),
                 11 => PlayerToString((value as SteamPlayerID)!, flags, format),
-                12 => CheckCase(Pluralize(value is Type t ? (t.IsEnum ? Localization.TranslateEnumName(t, language) : (t.IsArray ? (t.GetElementType()!.Name + " Array") : TypeToString(t))) : value.ToString(), flags), format),
-                13 => CheckCase(Pluralize(Localization.TranslateEnum(value, language), flags), format),
-                14 => CheckCase(AssetToString((value as Asset)!, format, flags), format),
+                12 => CheckCase(Pluralize(language, culture, value is Type t ? (t.IsEnum ? Localization.TranslateEnumName(t, language) : (t.IsArray ? (t.GetElementType()!.Name + " Array") : TypeToString(t))) : value.ToString(), flags), format),
+                13 => CheckCase(Pluralize(language, culture, Localization.TranslateEnum(value, language), flags), format),
+                14 => CheckCase(AssetToString(language, culture, (value as Asset)!, format, flags), format),
                 15 => ToStringFunc4!(value),
                 16 => CheckCase((value as BarricadeData)?.barricade.asset.itemName ?? value.ToString(), format),
                 17 => CheckCase((value as StructureData)?.structure.asset.itemName ?? value.ToString(), format),
-                18 => value is Guid guid ? guid.ToString(format ?? "N", locale) : value.ToString(),
+                18 => value is Guid guid ? guid.ToString(format ?? "N", culture) : value.ToString(),
                 19 => value is char chr ? CheckCase(new string(chr, 1), format) : value.ToString(),
-                50 => CheckTime(value, format, out string? val, language, locale) ? val! : value.ToString(),
-                51 => CheckTime(value, format, out string? val, language, locale) ? val! : ToStringFunc1!(value, format!, locale),
-                52 => CheckTime(value, format, out string? val, language, locale) ? val! : ToStringFunc2!(value, format!),
-                53 => CheckTime(value, format, out string? val, language, locale) ? val! : ToStringFunc3!(value, locale),
-                _  => Default(value, format, language, locale, target, flags),
+                50 => CheckTime(value, format, out string? val, language, culture) ? val! : value.ToString(),
+                51 => CheckTime(value, format, out string? val, language, culture) ? val! : ToStringFunc1!(value, format!, culture),
+                52 => CheckTime(value, format, out string? val, language, culture) ? val! : ToStringFunc2!(value, format!),
+                53 => CheckTime(value, format, out string? val, language, culture) ? val! : ToStringFunc3!(value, culture),
+                _  => Default(value, format, language, culture, target, flags),
             };
 
             return str;
@@ -345,43 +347,43 @@ public class Translation
             val = null;
             return false;
         }
-        private static string AssetToString(Asset asset, string? format, TranslationFlags flags)
+        private static string AssetToString(string language, CultureInfo culture, Asset asset, string? format, TranslationFlags flags)
         {
             if (asset is ItemAsset a)
-                return ItemAssetToString(a, format, flags);
+                return ItemAssetToString(language, culture, a, format, flags);
             else if (asset is VehicleAsset b)
-                return VehicleAssetToString(b, format, flags);
+                return VehicleAssetToString(language, culture, b, format, flags);
             else if (asset is QuestAsset c)
-                return QuestAssetToString(c, format, flags);
+                return QuestAssetToString(language, culture, c, format, flags);
 
-            return asset.FriendlyName;
+            return Pluralize(language, culture, asset.FriendlyName, flags);
         }
-        private static string QuestAssetToString(QuestAsset asset, string? format, TranslationFlags flags)
+        private static string QuestAssetToString(string language, CultureInfo culture, QuestAsset asset, string? format, TranslationFlags flags)
         {
             if (format is not null)
             {
                 if (format.Equals(BaseQuestData.COLOR_QUEST_ASSET_FORMAT, StringComparison.Ordinal))
-                    return asset.questName;
+                    return Pluralize(language, culture, asset.questName, flags);
             }
-            return (flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText ? F.RemoveColorTag(asset.questName) : asset.questName;
+            return Pluralize(language, culture, (flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText ? F.RemoveColorTag(asset.questName) : asset.questName, flags);
         }
-        private static string VehicleAssetToString(VehicleAsset asset, string? format, TranslationFlags flags)
+        private static string VehicleAssetToString(string language, CultureInfo culture, VehicleAsset asset, string? format, TranslationFlags flags)
         {
             if (format is not null)
             {
                 if (format.Equals(Warfare.T.FormatRarityColor, StringComparison.Ordinal))
-                    return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Pluralize(asset.vehicleName, flags), flags);
+                    return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Pluralize(language, culture, asset.vehicleName, flags), flags);
             }
-            return asset.vehicleName;
+            return Pluralize(language, culture, asset.vehicleName, flags);
         }
-        private static string ItemAssetToString(ItemAsset asset, string? format, TranslationFlags flags)
+        private static string ItemAssetToString(string language, CultureInfo culture, ItemAsset asset, string? format, TranslationFlags flags)
         {
             if (format is not null)
             {
                 if (format.Equals(Warfare.T.FormatRarityColor, StringComparison.Ordinal))
-                    return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Pluralize(asset.itemName, flags), flags);
+                    return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Pluralize(language, culture, asset.itemName, flags), flags);
             }
-            return asset.itemName;
+            return Pluralize(language, culture, asset.itemName, flags);
         }
         private static string CheckCase(string str, string? format)
         {
@@ -703,26 +705,25 @@ public class Translation
         }
     }
     private static bool TimeType(Type t) => t == typeof(float) || t == typeof(int) || t == typeof(uint) || t == typeof(TimeSpan);
-    protected struct TranslationValue
+    protected class TranslationValue
     {
-        public static TranslationValue Nil = new TranslationValue();
         public readonly string Language;
         public readonly string Original;
-        public readonly string ProcessedInner;
-        public readonly string Processed;
-        public readonly Color Color;
-        public readonly bool RichText;
+        public string ProcessedInner; // has colors replaced and correct color tag type, outer color removed
+        public string Processed; // has colors replaced and correct color tag type.
+        public string ProcessedNoTMProTags; // tmpro tags are converted to unity tags
+        public string ProcessedInnerNoTMProTags; // tmpro tags are converted to unity tags
+        public Color Color;
+        public bool RichText;
         private string? _console;
         public string Console => RichText ? (_console ??= Util.RemoveRichText(ProcessedInner)) : Original;
         public ConsoleColor ConsoleColor => Util.GetClosestConsoleColor(Color);
-        public bool IsNil => Original is null;
         public TranslationValue(string language, string original, TranslationFlags flags)
         {
+            Language = language;
             RichText = (flags & TranslationFlags.NoRichText) == 0;
             Original = original;
-            Processed = original;
-            Color = ProcessValue(ref Processed, out ProcessedInner, flags);
-            Language = language;
+            ProcessValue(this, flags);
             _console = null;
         }
         public TranslationValue(string language, string original, string processedInner, string processed, Color color)
@@ -735,98 +736,105 @@ public class Translation
             Color = color;
             _console = null;
         }
-        public TranslationValue(in TranslationValue value, TranslationFlags flags) : this(value.Language, value.Original, flags) { }
+
+        internal void ResetConsole() => _console = null;
     }
-    public static string Pluralize(string word, TranslationFlags flags)
+    public static string Pluralize(string language, CultureInfo? culture, string word, TranslationFlags flags)
     {
         if ((flags & TranslationFlags.NoPlural) == TranslationFlags.NoPlural || word.Length < 3 || (flags & TranslationFlags.Plural) == 0)
             return word;
-        string[] words = word.Split(' ');
-        bool hOthWrds = words.Length > 1;
-        string otherWords = string.Empty;
-        string str = (hOthWrds ? words[words.Length - 1] : word).ToLowerInvariant();
-        if (str.Length < 2)
-            return word;
-        if (hOthWrds)
-            otherWords = string.Join(" ", words, 0, words.Length - 1);
-        bool isPCaps = char.IsUpper(word[0]);
+        //culture ??= LanguageAliasSet.GetCultureInfo(language);
+        if (language.Equals(LanguageAliasSet.ENGLISH))
+        {
+            string[] words = word.Split(' ');
+            bool hOthWrds = words.Length > 1;
+            string otherWords = string.Empty;
+            string str = (hOthWrds ? words[words.Length - 1] : word).ToLowerInvariant();
+            if (str.Length < 2)
+                return word;
+            if (hOthWrds)
+                otherWords = string.Join(" ", words, 0, words.Length - 1);
+            bool isPCaps = char.IsUpper(word[0]);
 
-        if (str.Equals("child", StringComparison.OrdinalIgnoreCase))
-            return word + "ren";
-        if (str.Equals("goose", StringComparison.OrdinalIgnoreCase))
-            return otherWords + (isPCaps ? "Geese" : "geese");
-        if (str.Equals("tooth", StringComparison.OrdinalIgnoreCase))
-            return otherWords + (isPCaps ? "Teeth" : "teeth");
-        if (str.Equals("foot", StringComparison.OrdinalIgnoreCase))
-            return otherWords + (isPCaps ? "Feet" : "feet");
-        if (str.Equals("mouse", StringComparison.OrdinalIgnoreCase))
-            return otherWords + (isPCaps ? "Mice" : "mice");
-        if (str.Equals("die", StringComparison.OrdinalIgnoreCase))
-            return otherWords + (isPCaps ? "Dice" : "dice");
-        if (str.Equals("person", StringComparison.OrdinalIgnoreCase))
-            return otherWords + (isPCaps ? "People" : "people");
-        if (str.Equals("axis", StringComparison.OrdinalIgnoreCase))
-            return otherWords + (isPCaps ? "Axes" : "axes");
-        if (str.Equals("ammo", StringComparison.OrdinalIgnoreCase))
-            return otherWords + (isPCaps ? "Ammo" : "ammo");
+            if (str.Equals("child", StringComparison.OrdinalIgnoreCase))
+                return word + "ren";
+            if (str.Equals("goose", StringComparison.OrdinalIgnoreCase))
+                return otherWords + (isPCaps ? "Geese" : "geese");
+            if (str.Equals("tooth", StringComparison.OrdinalIgnoreCase))
+                return otherWords + (isPCaps ? "Teeth" : "teeth");
+            if (str.Equals("foot", StringComparison.OrdinalIgnoreCase))
+                return otherWords + (isPCaps ? "Feet" : "feet");
+            if (str.Equals("mouse", StringComparison.OrdinalIgnoreCase))
+                return otherWords + (isPCaps ? "Mice" : "mice");
+            if (str.Equals("die", StringComparison.OrdinalIgnoreCase))
+                return otherWords + (isPCaps ? "Dice" : "dice");
+            if (str.Equals("person", StringComparison.OrdinalIgnoreCase))
+                return otherWords + (isPCaps ? "People" : "people");
+            if (str.Equals("axis", StringComparison.OrdinalIgnoreCase))
+                return otherWords + (isPCaps ? "Axes" : "axes");
+            if (str.Equals("ammo", StringComparison.OrdinalIgnoreCase))
+                return otherWords + (isPCaps ? "Ammo" : "ammo");
 
-        if (str.EndsWith("man", StringComparison.OrdinalIgnoreCase))
-            return str.Substring(0, str.Length - 2) + (char.IsUpper(str[str.Length - 2]) ? "E" : "e") + str[str.Length - 1];
+            if (str.EndsWith("man", StringComparison.OrdinalIgnoreCase))
+                return str.Substring(0, str.Length - 2) + (char.IsUpper(str[str.Length - 2]) ? "E" : "e") + str[str.Length - 1];
 
-        char last = str[str.Length - 1];
-        char slast = str[str.Length - 2];
+            char last = str[str.Length - 1];
+            char slast = str[str.Length - 2];
 
-        if (last is 's' or 'x' or 'z' || (last is 'h' && slast is 's' or 'c'))
-            return word + "es";
+            if (last is 's' or 'x' or 'z' || (last is 'h' && slast is 's' or 'c'))
+                return word + "es";
 
-        if (str.Equals("roof", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("belief", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("chef", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("chief", StringComparison.OrdinalIgnoreCase)
-            )
-            goto s;
-        if (last is 'f')
-            return word.Substring(0, word.Length - 1) + "ves";
+            if (str.Equals("roof", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("belief", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("chef", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("chief", StringComparison.OrdinalIgnoreCase)
+                )
+                goto s;
+            if (last is 'f')
+                return word.Substring(0, word.Length - 1) + "ves";
 
-        if (last is 'e' && slast is 'f')
-            return word.Substring(0, word.Length - 2) + "ves";
+            if (last is 'e' && slast is 'f')
+                return word.Substring(0, word.Length - 2) + "ves";
 
-        if (last is 'y')
-            if (!(slast is 'a' or 'e' or 'i' or 'o' or 'u'))
-                return word.Substring(0, word.Length - 1) + "ies";
-            else goto s;
+            if (last is 'y')
+                if (!(slast is 'a' or 'e' or 'i' or 'o' or 'u'))
+                    return word.Substring(0, word.Length - 1) + "ies";
+                else goto s;
 
-        if (str.Equals("photo", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("piano", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("halo", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("volcano", StringComparison.OrdinalIgnoreCase)
-           )
-            goto s;
+            if (str.Equals("photo", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("piano", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("halo", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("volcano", StringComparison.OrdinalIgnoreCase)
+               )
+                goto s;
 
-        if (last is 'o')
-            return word + "es";
+            if (last is 'o')
+                return word + "es";
 
-        if (last is 's' && slast is 'u')
-            return word.Substring(0, word.Length - 2) + "i";
+            if (last is 's' && slast is 'u')
+                return word.Substring(0, word.Length - 2) + "i";
 
-        if (last is 's' && slast is 'i')
-            return word.Substring(0, word.Length - 2) + "es";
+            if (last is 's' && slast is 'i')
+                return word.Substring(0, word.Length - 2) + "es";
 
-        if (str.Equals("sheep", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("series", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("species", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("moose", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("fish", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("swine", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("buffalo", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("shrimp", StringComparison.OrdinalIgnoreCase) ||
-            str.Equals("trout", StringComparison.OrdinalIgnoreCase) ||
-            (str.EndsWith("craft", StringComparison.OrdinalIgnoreCase) && str.Length > 5) ||
-            str.Equals("deer", StringComparison.OrdinalIgnoreCase))
-            return word;
+            if (str.Equals("sheep", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("series", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("species", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("moose", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("fish", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("swine", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("buffalo", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("shrimp", StringComparison.OrdinalIgnoreCase) ||
+                str.Equals("trout", StringComparison.OrdinalIgnoreCase) ||
+                (str.EndsWith("craft", StringComparison.OrdinalIgnoreCase) && str.Length > 5) ||
+                str.Equals("deer", StringComparison.OrdinalIgnoreCase))
+                return word;
 
-        s:
-        return word + "s";
+            s:
+            return word + "s";
+        }
+
+        return word;
     }
     public static unsafe void ReplaceTMProRichText(ref string value, TranslationFlags flags)
     {
@@ -862,7 +870,7 @@ public class Translation
         }
         value = Util.RemoveTMProRichText(inp);
     }
-    public static unsafe void ReplaceColors(ref string message)
+    private static unsafe void ReplaceColors(ref string message)
     {
         int index = -2;
         if (message.Length < 4) return;
@@ -895,17 +903,25 @@ public class Translation
             index = nindex;
         }
     }
-    public static Color ProcessValue(ref string message, out string innerText, TranslationFlags flags)
+    private static void ProcessValue(TranslationValue value, TranslationFlags flags)
     {
-        ReplaceColors(ref message);
+        string message = value.Original;
+        ReplaceColors(ref message); // replace c$placeholder$s.
         Color color;
+        bool noTmproRepl = false;
 
+        // replaces tmpro rich text with unity rich text when needed
         if ((flags & TranslationFlags.NoRichText) == 0 && (flags & TranslationFlags.ReplaceTMProRichText) == TranslationFlags.ReplaceTMProRichText)
+        {
             ReplaceTMProRichText(ref message, flags);
+            noTmproRepl = true;
+        }
+        value.Processed = message;
 
         if ((flags & TranslationFlags.NoColorOptimization) == TranslationFlags.NoColorOptimization)
             goto noColor;
 
+        // removes outer colors to be sent as a message color instead.
         // <#ffffff>
         if (message.Length > 2 && message.StartsWith("<#", StringComparison.OrdinalIgnoreCase) && message[2] != '{')
         {
@@ -914,11 +930,11 @@ public class Translation
                 goto noColor;
             string clr = message.Substring(2, endtag - 2);
             if (endtag == message.Length - 1)
-                innerText = string.Empty;
+                value.ProcessedInner = string.Empty;
             else if (message.EndsWith("</color>", StringComparison.OrdinalIgnoreCase))
-                innerText = message.Substring(endtag + 1, message.Length - endtag - 1 - 8);
+                value.ProcessedInner = message.Substring(endtag + 1, message.Length - endtag - 1 - 8);
             else
-                innerText = message.Substring(endtag + 1, message.Length - endtag - 1);
+                value.ProcessedInner = message.Substring(endtag + 1, message.Length - endtag - 1);
             color = clr.Hex();
             goto next;
         }
@@ -930,20 +946,29 @@ public class Translation
                 goto noColor;
             string clr = message.Substring(8, endtag - 8);
             if (endtag == message.Length - 1)
-                innerText = string.Empty;
+                value.ProcessedInner = string.Empty;
             else if (message.EndsWith("</color>", StringComparison.OrdinalIgnoreCase))
-                innerText = message.Substring(endtag + 1, message.Length - endtag - 1 - 8);
+                value.ProcessedInner = message.Substring(endtag + 1, message.Length - endtag - 1 - 8);
             else
-                innerText = message.Substring(endtag + 1, message.Length - endtag - 1);
+                value.ProcessedInner = message.Substring(endtag + 1, message.Length - endtag - 1);
             color = clr.Hex();
             goto next;
         }
 
         noColor:
         color = UCWarfare.GetColor("default");
-        innerText = message;
+        value.ProcessedInner = message;
         next:
-        return color;
+        value.ProcessedNoTMProTags = message;
+        value.ProcessedInnerNoTMProTags = value.ProcessedInner;
+        if ((flags & TranslationFlags.NoRichText) == 0 && !noTmproRepl)
+        {
+            ReplaceTMProRichText(ref value.ProcessedNoTMProTags, flags);
+            ReplaceTMProRichText(ref value.ProcessedInnerNoTMProTags, flags);
+        }
+
+        value.Color = color;
+        value.ResetConsole();
     }
     protected TranslationFlags GetFlags(ulong targetTeam) => targetTeam switch
     {
@@ -958,32 +983,89 @@ public class Translation
             : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
                 ? NullColorUnity
                 : NullColorTMPro);
-    public string Translate(string? language)
+    public string Translate(string? language, bool imgui = false) => Translate(language, LanguageAliasSet.GetCultureInfo(language), imgui);
+    public string Translate(IPlayer? player, out Color color)
+    {
+        if (player is UCPlayer pl)
+            return Translate(pl.Language, pl.Culture, out color, pl.Save.IMGUI);
+        if (player is null)
+            return Translate(L.Default, Data.LocalLocale, out color);
+        string l = Localization.GetLang(player.Steam64);
+        return Translate(l, LanguageAliasSet.GetCultureInfo(l), out color);
+    }
+    public string Translate(IPlayer? player)
+    {
+        if (player is UCPlayer pl)
+            return Translate(pl.Language, pl.Culture, pl.Save.IMGUI);
+        if (player is null)
+            return Translate(L.Default, Data.LocalLocale);
+        string l = Localization.GetLang(player.Steam64);
+        return Translate(l, LanguageAliasSet.GetCultureInfo(l));
+    }
+    public string Translate(ulong player) => Translate(Localization.GetLang(player), UCPlayer.FromID(player) is { Save.IMGUI: true });
+    public string Translate(ulong player, out Color color)
+        => Translate(Localization.GetLang(player), out color, UCPlayer.FromID(player) is { Save.IMGUI: true });
+
+    public string Translate(string? language, out Color color, bool imgui = false) => Translate(language, LanguageAliasSet.GetCultureInfo(language), out color, imgui);
+    public string Translate(string? language, CultureInfo? culture, bool imgui = false)
     {
         if (language is null)
             return _defaultData.Processed;
-        if (language.Length == 0 || language.Equals("0", StringComparison.Ordinal))
+        if (language.Length == 0 || language.Length == 1 && language[0] == '0')
             language = L.Default;
 
-        ref TranslationValue data = ref this[language];
-        return data.Processed;
+        TranslationValue data = this[language];
+        string rtn = imgui ? data.ProcessedNoTMProTags : data.Processed;
+        AdjustForCulture(culture, ref rtn);
+        return rtn;
     }
-    public string Translate(IPlayer? player) => player is null ? Translate(L.Default) : Translate(Localization.GetLang(player.Steam64));
-    public string Translate(ulong player) => Translate(Localization.GetLang(player));
-    public string Translate(ulong player, out Color color) => Translate(Localization.GetLang(player), out color);
-    public string Translate(string? language, out Color color)
+    public string Translate(string? language, CultureInfo? culture, out Color color, bool imgui = false)
     {
         if (language is null)
         {
             color = _defaultData.Color;
             return _defaultData.ProcessedInner;
         }
-        if (language.Length == 0 || language.Equals("0", StringComparison.Ordinal))
+        if (language.Length == 0 || language.Length == 1 && language[0] == '0')
             language = L.Default;
 
-        ref TranslationValue data = ref this[language];
+        TranslationValue data = this[language];
         color = data.Color;
-        return data.ProcessedInner;
+        string rtn = imgui ? data.ProcessedInnerNoTMProTags : data.ProcessedInner;
+        AdjustForCulture(culture, ref rtn);
+        return rtn;
+    }
+    private static void AdjustForCulture(CultureInfo? culture, ref string output)
+    {
+        if (culture == null)
+            return;
+        if (culture.TextInfo.IsRightToLeft)
+        {
+            RightToLeftify(ref output);
+        }
+    }
+    
+    private static unsafe void RightToLeftify(ref string text)
+    {
+        return;
+        char[] chars = text.ToCharArray();
+        // treat tags as one character, and swap end and start tags...
+        int index = -1;
+        while (true)
+        {
+            index = text.IndexOf('<', index + 1);
+            if (index == -1 || index >= chars.Length - 2)
+                break;
+            bool endTag = chars[index + 1] == '/';
+            int index2 = text.IndexOf('>', index + 1);
+            if (index2 == -1)
+                break;
+            bool singleTag = !endTag;
+        }
+        char* ptr = stackalloc char[text.Length];
+        for (int i = 0; i < text.Length; ++i)
+            ptr[i] = text[text.Length - i - 1];
+        text = new string(ptr, 0, text.Length);
     }
     private string BaseUnsafeTranslate(Type t, string val, string language, Type[] gens, object[] formatting, UCPlayer? target, ulong targetTeam)
     {
@@ -1224,8 +1306,7 @@ public class Translation
             {
                 for (int i = 0; i < t._data.Length; ++i)
                 {
-                    ref TranslationValue v = ref t._data[i];
-                    if (v.Language.Equals(L.Default, StringComparison.Ordinal))
+                    if (t._data[i].Language.Equals(L.Default, StringComparison.Ordinal))
                         goto c;
                 }
             }
@@ -1247,7 +1328,7 @@ public class Translation
         using FileStream str = new FileStream(info.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
         using StreamWriter writer = new StreamWriter(str);
         string? lastSection = null;
-        foreach (Translation t in T.Translations.OrderBy(x => x._attr?.Section ?? "~", StringComparer.OrdinalIgnoreCase))
+        foreach (Translation t in T.Translations.OrderBy(x => x.AttributeData?.Section ?? "~", StringComparer.OrdinalIgnoreCase))
         {
             WriteTranslation(writer, t, t._defaultData.Original, ref lastSection);
         }
@@ -1263,15 +1344,14 @@ public class Translation
         using FileStream str = new FileStream(info.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
         using StreamWriter writer = new StreamWriter(str);
         string? lastSection = null;
-        foreach (Translation t in T.Translations.OrderBy(x => x._attr?.Section ?? "~", StringComparer.OrdinalIgnoreCase))
+        foreach (Translation t in T.Translations.OrderBy(x => x.AttributeData?.Section ?? "~", StringComparer.OrdinalIgnoreCase))
         {
             if (t._data is null) continue;
             string? val = null;
             for (int i = 0; i < t._data.Length; ++i)
             {
-                ref TranslationValue v = ref t._data[i];
-                if (v.Language.Equals(language, StringComparison.Ordinal))
-                    val = v.Original;
+                if (t._data[i].Language.Equals(language, StringComparison.Ordinal))
+                    val = t._data[i].Original;
             }
             if (val is not null)
                 WriteTranslation(writer, t, val, ref lastSection);
@@ -1282,7 +1362,7 @@ public class Translation
     private static void WriteTranslation(StreamWriter writer, Translation t, string val, ref string? lastSection)
     {
         if (string.IsNullOrEmpty(val)) return;
-        string? sect = t._attr?.Section;
+        string? sect = t.AttributeData?.Section;
         if (sect != lastSection)
         {
             lastSection = sect;
@@ -1292,10 +1372,10 @@ public class Translation
                 writer.WriteLine("! " + sect + " !");
         }
         writer.WriteLine();
-        if (t._attr is not null)
+        if (t.AttributeData is not null)
         {
-            if (t._attr.Description is not null)
-                writer.WriteLine("# Description: " + t._attr.Description.RemoveMany(true, '\r', '\n'));
+            if (t.AttributeData.Description is not null)
+                writer.WriteLine("# Description: " + t.AttributeData.Description.RemoveMany(true, '\r', '\n'));
         }
 
         Type tt = t.GetType();
@@ -1348,8 +1428,8 @@ public class Translation
                 }
             }
 
-            if (t._attr is not null && t._attr.FormattingDescriptions is not null && i < t._attr.FormattingDescriptions.Length && !string.IsNullOrEmpty(t._attr.FormattingDescriptions[i]))
-                fmt += " " + t._attr.FormattingDescriptions[i].RemoveMany(true, '\r', '\n');
+            if (t.AttributeData is not null && t.AttributeData.FormattingDescriptions is not null && i < t.AttributeData.FormattingDescriptions.Length && !string.IsNullOrEmpty(t.AttributeData.FormattingDescriptions[i]))
+                fmt += " " + t.AttributeData.FormattingDescriptions[i].RemoveMany(true, '\r', '\n');
 
             writer.WriteLine(fmt);
         }
@@ -1495,7 +1575,7 @@ public enum TranslationFlags
 
 public interface ITranslationArgument
 {
-    string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags);
+    string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags);
 }
 public sealed class Translation<T> : Translation
 {
@@ -1533,20 +1613,29 @@ public sealed class Translation<T> : Translation
     {
         return expectation == -1 ? flags : flags | TranslationFlags.Plural;
     }
-    public string Translate(string language, T arg, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language), language, arg, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(string language, T arg, out Color color, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language, out color), language, arg, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(string language, T arg, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language), language, arg, null, team, Flags)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(string language, T arg, out Color color, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language, out color), language, arg, null, team, Flags)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
     public string Translate(UCPlayer player, T arg)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        return Translate(Translate(lang), lang, arg, player, player is null ? 0 : player.GetTeam(), Flags);
-    }
-    public string Translate(ulong player, T arg)
-    {
-        UCPlayer? pl = UCPlayer.FromID(player);
-        string lang = Localization.GetLang(player);
-        return Translate(Translate(lang), lang, arg, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
+        return player == null
+            ? Translate(Translate(lang, culture), lang, arg, null, 0, Flags)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg, player, player.GetTeam(), Flags);
     }
 }
 public sealed class Translation<T1, T2> : Translation
@@ -1597,20 +1686,29 @@ public sealed class Translation<T1, T2> : Translation
         };
         return flags;
     }
-    public string Translate(string language, T1 arg1, T2 arg2, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language), language, arg1, arg2, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(string language, T1 arg1, T2 arg2, out Color color, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language, out color), language, arg1, arg2, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(string language, T1 arg1, T2 arg2, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language), language, arg1, arg2, null, team, Flags)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(string language, T1 arg1, T2 arg2, out Color color, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language, out color), language, arg1, arg2, null, team, Flags)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
     public string Translate(UCPlayer player, T1 arg1, T2 arg2)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        return Translate(Translate(lang), lang, arg1, arg2, player, player is null ? 0 : player.GetTeam(), Flags);
-    }
-    public string Translate(ulong player, T1 arg1, T2 arg2)
-    {
-        UCPlayer? pl = UCPlayer.FromID(player);
-        string lang = Localization.GetLang(player);
-        return Translate(Translate(lang), lang, arg1, arg2, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
+        return player == null
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, null, 0, Flags)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, player, player.GetTeam(), Flags);
     }
 }
 public sealed class Translation<T1, T2, T3> : Translation
@@ -1667,20 +1765,29 @@ public sealed class Translation<T1, T2, T3> : Translation
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language), language, arg1, arg2, arg3, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, out Color color, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language, out color), language, arg1, arg2, arg3, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3)
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language), language, arg1, arg2, arg3, null, team, Flags)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, out Color color, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, null, team, Flags)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
-    }
-    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3)
-    {
-        UCPlayer? pl = UCPlayer.FromID(player);
-        string lang = Localization.GetLang(player);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
+        return player == null
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, null, 0, Flags)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, player, player.GetTeam(), Flags);
     }
 }
 public sealed class Translation<T1, T2, T3, T4> : Translation
@@ -1743,20 +1850,29 @@ public sealed class Translation<T1, T2, T3, T4> : Translation
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language), language, arg1, arg2, arg3, arg4, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, out Color color, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, null, team, Flags)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, out Color color, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, null, team, Flags)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
-    }
-    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-    {
-        UCPlayer? pl = UCPlayer.FromID(player);
-        string lang = Localization.GetLang(player);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
+        return player == null
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, null, 0, Flags)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, player, player.GetTeam(), Flags);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5> : Translation
@@ -1825,20 +1941,29 @@ public sealed class Translation<T1, T2, T3, T4, T5> : Translation
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, out Color color, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, null, team, Flags)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, out Color color, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, null, team, Flags)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
-    }
-    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-    {
-        UCPlayer? pl = UCPlayer.FromID(player);
-        string lang = Localization.GetLang(player);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
+        return player == null
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, null, 0, Flags)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, player, player.GetTeam(), Flags);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
@@ -1913,20 +2038,29 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, out Color color, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, null, team, Flags)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, out Color color, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, null, team, Flags)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
-    }
-    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-    {
-        UCPlayer? pl = UCPlayer.FromID(player);
-        string lang = Localization.GetLang(player);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
+        return player == null
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, null, 0, Flags)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, player, player.GetTeam(), Flags);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
@@ -2007,20 +2141,29 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, out Color color, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, team, Flags)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, out Color color, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, team, Flags)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
-    }
-    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-    {
-        UCPlayer? pl = UCPlayer.FromID(player);
-        string lang = Localization.GetLang(player);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
+        return player == null
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, 0, Flags)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, player.GetTeam(), Flags);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
@@ -2107,20 +2250,29 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, out Color color, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, team, Flags)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, out Color color, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, team, Flags)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
-    }
-    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-    {
-        UCPlayer? pl = UCPlayer.FromID(player);
-        string lang = Localization.GetLang(player);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
+        return player == null
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, 0, Flags)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, player.GetTeam(), Flags);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translation
@@ -2212,20 +2364,29 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translatio
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, out Color color, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, team, Flags)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, out Color color, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, team, Flags)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
-    }
-    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-    {
-        UCPlayer? pl = UCPlayer.FromID(player);
-        string lang = Localization.GetLang(player);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
+        return player == null
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, 0, Flags)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, player.GetTeam(), Flags);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Translation
@@ -2324,20 +2485,29 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, out Color color, UCPlayer? target = null, ulong team = 0) =>
-        Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
-    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, team, Flags)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, out Color color, UCPlayer? target = null, ulong team = 0)
+    {
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        return target == null
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, team, Flags)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team == 0 ? target.GetTeam() : team, Flags);
+    }
+
+    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
-    }
-    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
-    {
-        UCPlayer? pl = UCPlayer.FromID(player);
-        string lang = Localization.GetLang(player);
-        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
+        return player == null
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, 0, Flags)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player, player.GetTeam(), Flags);
     }
 }
 [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]

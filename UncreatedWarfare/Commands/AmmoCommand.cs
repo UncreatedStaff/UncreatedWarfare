@@ -33,6 +33,8 @@ public class AmmoCommand : AsyncCommand
 
         if (ctx.TryGetTarget(out InteractableVehicle vehicle))
         {
+            if (!Util.IsValidSteam64Id(vehicle.lockedOwner.m_SteamID))
+                throw ctx.Reply(T.AmmoVehicleCantRearm);
             ctx.AssertGamemode<IVehicles>();
 
             SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);

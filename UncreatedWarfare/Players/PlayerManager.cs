@@ -148,7 +148,8 @@ public static class PlayerManager
             player.channel.owner.playerID.characterName,
             player.channel.owner.playerID.nickName,
             save.IsOtherDonator,
-            src ?? new CancellationTokenSource()
+            src ?? new CancellationTokenSource(),
+            save
         );
 
         Data.OriginalPlayerNames.Remove(ucplayer.Steam64);
@@ -175,8 +176,8 @@ public static class PlayerManager
                 }
             }
         }
-
-        SquadManager.OnPlayerJoined(ucplayer, save.SquadName);
+        if (save.SquadName != null)
+            SquadManager.OnPlayerJoined(ucplayer, save.SquadName);
         FOBManager.SendFOBList(ucplayer);
         return ucplayer;
     }

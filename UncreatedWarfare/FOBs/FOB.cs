@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -699,7 +700,8 @@ public class FOB : IFOB, IDeployable
     public const string GRID_LOCATION_FORMAT = "g";
     [FormatDisplay(typeof(IDeployable), "Name")]
     public const string NAME_FORMAT = "n";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null)
         {

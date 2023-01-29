@@ -691,7 +691,7 @@ public static class OffenseManager
         {
             CSteamID id = target.Player.channel.owner.playerID.steamID;
             await UCWarfare.ToUpdate();
-            ipv4 = SteamGameServerNetworkingUtils.getIPv4AddressOrZero(id);
+            target.Player.channel.owner.transportConnection.TryGetIPv4Address(out ipv4);
             name = target.Name;
             Provider.requestBanPlayer(Provider.server, id, ipv4, hwids, reason, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration));
         }

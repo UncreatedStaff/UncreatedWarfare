@@ -623,7 +623,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
         TraitSigns.TimeSync();
     }
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => DisplayName;
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags) => DisplayName;
     public void ShutdownAfterGame(string reason, ulong player)
     {
         ShouldShutdownAfterGame = true;

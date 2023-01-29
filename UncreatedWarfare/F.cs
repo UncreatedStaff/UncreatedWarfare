@@ -1516,7 +1516,7 @@ public static class F
     {
         return collection == null || collection.Count == 0;
     }
-    public static int StringSearch<T>(IReadOnlyList<T> collection, Func<T, string?> selector, string input, bool equalsOnly = false)
+    public static int StringIndexOf<T>(IReadOnlyList<T> collection, Func<T, string?> selector, string input, bool equalsOnly = false)
     {
         if (input == null)
             return -1;
@@ -1545,6 +1545,67 @@ public static class F
         }
 
         return -1;
+    }
+    public static T? StringFind<T>(IReadOnlyList<T> collection, Func<T, string?> selector, string input, bool equalsOnly = false)
+    {
+        if (input == null)
+            return default;
+
+        for (int i = 0; i < collection.Count; ++i)
+        {
+            if (string.Equals(selector(collection[i]), input, StringComparison.OrdinalIgnoreCase))
+                return collection[i];
+        }
+        if (!equalsOnly)
+        {
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? n = selector(collection[i]);
+                if (n != null && n.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
+                    return collection[i];
+            }
+
+            string[] inSplits = input.Split(splits);
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                string? name = selector(collection[i]);
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                    return collection[i];
+            }
+        }
+
+        return default;
+    }
+    public static T? StringFind<T, TKey>(IReadOnlyList<T> collection, Func<T, string?> selector, Func<T, TKey> orderBy, string input, bool equalsOnly = false, bool descending = false)
+    {
+        if (input == null)
+            return default;
+        T[] buffer = (descending ? collection.OrderByDescending(orderBy) : collection.OrderBy(orderBy)).ToArray();
+        for (int i = 0; i < buffer.Length; i++)
+        {
+            if (string.Equals(selector(buffer[i]), input, StringComparison.OrdinalIgnoreCase))
+                return buffer[i];
+        }
+
+        if (!equalsOnly)
+        {
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                string? n = selector(buffer[i]);
+                if (n != null && n.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
+                    return buffer[i];
+            }
+
+            string[] inSplits = input.Split(splits);
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                string? name = selector(buffer[i]);
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                    return buffer[i];
+            }
+        }
+
+        return default;
     }
     public static void StringSearch<T>(IReadOnlyList<T> collection, IList<T> output, Func<T, string?> selector, string input, bool equalsOnly = false)
     {
@@ -1748,4 +1809,5 @@ public static class F
             throw new ArgumentException("If item is null, pk must have a value to delete the item.", nameof(pk));
         return data.NonQueryAsync($"DELETE FROM `{tableMain}` WHERE `{columnPk}`=@0;", new object[] { pk.Key }, token);
     }
+    public static bool IsDefault(this string str) => str.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
 }

@@ -1189,6 +1189,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     public readonly string Language;
     public ulong Team = 0;
     public readonly List<UCPlayer> Players;
+    public readonly bool IMGUI;
     private int _index;
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
     public UCPlayer Next;
@@ -1199,6 +1200,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         if (!Data.Languages.TryGetValue(player.Steam64, out Language))
             Language = L.Default;
         Players = new List<UCPlayer>(1) { player };
+        IMGUI = player.Save.IMGUI;
         _index = -1;
         Next = null!;
         Team = player.GetTeam();
@@ -1266,7 +1268,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;
@@ -1296,7 +1298,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;
@@ -1328,7 +1330,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;
@@ -1360,7 +1362,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
                     LanguageSet l = Languages[i2];
-                    if (l.Team == team && l.Language.Equals(lang, StringComparison.Ordinal))
+                    if (l.Team == team && l.Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         l.Add(pl);
                         found = true;
@@ -1390,7 +1392,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;
@@ -1422,7 +1424,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;
@@ -1453,7 +1455,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;
@@ -1483,7 +1485,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;
@@ -1514,7 +1516,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;
@@ -1543,7 +1545,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;
@@ -1574,7 +1576,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;
@@ -1604,7 +1606,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;
@@ -1634,7 +1636,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
                 bool found = false;
                 for (int i2 = 0; i2 < Languages.Count; i2++)
                 {
-                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    if (Languages[i2].Language.Equals(lang, StringComparison.Ordinal) && Languages[i2].IMGUI == pl.Save.IMGUI)
                     {
                         Languages[i2].Add(pl);
                         found = true;

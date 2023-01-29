@@ -64,7 +64,7 @@ public class UAV : MonoBehaviour, IBuff
     public static void RequestUAV(UCPlayer requester)
     {
         ulong team = requester.GetTeam();
-        if ((team == 1 && _isRequestActiveT1) || (team == 2 && _isRequestActiveT2))
+        if ((team == 1 && _isRequestActiveT1) || (team == 2 && _isRequestActiveT2) || (team == 1 && _team1UAV != null) || (team == 2 && _team1UAV != null))
         {
             requester.SendChat(T.RequestAlreadyActive);
             return;
