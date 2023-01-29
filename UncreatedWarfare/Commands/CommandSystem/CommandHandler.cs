@@ -841,6 +841,39 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         return ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.LocalLocale, out value);
     }
+    public bool TryGet(int parameter, out bool value)
+    {
+        parameter += _offset;
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        {
+            value = false;
+            return false;
+        }
+
+        string p = GetParamForParse(parameter);
+        if (p.Equals("true", StringComparison.InvariantCultureIgnoreCase) ||
+            p.Equals("yes", StringComparison.InvariantCultureIgnoreCase) ||
+            p.Equals("1", StringComparison.InvariantCultureIgnoreCase) ||
+            p.Equals("y", StringComparison.InvariantCultureIgnoreCase))
+        {
+            value = true;
+        }
+        else if (p.Equals("false", StringComparison.InvariantCultureIgnoreCase) ||
+                 p.Equals("no", StringComparison.InvariantCultureIgnoreCase) ||
+                 p.Equals("0", StringComparison.InvariantCultureIgnoreCase) ||
+                 p.Equals("n", StringComparison.InvariantCultureIgnoreCase))
+        {
+            value = false;
+        }
+        else
+        {
+            value = false;
+            return false;
+        }
+
+
+        return true;
+    }
     public bool TryGetTeam(int parameter, out ulong value)
     {
         parameter += _offset;
@@ -1496,7 +1529,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.Default, out Color color);
+            string message = translation.Translate(L.Default, out Color color, false);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);

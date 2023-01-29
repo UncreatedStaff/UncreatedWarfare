@@ -82,29 +82,31 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-
-
         if (
-        _lost ||
-        _controller.LockOnTarget is null ||
-        !_controller.LockOnTarget.TryGetComponent(out VehicleComponent c) || 
-        c.Vehicle.isDead ||
-        c.Data is null)
+            _lost ||
+            _controller.LockOnTarget is null ||
+            !_controller.LockOnTarget.TryGetComponent(out VehicleComponent c) ||
+            c.Vehicle.isDead ||
+            c.Data is null)
         {
             return;
         }
 
-        for (byte seat = 0; seat < c.Vehicle.passengers.Length; seat++)
-        {
-            if (c.Vehicle.passengers[seat].player != null &&
-                c.Data.Item != null &&
-                c.Data.Item.CrewSeats.Contains(seat))
-            {
-                ushort effectID = VehicleBay.Config.MissileWarningID;
-                if (seat == 0)
-                    effectID = VehicleBay.Config.MissileWarningDriverID;
 
-                EffectManager.sendUIEffect(effectID, (short)effectID, c.Vehicle.passengers[seat].player.transportConnection, true);
+        L.LogDebug("Warning can be sent");
+
+        if (c.Data is { Item: { } item })
+        {
+            for (byte seat = 0; seat < c.Vehicle.passengers.Length; seat++)
+            {
+                if (c.Vehicle.passengers[seat].player != null && item.CrewSeats.Contains(seat))
+                {
+                    ushort effectID = VehicleBay.Config.MissileWarningID;
+                    if (seat == 0)
+                        effectID = VehicleBay.Config.MissileWarningDriverID;
+
+                    EffectManager.sendUIEffect(effectID, (short)effectID, c.Vehicle.passengers[seat].player.transportConnection, true);
+                }
             }
         }
     }
@@ -113,7 +115,7 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
     private void FixedUpdate()
     {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
 
         _guiderDistance += Time.fixedDeltaTime * _projectileSpeed;

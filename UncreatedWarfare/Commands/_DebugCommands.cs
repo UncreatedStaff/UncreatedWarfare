@@ -1519,4 +1519,29 @@ public class DebugCommand : AsyncCommand
         });
     }
 #endif
+
+    private void translate(CommandInteraction ctx)
+    {
+        if (ctx.TryGet(0, out string name))
+        {
+            ctx.TryGet(1, out bool imgui);
+            ctx.TryGet(2, out TranslationFlags flags);
+
+            if (T.Translations.FirstOrDefault(x => x.Key.Equals(name, StringComparison.Ordinal)) is { } translation)
+            {
+                string val = translation.Translate(ctx.Caller?.Language, out Color color, ctx.HasArg(1) ? imgui : (ctx.Caller?.Save.IMGUI ?? false));
+                L.Log($"Translation: {translation.Id}... {name}.");
+                L.Log($"Type: {translation.GetType()}");
+                L.Log($"Args: {string.Join(", ", translation.GetType().GetGenericArguments().Select(x => x.Name))}");
+                L.Log($"Color: " + color.ToString("F2"));
+                L.Log($"Value: \"" + val + "\".");
+                L.Log("Dump:");
+                using IDisposable indent = L.IndentLog(1);
+                translation.Dump();
+                ctx.ReplyString(val, color);
+            }
+            else ctx.ReplyString(name + " not found.");
+        }
+        
+    }
 }

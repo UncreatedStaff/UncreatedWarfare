@@ -47,6 +47,34 @@ public class Translation
         _defaultData = new TranslationValue(L.Default, @default, _flags);
         ProcessValue(_defaultData, Flags);
     }
+    internal void Dump()
+    {
+        L.Log($"Key: {Key}");
+        L.Log($"Id: {Id}");
+        L.Log($"Flags: {Flags}");
+        L.Log($"Default:");
+        void DumpVal(TranslationValue val)
+        {
+            L.Log("Language: " + (val.Language ?? L.Default));
+            L.Log($"Original: \"{val.Original}\"");
+            L.Log($"ProcessedInner: \"{val.ProcessedInner}\"");
+            L.Log($"Processed: \"{val.Processed}\"");
+            L.Log($"ProcessedNoTMProTags: \"{val.ProcessedNoTMProTags}\"");
+            L.Log($"ProcessedInnerNoTMProTags: \"{val.ProcessedInnerNoTMProTags}\"");
+            L.Log($"Color: \"{val.Color:F2}\"");
+            L.Log($"RichText: \"{val.RichText}\"");
+            L.Log($"Console: \"{val.Console}\"");
+        }
+        DumpVal(_defaultData);
+        if (_data != null)
+        {
+            using IDisposable indent = L.IndentLog(1);
+            for (int i = 0; i < _data.Length; ++i)
+            {
+                DumpVal(_data[i]);
+            }
+        }
+    }
     public void RefreshColors()
     {
         ProcessValue(_defaultData, Flags);
@@ -970,13 +998,20 @@ public class Translation
         value.Color = color;
         value.ResetConsole();
     }
-    protected TranslationFlags GetFlags(ulong targetTeam) => targetTeam switch
+    protected TranslationFlags GetFlags(ulong targetTeam, bool imgui = false) //todo
     {
-        3 => Flags | TranslationFlags.Team3,
-        2 => Flags | TranslationFlags.Team2,
-        1 => Flags | TranslationFlags.Team1,
-        _ => Flags
-    };
+        TranslationFlags flags = targetTeam switch
+        {
+            3 => Flags | TranslationFlags.Team3,
+            2 => Flags | TranslationFlags.Team2,
+            1 => Flags | TranslationFlags.Team1,
+            _ => Flags
+        };
+        if (imgui)
+            flags |= TranslationFlags.TranslateWithUnityRichText;
+        return flags;
+    }
+
     internal static string Null(TranslationFlags flags) =>
         ((flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText)
             ? NullNoColor
@@ -1589,9 +1624,9 @@ public sealed class Translation<T> : Translation
         _arg0Fmt = arg0Fmt;
         CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
     }
-    public string Translate(string value, string language, T arg, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
+    public string Translate(string value, string language, T arg, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
     {
-        flags |= GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam, imgui);
         try
         {
             return string.Format(value, ToString(arg, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags)));
@@ -1616,26 +1651,29 @@ public sealed class Translation<T> : Translation
     public string Translate(string language, T arg, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language), language, arg, null, team, Flags)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language), language, arg, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(string language, T arg, out Color color, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language, out color), language, arg, null, team, Flags)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language, out color), language, arg, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(UCPlayer player, T arg)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
+        bool imgui = player is not null && player.Save.IMGUI;
         CultureInfo culture = player?.Culture ?? Data.LocalLocale;
         return player == null
-            ? Translate(Translate(lang, culture), lang, arg, null, 0, Flags)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg, player, player.GetTeam(), Flags);
+            ? Translate(Translate(lang, culture), lang, arg, null, 0, Flags, imgui)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg, player, player.GetTeam(), Flags, imgui);
     }
 }
 public sealed class Translation<T1, T2> : Translation
@@ -1654,9 +1692,9 @@ public sealed class Translation<T1, T2> : Translation
         CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
         CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
     {
-        flags |= GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam, imgui);
         try
         {
             return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2)),
@@ -1689,26 +1727,29 @@ public sealed class Translation<T1, T2> : Translation
     public string Translate(string language, T1 arg1, T2 arg2, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language), language, arg1, arg2, null, team, Flags)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language), language, arg1, arg2, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(string language, T1 arg1, T2 arg2, out Color color, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, null, team, Flags)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language, out color), language, arg1, arg2, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(UCPlayer player, T1 arg1, T2 arg2)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
+        bool imgui = player is not null && player.Save.IMGUI;
         CultureInfo culture = player?.Culture ?? Data.LocalLocale;
         return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, null, 0, Flags)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, player, player.GetTeam(), Flags);
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, null, 0, Flags, imgui)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, player, player.GetTeam(), Flags, imgui);
     }
 }
 public sealed class Translation<T1, T2, T3> : Translation
@@ -1731,9 +1772,9 @@ public sealed class Translation<T1, T2, T3> : Translation
         CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
         CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
     {
-        flags |= GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam, imgui);
         try
         {
             return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3)),
@@ -1768,26 +1809,29 @@ public sealed class Translation<T1, T2, T3> : Translation
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, null, team, Flags)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language), language, arg1, arg2, arg3, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, out Color color, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, null, team, Flags)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
+        bool imgui = player is not null && player.Save.IMGUI;
         CultureInfo culture = player?.Culture ?? Data.LocalLocale;
         return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, null, 0, Flags)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, player, player.GetTeam(), Flags);
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, null, 0, Flags, imgui)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, player, player.GetTeam(), Flags, imgui);
     }
 }
 public sealed class Translation<T1, T2, T3, T4> : Translation
@@ -1814,9 +1858,9 @@ public sealed class Translation<T1, T2, T3, T4> : Translation
         CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
         CheckPluralFormatting(ref _arg3PluralExp, ref _arg3Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
     {
-        flags |= GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam, imgui);
         try
         {
             return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4)),
@@ -1853,26 +1897,29 @@ public sealed class Translation<T1, T2, T3, T4> : Translation
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, null, team, Flags)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, out Color color, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, null, team, Flags)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
+        bool imgui = player is not null && player.Save.IMGUI;
         CultureInfo culture = player?.Culture ?? Data.LocalLocale;
         return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, null, 0, Flags)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, player, player.GetTeam(), Flags);
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, null, 0, Flags, imgui)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, player, player.GetTeam(), Flags, imgui);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5> : Translation
@@ -1903,9 +1950,9 @@ public sealed class Translation<T1, T2, T3, T4, T5> : Translation
         CheckPluralFormatting(ref _arg3PluralExp, ref _arg3Fmt);
         CheckPluralFormatting(ref _arg4PluralExp, ref _arg4Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
     {
-        flags |= GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam, imgui);
         try
         {
             return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5)),
@@ -1944,26 +1991,29 @@ public sealed class Translation<T1, T2, T3, T4, T5> : Translation
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, null, team, Flags)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, out Color color, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, null, team, Flags)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
+        bool imgui = player is not null && player.Save.IMGUI;
         CultureInfo culture = player?.Culture ?? Data.LocalLocale;
         return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, null, 0, Flags)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, player, player.GetTeam(), Flags);
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, null, 0, Flags, imgui)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, player, player.GetTeam(), Flags, imgui);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
@@ -1998,9 +2048,9 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
         CheckPluralFormatting(ref _arg4PluralExp, ref _arg4Fmt);
         CheckPluralFormatting(ref _arg5PluralExp, ref _arg5Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
     {
-        flags |= GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam, imgui);
         try
         {
             return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)),
@@ -2041,26 +2091,29 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, null, team, Flags)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, out Color color, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, null, team, Flags)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
+        bool imgui = player is not null && player.Save.IMGUI;
         CultureInfo culture = player?.Culture ?? Data.LocalLocale;
         return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, null, 0, Flags)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, player, player.GetTeam(), Flags);
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, null, 0, Flags, imgui)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, player, player.GetTeam(), Flags, imgui);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
@@ -2099,9 +2152,9 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
         CheckPluralFormatting(ref _arg5PluralExp, ref _arg5Fmt);
         CheckPluralFormatting(ref _arg6PluralExp, ref _arg6Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
     {
-        flags |= GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam, imgui);
         try
         {
             return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
@@ -2144,26 +2197,29 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, team, Flags)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, out Color color, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, team, Flags)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
+        bool imgui = player is not null && player.Save.IMGUI;
         CultureInfo culture = player?.Culture ?? Data.LocalLocale;
         return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, 0, Flags)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, player.GetTeam(), Flags);
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, 0, Flags, imgui)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, player.GetTeam(), Flags, imgui);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
@@ -2206,9 +2262,9 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
         CheckPluralFormatting(ref _arg6PluralExp, ref _arg6Fmt);
         CheckPluralFormatting(ref _arg7PluralExp, ref _arg7Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
     {
-        flags |= GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam, imgui);
         try
         {
             return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
@@ -2253,26 +2309,29 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, team, Flags)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, out Color color, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, team, Flags)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
+        bool imgui = player is not null && player.Save.IMGUI;
         CultureInfo culture = player?.Culture ?? Data.LocalLocale;
         return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, 0, Flags)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, player.GetTeam(), Flags);
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, 0, Flags, imgui)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, player.GetTeam(), Flags, imgui);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translation
@@ -2319,9 +2378,9 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translatio
         CheckPluralFormatting(ref _arg7PluralExp, ref _arg7Fmt);
         CheckPluralFormatting(ref _arg8PluralExp, ref _arg8Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
     {
-        flags |= GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam, imgui);
         try
         {
             return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
@@ -2367,26 +2426,29 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translatio
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, team, Flags)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, out Color color, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, team, Flags)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
+        bool imgui = player is not null && player.Save.IMGUI;
         CultureInfo culture = player?.Culture ?? Data.LocalLocale;
         return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, 0, Flags)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, player.GetTeam(), Flags);
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, 0, Flags, imgui)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, player.GetTeam(), Flags, imgui);
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Translation
@@ -2437,9 +2499,9 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
         CheckPluralFormatting(ref _arg8PluralExp, ref _arg8Fmt);
         CheckPluralFormatting(ref _arg9PluralExp, ref _arg9Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
     {
-        flags |= GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam, imgui);
         try
         {
             return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
@@ -2488,26 +2550,29 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, team, Flags)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, out Color color, UCPlayer? target = null, ulong team = 0)
     {
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = target is not null && target.Save.IMGUI;
         return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, team, Flags)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team == 0 ? target.GetTeam() : team, Flags);
+            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, team, Flags, imgui)
+            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
     }
 
     public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
     {
         string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
+        bool imgui = player is not null && player.Save.IMGUI;
         CultureInfo culture = player?.Culture ?? Data.LocalLocale;
         return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, 0, Flags)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player, player.GetTeam(), Flags);
+            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, 0, Flags, imgui)
+            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player, player.GetTeam(), Flags, imgui);
     }
 }
 [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
