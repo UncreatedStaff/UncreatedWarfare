@@ -62,7 +62,7 @@ public class AttachCommand : Command
             ctx.Caller.Player.equipment.sendUpdateState();
             if (FiremodeEffect.ValidReference(out EffectAsset effect))
                 F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);
-            ctx.LogAction(ActionLogType.SetFiremode, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Amt: " + amt + (prevAmt != amt ? " | Prev: " + prevAmt : string.Empty));
+            ctx.LogAction(ActionLogType.SetAmmo, "Gun: " + ActionLog.AsAsset(gunAsset) + " | Amt: " + amt + (prevAmt != amt ? " | Prev: " + prevAmt : string.Empty));
             throw ctx.Reply(T.AttachSetAmmoSuccess, gunAsset, amt);
         }
         if (ctx.MatchParameter(0, "firerate", "firemode", "mode") && ctx.TryGet(1, out string firemodeStr) && TryGetFiremode(firemodeStr, out EFiremode mode))
@@ -99,21 +99,13 @@ public class AttachCommand : Command
     private static bool TryGetFiremode(string str, out EFiremode firemode)
     {
         if (str.IndexOf("semi", StringComparison.InvariantCultureIgnoreCase) != -1)
-        {
             firemode = EFiremode.SEMI;
-        }
         else if (str.IndexOf("auto", StringComparison.InvariantCultureIgnoreCase) != -1)
-        {
             firemode = EFiremode.AUTO;
-        }
         else if (str.IndexOf("burst", StringComparison.InvariantCultureIgnoreCase) != -1)
-        {
             firemode = EFiremode.BURST;
-        }
         else if (str.IndexOf("safe", StringComparison.InvariantCultureIgnoreCase) != -1)
-        {
             firemode = EFiremode.SAFETY;
-        }
         else
         {
             firemode = EFiremode.SAFETY;

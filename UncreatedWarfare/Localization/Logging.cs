@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
+using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace Uncreated.Warfare;
@@ -49,6 +50,7 @@ public static class L
                 File.Move(Data.Paths.CurrentLog, n);
             }
             _log = new FileStream(Data.Paths.CurrentLog, FileMode.Create, FileAccess.Write, FileShare.Read);
+            Application.logMessageReceivedThreaded += OnUnityLogMessage;
             try
             {
                 FieldInfo? defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -89,6 +91,29 @@ public static class L
             CommandWindow.LogError(ex);
         }
     }
+
+    private static void OnUnityLogMessage(string condition, string stacktrace, LogType type)
+    {
+        switch (type)
+        {
+            case LogType.Assert:
+            case LogType.Warning:
+                LogWarning(condition + Environment.NewLine + stacktrace);
+                break;
+            case LogType.Error:
+            case LogType.Exception:
+                LogError(condition + Environment.NewLine + stacktrace);
+                break;
+            default:
+                string? topstack = stacktrace.Split(SplitChars).FirstOrDefault()?.Trim(TrimChars);
+                if (topstack == null)
+                    topstack = condition;
+                else topstack = condition + " at \"" + topstack + "\".";
+                Log(topstack);
+                break;
+        }
+    }
+
     [OperationTest(DisplayName = "Colored Console Check")]
     [Conditional("DEBUG")]
     [UsedImplicitly]
@@ -305,7 +330,7 @@ public static class L
                         ? string.Join(Environment.NewLine, ex.StackTrace.Split(SplitChars).Select(x => ind + x.Trim(TrimChars)))
                         : ex.StackTrace, ConsoleColor.DarkGray);
                 }
-                if (ex is AggregateException) break; ;
+                if (ex is AggregateException) break;
                 ex = ex.InnerException!;
                 inner = true;
             }

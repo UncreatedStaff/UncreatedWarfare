@@ -4,9 +4,8 @@ using Uncreated.Warfare.Configuration;
 namespace Uncreated.Warfare.Vehicles;
 public class VehicleBayConfig : Config<VehicleBayData>
 {
-    public VehicleBayConfig() : base(Warfare.Data.Paths.VehicleStorage, "config.json") { }
+    public VehicleBayConfig() : base(Warfare.Data.Paths.VehicleStorage, "config.json", "vbconfig") { }
 }
-
 
 public class VehicleBayData : JSONConfigData
 {

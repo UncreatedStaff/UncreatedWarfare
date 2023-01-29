@@ -3,19 +3,17 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
 
 namespace Uncreated.Warfare.Commands;
 
 public class BuyCommand : AsyncCommand
 {
-    const string HELP = "Must be looking at a kit request sign. Purchases a kit for credits.";
-    const string SYNTAX = "/buy [help]";
+    const string Help = "Must be looking at a kit request sign. Purchases a kit for credits.";
+    const string Syntax = "/buy [help]";
     public BuyCommand() : base("buy", EAdminType.MEMBER) { }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
@@ -25,16 +23,16 @@ public class BuyCommand : AsyncCommand
         ctx.AssertRanByPlayer();
 
         if (ctx.MatchParameter(0, "help"))
-            throw ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
+            throw ctx.SendCorrectUsage(Syntax + " - " + Help);
         ctx.AssertGamemode(out IKitRequests gm);
         KitManager manager = gm.KitManager;
         if ((Data.Gamemode.State != State.Active && Data.Gamemode.State != State.Staging) || ctx.Caller is null)
             throw ctx.SendUnknownError();
-        if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
+        if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign)
         {
-            if (Signs.GetKitFromSign(drop, out int ld) is { Item: { } } sign2)
+            if (Signs.GetKitFromSign(drop, out int ld) is { Item: { } } kit)
             {
-                await manager.BuyKit(ctx, sign2, drop.model.position, token).ConfigureAwait(false);
+                await manager.BuyKit(ctx, kit, drop.model.position, token).ConfigureAwait(false);
                 return;
             }
             if (ld > -1)
