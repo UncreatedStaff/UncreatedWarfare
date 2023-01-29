@@ -75,11 +75,22 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        
+
         if (_controller.LockOnTarget is null ||
         !_controller.LockOnTarget.TryGetComponent(out VehicleComponent c) || 
         c.Vehicle.isDead ||
         c.Data is null)
+        {
+            L.LogDebug($"Did not send warning:" +
+                $"target={_controller.LockOnTarget} | " +
+                $"component={c} | " +
+                $"targetDead={c?.Vehicle.isDead} | " +
+                $"vehicleData={c?.Data}");
             return;
+        }
+
+        L.LogDebug($"Warning can be sent");
 
         for (byte seat = 0; seat < c.Vehicle.passengers.Length; seat++)
         {
@@ -121,20 +132,17 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
             _lastKnownTarget = null;
         }
 
-
-
-
         Vector3 idealDirection;
         float turnDegrees;
 
-        if (_lastKnownTarget is null || _startStatus != HeatSeekingController.ELockOnMode.LOCKED_ON)
+        if (_lastKnownTarget is null || _startStatus != ELockOnMode.LOCKED_ON)
         {
             idealDirection = _controller.AlternativeTargetPosition - _projectile.transform.position;
             turnDegrees = 0.2f;
         }
         else
         {
-            idealDirection = _lastKnownTarget.transform.position - _projectile.transform.position;
+            idealDirection = (_lastKnownTarget.Find("Center") ?? _lastKnownTarget).position - _projectile.transform.position;
             
             if (_lastKnownTarget.TryGetComponent<InteractableVehicle>(out _))
                 turnDegrees = _maxTurnDegrees;
