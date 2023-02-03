@@ -16,6 +16,8 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using UnityEngine.PlayerLoop;
+using System.Diagnostics;
 
 namespace Uncreated.Warfare.Components;
 
@@ -68,25 +70,18 @@ public class VehicleComponent : MonoBehaviour
             if (Data?.Item != null)
                 vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(Data.Item.Type, vehicle);
         }
-        _lastPos = this.transform.position;
+        _lastPosInterval = this.transform.position;
 
         foreach (var passenger in Vehicle.turrets)
         {
             if (VehicleBay.Config.GroundAAWeapons.HasID(passenger.turret.itemID))
-                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(450, 1000, Gamemode.Config.EffectLockOn1);
+                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(450, 1000, Gamemode.Config.EffectLockOn1, 2, 15.5f);
             if (VehicleBay.Config.AirAAWeapons.HasID(passenger.turret.itemID))
-                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(600, Gamemode.Config.EffectLockOn2);
+                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(600, Gamemode.Config.EffectLockOn2, 1, 11);
         }
-
-        _countermeasures = new List<Transform>();
     }
     public bool IsType(VehicleType type) => Data?.Item != null && Data.Item.Type == type;
 
-    [UsedImplicitly]
-    private void OnDestroy()
-    {
-        RemoveCountermeasures();
-    }
     private bool TryEnsureDataUpdated()
     {
         if (Data?.Item == null)
@@ -231,13 +226,13 @@ public class VehicleComponent : MonoBehaviour
             }
         }
     }
-    Coroutine? _countermeasureRoutine;
-    List<Transform> _countermeasures;
-    public void TrySpawnCountermeasures()
+    private float _timeLastCountermeasures;
+    public void DropCountermeasure()
     {
-        if (_countermeasureRoutine != null)
+        if (Time.time - _timeLastCountermeasures < 0.7f)
             return;
 
+        _timeLastCountermeasures = Time.time;
         StartCoroutine(DropCountermeasures());
 
         byte[] crewseats = Data?.Item == null ? Array.Empty<byte>() : Data.Item.CrewSeats;
@@ -246,56 +241,42 @@ public class VehicleComponent : MonoBehaviour
             if (Vehicle.passengers[seat].player != null && crewseats.ArrayContains(seat))
                 EffectManager.sendUIEffect(VehicleBay.Config.CountermeasureEffectID, (short)VehicleBay.Config.CountermeasureEffectID.Id, Vehicle.passengers[seat].player.transportConnection, true);
         }
-
-        _countermeasureRoutine = StartCoroutine(ReloadCountermeasures());
     }
     private IEnumerator<WaitForSeconds> DropCountermeasures()
     {
         if (Assets.find(VehicleBay.Config.CountermeasureGUID) is VehicleAsset countermeasureAsset)
         {
-            int flareCount = 5;
-            float angle = 0;
+
+            int flareCount = 4;
+            
             for (int i = 0; i < flareCount; i++)
             {
-                angle += i * (360 / flareCount) + Random.Range(-35f, 35f);
+                InteractableVehicle? countermeasureVehicle = VehicleManager.spawnVehicleV2(countermeasureAsset.id, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
 
-                InteractableVehicle? countermeasure = VehicleManager.spawnVehicleV2(countermeasureAsset.id, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
+                float angle = Random.Range(20, 30);
+                if (i % 2 == 0) angle = -angle;
 
-                countermeasure.transform.Rotate(Vector3.up, angle, Space.Self);
+                if (i > flareCount / 2) angle *= 0.5f;
+                L.Log("Angle: " + angle);
 
-                Rigidbody? rigidbody = countermeasure.transform.GetComponent<Rigidbody>();
-                rigidbody.velocity = Vehicle.transform.GetComponent<Rigidbody>().velocity;
-                rigidbody.AddForce(countermeasure.transform.forward * 5, ForceMode.Impulse);
+                countermeasureVehicle.transform.Rotate(Vector3.up, angle, Space.Self);
 
-                _countermeasures.Add(countermeasure.transform);
-                HeatSeekingController.ActiveCountermeasures.Add(countermeasure.transform);
+                Rigidbody? rigidbody = countermeasureVehicle.transform.GetComponent<Rigidbody>();
+                //Vector3 velocity = Vehicle.transform.GetComponent<Rigidbody>().velocity);
+                Vector3 velocity = countermeasureVehicle.transform.forward * Vehicle.speed * 0.5f - countermeasureVehicle.transform.up * 15;
+                rigidbody.velocity = velocity;
 
-                yield return new WaitForSeconds(0.25f);
+                rigidbody.AddForce(countermeasureVehicle.transform.forward * 8, ForceMode.Impulse);
+
+                var countermeasure = countermeasureVehicle.gameObject.AddComponent<Countermeasure>();
+
+                Countermeasure.ActiveCountermeasures.Add(countermeasure);
+
+                yield return new WaitForSeconds(0.15f);
             }
         }
         else
             L.LogDebug("     ERROR: Countermeasure asset not found");
-    }
-    private IEnumerator<WaitForSeconds> ReloadCountermeasures()
-    {
-        yield return new WaitForSeconds(15);
-
-        RemoveCountermeasures();
-
-        _countermeasureRoutine = null;
-    }
-    private void RemoveCountermeasures()
-    {
-        foreach (Transform countermeasure in _countermeasures)
-        {
-            HeatSeekingController.ActiveCountermeasures.RemoveAll(t => t.GetInstanceID() == countermeasure.GetInstanceID());
-
-            if (countermeasure.TryGetComponent(out InteractableVehicle vehicle))
-            {
-                VehicleManager.askVehicleDestroy(vehicle);
-            }
-        }
-        _countermeasures.Clear();
     }
     public void StartForceLoadSupplies(UCPlayer caller, SupplyType type, int amount)
     {
@@ -437,7 +418,7 @@ public class VehicleComponent : MonoBehaviour
             }
         }
     }
-    private Vector3 _lastPos;
+    private Vector3 _lastPosInterval;
     private float _totalDistance;
     public float TotalDistanceTravelled => _totalDistance;
     private float _lastCheck;
@@ -454,12 +435,20 @@ public class VehicleComponent : MonoBehaviour
             _lastCheck = Time.time;
             if (Vehicle.passengers[0]?.player == null) return;
             Vector3 pos = this.transform.position;
-            if (pos == _lastPos) return;
+            if (pos == _lastPosInterval) return;
             float old = _totalDistance;
-            _totalDistance += (_lastPos - pos).magnitude;
+            _totalDistance += (_lastPosInterval - pos).magnitude;
             QuestManager.OnDistanceUpdated(LastDriver, _totalDistance, _totalDistance - old, this);
-            _lastPos = pos;
+            _lastPosInterval = pos;
         }
+    }
+    private void FixedUpdate()
+    {
+        //if (Vehicle.anySeatsOccupied)
+        //{
+        //    L.Log("Velocity: " + Vehicle.transform.GetComponent<Rigidbody>().velocity);
+        //    L.Log("Speed: " + Vehicle.speed);
+        //}
     }
 }
 public enum SupplyType

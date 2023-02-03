@@ -56,12 +56,12 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         EventDispatcher.BarricadeDestroyed += OnBarricadeDestroyed;
         EventDispatcher.StructureDestroyed += OnStructureDestroyed;
         EventDispatcher.VehicleDestroyed += OnVehicleDestroyed;
-        UCPlayerKeys.SubscribeKeyUp(SpawnCountermeasuresPressed, Data.Keys.SpawnCountermeasures);
+        UCPlayerKeys.SubscribeKeyDown(SpawnCountermeasuresPressed, Data.Keys.SpawnCountermeasures);
         return base.PreLoad(token);
     }
     public override Task PreUnload(CancellationToken token)
     {
-        UCPlayerKeys.UnsubscribeKeyUp(SpawnCountermeasuresPressed, Data.Keys.SpawnCountermeasures);
+        UCPlayerKeys.UnsubscribeKeyDown(SpawnCountermeasuresPressed, Data.Keys.SpawnCountermeasures);
         EventDispatcher.VehicleDestroyed -= OnVehicleDestroyed;
         EventDispatcher.StructureDestroyed -= OnStructureDestroyed;
         EventDispatcher.BarricadeDestroyed -= OnBarricadeDestroyed;
@@ -155,7 +155,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         ThreadUtil.assertIsGameThread();
         Signs.UpdateVehicleBaySigns(null);
     }
-    private void SpawnCountermeasuresPressed(UCPlayer player, float timeDown, ref bool handled)
+    private void SpawnCountermeasuresPressed(UCPlayer player, /*float timeDown, */ref bool handled)
     {
         InteractableVehicle? vehicle = player.Player.movement.getVehicle();
         if (vehicle != null &&
@@ -163,7 +163,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && CanUseCountermeasures(vehicle) &&
             vehicle.transform.TryGetComponent(out VehicleComponent component))
         {
-            component.TrySpawnCountermeasures();
+            component.DropCountermeasure();
         }
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

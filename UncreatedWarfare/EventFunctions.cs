@@ -127,6 +127,8 @@ public static class EventFunctions
 
 
         UCPlayer? firer = UCPlayer.FromPlayer(gun.player);
+        if (firer is null)
+            return;
 
         if (gun.isAiming && Gamemode.Config.ItemLaserDesignator.MatchGuid(gun.equippedGunAsset.GUID))
         {
@@ -141,8 +143,7 @@ public static class EventFunctions
                         grndDist = (projectile.transform.position - hit.transform.position).sqrMagnitude;
                     else
                     {
-                        if (firer is not null)
-                            SpottedComponent.MarkTarget(hit.transform, firer);
+                        SpottedComponent.MarkTarget(hit.transform, firer);
                         return;
                     }
                 }
@@ -162,30 +163,33 @@ public static class EventFunctions
             if (hits.Count == 0) return;
             if (hits.Count == 1)
             {
-                if (firer is not null)
-                    SpottedComponent.MarkTarget(hits[0].transform, firer);
+                SpottedComponent.MarkTarget(hits[0].transform, firer);
                 return;
             }
             hits.Sort((a, b) => (strtPos - b.point).sqrMagnitude.CompareTo((strtPos - a.point).sqrMagnitude));
             hits.Sort((a, _) => (ELayerMask)a.transform.gameObject.layer is ELayerMask.PLAYER ? -1 : 1);
 
-            if (firer is not null)
-                SpottedComponent.MarkTarget(hits[0].transform, firer);
+            SpottedComponent.MarkTarget(hits[0].transform, firer);
             return;
         }
 
         Rocket[] rockets = projectile.GetComponentsInChildren<Rocket>(true);
         foreach (Rocket rocket in rockets)
         {
-            rocket.killer = gun.player.channel.owner.playerID.steamID;
+            rocket.killer = firer.CSteamID;
+
+            if (firer.CurrentVehicle != null)
+            {
+                rocket.ignoreTransform = firer.CurrentVehicle.transform;
+            }
         }
 
         if (VehicleBay.Config.TOWMissileWeapons.HasGuid(gun.equippedGunAsset.GUID))
             projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, firer, 90, 0.33f, 800);
         else if (VehicleBay.Config.GroundAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 150, 5f, 1000, 4, 0.33f);
+            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 150, 5f, 3);
         else if (VehicleBay.Config.AirAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 165, 6.5f, 1000, 15, 0f);
+            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 165, 6f, 0.5f);
         else if (VehicleBay.Config.LaserGuidedWeapons.HasGuid(gun.equippedGunAsset.GUID))
             projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, firer, 120, 1.15f, 150, 15, 0.6f);
 
