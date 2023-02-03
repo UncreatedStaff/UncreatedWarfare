@@ -6,9 +6,9 @@ using Uncreated.Warfare.Squads;
 namespace Uncreated.Warfare.Traits;
 public class BuffUI : UnturnedUI
 {
-    public const int MAX_BUFFS = 8;
-    public const int RESERVED_BUFFS = 2;
-    public const string DEFAULT_BUFF_ICON = "±";
+    public const int MaxBuffs = 8;
+    public const int ReservedBuffs = 2;
+    public const string DefaultBuffIcon = "±";
     public UnturnedUIElement Buff1 = new UnturnedUIElement("Buff1");
     public UnturnedUIElement Buff2 = new UnturnedUIElement("Buff2");
     public UnturnedUIElement Buff3 = new UnturnedUIElement("Buff3");
@@ -41,15 +41,15 @@ public class BuffUI : UnturnedUI
     public UnturnedLabel[] BlinkingIcons;
     public BuffUI() : base(12013, Gamemode.Config.UIBuffs, true, false)
     {
-        Parents = new UnturnedUIElement[MAX_BUFFS]
+        Parents = new UnturnedUIElement[MaxBuffs]
         {
             Buff1, Buff2, Buff3, Buff4, Buff5, Buff6, Buff7, Buff8
         };
-        SolidIcons = new UnturnedLabel[MAX_BUFFS]
+        SolidIcons = new UnturnedLabel[MaxBuffs]
         {
             SolidIcon1, SolidIcon2, SolidIcon3, SolidIcon4, SolidIcon5, SolidIcon6, SolidIcon7, SolidIcon8
         };
-        BlinkingIcons = new UnturnedLabel[MAX_BUFFS]
+        BlinkingIcons = new UnturnedLabel[MaxBuffs]
         {
             BlinkingIcon1, BlinkingIcon2, BlinkingIcon3, BlinkingIcon4, BlinkingIcon5, BlinkingIcon6, BlinkingIcon7, BlinkingIcon8
         };
@@ -59,7 +59,7 @@ public class BuffUI : UnturnedUI
     {
         ITransportConnection c = player.Connection;
         SendToPlayer(c);
-        for (int i = 0; i < MAX_BUFFS; ++i)
+        for (int i = 0; i < MaxBuffs; ++i)
         {
             IBuff? buff = player.ActiveBuffs[i];
             if (buff != null)
@@ -89,7 +89,7 @@ public class BuffUI : UnturnedUI
                     break;
                 }
             }
-            if (ind == -1 || !res && ind < MAX_BUFFS - RESERVED_BUFFS - 1)
+            if (ind == -1 || !res && ind < MaxBuffs - ReservedBuffs - 1)
                 return false; // no room
 
             string icon = buff.Icon;
@@ -112,7 +112,7 @@ public class BuffUI : UnturnedUI
                 IBuff? buff = player.ActiveBuffs[i];
                 if (buff == null)
                 {
-                    if (reserved || i < MAX_BUFFS - RESERVED_BUFFS)
+                    if (reserved || i < MaxBuffs - ReservedBuffs)
                         return true;
                 }
             }
@@ -139,13 +139,13 @@ public class BuffUI : UnturnedUI
 
             ITransportConnection c = player.Connection;
 
-            for (int i = ind; i < MAX_BUFFS; ++i)
+            for (int i = ind; i < MaxBuffs; ++i)
             {
                 IBuff? b = player.ActiveBuffs[i];
                 if (b == null)
                     break;
 
-                if (i == MAX_BUFFS - 1)
+                if (i == MaxBuffs - 1)
                 {
                     Parents[i].SetVisibility(c, false);
                     player.ActiveBuffs[i] = null;
@@ -194,7 +194,7 @@ public class BuffUI : UnturnedUI
     }
     private void UpdateBuffTimeState(IBuff buff, UCPlayer player, bool isBlinking)
     {
-        for (int i = 0; i < MAX_BUFFS; ++i)
+        for (int i = 0; i < MaxBuffs; ++i)
         {
             if (player.ActiveBuffs[i] == buff)
             {

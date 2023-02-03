@@ -116,14 +116,16 @@ public static class EventFunctions
     }
     internal static void ProjectileSpawned(UseableGun gun, GameObject projectile)
     {
+        try
+        {
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
+            using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        const float radius = 3;
-        const float length = 700;
-        const int rayMask = RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE | RayMasks.LARGE |
-                             RayMasks.MEDIUM | RayMasks.GROUND | RayMasks.GROUND2;
-        const int rayMaskBackup = RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE;
+            const float radius = 3;
+            const float length = 700;
+            const int rayMask = RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE | RayMasks.LARGE |
+                                 RayMasks.MEDIUM | RayMasks.GROUND | RayMasks.GROUND2;
+            const int rayMaskBackup = RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE;
 
 
         UCPlayer? firer = UCPlayer.FromPlayer(gun.player);
@@ -193,23 +195,29 @@ public static class EventFunctions
         else if (VehicleBay.Config.LaserGuidedWeapons.HasGuid(gun.equippedGunAsset.GUID))
             projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, firer, 120, 1.15f, 150, 15, 0.6f);
 
-        Patches.DeathsPatches.lastProjected = projectile;
-        if (gun.player.TryGetPlayerData(out UCPlayerData c))
-        {
-            c.LastRocketShot = gun.equippedGunAsset.GUID;
-            c.LastRocketShotVehicle = default;
-            InteractableVehicle? veh = gun.player.movement.getVehicle();
-            if (veh != null)
+            Patches.DeathsPatches.lastProjected = projectile;
+            if (gun.player.TryGetPlayerData(out UCPlayerData c))
             {
-                for (int i = 0; i < veh.turrets.Length; ++i)
+                c.LastRocketShot = gun.equippedGunAsset.GUID;
+                c.LastRocketShotVehicle = default;
+                InteractableVehicle? veh = gun.player.movement.getVehicle();
+                if (veh != null)
                 {
-                    if (veh.turrets[i].turret != null && veh.turrets[i].turret.itemID == gun.equippedGunAsset.id)
+                    for (int i = 0; i < veh.turrets.Length; ++i)
                     {
-                        c.LastRocketShotVehicle = veh.asset.GUID;
-                        break;
+                        if (veh.turrets[i].turret != null && veh.turrets[i].turret.itemID == gun.equippedGunAsset.id)
+                        {
+                            c.LastRocketShotVehicle = veh.asset.GUID;
+                            break;
+                        }
                     }
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Error handling projectile spawn.");
+            L.LogError(ex);
         }
     }
     internal static void BulletSpawned(UseableGun gun, BulletInfo bullet)

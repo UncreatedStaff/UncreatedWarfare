@@ -27,5 +27,7 @@ public class UnstuckCommand : Command
             t.TeamSelector?.ResetState(ctx.Caller);
         }
         else throw ctx.SendUnknownError();
+
+        ctx.Defer();
     }
 }

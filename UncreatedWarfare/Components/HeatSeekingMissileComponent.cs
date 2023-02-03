@@ -3,14 +3,12 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Components.HeatSeekingController;
-using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Components;
 
