@@ -72,9 +72,10 @@ internal static class EventPatches
     /// Postfix of <see cref="InteractableSign.updateText(string)"/> to invoke <see cref="EventDispatcher.SignTextUpdated"/>.
     /// </summary>
     private static void OnTextUpdated(InteractableSign __instance, string newText) => EventDispatcher.InvokeOnSignTextChanged(__instance);
+#pragma warning disable CS1580
     // SDG.Unturned.InteractableSign
     /// <summary>
-    /// Postfix of <see cref="InteractableSign.ReceiveChangeTextRequest(in ServerInvocationContext, string)"/>.
+    /// Postfix of <see cref="InteractableSign.ReceiveChangeTextRequest(in ServerInvocationContext,string)"/>.
     /// </summary>
     private static void OnTextUpdateRequested(InteractableSign __instance, in ServerInvocationContext context, string newText)
     {
@@ -85,6 +86,7 @@ internal static class EventPatches
             bcomp.EditTick = UCWarfare.I.Debugger.Updates;
         }
     }
+#pragma warning restore CS1580
     // SDG.Unturned.BarricadeManager
     /// <summary>
     /// Postfix of <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="EventDispatcher.BarricadeDestroyed"/>.
