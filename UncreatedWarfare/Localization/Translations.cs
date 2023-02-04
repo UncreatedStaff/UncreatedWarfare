@@ -1019,27 +1019,27 @@ public class Translation
                 ? NullColorUnity
                 : NullColorTMPro);
     public string Translate(string? language, bool imgui = false) => Translate(language, LanguageAliasSet.GetCultureInfo(language), imgui);
-    public string Translate(IPlayer? player, out Color color)
+    public string Translate(IPlayer? player, out Color color, bool imgui = false)
     {
         if (player is UCPlayer pl)
-            return Translate(pl.Language, pl.Culture, out color, pl.Save.IMGUI);
+            return Translate(pl.Language, pl.Culture, out color, imgui && pl.Save.IMGUI);
         if (player is null)
             return Translate(L.Default, Data.LocalLocale, out color);
         string l = Localization.GetLang(player.Steam64);
         return Translate(l, LanguageAliasSet.GetCultureInfo(l), out color);
     }
-    public string Translate(IPlayer? player)
+    public string Translate(IPlayer? player, bool imgui = false)
     {
         if (player is UCPlayer pl)
-            return Translate(pl.Language, pl.Culture, pl.Save.IMGUI);
+            return Translate(pl.Language, pl.Culture, imgui && pl.Save.IMGUI);
         if (player is null)
             return Translate(L.Default, Data.LocalLocale);
         string l = Localization.GetLang(player.Steam64);
         return Translate(l, LanguageAliasSet.GetCultureInfo(l));
     }
-    public string Translate(ulong player) => Translate(Localization.GetLang(player), UCPlayer.FromID(player) is { Save.IMGUI: true });
-    public string Translate(ulong player, out Color color)
-        => Translate(Localization.GetLang(player), out color, UCPlayer.FromID(player) is { Save.IMGUI: true });
+    public string Translate(ulong player, bool imgui = false) => Translate(Localization.GetLang(player), imgui && UCPlayer.FromID(player) is { Save.IMGUI: true });
+    public string Translate(ulong player, out Color color, bool imgui = false)
+        => Translate(Localization.GetLang(player), out color, imgui && UCPlayer.FromID(player) is { Save.IMGUI: true });
 
     public string Translate(string? language, out Color color, bool imgui = false) => Translate(language, LanguageAliasSet.GetCultureInfo(language), out color, imgui);
     public string Translate(string? language, CultureInfo? culture, bool imgui = false)
@@ -1082,6 +1082,23 @@ public class Translation
     
     private static unsafe void RightToLeftify(ref string text)
     {
+        char* ptr = stackalloc char[text.Length];
+        for (int i = 0; i < text.Length; ++i)
+        {
+            char c = text[text.Length - i - 1];
+            c = c switch
+            {
+                '{' => '}',
+                '}' => '{',
+                '<' => '>',
+                '>' => '<',
+                '(' => ')',
+                ')' => '(',
+                _ => c
+            };
+            ptr[i] = c;
+        }
+        text = new string(ptr, 0, text.Length);
         return;
         char[] chars = text.ToCharArray();
         // treat tags as one character, and swap end and start tags...
@@ -1097,10 +1114,6 @@ public class Translation
                 break;
             bool singleTag = !endTag;
         }
-        char* ptr = stackalloc char[text.Length];
-        for (int i = 0; i < text.Length; ++i)
-            ptr[i] = text[text.Length - i - 1];
-        text = new string(ptr, 0, text.Length);
     }
     private string BaseUnsafeTranslate(Type t, string val, string language, Type[] gens, object[] formatting, UCPlayer? target, ulong targetTeam)
     {

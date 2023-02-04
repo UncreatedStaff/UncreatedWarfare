@@ -1,11 +1,10 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
-using Steamworks;
 using System.Collections;
 using System.Linq;
 using Uncreated.Framework.UI;
-using Uncreated.Players;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
@@ -14,132 +13,31 @@ namespace Uncreated.Warfare.Teams;
 public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
 {
     public static TeamSelector Instance;
-    public static readonly JoinUI JoinUI = new JoinUI();
-    public static event PlayerDelegate OnPlayerSelecting;
-    public static event PlayerDelegate OnPlayerSelected;
+    public static readonly TeamSelectorUI JoinUI = new TeamSelectorUI();
+    public static event PlayerDelegate? OnPlayerSelecting;
+    public static event PlayerDelegate? OnPlayerSelected;
     private const string SelectedHex = "afffc9";
     private const string SelfHex = "9bf3f3";
     public override void Load()
     {
         Instance = this;
-        JoinUI.Team1Button.OnClicked += OnTeam1Clicked;
-        JoinUI.Team2Button.OnClicked += OnTeam2Clicked;
-        JoinUI.ConfirmButton.OnClicked += OnConfirmClicked;
-        EventDispatcher.PlayerLeaving += OnPlayerDisconnect;
+        JoinUI.OnConfirmClicked += OnConfirmed;
+        JoinUI.OnTeamButtonClicked += OnTeamClicked;
+        EventDispatcher.GroupChanged += OnGroupChanged;
+        EventDispatcher.PlayerLeft += OnPlayerDisconnect;
+        JoinUI.OnOptionsBackClicked += OnOptionsBackClicked;
     }
     public override void Unload()
     {
-        EventDispatcher.PlayerLeaving -= OnPlayerDisconnect;
-        JoinUI.ConfirmButton.OnClicked -= OnConfirmClicked;
-        JoinUI.Team2Button.OnClicked -= OnTeam2Clicked;
-        JoinUI.Team1Button.OnClicked -= OnTeam1Clicked;
+        JoinUI.OnOptionsBackClicked -= OnOptionsBackClicked;
+        EventDispatcher.PlayerLeft -= OnPlayerDisconnect;
+        EventDispatcher.GroupChanged -= OnGroupChanged;
+        JoinUI.OnTeamButtonClicked -= OnTeamClicked;
+        JoinUI.OnConfirmClicked -= OnConfirmed;
         Instance = null!;
     }
-    private void OnPlayerDisconnect(PlayerEvent e)
-    {
-        if (e.Player.TeamSelectorData is not null)
-        {
-            if (e.Player.TeamSelectorData.JoiningCoroutine != null)
-            {
-                StopCoroutine(e.Player.TeamSelectorData.JoiningCoroutine);
-                e.Player.TeamSelectorData.JoiningCoroutine = null;
-            }
-
-            UpdateList();
-        }
-    }
-    public void OnPostPlayerInit(UCPlayer player)
-    {
-        player.TeamSelectorData ??= new TeamSelectorData(false);
-
-        JoinSelectionMenu(player);
-    }
-    private void OnTeam1Clicked(UnturnedButton button, Player player)
-    {
-        UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
-        OnTeamClicked(ucplayer, 1);
-    }
-    private void OnTeam2Clicked(UnturnedButton button, Player player)
-    {
-        UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
-        OnTeamClicked(ucplayer, 2);
-    }
-    private void OnTeamClicked(UCPlayer? player, ulong team)
-    {
-        if (player is null || player.TeamSelectorData is null || !player.TeamSelectorData.IsSelecting) return;
-
-        ITransportConnection c = player.Connection;
-
-        if (CheckTeam(team, player.TeamSelectorData.SelectedTeam))
-        {
-            if (player.TeamSelectorData.SelectedTeam != 0 && player.TeamSelectorData.SelectedTeam != team)
-            {
-                (team == 2 ? JoinUI.Team1Highlight : JoinUI.Team2Highlight).SetVisibility(c, false);
-                bool otherTeamHasRoom = CheckTeam(team == 1 ? 2ul : 1ul, team);
-                (team == 2 ? JoinUI.Team1Select : JoinUI.Team2Select).SetText(c, (otherTeamHasRoom ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
-            }
-            player.TeamSelectorData.SelectedTeam = team;
-            UpdateList();
-            (team == 1 ? JoinUI.Team1Highlight : JoinUI.Team2Highlight).SetVisibility(c, true);
-            (team == 1 ? JoinUI.Team1Select : JoinUI.Team2Select).SetText(c, T.TeamsUIClickToJoin.Translate(player));
-        }
-    }
-    private void OnConfirmClicked(UnturnedButton button, Player player)
-    {
-        UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
-        if (ucplayer is null || ucplayer.TeamSelectorData is null || !ucplayer.TeamSelectorData.IsSelecting ||
-            ucplayer.TeamSelectorData.SelectedTeam is not 1 and not 2 ||
-            ucplayer.TeamSelectorData.JoiningCoroutine != null)
-            return;
-
-        ucplayer.TeamSelectorData.JoiningCoroutine = StartCoroutine(JoinCoroutine(ucplayer, ucplayer.TeamSelectorData.SelectedTeam));
-    }
-    private IEnumerator JoinCoroutine(UCPlayer player, ulong targetTeam)
-    {
-        ITransportConnection c = player.Connection;
-        JoinUI.ConfirmText.SetText(c, T.TeamsUIJoining.Translate(player));
-        yield return new WaitForSeconds(1f);
-
-        if (!player.IsOnline) yield break;
-
-        if (player.TeamSelectorData is not null)
-            player.TeamSelectorData.JoiningCoroutine = null;
-
-        JoinTeam(player, targetTeam);
-    }
-
     public void ForceUpdate() => UpdateList();
     public bool IsSelecting(UCPlayer player) => player.TeamSelectorData is not null && player.TeamSelectorData.IsSelecting;
-    public void JoinSelectionMenu(UCPlayer player)
-    {
-        if (player.TeamSelectorData is null)
-        {
-            player.TeamSelectorData = new TeamSelectorData(true);
-        }
-        else
-        {
-            if (player.TeamSelectorData.IsSelecting)
-                return;
-            player.TeamSelectorData.IsSelecting = true;
-            player.TeamSelectorData.SelectedTeam = 0;
-        }
-
-        ulong grpOld = player.Player.quests.groupID.m_SteamID;
-        player.Player.quests.leaveGroup(true);
-        EventDispatcher.InvokeOnGroupChanged(player, grpOld, 0);
-
-        if (!TeamManager.LobbyZone.IsInside(player.Player.transform.position))
-            player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
-
-        player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
-
-        player.HasUIHidden = true;
-        Data.SendEffectClearAll.Invoke(ENetReliability.Reliable, player.Connection);
-
-        SendSelectionMenu(player);
-
-        OnPlayerSelecting?.Invoke(player);
-    }
     public void ResetState(UCPlayer player)
     {
         if (player.TeamSelectorData is not null)
@@ -158,41 +56,149 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
 
         JoinSelectionMenu(player);
     }
+    private void OnGroupChanged(GroupChanged e) => UpdateList();
+    private void OnPlayerDisconnect(PlayerEvent e)
+    {
+        if (e.Player.TeamSelectorData is not null)
+        {
+            if (e.Player.TeamSelectorData.JoiningCoroutine != null)
+            {
+                StopCoroutine(e.Player.TeamSelectorData.JoiningCoroutine);
+                e.Player.TeamSelectorData.JoiningCoroutine = null;
+            }
+
+            UpdateList();
+        }
+    }
+    private void OnOptionsBackClicked(UCPlayer player)
+    {
+        if (player.TeamSelectorData is { IsOptionsOnly: true })
+        {
+            JoinUI.ClearFromPlayer(player.Connection);
+            player.HasUIHidden = false;
+            UCWarfare.I.UpdateLangs(player);
+            player.TeamSelectorData.IsOptionsOnly = false;
+            player.TeamSelectorData.IsSelecting = false;
+        }
+    }
+    void IPlayerPostInitListener.OnPostPlayerInit(UCPlayer player)
+    {
+        player.TeamSelectorData ??= new TeamSelectorData(false);
+
+        JoinSelectionMenu(player);
+    }
+    private void OnTeamClicked(UCPlayer? player, ulong team)
+    {
+        if (player?.TeamSelectorData is null || !player.IsOnline || !player.TeamSelectorData.IsSelecting) return;
+
+        ITransportConnection c = player.Connection;
+
+        GetTeamCounts(out int t1, out int t2);
+        if (CheckTeam(team, player.TeamSelectorData.SelectedTeam, t1, t2))
+        {
+            L.LogDebug("Joining team");
+            if (player.TeamSelectorData.SelectedTeam != 0 && player.TeamSelectorData.SelectedTeam != team)
+            {
+                ulong other = player.TeamSelectorData.SelectedTeam;
+                if (other == 1)
+                    --t1;
+                else --t2;
+                bool otherTeamHasRoom = CheckTeam(other, team, t1, t2);
+                L.LogDebug($"Room on other team after leaving: {otherTeamHasRoom}");
+                JoinUI.LogicTeamSelectedToggle[other - 1].SetVisibility(c, false);
+                JoinUI.TeamStatus[other - 1].SetText(c, (otherTeamHasRoom ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
+                JoinUI.SetTeamEnabled(c, other, otherTeamHasRoom);
+            }
+            player.TeamSelectorData.SelectedTeam = team;
+            UpdateList();
+            JoinUI.SetTeamEnabled(c, team, true);
+            JoinUI.LogicTeamSelectedToggle[team - 1].SetVisibility(c, true);
+            JoinUI.TeamStatus[team - 1].SetText(c, T.TeamsUIClickToJoin.Translate(player));
+            JoinUI.LabelConfirm.SetText(c, T.TeamsUIConfirm.Translate(player));
+            JoinUI.LogicConfirmToggle.SetVisibility(c, true);
+        }
+    }
+    private void OnConfirmed(UCPlayer player)
+    {
+        if (player.TeamSelectorData is not { IsSelecting: true, SelectedTeam: 1 or 2, JoiningCoroutine: null })
+            return;
+        
+        JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, false);
+        player.TeamSelectorData.JoiningCoroutine = StartCoroutine(JoinCoroutine(player, player.TeamSelectorData.SelectedTeam));
+    }
+    private IEnumerator JoinCoroutine(UCPlayer player, ulong targetTeam)
+    {
+        ITransportConnection c = player.Connection;
+        JoinUI.LabelConfirm.SetText(c, T.TeamsUIJoining.Translate(player));
+        yield return new WaitForSeconds(1f);
+
+        if (player.TeamSelectorData is not null)
+            player.TeamSelectorData.JoiningCoroutine = null;
+
+        if (!player.IsOnline) yield break;
+
+        JoinTeam(player, targetTeam);
+    }
+    public void JoinSelectionMenu(UCPlayer player)
+    {
+        if (player.TeamSelectorData is null)
+        {
+            player.TeamSelectorData = new TeamSelectorData(true);
+        }
+        else
+        {
+            if (player.TeamSelectorData.IsSelecting)
+                return;
+            player.TeamSelectorData.IsSelecting = true;
+            player.TeamSelectorData.SelectedTeam = 0;
+            player.TeamSelectorData.IsOptionsOnly = false;
+            if (player.TeamSelectorData.JoiningCoroutine != null)
+            {
+                StopCoroutine(player.TeamSelectorData.JoiningCoroutine);
+                player.TeamSelectorData.JoiningCoroutine = null;
+            }
+        }
+        
+        player.Player.quests.leaveGroup(true);
+
+        if (!TeamManager.LobbyZone.IsInside(player.Player.transform.position) || player.IsInVehicle)
+        {
+            if (player.IsInVehicle)
+                player.Player.movement.forceRemoveFromVehicle();
+            player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
+        }
+
+        player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
+
+        ClearAllUI(player);
+
+        SendSelectionMenu(player);
+
+        OnPlayerSelecting?.Invoke(player);
+    }
+    private static void ClearAllUI(UCPlayer player)
+    {
+        player.HasUIHidden = true;
+        Data.SendEffectClearAll.Invoke(ENetReliability.Reliable, player.Connection);
+    }
     private void JoinTeam(UCPlayer player, ulong team)
     {
         if (team is not 1 and not 2) return;
 
         if (player.TeamSelectorData is not null)
             player.TeamSelectorData.IsSelecting = false;
-
-        GroupInfo? groupInfo = GroupManager.getGroupInfo(new CSteamID(TeamManager.GetGroupID(team)));
-        if (groupInfo is not null && player.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
+        if (TeamManager.JoinTeam(player, team, announce: true, teleport: true))
         {
             JoinUI.ClearFromPlayer(player.Connection);
-
-            GroupManager.save();
-
-            EventDispatcher.InvokeOnGroupChanged(player, 0, groupInfo.groupID.m_SteamID);
-
-            player.HasUIHidden = false;
-
-            UpdateList();
-
-            ActionLog.Add(ActionLogType.ChangeGroupWithUI, "GROUP: " + TeamManager.TranslateName(team, 0).ToUpper(), player.Steam64);
-
             player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
-
-            player.Player.teleportToLocationUnsafe(
-                team is 1 ? TeamManager.Team1Main.Spawn3D : TeamManager.Team2Main.Spawn3D,
-                team is 1 ? TeamManager.Team1SpawnAngle : TeamManager.Team2SpawnAngle);
-
-            UpdateList();
-
-            ulong id = player.Steam64;
-            Chat.Broadcast(LanguageSet.Where(x => x.GetTeam() == team && x.Steam64 != id), T.TeamJoinAnnounce, TeamManager.GetFactionSafe(team)!, player);
-
+            player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
+            player.HasUIHidden = false;
+            TeamManager.TeleportToMain(player);
             CooldownManager.StartCooldown(player, CooldownType.ChangeTeams, TeamManager.TeamSwitchCooldown);
             ToastMessage.QueueMessage(player, new ToastMessage(string.Empty, Data.Gamemode.DisplayName, ToastMessageSeverity.Big));
+
+            ActionLog.Add(ActionLogType.ChangeGroupWithUI, "GROUP: " + TeamManager.TranslateName(team, 0).ToUpper(), player.Steam64);
 
             if (Data.Gamemode is IJoinedTeamListener tl)
                 tl.OnJoinTeam(player, team);
@@ -202,24 +208,41 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         else
         {
             L.LogError("Failed to assign group " + team.ToString(Data.LocalLocale) + " to " + player.CharacterName + ".", method: "TEAM SELECTOR");
+            ResetState(player);
         }
     }
-
+    public void OpenOptionsMenu(UCPlayer player)
+    {
+        if (player.TeamSelectorData is not { IsSelecting: true })
+        {
+            player.TeamSelectorData ??= new TeamSelectorData(false);
+            player.TeamSelectorData.IsOptionsOnly = true;
+            ClearAllUI(player);
+            JoinUI.SendToPlayer(player.Connection);
+            JoinUI.LogicTeamSettings.SetVisibility(player.Connection, false);
+            JoinUI.LabelOptionsBack.SetText(player.Connection, T.TeamsUIConfirm.Translate(player));
+        }
+        JoinUI.LogicOpenOptionsMenu.SetVisibility(player.Connection, true);
+    }
     private void SendSelectionMenu(UCPlayer player)
     {
         ITransportConnection c = player.Connection;
         JoinUI.SendToPlayer(c);
+        JoinUI.TeamsTitle.SetText(c, T.TeamsUIHeader.Translate(player));
+        JoinUI.TeamNames[0].SetText(c, TeamManager.Team1Faction.GetShortName(player.Language));
+        JoinUI.TeamNames[1].SetText(c, TeamManager.Team2Faction.GetShortName(player.Language));
+        string status = T.TeamsUIClickToJoin.Translate(player);
+        JoinUI.TeamStatus[0].SetText(c, status);
+        JoinUI.TeamStatus[1].SetText(c, status);
 
-        JoinUI.Heading.SetText(c, T.TeamsUIHeader.Translate(player));
-        JoinUI.Team1Name.SetText(c, TeamManager.Team1Name.Colorize(TeamManager.Team1ColorHex));
-        JoinUI.Team2Name.SetText(c, TeamManager.Team2Name.Colorize(TeamManager.Team2ColorHex));
+        JoinUI.LabelConfirm.SetText(c, T.TeamsUIConfirm.Translate(player));
+        JoinUI.LabelOptionsBack.SetText(player.Connection, T.TeamsUIBack.Translate(player));
 
-        OnDonorsChanged(player);
+        if (!string.IsNullOrEmpty(TeamManager.Team1Faction.FlagImageURL))
+            JoinUI.TeamFlags[0].SetImage(c, TeamManager.Team1Faction.FlagImageURL);
 
-        JoinUI.ConfirmText.SetText(c, T.TeamsUIConfirm.Translate(player));
-
-        JoinUI.Team1Image.SetImage(c, TeamManager.Team1Faction.FlagImageURL);
-        JoinUI.Team2Image.SetImage(c, TeamManager.Team2Faction.FlagImageURL);
+        if (!string.IsNullOrEmpty(TeamManager.Team2Faction.FlagImageURL))
+            JoinUI.TeamFlags[1].SetImage(c, TeamManager.Team2Faction.FlagImageURL);
 
         int t1Ct = 0, t2Ct = 0;
         foreach (UCPlayer pl in PlayerManager.OnlinePlayers.OrderBy(pl => pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting))
@@ -229,34 +252,28 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             if (team is not 1 and not 2) continue;
             string text = player.Steam64 == pl.Steam64 ? pl.CharacterName.Colorize(SelfHex) : (sel ? pl.CharacterName.Colorize(SelectedHex) : pl.CharacterName);
             if (team is 1)
-                JoinUI.Team1Players[t1Ct++].SetText(c, text);
+                JoinUI.TeamPlayers[0][t1Ct++].SetText(c, text);
             else
-                JoinUI.Team2Players[t2Ct++].SetText(c, text);
+                JoinUI.TeamPlayers[1][t2Ct++].SetText(c, text);
         }
 
         SetButtonState(player, 1, CheckTeam(1, 0, t1Ct, t2Ct));
         SetButtonState(player, 2, CheckTeam(2, 0, t1Ct, t2Ct));
 
-        JoinUI.Team1PlayerCount.SetText(c, t1Ct.ToString(Data.LocalLocale));
-        JoinUI.Team2PlayerCount.SetText(c, t2Ct.ToString(Data.LocalLocale));
-    }
-    private void SetButtonState(UCPlayer player, ulong team, bool hasSpace)
-    {
-        ITransportConnection c = player.Connection;
-        if (team == 1)
-        {
-            JoinUI.Team1Button.SetVisibility(c, hasSpace);
-            JoinUI.Team1Select.SetText(c, (hasSpace ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
-        }
-        else if (team == 2)
-        {
-            JoinUI.Team2Button.SetVisibility(c, hasSpace);
-            JoinUI.Team2Select.SetText(c, (hasSpace ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
-        }
-    }
+        JoinUI.TeamCounts[0].SetText(c, t1Ct.ToString(Data.LocalLocale));
+        JoinUI.TeamCounts[1].SetText(c, t2Ct.ToString(Data.LocalLocale));
 
-    private int _t1Amt = -1;
-    private int _t2Amt = -1;
+        JoinUI.OptionsIMGUICheckToggle.SetVisibility(c, player.Save.IMGUI);
+        JoinUI.LogicTeamSettings.SetVisibility(player.Connection, true);
+    }
+    private static void SetButtonState(UCPlayer player, ulong team, bool hasSpace)
+    {
+        if (team is not 1ul and not 2ul) return;
+        ITransportConnection c = player.Connection;
+        JoinUI.SetTeamEnabled(c, team, hasSpace);
+        JoinUI.TeamStatus[team - 1].SetText(c, (hasSpace ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
+    }
+    
     private void UpdateList()
     {
         int t1Ct = 0, t2Ct = 0;
@@ -264,86 +281,110 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         {
             bool sel = pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting;
             ulong team = sel ? pl.TeamSelectorData!.SelectedTeam : pl.GetTeam();
-            if (team is not 1 and not 2) continue;
-            string text = sel ? pl.CharacterName.Colorize(SelectedHex) : pl.CharacterName;
-            UnturnedLabel lbl = team is 1 ? JoinUI.Team1Players[t1Ct++] : JoinUI.Team2Players[t2Ct++];
+            if (team is not 1 and not 2)
+                continue;
+            if (team == 1 && t1Ct >= TeamSelectorUI.PlayerListCount || team == 2 && t2Ct >= TeamSelectorUI.PlayerListCount)
+            {
+                if (team == 1)
+                    ++t1Ct;
+                else
+                    ++t2Ct;
+                continue;
+            }
+            string text = sel ? pl.CharacterName.ColorizeTMPro(SelectedHex) : pl.CharacterName;
+            UnturnedLabel lbl = team is 1 ? JoinUI.TeamPlayers[0][t1Ct++] : JoinUI.TeamPlayers[1][t2Ct++];
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
-                if (pl2.TeamSelectorData is not null && pl2.TeamSelectorData.IsSelecting)
+                if (pl2.TeamSelectorData is { IsSelecting: true })
+                {
                     lbl.SetText(pl2.Connection, pl.Steam64 == pl2.Steam64 ? pl.CharacterName.Colorize(SelfHex) : text);
+                    L.LogDebug($"T{team} Set text: {text}");
+                }
             }
         }
 
-        for (int j = 0; j < PlayerManager.OnlinePlayers.Count; ++j)
+        // will cascade with animations
+        if (t1Ct > 0 || t2Ct > 0)
         {
-            UCPlayer pl = PlayerManager.OnlinePlayers[j];
-            if (pl.TeamSelectorData is null || !pl.TeamSelectorData.IsSelecting)
-                continue;
-            ITransportConnection c = pl.Connection;
-            for (int i = t1Ct; i < _t1Amt; ++i)
-                JoinUI.Team1Players[i].SetText(c, string.Empty);
-            for (int i = t2Ct; i < _t2Amt; ++i)
-                JoinUI.Team2Players[i].SetText(c, string.Empty);
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            {
+                UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
+                if (pl2.TeamSelectorData is { IsSelecting: true })
+                {
+                    if (t1Ct > 0)
+                    {
+                        JoinUI.TeamPlayers[0][t1Ct - 1].SetVisibility(pl2.Connection, true);
+                        L.LogDebug($"T1: Shown from {t1Ct} up.");
+                    }
+                    if (t2Ct > 0)
+                    {
+                        JoinUI.TeamPlayers[1][t2Ct - 1].SetVisibility(pl2.Connection, true);
+                        L.LogDebug($"T2: Shown from {t2Ct} up.");
+                    }
+                }
+            }
         }
-
-        if (_t1Amt < t1Ct)
-            _t1Amt = t1Ct;
-
-        if (_t2Amt < t2Ct)
-            _t2Amt = t2Ct;
+        if (TeamSelectorUI.PlayerListCount > t1Ct)
+        {
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            {
+                UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
+                if (pl2.TeamSelectorData is { IsSelecting: true })
+                {
+                    JoinUI.TeamPlayers[0][t1Ct].SetVisibility(pl2.Connection, false);
+                    L.LogDebug($"T1: Hid from {t1Ct + 1} down.");
+                }
+            }
+        }
+        if (TeamSelectorUI.PlayerListCount > t2Ct)
+        {
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            {
+                UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
+                if (pl2.TeamSelectorData is { IsSelecting: true })
+                {
+                    JoinUI.TeamPlayers[1][t2Ct].SetVisibility(pl2.Connection, false);
+                    L.LogDebug($"T2: Hid from {t2Ct + 1} down.");
+                }
+            }
+        }
 
         bool b1 = CheckTeam(1, 0, t1Ct, t2Ct),
              b2 = CheckTeam(2, 0, t1Ct, t2Ct),
              b3 = CheckTeam(1, 2, t1Ct, t2Ct),
              b4 = CheckTeam(2, 1, t1Ct, t2Ct);
-
+        
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
             if (pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting)
             {
                 ITransportConnection c = pl.Connection;
-                JoinUI.Team1PlayerCount.SetText(c, t1Ct.ToString(Data.LocalLocale));
-                JoinUI.Team2PlayerCount.SetText(c, t2Ct.ToString(Data.LocalLocale));
+                JoinUI.TeamCounts[0].SetText(c, t1Ct.ToString(pl.Culture));
+                JoinUI.TeamCounts[1].SetText(c, t2Ct.ToString(pl.Culture));
                 if (pl.TeamSelectorData.SelectedTeam is 1)
                 {
-                    JoinUI.Team1Button.SetVisibility(c, false);
-                    JoinUI.Team2Button.SetVisibility(c, b4);
+                    JoinUI.LogicTeamSelectedToggle[0].SetVisibility(c, true);
+                    JoinUI.LogicTeamSelectedToggle[1].SetVisibility(c, false);
+                    JoinUI.LogicTeamToggle[0].SetVisibility(c, true);
+                    JoinUI.LogicTeamToggle[1].SetVisibility(c, b4);
                 }
                 else if (pl.TeamSelectorData.SelectedTeam is 2)
                 {
-                    JoinUI.Team1Button.SetVisibility(c, b3);
-                    JoinUI.Team2Button.SetVisibility(c, false);
+                    JoinUI.LogicTeamSelectedToggle[0].SetVisibility(c, false);
+                    JoinUI.LogicTeamSelectedToggle[1].SetVisibility(c, true);
+                    JoinUI.LogicTeamToggle[0].SetVisibility(c, b3);
+                    JoinUI.LogicTeamToggle[1].SetVisibility(c, true);
                 }
                 else
                 {
-                    JoinUI.Team1Button.SetVisibility(c, b1);
-                    JoinUI.Team2Button.SetVisibility(c, b2);
+                    JoinUI.LogicTeamSelectedToggle[0].SetVisibility(c, false);
+                    JoinUI.LogicTeamSelectedToggle[1].SetVisibility(c, false);
+                    JoinUI.LogicTeamToggle[0].SetVisibility(c, b1);
+                    JoinUI.LogicTeamToggle[1].SetVisibility(c, b2);
                 }
             }
-        }
-    }
-    public void OnKitsUpdated(UCPlayer player)
-    {
-        if (player.TeamSelectorData is not null && player.TeamSelectorData.IsSelecting)
-            OnPostPlayerInit(player);
-    }
-    private void OnDonorsChanged(UCPlayer player)
-    {
-        GetTeamCounts(out int t1Ct, out int t2Ct);
-        if (player.TeamSelectorData!.SelectedTeam is 1)
-        {
-            SetButtonState(player, 2, CheckTeam(2, 1, t1Ct, t2Ct));
-        }
-        else if (player.TeamSelectorData.SelectedTeam is 2)
-        {
-            SetButtonState(player, 1, CheckTeam(1, 2, t1Ct, t2Ct));
-        }
-        else
-        {
-            SetButtonState(player, 1, CheckTeam(1, 0, t1Ct, t2Ct));
-            SetButtonState(player, 2, CheckTeam(2, 0, t1Ct, t2Ct));
         }
     }
     private bool CheckTeam(ulong team, ulong toBeLeft)
@@ -359,21 +400,18 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            if (pl.TeamSelectorData is null || !pl.TeamSelectorData.IsSelecting)
+            if (pl.TeamSelectorData is not { IsSelecting: true, SelectedTeam: 1ul or 2ul })
             {
-                ulong team2 = pl.GetTeam();
-                if (team2 is 1)
+                ulong team2 = pl.Player.quests.groupID.m_SteamID;
+                if (team2 == TeamManager.Team1ID)
                     ++t1;
-                else if (team2 is 2)
+                else if (team2 == TeamManager.Team2ID)
                     ++t2;
             }
-            else
-            {
-                if (pl.TeamSelectorData.SelectedTeam is 1)
-                    ++t1;
-                else if (pl.TeamSelectorData.SelectedTeam is 2)
-                    ++t2;
-            }
+            else if (pl.TeamSelectorData.SelectedTeam == 1ul)
+                ++t1;
+            else if (pl.TeamSelectorData.SelectedTeam == 2ul)
+                ++t2;
         }
     }
     private bool CheckTeam(ulong team, ulong toBeLeft, int t1, int t2)
@@ -381,13 +419,20 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         if (toBeLeft is 1)
         {
             --t1;
-            ++t2;
         }
         else if (toBeLeft is 2)
         {
-            ++t1;
             --t2;
         }
+
+        if (t1 == t2)
+            return true;
+
+        if (team == 1 && t1 <= 0 || team == 2 && t2 <= 0)
+            return true;
+        if (team == 2 && t1 <= 0 && t2 > 0 || team == 1 && t2 <= 0 && t1 > 0)
+            return false;
+
         int maxDiff = Mathf.Max(2, Mathf.CeilToInt(Provider.clients.Count * 0.10f));
 
         if (team == 2)
@@ -402,6 +447,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
 public class TeamSelectorData
 {
     public bool IsSelecting;
+    public bool IsOptionsOnly;
     public ulong SelectedTeam;
     public Coroutine? JoiningCoroutine;
     public TeamSelectorData(bool isInLobby)

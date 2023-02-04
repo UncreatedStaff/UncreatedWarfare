@@ -286,12 +286,12 @@ internal static class TraitSigns
         private void Start()
         {
             L.LogDebug("Registered Trait sign: " + (Data?.TypeName ?? "uninited"));
-            EventDispatcher.PlayerLeaving += OnPlayerLeft;
+            EventDispatcher.PlayerLeft += OnPlayerLeft;
         }
         [UsedImplicitly]
         private void OnDestroy()
         {
-            EventDispatcher.PlayerLeaving -= OnPlayerLeft;
+            EventDispatcher.PlayerLeft -= OnPlayerLeft;
             L.LogDebug("Destroyed Trait sign: " + (Data?.TypeName ?? "uninited"));
         }
         private void OnPlayerLeft(PlayerEvent e)

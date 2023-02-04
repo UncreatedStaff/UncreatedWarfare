@@ -51,7 +51,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         PlayerLife.OnPreDeath += OnPreDeath;
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.PlayerJoined += OnPlayerJoined;
-        EventDispatcher.PlayerLeaving += OnPlayerLeaving;
+        EventDispatcher.PlayerLeft += OnPlayerLeaving;
         OnItemsRefreshed += OnItemsRefreshedIntl;
         //await MigrateOldKits(token).ConfigureAwait(false);
         await base.PostLoad(token).ConfigureAwait(false);
@@ -81,7 +81,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     }
     public override async Task PreUnload(CancellationToken token)
     {
-        EventDispatcher.PlayerLeaving -= OnPlayerLeaving;
+        EventDispatcher.PlayerLeft -= OnPlayerLeaving;
         EventDispatcher.PlayerJoined -= OnPlayerJoined;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         PlayerLife.OnPreDeath -= OnPreDeath;
@@ -943,7 +943,6 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 Release();
             }
         }, "Updating all kit signs after team player count update");
-        // todo update all loadouts or request signs where team limit < 1
     }
     /// <remarks>Thread Safe</remarks>
     public static void UpdateSigns()

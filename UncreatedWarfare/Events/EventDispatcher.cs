@@ -57,6 +57,7 @@ public static class EventDispatcher
     public static event AsyncEventDelegate<PlayerPending> PlayerPendingAsync;
     public static event EventDelegate<PlayerJoined> PlayerJoined;
     public static event EventDelegate<PlayerEvent> PlayerLeaving;
+    public static event EventDelegate<PlayerEvent> PlayerLeft;
     public static event EventDelegate<BattlEyeKicked> PlayerBattlEyeKicked;
     public static event EventDelegate<PlayerDied> PlayerDied;
     public static event EventDelegate<GroupChanged> GroupChanged;
@@ -86,9 +87,11 @@ public static class EventDispatcher
         PlayerCrafting.onCraftBlueprintRequested += PlayerCraftingOnCraftRequested;
         StructureDrop.OnSalvageRequested_Global += StructureDropOnSalvageRequested;
         StructureManager.onDamageStructureRequested += StructureManagerOnDamageStructureRequested;
+        PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
     }
     internal static void UnsubscribeFromAll()
     {
+        PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
         StructureManager.onDamageStructureRequested -= StructureManagerOnDamageStructureRequested;
         StructureDrop.OnSalvageRequested_Global -= StructureDropOnSalvageRequested;
         PlayerCrafting.onCraftBlueprintRequested -= PlayerCraftingOnCraftRequested;
@@ -294,15 +297,17 @@ public static class EventDispatcher
     }
     private static void ProviderOnServerDisconnected(CSteamID steamID)
     {
-        if (PlayerLeaving == null) return;
         UCPlayer? player = UCPlayer.FromCSteamID(steamID);
         if (player is null) return;
-        player._isLeaving = true;
+        player.IsLeaving = true;
         PlayerEvent args = new PlayerEvent(player);
-        foreach (EventDelegate<PlayerEvent> inv in PlayerLeaving.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
+        if (PlayerLeaving != null)
         {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(PlayerLeaving));
+            foreach (EventDelegate<PlayerEvent> inv in PlayerLeaving.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
+            {
+                if (!args.CanContinue) break;
+                TryInvoke(inv, args, nameof(PlayerLeaving));
+            }
         }
         try
         {
@@ -312,6 +317,13 @@ public static class EventDispatcher
         {
             L.LogError("Failed to remove a player from player manager.");
             L.LogError(ex);
+        }
+        
+        if (PlayerLeft == null) return;
+        foreach (EventDelegate<PlayerEvent> inv in PlayerLeft.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(PlayerLeft));
         }
     }
     private static void ProviderOnServerConnected(CSteamID steamID)
@@ -568,10 +580,10 @@ public static class EventDispatcher
             if (!request.CanContinue) shouldAllow = false;
         }
     }
-    internal static void InvokeOnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup)
+    private static void PlayerQuestsOnGroupChanged(PlayerQuests sender, CSteamID oldgroupid, EPlayerGroupRank oldgrouprank, CSteamID newgroupid, EPlayerGroupRank newgrouprank)
     {
-        if (GroupChanged == null || player is null) return;
-        GroupChanged args = new GroupChanged(player, oldGroup, newGroup);
+        if (GroupChanged == null || sender == null || UCPlayer.FromPlayer(sender.player) is not { IsOnline: true } player) return;
+        GroupChanged args = new GroupChanged(player, oldgroupid.m_SteamID, oldgrouprank, newgroupid.m_SteamID, newgrouprank);
         foreach (EventDelegate<GroupChanged> inv in GroupChanged.GetInvocationList().Cast<EventDelegate<GroupChanged>>())
         {
             if (!args.CanContinue) break;
