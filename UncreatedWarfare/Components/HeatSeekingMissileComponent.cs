@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Components.HeatSeekingController;
@@ -16,23 +18,18 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
     private GameObject _projectile;
     private HeatSeekingController _controller;
     private Transform? _lastKnownTarget;
+    private Vector3 _alternativeTarget;
 
     private Rigidbody _rigidbody;
-    private List<Collider> _colliders;
 
-    private float _guiderDistance = 30;
-    private float _aquisitionRange;
     private float _projectileSpeed;
     private float _maxTurnDegrees;
-    private float _armingDistance;
-    private float _guidanceDelay;
+    private float _guidanceRampTime;
+
+    private float _startTime;
     private bool _lost;
 
-    private DateTime _start;
-
-    bool _armed;
-
-    public void Initialize(GameObject projectile, UCPlayer firer, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float guidanceDelay)
+    public void Initialize(GameObject projectile, UCPlayer firer, float projectileSpeed, float responsiveness, float guidanceRampTime)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -57,21 +54,16 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
         this._projectile = projectile;
         this._maxTurnDegrees = responsiveness;
         this._projectileSpeed = projectileSpeed;
-        this._aquisitionRange = aquisitionRange;
-        this._armingDistance = armingDistance;
-        this._guidanceDelay = guidanceDelay;
+        this._guidanceRampTime = guidanceRampTime;
+        this._startTime = Time.time;
         if (_controller.Status == ELockOnMode.LOCKED_ON)
             this._lost = false;
         else
             this._lost = true;
 
         this._rigidbody = projectile.GetComponent<Rigidbody>();
-        this._colliders = transform.GetComponentsInChildren<Collider>().ToList();
-        _colliders.ForEach(c => c.enabled = false);
 
-        _armed = false;
-
-        _start = DateTime.UtcNow;
+        _alternativeTarget = _projectile.transform.TransformPoint(Quaternion.AngleAxis(Random.Range(0f, 360f), Vector3.forward) * new Vector3(0, 500, 500));
     }
 
     private void TrySendWarning()
@@ -88,9 +80,6 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
         {
             return;
         }
-
-
-        L.LogDebug("Warning can be sent");
 
         if (c.Data is { Item: { } item })
         {
@@ -115,14 +104,6 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
 
-        _guiderDistance += Time.fixedDeltaTime * _projectileSpeed;
-
-        if (_guiderDistance > 30 + _armingDistance && !_armed)
-        {
-            _colliders.ForEach(c => c.enabled = true);
-            _armed = true;
-        }
-
         if (_controller.LockOnTarget is not null)
         {
             _lastKnownTarget = _controller.LockOnTarget;
@@ -134,24 +115,20 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
         }
 
         Vector3 idealDirection;
-        float turnDegrees;
+        float turnDegrees = _maxTurnDegrees;
 
         if (_lastKnownTarget is null || _lost)
         {
-            idealDirection = _controller.AlternativeTargetPosition - _projectile.transform.position;
-            turnDegrees = 0.2f;
+            idealDirection = _alternativeTarget - _projectile.transform.position;
         }
         else
         {
             idealDirection = (_lastKnownTarget.Find("Center") ?? _lastKnownTarget).position - _projectile.transform.position;
-            
-            if (_lastKnownTarget.TryGetComponent<InteractableVehicle>(out _))
-                turnDegrees = _maxTurnDegrees;
-            else
-                turnDegrees = 0.5f;
         }
 
-        Vector3 targetDirection = Vector3.RotateTowards(transform.forward, idealDirection, Mathf.Deg2Rad * turnDegrees, Mathf.Deg2Rad * turnDegrees);
+        float guidanceMultiplier = Mathf.Clamp((Time.time - _startTime) / _guidanceRampTime, 0, _guidanceRampTime);
+
+        Vector3 targetDirection = Vector3.RotateTowards(transform.forward, idealDirection, Mathf.Deg2Rad * guidanceMultiplier * turnDegrees, 0);
 
         _projectile.transform.forward = targetDirection;
         _rigidbody.velocity = _projectile.transform.forward * _projectileSpeed;

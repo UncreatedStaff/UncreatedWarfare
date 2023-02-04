@@ -26,19 +26,17 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     private EffectAsset _effect;
     private UCPlayer? _lastKnownGunner;
     public List<Transform> Hardpoints { get; set; }
-   
 
-    private float _aquisitionTime = 1.5f;
-    private float _timeOutTime = 10;
+
+    private float _aquisitionTime;
+    private float _timeOutTime;
+
     private float _timeOfAquisition;
     private float _timeOfLastScan;
     public int _currentHardpoint;
 
     public Transform? LockOnTarget { get; private set; }
-    public Vector3 AlternativeTargetPosition { get; private set; }
     public ELockOnMode Status { get; private set; }
-
-    public static List<Transform> ActiveCountermeasures = new List<Transform>();
     public Transform? CycleHardpoint()
     {
         if (Hardpoints.Count == 0)
@@ -61,17 +59,19 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         }
     }
 
-    public void Initialize(float horizontalRange, float verticalRange, JsonAssetReference<EffectAsset> lockOnEffect)
+    public void Initialize(float horizontalRange, float verticalRange, JsonAssetReference<EffectAsset> lockOnEffect, float aquisitionTime, float timeOutTime)
     {
         _vehicle = GetComponentInParent<InteractableVehicle>();
         _horizontalRange = horizontalRange;
         _verticalRange = verticalRange;
+        _aquisitionTime = aquisitionTime;
+        _timeOutTime = timeOutTime;
 
         Hardpoints = new List<Transform>();
         _currentHardpoint = 0;
         for (int i = 0; i < 8; i++)
         {
-            var hardpoint = _vehicle.transform.Find("Hardpoint_" + 0);
+            var hardpoint = _vehicle.transform.Find("Hardpoint_" + i);
             if (hardpoint != null)
                 Hardpoints.Add(hardpoint);
         }
@@ -81,10 +81,21 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         if (!lockOnEffect.Exists)
             L.LogWarning("HEATSEAKER ERROR: Lock on sound effect not found: " + lockOnEffect.Guid);
     }
-    public void Initialize(float range, JsonAssetReference<EffectAsset> lockOnEffect)
+    public void Initialize(float range, JsonAssetReference<EffectAsset> lockOnEffect, float aquisitionTime, float timeOutTime)
     {
         _vehicle = GetComponentInParent<InteractableVehicle>();
         _horizontalRange = range;
+        _aquisitionTime = aquisitionTime;
+        _timeOutTime = timeOutTime;
+
+        Hardpoints = new List<Transform>();
+        _currentHardpoint = 0;
+        for (int i = 0; i < 8; i++)
+        {
+            var hardpoint = _vehicle.transform.Find("Hardpoint_" + i);
+            if (hardpoint != null)
+                Hardpoints.Add(hardpoint);
+        }
 
         Hardpoints = new List<Transform>();
         _currentHardpoint = 0;
@@ -115,8 +126,6 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     private void ScanForTargets()
     {
-        AlternativeTargetPosition = GetRandomTarget();
-
         var gunner = GetGunner(_vehicle);
 
         if (gunner is null)
@@ -159,19 +168,22 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         bestTarget = AQUISITION_ANGLE;
 
-        foreach (Transform countermeasure in ActiveCountermeasures)
+        foreach (Countermeasure c in Countermeasure.ActiveCountermeasures)
         {
-            Vector3 relativePos = transform.InverseTransformPoint(countermeasure.position);
+            if (!c.Burning)
+                continue;
+
+            Vector3 relativePos = transform.InverseTransformPoint(c.transform.position);
 
             float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
-            float angleBetween = Vector3.Angle(countermeasure.position - transform.position, transform.forward);
+            float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
             if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
             {
                 bool raySuccess = Physics.Linecast(transform.position, countermeasure.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
                 if (!raySuccess)
                 {
                     bestTarget = lockOnDistance;
-                    newTarget = countermeasure;
+                    newTarget = c.transform;
                 }
             }
         }
@@ -220,14 +232,14 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     }
     private void PlayLockOnSound(UCPlayer gunner)
     {
-        if (_effect is null)
+        if (_effect == null || gunner == null || gunner.Connection == null)
             return;
 
         EffectManager.sendUIEffect(_effect.id, (short)_effect.id, gunner.Connection, true);
     }
     private void CancelLockOnSound(UCPlayer gunner)
     {
-        if (_effect is null)
+        if (_effect == null || gunner == null || gunner.Connection == null)
             return;
 
         EffectManager.ClearEffectByGuid(_effect.GUID, gunner.Connection);
@@ -243,8 +255,6 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         return (horizontal1 - horizontal2).sqrMagnitude < Math.Pow(_horizontalRange, 2) && Mathf.Abs(target.y - transform.position.y) < _verticalRange;
     }
-
-    private Vector3 GetRandomTarget() => transform.TransformPoint(new Vector3(Random.Range(-10f, 10f), Random.Range(-10f, 10f), 300));
 
     public enum ELockOnMode
     {
