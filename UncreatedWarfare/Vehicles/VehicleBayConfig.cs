@@ -9,8 +9,7 @@ public class VehicleBayConfig : Config<VehicleBayData>
 
 public class VehicleBayData : JSONConfigData
 {
-    public JsonAssetReference<EffectAsset> MissileWarningID;
-    public JsonAssetReference<EffectAsset> MissileWarningDriverID;
+    public JsonAssetReference<EffectAsset> VehicleHUDID;
     public JsonAssetReference<EffectAsset> CountermeasureEffectID;
     public JsonAssetReference<VehicleAsset> CountermeasureGUID;
     public JsonAssetReference<ItemGunAsset>[] TOWMissileWeapons;
@@ -20,8 +19,7 @@ public class VehicleBayData : JSONConfigData
 
     public override void SetDefaults()
     {
-        MissileWarningID = (JsonAssetReference<EffectAsset>)26033;
-        MissileWarningDriverID = (JsonAssetReference<EffectAsset>)26034;
+        VehicleHUDID = (JsonAssetReference<EffectAsset>)26033;
         CountermeasureEffectID = (JsonAssetReference<EffectAsset>)26035;
         CountermeasureGUID = "16dbd4e5928e498783675529ca53fc61";
         TOWMissileWeapons = new JsonAssetReference<ItemGunAsset>[]

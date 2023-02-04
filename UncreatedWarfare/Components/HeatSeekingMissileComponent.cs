@@ -9,10 +9,11 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Components.HeatSeekingController;
+using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Components;
 
-internal class HeatSeekingMissileComponent : MonoBehaviour
+public class HeatSeekingMissileComponent : MonoBehaviour
 {
     //private Player _firer;
     private GameObject _projectile;
@@ -81,20 +82,7 @@ internal class HeatSeekingMissileComponent : MonoBehaviour
             return;
         }
 
-        if (c.Data is { Item: { } item })
-        {
-            for (byte seat = 0; seat < c.Vehicle.passengers.Length; seat++)
-            {
-                if (c.Vehicle.passengers[seat].player != null && item.CrewSeats.Contains(seat))
-                {
-                    ushort effectID = VehicleBay.Config.MissileWarningID;
-                    if (seat == 0)
-                        effectID = VehicleBay.Config.MissileWarningDriverID;
-
-                    EffectManager.sendUIEffect(effectID, (short)effectID, c.Vehicle.passengers[seat].player.transportConnection, true);
-                }
-            }
-        }
+        c.ReceiveMissileWarning(this);
     }
     private float _timeOfLastLoop;
     [UsedImplicitly]

@@ -18,11 +18,14 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 using UnityEngine.PlayerLoop;
 using System.Diagnostics;
+using Uncreated.Warfare.Actions;
 
 namespace Uncreated.Warfare.Components;
 
 public class VehicleComponent : MonoBehaviour
 {
+    public static readonly VehicleHUD VehicleHUD = new VehicleHUD();
+
     public Guid LastItem;
     public bool LastItemIsVehicle;
     public InteractableVehicle Vehicle;
@@ -62,7 +65,7 @@ public class VehicleComponent : MonoBehaviour
 
         Quota = 0;
         RequiredQuota = -1;
-        
+
         VehicleBay? bay = VehicleBay.GetSingletonQuick();
         if (bay != null)
         {
@@ -79,6 +82,8 @@ public class VehicleComponent : MonoBehaviour
             if (VehicleBay.Config.AirAAWeapons.HasID(passenger.turret.itemID))
                 passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(600, Gamemode.Config.EffectLockOn2, 1, 11);
         }
+
+        ReloadCountermeasures();
     }
     public bool IsType(VehicleType type) => Data?.Item != null && Data.Item.Type == type;
 
@@ -94,6 +99,42 @@ public class VehicleComponent : MonoBehaviour
             return false;
         }
         return true;
+    }
+    private void ShowHUD(UCPlayer player, byte seat)
+    {
+        if (Data is null || Data.Item is null)
+            return;
+
+        if (!IsAircraft)
+            return;
+
+        if (!Data.Item.CrewSeats.Contains(seat))
+            return;
+
+        VehicleHUD.SendToPlayer(player.Connection);
+
+        VehicleHUD.MissileWarning.SetVisibility(player.Connection, false);
+        VehicleHUD.MissileWarningDriver.SetVisibility(player.Connection, false);
+        VehicleHUD.FlareCount.SetVisibility(player.Connection, true);
+
+        if (seat == 0)
+            VehicleHUD.FlareCount.SetText(player.Connection, "FLARES: " + _counterMeasuresCount);
+    }
+    private void UpdateHUDFlares()
+    {
+        if (IsAircraft)
+            return;
+
+        for (int i = 0; i < Vehicle.passengers.Length; i++)
+        {
+            var passenger = Vehicle.passengers[i];
+            if (i == 0 && passenger.player != null)
+                VehicleHUD.FlareCount.SetText(passenger.player.transportConnection, "FLARES: " + _counterMeasuresCount);
+        }
+    }
+    private void HideHUD(UCPlayer player)
+    {
+        VehicleHUD.ClearFromPlayer(player.Connection);
     }
     internal void OnPlayerEnteredVehicle(EnterVehicle e)
     {
@@ -130,6 +171,7 @@ public class VehicleComponent : MonoBehaviour
                 _quotaLoop = StartCoroutine(QuotaLoop());
             }
         }
+        ShowHUD(player, toSeat);
     }
     public void OnPlayerExitedVehicle(ExitVehicle e)
     {
@@ -177,6 +219,7 @@ public class VehicleComponent : MonoBehaviour
             }
             TransportTable.Remove(e.Player.Steam64);
         }
+        HideHUD(e.Player);
     }
     public void OnPlayerSwapSeatRequested(VehicleSwapSeat e)
     {
@@ -203,6 +246,8 @@ public class VehicleComponent : MonoBehaviour
             else
                 TransportTable.Remove(e.Player.Steam64);
         }
+
+        ShowHUD(e.Player, e.NewSeat);
     }
     public void EvaluateUsage(SteamPlayer player)
     {
@@ -227,8 +272,12 @@ public class VehicleComponent : MonoBehaviour
         }
     }
     private float _timeLastCountermeasures;
-    public void DropCountermeasure()
+    private int _counterMeasuresCount;
+    public void TryDropCountermeasures()
     {
+        if (_counterMeasuresCount == 0)
+            return;
+
         if (Time.time - _timeLastCountermeasures < 0.7f)
             return;
 
@@ -246,9 +295,8 @@ public class VehicleComponent : MonoBehaviour
     {
         if (Assets.find(VehicleBay.Config.CountermeasureGUID) is VehicleAsset countermeasureAsset)
         {
-
             int flareCount = 4;
-            
+
             for (int i = 0; i < flareCount; i++)
             {
                 InteractableVehicle? countermeasureVehicle = VehicleManager.spawnVehicleV2(countermeasureAsset.id, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
@@ -257,7 +305,6 @@ public class VehicleComponent : MonoBehaviour
                 if (i % 2 == 0) angle = -angle;
 
                 if (i > flareCount / 2) angle *= 0.5f;
-                L.Log("Angle: " + angle);
 
                 countermeasureVehicle.transform.Rotate(Vector3.up, angle, Space.Self);
 
@@ -272,11 +319,49 @@ public class VehicleComponent : MonoBehaviour
 
                 Countermeasure.ActiveCountermeasures.Add(countermeasure);
 
+                _counterMeasuresCount--;
+                UpdateHUDFlares();
+
+                if (_counterMeasuresCount == 0)
+                    yield break;
+
                 yield return new WaitForSeconds(0.15f);
             }
         }
         else
             L.LogDebug("     ERROR: Countermeasure asset not found");
+    }
+    public void ReloadCountermeasures()
+    {
+        _counterMeasuresCount = 20;
+        UpdateHUDFlares();
+    }
+    public void ReceiveMissileWarning(HeatSeekingMissileComponent heatseeker)
+    {
+        if (_warningRoutine is not null)
+            StopCoroutine(_warningRoutine);
+
+        _warningRoutine = StartCoroutine(WarningRoutine());
+    }
+    private Coroutine _warningRoutine;
+    private IEnumerator<WaitForSeconds> WarningRoutine()
+    {
+        ToggleMissileWarning(true);
+        yield return new WaitForSeconds(1);
+        ToggleMissileWarning(false);
+    }
+    private void ToggleMissileWarning(bool enabled)
+    {
+        for (byte i = 0; i < Vehicle.passengers.Length; i++)
+        {
+            var passenger = Vehicle.passengers[i];
+            if (passenger.player != null && Data!.Item!.IsCrewSeat(i))
+            {
+                VehicleHUD.MissileWarning.SetVisibility(passenger.player.transportConnection, enabled);
+                if (i == 0)
+                    VehicleHUD.MissileWarningDriver.SetVisibility(passenger.player.transportConnection, enabled);
+            }
+        }
     }
     public void StartForceLoadSupplies(UCPlayer caller, SupplyType type, int amount)
     {

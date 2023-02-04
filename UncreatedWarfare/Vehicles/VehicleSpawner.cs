@@ -163,7 +163,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && CanUseCountermeasures(vehicle) &&
             vehicle.transform.TryGetComponent(out VehicleComponent component))
         {
-            component.DropCountermeasure();
+            component.TryDropCountermeasures();
         }
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
