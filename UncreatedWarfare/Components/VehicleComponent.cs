@@ -52,6 +52,7 @@ public class VehicleComponent : MonoBehaviour
     public bool IsEmplacement => Data?.Item != null && VehicleData.IsEmplacement(Data.Item.Type);
     public bool IsInVehiclebay => Data?.Item != null;
     public bool CanTransport => Data?.Item != null && VehicleData.CanTransport(Data.Item, Vehicle);
+    public bool DroppingFlares;
 
     public void Initialize(InteractableVehicle vehicle)
     {
@@ -102,35 +103,32 @@ public class VehicleComponent : MonoBehaviour
     }
     private void ShowHUD(UCPlayer player, byte seat)
     {
-        if (Data is null || Data.Item is null)
+        if (Data?.Item == null)
             return;
 
         if (!IsAircraft)
             return;
 
-        if (!Data.Item.CrewSeats.Contains(seat))
+        if (!Data.Item.CrewSeats.ArrayContains(seat))
             return;
 
         VehicleHUD.SendToPlayer(player.Connection);
 
         VehicleHUD.MissileWarning.SetVisibility(player.Connection, false);
         VehicleHUD.MissileWarningDriver.SetVisibility(player.Connection, false);
-        VehicleHUD.FlareCount.SetVisibility(player.Connection, true);
+        VehicleHUD.FlareCount.SetVisibility(player.Connection, seat == 0);
 
         if (seat == 0)
-            VehicleHUD.FlareCount.SetText(player.Connection, "FLARES: " + _counterMeasuresCount);
+            VehicleHUD.FlareCount.SetText(player.Connection, "FLARES: " + _flaresLeft);
     }
     private void UpdateHUDFlares()
     {
-        if (IsAircraft)
+        if (!IsAircraft)
             return;
 
-        for (int i = 0; i < Vehicle.passengers.Length; i++)
-        {
-            var passenger = Vehicle.passengers[i];
-            if (i == 0 && passenger.player != null)
-                VehicleHUD.FlareCount.SetText(passenger.player.transportConnection, "FLARES: " + _counterMeasuresCount);
-        }
+        var driver = Vehicle.passengers[0].player;
+        if (driver != null)
+            VehicleHUD.FlareCount.SetText(driver.transportConnection, "FLARES: " + _flaresLeft);
     }
     private void HideHUD(UCPlayer player)
     {
@@ -181,6 +179,8 @@ public class VehicleComponent : MonoBehaviour
         if (IsInVehiclebay)
             EvaluateUsage(e.Player.Player.channel.owner);
 
+        HideHUD(e.Player);
+
         if (e.Player.KitClass == Class.Squadleader &&
             (Data?.Item != null && VehicleData.IsLogistics(Data.Item.Type)) &&
             !F.IsInMain(e.Player.Position) &&
@@ -219,7 +219,6 @@ public class VehicleComponent : MonoBehaviour
             }
             TransportTable.Remove(e.Player.Steam64);
         }
-        HideHUD(e.Player);
     }
     public void OnPlayerSwapSeatRequested(VehicleSwapSeat e)
     {
@@ -271,69 +270,10 @@ public class VehicleComponent : MonoBehaviour
             }
         }
     }
-    private float _timeLastCountermeasures;
-    private int _counterMeasuresCount;
-    public void TryDropCountermeasures()
-    {
-        if (_counterMeasuresCount == 0)
-            return;
-
-        if (Time.time - _timeLastCountermeasures < 0.7f)
-            return;
-
-        _timeLastCountermeasures = Time.time;
-        StartCoroutine(DropCountermeasures());
-
-        byte[] crewseats = Data?.Item == null ? Array.Empty<byte>() : Data.Item.CrewSeats;
-        for (byte seat = 0; seat < Vehicle.passengers.Length; seat++)
-        {
-            if (Vehicle.passengers[seat].player != null && crewseats.ArrayContains(seat))
-                EffectManager.sendUIEffect(VehicleBay.Config.CountermeasureEffectID, (short)VehicleBay.Config.CountermeasureEffectID.Id, Vehicle.passengers[seat].player.transportConnection, true);
-        }
-    }
-    private IEnumerator<WaitForSeconds> DropCountermeasures()
-    {
-        if (Assets.find(VehicleBay.Config.CountermeasureGUID) is VehicleAsset countermeasureAsset)
-        {
-            int flareCount = 4;
-
-            for (int i = 0; i < flareCount; i++)
-            {
-                InteractableVehicle? countermeasureVehicle = VehicleManager.spawnVehicleV2(countermeasureAsset.id, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
-
-                float angle = Random.Range(20, 30);
-                if (i % 2 == 0) angle = -angle;
-
-                if (i > flareCount / 2) angle *= 0.5f;
-
-                countermeasureVehicle.transform.Rotate(Vector3.up, angle, Space.Self);
-
-                Rigidbody? rigidbody = countermeasureVehicle.transform.GetComponent<Rigidbody>();
-                //Vector3 velocity = Vehicle.transform.GetComponent<Rigidbody>().velocity);
-                Vector3 velocity = countermeasureVehicle.transform.forward * Vehicle.speed * 0.5f - countermeasureVehicle.transform.up * 15;
-                rigidbody.velocity = velocity;
-
-                rigidbody.AddForce(countermeasureVehicle.transform.forward * 8, ForceMode.Impulse);
-
-                var countermeasure = countermeasureVehicle.gameObject.AddComponent<Countermeasure>();
-
-                Countermeasure.ActiveCountermeasures.Add(countermeasure);
-
-                _counterMeasuresCount--;
-                UpdateHUDFlares();
-
-                if (_counterMeasuresCount == 0)
-                    yield break;
-
-                yield return new WaitForSeconds(0.15f);
-            }
-        }
-        else
-            L.LogDebug("     ERROR: Countermeasure asset not found");
-    }
+    private int _flaresLeft;
     public void ReloadCountermeasures()
     {
-        _counterMeasuresCount = 20;
+        _flaresLeft = STARTING_FLARES;
         UpdateHUDFlares();
     }
     public void ReceiveMissileWarning(HeatSeekingMissileComponent heatseeker)
@@ -527,13 +467,53 @@ public class VehicleComponent : MonoBehaviour
             _lastPosInterval = pos;
         }
     }
+    private float _timeLastFlare;
+    private int _flareBurst = 0;
+    const int STARTING_FLARES = 20;
+    const int FLARE_BURST_COUNT = 4;
     private void FixedUpdate()
     {
-        //if (Vehicle.anySeatsOccupied)
-        //{
-        //    L.Log("Velocity: " + Vehicle.transform.GetComponent<Rigidbody>().velocity);
-        //    L.Log("Speed: " + Vehicle.speed);
-        //}
+        if (_flaresLeft > 0 && Time.time - _timeLastFlare > 0.15f)
+        {
+            if (DroppingFlares || (_flareBurst > 0 && _flareBurst < FLARE_BURST_COUNT))
+            {
+                _timeLastFlare = Time.time;
+
+                InteractableVehicle? countermeasureVehicle = VehicleManager.spawnVehicleV2(VehicleBay.Config.CountermeasureGUID.Id, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
+
+                float sideforce = Random.Range(20, 30);
+
+                int burstNumber = _flareBurst % FLARE_BURST_COUNT;
+
+                if (burstNumber % 2 == 0) sideforce = -sideforce;
+
+                if (burstNumber > FLARE_BURST_COUNT / 2) sideforce *= 0.5f;
+
+                //countermeasureVehicle.transform.Rotate(Vector3.up, angle, Space.Self);
+
+                Rigidbody? rigidbody = countermeasureVehicle.transform.GetComponent<Rigidbody>();
+                //Vector3 velocity = Vehicle.transform.GetComponent<Rigidbody>().velocity);
+                Vector3 velocity = Vehicle.transform.forward * Vehicle.speed * 0.5f - Vehicle.transform.up * 15 + Vehicle.transform.right * sideforce;
+                rigidbody.velocity = velocity;
+
+                var countermeasure = countermeasureVehicle.gameObject.AddComponent<Countermeasure>();
+
+                Countermeasure.ActiveCountermeasures.Add(countermeasure);
+
+                _flaresLeft--;
+                _flareBurst++;
+                UpdateHUDFlares();
+
+                byte[] crewseats = Data?.Item == null ? Array.Empty<byte>() : Data.Item.CrewSeats;
+                for (byte seat = 0; seat < Vehicle.passengers.Length; seat++)
+                {
+                    if (Vehicle.passengers[seat].player != null && crewseats.ArrayContains(seat))
+                        EffectManager.sendUIEffect(VehicleBay.Config.CountermeasureEffectID, (short)VehicleBay.Config.CountermeasureEffectID.Id, Vehicle.passengers[seat].player.transportConnection, true);
+                }
+            }
+            else if (_flareBurst > 0)
+                _flareBurst = 0;
+        }
     }
 }
 public enum SupplyType

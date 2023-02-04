@@ -56,12 +56,14 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         EventDispatcher.BarricadeDestroyed += OnBarricadeDestroyed;
         EventDispatcher.StructureDestroyed += OnStructureDestroyed;
         EventDispatcher.VehicleDestroyed += OnVehicleDestroyed;
-        UCPlayerKeys.SubscribeKeyDown(SpawnCountermeasuresPressed, Data.Keys.SpawnCountermeasures);
+        UCPlayerKeys.SubscribeKeyDown(DropFlaresStart, Data.Keys.SpawnCountermeasures);
+        UCPlayerKeys.SubscribeKeyUp(DropFlaresStop, Data.Keys.SpawnCountermeasures);
         return base.PreLoad(token);
     }
     public override Task PreUnload(CancellationToken token)
     {
-        UCPlayerKeys.UnsubscribeKeyDown(SpawnCountermeasuresPressed, Data.Keys.SpawnCountermeasures);
+        UCPlayerKeys.UnsubscribeKeyDown(DropFlaresStart, Data.Keys.SpawnCountermeasures);
+        UCPlayerKeys.UnsubscribeKeyUp(DropFlaresStop, Data.Keys.SpawnCountermeasures);
         EventDispatcher.VehicleDestroyed -= OnVehicleDestroyed;
         EventDispatcher.StructureDestroyed -= OnStructureDestroyed;
         EventDispatcher.BarricadeDestroyed -= OnBarricadeDestroyed;
@@ -155,7 +157,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         ThreadUtil.assertIsGameThread();
         Signs.UpdateVehicleBaySigns(null);
     }
-    private void SpawnCountermeasuresPressed(UCPlayer player, /*float timeDown, */ref bool handled)
+    private void DropFlaresStart(UCPlayer player, /*float timeDown, */ref bool handled)
     {
         InteractableVehicle? vehicle = player.Player.movement.getVehicle();
         if (vehicle != null &&
@@ -163,7 +165,18 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && CanUseCountermeasures(vehicle) &&
             vehicle.transform.TryGetComponent(out VehicleComponent component))
         {
-            component.TryDropCountermeasures();
+            component.DroppingFlares = true;
+        }
+    }
+    private void DropFlaresStop(UCPlayer player, float timeDown, ref bool handled)
+    {
+        InteractableVehicle? vehicle = player.Player.movement.getVehicle();
+        if (vehicle != null &&
+            player.Player.movement.getSeat() == 0 &&
+            (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && CanUseCountermeasures(vehicle) &&
+            vehicle.transform.TryGetComponent(out VehicleComponent component))
+        {
+            component.DroppingFlares = false;
         }
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -19,7 +19,7 @@ public class VehicleBayData : JSONConfigData
 
     public override void SetDefaults()
     {
-        VehicleHUDID = (JsonAssetReference<EffectAsset>)26033;
+        VehicleHUDID = "1e1762d6f01442e89d159d4cd0ae7587";  
         CountermeasureEffectID = (JsonAssetReference<EffectAsset>)26035;
         CountermeasureGUID = "16dbd4e5928e498783675529ca53fc61";
         TOWMissileWeapons = new JsonAssetReference<ItemGunAsset>[]
