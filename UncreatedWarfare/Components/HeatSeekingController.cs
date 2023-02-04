@@ -1,16 +1,8 @@
-﻿using HarmonyLib;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.SQL;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Components;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles
@@ -179,7 +171,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
             if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
             {
-                bool raySuccess = Physics.Linecast(transform.position, countermeasure.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                bool raySuccess = Physics.Linecast(transform.position, c.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
                 if (!raySuccess)
                 {
                     bestTarget = lockOnDistance;
