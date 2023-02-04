@@ -181,15 +181,17 @@ public static class EventFunctions
             {
                 rocket.killer = gun.player.channel.owner.playerID.steamID;
             }
-
-            if (VehicleBay.Config.TOWMissileWeapons.HasGuid(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, firer, 90, 0.33f, 800);
-            else if (VehicleBay.Config.GroundAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 150, 5f, 1000, 4, 0.33f);
-            else if (VehicleBay.Config.AirAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 165, 6.5f, 1000, 15, 0f);
-            else if (VehicleBay.Config.LaserGuidedWeapons.HasGuid(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, firer, 120, 1.15f, 150, 15, 0.6f);
+            if (firer != null)
+            {
+                if (VehicleBay.Config.TOWMissileWeapons.HasGuid(gun.equippedGunAsset.GUID))
+                    projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, firer, 90, 0.33f, 800);
+                else if (VehicleBay.Config.GroundAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
+                    projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 150, 5f, 1000, 4, 0.33f);
+                else if (VehicleBay.Config.AirAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
+                    projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 165, 6.5f, 1000, 15, 0f);
+                else if (VehicleBay.Config.LaserGuidedWeapons.HasGuid(gun.equippedGunAsset.GUID))
+                    projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, firer, 120, 1.15f, 150, 15, 0.6f);
+            }
 
             Patches.DeathsPatches.lastProjected = projectile;
             if (gun.player.TryGetPlayerData(out UCPlayerData c))

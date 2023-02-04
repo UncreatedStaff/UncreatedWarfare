@@ -1715,6 +1715,7 @@ internal static class T
     public static readonly Translation TeamsUIJoined = new Translation("JOINED", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIFull = new Translation("<#bf6363>FULL", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIConfirm = new Translation("<#888888>CONFIRM", TranslationFlags.UnityUI);
+    public static readonly Translation TeamsUIBack = new Translation("BACK", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIJoining = new Translation("<#999999>JOINING...", TranslationFlags.UnityUI);
     #endregion
 

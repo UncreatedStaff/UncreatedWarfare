@@ -3,10 +3,13 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.SQL;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -171,17 +174,17 @@ public class KitMenuUI : UnturnedUI
     public readonly UnturnedLabel[] IncludedItemsAmounts = UnturnedLabel.GetPattern("kit_included_amt_{0}", IncludedItemsCount, 0);
 
     // kit list
-    public readonly UnturnedButton[] Kits = UnturnedButton.GetPattern("kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] FlagLabels = UnturnedLabel.GetPattern("flag_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] NameLabels = UnturnedLabel.GetPattern("name_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] WeaponLabels = UnturnedLabel.GetPattern("weapon_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] IdLabels = UnturnedLabel.GetPattern("id_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] FavoriteLabels = UnturnedLabel.GetPattern("txt_fav_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] ClassLabels = UnturnedLabel.GetPattern("class_kit_{0}", KitListCount, 1);
-    public readonly UnturnedLabel[] StatusLabels = UnturnedLabel.GetPattern("status_kit_{0}", KitListCount, 1);
-    public readonly UnturnedButton[] FavoriteButtons = UnturnedButton.GetPattern("btn_fav_kit_{0}", KitListCount, 1);
+    public readonly UnturnedButton[] Kits = UnturnedButton.GetPattern("kit_{0}", KitListCount);
+    public readonly UnturnedLabel[] FlagLabels = UnturnedLabel.GetPattern("flag_kit_{0}", KitListCount);
+    public readonly UnturnedLabel[] NameLabels = UnturnedLabel.GetPattern("name_kit_{0}", KitListCount);
+    public readonly UnturnedLabel[] WeaponLabels = UnturnedLabel.GetPattern("weapon_kit_{0}", KitListCount);
+    public readonly UnturnedLabel[] IdLabels = UnturnedLabel.GetPattern("id_kit_{0}", KitListCount);
+    public readonly UnturnedLabel[] FavoriteLabels = UnturnedLabel.GetPattern("txt_fav_kit_{0}", KitListCount);
+    public readonly UnturnedLabel[] ClassLabels = UnturnedLabel.GetPattern("class_kit_{0}", KitListCount);
+    public readonly UnturnedLabel[] StatusLabels = UnturnedLabel.GetPattern("status_kit_{0}", KitListCount);
+    public readonly UnturnedButton[] FavoriteButtons = UnturnedButton.GetPattern("btn_fav_kit_{0}", KitListCount);
 
-    public readonly UnturnedUIElement[] LogicSetTabs = UnturnedUIElement.GetPattern("anim_logic_set_tab_{0}", TabCount, 1);
+    public readonly UnturnedUIElement[] LogicSetTabs = UnturnedUIElement.GetPattern("anim_logic_set_tab_{0}", TabCount);
 
     public readonly UnturnedButton[] DropdownButtons;
     public readonly string[] DefaultClassCache;
@@ -626,6 +629,16 @@ public class KitMenuUI : UnturnedUI
             ValStatsPrimaryAverageDistance.SetText(c, kitStats.AverageGunKillDistance.ToString("0.#", locale) + " m");
             ValStatsPlaytime.SetText(c, ((int)kitStats.PlaytimeMinutes).GetTimeFromMinutes(lang));
         }
+
+        if (TeamManager.IsInMain(player) && Data.Is<IKitRequests>())
+        {
+            LogicActionButton.SetVisibility(c, true);
+        }
+        else
+        {
+            LogicActionButton.SetVisibility(c, false);
+        }
+
     }
     private string GetTypeString(UCPlayer player, KitType type)
     {
@@ -766,7 +779,25 @@ public class KitMenuUI : UnturnedUI
     }
     private void OnActionButtonClicked(UnturnedButton button, Player player)
     {
-        // todo determine action, perform action
+        if (UCPlayer.FromPlayer(player) is not { } pl)
+            return;
+        if (!TeamManager.IsInMain(pl) || !Data.Is<IKitRequests>())
+        {
+            LogicActionButton.SetVisibility(pl.Connection, false);
+            return;
+        }
+        if (pl.KitMenuData.SelectedKit is { Item: { } } proxy)
+        {
+            CancellationToken tkn = pl.DisconnectToken;
+            tkn.CombineIfNeeded(Data.Gamemode.UnloadToken);
+            UCWarfare.RunTask(async token =>
+            {
+                KitManager? manager = KitManager.GetSingletonQuick();
+                if (manager == null)
+                    return;
+                await manager.RequestKit(proxy, CommandInteraction.CreateTemporary(pl), token);
+            }, tkn, ctx: "Request kit from kit UI.");
+        }
     }
 
     private void OnStaffButton1Clicked(UnturnedButton button, Player player)

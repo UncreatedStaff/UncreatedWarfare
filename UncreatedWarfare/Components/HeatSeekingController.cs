@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -134,7 +135,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         foreach (InteractableVehicle v in VehicleManager.vehicles)
         {
-            if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead/* && v.isEngineOn*/)
+            if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead/* && v.isEngineOn*/ && !(v.anySeatsOccupied && TeamManager.IsInAnyMain(v.transform.position)))
             {
                 if (IsInRange(v.transform.position))
                 {
@@ -145,7 +146,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
                     float angleBetween = Vector3.Angle(v.transform.position - transform.position, transform.forward);
                     if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
                     {
-                        bool raySuccess = Physics.Raycast(new Ray(transform.position, v.transform.position - transform.position), out RaycastHit hit, Vector3.Distance(v.transform.position, transform.position), RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                        bool raySuccess = Physics.Linecast(transform.position, v.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
                         if (!raySuccess)
                         {
                             bestTarget = lockOnDistance;
@@ -166,7 +167,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             float angleBetween = Vector3.Angle(countermeasure.position - transform.position, transform.forward);
             if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
             {
-                bool raySuccess = Physics.Raycast(new Ray(transform.position, countermeasure.position - transform.position), out RaycastHit hit, Vector3.Distance(countermeasure.position, transform.position), RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                bool raySuccess = Physics.Linecast(transform.position, countermeasure.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
                 if (!raySuccess)
                 {
                     bestTarget = lockOnDistance;

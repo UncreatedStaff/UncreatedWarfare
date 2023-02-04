@@ -14,6 +14,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
 using UnityEngine;
@@ -655,6 +656,61 @@ public static class TeamManager
         _ = Team2Main;
         _ = Team1AMC;
         _ = Team2AMC;
+    }
+    public static bool JoinTeam(UCPlayer player, ulong team, bool teleport = false, bool announce = false)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (team is 1 or 2)
+        {
+            GroupInfo? groupInfo = GroupManager.getGroupInfo(new CSteamID(GetGroupID(team)));
+            if (groupInfo is not null && player.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
+            {
+                if (teleport)
+                    TeleportToMain(player, team);
+
+                if (announce)
+                {
+                    ulong id = player.Steam64;
+                    Chat.Broadcast(LanguageSet.Where(x => x.GetTeam() == team && x.Steam64 != id), T.TeamJoinAnnounce, TeamManager.GetFactionSafe(team)!, player);
+                }
+            }
+            else return false;
+        }
+        else
+        {
+            if (Data.Gamemode is ITeams { UseTeamSelector: true, TeamSelector: { IsLoaded: true } ts })
+            {
+                if (ts.IsSelecting(player))
+                    return false;
+                ts.JoinSelectionMenu(player);
+            }
+            else
+            {
+                if (teleport) TeleportToMain(player, 0ul);
+                player.Player.quests.leaveGroup(true);
+            }
+        }
+
+        return true;
+    }
+
+    public static void TeleportToMain(UCPlayer player) => TeleportToMain(player, player.GetTeam());
+    public static void TeleportToMain(UCPlayer player, ulong team)
+    {
+        ThreadUtil.assertIsGameThread();
+        Vector3 pos = team switch
+        {
+            1ul => Team1Main.Spawn3D,
+            2ul => Team2Main.Spawn3D,
+            _ => LobbySpawn
+        };
+        float angle = team switch
+        {
+            1ul => Team1SpawnAngle,
+            2ul => Team2SpawnAngle,
+            _ => LobbySpawnAngle
+        };
+        player.Player.teleportToLocationUnsafe(pos, angle);
     }
     public static void CheckGroups()
     {

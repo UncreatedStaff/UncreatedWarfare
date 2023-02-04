@@ -85,7 +85,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public List<SqlItem<Kit>>? AccessibleKits;
     public IBuff?[] ActiveBuffs = new IBuff?[BuffUI.MaxBuffs];
     public List<Trait> ActiveTraits = new List<Trait>(8);
-    internal bool _isLeaving;
     internal Action<byte, ItemJar> SendItemRemove;
     internal List<Guid>? CompletedQuests;
     private readonly CancellationTokenSource _disconnectTokenSrc;
@@ -110,6 +109,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             _cachedName = new PlayerNames(player);
         else Data.OriginalPlayerNames.Remove(Steam64);
         NickName = nickName;
+        CharacterName = characterName;
         _isOnline = true;
         IsOtherDonator = donator;
         LifeCounter = 0;
@@ -186,7 +186,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public string Language => _lang ??= Localization.GetLang(Steam64);
     public CultureInfo Culture => _locale ??= LanguageAliasSet.GetCultureInfo(Language);
     public bool IsTalking => !_lastMuted && _isTalking && IsOnline;
-    public bool IsLeaving => _isLeaving;
+    public bool IsLeaving { get; internal set; }
     public bool IsOnline => _isOnline;
     public bool VanishMode { get; set; }
     public bool IsActionMenuOpen { get; internal set; }
@@ -367,6 +367,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         lock (this)
         {
             _isOnline = false;
+            IsLeaving = false;
             _disconnectTokenSrc.Cancel();
             Events.Dispose();
             Keys.Dispose();
