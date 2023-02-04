@@ -292,6 +292,11 @@ public class SpottedComponent : MonoBehaviour
     public void Activate(UCPlayer spotter, bool isUav) => Activate(spotter, _defaultTimer, isUav);
     public void Activate(UCPlayer spotter, float seconds, bool isUav)
     {
+        if (this == null)
+        {
+            _coroutine = null;
+            return;
+        }
         EndTime = Time.realtimeSinceStartup + seconds;
         if (!isUav)
             ToBeUnspottedNonUAV = EndTime;

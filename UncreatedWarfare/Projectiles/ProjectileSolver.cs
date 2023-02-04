@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using Uncreated.Framework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Squads;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -138,7 +139,7 @@ internal class ProjectileSolver : MonoBehaviour
             seconds = i * Time.fixedDeltaTime;
             if (seconds - lastSent > 0.25f)
             {
-                if (SquadManager.Config.SquadLeaderEmptyMarker.ValidReference(out EffectAsset asset))
+                if (Gamemode.Config.EffectActionSuppliesAmmo.ValidReference(out EffectAsset asset))
                     F.TriggerEffectReliable(asset, Level.size * 2, transform.gameObject.transform.position);
                 lastSent = seconds;
             }

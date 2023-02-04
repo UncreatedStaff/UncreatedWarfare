@@ -306,11 +306,6 @@ public abstract class TeamGamemode : Gamemode, ITeams
         UCWarfare.RunTask(async tkn =>
         {
             await UCWarfare.ToUpdate(tkn);
-            if (this is IJoinedTeamListenerAsync jas)
-            {
-                await jas.OnJoinTeamAsync(player, team, tkn).ConfigureAwait(false);
-                await UCWarfare.ToUpdate(tkn);
-            }
             for (int i = 0; i < this.Singletons.Count; ++i)
             {
                 IUncreatedSingleton singleton = Singletons[i];

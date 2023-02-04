@@ -1031,6 +1031,11 @@ public class UCWarfare : MonoBehaviour
 #endif
         }
     }
+
+    public static bool IsNerd(ulong s64)
+    {
+        return Config.Nerds != null && Config.Nerds.Contains(s64);
+    }
 }
 
 public class UCWarfareNexus : IModuleNexus

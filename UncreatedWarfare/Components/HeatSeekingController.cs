@@ -1,15 +1,8 @@
-﻿using HarmonyLib;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.SQL;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Components;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles
@@ -143,7 +136,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         foreach (InteractableVehicle v in VehicleManager.vehicles)
         {
-            if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead/* && v.isEngineOn*/)
+            if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead/* && v.isEngineOn*/ && !(v.anySeatsOccupied && TeamManager.IsInAnyMain(v.transform.position)))
             {
                 if (IsInRange(v.transform.position))
                 {
@@ -154,7 +147,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
                     float angleBetween = Vector3.Angle(v.transform.position - transform.position, transform.forward);
                     if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
                     {
-                        bool raySuccess = Physics.Raycast(new Ray(transform.position, v.transform.position - transform.position), out RaycastHit hit, Vector3.Distance(v.transform.position, transform.position), RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                        bool raySuccess = Physics.Linecast(transform.position, v.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
                         if (!raySuccess)
                         {
                             bestTarget = lockOnDistance;
@@ -178,7 +171,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
             if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
             {
-                bool raySuccess = Physics.Raycast(new Ray(transform.position, c.transform.position - transform.position), out RaycastHit hit, Vector3.Distance(c.transform.position, transform.position), RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                bool raySuccess = Physics.Linecast(transform.position, c.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
                 if (!raySuccess)
                 {
                     bestTarget = lockOnDistance;
@@ -231,14 +224,14 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     }
     private void PlayLockOnSound(UCPlayer gunner)
     {
-        if (_effect == null || gunner == null || gunner.Connection == null)
+        if (_effect == null || gunner is not { IsOnline: true })
             return;
 
         EffectManager.sendUIEffect(_effect.id, (short)_effect.id, gunner.Connection, true);
     }
     private void CancelLockOnSound(UCPlayer gunner)
     {
-        if (_effect == null || gunner == null || gunner.Connection == null)
+        if (_effect == null || gunner is not { IsOnline: true })
             return;
 
         EffectManager.ClearEffectByGuid(_effect.GUID, gunner.Connection);

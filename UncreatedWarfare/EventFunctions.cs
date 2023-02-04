@@ -184,16 +184,18 @@ public static class EventFunctions
             {
                 rocket.ignoreTransform = firer.CurrentVehicle.transform;
             }
+            if (firer != null)
+            {
+                if (VehicleBay.Config.TOWMissileWeapons.HasGuid(gun.equippedGunAsset.GUID))
+                    projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, firer, 90, 0.33f, 800);
+                else if (VehicleBay.Config.GroundAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
+                    projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 150, 5f, 3);
+                else if (VehicleBay.Config.AirAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
+                    projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 165, 6f, 0.5f);
+                else if (VehicleBay.Config.LaserGuidedWeapons.HasGuid(gun.equippedGunAsset.GUID))
+                    projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, firer, 120, 1.15f, 150, 15, 0.6f);
+            }
         }
-
-        if (VehicleBay.Config.TOWMissileWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, firer, 90, 0.33f, 800);
-        else if (VehicleBay.Config.GroundAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 150, 5f, 3);
-        else if (VehicleBay.Config.AirAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, firer, 165, 6f, 0.5f);
-        else if (VehicleBay.Config.LaserGuidedWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, firer, 120, 1.15f, 150, 15, 0.6f);
 
             Patches.DeathsPatches.lastProjected = projectile;
             if (gun.player.TryGetPlayerData(out UCPlayerData c))

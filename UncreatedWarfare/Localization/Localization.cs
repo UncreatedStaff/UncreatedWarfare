@@ -867,6 +867,8 @@ public static class Localization
                     }
                 }
             }
+
+            set = null;
         }
         found:
         return set;

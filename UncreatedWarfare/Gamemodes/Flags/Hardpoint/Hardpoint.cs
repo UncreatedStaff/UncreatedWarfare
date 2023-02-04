@@ -432,6 +432,9 @@ public class HardpointTicketProvider : BaseTicketProvider
                     --Manager.Team1Tickets;
                     break;
                 case 0ul:
+                    // draw
+                    if (Manager.Team1Tickets == 1 && Manager.Team2Tickets == 1)
+                        return;
                     --Manager.Team1Tickets;
                     --Manager.Team2Tickets;
                     break;

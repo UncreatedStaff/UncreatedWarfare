@@ -49,11 +49,9 @@ public class GroupCommand : Command
                 ctx.Reply(T.GroupNotFound, groupId.ToString(Data.LocalLocale));
                 return;
             }
-            ulong oldgroup = ctx.Caller.Player.quests.groupID.m_SteamID;
             if (ctx.Caller.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
             {
                 GroupManager.save();
-                EventDispatcher.InvokeOnGroupChanged(ctx.Caller, oldgroup, groupInfo.groupID.m_SteamID);
                 ulong team = ctx.Caller.GetTeam();
                 if (gm.TeamSelector != null)
                     gm.TeamSelector.ForceUpdate();

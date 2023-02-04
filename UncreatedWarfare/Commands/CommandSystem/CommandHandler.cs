@@ -465,9 +465,9 @@ public static class CommandHandler
 }
 public abstract class BaseCommandInteraction : Exception
 {
-    public readonly IExecutableCommand Command;
+    public readonly IExecutableCommand? Command;
     public bool Responded { get; protected set; }
-    protected BaseCommandInteraction(IExecutableCommand cmd, string message) : base(message)
+    protected BaseCommandInteraction(IExecutableCommand? cmd, string message) : base(message)
     {
         this.Command = cmd;
     }
@@ -493,17 +493,22 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public CSteamID CallerCSteamID => _ctx.CallerCSteamID;
     public string OriginalMessage => _ctx.OriginalMessage;
     public int Offset { get => _offset; set => _offset = value; }
-    public CommandInteraction(ContextData ctx, IExecutableCommand cmd)
+    public CommandInteraction(ContextData ctx, IExecutableCommand? cmd)
         : base(cmd, ctx.IsConsole ? ("Console Command: " + ctx.OriginalMessage) :
             ("Command ran by " + ctx.CallerID + ": " + ctx.OriginalMessage))
     {
         this._ctx = ctx;
         _offset = 0;
     }
-
+    public static CommandInteraction CreateTemporary(UCPlayer player)
+    {
+        return new CommandInteraction(new ContextData(player, Array.Empty<string>(), string.Empty), null);
+    }
     public string? this[int index] => Get(index);
     internal void ExecuteCommandSync()
     {
+        if (Command == null)
+            throw new NotSupportedException("Can not execute a temporary context.");
         if (Command.CheckPermission(this))
         {
             try
@@ -546,6 +551,8 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     internal async Task ExecuteCommandAsync()
     {
+        if (Command == null)
+            throw new NotSupportedException("Can not execute a temporary context.");
         bool rem = false;
         try
         {

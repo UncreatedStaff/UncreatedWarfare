@@ -91,8 +91,12 @@ public class HeatSeekingMissileComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-
-        if (_controller.LockOnTarget is not null)
+        if (_controller == null)
+        {
+            Destroy(this);
+            return;
+        }
+        if (_controller.LockOnTarget != null)
         {
             _lastKnownTarget = _controller.LockOnTarget;
         }
@@ -105,7 +109,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         Vector3 idealDirection;
         float turnDegrees = _maxTurnDegrees;
 
-        if (_lastKnownTarget is null || _lost)
+        if (_lastKnownTarget == null || _lost)
         {
             idealDirection = _alternativeTarget - _projectile.transform.position;
         }
