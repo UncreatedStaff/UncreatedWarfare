@@ -1544,4 +1544,27 @@ public class DebugCommand : AsyncCommand
         }
         
     }
+
+
+    private void nerd(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.STAFF);
+        if (ctx.TryGet(0, out ulong s64, out _))
+        {
+            if (!UCWarfare.Config.Nerds.Contains(s64))
+                UCWarfare.Config.Nerds.Add(s64);
+            ctx.ReplyString($"{s64} is now a nerd.");
+        }
+        else ctx.SendCorrectUsage("/text nerd <player>");
+    }
+    private void unnerd(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.STAFF);
+        if (ctx.TryGet(0, out ulong s64, out _))
+        {
+            UCWarfare.Config.Nerds.RemoveAll(x => x == s64);
+            ctx.ReplyString($"{s64} is not a nerd.");
+        }
+        else ctx.SendCorrectUsage("/text unnerd <player>");
+    }
 }

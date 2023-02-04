@@ -93,6 +93,8 @@ public class SystemConfigData : JSONConfigData
     public bool SendActionLogs;
     [JsonPropertyName("disableMissingAssetKick")]
     public bool DisableMissingAssetKick;
+    [JsonPropertyName("nerds")]
+    public List<ulong> Nerds;
 
     public override void SetDefaults()
     {
@@ -136,6 +138,7 @@ public class SystemConfigData : JSONConfigData
         SecondsBetweenAnnouncements = 60f;
         SendActionLogs = true;
         DisableMissingAssetKick = false;
+        Nerds = new List<ulong>() { 76561198312948915ul };
     }
     public class ModerationConfig
     {

@@ -262,13 +262,19 @@ public static partial class Patches
                     _ => "<color=#" + Teams.TeamManager.GetTeamHexColor(team) + ">%SPEAKER%</color>: " + text.Replace('<', '{').Replace('>', '}')
                 };
             }
+
+            string? iconurl = null;
+            if (UCWarfare.IsNerd(callingPlayer.playerID.steamID.m_SteamID))
+            {
+                iconurl = "https://i1.sndcdn.com/artworks-Q61q2IpGG3x0QvIQ-FRIyHw-t500x500.jpg";
+            }
             if (mode == EChatMode.GLOBAL)
             {
                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                 {
                     UCPlayer pl = PlayerManager.OnlinePlayers[i];
                     ChatManager.serverSendMessage(pl.Save.IMGUI ? (imgui ??= GetIMGUIText()) : newText, chatted, callingPlayer,
-                        pl.Player.channel.owner, EChatMode.GLOBAL, useRichTextFormatting: true);
+                        pl.Player.channel.owner, EChatMode.GLOBAL, iconurl, true);
                 }
             }
             else if (mode == EChatMode.LOCAL)
@@ -282,7 +288,7 @@ public static partial class Patches
                     {
                         UCPlayer pl = PlayerManager.OnlinePlayers[i];
                         if ((double)(pl.Position - pos).sqrMagnitude < num)
-                            ChatManager.serverSendMessage(pl.Save.IMGUI ? (imgui ??= "[A] " + GetIMGUIText()) : newText, chatted, callingPlayer, pl.Player.channel.owner, EChatMode.LOCAL, useRichTextFormatting: isRich);
+                            ChatManager.serverSendMessage(pl.Save.IMGUI ? (imgui ??= "[A] " + GetIMGUIText()) : newText, chatted, callingPlayer, pl.Player.channel.owner, EChatMode.LOCAL, iconurl, isRich);
                     }
                 }
                 else
@@ -291,9 +297,9 @@ public static partial class Patches
                     {
                         UCPlayer pl = PlayerManager.OnlinePlayers[i];
                         if (caller.Squad.ContainsMember(pl))
-                            ChatManager.serverSendMessage("[SQ] " + (pl.Save.IMGUI ? (imgui ??= GetIMGUIText()) : newText), chatted, callingPlayer, pl.Player.channel.owner, EChatMode.LOCAL, useRichTextFormatting: isRich);
+                            ChatManager.serverSendMessage("[SQ] " + (pl.Save.IMGUI ? (imgui ??= GetIMGUIText()) : newText), chatted, callingPlayer, pl.Player.channel.owner, EChatMode.LOCAL, iconurl, isRich);
                         else if ((pl.Position - pos).sqrMagnitude < num)
-                            ChatManager.serverSendMessage("[A] "  + (pl.Save.IMGUI ? (imgui ??= GetIMGUIText()) : newText), chatted, callingPlayer, pl.Player.channel.owner, EChatMode.LOCAL, useRichTextFormatting: isRich);
+                            ChatManager.serverSendMessage("[A] "  + (pl.Save.IMGUI ? (imgui ??= GetIMGUIText()) : newText), chatted, callingPlayer, pl.Player.channel.owner, EChatMode.LOCAL, iconurl, isRich);
                     }
                 }
             }
@@ -306,7 +312,7 @@ public static partial class Patches
                 {
                     UCPlayer pl = PlayerManager.OnlinePlayers[i];
                     if (pl.Player.quests.isMemberOfSameGroupAs(callingPlayer.player))
-                        ChatManager.serverSendMessage(pl.Save.IMGUI ? (imgui ??= "[T] " + GetIMGUIText()) : newText, chatted, callingPlayer, pl.Player.channel.owner, EChatMode.GROUP, useRichTextFormatting: isRich);
+                        ChatManager.serverSendMessage(pl.Save.IMGUI ? (imgui ??= "[T] " + GetIMGUIText()) : newText, chatted, callingPlayer, pl.Player.channel.owner, EChatMode.GROUP, iconurl, isRich);
                 }
             }
             Data.Reporter?.OnPlayerChat(callingPlayer.playerID.steamID.m_SteamID, text);

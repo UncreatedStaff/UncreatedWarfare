@@ -1450,9 +1450,9 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 throw ctx.Reply(T.RequestKitAlreadyOwned);
             if (kit.Disabled || kit.Season != UCWarfare.Season && kit.Season > 0)
                 throw ctx.Reply(T.RequestKitDisabled);
-            if (kit.IsCurrentMapAllowed())
+            if (!kit.IsCurrentMapAllowed())
                 throw ctx.Reply(T.RequestKitMapBlacklisted);
-            if (kit.IsFactionAllowed(TeamManager.GetFactionSafe(team)))
+            if (!kit.IsFactionAllowed(TeamManager.GetFactionSafe(team)))
                 throw ctx.Reply(T.RequestKitFactionBlacklisted);
             if (kit.IsPublicKit)
             {

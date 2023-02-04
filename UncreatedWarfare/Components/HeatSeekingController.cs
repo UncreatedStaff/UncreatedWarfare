@@ -224,14 +224,14 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     }
     private void PlayLockOnSound(UCPlayer gunner)
     {
-        if (_effect == null || gunner == null || gunner.Connection == null)
+        if (_effect == null || gunner is not { IsOnline: true })
             return;
 
         EffectManager.sendUIEffect(_effect.id, (short)_effect.id, gunner.Connection, true);
     }
     private void CancelLockOnSound(UCPlayer gunner)
     {
-        if (_effect == null || gunner == null || gunner.Connection == null)
+        if (_effect == null || gunner is not { IsOnline: true })
             return;
 
         EffectManager.ClearEffectByGuid(_effect.GUID, gunner.Connection);

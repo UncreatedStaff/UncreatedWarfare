@@ -89,7 +89,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
     }
     private void OnTeamClicked(UCPlayer? player, ulong team)
     {
-        if (player?.TeamSelectorData is null || !player.IsOnline || !player.TeamSelectorData.IsSelecting) return;
+        if (player?.TeamSelectorData is null || !player.IsOnline || !player.TeamSelectorData.IsSelecting || player.TeamSelectorData.SelectedTeam == team) return;
 
         ITransportConnection c = player.Connection;
 
@@ -101,8 +101,15 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             {
                 ulong other = player.TeamSelectorData.SelectedTeam;
                 if (other == 1)
+                {
+                    ++t2;
                     --t1;
-                else --t2;
+                }
+                else
+                {
+                    ++t1;
+                    --t2;
+                }
                 bool otherTeamHasRoom = CheckTeam(other, team, t1, t2);
                 L.LogDebug($"Room on other team after leaving: {otherTeamHasRoom}");
                 JoinUI.LogicTeamSelectedToggle[other - 1].SetVisibility(c, false);
@@ -256,6 +263,14 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             else
                 JoinUI.TeamPlayers[1][t2Ct++].SetText(c, text);
         }
+        if (t1Ct > 0)
+            JoinUI.TeamPlayers[0][t1Ct - 1].SetVisibility(c, true);
+        if (t2Ct > 0)
+            JoinUI.TeamPlayers[1][t2Ct - 1].SetVisibility(c, true);
+        if (TeamSelectorUI.PlayerListCount > t1Ct)
+            JoinUI.TeamPlayers[0][t1Ct].SetVisibility(c, false);
+        if (TeamSelectorUI.PlayerListCount > t2Ct)
+            JoinUI.TeamPlayers[1][t2Ct].SetVisibility(c, false);
 
         SetButtonState(player, 1, CheckTeam(1, 0, t1Ct, t2Ct));
         SetButtonState(player, 2, CheckTeam(2, 0, t1Ct, t2Ct));
@@ -297,10 +312,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             {
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
-                {
                     lbl.SetText(pl2.Connection, pl.Steam64 == pl2.Steam64 ? pl.CharacterName.Colorize(SelfHex) : text);
-                    L.LogDebug($"T{team} Set text: {text}");
-                }
             }
         }
 
@@ -313,15 +325,9 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
                 if (pl2.TeamSelectorData is { IsSelecting: true })
                 {
                     if (t1Ct > 0)
-                    {
                         JoinUI.TeamPlayers[0][t1Ct - 1].SetVisibility(pl2.Connection, true);
-                        L.LogDebug($"T1: Shown from {t1Ct} up.");
-                    }
                     if (t2Ct > 0)
-                    {
                         JoinUI.TeamPlayers[1][t2Ct - 1].SetVisibility(pl2.Connection, true);
-                        L.LogDebug($"T2: Shown from {t2Ct} up.");
-                    }
                 }
             }
         }
@@ -387,12 +393,6 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             }
         }
     }
-    private bool CheckTeam(ulong team, ulong toBeLeft)
-    {
-        if (team is not 1 and not 2) return false;
-        GetTeamCounts(out int t1, out int t2);
-        return CheckTeam(team, toBeLeft, t1, t2);
-    }
     private void GetTeamCounts(out int t1, out int t2)
     {
         t1 = 0;
@@ -428,12 +428,15 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         if (t1 == t2)
             return true;
 
+        // joining team is at 0
         if (team == 1 && t1 <= 0 || team == 2 && t2 <= 0)
             return true;
+
+        // joining team is not zero and other team is zero
         if (team == 2 && t1 <= 0 && t2 > 0 || team == 1 && t2 <= 0 && t1 > 0)
             return false;
 
-        int maxDiff = Mathf.Max(2, Mathf.CeilToInt(Provider.clients.Count * 0.10f));
+        int maxDiff = Mathf.Max(2, Mathf.CeilToInt((t1 + t2) * 0.10f));
 
         if (team == 2)
             return t2 - maxDiff <= t1;
