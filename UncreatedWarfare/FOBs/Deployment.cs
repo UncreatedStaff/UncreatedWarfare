@@ -6,7 +6,7 @@ using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs;
-internal static class Deployment
+public static class Deployment
 {
     private const float DeployTickSpeed = 0.25f;
     public static void CancelDeploymentsTo(IDeployable location)
