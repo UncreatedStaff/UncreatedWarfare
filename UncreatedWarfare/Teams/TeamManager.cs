@@ -657,6 +657,34 @@ public static class TeamManager
         _ = Team1AMC;
         _ = Team2AMC;
     }
+    public static Zone? GetMain(ulong team)
+    {
+        if (!Data.Is<ITeams>(out _))
+        {
+            return null;
+        }
+
+        return team switch
+        {
+            1 => Team1Main,
+            2 => Team2Main,
+            _ => null
+        };
+    }
+    public static float GetMainYaw(ulong team)
+    {
+        if (!Data.Is<ITeams>(out _))
+        {
+            return 0f;
+        }
+
+        return team switch
+        {
+            1 => Team1SpawnAngle,
+            2 => Team2SpawnAngle,
+            _ => LobbySpawnAngle
+        };
+    }
     public static bool JoinTeam(UCPlayer player, ulong team, bool teleport = false, bool announce = false)
     {
         ThreadUtil.assertIsGameThread();
@@ -671,7 +699,7 @@ public static class TeamManager
                 if (announce)
                 {
                     ulong id = player.Steam64;
-                    Chat.Broadcast(LanguageSet.Where(x => x.GetTeam() == team && x.Steam64 != id), T.TeamJoinAnnounce, TeamManager.GetFactionSafe(team)!, player);
+                    Chat.Broadcast(LanguageSet.Where(x => x.GetTeam() == team && x.Steam64 != id), T.TeamJoinAnnounce, GetFactionSafe(team)!, player);
                 }
             }
             else return false;
@@ -898,26 +926,70 @@ public static class TeamManager
         ulong t = player.GetTeam();
         return t is 1 or 2;
     }
-    public static bool IsFriendly(Player player, ulong groupID) => player.quests.groupID.m_SteamID == groupID;
+    public static bool IsFriendly(Player player, ulong team) => team is 1 or 2 && player.quests.groupID.m_SteamID == (team == 1 ? Team1ID : Team2ID);
+    public static bool CanJoinTeam(UCPlayer player, ulong team)
+    {
+        ulong cteam = player.GetTeam();
+        GetTeamCounts(out int t1, out int t2);
+        if (cteam == 1)
+            --t1;
+        else if (cteam == 2)
+            --t2;
+        return CanJoinTeam(team, t1, t2);
+    }
     public static bool CanJoinTeam(ulong team)
     {
-        if (_data.Data.BalanceTeams)
+        if (!_data.Data.BalanceTeams)
+            return true;
+        GetTeamCounts(out int t1, out int t2);
+        return CanJoinTeam(team, t1, t2);
+    }
+    public static void GetTeamCounts(out int t1Count, out int t2Count, bool includeSelectors = true)
+    {
+        t1Count = 0; t2Count = 0;
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
-            int t1Count = PlayerManager.OnlinePlayers.Count(x => x.GetTeam() == 1);
-            int t2Count = PlayerManager.OnlinePlayers.Count(x => x.GetTeam() == 2);
-            if (t1Count == t2Count) return true;
-            if (team == 1)
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
+            if (includeSelectors && player.TeamSelectorData is { IsSelecting: true })
             {
-                if (t2Count > t1Count) return true;
-                if ((float)(t1Count - t2Count) / (t1Count + t2Count) >= _data.Data.AllowedDifferencePercent) return false;
+                ulong team3 = player.TeamSelectorData.SelectedTeam;
+                if (team3 == 2)
+                    ++t2Count;
+                else if (team3 == 1)
+                    ++t1Count;
+                continue;
             }
-            else if (team == 2)
-            {
-                if (t1Count > t2Count) return true;
-                if ((float)(t2Count - t1Count) / (t1Count + t2Count) >= _data.Data.AllowedDifferencePercent) return false;
-            }
+            int team2 = player.Player.quests.groupID.m_SteamID.GetTeamByte();
+            if (team2 == 2)
+                ++t2Count;
+            else if (team2 == 1)
+                ++t1Count;
         }
-        return true;
+    }
+    public static bool CanJoinTeam(ulong team, int t1Count, int t2Count)
+    {
+        if (!_data.Data.BalanceTeams)
+            return true;
+
+        if (t1Count == t2Count)
+            return true;
+
+        // joining team is at 0
+        if (team == 1 && t1Count <= 0 || team == 2 && t2Count <= 0)
+            return true;
+
+        // joining team is not zero and other team is zero
+        if (team == 2 && t1Count <= 0 && t2Count > 0 || team == 1 && t2Count <= 0 && t1Count > 0)
+            return false;
+
+        int maxDiff = Mathf.Max(2, Mathf.CeilToInt((t1Count + t2Count) * 0.10f));
+
+        return team switch
+        {
+            2 => t2Count - maxDiff <= t1Count,
+            1 => t1Count - maxDiff <= t2Count,
+            _ => false
+        };
     }
     public static void EvaluateBases()
     {

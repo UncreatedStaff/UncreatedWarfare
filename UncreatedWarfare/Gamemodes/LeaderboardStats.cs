@@ -10,6 +10,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes;
@@ -37,7 +38,10 @@ public static class LeaderboardEx
             if (Data.Is(out IRevives r)) r.ReviveManager.RevivePlayer(player.Player);
 
             if (!player.Player.life.isDead)
-                player.Player.teleportToLocationUnsafe(team.GetBaseSpawnFromTeam(), team.GetBaseAngle());
+            {
+                Zone? zone = TeamManager.GetMain(team);
+                player.Player.teleportToLocationUnsafe(zone != null ? zone.Center3D : TeamManager.LobbySpawn, TeamManager.GetMainYaw(team));
+            }
             else
                 player.Player.life.ServerRespawn(false);
 
@@ -149,7 +153,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
                     IndividualStats st = stats[j];
                     st.Player = pl;
                     if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
-                        pt.stats = st;
+                        pt.Stats = st;
                     st.Reset();
                     found = true;
                 }
@@ -159,7 +163,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
                 IndividualStats s = BasePlayerStats.New<IndividualStats>(pl);
                 stats.Add(s);
                 if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
-                    pt.stats = s;
+                    pt.Stats = s;
             }
         }
 
@@ -189,7 +193,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
                     IndividualStats st = stats[j];
                     st.Player = pl;
                     if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
-                        pt.stats = st;
+                        pt.Stats = st;
                     found = true;
                 }
             }
@@ -198,7 +202,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
                 IndividualStats s = BasePlayerStats.New<IndividualStats>(pl);
                 stats.Add(s);
                 if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
-                    pt.stats = s;
+                    pt.Stats = s;
             }
         }
         L.LogDebug(player.CharacterName + " added to playerstats, " + stats.Count + " trackers");
@@ -209,7 +213,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
         {
             UCPlayer? pl = UCPlayer.FromID(stats[i].Steam64);
             if (pl != null && F.TryGetPlayerData(pl.Player, out UCPlayerData data))
-                data.stats = null!;
+                data.Stats = null!;
         }
 
         stats.Clear();
@@ -310,16 +314,16 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
                     ++teamkillsT1;
                 else if (e.DeadTeam == 2)
                     ++teamkillsT2;
-                if (e.Killer.Player.TryGetPlayerData(out c) && c.stats is ITeamPVPModeStats tpvp)
+                if (e.Killer.Player.TryGetPlayerData(out c) && c.Stats is ITeamPVPModeStats tpvp)
                     tpvp.AddTeamkill();
             }
             else
             {
                 if (e.Killer.Player.TryGetPlayerData(out c))
                 {
-                    if (c.stats is IPVPModeStats kd)
+                    if (c.Stats is IPVPModeStats kd)
                         kd.AddKill();
-                    if (c.stats is BaseCTFStats st && e.Killer.Player.IsOnFlag())
+                    if (c.Stats is BaseCTFStats st && e.Killer.Player.IsOnFlag())
                         st.AddKillOnPoint();
                 }
                 if (this is ILongestShotTracker ls && e.Cause is EDeathCause.GUN or EDeathCause.SPLASH && 
@@ -329,7 +333,7 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
                 }
             }
         }
-        if (e.Player.Player.TryGetPlayerData(out c) && c.stats is IPVPModeStats kd2)
+        if (e.Player.Player.TryGetPlayerData(out c) && c.Stats is IPVPModeStats kd2)
             kd2.AddDeath();
         if (e.DeadTeam == 1)
             ++casualtiesT1;

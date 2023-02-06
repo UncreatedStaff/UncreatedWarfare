@@ -168,6 +168,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("ui_kit_menu")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIKitMenu { get; set; }
 
+    [Sync(420, OnPullMethod = nameof(OnUIVehicleHUDUpdated))]
+    [JsonPropertyName("ui_vehicle_hud")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> UIVehicleHUD { get; set; }
+
     [Sync(450, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_toast_info")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastInfo { get; set; }
@@ -798,6 +802,23 @@ public sealed class GamemodeConfigData : JSONConfigData
         UIToastLarge = new JsonAssetReference<EffectAsset>("9de82ffea13946b391090eb918bf3991");
         UIToastWin = new JsonAssetReference<EffectAsset>("1f3ce50c120042c390f5c42522bd0fcd");
         UIKitMenu = new JsonAssetReference<EffectAsset>("c0155ea486d8427d9c70541abc875e78");
+        UIVehicleHUD = new JsonAssetReference<EffectAsset>("1e1762d6f01442e89d159d4cd0ae7587");
+        EffectSpottedMarkerInfantry = new JsonAssetReference<EffectAsset>("79add0f1b07c478f87207d30fe5a5f4f");
+        EffectSpottedMarkerFOB = new JsonAssetReference<EffectAsset>("39dce42142074b46b819feba9ce83353");
+        EffectSpottedMarkerAA = new JsonAssetReference<EffectAsset>("0e90e68eff624456b76fee28a4875d14");
+        EffectSpottedMarkerAPC = new JsonAssetReference<EffectAsset>("31d1404b7b3a465b8631308cdb48e3b2");
+        EffectSpottedMarkerATGM = new JsonAssetReference<EffectAsset>("b20a7d914f92492fb1588f7baac80239");
+        EffectSpottedMarkerAttackHeli = new JsonAssetReference<EffectAsset>("3f2c6776ba484f8ea443719161ec6ce5");
+        EffectSpottedMarkerHMG = new JsonAssetReference<EffectAsset>("2315e6ed970542499fec1b06df87ffd2");
+        EffectSpottedMarkerHumvee = new JsonAssetReference<EffectAsset>("99a84b82f9bd433891fdb99e80394bf3");
+        EffectSpottedMarkerIFV = new JsonAssetReference<EffectAsset>("f2c29856b4f64146afd9872ab528c242");
+        EffectSpottedMarkerJet = new JsonAssetReference<EffectAsset>("08f2cc6ed558459ea2caf3477b40df64");
+        EffectSpottedMarkerMBT = new JsonAssetReference<EffectAsset>("983c6510c13042bf983e81f49cffca39");
+        EffectSpottedMarkerMortar = new JsonAssetReference<EffectAsset>("c377810f849c4c7d84391b491406918b");
+        EffectSpottedMarkerScoutCar = new JsonAssetReference<EffectAsset>("b0937aff90b94a588b70bc96ece49f53");
+        EffectSpottedMarkerTransportAir = new JsonAssetReference<EffectAsset>("91b9f175b84849268d861eb0f0567788");
+        EffectSpottedMarkerLogisticsGround = new JsonAssetReference<EffectAsset>("fa226268e87b4ec89664eca5b22b4d3d");
+        EffectSpottedMarkerTransportGround = new JsonAssetReference<EffectAsset>("fa226268e87b4ec89664eca5b22b4d3d");
         EffectMarkerAmmo = new JsonAssetReference<EffectAsset>("827b0c00724b466d8d33633fe2a7743a");
         EffectMarkerRepair = new JsonAssetReference<EffectAsset>("bcfda6fb871f42cd88597c8ac5f7c424");
         EffectMarkerRadio = new JsonAssetReference<EffectAsset>("bc6f0e7d5d9340f39ca4968bc3f7a132");
@@ -927,6 +948,7 @@ public sealed class GamemodeConfigData : JSONConfigData
     }
     private void OnUIToastUpdated() => UCPlayerData.ReloadToastIDs();
     private void OnUIKitMenuUpdated() => KitManager.MenuUI.LoadFromConfig(UIKitMenu);
+    private void OnUIVehicleHUDUpdated() => VehicleComponent.VehicleHUD.LoadFromConfig(UIVehicleHUD);
     private void OnUIToastWinUpdated() => Gamemode.WinToastUI.LoadFromConfig(UIToastWin);
     private void OnUIActionMenuUpdated() => ActionManager.ActionMenuUI.LoadFromConfig(UIActionMenu);
     private void OnUILoadingUpdated() => UCPlayer.LoadingUI.LoadFromConfig(UILoading);

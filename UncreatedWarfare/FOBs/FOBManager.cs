@@ -28,30 +28,32 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.FOBs;
 [SingletonDependency(typeof(Whitelister))]
-public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener, IPlayerDisconnectListener, IGameTickListener
+public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener, IPlayerDisconnectListener, IGameTickListener, IJoinedTeamListener, IReloadUIListener
 {
-    private static FOBManager Singleton;
-    private static readonly FOBConfig _config = new FOBConfig();
-    public static bool Loaded => Singleton.IsLoaded();
+    private const float InsideFOBRangeSqr = 2f * 2f;
+
+    private static FOBManager _singleton;
+    private static readonly FOBConfig ConfigFile = new FOBConfig();
+    public static bool Loaded => _singleton.IsLoaded();
     public static readonly FOBListUI ListUI = new FOBListUI();
     public static readonly NearbyResourceUI ResourceUI = new NearbyResourceUI();
     public readonly List<SpecialFOB> SpecialFOBs = new List<SpecialFOB>();
     public readonly List<Cache> Caches = new List<Cache>();
     public readonly List<FOB> Team1FOBs = new List<FOB>();
     public readonly List<FOB> Team2FOBs = new List<FOB>();
-    public static FOBConfigData Config => _config.Data;
+    public static FOBConfigData Config => ConfigFile.Data;
     public IEnumerable<FOB> AllFOBs => Team1FOBs.Concat(Team2FOBs);
-    public FOBManager() { }
+
     public override void Load()
     {
         EventDispatcher.BarricadePlaced += OnBarricadePlaced;
         EventDispatcher.BarricadeDestroyed += OnBarricadeDestroyed;
         EventDispatcher.GroupChanged += OnGroupChanged;
-        Singleton = this;
+        _singleton = this;
     }
     public override void Unload()
     {
-        Singleton = null!;
+        _singleton = null!;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         EventDispatcher.BarricadeDestroyed -= OnBarricadeDestroyed;
         EventDispatcher.BarricadePlaced -= OnBarricadePlaced;
@@ -60,6 +62,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         SpecialFOBs.Clear();
         Caches.Clear();
     }
+    void IJoinedTeamListener.OnJoinTeam(UCPlayer player, ulong team) => SendFOBList(player);
     void ILevelStartListener.OnLevelReady()
     {
 #if DEBUG
@@ -135,7 +138,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 RegisterNewFOB(e.Barricade);
         }
         BuildableData? repairable = isRadio ? null : Config.Buildables.Find(b => b.BuildableBarricade != null && b.BuildableBarricade.HasValue && b.BuildableBarricade.Value.MatchGuid(guid) ||
-            (b.Type == EBuildableType.EMPLACEMENT && b.Emplacement != null && b.Emplacement.BaseBarricade.MatchGuid(guid)));
+            (b.Type == BuildableType.Emplacement && b.Emplacement != null && b.Emplacement.BaseBarricade.MatchGuid(guid)));
         if (repairable != null || isRadio)
         {
             drop.model.gameObject.AddComponent<RepairableComponent>();
@@ -203,6 +206,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public FOB RegisterNewFOB(BarricadeDrop drop)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -210,7 +214,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         if (fob.Owner != 0 && Data.Is(out IGameStats ws) && ws.GameStats is IFobsTracker ft)
         {
-            if (fob.Owner.TryGetPlayerData(out UCPlayerData c) && c.stats is IFOBStats f)
+            if (fob.Owner.TryGetPlayerData(out UCPlayerData c) && c.Stats is IFOBStats f)
                 f.AddFOBPlaced();
             if (fob.Team == 1)
             {
@@ -286,58 +290,59 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         return fob;
     }
 
-    private const float INSIDE_FOB_RANGE_SQR = 2f * 2f;
     public static bool IsPointInFOB(Vector3 point, out FOB? fob, out SpecialFOB? specialFob)
     {
-        Singleton.AssertLoaded();
+        _singleton.AssertLoaded();
         fob = null;
         specialFob = null;
-        if (Singleton.SpecialFOBs != null)
+        if (_singleton.SpecialFOBs != null)
         {
-            for (int i = 0; i < Singleton.SpecialFOBs.Count; ++i)
+            for (int i = 0; i < _singleton.SpecialFOBs.Count; ++i)
             {
-                if ((Singleton.SpecialFOBs[i].Position - point).sqrMagnitude <= INSIDE_FOB_RANGE_SQR)
+                if ((_singleton.SpecialFOBs[i].Position - point).sqrMagnitude <= InsideFOBRangeSqr)
                 {
-                    specialFob = Singleton.SpecialFOBs[i];
+                    specialFob = _singleton.SpecialFOBs[i];
                 }
             }
         }
-        if (Singleton.Team1FOBs != null)
+        if (_singleton.Team1FOBs != null)
         {
-            for (int i = 0; i < Singleton.Team1FOBs.Count; ++i)
+            for (int i = 0; i < _singleton.Team1FOBs.Count; ++i)
             {
-                BarricadeDrop? bunker = Singleton.Team1FOBs[i].Bunker;
-                if (bunker != null && (bunker.model.position - point).sqrMagnitude <= INSIDE_FOB_RANGE_SQR)
+                BarricadeDrop? bunker = _singleton.Team1FOBs[i].Bunker;
+                if (bunker != null && (bunker.model.position - point).sqrMagnitude <= InsideFOBRangeSqr)
                 {
-                    fob = Singleton.Team1FOBs[i];
+                    fob = _singleton.Team1FOBs[i];
                 }
             }
         }
-        if (Singleton.Team2FOBs != null)
+        if (_singleton.Team2FOBs != null)
         {
-            for (int i = 0; i < Singleton.Team2FOBs.Count; ++i)
+            for (int i = 0; i < _singleton.Team2FOBs.Count; ++i)
             {
-                BarricadeDrop? bunker = Singleton.Team2FOBs[i].Bunker;
-                if (bunker != null && (bunker.model.position - point).sqrMagnitude <= INSIDE_FOB_RANGE_SQR)
+                BarricadeDrop? bunker = _singleton.Team2FOBs[i].Bunker;
+                if (bunker != null && (bunker.model.position - point).sqrMagnitude <= InsideFOBRangeSqr)
                 {
-                    fob = Singleton.Team2FOBs[i];
+                    fob = _singleton.Team2FOBs[i];
                 }
             }
         }
         return fob is not null || specialFob is not null;
     }
-    public static SpecialFOB RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string UIcolor, bool disappearAroundEnemies)
+    public static SpecialFOB RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string color, bool disappearAroundEnemies)
     {
-        Singleton.AssertLoaded();
-        SpecialFOB f = new SpecialFOB(name, point, team, UIcolor, disappearAroundEnemies);
-        Singleton.SpecialFOBs.Add(f);
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
+        SpecialFOB f = new SpecialFOB(name, point, team, color, disappearAroundEnemies);
+        _singleton.SpecialFOBs.Add(f);
 
         SendFOBListToTeam(team);
         return f;
     }
     public static Cache RegisterNewCache(BarricadeDrop drop)
     {
-        Singleton.AssertLoaded();
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
         if (Data.Is(out Insurgency insurgency))
         {
 #if DEBUG
@@ -355,7 +360,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             cache.Number = number;
             cache.Name = "CACHE" + number;
 
-            Singleton.Caches.Add(cache);
+            _singleton.Caches.Add(cache);
 
             SendFOBListToTeam(cache.Team);
 
@@ -366,7 +371,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static void DeleteFOB(FOB fob)
     {
-        Singleton.AssertLoaded();
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -382,35 +388,25 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         FOB? removed;
         if (team == 1)
         {
-            removed = Singleton.Team1FOBs.FirstOrDefault(x => x.Radio.instanceID == instanceID);
-            Singleton.Team1FOBs.RemoveAll(f => f.Radio.instanceID == instanceID);
+            removed = _singleton.Team1FOBs.FirstOrDefault(x => x.Radio.instanceID == instanceID);
+            _singleton.Team1FOBs.RemoveAll(f => f.Radio.instanceID == instanceID);
         }
         else if (team == 2)
         {
-            removed = Singleton.Team2FOBs.FirstOrDefault(x => x.Radio.instanceID == instanceID);
-            Singleton.Team2FOBs.RemoveAll(f => f.Radio.instanceID == instanceID);
+            removed = _singleton.Team2FOBs.FirstOrDefault(x => x.Radio.instanceID == instanceID);
+            _singleton.Team2FOBs.RemoveAll(f => f.Radio.instanceID == instanceID);
         }
         else removed = null;
 
         if (removed != null)
-        {
-            IEnumerator<UCPlayerData> pts = Data.PlaytimeComponents.Values.GetEnumerator();
-            while (pts.MoveNext())
-            {
-                if (pts.Current.PendingFOB is FOB f && f.Number == removed.Number)
-                {
-                    pts.Current.CancelTeleport();
-                }
-            }
-            pts.Dispose();
-        }
+            Deployment.CancelDeploymentsTo(removed);
 
         if (!fob.IsWipedByAuthority)
         {
             if (killer != null && killerteam != 0 && killerteam != team && Data.Gamemode.State == State.Active && Data.Is(out IGameStats w) && w.GameStats is IFobsTracker ft)
             // doesnt count destroying fobs after game ends
             {
-                if (killer.Player.TryGetPlayerData(out UCPlayerData c) && c.stats is IFOBStats f)
+                if (killer.Player.TryGetPlayerData(out UCPlayerData c) && c.Stats is IFOBStats f)
                     f.AddFOBDestroyed();
                 if (team == 1)
                 {
@@ -442,30 +438,25 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static void DeleteSpecialFOB(string name, ulong team)
     {
-        Singleton.AssertLoaded();
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SpecialFOB removed = Singleton.SpecialFOBs.FirstOrDefault(x => x.Name == name && x.Team == team);
-        Singleton.SpecialFOBs.Remove(removed);
+        SpecialFOB? removed = _singleton.SpecialFOBs.FirstOrDefault(x => x.Name == name && x.Team == team);
+        if (removed == null)
+            return;
+        _singleton.SpecialFOBs.Remove(removed);
 
-        if (removed != null)
-        {
-            IEnumerator<UCPlayerData> pts = Data.PlaytimeComponents.Values.GetEnumerator();
-            while (pts.MoveNext())
-            {
-                if (pts.Current.PendingFOB is SpecialFOB special)
-                {
-                    pts.Current.CancelTeleport();
-                }
-            }
-        }
+        Deployment.CancelDeploymentsTo(removed);
 
         SendFOBListToTeam(team);
     }
+
     public static void DeleteCache(BarricadeDrop cache)
     {
-        Singleton.AssertLoaded();
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -479,22 +470,14 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         ulong instanceID = cache.instanceID;
 
-        Cache removed = Singleton.Caches.FirstOrDefault(x => x.Structure.instanceID == instanceID);
-        Singleton.Caches.RemoveAll(f => f.Structure.instanceID == instanceID);
+        Cache? removed = _singleton.Caches.FirstOrDefault(x => x.Structure.instanceID == instanceID);
+        _singleton.Caches.RemoveAll(f => f.Structure.instanceID == instanceID);
 
         if (removed != null)
         {
             removed.Destroy();
 
-            IEnumerator<UCPlayerData> pts = Data.PlaytimeComponents.Values.GetEnumerator();
-            while (pts.MoveNext())
-            {
-                if (pts.Current.PendingFOB is FOB fob && fob.Number == removed.Number)
-                {
-                    pts.Current.CancelTeleport();
-                }
-            }
-            pts.Dispose();
+            Deployment.CancelDeploymentsTo(removed);
         }
 
 
@@ -521,58 +504,56 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         SendFOBListToTeam(team);
     }
-    public static bool FindFOBByName(string name, ulong team, out object? fob)
+    public static bool TryFindFOB(string name, ulong team, out IDeployable fob)
     {
-        Singleton.AssertLoaded();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        fob = Singleton.SpecialFOBs.Find(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && f.Team == team);
+        if (team is 1 or 2)
+        {
+            fob = int.TryParse(name, NumberStyles.Number, Data.LocalLocale, out int fobNumber)
+                ? (team == 1 ? _singleton.Team1FOBs : _singleton.Team2FOBs).Find(x => x.Number == fobNumber)
+                : (team == 1 ? _singleton.Team1FOBs : _singleton.Team2FOBs).Find(f => f.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            if (fob != null)
+                return true;
+        }
+
+        fob = _singleton.SpecialFOBs.Find(f => f.Team == team && f.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         if (fob != null)
             return true;
 
-        fob = Singleton.Caches.Find(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && f.Team == team);
-        if (fob != null)
-            return true;
-
-        if (team == 1)
-        {
-            fob = Singleton.Team1FOBs.Find(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-            return fob != null;
-        }
-        else if (team == 2)
-        {
-            fob = Singleton.Team2FOBs.Find(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-            return fob != null;
-        }
-        fob = null;
-        return false;
+        fob = _singleton.Caches.Find(f => f.Team == team && f.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        if (name.Equals("cache", StringComparison.InvariantCultureIgnoreCase) && _singleton.Caches.Count == 1)
+            fob = _singleton.Caches[0];
+        return fob != null;
     }
 
     public static void UpdateFOBListForTeam(ulong team, SpecialFOB? fob = null)
     {
-        Singleton.AssertLoaded();
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (fob != null)
         {
             int offset = -1, index = -1;
-            for (int b = 0; b < Singleton.SpecialFOBs.Count; b++)
+            for (int b = 0; b < _singleton.SpecialFOBs.Count; b++)
             {
-                SpecialFOB specFob = Singleton.SpecialFOBs[b];
+                SpecialFOB specFob = _singleton.SpecialFOBs[b];
                 if (specFob == fob)
                 {
                     ++offset;
                     index = b;
                     break;
                 }
-                else if (specFob.Team == team)
+                if (specFob.Team == team)
                     ++offset;
             }
             if (index != -1 && ListUI.FOBNames.Length > offset)
             {
-                SpecialFOB spf = Singleton.SpecialFOBs[index];
+                SpecialFOB spf = _singleton.SpecialFOBs[index];
                 foreach (LanguageSet set in LanguageSet.OnTeam(team))
                 {
                     string txt = T.FOBUI.Translate(set.Language, spf, spf.GridLocation, spf.ClosestLocation, null, set.Team);
@@ -589,31 +570,32 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static void UpdateFOBListForTeam(ulong team, FOB? fob = null)
     {
-        Singleton.AssertLoaded();
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<FOB> FOBList;
+        List<FOB> list;
         if (team == 1)
-            FOBList = Singleton.Team1FOBs;
+            list = _singleton.Team1FOBs;
         else if (team == 2)
-            FOBList = Singleton.Team2FOBs;
+            list = _singleton.Team2FOBs;
         else return;
 
         if (fob != null)
         {
             int offset = 0;
-            for (int b = 0; b < Singleton.SpecialFOBs.Count; b++)
-                if (Singleton.SpecialFOBs[b].Team == team)
+            for (int b = 0; b < _singleton.SpecialFOBs.Count; b++)
+                if (_singleton.SpecialFOBs[b].Team == team)
                     offset++;
-            for (int b = 0; b < Singleton.Caches.Count; b++)
-                if (Singleton.Caches[b].Team == team)
+            for (int b = 0; b < _singleton.Caches.Count; b++)
+                if (_singleton.Caches[b].Team == team)
                     offset++;
-            int i = FOBList.IndexOf(fob);
+            int i = list.IndexOf(fob);
             int ii = i + offset;
             if (i != -1 && ListUI.FOBNames.Length > ii)
             {
-                FOB f = FOBList[i];
+                FOB f = list[i];
                 foreach (LanguageSet set in LanguageSet.OnTeam(team))
                 {
                     string txt = T.FOBUI.Translate(set.Language, f, f.GridLocation, f.ClosestLocation, null, set.Team);
@@ -632,20 +614,21 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static void UpdateFOBListForTeam(ulong team, Cache? cache = null)
     {
-        Singleton.AssertLoaded();
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (cache != null)
         {
             int offset = 0;
-            for (int b = 0; b < Singleton.SpecialFOBs.Count; b++)
-                if (Singleton.SpecialFOBs[b].Team == team)
+            for (int b = 0; b < _singleton.SpecialFOBs.Count; b++)
+                if (_singleton.SpecialFOBs[b].Team == team)
                     offset++;
             int cacheOffset = -1, index = -1;
-            for (int b = 0; b < Singleton.Caches.Count; b++)
+            for (int b = 0; b < _singleton.Caches.Count; b++)
             {
-                Cache cache2 = Singleton.Caches[b];
+                Cache cache2 = _singleton.Caches[b];
                 if ((object)cache2 == cache)
                 {
                     ++cacheOffset;
@@ -658,7 +641,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             int ii = cacheOffset + offset;
             if (index != -1 && ListUI.FOBNames.Length > ii)
             {
-                Cache c2 = Singleton.Caches[index];
+                Cache c2 = _singleton.Caches[index];
                 foreach (LanguageSet set in LanguageSet.OnTeam(team))
                 {
                     string txt = T.FOBUI.Translate(set.Language, c2, c2.GridLocation, c2.ClosestLocation, null, set.Team);
@@ -674,11 +657,12 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static void SendFOBListToTeam(ulong team)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (team == 0) return;
-        if (!Data.Is(out TeamGamemode gm)) return;
+        if (!Data.Is<TeamGamemode>()) return;
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
@@ -689,20 +673,22 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
     public static void HideFOBList(UCPlayer player)
     {
+        ThreadUtil.assertIsGameThread();
         ListUI.ClearFromPlayer(player.Player.channel.owner.transportConnection);
     }
     public static void SendFOBList(UCPlayer player)
     {
-        Singleton.AssertLoaded();
-        List<FOB> FOBList;
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
+        List<FOB> list;
         ulong team = player.GetTeam();
         if (team == 1)
-            FOBList = Singleton.Team1FOBs;
+            list = _singleton.Team1FOBs;
         else if (team == 2)
-            FOBList = Singleton.Team2FOBs;
+            list = _singleton.Team2FOBs;
         else return;
 
-        UpdateUIList(team, player.Connection, FOBList, player);
+        UpdateUIList(team, player.Connection, list, player);
     }
     private void OnGroupChanged(GroupChanged e)
     {
@@ -711,29 +697,30 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static void UpdateResourceUIString(FOB fob)
     {
-        Singleton.AssertLoaded();
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!Data.Is(out TeamGamemode gm)) return;
+        if (!Data.Is<TeamGamemode>()) return;
         if (fob.IsBleeding) return;
 
-        List<FOB> FOBList;
+        List<FOB> list;
         ulong team = fob.Team;
         if (team == 1)
-            FOBList = Singleton.Team1FOBs;
+            list = _singleton.Team1FOBs;
         else if (team == 2)
-            FOBList = Singleton.Team2FOBs;
+            list = _singleton.Team2FOBs;
         else return;
 
         int offset = 0;
-        for (int b = 0; b < Singleton.SpecialFOBs.Count; b++)
-            if (Singleton.SpecialFOBs[b].Team == team)
+        for (int b = 0; b < _singleton.SpecialFOBs.Count; b++)
+            if (_singleton.SpecialFOBs[b].Team == team)
                 offset++;
-        for (int b = 0; b < Singleton.Caches.Count; b++)
-            if (Singleton.Caches[b].Team == team)
+        for (int b = 0; b < _singleton.Caches.Count; b++)
+            if (_singleton.Caches[b].Team == team)
                 offset++;
-        int i = FOBList.IndexOf(fob);
+        int i = list.IndexOf(fob);
         if (i == -1)
             return;
         i += offset;
@@ -747,42 +734,43 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static void UpdateFOBList(UCPlayer player, FOB? fob = null)
     {
-        Singleton.AssertLoaded();
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<FOB> FOBList;
+        List<FOB> list;
         ulong team = player.GetTeam();
         if (team == 1)
-            FOBList = Singleton.Team1FOBs;
+            list = _singleton.Team1FOBs;
         else if (team == 2)
-            FOBList = Singleton.Team2FOBs;
+            list = _singleton.Team2FOBs;
         else return;
 
         if (fob == null)
         {
-            UpdateUIList(team, player.Connection, FOBList, player);
+            UpdateUIList(team, player.Connection, list, player);
         }
         else
         {
             int offset = 0;
-            for (int b = 0; b < Singleton.SpecialFOBs.Count; b++)
-                if (Singleton.SpecialFOBs[b].Team == team)
+            for (int b = 0; b < _singleton.SpecialFOBs.Count; b++)
+                if (_singleton.SpecialFOBs[b].Team == team)
                     offset++;
-            for (int b = 0; b < Singleton.Caches.Count; b++)
-                if (Singleton.Caches[b].Team == team)
+            for (int b = 0; b < _singleton.Caches.Count; b++)
+                if (_singleton.Caches[b].Team == team)
                     offset++;
-            int i = FOBList.IndexOf(fob);
+            int i = list.IndexOf(fob);
             if (i == -1)
             {
-                UpdateUIList(team, player.Connection, FOBList, player);
+                UpdateUIList(team, player.Connection, list, player);
                 return;
             }
             int ii = i + offset;
             L.LogDebug(ii.ToString());
             if (ListUI.FOBNames.Length > ii)
             {
-                FOB f = FOBList[i];
+                FOB f = list[i];
                 ListUI.FOBNames[ii].SetText(player.Connection, T.FOBUI.Translate(player, f, f.GridLocation, f.ClosestLocation));
                 ListUI.FOBResources[ii].SetText(player.Connection, f.UIResourceString);
             }
@@ -790,7 +778,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static void UpdateFOBList(UCPlayer player, SpecialFOB? fob = null)
     {
-        Singleton.AssertLoaded();
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -799,9 +788,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         if (fob != null)
         {
             int offset = -1, index = -1;
-            for (int b = 0; b < Singleton.SpecialFOBs.Count; b++)
+            for (int b = 0; b < _singleton.SpecialFOBs.Count; b++)
             {
-                SpecialFOB specFob = Singleton.SpecialFOBs[b];
+                SpecialFOB specFob = _singleton.SpecialFOBs[b];
                 if (specFob == fob)
                 {
                     ++offset;
@@ -813,22 +802,23 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             }
             if (index != -1 && ListUI.FOBNames.Length > offset)
             {
-                SpecialFOB spf = Singleton.SpecialFOBs[index];
+                SpecialFOB spf = _singleton.SpecialFOBs[index];
                 ListUI.FOBNames[offset].SetText(player.Connection, T.FOBUI.Translate(player, spf, spf.GridLocation, spf.ClosestLocation));
                 return;
             }
         }
-        List<FOB> FOBList;
+        List<FOB> list;
         if (team == 1)
-            FOBList = Singleton.Team1FOBs;
+            list = _singleton.Team1FOBs;
         else if (team == 2)
-            FOBList = Singleton.Team2FOBs;
+            list = _singleton.Team2FOBs;
         else return;
-        UpdateUIList(team, c, FOBList, player);
+        UpdateUIList(team, c, list, player);
     }
     public static void UpdateFOBList(UCPlayer player, Cache? cache = null)
     {
-        Singleton.AssertLoaded();
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -837,13 +827,13 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         if (cache != null)
         {
             int offset = 0;
-            for (int b = 0; b < Singleton.SpecialFOBs.Count; b++)
-                if (Singleton.SpecialFOBs[b].Team == team)
+            for (int b = 0; b < _singleton.SpecialFOBs.Count; b++)
+                if (_singleton.SpecialFOBs[b].Team == team)
                     offset++;
             int cacheOffset = -1, index = -1;
-            for (int b = 0; b < Singleton.Caches.Count; b++)
+            for (int b = 0; b < _singleton.Caches.Count; b++)
             {
-                Cache cache2 = Singleton.Caches[b];
+                Cache cache2 = _singleton.Caches[b];
                 if ((object)cache2 == cache)
                 {
                     ++cacheOffset;
@@ -856,35 +846,34 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             int ii = cacheOffset + offset;
             if (index != -1 && ListUI.FOBNames.Length > ii)
             {
-                Cache c2 = Singleton.Caches[index];
+                Cache c2 = _singleton.Caches[index];
                 ListUI.FOBNames[ii].SetText(player.Connection, T.FOBUI.Translate(player, c2, c2.GridLocation, c2.ClosestLocation));
                 return;
             }
         }
-        List<FOB> FOBList;
+        List<FOB> list;
         if (team == 1)
-            FOBList = Singleton.Team1FOBs;
+            list = _singleton.Team1FOBs;
         else if (team == 2)
-            FOBList = Singleton.Team2FOBs;
+            list = _singleton.Team2FOBs;
         else return;
-        UpdateUIList(team, c, FOBList, player);
+        UpdateUIList(team, c, list, player);
     }
     private static void UpdateUIList(ulong team, ITransportConnection connection, List<FOB> fobs, UCPlayer player)
     {
-        Singleton.AssertLoaded();
+        _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ListUI.SendToPlayer(connection);
 
         int i2 = 0;
-        FOBConfigData config = Config;
-        int min = Math.Min(Singleton.SpecialFOBs.Count, ListUI.FOBParents.Length);
+        int min = Math.Min(_singleton.SpecialFOBs.Count, ListUI.FOBParents.Length);
         for (int i = 0; i < min; i++)
         {
-            if (Singleton.SpecialFOBs[i].IsActive && Singleton.SpecialFOBs[i].Team == team)
+            if (_singleton.SpecialFOBs[i].IsActive && _singleton.SpecialFOBs[i].Team == team)
             {
-                SpecialFOB spf = Singleton.SpecialFOBs[i];
+                SpecialFOB spf = _singleton.SpecialFOBs[i];
                 ListUI.FOBParents[i2].SetVisibility(connection, true);
                 ListUI.FOBNames[i2].SetText(connection, T.FOBUI.Translate(player, spf, spf.GridLocation, spf.ClosestLocation));
                 i2++;
@@ -893,10 +882,10 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         if (Data.Is(out Insurgency ins) && team == ins.DefendingTeam)
         {
-            min = Math.Min(Singleton.Caches.Count, ListUI.FOBParents.Length);
+            min = Math.Min(_singleton.Caches.Count, ListUI.FOBParents.Length);
             for (int i = 0; i < min; i++)
             {
-                Cache cache = Singleton.Caches[i];
+                Cache cache = _singleton.Caches[i];
                 ListUI.FOBParents[i2].SetVisibility(connection, true);
                 ListUI.FOBNames[i2].SetText(connection, T.FOBUI.Translate(player, cache, cache.GridLocation, cache.ClosestLocation));
                 ListUI.FOBResources[i2].SetText(connection, string.Empty);
@@ -916,6 +905,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         {
             ListUI.FOBParents[i2].SetVisibility(connection, false);
         }
+    }
+
+    void IReloadUIListener.ReloadUI(UCPlayer player)
+    {
+        SendFOBList(player);
     }
 }
 
@@ -991,8 +985,10 @@ public class SpecialFOB : IFOB, IDeployable
         if (chat)
             player.SendChat(T.DeploySuccess, this);
     }
+
+    float IDeployable.GetDelay() => FOBManager.Config.DeployFOBDelay;
 }
-[JsonSerializable(typeof(FOBConfigData))]
+
 public class FOBConfigData : JSONConfigData
 {
     public JsonAssetReference<VehicleAsset> MortarBase;
@@ -1011,8 +1007,8 @@ public class FOBConfigData : JSONConfigData
     public JsonAssetReference<VehicleAsset>[] LogiTruckIDs;
     public int AmmoBagMaxUses;
 
-    public float DeloyMainDelay;
-    public float DeloyFOBDelay;
+    public float DeployMainDelay;
+    public float DeployFOBDelay;
 
     public bool EnableCombatLogger;
     public uint CombatCooldown;
@@ -1049,7 +1045,7 @@ public class FOBConfigData : JSONConfigData
         T1RadioState = "8yh8NQEAEAEAAAAAAAAAACIAAACmlQFkAAQAAKyVAWQAAAIArpUBZAAABQDGlQFkAAMFAMmVAWQABgUAyZUBZAAACACmZQFkAAMIAMCVAWQABggAwJUBZAAHAgDWlQFkAAoCANaVAWQABwMA1pUBZAAKAwDWlQFkAAcEANaVAWQACgQA1pUBZAAJBQDYlQFkAAkHANiVAWQACQkA2JUBZAAACwDOlQFkAAAMAM6VAWQAAA0AzpUBZAADCwDOlQFkAAcAAKyVAWQACgAA1pUBZAAKAQDWlQFkAAMMAM6VAWQAAw0AzpUBZAAGDQDQlQFkAAQCANqVAWQACQsA0JUBZAAJDADQlQFkAAkNANCVAWQABgsAzpUBZAAGDADOlQFkAA==";
         T2RadioState = "8yh8NQEAEAEAAAAAAAAAACIAAACmlQFkAAQAAKyVAWQAAAIArpUBZAADCADAlQFkAAYIAMCVAWQABwIA1pUBZAAKAgDWlQFkAAcDANaVAWQACgMA1pUBZAAHBADWlQFkAAoEANaVAWQACQUA2JUBZAAJBwDYlQFkAAkJANiVAWQAAAsAzpUBZAAADADOlQFkAAANAM6VAWQAAwsAzpUBZAAHAACslQFkAAoAANaVAWQACgEA1pUBZAADDADOlQFkAAMNAM6VAWQABg0A0JUBZAAEAgDalQFkAAkLANCVAWQACQwA0JUBZAAJDQDQlQFkAAYLAM6VAWQABgwAzpUBZAAABQDDlQFkAAMFAMqVAWQABgUAypUBZAAACAC6ZQFkAA==";
 
-        LogiTruckIDs = new JsonAssetReference<VehicleAsset>[6]
+        LogiTruckIDs = new JsonAssetReference<VehicleAsset>[]
         {
             "58d6410084f04e43ba4462a1c9a6b8c0", // Logistics_Woodlands
             "fe1a85aeb8e34c2fbeca3e485300a61c", // Logistics_Forest
@@ -1068,7 +1064,7 @@ public class FOBConfigData : JSONConfigData
             {
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("61c349f10000498fa2b92c029d38e523"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("1bb17277dd8148df9f4c53d1a19b2503"),
-                Type = EBuildableType.FOB_BUNKER,
+                Type = BuildableType.Bunker,
                 RequiredHits = 30,
                 RequiredBuild = 15,
                 Team = 0,
@@ -1078,7 +1074,7 @@ public class FOBConfigData : JSONConfigData
             {
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("6fe208519d7c45b0be38273118eea7fd"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("eccfe06e53d041d5b83c614ffa62ee59"),
-                Type = EBuildableType.AMMO_CRATE,
+                Type = BuildableType.AmmoCrate,
                 RequiredHits = 10,
                 RequiredBuild = 1,
                 Team = 0,
@@ -1088,7 +1084,7 @@ public class FOBConfigData : JSONConfigData
             {
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("c0d11e0666694ddea667377b4c0580be"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("26a6b91cd1944730a0f28e5f299cebf9"),
-                Type = EBuildableType.REPAIR_STATION,
+                Type = BuildableType.RepairStation,
                 RequiredHits = 25,
                 RequiredBuild = 15,
                 Team = 0,
@@ -1099,7 +1095,7 @@ public class FOBConfigData : JSONConfigData
                 // sandbag line
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("ab702192eab4456ebb9f6d7cc74d4ba2"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("15f674dcaf3f44e19a124c8bf7e19ca2"),
-                Type = EBuildableType.FORTIFICATION,
+                Type = BuildableType.Fortification,
                 RequiredHits = 8,
                 RequiredBuild = 1,
                 Team = 0,
@@ -1110,7 +1106,7 @@ public class FOBConfigData : JSONConfigData
                 // sandbag pillbox
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("f3bd9ee2fa334faabc8fd9d5a3b84424"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("a9294335d8e84b76b1cbcb7d70f66aaa"),
-                Type = EBuildableType.FORTIFICATION,
+                Type = BuildableType.Fortification,
                 RequiredHits = 8,
                 RequiredBuild = 1,
                 Team = 0,
@@ -1121,7 +1117,7 @@ public class FOBConfigData : JSONConfigData
                 // sandbag crescent
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("eefee76f077349e58359f5fd03cf311d"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("920f8b30ae314406ab032a0c2efa753d"),
-                Type = EBuildableType.FORTIFICATION,
+                Type = BuildableType.Fortification,
                 RequiredHits = 8,
                 RequiredBuild = 1,
                 Team = 0,
@@ -1132,7 +1128,7 @@ public class FOBConfigData : JSONConfigData
                 // sandbag foxhole
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("a71e3e3d6bb54a36b7bd8bf5f25160aa"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("12ea830dd9ab4f949893bbbbc5e9a5f6"),
-                Type = EBuildableType.FORTIFICATION,
+                Type = BuildableType.Fortification,
                 RequiredHits = 12,
                 RequiredBuild = 2,
                 Team = 0,
@@ -1143,7 +1139,7 @@ public class FOBConfigData : JSONConfigData
                 // razorwire
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("bc24bd85ff714ff7bb2f8b2dd5056395"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("a2a8a01a58454816a6c9a047df0558ad"),
-                Type = EBuildableType.FORTIFICATION,
+                Type = BuildableType.Fortification,
                 RequiredHits = 8,
                 RequiredBuild = 1,
                 Team = 0,
@@ -1154,7 +1150,7 @@ public class FOBConfigData : JSONConfigData
                 // hesco wall
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("e1af3a3af31e4996bc5d6ffd9a0773ec"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("baf23a8b514441ee8db891a3ddf32ef4"),
-                Type = EBuildableType.FORTIFICATION,
+                Type = BuildableType.Fortification,
                 RequiredHits = 20,
                 RequiredBuild = 1,
                 Team = 0,
@@ -1165,7 +1161,7 @@ public class FOBConfigData : JSONConfigData
                 // hesco tower
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("857c85161f254964a921700a69e215a9"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("827d0ca8bfff43a39f750f191e16ea71"),
-                Type = EBuildableType.FORTIFICATION,
+                Type = BuildableType.Fortification,
                 RequiredHits = 15,
                 RequiredBuild = 1,
                 Team = 0,
@@ -1176,7 +1172,7 @@ public class FOBConfigData : JSONConfigData
                 // M2A1
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("80396c361d3040d7beb3921964ec2997"),
-                Type = EBuildableType.EMPLACEMENT,
+                Type = BuildableType.Emplacement,
                 RequiredHits = 10,
                 RequiredBuild = 6,
                 Team = 1,
@@ -1194,7 +1190,7 @@ public class FOBConfigData : JSONConfigData
                 // Kord
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("e44ba62f763c432e882ddc7eabaa9c77"),
-                Type = EBuildableType.EMPLACEMENT,
+                Type = BuildableType.Emplacement,
                 RequiredHits = 10,
                 RequiredBuild = 6,
                 Team = 2,
@@ -1212,7 +1208,7 @@ public class FOBConfigData : JSONConfigData
                 // TOW
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("a68ae466fb804829a0eb0d4556071801"),
-                Type = EBuildableType.EMPLACEMENT,
+                Type = BuildableType.Emplacement,
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Team = 1,
@@ -1230,7 +1226,7 @@ public class FOBConfigData : JSONConfigData
                 // Kornet
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("37811b1847744c958fcb30a0b759874b"),
-                Type = EBuildableType.EMPLACEMENT,
+                Type = BuildableType.Emplacement,
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Team = 2,
@@ -1248,7 +1244,7 @@ public class FOBConfigData : JSONConfigData
                 // Stinger
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("3c2dd7febc854b7f8859852b8c736c8e"),
-                Type = EBuildableType.EMPLACEMENT,
+                Type = BuildableType.Emplacement,
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Team = 2,
@@ -1266,7 +1262,7 @@ public class FOBConfigData : JSONConfigData
                 // Igla
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("b50cb548734946ffa5f88d6691a2c7ce"),
-                Type = EBuildableType.EMPLACEMENT,
+                Type = BuildableType.Emplacement,
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Team = 2,
@@ -1284,7 +1280,7 @@ public class FOBConfigData : JSONConfigData
                 // Mortar
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("6ff4826eaeb14c7cac1cf25a55d24bd3"),
-                Type = EBuildableType.EMPLACEMENT,
+                Type = BuildableType.Emplacement,
                 RequiredHits = 22,
                 RequiredBuild = 10,
                 Team = 0,
@@ -1301,8 +1297,8 @@ public class FOBConfigData : JSONConfigData
             },
         };
 
-        DeloyMainDelay = 3;
-        DeloyFOBDelay = 5;
+        DeployMainDelay = 3;
+        DeployFOBDelay = 5;
 
         DeployCancelOnMove = true;
         DeployCancelOnDamage = true;
@@ -1312,8 +1308,6 @@ public class FOBConfigData : JSONConfigData
         ShouldWipeAllFOBsOnRoundedEnded = true;
         ShouldKillMaincampers = true;
     }
-
-    public FOBConfigData() { }
 }
 
 [JsonSerializable(typeof(BuildableData))]
@@ -1324,7 +1318,7 @@ public class BuildableData : ITranslationArgument
     [JsonPropertyName("structureID")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BuildableBarricade;
     [JsonPropertyName("type")]
-    public EBuildableType Type;
+    public BuildableType Type;
     [JsonPropertyName("requiredHits")]
     public RotatableConfig<int> RequiredHits;
     [JsonPropertyName("requiredBuild")]
@@ -1394,28 +1388,18 @@ public class EmplacementData
     [JsonPropertyName("allowedPerFob")]
     public int MaxFobCapacity;
     [JsonPropertyName("warnFriendlyProjectiles")]
-    public bool ShouldWarnFriendlies = false;
+    public bool ShouldWarnFriendlies;
     [JsonPropertyName("warnEnemyProjectiles")]
-    public bool ShouldWarnEnemies = false;
+    public bool ShouldWarnEnemies;
 }
 
 [Translatable("Buildable Type")]
-public enum EBuildableType
+public enum BuildableType
 {
-    [Translatable("Bunker")]
-    FOB_BUNKER,
-    AMMO_CRATE,
-    REPAIR_STATION,
-    FORTIFICATION,
-    EMPLACEMENT,
-    RADIO
-}
-
-[Flags]
-public enum EFOBStatus : byte
-{
-    RADIO = 0,
-    AMMO_CRATE = 1,
-    REPAIR_STATION = 2,
-    HAB = 4
+    Bunker,
+    AmmoCrate,
+    RepairStation,
+    Fortification,
+    Emplacement,
+    Radio
 }

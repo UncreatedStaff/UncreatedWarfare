@@ -289,7 +289,7 @@ public class Insurgency :
         if (e.Killer is not null && !e.WasTeamkill && e.DeadTeam == _defendTeam)
         {
             AddIntelligencePoints(1);
-            if (e.Killer!.Player.TryGetPlayerData(out UCPlayerData c) && c.stats is InsurgencyPlayerStats s)
+            if (e.Killer!.Player.TryGetPlayerData(out UCPlayerData c) && c.Stats is InsurgencyPlayerStats s)
                 s._intelligencePointsCollected++;
             ((IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>)this).WarstatsTracker.intelligenceGathered++;
         }
@@ -686,6 +686,7 @@ public class Insurgency :
         public bool CheckDeployable(UCPlayer player, CommandInteraction? ctx) => ((IDeployable)Cache).CheckDeployable(player, ctx);
         public bool CheckDeployableTick(UCPlayer player, bool chat) => ((IDeployable)Cache).CheckDeployableTick(player, chat);
         public void OnDeploy(UCPlayer player, bool chat) => ((IDeployable)Cache).OnDeploy(player, chat);
+        float IDeployable.GetDelay() => ((IDeployable)Cache).GetDelay();
     }
 #region DEFAULT CACHE SPAWNS
     private static readonly KeyValuePair<string, SerializableTransform[]>[] DefaultCacheSpawns =

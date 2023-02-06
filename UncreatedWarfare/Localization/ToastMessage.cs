@@ -16,10 +16,10 @@ public readonly struct ToastMessage
     public const float BigToastTime = 5.5f;
     public readonly uint InstanceID;
     private static uint _lastInstId;
-    public static bool operator ==(ToastMessage left, ToastMessage right) => left._time == right._time && left.Message1 == right.Message1;
-    public static bool operator !=(ToastMessage left, ToastMessage right) => left._time != right._time || left.Message1 != right.Message1;
+    public static bool operator ==(ToastMessage left, ToastMessage right) => left.InstanceID == right.InstanceID;
+    public static bool operator !=(ToastMessage left, ToastMessage right) => !(left == right);
     public override int GetHashCode() => _time.GetHashCode() / 2 + Message1.GetHashCode() / 2;
-    public override bool Equals(object obj) => obj is ToastMessage msg && msg._time == _time && msg.Message1 == Message1;
+    public override bool Equals(object obj) => obj is ToastMessage msg && this == msg;
     public ToastMessage(string message1, ToastMessageSeverity severity)
     {
         this._time = DateTime.UtcNow.Ticks;

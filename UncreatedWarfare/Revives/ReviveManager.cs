@@ -17,6 +17,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
@@ -27,17 +28,16 @@ namespace Uncreated.Warfare.Revives;
 public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinListener
 {
     private readonly Dictionary<ulong, DownedPlayerData> _injuredPlayers;
-    public readonly List<UCPlayer> Medics;
     private static ReviveManager _singleton;
     private Coroutine? _updater;
     // the estimated amount of time between simulate() calls.
     const float EstSimulateTimeSec = 0.08f;
     const bool CanHealEnemies = true;
     public static bool Loaded => _singleton.IsLoaded();
+    private static IEnumerable<UCPlayer> Medics => PlayerManager.OnlinePlayers.Where(x => x.KitClass == Class.Medic);
     public ReviveManager()
     {
         _injuredPlayers = new Dictionary<ulong, DownedPlayerData>(Provider.maxPlayers);
-        Medics = new List<UCPlayer>(Provider.maxPlayers);
     }
     public bool IsInjured(ulong player) => _injuredPlayers.ContainsKey(player);
     public bool IsInjured(IPlayer player) => _injuredPlayers.ContainsKey(player.Steam64);
@@ -55,7 +55,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     public override void Load()
     {
-        Medics.AddRange(PlayerManager.OnlinePlayers.Where(x => x.KitClass == Class.Medic).ToList());
         EventDispatcher.PlayerDied += OnPlayerDeath;
         PlayerLife.OnRevived_Global += OnPlayerRespawned;
         UseableConsumeable.onPerformingAid += OnHealPlayer;
@@ -79,7 +78,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             UCWarfare.I.StopCoroutine(_updater);
             _updater = null;
         }
-        Medics.Clear();
         foreach (DownedPlayerData downedPlayer in _injuredPlayers.Values.ToList())
         {
             if (downedPlayer.Parameters.player.TryGetComponent(out Reviver reviver))
@@ -123,8 +121,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     {
         if (!player.Player.transform.gameObject.TryGetComponent<Reviver>(out _))
             player.Player.transform.gameObject.AddComponent<Reviver>();
-        if (player.KitClass == Class.Medic)
-            Medics.Add(player);
         _injuredPlayers.Remove(player.Steam64);
         DeathTracker.RemovePlayerInfo(player.Steam64);
     }
@@ -181,7 +177,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Medics.RemoveAll(x => x == null || !x.IsOnline || x.Steam64 == player.playerID.steamID.m_SteamID);
         DeathTracker.RemovePlayerInfo(player.playerID.steamID.m_SteamID);
         if (_injuredPlayers.TryGetValue(player.playerID.steamID.m_SteamID, out DownedPlayerData p))
         {
@@ -248,7 +243,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 }
 
 
-                if (medic.Player.TryGetPlayerData(out UCPlayerData c) && c.stats is IRevivesStats r2)
+                if (medic.Player.TryGetPlayerData(out UCPlayerData c) && c.Stats is IRevivesStats r2)
                     r2.AddRevive();
 
                 Stats.StatsManager.ModifyTeam(team, t => t.Revives++, false);
@@ -445,13 +440,11 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     private void RegisterMedic(UCPlayer player)
     {
-        Medics.Add(player);
         IEnumerable<Vector3> newpositions = GetPositionsOfTeam(player.GetTeam());
         SpawnInjuredMarkers(player.Player.channel.owner.transportConnection, newpositions, true, player.Position);
     }
     private void DeregisterMedic(UCPlayer player)
     {
-        Medics.RemoveAll(x => x == null || x.Steam64 == player.Steam64);
         ClearInjuredMarkers(player);
     }
     public void SpawnInjuredMarker(Vector3 position, ulong team)
@@ -546,8 +539,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        IEnumerable<UCPlayer> medics = Medics
-            .Where(x => x.GetTeam() == team);
+        IEnumerable<UCPlayer> medics = Medics.Where(x => TeamManager.IsFriendly(x, team));
         List<Vector3> positions = new List<Vector3>();
         foreach (ulong down in _injuredPlayers.Keys)
         {
@@ -699,7 +691,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (killerid.TryGetPlayerData(out UCPlayerData killer) && killer.stats != null && killer.stats is IPVPModeStats pvp)
+            if (killerid.TryGetPlayerData(out UCPlayerData killer) && killer.Stats != null && killer.Stats is IPVPModeStats pvp)
             {
                 pvp.AddDamage(damage);
             }

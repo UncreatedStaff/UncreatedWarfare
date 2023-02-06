@@ -87,6 +87,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public List<Trait> ActiveTraits = new List<Trait>(8);
     internal Action<byte, ItemJar> SendItemRemove;
     internal List<Guid>? CompletedQuests;
+    internal bool ModalNeeded;
     private readonly CancellationTokenSource _disconnectTokenSrc;
     private int _multVersion = -1;
     private bool _isTalking;
@@ -876,14 +877,15 @@ public class UCPlayerLocale // todo implement
 
 public class PlayerSave
 {
-    public const uint DataVersion = 2;
+    public const uint DataVersion = 3;
     public readonly ulong Steam64;
     [CommandSettable]
     public ulong Team;
     [CommandSettable]
-    public string? KitName;
-    [CommandSettable]
-    public string? SquadName;
+    public string KitName = string.Empty;
+    public string SquadName = string.Empty;
+    public ulong SquadLeader;
+    public bool SquadWasLocked;
     [CommandSettable]
     public bool HasQueueSkip;
     [CommandSettable]
@@ -897,49 +899,27 @@ public class PlayerSave
     public PlayerSave(ulong s64)
     {
         this.Steam64 = s64;
-        Team = 0;
-        KitName = string.Empty;
-        SquadName = string.Empty;
-        HasQueueSkip = false;
-        LastGame = 0;
-        ShouldRespawnOnJoin = false;
-        IsOtherDonator = false;
     }
     public PlayerSave(UCPlayer player)
     {
         this.Steam64 = player.Steam64;
-        Team = player.GetTeam();
-        KitName = player.ActiveKit?.Item?.Id;
-        SquadName = player.Squad?.Name;
-        HasQueueSkip = false;
-        LastGame = Data.Gamemode == null ? 0 : Data.Gamemode.GameID;
-        ShouldRespawnOnJoin = false;
-        IsOtherDonator = false;
+        Apply(player);
     }
-    public PlayerSave()
+    internal void Apply(UCPlayer player)
     {
-        this.Steam64 = 0;
-        Team = 0;
-        KitName = string.Empty;
-        SquadName = string.Empty;
-        HasQueueSkip = false;
-        LastGame = 0;
-        ShouldRespawnOnJoin = false;
-        IsOtherDonator = false;
-    }
-    [JsonConstructor]
-    public PlayerSave(ulong s64, ulong team, string kitName, string squadName, bool hasQueueSkip, long lastGame, bool respawnOnJoin, bool isOtherDonor)
-    {
-        this.Steam64 = s64;
-        this.Team = team;
-        this.KitName = kitName;
-        this.SquadName = squadName;
-        this.HasQueueSkip = hasQueueSkip;
-        this.LastGame = lastGame;
-        this.ShouldRespawnOnJoin = respawnOnJoin;
-        this.IsOtherDonator = isOtherDonor;
-    }
+        if (player.Steam64 != Steam64)
+            throw new ArgumentException("Player does not own this save.", nameof(player));
 
+        Team = player.GetTeam();
+        KitName = player.ActiveKit?.Item?.Id ?? string.Empty;
+        if (player.Squad != null && player.Squad.Leader.Steam64 != Steam64)
+        {
+            SquadName = player.Squad.Name;
+            SquadLeader = player.Squad.Leader.Steam64;
+            SquadWasLocked = player.Squad.IsLocked;
+        }
+        LastGame = Data.Gamemode == null ? 0 : Data.Gamemode.GameID;
+    }
     /// <summary>Players / 76561198267927009_0 / Uncreated_S2 / PlayerSave.dat</summary>
     private static string GetPath(ulong steam64) => Path.DirectorySeparatorChar + Path.Combine("Players",
         steam64.ToString(Data.AdminLocale) + "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.AdminLocale),
@@ -951,6 +931,8 @@ public class PlayerSave
         block.writeByte((byte)save.Team);
         block.writeString(save.KitName);
         block.writeString(save.SquadName);
+        block.writeUInt64(save.SquadLeader);
+        block.writeBoolean(save.SquadWasLocked);
         block.writeBoolean(save.HasQueueSkip);
         block.writeInt64(save.LastGame);
         block.writeBoolean(save.ShouldRespawnOnJoin);
@@ -962,7 +944,6 @@ public class PlayerSave
     {
         return PlayerManager.FromID(player) is not null || ServerSavedata.fileExists(GetPath(player));
     }
-
     public static bool TryReadSaveFile(ulong player, out PlayerSave save)
     {
         UCPlayer? pl = PlayerManager.FromID(player);
@@ -979,6 +960,7 @@ public class PlayerSave
             save = null!;
             return false;
         }
+        ThreadUtil.assertIsGameThread();
         Block block = ServerSavedata.readBlock(path, 0);
         uint dv = block.readUInt32();
         save = new PlayerSave(player);
@@ -987,6 +969,11 @@ public class PlayerSave
             save.Team = block.readByte();
             save.KitName = block.readString();
             save.SquadName = block.readString();
+            if (dv > 2)
+            {
+                save.SquadLeader = block.readUInt64();
+                save.SquadWasLocked = block.readBoolean();
+            }
             save.HasQueueSkip = block.readBoolean();
             save.LastGame = block.readInt64();
             save.ShouldRespawnOnJoin = block.readBoolean();
@@ -995,11 +982,6 @@ public class PlayerSave
             {
                 save.IMGUI = block.readBoolean();
             }
-        }
-        else
-        {
-            save.KitName = string.Empty;
-            save.SquadName = string.Empty;
         }
         return true;
     }

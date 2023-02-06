@@ -223,7 +223,10 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
     }
     void IDeployable.OnDeploy(UCPlayer player, bool chat)
     {
+        ActionLog.Add(ActionLogType.DeployToLocation, "CACHE " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
         if (chat)
             player.SendChat(T.DeploySuccess, this);
     }
+
+    float IDeployable.GetDelay() => FOBManager.Config.DeployFOBDelay;
 }

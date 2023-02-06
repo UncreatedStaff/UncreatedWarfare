@@ -244,60 +244,6 @@ public static class F
             _ => 0
         };
     }
-    public static Vector3 GetBaseSpawn(this Player player)
-    {
-        if (!Data.Is<ITeams>(out _)) return TeamManager.LobbySpawn;
-        ulong team = player.GetTeam();
-        return team switch
-        {
-            1 => TeamManager.Team1Main.Spawn3D,
-            2 => TeamManager.Team2Main.Spawn3D,
-            _ => TeamManager.LobbySpawn
-        };
-    }
-    public static Vector3 GetBaseSpawn(this Player player, out ulong team)
-    {
-        if (!Data.Is<ITeams>(out _))
-        {
-            team = player.quests.groupID.m_SteamID;
-            return TeamManager.LobbySpawn;
-        }
-        team = player.GetTeam();
-        return team switch
-        {
-            1 => TeamManager.Team1Main.Spawn3D,
-            2 => TeamManager.Team2Main.Spawn3D,
-            _ => TeamManager.LobbySpawn
-        };
-    }
-    public static Vector3 GetBaseSpawnFromTeam(this ulong team)
-    {
-        if (!Data.Is<ITeams>(out _))
-        {
-            return TeamManager.LobbySpawn;
-        }
-
-        return team switch
-        {
-            1 => TeamManager.Team1Main.Spawn3D,
-            2 => TeamManager.Team2Main.Spawn3D,
-            _ => TeamManager.LobbySpawn
-        };
-    }
-    public static float GetBaseAngle(this ulong team)
-    {
-        if (!Data.Is<ITeams>(out _))
-        {
-            return TeamManager.LobbySpawnAngle;
-        }
-
-        return team switch
-        {
-            1 => TeamManager.Team1SpawnAngle,
-            2 => TeamManager.Team2SpawnAngle,
-            _ => TeamManager.LobbySpawnAngle
-        };
-    }
     public static IEnumerable<SteamPlayer> EnumerateClients_Remote(byte x, byte y, byte distance)
     {
         for (int i = 0; i < Provider.clients.Count; i++)

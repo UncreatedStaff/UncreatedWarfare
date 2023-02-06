@@ -460,7 +460,7 @@ public class DebugCommand : AsyncCommand
 
         if (ctx.Caller.HasUIHidden)
         {
-            UCWarfare.I.UpdateLangs(ctx.Caller);
+            UCWarfare.I.UpdateLangs(ctx.Caller, true);
         }
         else
         {

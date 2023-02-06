@@ -9,6 +9,7 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
@@ -18,7 +19,7 @@ using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Traits;
-public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IGameStartListener, ILevelStartListener, IPlayerPostInitListener
+public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IGameStartListener, ILevelStartListener, IPlayerPostInitListener, IReloadUIListener
 {
     public List<Trait> ActiveTraits;
     public static TraitManager Singleton;
@@ -627,5 +628,11 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         }
 
         return null;
+    }
+
+    public void ReloadUI(UCPlayer player)
+    {
+        if (player.GetTeam() is 1 or 2 && !player.HasUIHidden && !(Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> lb) && lb.IsScreenUp))
+            BuffUI.SendBuffs(player);
     }
 }

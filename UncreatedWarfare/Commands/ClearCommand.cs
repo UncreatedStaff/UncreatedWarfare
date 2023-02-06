@@ -78,7 +78,7 @@ public class ClearCommand : Command
     }
     public static void ClearItems()
     {
-        EventFunctions.itemstemp.Clear();
+        EventFunctions.ItemsTempBuffer.Clear();
         ItemManager.askClearAllItems();
     }
 }

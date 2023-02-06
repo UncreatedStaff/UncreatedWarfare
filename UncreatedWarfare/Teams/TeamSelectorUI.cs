@@ -74,7 +74,6 @@ public class TeamSelectorUI : UnturnedUI
         if (PlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave save))
         {
             save.IMGUI = !save.IMGUI;
-            L.LogDebug($"IMGUI: {save.IMGUI}");
             OptionsIMGUICheckToggle.SetVisibility(player.channel.owner.transportConnection, save.IMGUI);
             PlayerSave.WriteToSaveFile(save);
         }
@@ -85,14 +84,12 @@ public class TeamSelectorUI : UnturnedUI
         ulong team = (ulong)(1 + Array.IndexOf(TeamButtons, button));
         if (team is not 1 and not 2 || UCPlayer.FromPlayer(player) is not { } ucplayer)
             return;
-        L.LogDebug($"Team clicked: {team}");
         OnTeamButtonClicked?.Invoke(ucplayer, team);
     }
     private void OnConfirm(UnturnedButton button, Player player)
     {
         if (OnConfirmClicked == null || UCPlayer.FromPlayer(player) is not { } ucplayer)
             return;
-        L.LogDebug($"Confirm clicked");
         OnConfirmClicked?.Invoke(ucplayer);
     }
 }

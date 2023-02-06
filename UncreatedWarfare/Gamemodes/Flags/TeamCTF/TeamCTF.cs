@@ -67,6 +67,7 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
         CTFUI.SendFlagList(e.Player);
         base.OnGroupChanged(e);
     }
+    
     protected override void InitUI(UCPlayer player)
     {
         CTFUI.SendFlagList(player);

@@ -54,7 +54,7 @@ internal class RepairableComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.BuildableBarricade.MatchGuid(Structure.asset.GUID) && b.Type != EBuildableType.EMPLACEMENT);
+        BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.BuildableBarricade.MatchGuid(Structure.asset.GUID) && b.Type != BuildableType.Emplacement);
 
         if (buildable != null && buildable.Foundation.ValidReference(out ItemBarricadeAsset asset))
         {
@@ -69,7 +69,7 @@ internal class RepairableComponent : MonoBehaviour
 
                 int amount = 0;
                 float vehicleQuota = 0;
-                if (buildable.Type == EBuildableType.FOB_BUNKER)
+                if (buildable.Type == BuildableType.Bunker)
                 {
                     if (teamkilled)
                     {
@@ -81,7 +81,7 @@ internal class RepairableComponent : MonoBehaviour
                         vehicleQuota = 5;
                     }
                 }
-                if (buildable.Type == EBuildableType.FORTIFICATION)
+                if (buildable.Type == BuildableType.Fortification)
                 {
                     amount = (int)Math.Round(buildable.RequiredHits * 0.1F);
 

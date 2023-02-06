@@ -116,7 +116,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             shouldAllow = false;
             player.SendChat(T.WhitelistNoKit);
         }
-        if (EventFunctions.droppeditems.TryGetValue(pl.channel.owner.playerID.steamID.m_SteamID, out List<uint> instances))
+        if (EventFunctions.DroppedItems.TryGetValue(pl.channel.owner.playerID.steamID.m_SteamID, out List<uint> instances))
         {
             if (instances != null)
                 instances.Remove(instanceID);

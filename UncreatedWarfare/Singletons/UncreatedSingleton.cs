@@ -139,6 +139,15 @@ public interface IPlayerDeathListener
 {
     void OnPlayerDeath(PlayerDied e);
 }
+public interface IReloadUIListener
+{
+    void ReloadUI(UCPlayer player);
+}
+
+public interface ILanguageChangedListener
+{
+    void OnLanguageChanged(UCPlayer player);
+}
 
 public interface IReloadableSingleton : IUncreatedSingleton
 {

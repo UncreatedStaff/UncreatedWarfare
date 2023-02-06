@@ -13,8 +13,8 @@ using Uncreated.Warfare.Vehicles;
 namespace Uncreated.Warfare.Commands;
 public class LoadCommand : AsyncCommand
 {
-    private const string SYNTAX = "/load <build|ammo> <amount|'half'>";
-    private const string HELP = "Loads supplies into a logistics truck. If no amount is given, it fills the vehicle. If 'half' is supplied, it fills half the empty slots.";
+    private const string Syntax = "/load <build|ammo> <amount|'half'>";
+    private const string Help = "Loads supplies into a logistics truck. If no amount is given, it fills the vehicle. If 'half' is supplied, it fills half the empty slots.";
 
     public LoadCommand() : base("load", EAdminType.MEMBER) { }
 

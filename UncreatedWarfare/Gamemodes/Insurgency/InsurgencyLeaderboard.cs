@@ -109,7 +109,7 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
                         Gamemode.ConfigObj.Data.InsurgencyCacheDiscoverRange)
                     {
                         if (e.Killer.Player.TryGetPlayerData(out UCPlayerData comp) &&
-                            comp.stats is InsurgencyPlayerStats ps) ps._killsDefense++;
+                            comp.Stats is InsurgencyPlayerStats ps) ps._killsDefense++;
                     }
                 }
             }
@@ -126,7 +126,7 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
                         Gamemode.ConfigObj.Data.InsurgencyCacheDiscoverRange)
                     {
                         if (e.Killer.Player.TryGetPlayerData(out UCPlayerData comp) &&
-                            comp.stats is InsurgencyPlayerStats ps) ps._killsAttack++;
+                            comp.Stats is InsurgencyPlayerStats ps) ps._killsAttack++;
                     }
                 }
             }

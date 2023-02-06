@@ -1,16 +1,18 @@
-﻿using SDG.NetTransport;
+﻿using System;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System.Collections;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Teams;
 
-public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
+public class TeamSelector : BaseSingletonComponent
 {
     public static TeamSelector Instance;
     public static readonly TeamSelectorUI JoinUI = new TeamSelectorUI();
@@ -25,11 +27,13 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         JoinUI.OnTeamButtonClicked += OnTeamClicked;
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.PlayerLeft += OnPlayerDisconnect;
+        Gamemode.OnStateUpdated += OnGamemodeStateUpdated;
         JoinUI.OnOptionsBackClicked += OnOptionsBackClicked;
     }
     public override void Unload()
     {
         JoinUI.OnOptionsBackClicked -= OnOptionsBackClicked;
+        Gamemode.OnStateUpdated -= OnGamemodeStateUpdated;
         EventDispatcher.PlayerLeft -= OnPlayerDisconnect;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         JoinUI.OnTeamButtonClicked -= OnTeamClicked;
@@ -56,7 +60,25 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
 
         JoinSelectionMenu(player);
     }
-    private void OnGroupChanged(GroupChanged e) => UpdateList();
+    private static void OnGamemodeStateUpdated()
+    {
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
+            if (player.TeamSelectorData is { IsSelecting: true })
+            {
+                if (Data.Gamemode.State is State.Staging or State.Active)
+                {
+                    JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, player.TeamSelectorData.SelectedTeam is 1 or 2);
+                }
+                else
+                {
+                    JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, true);
+                }
+            }
+        }
+    }
+    private static void OnGroupChanged(GroupChanged e) => UpdateList();
     private void OnPlayerDisconnect(PlayerEvent e)
     {
         if (e.Player.TeamSelectorData is not null)
@@ -70,22 +92,26 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             UpdateList();
         }
     }
-    private void OnOptionsBackClicked(UCPlayer player)
+    private static void OnOptionsBackClicked(UCPlayer player)
     {
         if (player.TeamSelectorData is { IsOptionsOnly: true })
         {
-            JoinUI.ClearFromPlayer(player.Connection);
-            player.HasUIHidden = false;
-            UCWarfare.I.UpdateLangs(player);
+            CloseOptions(player);
+        }
+    }
+    private static void CloseOptions(UCPlayer player)
+    {
+        JoinUI.ClearFromPlayer(player.Connection);
+        player.ModalNeeded = false;
+        player.HasUIHidden = false;
+        UCWarfare.I.UpdateLangs(player, true);
+        if (player.TeamSelectorData != null)
+        {
             player.TeamSelectorData.IsOptionsOnly = false;
             player.TeamSelectorData.IsSelecting = false;
         }
-    }
-    void IPlayerPostInitListener.OnPostPlayerInit(UCPlayer player)
-    {
-        player.TeamSelectorData ??= new TeamSelectorData(false);
-
-        JoinSelectionMenu(player);
+        player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
     }
     private void OnTeamClicked(UCPlayer? player, ulong team)
     {
@@ -96,7 +122,6 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         GetTeamCounts(out int t1, out int t2);
         if (CheckTeam(team, player.TeamSelectorData.SelectedTeam, t1, t2))
         {
-            L.LogDebug("Joining team");
             if (player.TeamSelectorData.SelectedTeam != 0 && player.TeamSelectorData.SelectedTeam != team)
             {
                 ulong other = player.TeamSelectorData.SelectedTeam;
@@ -111,7 +136,6 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
                     --t2;
                 }
                 bool otherTeamHasRoom = CheckTeam(other, team, t1, t2);
-                L.LogDebug($"Room on other team after leaving: {otherTeamHasRoom}");
                 JoinUI.LogicTeamSelectedToggle[other - 1].SetVisibility(c, false);
                 JoinUI.TeamStatus[other - 1].SetText(c, (otherTeamHasRoom ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
                 JoinUI.SetTeamEnabled(c, other, otherTeamHasRoom);
@@ -127,7 +151,17 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
     }
     private void OnConfirmed(UCPlayer player)
     {
-        if (player.TeamSelectorData is not { IsSelecting: true, SelectedTeam: 1 or 2, JoiningCoroutine: null })
+        if (player.TeamSelectorData is { IsOptionsOnly: true })
+        {
+            if (player.TeamSelectorData.JoiningCoroutine != null)
+                StopCoroutine(player.TeamSelectorData.JoiningCoroutine);
+
+            CloseOptions(player);
+            return;
+        }
+        if (player.TeamSelectorData is not { IsSelecting: true, SelectedTeam: 1 or 2, JoiningCoroutine: null } ||
+            Data.Gamemode == null ||
+            Data.Gamemode.State is not State.Staging and not State.Active)
             return;
         
         JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, false);
@@ -148,6 +182,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
     }
     public void JoinSelectionMenu(UCPlayer player)
     {
+        bool options = false;
         if (player.TeamSelectorData is null)
         {
             player.TeamSelectorData = new TeamSelectorData(true);
@@ -158,6 +193,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
                 return;
             player.TeamSelectorData.IsSelecting = true;
             player.TeamSelectorData.SelectedTeam = 0;
+            options = player.TeamSelectorData.IsOptionsOnly;
             player.TeamSelectorData.IsOptionsOnly = false;
             if (player.TeamSelectorData.JoiningCoroutine != null)
             {
@@ -174,13 +210,17 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
                 player.Player.movement.forceRemoveFromVehicle();
             player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
         }
+        player.ModalNeeded = true;
 
-        player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
-        player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
+        if (!options)
+        {
+            player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+            player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
+        }
 
         ClearAllUI(player);
 
-        SendSelectionMenu(player);
+        SendSelectionMenu(player, options);
 
         OnPlayerSelecting?.Invoke(player);
     }
@@ -200,6 +240,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             JoinUI.ClearFromPlayer(player.Connection);
             player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
             player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
+            player.ModalNeeded = false;
             player.HasUIHidden = false;
             TeamManager.TeleportToMain(player);
             CooldownManager.StartCooldown(player, CooldownType.ChangeTeams, TeamManager.TeamSwitchCooldown);
@@ -218,23 +259,30 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             ResetState(player);
         }
     }
-    public void OpenOptionsMenu(UCPlayer player)
+    public static void OpenOptionsMenu(UCPlayer player)
     {
         if (player.TeamSelectorData is not { IsSelecting: true })
         {
             player.TeamSelectorData ??= new TeamSelectorData(false);
+            player.ModalNeeded = true;
             player.TeamSelectorData.IsOptionsOnly = true;
+            player.HasUIHidden = true;
             ClearAllUI(player);
             JoinUI.SendToPlayer(player.Connection);
             JoinUI.LogicTeamSettings.SetVisibility(player.Connection, false);
             JoinUI.LabelOptionsBack.SetText(player.Connection, T.TeamsUIConfirm.Translate(player));
+            player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+            player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
         }
         JoinUI.LogicOpenOptionsMenu.SetVisibility(player.Connection, true);
     }
-    private void SendSelectionMenu(UCPlayer player)
+    private static void SendSelectionMenu(UCPlayer player, bool optionsAlreadyOpen)
     {
         ITransportConnection c = player.Connection;
-        JoinUI.SendToPlayer(c);
+        if (!optionsAlreadyOpen)
+            JoinUI.SendToPlayer(c);
+        else
+            JoinUI.LogicOpenTeamMenu.SetVisibility(c, true);
         JoinUI.TeamsTitle.SetText(c, T.TeamsUIHeader.Translate(player));
         JoinUI.TeamNames[0].SetText(c, TeamManager.Team1Faction.GetShortName(player.Language));
         JoinUI.TeamNames[1].SetText(c, TeamManager.Team2Faction.GetShortName(player.Language));
@@ -244,6 +292,9 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
 
         JoinUI.LabelConfirm.SetText(c, T.TeamsUIConfirm.Translate(player));
         JoinUI.LabelOptionsBack.SetText(player.Connection, T.TeamsUIBack.Translate(player));
+
+        if (Data.Gamemode == null || Data.Gamemode.State is not State.Staging and not State.Active)
+            JoinUI.LogicConfirmToggle.SetVisibility(c, false);
 
         if (!string.IsNullOrEmpty(TeamManager.Team1Faction.FlagImageURL))
             JoinUI.TeamFlags[0].SetImage(c, TeamManager.Team1Faction.FlagImageURL);
@@ -289,7 +340,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         JoinUI.TeamStatus[team - 1].SetText(c, (hasSpace ? T.TeamsUIClickToJoin : T.TeamsUIFull).Translate(player));
     }
     
-    private void UpdateList()
+    private static void UpdateList()
     {
         int t1Ct = 0, t2Ct = 0;
         foreach (UCPlayer pl in PlayerManager.OnlinePlayers.OrderBy(pl => pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting))
@@ -337,10 +388,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             {
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
-                {
                     JoinUI.TeamPlayers[0][t1Ct].SetVisibility(pl2.Connection, false);
-                    L.LogDebug($"T1: Hid from {t1Ct + 1} down.");
-                }
             }
         }
         if (TeamSelectorUI.PlayerListCount > t2Ct)
@@ -349,10 +397,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             {
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
-                {
                     JoinUI.TeamPlayers[1][t2Ct].SetVisibility(pl2.Connection, false);
-                    L.LogDebug($"T2: Hid from {t2Ct + 1} down.");
-                }
             }
         }
 
@@ -393,7 +438,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             }
         }
     }
-    private void GetTeamCounts(out int t1, out int t2)
+    private static void GetTeamCounts(out int t1, out int t2)
     {
         t1 = 0;
         t2 = 0;
@@ -414,7 +459,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
                 ++t2;
         }
     }
-    private bool CheckTeam(ulong team, ulong toBeLeft, int t1, int t2)
+    private static bool CheckTeam(ulong team, ulong toBeLeft, int t1, int t2)
     {
         if (toBeLeft is 1)
         {
@@ -425,25 +470,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
             --t2;
         }
 
-        if (t1 == t2)
-            return true;
-
-        // joining team is at 0
-        if (team == 1 && t1 <= 0 || team == 2 && t2 <= 0)
-            return true;
-
-        // joining team is not zero and other team is zero
-        if (team == 2 && t1 <= 0 && t2 > 0 || team == 1 && t2 <= 0 && t1 > 0)
-            return false;
-
-        int maxDiff = Mathf.Max(2, Mathf.CeilToInt((t1 + t2) * 0.10f));
-
-        if (team == 2)
-            return t2 - maxDiff <= t1;
-        if (team == 1)
-            return t1 - maxDiff <= t2;
-
-        return false;
+        return TeamManager.CanJoinTeam(team, t1, t2);
     }
 }
 

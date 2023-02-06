@@ -37,13 +37,13 @@ public class TDMGameStatsTracker : MonoBehaviour
             s = new TDMPlayerStats(player);
             playerstats.Add(player.Steam64, s);
             if (player.Player.TryGetPlayerData(out Components.UCPlayerData c))
-                c.stats = s;
+                c.Stats = s;
         }
         else
         {
             s.player = player;
             if (player.Player.TryGetPlayerData(out Components.UCPlayerData c))
-                c.stats = s;
+                c.Stats = s;
         }
         L.Log(player.CharacterName + " added to playerstats, " + playerstats.Count + " trackers");
     }
@@ -67,7 +67,7 @@ public class TDMGameStatsTracker : MonoBehaviour
                 TDMPlayerStats s = new TDMPlayerStats(pl);
                 playerstats.Add(pl.Steam64, s);
                 if (pl.Player.TryGetPlayerData(out Components.UCPlayerData pt))
-                    pt.stats = s;
+                    pt.Stats = s;
             }
         }
         foreach (KeyValuePair<ulong, TDMPlayerStats> p in playerstats.ToList())
@@ -197,13 +197,13 @@ public class TDMGameStatsTracker : MonoBehaviour
             int totalxpgaina = 0;
             for (int i = 0; i < a.Members.Count; i++)
             {
-                if (a.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IExperienceStats xp)
+                if (a.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.Stats is IExperienceStats xp)
                     totalxpgaina += xp.XPGained;
             }
             int totalxpgainb = 0;
             for (int i = 0; i < b.Members.Count; i++)
             {
-                if (b.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IExperienceStats xp)
+                if (b.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.Stats is IExperienceStats xp)
                     totalxpgainb += xp.XPGained;
             }
             if (totalxpgaina == totalxpgainb)
@@ -211,13 +211,13 @@ public class TDMGameStatsTracker : MonoBehaviour
                 int totalopgaina = 0;
                 for (int i = 0; i < a.Members.Count; i++)
                 {
-                    if (a.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IExperienceStats xp)
+                    if (a.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.Stats is IExperienceStats xp)
                         totalopgaina += xp.Credits;
                 }
                 int totalopgainb = 0;
                 for (int i = 0; i < b.Members.Count; i++)
                 {
-                    if (b.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IExperienceStats xp)
+                    if (b.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.Stats is IExperienceStats xp)
                         totalopgainb += xp.Credits;
                 }
                 if (totalxpgaina == totalxpgainb)
@@ -225,13 +225,13 @@ public class TDMGameStatsTracker : MonoBehaviour
                     int totalkillsa = 0;
                     for (int i = 0; i < a.Members.Count; i++)
                     {
-                        if (a.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IPVPModeStats pvp)
+                        if (a.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.Stats is IPVPModeStats pvp)
                             totalkillsa += pvp.Kills;
                     }
                     int totalkillsb = 0;
                     for (int i = 0; i < b.Members.Count; i++)
                     {
-                        if (b.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IPVPModeStats pvp)
+                        if (b.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.Stats is IPVPModeStats pvp)
                             totalkillsb += pvp.Kills;
                     }
                     return totalkillsa.CompareTo(totalkillsb);
@@ -250,9 +250,9 @@ public class TDMGameStatsTracker : MonoBehaviour
             else
             {
                 int axp = 0, bxp = 0;
-                if (a.Player.TryGetPlayerData(out Components.UCPlayerData ca) && ca.stats is IExperienceStats xp)
+                if (a.Player.TryGetPlayerData(out Components.UCPlayerData ca) && ca.Stats is IExperienceStats xp)
                     axp = xp.XPGained;
-                if (b.Player.TryGetPlayerData(out ca) && ca.stats is IExperienceStats xp2)
+                if (b.Player.TryGetPlayerData(out ca) && ca.Stats is IExperienceStats xp2)
                     bxp = xp2.XPGained;
                 return axp.CompareTo(bxp);
             }
