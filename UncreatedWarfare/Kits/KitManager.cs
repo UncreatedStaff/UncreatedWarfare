@@ -2894,6 +2894,25 @@ public static class KitEx
         }
         return false;
     }
+    public static int CountItems(this Kit kit, Guid guid, bool checkClothes = false)
+    {
+        int count = 0;
+        for (int i = 0; i < kit.Items.Length; ++i)
+        {
+            if (kit.Items[i] is IItem item)
+            {
+                if (item.Item == guid)
+                    count++;
+            }
+            else if (checkClothes && kit.Items[i] is IBaseItem clothing)
+            {
+                if (clothing.Item == guid)
+                    count++;
+            }
+        }
+        return count;
+    }
+
     public static string GetFlagIcon(this FactionInfo? faction)
     {
         if (faction is not { TMProSpriteIndex: { } })

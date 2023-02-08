@@ -1180,13 +1180,13 @@ public class FOBConfigData : JSONConfigData
                 RequiredHits = 10,
                 RequiredBuild = 6,
                 Team = 1,
+                Limit = 2,
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = new JsonAssetReference<VehicleAsset>("aa3c6af4911243b5b5c9dc95ca1263bf"),
                     BaseBarricade =  new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = new JsonAssetReference<ItemAsset>("523c49ce4df44d46ba37be0dd6b4504b"),
-                    AmmoCount = 2,
-                    MaxFobCapacity = 2
+                    AmmoCount = 2
                 }
             },
             new BuildableData
@@ -1198,13 +1198,13 @@ public class FOBConfigData : JSONConfigData
                 RequiredHits = 10,
                 RequiredBuild = 6,
                 Team = 2,
+                Limit = 2,
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = new JsonAssetReference<VehicleAsset>("86cfe1eb8be144aeae7659c9c74ff11a"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = new JsonAssetReference<ItemAsset>("6e9bc2083a1246b49b1656c2ec6f535a"),
                     AmmoCount = 2,
-                    MaxFobCapacity = 2
                 }
             },
             new BuildableData
@@ -1216,13 +1216,13 @@ public class FOBConfigData : JSONConfigData
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Team = 1,
+                Limit = 1,
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = new JsonAssetReference<VehicleAsset>("9d305050a6a142349376d6c49fb38362"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = new JsonAssetReference<ItemAsset>("3128a69d06ac4bbbbfddc992aa7185a6"),
-                    AmmoCount = 1,
-                    MaxFobCapacity = 1
+                    AmmoCount = 1
                 }
             },
             new BuildableData
@@ -1234,13 +1234,13 @@ public class FOBConfigData : JSONConfigData
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Team = 2,
+                Limit = 1,
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = new JsonAssetReference<VehicleAsset>("677b1084-dffa-4633-84d2-9167a3fae25b"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = new JsonAssetReference<ItemAsset>("d7774b017c404adbb0a0fe8e902b9689"),
-                    AmmoCount = 1,
-                    MaxFobCapacity = 1
+                    AmmoCount = 1
                 }
             },
             new BuildableData
@@ -1252,13 +1252,13 @@ public class FOBConfigData : JSONConfigData
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Team = 2,
+                Limit = 1,
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = new JsonAssetReference<VehicleAsset>("1883345cbdad40aa81e49c84e6c872ef"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = new JsonAssetReference<ItemAsset>("3c0a94af5af24901a9e3207f3e9ed0ba"),
-                    AmmoCount = 1,
-                    MaxFobCapacity = 1
+                    AmmoCount = 1
                 }
             },
             new BuildableData
@@ -1269,14 +1269,13 @@ public class FOBConfigData : JSONConfigData
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 25,
                 RequiredBuild = 14,
-                Team = 2,
+                Limit = 1,
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = new JsonAssetReference<VehicleAsset>("8add59a2e2b94f93ab0d6b727d310097"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = new JsonAssetReference<ItemAsset>("a54d571983c2432a9624eec39d602997"),
-                    AmmoCount = 1,
-                    MaxFobCapacity = 1
+                    AmmoCount = 1
                 }
             },
             new BuildableData
@@ -1288,13 +1287,13 @@ public class FOBConfigData : JSONConfigData
                 RequiredHits = 22,
                 RequiredBuild = 10,
                 Team = 0,
+                Limit = 2,
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = new JsonAssetReference<VehicleAsset>("94bf8feb05bc4680ac26464bc175460c"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>("c3eb4dd3fd1d463993ec69c4c3de50d7"), // Mortar
                     Ammo = new JsonAssetReference<ItemAsset>("66f4c76a119e4d6ca9d0b1a866c4d901"),
                     AmmoCount = 3,
-                    MaxFobCapacity = 2,
                     ShouldWarnFriendlies = true,
                     ShouldWarnEnemies = true
                 }
@@ -1331,6 +1330,8 @@ public class BuildableData : ITranslationArgument
     public RotatableConfig<int> RequiredBuild;
     [JsonPropertyName("team")]
     public int Team;
+    [JsonPropertyName("limit")]
+    public int Limit;
     [JsonPropertyName("disabled")]
     public RotatableConfig<bool> Disabled;
     [JsonPropertyName("emplacementData")]
@@ -1391,8 +1392,6 @@ public class EmplacementData
     public JsonAssetReference<ItemAsset> Ammo;
     [JsonPropertyName("ammoAmount")]
     public int AmmoCount;
-    [JsonPropertyName("allowedPerFob")]
-    public int MaxFobCapacity;
     [JsonPropertyName("warnFriendlyProjectiles")]
     public bool ShouldWarnFriendlies = false;
     [JsonPropertyName("warnEnemyProjectiles")]

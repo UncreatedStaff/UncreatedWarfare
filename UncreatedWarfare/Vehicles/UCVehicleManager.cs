@@ -48,7 +48,7 @@ public static class UCVehicleManager
         vehicles.Clear();
         return newvehicles;
     }
-    public static int CountNearbyVehicles(Guid id, float radius, Vector3 origin)
+    public static int CountNearbyVehicles(Guid id, float radius, Vector3 origin, ulong team = 0)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -59,7 +59,7 @@ public static class UCVehicleManager
         VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
         for (int v = 0; v < vehicles.Count; v++)
         {
-            if (vehicles[v].asset.GUID == id)
+            if (vehicles[v].asset.GUID == id && team != 0 && vehicles[v].lockedGroup.m_SteamID == team)
                 ++amt;
         }
         vehicles.Clear();

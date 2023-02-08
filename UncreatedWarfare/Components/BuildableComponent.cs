@@ -11,6 +11,7 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -61,31 +62,16 @@ public class BuildableComponent : MonoBehaviour
             builder.SendChat(T.BuildTickNotInRadius);
             return;
         }
-        switch (Buildable.Type)
+
+        if (Buildable.Type == EBuildableType.FOB_BUNKER && fob!.Bunker != null)
         {
-            case EBuildableType.FOB_BUNKER:
-                if (fob!.Bunker != null)
-                {
-                    builder.SendChat(T.BuildTickStructureExists, Buildable);
-                    return;
-                }
-                break;
-            case EBuildableType.REPAIR_STATION:
-                if (fob!.RepairStation != null)
-                {
-                    builder.SendChat(T.BuildTickStructureExists, Buildable);
-                    return;
-                }
-                break;
-            case EBuildableType.EMPLACEMENT:
-                if (Buildable.Emplacement == null ||
-                    UCVehicleManager.CountNearbyVehicles(Buildable.Emplacement.EmplacementVehicle.Guid, fob!.Radius, fob.Position) >= Buildable.Emplacement.MaxFobCapacity)
-                {
-                    builder.SendChat(T.BuildTickStructureExists, Buildable);
-                    return;
-                }
-                break;
+            builder.SendChat(T.BuildTickStructureExists, Buildable);
+            return;
         }
+
+        if (!ValidatePlacementWithFriendlyFOB(Buildable, fob, builder, Foundation.GetServersideData().point))
+            return;
+
         float amount = builder.KitClass == Class.CombatEngineer ? 2f : 1f;
 
         amount = Mathf.Max(builder.ShovelSpeedMultiplier, amount);
@@ -319,12 +305,12 @@ public class BuildableComponent : MonoBehaviour
 
         return true;
     }
-    public static bool TryPlaceBuildable(Barricade foundation, BuildableData buildable, UCPlayer? placer, Vector3 point)
+    public static bool TryPlaceBuildable(Barricade foundation, BuildableData buildable, UCPlayer placer, Vector3 point)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong team = placer == null ? 0ul : placer.GetTeam();
+        ulong team = placer.GetTeam();
 
         FOB? fob = FOB.GetNearestFOB(point, EfobRadius.FULL, team);
 
@@ -334,30 +320,30 @@ public class BuildableComponent : MonoBehaviour
             {
                 if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
                 {
-                    placer?.SendChat(T.BuildFOBUnderwater);
+                    placer.SendChat(T.BuildFOBUnderwater);
                     return false;
                 }
                 if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z) + FOBManager.Config.FOBMaxHeightAboveTerrain)
                 {
-                    placer?.SendChat(T.BuildFOBTooHigh, FOBManager.Config.FOBMaxHeightAboveTerrain);
+                    placer.SendChat(T.BuildFOBTooHigh, FOBManager.Config.FOBMaxHeightAboveTerrain);
                     return false;
                 }
                 if (Data.Gamemode is ITeams && TeamManager.IsInAnyMainOrAMCOrLobby(point))
                 {
-                    placer?.SendChat(T.BuildFOBTooCloseToMain);
+                    placer.SendChat(T.BuildFOBTooCloseToMain);
                     return false;
                 }
             }
             if (fob == null || (fob.Position - point).sqrMagnitude > Math.Pow(30, 2))
             {
                 // no radio nearby, radio must be within 30m
-                placer?.SendChat(T.BuildNoRadio, 30);
+                placer.SendChat(T.BuildNoRadio, 30);
                 return false;
             }
             if (fob.Bunker != null)
             {
                 // this fob already has a bunker
-                placer?.SendChat(T.BuildStructureExists, buildable);
+                placer.SendChat(T.BuildLimitReached, buildable.Limit, buildable);
                 return false;
             }
         }
@@ -366,65 +352,99 @@ public class BuildableComponent : MonoBehaviour
             BarricadeDrop? closeEnemyFOB = Gamemode.Config.BarricadeFOBBunker.ValidReference(out Guid guid)
                 ? UCBarricadeManager.GetNearbyBarricades(guid, 5, point, false).FirstOrDefault()
                 : null;
+
+            if (buildable.Type == EBuildableType.EMPLACEMENT)
+            {
+                if (!buildable.Foundation.Value.Exists || buildable.Emplacement is null || buildable.Emplacement.EmplacementVehicle.Exists)
+                {
+                    // invalid GUIDs
+                    placer.SendChat(T.BuildInvalidAsset);
+                    return false;
+                }
+            }
+            else
+            {
+                if (!buildable.Foundation.Value.Exists || !buildable.BuildableBarricade.Value.Exists)
+                {
+                    // invalid GUIDs
+                    placer.SendChat(T.BuildInvalidAsset);
+                    return false;
+                }
+            }
+            
+
             if (closeEnemyFOB is not null && closeEnemyFOB.GetServersideData().group != team)
             {
                 // buildable too close to enemy bunker
-                placer?.SendChat(T.BuildBunkerTooClose, (closeEnemyFOB.model.position - point).magnitude, 5f);
+                placer.SendChat(T.BuildBunkerTooClose, (closeEnemyFOB.model.position - point).magnitude, 5f);
                 return false;
             }
 
-            if (placer is not { KitClass: Class.CombatEngineer } ||
-                !buildable.Foundation.ValidReference(out Guid foundGuid) ||
-                !placer.HasKit ||
-                !placer.ActiveKit!.Item!.ContainsItem(foundGuid))
-            {
-                if (fob == null)
-                {
-                    // no fob nearby
-                    placer?.SendChat(T.BuildNotInRadius);
-                    return false;
-                }
-                if ((fob.Position - point).sqrMagnitude > Math.Pow(fob.Radius, 2))
-                {
-                    // radius is constrained because there is no bunker
-                    placer?.SendChat(T.BuildSmallRadius, fob.Radius);
-                    return false;
-                }
-            }
-
-            if (fob is null)
-                return true;
-
-            if (buildable.Type == EBuildableType.REPAIR_STATION)
-            {
-                int existing = Gamemode.Config.BarricadeRepairStation.ValidReference(out guid) ? UCBarricadeManager.CountNearbyBarricades(guid, fob.Radius, fob.Position, team) : 0;
-                if (existing >= 1)
-                {
-                    // repair station already exists
-                    placer?.SendChat(T.BuildStructureExists, buildable);
-                    return false;
-                }
-            }
-            if (buildable.Type == EBuildableType.EMPLACEMENT && buildable.Emplacement != null)
-            {
-                int existing = UCVehicleManager.GetNearbyVehicles(buildable.Emplacement.EmplacementVehicle, fob.Radius, fob.Position).Count();
-                if (existing >= buildable.Emplacement.MaxFobCapacity)
-                {
-                    // max emplacements of this type reached
-                    placer?.SendChat(T.BuildStructureExists, buildable);
-                    return false;
-                }
-            }
+            if (!ValidatePlacementWithFriendlyFOB(buildable, fob, placer, point))
+                return false;
         }
 
-        if (fob.Build < buildable.RequiredBuild)
+        if (fob is not null)
         {
-            // not enough build
-            placer?.SendChat(T.BuildMissingSupplies, fob.Build, buildable.RequiredBuild);
-            return false;
+            if (fob.Build < buildable.RequiredBuild)
+            {
+                // not enough build
+                placer.SendChat(T.BuildMissingSupplies, fob.Build, buildable.RequiredBuild);
+                return false;
+            }
+
+            fob.ReduceBuild(buildable.RequiredBuild);
+        }
+        return true;
+    }
+    private static bool ValidatePlacementWithFriendlyFOB(BuildableData buildable, FOB? fob, UCPlayer placer, Vector3 point)
+    {
+        if (!placer.HasKit || !placer.ActiveKit!.Item!.ContainsItem(buildable.Foundation.Value.Guid)) // normal player, buildable is not in their kit
+        {
+            if (fob is null)
+            {
+                // no fob nearby
+                placer.SendChat(T.BuildNotInRadius);
+                return false;
+            }
+            else if ((fob.Position - point).sqrMagnitude > Math.Pow(fob.Radius, 2))
+            {
+                // radius is constrained because there is no bunker
+                placer.SendChat(T.BuildSmallRadius, fob.Radius);
+                return false;
+            }
+            else
+            {
+                int existing;
+                if (buildable.Type != EBuildableType.EMPLACEMENT)
+                    existing = UCBarricadeManager.CountNearbyBarricades(buildable.BuildableBarricade.Value, fob.Radius, fob.Position, fob.Team);
+                else
+                    existing = UCVehicleManager.CountNearbyVehicles(buildable.Emplacement!.EmplacementVehicle, fob.Radius, fob.Position, placer.GetTeam()); // TODO: Check vehicle team
+
+                if (existing >= buildable.Limit)
+                {
+                    // fob buildable limit reached for this type
+                    placer.SendChat(T.BuildLimitReached, buildable.Limit, buildable);
+                    return false;
+                }
+
+            }
+        }
+        else
+        {
+            int totalPlaced = UCBarricadeManager.CountBarricadesWhere(b =>
+            b.GetServersideData().owner == placer.Steam64 &&
+                b.asset.GUID == buildable.BuildableBarricade.Value.Guid &&
+                (b.GetServersideData().point - placer.Position).sqrMagnitude < Mathf.Pow(100, 2)); // TODO: check will not work for emplacements - fix?
+
+            if (totalPlaced >= placer.ActiveKit!.Item!.CountItems(buildable.BuildableBarricade.Value.Guid))
+            {
+                // regional buildable limit reached for this player
+                placer.SendChat(T.RegionalBuildLimitReached, buildable.Limit, buildable);
+                return false;
+            }
         }
 
-        fob.ReduceBuild(buildable.RequiredBuild);
         return true;
     }
 }
