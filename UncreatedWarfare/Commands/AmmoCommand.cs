@@ -35,6 +35,7 @@ public class AmmoCommand : AsyncCommand
         {
             if (!Util.IsValidSteam64Id(vehicle.lockedOwner.m_SteamID))
                 throw ctx.Reply(T.AmmoVehicleCantRearm);
+
             ctx.AssertGamemode<IVehicles>();
 
             SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
@@ -68,6 +69,9 @@ public class AmmoCommand : AsyncCommand
 
                 if (!isInMain && fob!.Ammo < vehicleData.RearmCost)
                     throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, vehicleData.RearmCost);
+
+                if (vehicleData.Team != 0 && vehicleData.Team != ctx.Caller.Steam64)
+                    throw ctx.Reply(T.AmmoVehicleCantRearm);
 
                 if (vehicleData.Items.Length == 0)
                     throw ctx.Reply(T.AmmoVehicleFullAlready);
