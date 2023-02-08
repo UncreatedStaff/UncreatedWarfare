@@ -38,7 +38,7 @@ public class BuildableComponent : MonoBehaviour
         BarricadeData data = foundation.GetServersideData();
 
         UCPlayer? placer = UCPlayer.FromID(data.owner);
-        if (placer != null && !(buildable.Type == EBuildableType.FORTIFICATION || buildable.Type == EBuildableType.AMMO_CRATE))
+        if (placer != null && !(buildable.Type == BuildableType.Fortification || buildable.Type == BuildableType.AmmoCrate))
         {
             foreach (UCPlayer player in PlayerManager.OnlinePlayers.Where(p => p != placer &&
             p.GetTeam() == data.group &&
@@ -57,7 +57,7 @@ public class BuildableComponent : MonoBehaviour
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EfobRadius.FULL, Foundation.GetServersideData().group.GetTeam());
-        if (fob == null && Buildable.Type != EBuildableType.RADIO && (builder.KitClass is not Class.CombatEngineer || Buildable.Type is not EBuildableType.FORTIFICATION))
+        if (fob == null && Buildable.Type != BuildableType.Radio && (builder.KitClass is not Class.CombatEngineer || Buildable.Type is not BuildableType.Fortification))
         {
             builder.SendChat(T.BuildTickNotInRadius);
             return;
@@ -107,7 +107,7 @@ public class BuildableComponent : MonoBehaviour
         BarricadeData data = Foundation.GetServersideData();
 
         string structureName;
-        if (Buildable.Type != EBuildableType.EMPLACEMENT)
+        if (Buildable.Type != BuildableType.Emplacement)
         {
             if (!Buildable.BuildableBarricade.ValidReference(out ItemBarricadeAsset asset))
             {
@@ -123,7 +123,7 @@ public class BuildableComponent : MonoBehaviour
 
             structureName = Buildable.Foundation.ValidReference(out ItemBarricadeAsset fndAsset) ? fndAsset.itemName : "<unknown>";
 
-            if (Buildable.Type == EBuildableType.FOB_BUNKER)
+            if (Buildable.Type == BuildableType.Bunker)
             {
                 FOB? fob = FOB.GetNearestFOB(structure.model.position, EfobRadius.SHORT, data.group);
                 if (fob != null)
@@ -172,7 +172,7 @@ public class BuildableComponent : MonoBehaviour
 
             if (contribution >= 0.1F && player != null)
             {
-                float amount = Buildable.Type == EBuildableType.FOB_BUNKER
+                float amount = Buildable.Type == BuildableType.Bunker
                     ? Mathf.RoundToInt(contribution * Points.XPConfig.BuiltFOBXP)
                     : entry.Value * Points.XPConfig.ShovelXP;
 
@@ -314,7 +314,7 @@ public class BuildableComponent : MonoBehaviour
 
         FOB? fob = FOB.GetNearestFOB(point, EfobRadius.FULL, team);
 
-        if (buildable.Type == EBuildableType.FOB_BUNKER)
+        if (buildable.Type == BuildableType.Bunker)
         {
             if (FOBManager.Config.RestrictFOBPlacement)
             {

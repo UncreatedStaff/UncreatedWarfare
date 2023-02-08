@@ -579,7 +579,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                             if (_edit != null)
                                 EffectManager.askEffectClearByID(_edit.id, _player.Player.channel.owner.transportConnection);
                             _player.HasUIHidden = false;
-                            UCWarfare.I.UpdateLangs(_player);
+                            UCWarfare.I.UpdateLangs(_player, true);
                             _currentBuilderIsExisting = false;
                             RefreshPreview();
                         }
@@ -602,7 +602,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 if (_edit != null)
                     EffectManager.askEffectClearByID(_edit.id, _player.Player.channel.owner.transportConnection);
                 _player.HasUIHidden = false;
-                UCWarfare.I.UpdateLangs(_player);
+                UCWarfare.I.UpdateLangs(_player, true);
                 RefreshPreview();
             }
             else if (ctx.MatchParameter(0, "addpt", "addpoint", "newpt"))

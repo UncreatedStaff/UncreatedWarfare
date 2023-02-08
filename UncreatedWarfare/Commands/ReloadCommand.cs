@@ -123,7 +123,7 @@ public class ReloadCommand : AsyncCommand
         Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
         Translation.OnColorsReloaded();
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-            UCWarfare.I.UpdateLangs(PlayerManager.OnlinePlayers[i]);
+            UCWarfare.I.UpdateLangs(PlayerManager.OnlinePlayers[i], false);
     }
     public static void ReloadPermissions()
     {

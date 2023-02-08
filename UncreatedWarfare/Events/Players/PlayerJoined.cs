@@ -1,11 +1,11 @@
 ﻿namespace Uncreated.Warfare.Events.Players;
 public class PlayerJoined : PlayerEvent
 {
-    private readonly PlayerSave? _save;
-    public bool IsNewPlayer => SaveData is null;
-    public PlayerSave? SaveData => _save;
-    public PlayerJoined(UCPlayer player, PlayerSave? saveData) : base(player)
+    public bool IsNewPlayer { get; }
+    public PlayerSave SaveData { get; }
+    public PlayerJoined(UCPlayer player, bool newPlayer) : base(player)
     {
-        _save = saveData;
+        IsNewPlayer = newPlayer;
+        SaveData = player.Save;
     }
 }

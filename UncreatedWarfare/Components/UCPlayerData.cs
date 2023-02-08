@@ -2,15 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Point;
-using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
@@ -19,109 +16,108 @@ namespace Uncreated.Warfare.Components;
 public struct LandmineData
 {
     public static LandmineData Nil = new LandmineData(null, null);
-    public Guid barricadeGUID;
-    public Player? owner;
-    public ulong ownerID;
-    public int instanceID;
+    public Guid Barricade;
+    public Player? Owner;
+    public ulong OwnerId;
+    public int InstanceId;
     public LandmineData(InteractableTrap? trap, BarricadeComponent? owner)
     {
         if (trap == null || owner == null)
         {
-            barricadeGUID = Guid.Empty;
-            this.owner = null;
-            if (owner != null)
-                this.ownerID = owner.Owner;
-            else this.ownerID = 0;
-            instanceID = 0;
+            Barricade = Guid.Empty;
+            this.Owner = null;
+            this.OwnerId = owner != null ? owner.Owner : 0ul;
+            InstanceId = 0;
         }
         else
         {
-            this.instanceID = trap.GetInstanceID();
-            this.barricadeGUID = owner.BarricadeGUID;
-            this.owner = owner.Player;
-            this.ownerID = owner.Owner;
+            this.InstanceId = trap.GetInstanceID();
+            this.Barricade = owner.BarricadeGUID;
+            this.Owner = owner.Player;
+            this.OwnerId = owner.Owner;
         }
     }
 
 }
 public class UCPlayerData : MonoBehaviour
 {
-    public const int PING_BUFFER_SIZE = 256;
-    public float CurrentTimeSeconds;
-    public float JoinTime;
-    public Gamemodes.Interfaces.IStats stats;
-    public Player player;
-    public Guid LastRocketShot;
-    public Guid LastRocketShotVehicle;
-    public ulong lastAttacker;
-    public KeyValuePair<ulong, DateTime> secondLastAttacker;
-    public BarricadeDrop? ExplodingLandmine;
-    public BarricadeDrop? TriggeringLandmine;
-    public Guid lastExplodedVehicle;
-    public Guid LastVehicleHitBy;
-    public ItemMagazineAsset LastProjectedAmmoType;
-    public Coroutine? CurrentTeleportRequest;
-    public DeathMessageArgs LastBleedingArgs;
-    public PlayerDied? LastBleedingEvent;
-    public Guid LastInfectableConsumed;
-    public Guid LastExplosiveConsumed;
-    public Guid LastChargeDetonated;
-    public Guid LastShreddedBy;
-    public Guid LastGunShot; // used for amc
-    public object PendingFOB;
-    public float[] PingBuffer = new float[PING_BUFFER_SIZE];
-    public int PingBufferIndex = -1;
-    public float LastAvgPingDifference;
+    internal const int PingBufferSize = 256;
+    internal BarricadeDrop? ExplodingLandmine;
+    internal BarricadeDrop? TriggeringLandmine;
+    internal ItemMagazineAsset LastProjectedAmmoType;
+    internal Coroutine? CurrentTeleportRequest;
+    internal PlayerDied? LastBleedingEvent;
+    internal IDeployable? PendingDeploy;
+    internal float[] PingBuffer = new float[PingBufferSize];
+    internal int PingBufferIndex = -1;
+    internal float LastAvgPingDifference;
     internal List<ThrowableComponent> ActiveThrownItems = new List<ThrowableComponent>(4);
     internal SqlItem<VehicleSpawn>? Currentlylinking;
     internal VehicleComponent? ExplodingVehicle;
     internal ThrowableComponent? TriggeringThrowable;
+    internal KeyValuePair<ulong, DateTime> SecondLastAttacker;
+    internal DeathMessageArgs LastBleedingArgs;
+    internal Guid LastExplodedVehicle;
+    internal Guid LastVehicleHitBy;
+    internal Guid LastInfectableConsumed;
+    internal Guid LastExplosiveConsumed;
+    internal Guid LastChargeDetonated;
+    internal Guid LastShreddedBy;
+    internal Guid LastRocketShot;
+    internal Guid LastRocketShotVehicle;
+    internal Guid LastGunShot; // used for amc
+    internal ulong LastAttacker;
+    private float _currentTimeSeconds;
+    public Player Player { get; private set; }
+    public Gamemodes.Interfaces.IStats Stats { get; internal set; }
+    public float JoinTime { get; private set; }
+
     #region TOASTS
     public struct ToastMessageInfo
     {
         public static readonly ToastMessageInfo Nil = new ToastMessageInfo(0, Guid.Empty, 0, 0f);
-        public byte channel;
-        public ushort id;
-        public ToastMessageSeverity type;
-        public Guid guid;
-        public float time;
+        public byte Channel;
+        public ushort Id;
+        public ToastMessageSeverity Type;
+        public Guid Guid;
+        public float Time;
         public ToastMessageInfo(ToastMessageSeverity type, Guid guid, byte channel, float time)
         {
-            this.type = type;
-            this.channel = channel;
-            this.guid = guid;
-            this.time = time;
-            this.id = 0;
+            this.Type = type;
+            this.Channel = channel;
+            this.Guid = guid;
+            this.Time = time;
+            this.Id = 0;
             ReloadAsset();
         }
         public void ReloadAsset()
         {
-            if (Assets.find(this.guid) is not EffectAsset ea)
-                L.Log("Unable to find effect asset with GUID " + this.guid.ToString("N") + " in toast messages.");
+            if (Assets.find(this.Guid) is not EffectAsset ea)
+                L.Log("Unable to find effect asset with GUID " + this.Guid.ToString("N") + " in toast messages.");
             else
-                this.id = ea.id;
+                this.Id = ea.id;
         }
     }
     internal static void ReloadToastIDs()
     {
-        ref ToastMessageInfo i = ref TOASTS[0];
-        Gamemode.Config.UIToastInfo.ValidReference(out i.guid);
-        i = ref TOASTS[1];
-        Gamemode.Config.UIToastWarning.ValidReference(out i.guid);
-        i = ref TOASTS[2];
-        Gamemode.Config.UIToastSevere.ValidReference(out i.guid);
-        i = ref TOASTS[3];
-        Gamemode.Config.UIToastXP.ValidReference(out i.guid);
-        i = ref TOASTS[4];
-        Gamemode.Config.UIToastMedium.ValidReference(out i.guid);
-        i = ref TOASTS[5];
-        Gamemode.Config.UIToastLarge.ValidReference(out i.guid);
-        i = ref TOASTS[6];
-        Gamemode.Config.UIToastProgress.ValidReference(out i.guid);
-        i = ref TOASTS[7];
-        Gamemode.Config.UIToastTip.ValidReference(out i.guid);
+        ref ToastMessageInfo i = ref Toasts[0];
+        Gamemode.Config.UIToastInfo.ValidReference(out i.Guid);
+        i = ref Toasts[1];
+        Gamemode.Config.UIToastWarning.ValidReference(out i.Guid);
+        i = ref Toasts[2];
+        Gamemode.Config.UIToastSevere.ValidReference(out i.Guid);
+        i = ref Toasts[3];
+        Gamemode.Config.UIToastXP.ValidReference(out i.Guid);
+        i = ref Toasts[4];
+        Gamemode.Config.UIToastMedium.ValidReference(out i.Guid);
+        i = ref Toasts[5];
+        Gamemode.Config.UIToastLarge.ValidReference(out i.Guid);
+        i = ref Toasts[6];
+        Gamemode.Config.UIToastProgress.ValidReference(out i.Guid);
+        i = ref Toasts[7];
+        Gamemode.Config.UIToastTip.ValidReference(out i.Guid);
     }
-    public static readonly ToastMessageInfo[] TOASTS = new ToastMessageInfo[]
+    public static readonly ToastMessageInfo[] Toasts =
     {
         new ToastMessageInfo(ToastMessageSeverity.Info,        Gamemode.Config.UIToastInfo.ValidReference(out Guid guid) ? guid : Guid.Empty, 0, 12f), // info
         new ToastMessageInfo(ToastMessageSeverity.Warning,     Gamemode.Config.UIToastWarning.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),   // warning
@@ -134,84 +130,84 @@ public class UCPlayerData : MonoBehaviour
     };
     public struct ToastChannel
     {
-        public byte channel;
-        public ToastMessageInfo info;
-        public ToastMessage message;
-        public float timeRemaining;
-        public bool InUse => timeRemaining > 0f;
-        public bool hasPending = false;
+        public byte Channel;
+        public ToastMessageInfo Info;
+        public ToastMessage Message;
+        public float TimeRemaining;
+        public bool InUse => TimeRemaining > 0f;
+        public bool HasPending = false;
         public ToastChannel(byte channel)
         {
-            this.info = default;
-            this.message = default;
-            this.timeRemaining = 0f;
-            this.channel = channel;
+            this.Info = default;
+            this.Message = default;
+            this.TimeRemaining = 0f;
+            this.Channel = channel;
         }
         public void SetMessage(ToastMessageInfo info, ToastMessage message)
         {
-            this.info = info;
-            this.message = message;
-            this.timeRemaining = info.time;
+            this.Info = info;
+            this.Message = message;
+            this.TimeRemaining = info.Time;
         }
         /// <returns><see langword="true"/> if there is a message currently playing on the channel, otherwise <see langword="false"/>.</returns>
         public bool Update(float dt)
         {
-            if (this.timeRemaining <= 0f) return hasPending;
-            this.timeRemaining -= dt;
-            if (this.timeRemaining <= 0f)
+            if (this.TimeRemaining <= 0f) return HasPending;
+            this.TimeRemaining -= dt;
+            if (this.TimeRemaining <= 0f)
             {
-                this.timeRemaining = 0f;
-                return hasPending;
+                this.TimeRemaining = 0f;
+                return HasPending;
             }
             return false;
         }
     }
-    public ToastChannel[] channels;
+    public ToastChannel[] Channels;
     public void QueueMessage(ToastMessage message, bool priority = false)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ToastMessageInfo info = ToastMessageInfo.Nil;
-        for (int i = 0; i < TOASTS.Length; i++)
+        for (int i = 0; i < Toasts.Length; i++)
         {
-            if (TOASTS[i].type == message.Severity)
+            if (Toasts[i].Type == message.Severity)
             {
-                info = TOASTS[i];
+                info = Toasts[i];
                 break;
             }
         }
-        if (info.guid == Guid.Empty)
+        if (info.Guid == Guid.Empty)
         {
             L.LogWarning("Undefined toast message type: " + message.Severity.ToString());
             return;
         }
-        if (priority || (pendingToastMessages.Count(x => x.Value.channel == info.channel) == 0 && !channels[info.channel].InUse))
+        if (priority || (_pendingToastMessages.Count(x => x.Value.Channel == info.Channel) == 0 && !Channels[info.Channel].InUse))
             SendToastMessage(message, info);
         else
         {
-            pendingToastMessages.Insert(0, new KeyValuePair<ToastMessage, ToastMessageInfo>(message, info));
-            for (int i = 0; i < channels.Length; i++)
+            _pendingToastMessages.Insert(0, new KeyValuePair<ToastMessage, ToastMessageInfo>(message, info));
+            for (int i = 0; i < Channels.Length; i++)
             {
-                if (channels[i].channel == info.channel)
+                if (Channels[i].Channel == info.Channel)
                 {
-                    channels[i].hasPending = true;
+                    Channels[i].HasPending = true;
                     break;
                 }
             }
         }
     }
-    readonly List<KeyValuePair<ToastMessage, ToastMessageInfo>> pendingToastMessages = new List<KeyValuePair<ToastMessage, ToastMessageInfo>>();
+    private readonly List<KeyValuePair<ToastMessage, ToastMessageInfo>> _pendingToastMessages = new List<KeyValuePair<ToastMessage, ToastMessageInfo>>();
     private void SendToastMessage(ToastMessage message, ToastMessageInfo info)
     {
-        EffectManager.sendUIEffect(info.id, unchecked((short)info.id), player.channel.owner.transportConnection, true, message.Message1 ?? "", message.Message2 ?? "", message.Message3 ?? "");
-        channels[info.channel].SetMessage(info, message);
-        for (int i = pendingToastMessages.Count - 1; i >= 0; i--)
+        EffectManager.sendUIEffect(info.Id, unchecked((short)info.Id), Player.channel.owner.transportConnection, true, message.Message1 ?? "", message.Message2 ?? "", message.Message3 ?? "");
+        Channels[info.Channel].SetMessage(info, message);
+        for (int i = _pendingToastMessages.Count - 1; i >= 0; i--)
         {
-            KeyValuePair<ToastMessage, ToastMessageInfo> t = pendingToastMessages[i];
+            KeyValuePair<ToastMessage, ToastMessageInfo> t = _pendingToastMessages[i];
             if (t.Key == message)
             {
-                pendingToastMessages.RemoveAt(i);
+                _pendingToastMessages.RemoveAt(i);
                 break;
             }
         }
@@ -219,40 +215,40 @@ public class UCPlayerData : MonoBehaviour
     #endregion
     public void StartTracking(Player player)
     {
-        this.player = player;
-        CurrentTimeSeconds = 0.0f;
+        this.Player = player;
+        _currentTimeSeconds = 0.0f;
         JoinTime = Time.realtimeSinceStartup;
         byte max = 0;
         bool cont0 = false;
-        for (int i = 0; i < TOASTS.Length; i++)
+        for (int i = 0; i < Toasts.Length; i++)
         {
-            ToastMessageInfo toast = TOASTS[i];
-            if (toast.channel == 0)
+            ref ToastMessageInfo toast = ref Toasts[i];
+            if (toast.Channel == 0)
                 cont0 = true;
-            else if (max < toast.channel)
-                max = toast.channel;
+            else if (max < toast.Channel)
+                max = toast.Channel;
         }
         if (cont0) max++;
-        channels = new ToastChannel[max];
-        for (byte i = 0; i < channels.Length; i++)
-            channels[i] = new ToastChannel(i);
+        Channels = new ToastChannel[max];
+        for (byte i = 0; i < Channels.Length; i++)
+            Channels[i] = new ToastChannel(i);
     }
     public void AddPing(float value)
     {
         ++PingBufferIndex;
-        PingBuffer[PingBufferIndex % PING_BUFFER_SIZE] = value;
+        PingBuffer[PingBufferIndex % PingBufferSize] = value;
     }
     public void TryUpdateAttackers(ulong newLastAttacker)
     {
-        if (newLastAttacker == lastAttacker) return;
+        if (newLastAttacker == LastAttacker) return;
 
-        secondLastAttacker = new KeyValuePair<ulong, DateTime>(lastAttacker, DateTime.Now);
-        lastAttacker = newLastAttacker;
+        SecondLastAttacker = new KeyValuePair<ulong, DateTime>(LastAttacker, DateTime.Now);
+        LastAttacker = newLastAttacker;
     }
     public void ResetAttackers()
     {
-        lastAttacker = 0;
-        secondLastAttacker = new KeyValuePair<ulong, DateTime>(0, DateTime.Now);
+        LastAttacker = 0;
+        SecondLastAttacker = new KeyValuePair<ulong, DateTime>(0, DateTime.Now);
     }
     public void Update()
     {
@@ -260,220 +256,33 @@ public class UCPlayerData : MonoBehaviour
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         float dt = Time.deltaTime;
-        CurrentTimeSeconds += dt;
-        for (int i = 0; i < channels.Length; i++)
+        _currentTimeSeconds += dt;
+        for (int i = 0; i < Channels.Length; i++)
         {
-            if (channels[i].Update(dt))
+            if (Channels[i].Update(dt))
             {
-                ToastChannel channel = channels[i];
-                for (int j = pendingToastMessages.Count - 1; j >= 0; j--)
+                ref ToastChannel channel = ref Channels[i];
+                for (int j = _pendingToastMessages.Count - 1; j >= 0; j--)
                 {
-                    KeyValuePair<ToastMessage, ToastMessageInfo> t = pendingToastMessages[j];
-                    if (t.Value.channel == channel.channel)
+                    KeyValuePair<ToastMessage, ToastMessageInfo> t = _pendingToastMessages[j];
+                    if (t.Value.Channel == channel.Channel)
                     {
                         SendToastMessage(t.Key, t.Value);
                         goto next;
                     }
                 }
-                channel.hasPending = false;
+                channel.HasPending = false;
             next:;
             }
         }
     }
-    public void CancelTeleport()
+    public void CancelDeployment()
     {
-        if (CurrentTeleportRequest != default)
+        if (CurrentTeleportRequest != null)
         {
             StopCoroutine(CurrentTeleportRequest);
-            CurrentTeleportRequest = default;
+            CurrentTeleportRequest = null;
+            PendingDeploy = null;
         }
-    }
-    public bool TeleportTo(object location, float delay, bool shouldCancelOnMove, bool startCoolDown = true, float yawOverride = -1)
-    {
-        UCPlayer? player = UCPlayer.FromPlayer(this.player);
-
-        if (player != null)
-        {
-            if (CurrentTeleportRequest == default)
-            {
-                CurrentTeleportRequest = StartCoroutine(TeleportCoroutine(player, location, delay, shouldCancelOnMove, startCoolDown, yawOverride));
-                return true;
-            }
-            else
-                player.SendChat(T.DeployAlreadyActive);
-        }
-        return false;
-    }
-
-    private IEnumerator<WaitForSeconds> TeleportCoroutine(UCPlayer player, object structure, float delay, bool shouldCancelOnMove = false, bool startCoolDown = true, float yawOverride = -1)
-    {
-        bool isFOB = structure is FOB;
-        bool isSpecialFOB = structure is SpecialFOB;
-        bool isCache = structure is Cache;
-        bool isMain = structure is Vector3;
-
-        PendingFOB = structure;
-
-        FOB? fob = null;
-        SpecialFOB? special = null;
-        Cache? cache = null;
-
-        if (isFOB)
-            fob = structure as FOB;
-        else if (isSpecialFOB)
-            special = structure as SpecialFOB;
-        else if (isCache)
-            cache = structure as Cache;
-
-        ulong team = player.GetTeam();
-
-        if (isFOB || isSpecialFOB || isCache)
-            player.SendChat(T.DeployStandby, isFOB ? fob! : (isSpecialFOB ? special : cache)!, Mathf.RoundToInt(delay));
-        else if (isMain && team is 1 or 2)
-            player.SendChat(T.DeployStandby, team == 1 ? Teams.TeamManager.Team1Main : Teams.TeamManager.Team2Main, Mathf.RoundToInt(delay));
-
-        int counter = 0;
-
-        Vector3 originalPosition = player.Position;
-
-        while (counter < delay * 4)
-        {
-            yield return new WaitForSeconds(0.25F);
-
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            try
-            {
-                if (player.Player.life.isDead)
-                {
-                    CancelTeleport();
-                    yield break;
-                }
-                if (shouldCancelOnMove && player.Position != originalPosition)
-                {
-                    player.SendChat(T.DeployMoved);
-
-                    CancelTeleport();
-                    yield break;
-                }
-                if (isFOB)
-                {
-                    if (fob!.NearbyEnemies.Count != 0)
-                    {
-                        player.SendChat(T.DeployEnemiesNearby, fob);
-
-                        CancelTeleport();
-                        yield break;
-                    }
-                    if (fob.IsBleeding)
-                    {
-                        player.SendChat(T.DeployRadioDamaged, fob);
-
-                        CancelTeleport();
-                        yield break;
-                    }
-                    if (!fob.IsSpawnable)
-                    {
-                        player.SendChat(T.DeployNotSpawnable, fob);
-
-                        CancelTeleport();
-                        yield break;
-                    }
-                }
-                else if (isCache)
-                {
-                    if (cache!.NearbyAttackers.Count != 0)
-                    {
-                        player.SendChat(T.DeployEnemiesNearby);
-
-                        CancelTeleport();
-                        yield break;
-                    }
-                    if (cache == null || cache.Structure.GetServersideData().barricade.isDead)
-                    {
-                        player.SendChat(T.DeployDestroyed);
-
-                        CancelTeleport();
-                        yield break;
-                    }
-                }
-                else if (isSpecialFOB)
-                {
-                    if (special == null || !special.IsActive)
-                    {
-                        player.SendChat(T.DeployNotSpawnable);
-
-                        CancelTeleport();
-                        yield break;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                L.LogError("Failed to teleport to FOB: " + player.Player.channel.owner.playerID.playerName);
-                L.LogError(ex);
-
-                CancelTeleport();
-            }
-
-            counter++;
-        }
-
-        Vector3 position = Vector3.zero;
-        float rotation = player.Player.transform.eulerAngles.y;
-        if (isFOB)
-        {
-            if (fob!.Bunker != null)
-            {
-                position = fob.Bunker.model.position;
-                rotation = fob.Bunker.model.eulerAngles.y;
-                ActionLog.Add(ActionLogType.DeployToLocation, "FOB BUNKER " + fob.Name + " TEAM " + Teams.TeamManager.TranslateName(fob.Team, 0), player);
-            }
-        }
-        else if (isCache)
-        {
-            position = cache!.Structure.model.TransformPoint(new Vector3(3, 0, 0));
-            rotation = cache.Structure.model.eulerAngles.y;
-            ActionLog.Add(ActionLogType.DeployToLocation, "CACHE " + cache.Name + " TEAM " + Teams.TeamManager.TranslateName(cache.Team, 0), player);
-        }
-        else if (isSpecialFOB)
-        {
-            position = special!.Position;
-            ActionLog.Add(ActionLogType.DeployToLocation, "SPECIAL FOB " + special.Name + " TEAM " + Teams.TeamManager.TranslateName(special.Team, 0), player);
-        }
-        else if (structure is Vector3 vector)
-        {
-            position = vector;
-            ActionLog.Add(ActionLogType.DeployToLocation, "MAIN BASE " + Teams.TeamManager.TranslateName(player.GetTeam(), 0), player);
-        }
-
-        if (yawOverride != -1)
-            rotation = yawOverride;
-
-        player.Player.teleportToLocationUnsafe(position, rotation);
-
-        CurrentTeleportRequest = default;
-
-        if (isFOB)
-        {
-            player.SendChat(T.DeploySuccess, fob!);
-
-            Points.TryAwardFOBCreatorXP(fob!, Points.XPConfig.FOBDeployedXP, T.XPToastFOBUsed);
-
-            if (fob!.Bunker!.model.TryGetComponent(out BuiltBuildableComponent comp))
-                Quests.QuestManager.OnPlayerSpawnedAtBunker(comp, fob!, player);
-        }
-        else if (isSpecialFOB)
-            player.SendChat(T.DeploySuccess, special!);
-        else if (isCache)
-            player.SendChat(T.DeploySuccess, cache!);
-        else if (structure is Vector3 && team is 1 or 2)
-        {
-            player.SendChat(T.DeploySuccess, team == 1 ? Teams.TeamManager.Team1Main : Teams.TeamManager.Team2Main);
-        }
-
-        if (startCoolDown)
-            CooldownManager.StartCooldown(player, CooldownType.Deploy, RapidDeployment.GetDeployTime(player));
     }
 }

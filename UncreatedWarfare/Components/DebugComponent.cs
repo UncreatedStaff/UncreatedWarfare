@@ -104,7 +104,7 @@ internal class DebugComponent : MonoBehaviour
         float latest = pl.SteamPlayer.ping * 1000f;
         data.AddPing(latest);
         float[] pings = data.PingBuffer;
-        int size = Math.Min(UCPlayerData.PING_BUFFER_SIZE, data.PingBufferIndex + 1);
+        int size = Math.Min(UCPlayerData.PingBufferSize, data.PingBufferIndex + 1);
         float total = 0f;
         for (int i = 0; i < size; ++i)
             total += pings[i];
@@ -121,9 +121,9 @@ internal class DebugComponent : MonoBehaviour
             lastPing = latest;
         else
         {
-            int ind = data.PingBufferIndex % UCPlayerData.PING_BUFFER_SIZE;
+            int ind = data.PingBufferIndex % UCPlayerData.PingBufferSize;
             if (ind == 0)
-                ind = UCPlayerData.PING_BUFFER_SIZE - 1;
+                ind = UCPlayerData.PingBufferSize - 1;
             lastPing = data.PingBuffer[ind - 1];
         }
         lastPing -= latest;

@@ -341,15 +341,12 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         bool obj = index == _objIndex;
         string s1 = $"<color=#{(obj ? GetObjectiveColor() : UCWarfare.GetColorHex("undiscovered_flag"))}>{FlagRotation[index].ShortName}</color>";
         string s2 = obj ? $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Config.UIIconAttack}</color>" : string.Empty;
-        foreach (LanguageSet set in LanguageSet.All())
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            while (set.MoveNext())
-            {
-                ITransportConnection c = set.Next.Connection;
-                CTFUI.ListUI.Names[index].SetText(c, s1);
-                CTFUI.ListUI.Icons[index].SetText(c, s2);
-                CTFUI.ListUI.Parents[index].SetVisibility(c, true);
-            }
+            ITransportConnection c = PlayerManager.OnlinePlayers[i].Connection;
+            CTFUI.ListUI.Names[index].SetText(c, s1);
+            CTFUI.ListUI.Icons[index].SetText(c, s2);
+            CTFUI.ListUI.Parents[index].SetVisibility(c, true);
         }
     }
     public void SendListUI(UCPlayer player)

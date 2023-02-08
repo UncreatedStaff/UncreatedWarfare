@@ -10,6 +10,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -89,13 +90,8 @@ public static class PlayerManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave? save) || save == null)
-            save = new PlayerSave(player.Steam64);
-        save.Team = player.GetTeam();
-        save.KitName = player.ActiveKit?.Item?.Id ?? string.Empty;
-        save.SquadName = player.Squad is { IsLocked: false } ? player.Squad.Name : string.Empty;
-        save.LastGame = Data.Gamemode.GameID;
-        PlayerSave.WriteToSaveFile(save);
+        player.Save.Apply(player);
+        PlayerSave.WriteToSaveFile(player.Save);
     }
     public static PlayerListEntry[] GetPlayerList()
     {
@@ -113,7 +109,7 @@ public static class PlayerManager
         return rtn;
     }
     public static void AddSave(PlayerSave save) => PlayerSave.WriteToSaveFile(save);
-    internal static UCPlayer InvokePlayerConnected(Player player)
+    internal static UCPlayer InvokePlayerConnected(Player player, out bool newPlayer)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -121,9 +117,11 @@ public static class PlayerManager
         ulong s64 = player.channel.owner.playerID.steamID.m_SteamID;
         if (!PlayerSave.TryReadSaveFile(s64, out PlayerSave? save) || save == null)
         {
+            newPlayer = true;
             save = new PlayerSave(s64);
             PlayerSave.WriteToSaveFile(save);
         }
+        else newPlayer = false;
 
         CancellationTokenSource? src = null;
         for (int i = 0; i < PlayerConnectCancellationTokenSources.Count; ++i)
@@ -176,9 +174,8 @@ public static class PlayerManager
                 }
             }
         }
-        if (save.SquadName != null)
-            SquadManager.OnPlayerJoined(ucplayer, save.SquadName);
-        FOBManager.SendFOBList(ucplayer);
+        //if (save.SquadName != null)
+        //    SquadManager.OnPlayerJoined(ucplayer, save.SquadName);
         return ucplayer;
     }
     private static void OnGroupChagned(GroupChanged e)
@@ -232,38 +229,6 @@ public static class PlayerManager
         float sqrRange = range * range;
         return !player.Player.life.isDead && (player.Position - point).sqrMagnitude < sqrRange;
     }
-    internal static void PickGroupAfterJoin(UCPlayer ucplayer)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ulong oldGroup = ucplayer.Player.quests.groupID.m_SteamID;
-        if (HasSave(ucplayer.Steam64, out PlayerSave save))
-        {
-            if (TeamManager.CanJoinTeam(save.Team) && ucplayer.Player.quests.groupID.m_SteamID != save.Team)
-            {
-                ucplayer.Player.quests.ServerAssignToGroup(new CSteamID(TeamManager.GetGroupID(save.Team)), EPlayerGroupRank.MEMBER, true);
-            }
-            else
-            {
-                ulong other = TeamManager.Other(save.Team);
-                if (TeamManager.CanJoinTeam(other) && ucplayer.Player.quests.groupID.m_SteamID != other)
-                {
-                    ucplayer.Player.quests.ServerAssignToGroup(new CSteamID(TeamManager.GetGroupID(other)), EPlayerGroupRank.MEMBER, true);
-                }
-            }
-        }
-        if (oldGroup != ucplayer.Player.quests.groupID.m_SteamID)
-        {
-            ulong team = ucplayer.Player.quests.groupID.m_SteamID.GetTeam();
-            if (team != oldGroup.GetTeam())
-            {
-                ucplayer.Player.teleportToLocation(ucplayer.Player.GetBaseSpawn(), team.GetBaseAngle());
-            }
-        }
-        GroupManager.save();
-
-    }
     public static class NetCalls
     {
         public static readonly NetCall<ulong, bool> SendSetQueueSkip = new NetCall<ulong, bool>(ReceiveSetQueueSkip);
@@ -288,7 +253,7 @@ public static class PlayerManager
             }
             else if (status)
             {
-                save = new PlayerSave(player, 0, string.Empty, string.Empty, status, 0, false, false);
+                save = new PlayerSave(player) { HasQueueSkip = status };
                 PlayerSave.WriteToSaveFile(save);
             }
         }

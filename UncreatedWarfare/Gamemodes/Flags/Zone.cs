@@ -314,4 +314,13 @@ public abstract class Zone : IDeployable, IListItem
             ActionLog.Add(ActionLogType.DeployToLocation, "ZONE " + Name, player);
         }
     }
+
+    float IDeployable.GetDelay()
+    {
+        return Data.UseCase switch
+        {
+            ZoneUseCase.Team1Main or ZoneUseCase.Team2Main => FOBManager.Config.DeployMainDelay,
+            _ => 0f
+        };
+    }
 }

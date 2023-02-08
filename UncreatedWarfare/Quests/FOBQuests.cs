@@ -374,7 +374,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
 {
     public DynamicIntegerValue Amount;
     public DynamicAssetValue<ItemBarricadeAsset> BaseIDs = new DynamicAssetValue<ItemBarricadeAsset>(DynamicValueType.Wildcard, ChoiceBehavior.Inclusive);
-    public DynamicEnumValue<EBuildableType> BuildableType = new DynamicEnumValue<EBuildableType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
+    public DynamicEnumValue<BuildableType> BuildableType = new DynamicEnumValue<BuildableType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -387,7 +387,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         else if (propertyname.Equals("buildable_type", StringComparison.Ordinal))
         {
             if (!reader.TryReadEnumValue(out BuildableType))
-                BuildableType = new DynamicEnumValue<EBuildableType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
+                BuildableType = new DynamicEnumValue<BuildableType>(DynamicValueType.Wildcard, ChoiceBehavior.Selective);
         }
         else if (propertyname.Equals("base_ids", StringComparison.Ordinal))
         {
@@ -399,7 +399,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
     {
         public IDynamicValue<int>.IChoice Amount;
         public DynamicAssetValue<ItemBarricadeAsset>.Choice BaseIDs;
-        public IDynamicValue<EBuildableType>.IChoice BuildableType;
+        public IDynamicValue<BuildableType>.IChoice BuildableType;
         public IDynamicValue<int>.IChoice FlagValue => Amount;
         public void Init(HelpBuildQuest data)
         {
@@ -413,7 +413,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
             if (prop.Equals("buildables_required", StringComparison.Ordinal))
                 Amount = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("buildable_type", StringComparison.Ordinal))
-                BuildableType = DynamicEnumValue<EBuildableType>.ReadChoice(ref reader);
+                BuildableType = DynamicEnumValue<BuildableType>.ReadChoice(ref reader);
             else if (prop.Equals("base_ids", StringComparison.Ordinal))
                 BaseIDs = DynamicAssetValue<ItemBarricadeAsset>.ReadChoice(ref reader);
         }
@@ -428,7 +428,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
     {
         private readonly int Amount = 0;
         private readonly DynamicAssetValue<ItemBarricadeAsset>.Choice BaseIDs;
-        private readonly IDynamicValue<EBuildableType>.IChoice BuildableType;
+        private readonly IDynamicValue<BuildableType>.IChoice BuildableType;
         private int _built;
         protected override bool CompletedCheck => _built >= Amount;
         public override short FlagValue => (short)_built;

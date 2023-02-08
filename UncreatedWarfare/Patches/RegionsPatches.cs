@@ -114,7 +114,7 @@ public static partial class Patches
             byte to_rot,
             byte to_page)
         {
-            EventFunctions.droppeditemsInverse.Remove(instanceID);
+            EventFunctions.DroppedItemsOwners.Remove(instanceID);
         }
 
         // SDG.Unturned.BarricadeManager

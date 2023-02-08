@@ -117,27 +117,27 @@ public class BadOmen : Buff
         float endTime = Time.realtimeSinceStartup + timeLeft;
         uint id = msg.InstanceID;
         UCPlayerData.ToastMessageInfo info = UCPlayerData.ToastMessageInfo.Nil;
-        for (int i = 0; i < UCPlayerData.TOASTS.Length; i++)
+        for (int i = 0; i < UCPlayerData.Toasts.Length; i++)
         {
-            if (UCPlayerData.TOASTS[i].type == msg.Severity)
+            if (UCPlayerData.Toasts[i].Type == msg.Severity)
             {
-                info = UCPlayerData.TOASTS[i];
+                info = UCPlayerData.Toasts[i];
                 break;
             }
         }
-        if (info.guid == Guid.Empty)
+        if (info.Guid == Guid.Empty)
             yield break;
         if (player.Player.TryGetPlayerData(out UCPlayerData data))
         {
             float t;
             while ((t = endTime - Time.realtimeSinceStartup) >= 0f)
             {
-                if (data.channels[info.channel].message.InstanceID != id)
+                if (data.Channels[info.Channel].Message.InstanceID != id)
                     yield break;
-                EffectManager.sendUIEffectText(unchecked((short)info.id), player.Connection, true, "Text", T.BadOmenMortarWarning.Translate(player, t));
+                EffectManager.sendUIEffectText(unchecked((short)info.Id), player.Connection, true, "Text", T.BadOmenMortarWarning.Translate(player, t));
                 yield return new WaitForSecondsRealtime(1f);
             }
-            EffectManager.askEffectClearByID(info.id, player.Connection);
+            EffectManager.askEffectClearByID(info.Id, player.Connection);
         }
     }
     private static float GetBadOmenWarn(UCPlayer player)

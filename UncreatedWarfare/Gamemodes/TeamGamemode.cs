@@ -4,7 +4,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Players;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -20,7 +19,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     protected TeamSelector _teamSelector;
     private Transform? _blockerBarricadeT1;
     private Transform? _blockerBarricadeT2;
-    private readonly List<ulong> mainCampers = new List<ulong>(24);
+    private readonly List<ulong> _mainCampers = new List<ulong>(24);
     public TeamSelector TeamSelector { get => _teamSelector; }
     public virtual bool UseTeamSelector { get => true; }
     public virtual bool EnableAMC { get => true; }
@@ -51,7 +50,10 @@ public abstract class TeamGamemode : Gamemode, ITeams
         if (UseTeamSelector)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                TeamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
+            {
+                if (PlayerManager.OnlinePlayers[i].TeamSelectorData is not { IsSelecting: true })
+                    TeamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
+            }
         }
         Task task = base.PostInit(token);
         if (!task.IsCompleted)
@@ -97,14 +99,14 @@ public abstract class TeamGamemode : Gamemode, ITeams
             Vector3 pos = player.Position;
             if (team == 1 && !TeamManager.Team2AMC.IsInside(pos) || team == 2 && !TeamManager.Team1AMC.IsInside(pos))
                 goto notInMain;
-            if (!mainCampers.Contains(player.Steam64))
+            if (!_mainCampers.Contains(player.Steam64))
             {
-                mainCampers.Add(player.Steam64);
+                _mainCampers.Add(player.Steam64);
                 OnPlayerMainCamping(player);
             }
             continue;
         notInMain:
-            mainCampers.Remove(player.Steam64);
+            _mainCampers.Remove(player.Steam64);
         }
     }
     private void OnPlayerMainCamping(UCPlayer player)
@@ -119,7 +121,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
         ulong team = player.GetTeam();
         if (Config.GeneralAMCKillTime.Value != 0)
             yield return new WaitForSecondsRealtime(Config.GeneralAMCKillTime.Value);
-        if (player.Player == null || !mainCampers.Contains(player.Steam64) || player.Player.life.isDead || player.OnDuty())
+        if (player.Player == null || !_mainCampers.Contains(player.Steam64) || player.Player.life.isDead || player.OnDuty())
             yield break;
         player.Player.movement.forceRemoveFromVehicle();
         yield return null;
@@ -273,16 +275,26 @@ public abstract class TeamGamemode : Gamemode, ITeams
     public override void OnPlayerDeath(PlayerDied e)
     {
         base.OnPlayerDeath(e);
-        mainCampers.Remove(e.Player.Steam64);
+        _mainCampers.Remove(e.Player.Steam64);
         EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
     protected override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline, CancellationToken token)
     {
         // token.CombineIfNeeded(UnloadToken, player.DisconnectToken);
         if (!UseTeamSelector)
+        {
+            ulong team = player.Save.Team;
+            if (this is not IEndScreen { IsScreenUp: true } && !TeamManager.IsFriendly(player.Player, team))
+            {
+                TeamManager.JoinTeam(player, player.Save.Team, player.Save.LastGame != GameID || player.Save.ShouldRespawnOnJoin, true);
+            }
+            OnJoinTeam(player, player.Save.Team);
+        }
+        else if (!TeamSelector.IsSelecting(player))
             InitUI(player);
         return base.PlayerInit(player, wasAlreadyOnline, token);
     }
+    protected override void ReloadUI(UCPlayer player) => InitUI(player);
     protected abstract void InitUI(UCPlayer player);
     public virtual void OnJoinTeam(UCPlayer player, ulong team)
     {
@@ -290,14 +302,15 @@ public abstract class TeamGamemode : Gamemode, ITeams
             ShowStagingUI(player);
         if (this is IGameStats gs)
             gs.GameStats.OnPlayerJoin(player);
-        if (this is IEndScreen es && es.IsScreenUp)
+        if (this is IEndScreen { IsScreenUp: true })
         {
             if (this is IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> impl && impl.Leaderboard != null)
                 impl.Leaderboard.OnPlayerJoined(player);
         }
-        else if (this is ITickets tickets)
+        else
         {
-            tickets.TicketManager.SendUI(player);
+            if (this is ITickets tickets)
+                tickets.TicketManager.SendUI(player);
             InitUI(player);
         }
 
@@ -325,7 +338,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     public override void PlayerLeave(UCPlayer player)
     {
-        mainCampers.Remove(player.Steam64);
+        _mainCampers.Remove(player.Steam64);
         base.PlayerLeave(player);
     }
 }

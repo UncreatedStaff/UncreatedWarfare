@@ -382,50 +382,22 @@ public class UCWarfare : MonoBehaviour
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
         StatsManager.UnloadEvents();
     }
-    internal void UpdateLangs(UCPlayer player)
+    internal void UpdateLangs(UCPlayer player, bool uiOnly)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        player.OnLanguageChanged();
+        if (!uiOnly)
+            player.OnLanguageChanged();
+
         EventDispatcher.InvokeUIRefreshRequest(player);
-        Signs.UpdateAllSigns(player);
-        if (Data.Is<TeamCTF>(out _))
-        {
-            CTFUI.SendFlagList(player);
-        }
-        else if (Data.Is<Invasion>(out _))
-        {
-            InvasionUI.SendFlagList(player);
-        }
-        else if (Data.Is<Insurgency>())
-        {
-            InsurgencyUI.SendCacheList(player);
-        }
-        if (Data.Is<ISquads>(out _))
-        {
-            if (player.Squad == null)
-                SquadManager.SendSquadList(player);
-            else
-            {
-                SquadManager.SendSquadMenu(player, player.Squad);
-                SquadManager.UpdateMemberList(player.Squad);
-                if (RallyManager.HasRally(player.Squad, out RallyPoint p))
-                    p.ShowUIForPlayer(player);
-            }
-        }
-        if (Data.Is<IFOBs>(out _))
-            FOBManager.SendFOBList(player);
-        if (Data.Gamemode.ShowXPUI)
-            Points.UpdateXPUI(player);
+        if (!uiOnly) Signs.UpdateAllSigns(player);
 
-        if (player.Player.TryGetComponent(out ZonePlayerComponent comp))
-            comp.ReloadLang();
-
-        if (TraitManager.Loaded)
+        if (Data.Gamemode != null)
         {
-            if (player.GetTeam() is 1 or 2 && !player.HasUIHidden && !(Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> lb) && lb.IsScreenUp))
-                TraitManager.BuffUI.SendBuffs(player);
+            if (!uiOnly)
+                Data.Gamemode.InvokeLanguageChanged(player);
+            Data.Gamemode.InvokeReloadUI(player);
         }
     }
 

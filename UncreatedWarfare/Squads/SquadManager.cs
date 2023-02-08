@@ -17,7 +17,7 @@ using Uncreated.Warfare.Squads.UI;
 
 namespace Uncreated.Warfare.Squads;
 
-public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDeclareWinListener
+public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDeclareWinListener, IJoinedTeamListener, IReloadUIListener
 {
     public SquadManager() : base("squad") { }
 
@@ -247,23 +247,27 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             }
         }
     }
-    public static void OnPlayerJoined(UCPlayer player, string squadName)
+    void IJoinedTeamListener.OnJoinTeam(UCPlayer player, ulong team)
     {
         _singleton.IsLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong team = player.GetTeam();
-        Squad squad = Squads.Find(s => s.Name == squadName && s.Team == team);
+        if (player.Save.LastGame == Data.Gamemode.GameID && player.Save.SquadLeader != 0ul && string.IsNullOrEmpty(player.Save.SquadName))
+        {
+            string sn = player.Save.SquadName;
+            ulong pl = player.Save.SquadLeader;
+            Squad squad = Squads.Find(s => s.Team == team && s.Name.Equals(sn, StringComparison.Ordinal) && s.Leader.Steam64 == pl);
 
-        if (squad is not null && !squad.IsFull())
-        {
-            JoinSquad(player, squad);
+            if (squad is not null && !squad.IsFull() && (!squad.IsLocked || player.Save.SquadWasLocked))
+            {
+                JoinSquad(player, squad);
+            }
+
+            return;
         }
-        else
-        {
-            SendSquadList(player, team);
-        }
+        
+        SendSquadList(player, team);
     }
     public static void SendSquadListToTeam(ulong team)
     {
@@ -727,6 +731,19 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         ActionLog.Add(value ? ActionLogType.LockedSquad : ActionLogType.UnlockedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
         squad.IsLocked = value;
         ReplicateLockSquad(squad);
+    }
+
+    void IReloadUIListener.ReloadUI(UCPlayer player)
+    {
+        if (player.Squad == null)
+            SendSquadList(player);
+        else
+        {
+            SendSquadMenu(player, player.Squad);
+            UpdateMemberList(player.Squad);
+            if (RallyManager.HasRally(player.Squad, out RallyPoint p))
+                p.ShowUIForPlayer(player);
+        }
     }
 }
 

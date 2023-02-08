@@ -58,6 +58,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         new KeyValuePair<string, Type>("Hardpoint", typeof(Hardpoint))
     };
     internal static GamemodeConfig ConfigObj;
+    public static Action? OnStateUpdated;
     public static WinToastUI WinToastUI;
     public Whitelister Whitelister;
     public CooldownManager Cooldowns;
@@ -120,6 +121,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         this._eventLoopSpeed = eventLoopSpeed;
         this._useEventLoop = eventLoopSpeed > 0;
         this._state = State.Loading;
+        OnStateUpdated?.Invoke();
     }
     public void SetTiming(float newSpeed)
     {
@@ -308,6 +310,14 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     /// <remarks>No base</remarks>
     protected virtual Task PlayerInit(UCPlayer player, bool wasAlreadyOnline, CancellationToken token) => Task.CompletedTask;
 
+    /// <summary>Ran when a player's UI needs to regenerate (i.e. after closing a menu).</summary>
+    /// <remarks>No base</remarks>
+    protected virtual void ReloadUI(UCPlayer player) { }
+
+    /// <summary>Ran when a player's language changes, <see cref="ReloadUI"/> is also called.</summary>
+    /// <remarks>No base</remarks>
+    protected virtual void OnLanguageChanged(UCPlayer player) { }
+
     /// <summary>Run in <see cref="EventLoopAction"/>, returns true if <param name="seconds"/> ago it would've also returned true. Based on tick speed and number of ticks.</summary>
     /// <remarks>Returns true if the second mark passed between the end of last tick and the start of this tick. Inlined when possible.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -328,6 +338,11 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (!player.IsOnline)
             return;
         Task task;
+        if (player.Save.LastGame != GameID)
+        {
+            player.Save.LastGame = GameID;
+            PlayerSave.WriteToSaveFile(player.Save);
+        }
         player.HasInitedOnce = true;
         for (int i = 0; i < _singletons.Count; ++i)
         {
@@ -526,6 +541,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     public void OnStagingComplete()
     {
+        OnStateUpdated?.Invoke();
         for (int i = 0; i < _singletons.Count; ++i)
             if (_singletons[i] is IStagingPhaseOverListener staging)
                 staging.OnStagingPhaseOver();
@@ -644,6 +660,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             token.CombineIfNeeded(UnloadToken);
             ThreadUtil.assertIsGameThread();
             this._state = State.Finished;
+            OnStateUpdated?.Invoke();
             L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
             for (int i = 0; i < _singletons.Count; ++i)
             {
@@ -852,9 +869,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             _state = State.Active;
             _gameID = DateTime.UtcNow.Ticks;
             _startTime = Time.realtimeSinceStartup;
-            for (int i = 0; i < Provider.clients.Count; i++)
-                if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = _gameID;
             PlayerManager.ApplyToOnline();
+            OnStateUpdated?.Invoke();
             if (!onLoad)
             {
                 for (int i = 0; i < _singletons.Count; ++i)
@@ -927,7 +943,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     internal async Task OnPlayerJoined(UCPlayer player, CancellationToken token)
     {
         ThreadUtil.assertIsGameThread();
-        token.CombineIfNeeded(UnloadToken, player.DisconnectToken);
+        token.CombineIfNeeded(UnloadToken);
         for (int i = 0; i < _singletons.Count; ++i)
         {
             IUncreatedSingleton singleton = _singletons[i];
@@ -945,8 +961,15 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 }
             }
         }
-        L.LogDebug("connect done.");
         await InternalPlayerInit(player, false, token).ConfigureAwait(false);
+        await UCWarfare.ToUpdate(token);
+        if (player.IsOnline)
+        {
+            UCPlayer.LoadingUI.ClearFromPlayer(player.Connection);
+            if (!player.ModalNeeded)
+                player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+        }
+        player.Save.Apply(player);
     }
     public virtual void OnGroupChanged(GroupChanged e) { }
     private void OnGroupChangedIntl(GroupChanged e)
@@ -960,12 +983,43 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
         OnGroupChanged(e);
     }
+    internal void InvokeReloadUI(UCPlayer player)
+    {
+        ReloadUI(player);
+        if (ShowXPUI)
+            Points.UpdateXPUI(player);
+        if (ShowOFPUI)
+            Points.UpdateCreditsUI(player);
+        for (int i = 0; i < _singletons.Count; ++i)
+        {
+            IUncreatedSingleton singleton = _singletons[i];
+            if (singleton is IReloadUIListener l1)
+                l1.ReloadUI(player);
+        }
+    }
+    internal void InvokeLanguageChanged(UCPlayer player)
+    {
+        OnLanguageChanged(player);
+        for (int i = 0; i < _singletons.Count; ++i)
+        {
+            IUncreatedSingleton singleton = _singletons[i];
+            if (singleton is ILanguageChangedListener l1)
+                l1.OnLanguageChanged(player);
+        }
+    }
     public virtual void PlayerLeave(UCPlayer player)
     {
-        if (State is not State.Active or State.Staging && PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave save))
+        if (State is not State.Active and not State.Staging)
         {
-            save.ShouldRespawnOnJoin = true;
-            PlayerSave.WriteToSaveFile(save);
+            player.Save.ShouldRespawnOnJoin = true;
+            player.Save.LastGame = GameID;
+            PlayerSave.WriteToSaveFile(player.Save);
+        }
+
+        if (player.Save.LastGame != GameID)
+        {
+            player.Save.LastGame = GameID;
+            PlayerSave.WriteToSaveFile(player.Save);
         }
         foreach (IPlayerDisconnectListener listener in _singletons.OfType<IPlayerDisconnectListener>())
             listener.OnPlayerDisconnecting(player);
@@ -1010,7 +1064,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         _stagingSeconds = seconds;
         _state = State.Staging;
-
+        OnStateUpdated?.Invoke();
         StagingPhaseTimer = StartCoroutine(StagingPhaseLoop());
     }
     public void SkipStagingPhase()

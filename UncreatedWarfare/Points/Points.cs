@@ -209,7 +209,7 @@ public static class Points
 
                 if (!parameters.IsPurchase && player.Player.TryGetPlayerData(out UCPlayerData c))
                 {
-                    if (c.stats is IExperienceStats kd)
+                    if (c.Stats is IExperienceStats kd)
                         kd.AddCredits(amount);
                 }
 
@@ -351,7 +351,7 @@ public static class Points
 
                     if (player.Player.TryGetPlayerData(out UCPlayerData c))
                     {
-                        if (c.stats is IExperienceStats kd)
+                        if (c.Stats is IExperienceStats kd)
                             kd.AddXP(amount);
                     }
 
@@ -563,8 +563,8 @@ public static class Points
             ulong killerID = e.Killer.Steam64;
             ulong victimID = e.Player.Steam64;
 
-            UCPlayer? assister = UCPlayer.FromID(component.secondLastAttacker.Key);
-            if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.secondLastAttacker.Value).TotalSeconds <= 30)
+            UCPlayer? assister = UCPlayer.FromID(component.SecondLastAttacker.Key);
+            if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.SecondLastAttacker.Value).TotalSeconds <= 30)
             {
                 AwardXP(assister, XPConfig.KillAssistXP, T.XPToastKillAssist);
             }

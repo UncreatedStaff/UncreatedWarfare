@@ -65,7 +65,7 @@ public static class IconManager
         }
 
         // buildable
-        else if (Gamemode.Config.EffectMarkerBuildable.ValidReference(out guid) && FOBManager.Config.Buildables.Exists(b => b.Foundation.MatchGuid(drop.asset.GUID) && b.Type != EBuildableType.FORTIFICATION))
+        else if (Gamemode.Config.EffectMarkerBuildable.ValidReference(out guid) && FOBManager.Config.Buildables.Exists(b => b.Foundation.MatchGuid(drop.asset.GUID) && b.Type != BuildableType.Fortification))
             AttachIcon(guid, drop.model, data.group, 2f);
     }
     private static void OnGroupChanged(GroupChanged e)

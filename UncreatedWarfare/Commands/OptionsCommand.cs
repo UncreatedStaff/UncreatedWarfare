@@ -1,5 +1,8 @@
 ﻿using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Teams;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
@@ -21,7 +24,11 @@ public sealed class OptionsCommand : Command
 
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         if (!ctx.HasArgs(2))
-            throw ctx.SendCorrectUsage(Syntax);
+        {
+            TeamSelector.OpenOptionsMenu(ctx.Caller);
+            ctx.Defer();
+            return;
+        }
         if (ctx.MatchParameter(0, "imgui", "legacyui", "oldui"))
         {
             if (Util.TryParse(ctx.GetRange(1)!, out bool value))
@@ -43,7 +50,6 @@ public sealed class OptionsCommand : Command
                 PlayerSave.WriteToSaveFile(save);
                 ctx.Reply(T.OptionsSet, "IMGUI",
                     Translation.ToString(value, ctx.Caller.Language, null, ctx.Caller, TranslationFlags.None));
-                UCWarfare.I.UpdateLangs(ctx.Caller);
             }
             else throw ctx.Reply(T.OptionsInvalidValue, ctx.Get(0)!.ToUpperInvariant(), typeof(bool));
         }

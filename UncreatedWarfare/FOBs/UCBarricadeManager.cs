@@ -154,26 +154,33 @@ public static class UCBarricadeManager
         if (barricadeTransform == null) return null;
         return barricadeTransform.GetComponent<T>();
     }
-    public static bool IsBarricadeNearby(Guid guid, float range, Vector3 origin, out BarricadeDrop drop)
+    public static bool IsBarricadeNearby(Guid id, float range, Vector3 origin, out BarricadeDrop drop)
     {
-        float sqrRange = range * range;
-        for (int x = 0; x < Regions.WORLD_SIZE; x++)
+        lock (RegionBuffer)
         {
-            for (int y = 0; y < Regions.WORLD_SIZE; y++)
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            RegionBuffer.Clear();
+            float sqrRange = range * range;
+            Regions.getRegionsInRadius(origin, range, RegionBuffer);
+            for (int r = 0; r < RegionBuffer.Count; r++)
             {
-                BarricadeRegion region = BarricadeManager.regions[x, y];
-                foreach (BarricadeDrop drop2 in region.drops)
+                RegionCoordinate rc = RegionBuffer[r];
+                BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
+                foreach (BarricadeDrop barricade in region.drops)
                 {
-                    if (drop2.asset.GUID == guid && (drop2.model.position - origin).sqrMagnitude <= sqrRange)
+                    if (barricade.asset.GUID == id && (barricade.model.position - origin).sqrMagnitude <= sqrRange)
                     {
-                        drop = drop2;
+                        drop = barricade;
                         return true;
                     }
                 }
             }
+
+            drop = null!;
+            return false;
         }
-        drop = null!;
-        return false;
     }
     public static IEnumerable<BarricadeDrop> GetBarricadesByGuid(Guid guid)
     {
@@ -455,6 +462,35 @@ public static class UCBarricadeManager
                 }
             }
             return rtn;
+        }
+    }
+    public static bool IsBarricadeNearby(Guid id, float range, Vector3 origin, ulong team, out BarricadeDrop drop)
+    {
+        lock (RegionBuffer)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            RegionBuffer.Clear();
+            float sqrRange = range * range;
+            ulong group = TeamManager.GetGroupID(team);
+            Regions.getRegionsInRadius(origin, range, RegionBuffer);
+            for (int r = 0; r < RegionBuffer.Count; r++)
+            {
+                RegionCoordinate rc = RegionBuffer[r];
+                BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
+                foreach (BarricadeDrop barricade in region.drops)
+                {
+                    if (barricade.GetServersideData().group == group && barricade.asset.GUID == id && (barricade.model.position - origin).sqrMagnitude <= sqrRange)
+                    {
+                        drop = barricade;
+                        return true;
+                    }
+                }
+            }
+
+            drop = null!;
+            return false;
         }
     }
     public static int CountNearbyBarricades(Guid id, float range, Vector3 origin)

@@ -10,7 +10,7 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets;
 
-public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartListener, IGameTickListener, IFlagCapturedListener, IFlagNeutralizedListener
+public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartListener, IGameTickListener, IFlagCapturedListener, IFlagNeutralizedListener, IReloadUIListener
 {
     public static TicketManager Singleton;
     public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
@@ -63,7 +63,6 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
         Provider.Load();
         EventDispatcher.PlayerDied += OnPlayerDeath;
         EventDispatcher.GroupChanged += OnGroupChanged;
-        EventDispatcher.UIRefreshRequested += ReloadUI;
     }
     public override void Unload()
     {
@@ -73,7 +72,6 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
         Provider = null!;
         Team1Tickets = 0;
         Team2Tickets = 0;
-        EventDispatcher.UIRefreshRequested -= ReloadUI;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         EventDispatcher.PlayerDied -= OnPlayerDeath;
     }
@@ -83,10 +81,6 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
         {
             Provider.Tick();
         }
-    }
-    private void ReloadUI(PlayerEvent e)
-    {
-        SendUI(e.Player);
     }
     public void SendUI(UCPlayer player)
     {
@@ -178,22 +172,22 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
             }
         }
     }
+
+    void IReloadUIListener.ReloadUI(UCPlayer player)
+    {
+        SendUI(player);
+    }
 }
 public class TicketData : JSONConfigData
 {
     public int TicketHandicapDifference;
     public int FOBCost;
     public int PlayerDeathCost;
-    public ushort Team1TicketUIID;
-    public ushort Team2TicketUIID;
 
     public override void SetDefaults()
     {
         PlayerDeathCost = 1;
         TicketHandicapDifference = 40;
         FOBCost = 15;
-        Team1TicketUIID = 36035;
-        Team2TicketUIID = 36058;
     }
-    public TicketData() { }
 }

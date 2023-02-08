@@ -288,6 +288,9 @@ public static class EventDispatcher
     internal static void InvokeOnPlayerDied(PlayerDied e)
     {
         if (PlayerDied == null) return;
+        if (e.Player.Player.TryGetPlayerData(out UCPlayerData data))
+            data.CancelDeployment();
+        
         foreach (EventDelegate<PlayerDied> inv in PlayerDied.GetInvocationList().Cast<EventDelegate<PlayerDied>>())
         {
             if (!e.CanContinue) break;
@@ -330,12 +333,13 @@ public static class EventDispatcher
     {
         if (PlayerJoined == null) return;
         UCPlayer player;
+        bool newPlayer;
         try
         {
             Player pl = PlayerTool.getPlayer(steamID);
             if (pl is null)
                 goto error;
-            player = PlayerManager.InvokePlayerConnected(pl);
+            player = PlayerManager.InvokePlayerConnected(pl, out newPlayer);
             if (player is null)
                 goto error;
         }
@@ -345,8 +349,7 @@ public static class EventDispatcher
             L.LogError(ex);
             goto error;
         }
-        PlayerSave.TryReadSaveFile(steamID.m_SteamID, out PlayerSave? save);
-        PlayerJoined args = new PlayerJoined(player, save);
+        PlayerJoined args = new PlayerJoined(player, newPlayer);
         foreach (EventDelegate<PlayerJoined> inv in PlayerJoined.GetInvocationList().Cast<EventDelegate<PlayerJoined>>())
         {
             if (!args.CanContinue) break;

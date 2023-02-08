@@ -141,6 +141,7 @@ public class FOB : IFOB, IDeployable
     public ulong Owner => Radio.GetServersideData().owner;
     public BarricadeDrop? Bunker { get; private set; }
     public Vector3 Position => Radio.model.position;
+    Vector3 IDeployable.Position => Bunker == null ? Position : Bunker.model.position;
     public float Yaw => Bunker == null || Bunker.model == null ? 0 : (Bunker.model.rotation.eulerAngles.y + 90f);
     public float Radius { get; private set; }
     public float SqrRadius
@@ -189,7 +190,7 @@ public class FOB : IFOB, IDeployable
             ? UCBarricadeManager.GetNearbyBarricades(guid, Radius, Position, Team, true)
             : Array.Empty<BarricadeDrop>();
     }
-    public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.Config.Buildables.Where(bl => bl.Type == EBuildableType.EMPLACEMENT).Cast<Guid>(), Radius, Position);
+    public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.Config.Buildables.Where(bl => bl.Type == BuildableType.Emplacement).Cast<Guid>(), Radius, Position);
     public List<UCPlayer> FriendliesOnFOB { get; }
     public List<UCPlayer> NearbyEnemies { get; }
     public ulong Killer { get; private set; }
@@ -357,7 +358,7 @@ public class FOB : IFOB, IDeployable
         {
             if (item.item.id == _shortBuildID || item.item.id == _shortAmmoID)
             {
-                if (EventFunctions.droppeditemsInverse.TryGetValue(item.instanceID, out ulong playerID))
+                if (EventFunctions.DroppedItemsOwners.TryGetValue(item.instanceID, out ulong playerID))
                 {
                     UCPlayer? player = UCPlayer.FromID(playerID);
                     if (player != null)
@@ -412,7 +413,7 @@ public class FOB : IFOB, IDeployable
             Ammo += Math.Min(ammoCount, 3);
             UCBarricadeManager.RemoveNearbyItemsByID(_ammoID, 3, Position, Radius);
             if (Gamemode.Config.EffectUnloadAmmo.ValidReference(out EffectAsset effect))
-                F.TriggerEffectReliable(effect, EffectManager.MEDIUM, nearbyBuild[0].point);
+                F.TriggerEffectReliable(effect, EffectManager.MEDIUM, nearbyAmmo[0].point);
             foreach (UCPlayer player in FriendliesOnFOB)
                 UpdateAmmoUI(player);
         }
@@ -725,7 +726,7 @@ public class FOB : IFOB, IDeployable
         if (IsBleeding || !IsSpawnable)
         {
             if (ctx is not null)
-                throw ctx.Reply(T.DeployNotSpawnable, this);
+                throw ctx.Reply(IsBleeding ? T.DeployRadioDamaged : T.DeployNotSpawnable, this);
             return false;
         }
         if (Bunker == null)
@@ -765,7 +766,14 @@ public class FOB : IFOB, IDeployable
         ActionLog.Add(ActionLogType.DeployToLocation, "FOB BUNKER " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
         if (chat)
             player.SendChat(T.DeploySuccess, this);
+
+        Points.TryAwardFOBCreatorXP(this, Points.XPConfig.FOBDeployedXP, T.XPToastFOBUsed);
+
+        if (Bunker != null && Bunker.model.TryGetComponent(out BuiltBuildableComponent comp))
+            QuestManager.OnPlayerSpawnedAtBunker(comp, this, player);
     }
+
+    float IDeployable.GetDelay() => FOBManager.Config.DeployFOBDelay;
 }
 
 public interface IFOB : ITranslationArgument
