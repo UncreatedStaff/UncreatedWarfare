@@ -81,7 +81,7 @@ public class VehicleComponent : MonoBehaviour
             if (VehicleBay.Config.GroundAAWeapons.HasID(passenger.turret.itemID))
                 passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(450, 1000, Gamemode.Config.EffectLockOn1, 2, 15.5f);
             if (VehicleBay.Config.AirAAWeapons.HasID(passenger.turret.itemID))
-                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(600, Gamemode.Config.EffectLockOn2, 1, 11);
+                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(600, Gamemode.Config.EffectLockOn2, 0.75f, 11);
         }
 
         ReloadCountermeasures();
@@ -273,6 +273,9 @@ public class VehicleComponent : MonoBehaviour
     private int _flaresLeft;
     public void ReloadCountermeasures()
     {
+        if (_flaresLeft == STARTING_FLARES)
+            return;
+
         _flaresLeft = STARTING_FLARES;
         UpdateHUDFlares();
     }
@@ -428,6 +431,7 @@ public class VehicleComponent : MonoBehaviour
                 if (Vehicle.speed >= -1 && Vehicle.speed <= 1)
                 {
                     TryStartAutoLoadSupplies();
+                    ReloadCountermeasures();
                 }
             }
             else if (_isResupplied)
@@ -493,7 +497,12 @@ public class VehicleComponent : MonoBehaviour
 
                 Rigidbody? rigidbody = countermeasureVehicle.transform.GetComponent<Rigidbody>();
                 //Vector3 velocity = Vehicle.transform.GetComponent<Rigidbody>().velocity);
-                Vector3 velocity = Vehicle.transform.forward * Vehicle.speed * 0.5f - Vehicle.transform.up * 15 + Vehicle.transform.right * sideforce;
+                Vector3 velocity = 
+                    Vehicle.transform.forward * Random.Range(15, 25) + 
+                    Vehicle.transform.forward * Vehicle.speed * 0.5f - 
+                    Vehicle.transform.up * 15 + 
+                    Vehicle.transform.right * sideforce;
+
                 rigidbody.velocity = velocity;
 
                 var countermeasure = countermeasureVehicle.gameObject.AddComponent<Countermeasure>();
