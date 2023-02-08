@@ -66,11 +66,11 @@ public sealed class GamemodeConfigData : JSONConfigData
 
     [Sync(11)]
     [JsonPropertyName("barricade_time_restricted_storages")]
-    public RotatableConfig<SyncableArray<JsonAssetReference<ItemBarricadeAsset>>> TimeLimitedStorages { get; set; }
+    public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> TimeLimitedStorages { get; set; }
 
     [Sync(12)]
     [JsonPropertyName("barricade_fob_radios")]
-    public RotatableConfig<SyncableArray<JsonAssetReference<ItemBarricadeAsset>>> FOBRadios { get; set; }
+    public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> FOBRadios { get; set; }
 
     [Sync(13)]
     [JsonPropertyName("barricade_zone_blocker_team_1")]
@@ -79,6 +79,9 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(14)]
     [JsonPropertyName("barricade_zone_blocker_team_2")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeZoneBlockerTeam2 { get; set; }
+    [Sync(15)]
+    [JsonPropertyName("barricade_rallypoints")]
+    public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> RallyPoints { get; set; }
 
     [Sync(101)]
     [JsonPropertyName("structure_vehicle_bay")]
@@ -739,18 +742,24 @@ public sealed class GamemodeConfigData : JSONConfigData
         BarricadeAmmoBag = new JsonAssetReference<ItemBarricadeAsset>("16f55b999e9b4f158be12645e41dd753");
         StructureVehicleBay = new JsonAssetReference<ItemAsset>("c076f9e9f35f42a4b8b5711dfb230010");
         BarricadeUAV = new JsonAssetReference<ItemBarricadeAsset>("fb8f84e2617b480aadfd77bbf4a6c3ec");
-        TimeLimitedStorages = (SyncableArray<JsonAssetReference<ItemBarricadeAsset>>)new JsonAssetReference<ItemBarricadeAsset>[]
+        TimeLimitedStorages = new JsonAssetReference<ItemBarricadeAsset>[]
         {
             BarricadeAmmoCrate,
             BarricadeRepairStation,
             "a2eb76590cf74401aeb7ff4b4b79fd86", // supply crate
             "2193aa0b272f4cc1938f719c8e8badb1"  // supply roll
         };
-        FOBRadios = (SyncableArray<JsonAssetReference<ItemBarricadeAsset>>)new JsonAssetReference<ItemBarricadeAsset>[]
+        FOBRadios = new JsonAssetReference<ItemBarricadeAsset>[]
         {
             "7715ad81f1e24f60bb8f196dd09bd4ef",
             "fb910102ad954169abd4b0cb06a112c8",
             "c7754ac78083421da73006b12a56811a"
+        };
+        RallyPoints = new JsonAssetReference<ItemBarricadeAsset>[]
+        {
+            "5e1db525179341d3b0c7576876212a81", // USA
+            "0d7895360c80440fbe4a45eba28b2007", // Russia
+            "c03352d9e6bb4e2993917924b604ee76" // MEC
         };
         BarricadeZoneBlockerTeam1 = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(
             new JsonAssetReference<ItemBarricadeAsset>(Guid.Empty),
