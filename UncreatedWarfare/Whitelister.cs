@@ -7,6 +7,7 @@ using System.Linq;
 using Uncreated.Framework;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -139,7 +140,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
         }
         else
         {
-            if (!player.OnDuty() && (!IsWhitelisted(barricade.asset.GUID, out _) || isFOB))
+            if (!(player.OnDuty() || isFOB && player.OnDuty() || IsWhitelisted(barricade.asset.GUID, out _) || (player.IsSquadLeader() && RallyManager.IsRally(barricade.asset))))
             {
                 player.SendChat(T.WhitelistProhibitedSalvage, barricade.asset);
                 shouldAllow = false;

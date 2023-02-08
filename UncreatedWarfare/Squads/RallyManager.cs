@@ -5,6 +5,7 @@ using System.Linq;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using Uncreated.Warfare.Gamemodes;
 
 namespace Uncreated.Warfare.Squads;
 
@@ -20,7 +21,7 @@ public static class RallyManager
 #endif
         SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
-        if (TeamManager.Team1Faction.RallyPoint.MatchGuid(data.barricade.asset.GUID) || TeamManager.Team2Faction.RallyPoint.MatchGuid(data.barricade.asset.GUID))
+        if (IsRally(drop.asset))
         {
             UCPlayer? player = UCPlayer.FromID(data.owner);
             if (player?.Squad != null)
@@ -46,13 +47,13 @@ public static class RallyManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (TeamManager.Team1Faction.RallyPoint.MatchGuid(barricade.asset.GUID) || TeamManager.Team2Faction.RallyPoint.MatchGuid(barricade.asset.GUID))
+        if (IsRally(barricade.asset))
         {
             UCPlayer? player = UCPlayer.FromID(owner);
             if (player == null) return;
             if (player.Squad != null && player.Squad.Leader.Steam64 == player.Steam64)
             {
-                if (player.Squad.Members.Count > 1)
+                if (player.Squad.Members.Count > 1 || player.OnDuty())
                 {
                     int nearbyEnemiesCount = 0;
                     float sqrdst = SquadManager.Config.RallyDespawnDistance *
@@ -91,7 +92,7 @@ public static class RallyManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (TeamManager.Team1Faction.RallyPoint.MatchGuid(data.barricade.asset.GUID) || TeamManager.Team2Faction.RallyPoint.MatchGuid(data.barricade.asset.GUID))
+        if (IsRally(data.barricade.asset))
         {
             TryDeleteRallyPoint(instanceID);
         }
@@ -194,10 +195,9 @@ public static class RallyManager
         if (BarricadeManager.regions is null) return new BarricadeDrop[0];
         IEnumerable<BarricadeDrop> barricadeDrops = BarricadeManager.regions.Cast<BarricadeRegion>().SelectMany(brd => brd.drops);
 
-        return barricadeDrops.Where(b =>
-            TeamManager.Team1Faction.RallyPoint.MatchGuid(b.asset.GUID) ||
-            TeamManager.Team2Faction.RallyPoint.MatchGuid(b.asset.GUID));
+        return barricadeDrops.Where(b => IsRally(b.asset));
     }
+    public static bool IsRally(ItemBarricadeAsset asset) => Gamemode.Config.RallyPoints.Value.Any(r => r.MatchGuid(asset.GUID));
 }
 
 public class RallyPoint
@@ -273,7 +273,7 @@ public class RallyComponent : MonoBehaviour
     public void Initialize(RallyPoint rallypoint)
     {
         parent = rallypoint;
-        StartCoroutine(RallyPointLoop());
+        //StartCoroutine(RallyPointLoop());
     }
     private IEnumerator<WaitForSeconds> RallyPointLoop()
     {
