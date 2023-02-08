@@ -63,7 +63,7 @@ public class BuildableComponent : MonoBehaviour
             return;
         }
 
-        if (Buildable.Type == BuildableType.Bunker && fob!.Bunker != null)
+        if (Buildable.Type == EBuildableType.FOB_BUNKER && fob!.Bunker != null)
         {
             builder.SendChat(T.BuildTickStructureExists, Buildable);
             return;
@@ -353,7 +353,7 @@ public class BuildableComponent : MonoBehaviour
                 ? UCBarricadeManager.GetNearbyBarricades(guid, 5, point, false).FirstOrDefault()
                 : null;
 
-            if (buildable.Type == BuildableType.Emplacement)
+            if (buildable.Type == EBuildableType.EMPLACEMENT)
             {
                 if (!buildable.Foundation.Value.Exists || buildable.Emplacement is null || buildable.Emplacement.EmplacementVehicle.Exists)
                 {
@@ -416,7 +416,7 @@ public class BuildableComponent : MonoBehaviour
             else
             {
                 int existing;
-                if (buildable.Type != BuildableType.Emplacement)
+                if (buildable.Type != EBuildableType.EMPLACEMENT)
                     existing = UCBarricadeManager.CountNearbyBarricades(buildable.BuildableBarricade.Value, fob.Radius, fob.Position, fob.Team);
                 else
                     existing = UCVehicleManager.CountNearbyVehicles(buildable.Emplacement!.EmplacementVehicle, fob.Radius, fob.Position, placer.GetTeam()); // TODO: Check vehicle team
