@@ -52,7 +52,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
                 if (PlayerManager.OnlinePlayers[i].TeamSelectorData is not { IsSelecting: true })
-                    TeamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
+                    TeamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i], TeamSelector.JoinTeamBehavior.Shuffle);
             }
         }
         Task task = base.PostInit(token);

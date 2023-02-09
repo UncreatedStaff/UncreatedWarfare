@@ -3,6 +3,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Teams;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
@@ -40,7 +41,7 @@ public class TeamsCommand : Command
             ctx.Reply(T.NotInMain);
             return;
         }
-        teamgm.TeamSelector!.JoinSelectionMenu(ctx.Caller);
+        teamgm.TeamSelector!.JoinSelectionMenu(ctx.Caller, TeamSelector.JoinTeamBehavior.KeepTeam);
         ctx.Defer();
     }
 }
