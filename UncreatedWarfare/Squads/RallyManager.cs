@@ -218,11 +218,15 @@ public class RallyPoint : MonoBehaviour
     }
     private IEnumerator<WaitForSeconds> RallyRoutine()
     {
-        foreach (var player in Squad.Members)
-            AwaitingPlayers.Add(player);
-
-        SecondsLeft = 5;
+        SecondsLeft = SquadManager.Config.RallyTimer;
         IsDeploying = true;
+
+        foreach (var player in Squad.Members)
+        {
+            AwaitingPlayers.Add(player);
+            player.SendChat(T.RallyWait, SecondsLeft);
+            Tips.TryGiveTip(player, 5, T.RallyToast, SecondsLeft);
+        }
 
         while (SecondsLeft > 0)
         {

@@ -114,6 +114,9 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 #endif
         float minAngle = 45;
 
+        if (_firer is null)
+            return false;
+
         foreach (SpottedComponent spotted in SpottedComponent.ActiveMarkers)
         {
             if (spotted.SpottingTeam == _firer.Player.quests.groupID.m_SteamID && spotted.IsLaserTarget)

@@ -2,6 +2,7 @@
 using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Squads;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -67,8 +68,12 @@ public class RallyCommand : Command
         {
             if (!rallypoint.IsDeploying)
             {
+                if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.Rally, out Cooldown cooldown))
+                    throw ctx.Reply(T.RallyCooldown, cooldown);
+
                 rallypoint.StartDeployment();
-                ctx.Reply(T.RallyWait, rallypoint.SecondsLeft);
+                CooldownManager.StartCooldown(ctx.Caller, CooldownType.Rally, SquadManager.Config.RallyCooldown);
+                ctx.ReplyString("");
             }
             else throw ctx.Reply(T.RallyAlreadyDeploying);
         }

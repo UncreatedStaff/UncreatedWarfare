@@ -225,5 +225,7 @@ public enum CooldownType
     [Translatable("Request Single Trait")]
     IndividualRequestTrait,
     [Translatable("Announce Action")]
-    AnnounceAction
+    AnnounceAction,
+    [Translatable("Rally")]
+    Rally
 }

@@ -355,7 +355,7 @@ public class BuildableComponent : MonoBehaviour
 
             if (buildable.Type == BuildableType.Emplacement)
             {
-                if (!buildable.Foundation.Value.Exists || buildable.Emplacement is null || buildable.Emplacement.EmplacementVehicle.Exists)
+                if (!buildable.Foundation.Value.Exists || buildable.Emplacement is null || !buildable.Emplacement.EmplacementVehicle.Exists)
                 {
                     // invalid GUIDs
                     placer.SendChat(T.BuildInvalidAsset);
@@ -435,12 +435,13 @@ public class BuildableComponent : MonoBehaviour
             int totalPlaced = UCBarricadeManager.CountBarricadesWhere(b =>
             b.GetServersideData().owner == placer.Steam64 &&
                 b.asset.GUID == buildable.BuildableBarricade.Value.Guid &&
-                (b.GetServersideData().point - placer.Position).sqrMagnitude < Mathf.Pow(100, 2)); // TODO: check will not work for emplacements - fix?
+                (b.GetServersideData().point - placer.Position).sqrMagnitude < Mathf.Pow(50, 2)); // TODO: check will not work for emplacements - fix?
 
-            if (totalPlaced >= placer.ActiveKit!.Item!.CountItems(buildable.BuildableBarricade.Value.Guid))
+            int kitCount = placer.ActiveKit!.Item!.CountItems(buildable.Foundation.Value.Guid);
+            if (totalPlaced >= kitCount)
             {
                 // regional buildable limit reached for this player
-                placer.SendChat(T.RegionalBuildLimitReached, buildable.Limit, buildable);
+                placer.SendChat(T.RegionalBuildLimitReached, kitCount, buildable);
                 return false;
             }
         }

@@ -1068,6 +1068,7 @@ public class FOBConfigData : JSONConfigData
                 RequiredHits = 30,
                 RequiredBuild = 15,
                 Team = 0,
+                Limit = 1,
                 Emplacement = null
             },
             new BuildableData
@@ -1078,6 +1079,7 @@ public class FOBConfigData : JSONConfigData
                 RequiredHits = 10,
                 RequiredBuild = 1,
                 Team = 0,
+                Limit = 6,
                 Emplacement = null
             },
             new BuildableData
@@ -1088,6 +1090,7 @@ public class FOBConfigData : JSONConfigData
                 RequiredHits = 25,
                 RequiredBuild = 15,
                 Team = 0,
+                Limit = 1,
                 Emplacement = null
             },
             new BuildableData
@@ -1096,9 +1099,10 @@ public class FOBConfigData : JSONConfigData
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("ab702192eab4456ebb9f6d7cc74d4ba2"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("15f674dcaf3f44e19a124c8bf7e19ca2"),
                 Type = BuildableType.Fortification,
-                RequiredHits = 8,
+                RequiredHits = 10,
                 RequiredBuild = 1,
                 Team = 0,
+                Limit = 8,
                 Emplacement = null
             },
             new BuildableData
@@ -1107,9 +1111,10 @@ public class FOBConfigData : JSONConfigData
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("f3bd9ee2fa334faabc8fd9d5a3b84424"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("a9294335d8e84b76b1cbcb7d70f66aaa"),
                 Type = BuildableType.Fortification,
-                RequiredHits = 8,
+                RequiredHits = 10,
                 RequiredBuild = 1,
                 Team = 0,
+                Limit = 6,
                 Emplacement = null
             },
             new BuildableData
@@ -1118,9 +1123,10 @@ public class FOBConfigData : JSONConfigData
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("eefee76f077349e58359f5fd03cf311d"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("920f8b30ae314406ab032a0c2efa753d"),
                 Type = BuildableType.Fortification,
-                RequiredHits = 8,
+                RequiredHits = 10,
                 RequiredBuild = 1,
                 Team = 0,
+                Limit = 4,
                 Emplacement = null
             },
             new BuildableData
@@ -1132,6 +1138,7 @@ public class FOBConfigData : JSONConfigData
                 RequiredHits = 12,
                 RequiredBuild = 2,
                 Team = 0,
+                Limit = 3,
                 Emplacement = null
             },
             new BuildableData
@@ -1140,9 +1147,10 @@ public class FOBConfigData : JSONConfigData
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("bc24bd85ff714ff7bb2f8b2dd5056395"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("a2a8a01a58454816a6c9a047df0558ad"),
                 Type = BuildableType.Fortification,
-                RequiredHits = 8,
+                RequiredHits = 10,
                 RequiredBuild = 1,
                 Team = 0,
+                Limit = 16,
                 Emplacement = null
             },
             new BuildableData
@@ -1151,9 +1159,10 @@ public class FOBConfigData : JSONConfigData
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("e1af3a3af31e4996bc5d6ffd9a0773ec"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("baf23a8b514441ee8db891a3ddf32ef4"),
                 Type = BuildableType.Fortification,
-                RequiredHits = 20,
+                RequiredHits = 25,
                 RequiredBuild = 1,
                 Team = 0,
+                Limit = 4,
                 Emplacement = null
             },
             new BuildableData
@@ -1162,9 +1171,10 @@ public class FOBConfigData : JSONConfigData
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("857c85161f254964a921700a69e215a9"),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("827d0ca8bfff43a39f750f191e16ea71"),
                 Type = BuildableType.Fortification,
-                RequiredHits = 15,
+                RequiredHits = 20,
                 RequiredBuild = 1,
                 Team = 0,
+                Limit = 4,
                 Emplacement = null
             },
             new BuildableData
@@ -1173,7 +1183,7 @@ public class FOBConfigData : JSONConfigData
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("80396c361d3040d7beb3921964ec2997"),
                 Type = BuildableType.Emplacement,
-                RequiredHits = 10,
+                RequiredHits = 16,
                 RequiredBuild = 6,
                 Team = 1,
                 Limit = 2,
@@ -1191,7 +1201,7 @@ public class FOBConfigData : JSONConfigData
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("e44ba62f763c432e882ddc7eabaa9c77"),
                 Type = BuildableType.Emplacement,
-                RequiredHits = 10,
+                RequiredHits = 16,
                 RequiredBuild = 6,
                 Team = 2,
                 Limit = 2,

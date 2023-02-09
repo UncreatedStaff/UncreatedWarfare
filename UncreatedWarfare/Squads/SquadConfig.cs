@@ -20,6 +20,7 @@ public sealed class SquadsConfig : Config<SquadConfigData>
 public class SquadConfigData : JSONConfigData
 {
     public ushort RallyTimer;
+    public ushort RallyCooldown;
     public float RallyDespawnDistance;
     public int SquadDisconnectTime;
     public float MedicRange;
@@ -34,7 +35,8 @@ public class SquadConfigData : JSONConfigData
     public JsonAssetReference<EffectAsset> SquadRallyUI;
     public override void SetDefaults()
     {
-        RallyTimer = 45;
+        RallyTimer = 20;
+        RallyCooldown = 60;
         RallyDespawnDistance = 30;
         MedicRange = 300f;
         SquadDisconnectTime = 120;
