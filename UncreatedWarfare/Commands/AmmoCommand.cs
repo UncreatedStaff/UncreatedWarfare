@@ -70,7 +70,7 @@ public class AmmoCommand : AsyncCommand
                 if (!isInMain && fob!.Ammo < vehicleData.RearmCost)
                     throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, vehicleData.RearmCost);
 
-                if (vehicleData.Team != 0 && vehicleData.Team != ctx.Caller.Steam64)
+                if (vehicle.lockedGroup.m_SteamID != 0 && vehicle.lockedGroup != ctx.Caller.CSteamID)
                     throw ctx.Reply(T.AmmoVehicleCantRearm);
 
                 if (vehicleData.Items.Length == 0)
