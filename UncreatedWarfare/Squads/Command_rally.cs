@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -31,32 +32,45 @@ public class RallyCommand : Command
             return;
         }
 
-        if (ctx.Caller.Squad is null)
-            throw ctx.Reply(T.RallyNotInSquad);
+        if (ctx.Caller.Squad is null || !ctx.Caller.IsSquadLeader())
+            throw ctx.Reply(T.RallyNotSquadleader);
 
-        if (!RallyManager.HasRally(ctx.Caller.Squad, out RallyPoint rallypoint) || !rallypoint.IsActive)
-            throw ctx.Reply(ctx.Caller.IsSquadLeader() ? T.RallyNotActiveSL : T.RallyNotActive);
+        var rallypoint = ctx.Caller.Squad.RallyPoint;
+
+        if (rallypoint == null || !rallypoint.IsActive)
+            throw ctx.Reply(T.RallyNotActiveSL);
 
         if (ctx.MatchParameter(0, "cancel", "c", "abort"))
         {
-            if (rallypoint.AwaitingPlayers.RemoveAll(p => p.Steam64 == ctx.CallerID) > 0)
+            if (!ctx.Caller.IsSquadLeader())
+                throw ctx.Reply(T.RallyNoCancelPerm);
+
+            if (rallypoint.IsDeploying)
             {
+                rallypoint.AwaitingPlayers.Clear();
                 rallypoint.ShowUIForPlayer(ctx.Caller);
-                ctx.Reply(T.RallyAbort);
+                ctx.Reply(T.RallyCancel);
             }
-            else throw ctx.Reply(T.RallyNotQueued);
+            else throw ctx.Reply(T.RallyNoCancel);
+        }
+        else if (ctx.MatchParameter(0, "deny", "d"))
+        {
+            if (rallypoint.IsDeploying)
+            {
+                rallypoint.AwaitingPlayers.RemoveAll(p => p.Steam64 == ctx.CallerID);
+                rallypoint.ShowUIForPlayer(ctx.Caller);
+                ctx.Reply(T.RallyCancel);
+            }
+            else throw ctx.Reply(T.RallyNoDeny);
         }
         else if (ctx.HasArgsExact(0))
         {
-            if (rallypoint.Timer <= 0)
-                rallypoint.TeleportPlayer(ctx.Caller);
-            else if (!rallypoint.AwaitingPlayers.Exists(p => p.Steam64 == ctx.CallerID))
+            if (!rallypoint.IsDeploying)
             {
-                rallypoint.AwaitingPlayers.Add(ctx.Caller);
-                rallypoint.UpdateUIForAwaitingPlayers();
-                ctx.Reply(T.RallyWait, rallypoint.Timer);
+                rallypoint.StartDeployment();
+                ctx.Reply(T.RallyWait, rallypoint.SecondsLeft);
             }
-            else throw ctx.Reply(T.RallyAlreadyQueued);
+            else throw ctx.Reply(T.RallyAlreadyDeploying);
         }
         else throw ctx.SendCorrectUsage(SYNTAX);
     }

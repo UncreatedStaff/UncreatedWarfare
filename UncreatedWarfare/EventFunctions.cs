@@ -1534,7 +1534,7 @@ public static class EventFunctions
             IconManager.DeleteIcon(iconRenderer);
 
         if (Data.Is<ISquads>(out _))
-            RallyManager.OnBarricadeDestroyed(e.ServersideData, e.Barricade, e.InstanceID, e.VehicleRegionIndex);
+            RallyManager.OnBarricadeDestroyed(e.Barricade);
         if (e.Transform.TryGetComponent(out BarricadeComponent c))
         {
             SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);

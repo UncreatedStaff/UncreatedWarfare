@@ -233,7 +233,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                     if (s2 >= ListUI.Squads.Length) break;
                     Squad sq = Squads[s];
                     ListUI.Squads[s2].SetVisibility(c, true);
-                    ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? sq.Name.Colorize("5eff87") : sq.Name);
+                    ListUI.SquadNames[s2].SetText(c, sq.HasRally ? sq.Name.Colorize("5eff87") : sq.Name);
                     ListUI.SquadMemberCounts[s2].SetText(player.Connection,
                         sq.IsLocked ?
                             T.SquadsUIPlayerCountListLocked.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UIIconLocked) :
@@ -302,7 +302,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 if (s2 == 0)
                     ListUI.Header.SetVisibility(c, true);
                 ListUI.Squads[s2].SetVisibility(c, true);
-                ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? sq.Name.Colorize(UCWarfare.GetColorHex("rally")) : sq.Name);
+                ListUI.SquadNames[s2].SetText(c, sq.HasRally ? sq.Name.Colorize(UCWarfare.GetColorHex("rally")) : sq.Name);
                 ListUI.SquadMemberCounts[s2].SetText(player.Connection,
                     sq.IsLocked ?
                         T.SquadsUIPlayerCountListLocked.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UIIconLocked) :
@@ -504,8 +504,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         ActionLog.Add(ActionLogType.JoinedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + squad.Leader.Steam64.ToString(Data.AdminLocale), player);
 
-        if (RallyManager.HasRally(squad, out RallyPoint rally))
-            rally.ShowUIForSquad();
+        if (squad.HasRally)
+            squad.RallyPoint!.ShowUIForSquad();
 
         PlayerManager.ApplyTo(player);
     }
@@ -554,12 +554,9 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
             ActionLog.Add(ActionLogType.DisbandedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), player);
 
-            if (RallyManager.HasRally(squad, out RallyPoint rally1))
+            if (squad.HasRally)
             {
-                if (Regions.tryGetCoordinate(rally1.Drop.model.position, out byte x, out byte y))
-                    BarricadeManager.destroyBarricade(rally1.Drop, x, y, ushort.MaxValue);
-
-                RallyManager.TryDeleteRallyPoint(rally1.Drop.instanceID);
+                squad.RallyPoint!.Destroy();
             }
 
 
@@ -590,8 +587,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         UpdateMemberList(squad);
         UpdateUIMemberCount(squad.Team);
 
-        if (RallyManager.HasRally(squad, out RallyPoint rally2))
-            rally2.ClearUIForPlayer(player);
+        if (squad.HasRally)
+            squad.RallyPoint!.ClearUIForPlayer(player);
 
         SendSquadList(player);
 
@@ -622,13 +619,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         SendSquadListToTeam(squad.Team);
         UpdateUIMemberCount(squad.Team);
 
-        if (RallyManager.HasRally(squad, out RallyPoint rally))
-        {
-            if (Regions.tryGetCoordinate(rally.Drop.model.position, out byte x, out byte y))
-                BarricadeManager.destroyBarricade(rally.Drop, x, y, ushort.MaxValue);
-
-            RallyManager.TryDeleteRallyPoint(rally.Drop.instanceID);
-        }
+        if (squad.HasRally)
+            squad.RallyPoint!.Destroy();
 
     }
     public static void KickPlayerFromSquad(UCPlayer player, Squad squad)
@@ -658,8 +650,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         SendSquadListToTeam(squad.Team);
         UpdateUIMemberCount(squad.Team);
 
-        if (RallyManager.HasRally(squad, out RallyPoint rally))
-            rally.ClearUIForPlayer(player);
+        if (squad.HasRally)
+            squad.RallyPoint!.ClearUIForPlayer(player);
 
         PlayerManager.ApplyTo(player);
     }
@@ -741,8 +733,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         {
             SendSquadMenu(player, player.Squad);
             UpdateMemberList(player.Squad);
-            if (RallyManager.HasRally(player.Squad, out RallyPoint p))
-                p.ShowUIForPlayer(player);
+            if (player.Squad.HasRally)
+                player.Squad.RallyPoint!.ShowUIForPlayer(player);
         }
     }
 }
@@ -756,6 +748,8 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     public UCPlayer Leader;
     public List<UCPlayer> Members;
     public bool Disbanded;
+    public RallyPoint? RallyPoint;
+    public bool HasRally => RallyPoint != null;
     /// <summary><see langword="true"/> if this <see cref="Squad"/>'s <seealso cref="Leader"/> is a commander.</summary>
     public bool IsCommandingSquad
     {
