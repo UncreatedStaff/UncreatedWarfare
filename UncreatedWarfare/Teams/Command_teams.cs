@@ -9,7 +9,7 @@ using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 namespace Uncreated.Warfare.Commands;
 public class TeamsCommand : Command
 {
-    private const string SYNTAX = "/teams";
+    private const string SYNTAX = "/teams ";
     private const string HELP = "Switch teams without rejoining the server.";
 
     public TeamsCommand() : base("teams", EAdminType.MEMBER) { }
@@ -29,6 +29,16 @@ public class TeamsCommand : Command
 
         if (!teamgm.UseTeamSelector || teamgm.TeamSelector is null)
             throw ctx.SendGamemodeError();
+
+        if (ctx.MatchParameter(0, "shuffle", "sh"))
+        {
+            if (!ctx.Caller.OnDuty())
+                throw ctx.Reply(T.NotOnDuty);
+
+            TeamSelector.ShuffleTeamsNextGame = true;
+            ctx.Reply(T.TeamsShuffleQueued);
+            return;
+        }
 
         if (!ctx.Caller.OnDuty() && CooldownManager.HasCooldown(ctx.Caller, CooldownType.ChangeTeams, out Cooldown cooldown))
         {

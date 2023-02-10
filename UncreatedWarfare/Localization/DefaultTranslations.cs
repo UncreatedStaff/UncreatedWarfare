@@ -1819,6 +1819,7 @@ internal static class T
     public static readonly Translation TeamsUIConfirm = new Translation("CONFIRM", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIBack = new Translation("BACK", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIJoining = new Translation("<#999999>JOINING...", TranslationFlags.UnityUI);
+    public static readonly Translation TeamsShuffleQueued = new Translation("Teams will be SHUFFLED next game.");
     #endregion
 
     #region Spotting

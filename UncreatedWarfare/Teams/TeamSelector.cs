@@ -18,6 +18,7 @@ public class TeamSelector : BaseSingletonComponent
     public static readonly TeamSelectorUI JoinUI = new TeamSelectorUI();
     public static event PlayerDelegate? OnPlayerSelecting;
     public static event PlayerDelegate? OnPlayerSelected;
+    public static bool ShuffleTeamsNextGame = false;
     private const string SelectedHex = "afffc9";
     private const string SelfHex = "9bf3f3";
     public override void Load()
