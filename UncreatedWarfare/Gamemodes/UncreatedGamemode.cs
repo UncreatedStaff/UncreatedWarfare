@@ -31,6 +31,7 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -70,13 +71,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     internal string ShutdownMessage = string.Empty;
     internal bool ShouldShutdownAfterGame;
     internal ulong ShutdownPlayer;
-    protected readonly string _name;
     protected Coroutine? StagingPhaseTimer;
-    protected float _startTime;
-    protected long _gameID;
     protected int Ticks;
-    protected float _stagingSeconds;
-    protected State _state;
     private float _eventLoopSpeed;
     private bool _useEventLoop;
     private bool _isPreLoading;
@@ -90,13 +86,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     protected IReadOnlyList<IUncreatedSingleton> Singletons => _singletonsRl;
     public bool LoadAsynchronous => true;
     public override bool AwaitLoad => true;
-    public State State => _state;
-    public float StartTime => _startTime;
-    public float StagingSeconds => _stagingSeconds;
-    public float SecondsSinceStart => Time.realtimeSinceStartup - _startTime;
-    public long GameID => _gameID;
+    public State State { get; private set; }
+    public float StartTime { get; private set; }
+    public float StagingSeconds { get; private set; }
+    public float SecondsSinceStart => Time.realtimeSinceStartup - StartTime;
+    public long GameID { get; private set; }
     public static GamemodeConfigData Config => ConfigObj.Data;
-    public string Name => _name;
+    public string Name { get; }
     public float EventLoopSpeed => _eventLoopSpeed;
     public bool EveryMinute => Ticks % Mathf.RoundToInt(60f / _eventLoopSpeed) == 0;
     public bool Every30Seconds => Ticks % Mathf.RoundToInt(30f / _eventLoopSpeed) == 0;
@@ -117,10 +113,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public CancellationToken UnloadToken => _tokenSrc == null ? CancellationToken.None : _tokenSrc.Token;
     protected Gamemode(string name, float eventLoopSpeed)
     {
-        this._name = name;
+        this.Name = name;
         this._eventLoopSpeed = eventLoopSpeed;
         this._useEventLoop = eventLoopSpeed > 0;
-        this._state = State.Loading;
+        this.State = State.Loading;
         OnStateUpdated?.Invoke();
     }
     public void SetTiming(float newSpeed)
@@ -130,7 +126,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     public void AdvanceDelays(float seconds)
     {
-        _startTime -= seconds;
+        StartTime -= seconds;
         Signs.UpdateAllSigns();
         TimeSync();
     }
@@ -187,23 +183,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
         if (_wasLevelLoadedOnStart)
         {
-            for (int i = 0; i < _singletons.Count; ++i)
-            {
-                IUncreatedSingleton singleton = _singletons[i];
-                if (singleton is ILevelStartListener l1)
-                {
-                    l1.OnLevelReady();
-                }
-                if (singleton is ILevelStartListenerAsync l2)
-                {
-                    task = l2.OnLevelReady(token);
-                    if (!task.IsCompleted)
-                    {
-                        await task.ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(token);
-                    }
-                }
-            }
+            await InvokeSingletonEvent<ILevelStartListener, ILevelStartListenerAsync>
+                (x => x.OnLevelReady(), x => x.OnLevelReady(token), token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             ThreadUtil.assertIsGameThread();
             await InternalOnReady(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
@@ -337,31 +319,17 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
             return;
-        Task task;
         if (player.Save.LastGame != GameID)
         {
             player.Save.LastGame = GameID;
             PlayerSave.WriteToSaveFile(player.Save);
         }
         player.HasInitedOnce = true;
-        for (int i = 0; i < _singletons.Count; ++i)
-        {
-            IUncreatedSingleton singleton = _singletons[i];
-            if (singleton is IPlayerPreInitListener l1)
-                l1.OnPrePlayerInit(player, wasAlreadyOnline);
-            if (singleton is IPlayerPreInitListenerAsync l2)
-            {
-                task = l2.OnPrePlayerInit(player, wasAlreadyOnline, token);
-                if (!task.IsCompleted)
-                {
-                    await task.ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
-                    if (!player.IsOnline)
-                        return;
-                }
-            }
-        }
-        L.LogDebug("preinit done.");
+        await InvokeSingletonEvent<IPlayerPreInitListener, IPlayerPreInitListenerAsync>
+            (x => x.OnPrePlayerInit(player, wasAlreadyOnline),
+                x => x.OnPrePlayerInit(player, wasAlreadyOnline, token), token, onlineCheck: player)
+            .ConfigureAwait(false);
+        await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
         if (!wasAlreadyOnline)
         {
@@ -378,26 +346,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (!player.IsOnline)
             return;
         PlayerInitIntl(player, wasAlreadyOnline);
-        task = PlayerInit(player, wasAlreadyOnline, token);
+        Task task = PlayerInit(player, wasAlreadyOnline, token);
         if (!task.IsCompleted)
             await task.ConfigureAwait(false);
-        for (int i = 0; i < _singletons.Count; ++i)
-        {
-            IUncreatedSingleton singleton = _singletons[i];
-            if (singleton is IPlayerPostInitListener l1)
-                l1.OnPostPlayerInit(player);
-            if (singleton is IPlayerPostInitListenerAsync l2)
-            {
-                task = l2.OnPostPlayerInit(player, token);
-                if (!task.IsCompleted)
-                {
-                    await task.ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
-                    if (!player.IsOnline)
-                        return;
-                }
-            }
-        }
+        await UCWarfare.ToUpdate(token);
+        await InvokeSingletonEvent<IPlayerPostInitListener, IPlayerPostInitListenerAsync>
+                (x => x.OnPostPlayerInit(player), x => x.OnPostPlayerInit(player, token), token, onlineCheck: player)
+            .ConfigureAwait(false);
     }
     private void PlayerInitIntl(UCPlayer player, bool wasAlreadyOnline)
     {
@@ -414,9 +369,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         if (StagingPhaseTimer is not null)
             StopCoroutine(StagingPhaseTimer);
-        if (_state == State.Staging)
+        if (State == State.Staging)
         {
-            _stagingSeconds = 0;
+            StagingSeconds = 0;
             EndStagingPhase();
             StagingPhaseTimer = null;
         }
@@ -470,26 +425,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (!_wasLevelLoadedOnStart)
         {
             await UCWarfare.ToUpdate(token);
-            Task task;
-            for (int i = 0; i < _singletons.Count; ++i)
-            {
-                IUncreatedSingleton singleton = _singletons[i];
-                if (singleton is ILevelStartListener l1)
-                    l1.OnLevelReady();
-                if (singleton is ILevelStartListenerAsync l2)
-                {
-                    task = l2.OnLevelReady(token);
-                    if (!task.IsCompleted)
-                    {
-                        await task.ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(token);
-                    }
-                }
-            }
+            await InvokeSingletonEvent<ILevelStartListener, ILevelStartListenerAsync>
+                (x => x.OnLevelReady(), x => x.OnLevelReady(token), token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             ThreadUtil.assertIsGameThread();
             await InternalOnReady(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
-            task = OnReady(token);
+            Task task = OnReady(token);
             if (!task.IsCompleted)
             {
                 await task.ConfigureAwait(false);
@@ -508,15 +450,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (!e.CanContinue)
             return;
 
-        for (int i = 0; i < _singletons.Count; i++)
-        {
-            if (_singletons[i] is ICraftingSettingsOverride craftingOverride)
-            {
-                craftingOverride.OnCraftRequested(e);
-                if (!e.CanContinue)
-                    return;
-            }
-        }
+        InvokeSingletonEvent<ICraftingSettingsOverride>(x => x.OnCraftRequested(e), e);
     }
     private void InternalSubscribe()
     {
@@ -542,9 +476,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public void OnStagingComplete()
     {
         OnStateUpdated?.Invoke();
-        for (int i = 0; i < _singletons.Count; ++i)
-            if (_singletons[i] is IStagingPhaseOverListener staging)
-                staging.OnStagingPhaseOver();
+        InvokeSingletonEvent<IStagingPhaseOverListener>(x => x.OnStagingPhaseOver());
         if (StagingPhaseOver != null)
         {
             try
@@ -592,12 +524,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             try
             {
                 EventLoopAction();
-                if (Data.Gamemode is not null)
+                if (State is State.Staging or State.Active)
                 {
                     OnGameTick?.Invoke();
-                    for (int i = 0; i < _singletons.Count; ++i)
-                        if (_singletons[i] is IGameTickListener ticker)
-                            ticker.Tick();
+                    InvokeSingletonEvent<IGameTickListener>(x => x.Tick());
                 }
             }
             catch (Exception ex)
@@ -632,12 +562,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     protected virtual void TimeSync()
     {
         float time = Time.realtimeSinceStartup;
-        for (int i = 0; i < _singletons.Count; ++i)
-        {
-            if (_singletons[i] is ITimeSyncListener ts)
-                ts.TimeSync(time);
-        }
-        TraitSigns.TimeSync();
+        InvokeSingletonEvent<ITimeSyncListener>(x => x.TimeSync(time));
     }
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags) => DisplayName;
@@ -659,24 +584,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             token.CombineIfNeeded(UnloadToken);
             ThreadUtil.assertIsGameThread();
-            this._state = State.Finished;
+            this.State = State.Finished;
             OnStateUpdated?.Invoke();
             L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
-            for (int i = 0; i < _singletons.Count; ++i)
-            {
-                IUncreatedSingleton singleton = _singletons[i];
-                if (singleton is IDeclareWinListener l1)
-                    l1.OnWinnerDeclared(winner);
-                if (singleton is IDeclareWinListenerAsync l2)
-                {
-                    Task task = l2.OnWinnerDeclared(winner, token);
-                    if (!task.IsCompleted)
-                    {
-                        await task.ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(token);
-                    }
-                }
-            }
+            await InvokeSingletonEvent<IDeclareWinListener, IDeclareWinListenerAsync>
+                (x => x.OnWinnerDeclared(winner), x => x.OnWinnerDeclared(winner, token), token)
+                .ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             ThreadUtil.assertIsGameThread();
 
             QuestManager.OnGameOver(winner);
@@ -748,7 +662,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             if (Data.Gamemode is not null)
             {
-                Data.Gamemode._state = State.Discarded;
+                Data.Gamemode.State = State.Discarded;
                 await Data.Singletons.UnloadSingletonAsync(Data.Gamemode, token: token).ConfigureAwait(false);
                 Data.Gamemode = null!;
                 await UCWarfare.ToUpdate(token);
@@ -847,48 +761,23 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     }
                 }
             }
-            for (int i = 0; i < _singletons.Count; ++i)
-            {
-                IUncreatedSingleton singleton = _singletons[i];
-                if (singleton is IGameStartListener l1)
-                    l1.OnGameStarting(onLoad);
-                if (singleton is IGameStartListenerAsync l2)
-                {
-                    task = l2.OnGameStarting(onLoad, token);
-                    if (!task.IsCompleted)
-                    {
-                        await task.ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(token);
-                    }
-                }
-            }
+            await InvokeSingletonEvent<IGameStartListener, IGameStartListenerAsync>
+                (x => x.OnGameStarting(onLoad), x => x.OnGameStarting(onLoad, token), token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
 
             ThreadUtil.assertIsGameThread();
             CooldownManager.OnGameStarting();
             L.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
-            _state = State.Active;
-            _gameID = DateTime.UtcNow.Ticks;
-            _startTime = Time.realtimeSinceStartup;
+            State = State.Active;
+            GameID = DateTime.UtcNow.Ticks;
+            StartTime = Time.realtimeSinceStartup;
             PlayerManager.ApplyToOnline();
             OnStateUpdated?.Invoke();
             if (!onLoad)
             {
-                for (int i = 0; i < _singletons.Count; ++i)
-                {
-                    IUncreatedSingleton singleton = _singletons[i];
-                    if (singleton is ILevelStartListener l1)
-                        l1.OnLevelReady();
-                    if (singleton is ILevelStartListenerAsync l2)
-                    {
-                        task = l2.OnLevelReady(token);
-                        if (!task.IsCompleted)
-                        {
-                            await task.ConfigureAwait(false);
-                            await UCWarfare.ToUpdate(token);
-                        }
-                    }
-                }
-                ThreadUtil.assertIsGameThread();
+                await InvokeSingletonEvent<ILevelStartListener, ILevelStartListenerAsync>
+                    (x => x.OnLevelReady(), x => x.OnLevelReady(token), token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
             }
             task = PostGameStarting(onLoad, token);
             if (!task.IsCompleted)
@@ -944,23 +833,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         ThreadUtil.assertIsGameThread();
         token.CombineIfNeeded(UnloadToken);
-        for (int i = 0; i < _singletons.Count; ++i)
-        {
-            IUncreatedSingleton singleton = _singletons[i];
-            if (singleton is IPlayerConnectListener l1)
-                l1.OnPlayerConnecting(player);
-            if (singleton is IPlayerConnectListenerAsync l2)
-            {
-                Task task = l2.OnPlayerConnecting(player, token);
-                if (!task.IsCompleted)
-                {
-                    await task.ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
-                    if (!player.IsOnline)
-                        return;
-                }
-            }
-        }
+        await InvokeSingletonEvent<IPlayerConnectListener, IPlayerConnectListenerAsync>
+            (x => x.OnPlayerConnecting(player), x => x.OnPlayerConnecting(player, token), token, onlineCheck: player)
+            .ConfigureAwait(false);
+        await UCWarfare.ToUpdate(token);
         await InternalPlayerInit(player, false, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         if (player.IsOnline)
@@ -990,22 +866,12 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             Points.UpdateXPUI(player);
         if (ShowOFPUI)
             Points.UpdateCreditsUI(player);
-        for (int i = 0; i < _singletons.Count; ++i)
-        {
-            IUncreatedSingleton singleton = _singletons[i];
-            if (singleton is IReloadUIListener l1)
-                l1.ReloadUI(player);
-        }
+        InvokeSingletonEvent<IReloadUIListener>(x => x.ReloadUI(player));
     }
     internal void InvokeLanguageChanged(UCPlayer player)
     {
         OnLanguageChanged(player);
-        for (int i = 0; i < _singletons.Count; ++i)
-        {
-            IUncreatedSingleton singleton = _singletons[i];
-            if (singleton is ILanguageChangedListener l1)
-                l1.OnLanguageChanged(player);
-        }
+        InvokeSingletonEvent<ILanguageChangedListener>(x => x.OnLanguageChanged(player));
     }
     public virtual void PlayerLeave(UCPlayer player)
     {
@@ -1021,14 +887,14 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             player.Save.LastGame = GameID;
             PlayerSave.WriteToSaveFile(player.Save);
         }
-        foreach (IPlayerDisconnectListener listener in _singletons.OfType<IPlayerDisconnectListener>())
-            listener.OnPlayerDisconnecting(player);
+        InvokeSingletonEvent<IPlayerDisconnectListener>(x => x.OnPlayerDisconnecting(player));
     }
     public virtual void OnPlayerDeath(PlayerDied e)
     {
         Points.OnPlayerDeath(e);
         if (e.Player.Player.TryGetPlayerData(out UCPlayerData c))
             c.LastGunShot = default;
+        InvokeSingletonEvent<IPlayerDeathListener>(x => x.OnPlayerDeath(e), e);
     }
     public static Type? FindGamemode(string name)
     {
@@ -1062,14 +928,14 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public virtual void Unsubscribe() { }
     public virtual void StartStagingPhase(float seconds)
     {
-        _stagingSeconds = seconds;
-        _state = State.Staging;
+        StagingSeconds = seconds;
+        State = State.Staging;
         OnStateUpdated?.Invoke();
         StagingPhaseTimer = StartCoroutine(StagingPhaseLoop());
     }
     public void SkipStagingPhase()
     {
-        _stagingSeconds = 0;
+        StagingSeconds = 0;
     }
     public IEnumerator<WaitForSeconds> StagingPhaseLoop()
     {
@@ -1087,7 +953,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             UpdateStagingUIForAll();
 
             yield return new WaitForSeconds(1f);
-            _stagingSeconds--;
+            --StagingSeconds;
         }
         EndStagingPhase();
         StagingPhaseTimer = null;
@@ -1128,7 +994,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     protected virtual void EndStagingPhase()
     {
         CTFUI.StagingUI.ClearFromAllPlayers();
-        _state = State.Active;
+        State = State.Active;
         OnStagingComplete();
     }
     public void ReplaceBarricadesAndStructures()
@@ -1302,58 +1168,169 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     internal async Task OnQuestCompleted(QuestCompleted e, CancellationToken token)
     {
         token.CombineIfNeeded(UnloadToken, e.Player.DisconnectToken);
-        for (int i = 0; i < _singletons.Count; ++i)
-        {
-            IUncreatedSingleton singleton = _singletons[i];
-            if (singleton is IQuestCompletedListener l1)
-                l1.OnQuestCompleted(e);
-            if (singleton is IQuestCompletedListenerAsync l2)
-            {
-                Task task = l2.OnQuestCompleted(e, token);
-                if (!task.IsCompleted)
-                {
-                    await task.ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
-                    if (!e.Player.IsOnline)
-                        return;
-                }
-            }
-        }
+        await InvokeSingletonEvent<IQuestCompletedListener, IQuestCompletedListenerAsync>
+            (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e)
+            .ConfigureAwait(false);
     }
     internal async Task HandleQuestCompleted(QuestCompleted e, CancellationToken token)
     {
         if (!RankManager.OnQuestCompleted(e))
         {
             token.CombineIfNeeded(UnloadToken, e.Player.DisconnectToken);
-            for (int i = 0; i < _singletons.Count; ++i)
-            {
-                IUncreatedSingleton singleton = _singletons[i];
-                if (singleton is IQuestCompletedHandler l1)
-                {
-                    l1.OnQuestCompleted(e);
-                    if (!e.CanContinue)
-                        return;
-                }
-                if (singleton is IQuestCompletedHandlerAsync l2)
-                {
-                    Task task = l2.OnQuestCompleted(e, token);
-                    if (!task.IsCompleted)
-                    {
-                        await task.ConfigureAwait(false);
-                        await UCWarfare.ToUpdate(token);
-                        if (!e.Player.IsOnline)
-                            return;
-                    }
-                    if (!e.CanContinue)
-                        return;
-                }
-            }
+            await InvokeSingletonEvent<IQuestCompletedHandler, IQuestCompletedHandlerAsync>
+                (x => x.OnQuestCompleted(e), x => x.OnQuestCompleted(e, token), token, e)
+                .ConfigureAwait(false);
         }
         else e.Break();
     }
     internal virtual bool CanRefillAmmoAt(ItemBarricadeAsset barricade)
     {
         return Config.BarricadeAmmoCrate.MatchGuid(barricade.GUID);
+    }
+
+    private void InvokeSingletonEvent<T>(Action<T> action, EventState? e = null)
+    {
+        ThreadUtil.assertIsGameThread();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils
+            .StartTracking("Singleton event: " + typeof(T).Name + " in " + DisplayName + ".");
+#endif
+        bool tmFound = false;
+        for (int i = 0; i < _singletons.Count; ++i)
+        {
+            if (_singletons[i] is T t)
+            {
+                tmFound |= t is TicketManager;
+                action(t);
+                if (e is { CanContinue: false })
+                    return;
+            }
+        }
+        if (!tmFound && this is ITickets tickets && tickets.TicketManager.Provider is T t3)
+        {
+            action(t3);
+            if (e is { CanContinue: false })
+                return;
+        }
+        if (this is IGameStats stats)
+        {
+            if (stats.GameStats is T t)
+            {
+                action(t);
+                if (e is { CanContinue: false })
+                    return;
+            }
+            if (stats.GameStats is BaseStatTracker<BasePlayerStats> b)
+            {
+                for (int i = 0; i < b.stats.Count; ++i)
+                {
+                    if (b.stats[i] is T t2)
+                        action(t2);
+                    else break;
+                    if (e is { CanContinue: false })
+                        return;
+                }
+            }
+        }
+    }
+    private async Task InvokeSingletonEvent<TSync, TAsync>(Action<TSync> action1, Func<TAsync, Task> action2, CancellationToken token = default, EventState? args = null, UCPlayer? onlineCheck = null)
+    {
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate(token);
+        ThreadUtil.assertIsGameThread();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils
+            .StartTracking("Async singleton event: " + typeof(TSync).Name + " / " +
+                           typeof(TAsync).Name + " in " + DisplayName + ".");
+#endif
+        bool tmFound = false;
+        
+        void CheckContinue(EventState? args, UCPlayer? onlineCheck)
+        {
+#if DEBUG
+            ThreadUtil.assertIsGameThread();
+#endif
+            token.ThrowIfCancellationRequested();
+            if (args != null)
+            {
+                if (!args.CanContinue ||
+                    args is PlayerEvent { Player.IsOnline: false } or BreakablePlayerEvent { Player.IsOnline: false })
+                    throw new OperationCanceledException();
+            }
+
+            if (onlineCheck is { IsOnline: false })
+                throw new OperationCanceledException();
+        }
+        for (int i = 0; i < _singletons.Count; ++i)
+        {
+            if (_singletons[i] is TSync t)
+            {
+                tmFound |= t is TicketManager;
+                action1(t);
+            }
+            else if (_singletons[i] is TAsync t2)
+            {
+                tmFound |= t2 is TicketManager;
+                Task task = action2(t2);
+                if (!task.IsCompleted)
+                {
+                    await task.ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
+                    if (onlineCheck is { IsOnline: false })
+                        return;
+                    CheckContinue(args, onlineCheck);
+                }
+            }
+        }
+        if (!tmFound && this is ITickets tickets && tickets.TicketManager.Provider != null)
+        {
+            if (tickets.TicketManager.Provider is TSync t)
+                action1(t);
+            else if (tickets.TicketManager.Provider is TAsync t2)
+            {
+                Task task = action2(t2);
+                if (!task.IsCompleted)
+                {
+                    await task.ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
+                    CheckContinue(args, onlineCheck);
+                }
+            }
+        }
+        if (this is IGameStats stats)
+        {
+            if (stats.GameStats is TSync t)
+                action1(t);
+            else if (stats.GameStats is TAsync t2)
+            {
+                Task task = action2(t2);
+                if (!task.IsCompleted)
+                {
+                    await task.ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
+                    CheckContinue(args, onlineCheck);
+                }
+            }
+            if (stats.GameStats is BaseStatTracker<BasePlayerStats> b)
+            {
+                for (int i = 0; i < b.stats.Count; ++i)
+                {
+                    if (b.stats[i] is TSync t2)
+                        action1(t2);
+                    else if (b.stats[i] is TAsync t3)
+                    {
+                        Task task = action2(t3);
+                        if (!task.IsCompleted)
+                        {
+                            await task.ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(token);
+                            CheckContinue(args, onlineCheck);
+                        }
+                    }
+                    else break;
+                }
+            }
+        }
     }
 }
 public enum State : byte

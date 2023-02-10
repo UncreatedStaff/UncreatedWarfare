@@ -17,8 +17,8 @@ namespace Uncreated.Warfare.Gamemodes;
 
 public static class LeaderboardEx
 {
-    public const string NO_PLAYER_NAME_PLACEHOLDER = "---";
-    public const string NO_PLAYER_VALUE_PLACEHOLDER = "--";
+    public const string EmptyFieldNamePlaceholder = "---";
+    public const string EmptyFieldPlaceholder = "--";
     public static void RemoveLeaderboardModifiers(UCPlayer player)
     {
         player.Player.movement.sendPluginSpeedMultiplier(1f);
@@ -130,6 +130,8 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
     protected int coroutinect;
     public List<IndividualStats> stats;
     protected Coroutine ticker;
+    protected float deltaTime;
+    private float lastTickTime;
     [UsedImplicitly]
     private void Awake() => Reset();
     public float GetPresence(IPresenceStats stats) => (float)stats.OnlineTicks / coroutinect;
@@ -246,9 +248,11 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
     }
     private IEnumerator<WaitForSeconds> Ticker()
     {
+        lastTickTime = Time.realtimeSinceStartup;
         while (true)
         {
             OnTick();
+            lastTickTime = Time.realtimeSinceStartup;
             yield return new WaitForSeconds(10f);
         }
     }

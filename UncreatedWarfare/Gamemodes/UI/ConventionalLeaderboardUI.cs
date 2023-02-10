@@ -15,9 +15,9 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes.UI;
 public class ConventionalLeaderboardUI : UnturnedUI
 {
-    private const string STAT_TIME_FORMAT = "h\\:mm\\:ss";
-    private const string STAT_FLOAT_FORMAT = "F0";
-    private const string STAT_PRECISION_FLOAT_FORMAT = "0.##";
+    internal const string StatFormatTime = "h\\:mm\\:ss";
+    internal const string StatFormatFloat = "F0";
+    internal const string StatFormatPrecisionFloat = "0.##";
     public readonly UnturnedLabel Title = new UnturnedLabel("TitleWinner");
     public readonly UnturnedLabel Gamemode = new UnturnedLabel("TitleGamemode");
 
@@ -38,8 +38,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public readonly UnturnedLabel Team2Header3 = new UnturnedLabel("2OFP");
     public readonly UnturnedLabel Team2Header4 = new UnturnedLabel("2Caps");
     public readonly UnturnedLabel Team2Header5 = new UnturnedLabel("2Damage");
-
-    #region Player List
+    
     public readonly UnturnedLabel Team1Name = new UnturnedLabel("1N0");
     public readonly UnturnedLabel Team1Kills = new UnturnedLabel("1K0");
     public readonly UnturnedLabel Team1Deaths = new UnturnedLabel("1D0");
@@ -47,132 +46,6 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public readonly UnturnedLabel Team1Credits = new UnturnedLabel("1F0");
     public readonly UnturnedLabel Team1Captures = new UnturnedLabel("1C0");
     public readonly UnturnedLabel Team1Damage = new UnturnedLabel("1T0");
-
-    public readonly UnturnedLabel Team1Player0Name = new UnturnedLabel("1N1");
-    public readonly UnturnedLabel Team1Player0Kills = new UnturnedLabel("1K1");
-    public readonly UnturnedLabel Team1Player0Deaths = new UnturnedLabel("1D1");
-    public readonly UnturnedLabel Team1Player0XP = new UnturnedLabel("1X1");
-    public readonly UnturnedLabel Team1Player0Credits = new UnturnedLabel("1F1");
-    public readonly UnturnedLabel Team1Player0Captures = new UnturnedLabel("1C1");
-    public readonly UnturnedLabel Team1Player0Damage = new UnturnedLabel("1T1");
-    public readonly UnturnedUIElement Team1Player0VC = new UnturnedUIElement("1VC1");
-
-    public readonly UnturnedLabel Team1Player1Name = new UnturnedLabel("1N2");
-    public readonly UnturnedLabel Team1Player1Kills = new UnturnedLabel("1K2");
-    public readonly UnturnedLabel Team1Player1Deaths = new UnturnedLabel("1D2");
-    public readonly UnturnedLabel Team1Player1XP = new UnturnedLabel("1X2");
-    public readonly UnturnedLabel Team1Player1Credits = new UnturnedLabel("1F2");
-    public readonly UnturnedLabel Team1Player1Captures = new UnturnedLabel("1C2");
-    public readonly UnturnedLabel Team1Player1Damage = new UnturnedLabel("1T2");
-    public readonly UnturnedUIElement Team1Player1VC = new UnturnedUIElement("1VC2");
-
-    public readonly UnturnedLabel Team1Player2Name = new UnturnedLabel("1N3");
-    public readonly UnturnedLabel Team1Player2Kills = new UnturnedLabel("1K3");
-    public readonly UnturnedLabel Team1Player2Deaths = new UnturnedLabel("1D3");
-    public readonly UnturnedLabel Team1Player2XP = new UnturnedLabel("1X3");
-    public readonly UnturnedLabel Team1Player2Credits = new UnturnedLabel("1F3");
-    public readonly UnturnedLabel Team1Player2Captures = new UnturnedLabel("1C3");
-    public readonly UnturnedLabel Team1Player2Damage = new UnturnedLabel("1T3");
-    public readonly UnturnedUIElement Team1Player2VC = new UnturnedUIElement("1VC3");
-
-    public readonly UnturnedLabel Team1Player3Name = new UnturnedLabel("1N4");
-    public readonly UnturnedLabel Team1Player3Kills = new UnturnedLabel("1K4");
-    public readonly UnturnedLabel Team1Player3Deaths = new UnturnedLabel("1D4");
-    public readonly UnturnedLabel Team1Player3XP = new UnturnedLabel("1X4");
-    public readonly UnturnedLabel Team1Player3Credits = new UnturnedLabel("1F4");
-    public readonly UnturnedLabel Team1Player3Captures = new UnturnedLabel("1C4");
-    public readonly UnturnedLabel Team1Player3Damage = new UnturnedLabel("1T4");
-    public readonly UnturnedUIElement Team1Player3VC = new UnturnedUIElement("1VC4");
-
-    public readonly UnturnedLabel Team1Player4Name = new UnturnedLabel("1N5");
-    public readonly UnturnedLabel Team1Player4Kills = new UnturnedLabel("1K5");
-    public readonly UnturnedLabel Team1Player4Deaths = new UnturnedLabel("1D5");
-    public readonly UnturnedLabel Team1Player4XP = new UnturnedLabel("1X5");
-    public readonly UnturnedLabel Team1Player4Credits = new UnturnedLabel("1F5");
-    public readonly UnturnedLabel Team1Player4Captures = new UnturnedLabel("1C5");
-    public readonly UnturnedLabel Team1Player4Damage = new UnturnedLabel("1T5");
-    public readonly UnturnedUIElement Team1Player4VC = new UnturnedUIElement("1VC5");
-
-    public readonly UnturnedLabel Team1Player5Name = new UnturnedLabel("1N6");
-    public readonly UnturnedLabel Team1Player5Kills = new UnturnedLabel("1K6");
-    public readonly UnturnedLabel Team1Player5Deaths = new UnturnedLabel("1D6");
-    public readonly UnturnedLabel Team1Player5XP = new UnturnedLabel("1X6");
-    public readonly UnturnedLabel Team1Player5Credits = new UnturnedLabel("1F6");
-    public readonly UnturnedLabel Team1Player5Captures = new UnturnedLabel("1C6");
-    public readonly UnturnedLabel Team1Player5Damage = new UnturnedLabel("1T6");
-    public readonly UnturnedUIElement Team1Player5VC = new UnturnedUIElement("1VC6");
-
-    public readonly UnturnedLabel Team1Player6Name = new UnturnedLabel("1N7");
-    public readonly UnturnedLabel Team1Player6Kills = new UnturnedLabel("1K7");
-    public readonly UnturnedLabel Team1Player6Deaths = new UnturnedLabel("1D7");
-    public readonly UnturnedLabel Team1Player6XP = new UnturnedLabel("1X7");
-    public readonly UnturnedLabel Team1Player6Credits = new UnturnedLabel("1F7");
-    public readonly UnturnedLabel Team1Player6Captures = new UnturnedLabel("1C7");
-    public readonly UnturnedLabel Team1Player6Damage = new UnturnedLabel("1T7");
-    public readonly UnturnedUIElement Team1Player6VC = new UnturnedUIElement("1VC7");
-
-    public readonly UnturnedLabel Team1Player7Name = new UnturnedLabel("1N8");
-    public readonly UnturnedLabel Team1Player7Kills = new UnturnedLabel("1K8");
-    public readonly UnturnedLabel Team1Player7Deaths = new UnturnedLabel("1D8");
-    public readonly UnturnedLabel Team1Player7XP = new UnturnedLabel("1X8");
-    public readonly UnturnedLabel Team1Player7Credits = new UnturnedLabel("1F8");
-    public readonly UnturnedLabel Team1Player7Captures = new UnturnedLabel("1C8");
-    public readonly UnturnedLabel Team1Player7Damage = new UnturnedLabel("1T8");
-    public readonly UnturnedUIElement Team1Player7VC = new UnturnedUIElement("1VC8");
-
-    public readonly UnturnedLabel Team1Player8Name = new UnturnedLabel("1N9");
-    public readonly UnturnedLabel Team1Player8Kills = new UnturnedLabel("1K9");
-    public readonly UnturnedLabel Team1Player8Deaths = new UnturnedLabel("1D9");
-    public readonly UnturnedLabel Team1Player8XP = new UnturnedLabel("1X9");
-    public readonly UnturnedLabel Team1Player8Credits = new UnturnedLabel("1F9");
-    public readonly UnturnedLabel Team1Player8Captures = new UnturnedLabel("1C9");
-    public readonly UnturnedLabel Team1Player8Damage = new UnturnedLabel("1T9");
-    public readonly UnturnedUIElement Team1Player8VC = new UnturnedUIElement("1VC9");
-
-    public readonly UnturnedLabel Team1Player9Name = new UnturnedLabel("1N10");
-    public readonly UnturnedLabel Team1Player9Kills = new UnturnedLabel("1K10");
-    public readonly UnturnedLabel Team1Player9Deaths = new UnturnedLabel("1D10");
-    public readonly UnturnedLabel Team1Player9XP = new UnturnedLabel("1X10");
-    public readonly UnturnedLabel Team1Player9Credits = new UnturnedLabel("1F10");
-    public readonly UnturnedLabel Team1Player9Captures = new UnturnedLabel("1C10");
-    public readonly UnturnedLabel Team1Player9Damage = new UnturnedLabel("1T10");
-    public readonly UnturnedUIElement Team1Player9VC = new UnturnedUIElement("1VC10");
-
-    public readonly UnturnedLabel Team1Player10Name = new UnturnedLabel("1N11");
-    public readonly UnturnedLabel Team1Player10Kills = new UnturnedLabel("1K11");
-    public readonly UnturnedLabel Team1Player10Deaths = new UnturnedLabel("1D11");
-    public readonly UnturnedLabel Team1Player10XP = new UnturnedLabel("1X11");
-    public readonly UnturnedLabel Team1Player10Credits = new UnturnedLabel("1F11");
-    public readonly UnturnedLabel Team1Player10Captures = new UnturnedLabel("1C11");
-    public readonly UnturnedLabel Team1Player10Damage = new UnturnedLabel("1T11");
-    public readonly UnturnedUIElement Team1Player10VC = new UnturnedUIElement("1VC11");
-
-    public readonly UnturnedLabel Team1Player11Name = new UnturnedLabel("1N12");
-    public readonly UnturnedLabel Team1Player11Kills = new UnturnedLabel("1K12");
-    public readonly UnturnedLabel Team1Player11Deaths = new UnturnedLabel("1D12");
-    public readonly UnturnedLabel Team1Player11XP = new UnturnedLabel("1X12");
-    public readonly UnturnedLabel Team1Player11Credits = new UnturnedLabel("1F12");
-    public readonly UnturnedLabel Team1Player11Captures = new UnturnedLabel("1C12");
-    public readonly UnturnedLabel Team1Player11Damage = new UnturnedLabel("1T12");
-    public readonly UnturnedUIElement Team1Player11VC = new UnturnedUIElement("1VC12");
-
-    public readonly UnturnedLabel Team1Player12Name = new UnturnedLabel("1N13");
-    public readonly UnturnedLabel Team1Player12Kills = new UnturnedLabel("1K13");
-    public readonly UnturnedLabel Team1Player12Deaths = new UnturnedLabel("1D13");
-    public readonly UnturnedLabel Team1Player12XP = new UnturnedLabel("1X13");
-    public readonly UnturnedLabel Team1Player12Credits = new UnturnedLabel("1F13");
-    public readonly UnturnedLabel Team1Player12Captures = new UnturnedLabel("1C13");
-    public readonly UnturnedLabel Team1Player12Damage = new UnturnedLabel("1T13");
-    public readonly UnturnedUIElement Team1Player12VC = new UnturnedUIElement("1VC13");
-
-    public readonly UnturnedLabel Team1Player13Name = new UnturnedLabel("1N14");
-    public readonly UnturnedLabel Team1Player13Kills = new UnturnedLabel("1K14");
-    public readonly UnturnedLabel Team1Player13Deaths = new UnturnedLabel("1D14");
-    public readonly UnturnedLabel Team1Player13XP = new UnturnedLabel("1X14");
-    public readonly UnturnedLabel Team1Player13Credits = new UnturnedLabel("1F14");
-    public readonly UnturnedLabel Team1Player13Captures = new UnturnedLabel("1C14");
-    public readonly UnturnedLabel Team1Player13Damage = new UnturnedLabel("1T14");
-    public readonly UnturnedUIElement Team1Player13VC = new UnturnedUIElement("1VC14");
 
     public readonly UnturnedLabel Team2Name = new UnturnedLabel("2N0");
     public readonly UnturnedLabel Team2Kills = new UnturnedLabel("2K0");
@@ -182,132 +55,23 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public readonly UnturnedLabel Team2Captures = new UnturnedLabel("2C0");
     public readonly UnturnedLabel Team2Damage = new UnturnedLabel("2T0");
 
-    public readonly UnturnedLabel Team2Player0Name = new UnturnedLabel("2N1");
-    public readonly UnturnedLabel Team2Player0Kills = new UnturnedLabel("2K1");
-    public readonly UnturnedLabel Team2Player0Deaths = new UnturnedLabel("2D1");
-    public readonly UnturnedLabel Team2Player0XP = new UnturnedLabel("2X1");
-    public readonly UnturnedLabel Team2Player0Credits = new UnturnedLabel("2F1");
-    public readonly UnturnedLabel Team2Player0Captures = new UnturnedLabel("2C1");
-    public readonly UnturnedLabel Team2Player0Damage = new UnturnedLabel("2T1");
-    public readonly UnturnedUIElement Team2Player0VC = new UnturnedUIElement("2VC1");
+    public readonly UnturnedLabel[] Team1PlayerNames = UnturnedLabel.GetPattern("1N{0}", 14);
+    public readonly UnturnedLabel[] Team1PlayerKills = UnturnedLabel.GetPattern("1K{0}", 14);
+    public readonly UnturnedLabel[] Team1PlayerDeaths = UnturnedLabel.GetPattern("1D{0}", 14);
+    public readonly UnturnedLabel[] Team1PlayerXP = UnturnedLabel.GetPattern("1X{0}", 14);
+    public readonly UnturnedLabel[] Team1PlayerCredits = UnturnedLabel.GetPattern("1F{0}", 14);
+    public readonly UnturnedLabel[] Team1PlayerCaptures = UnturnedLabel.GetPattern("1C{0}", 14);
+    public readonly UnturnedLabel[] Team1PlayerDamage = UnturnedLabel.GetPattern("1T{0}", 14);
+    public readonly UnturnedLabel[] Team1PlayerVCs = UnturnedLabel.GetPattern("1VC{0}", 14);
 
-    public readonly UnturnedLabel Team2Player1Name = new UnturnedLabel("2N2");
-    public readonly UnturnedLabel Team2Player1Kills = new UnturnedLabel("2K2");
-    public readonly UnturnedLabel Team2Player1Deaths = new UnturnedLabel("2D2");
-    public readonly UnturnedLabel Team2Player1XP = new UnturnedLabel("2X2");
-    public readonly UnturnedLabel Team2Player1Credits = new UnturnedLabel("2F2");
-    public readonly UnturnedLabel Team2Player1Captures = new UnturnedLabel("2C2");
-    public readonly UnturnedLabel Team2Player1Damage = new UnturnedLabel("2T2");
-    public readonly UnturnedUIElement Team2Player1VC = new UnturnedUIElement("2VC2");
-
-    public readonly UnturnedLabel Team2Player2Name = new UnturnedLabel("2N3");
-    public readonly UnturnedLabel Team2Player2Kills = new UnturnedLabel("2K3");
-    public readonly UnturnedLabel Team2Player2Deaths = new UnturnedLabel("2D3");
-    public readonly UnturnedLabel Team2Player2XP = new UnturnedLabel("2X3");
-    public readonly UnturnedLabel Team2Player2Credits = new UnturnedLabel("2F3");
-    public readonly UnturnedLabel Team2Player2Captures = new UnturnedLabel("2C3");
-    public readonly UnturnedLabel Team2Player2Damage = new UnturnedLabel("2T3");
-    public readonly UnturnedUIElement Team2Player2VC = new UnturnedUIElement("2VC3");
-
-    public readonly UnturnedLabel Team2Player3Name = new UnturnedLabel("2N4");
-    public readonly UnturnedLabel Team2Player3Kills = new UnturnedLabel("2K4");
-    public readonly UnturnedLabel Team2Player3Deaths = new UnturnedLabel("2D4");
-    public readonly UnturnedLabel Team2Player3XP = new UnturnedLabel("2X4");
-    public readonly UnturnedLabel Team2Player3Credits = new UnturnedLabel("2F4");
-    public readonly UnturnedLabel Team2Player3Captures = new UnturnedLabel("2C4");
-    public readonly UnturnedLabel Team2Player3Damage = new UnturnedLabel("2T4");
-    public readonly UnturnedUIElement Team2Player3VC = new UnturnedUIElement("2VC4");
-
-    public readonly UnturnedLabel Team2Player4Name = new UnturnedLabel("2N5");
-    public readonly UnturnedLabel Team2Player4Kills = new UnturnedLabel("2K5");
-    public readonly UnturnedLabel Team2Player4Deaths = new UnturnedLabel("2D5");
-    public readonly UnturnedLabel Team2Player4XP = new UnturnedLabel("2X5");
-    public readonly UnturnedLabel Team2Player4Credits = new UnturnedLabel("2F5");
-    public readonly UnturnedLabel Team2Player4Captures = new UnturnedLabel("2C5");
-    public readonly UnturnedLabel Team2Player4Damage = new UnturnedLabel("2T5");
-    public readonly UnturnedUIElement Team2Player4VC = new UnturnedUIElement("2VC5");
-
-    public readonly UnturnedLabel Team2Player5Name = new UnturnedLabel("2N6");
-    public readonly UnturnedLabel Team2Player5Kills = new UnturnedLabel("2K6");
-    public readonly UnturnedLabel Team2Player5Deaths = new UnturnedLabel("2D6");
-    public readonly UnturnedLabel Team2Player5XP = new UnturnedLabel("2X6");
-    public readonly UnturnedLabel Team2Player5Credits = new UnturnedLabel("2F6");
-    public readonly UnturnedLabel Team2Player5Captures = new UnturnedLabel("2C6");
-    public readonly UnturnedLabel Team2Player5Damage = new UnturnedLabel("2T6");
-    public readonly UnturnedUIElement Team2Player5VC = new UnturnedUIElement("2VC6");
-
-    public readonly UnturnedLabel Team2Player6Name = new UnturnedLabel("2N7");
-    public readonly UnturnedLabel Team2Player6Kills = new UnturnedLabel("2K7");
-    public readonly UnturnedLabel Team2Player6Deaths = new UnturnedLabel("2D7");
-    public readonly UnturnedLabel Team2Player6XP = new UnturnedLabel("2X7");
-    public readonly UnturnedLabel Team2Player6Credits = new UnturnedLabel("2F7");
-    public readonly UnturnedLabel Team2Player6Captures = new UnturnedLabel("2C7");
-    public readonly UnturnedLabel Team2Player6Damage = new UnturnedLabel("2T7");
-    public readonly UnturnedUIElement Team2Player6VC = new UnturnedUIElement("2VC7");
-
-    public readonly UnturnedLabel Team2Player7Name = new UnturnedLabel("2N8");
-    public readonly UnturnedLabel Team2Player7Kills = new UnturnedLabel("2K8");
-    public readonly UnturnedLabel Team2Player7Deaths = new UnturnedLabel("2D8");
-    public readonly UnturnedLabel Team2Player7XP = new UnturnedLabel("2X8");
-    public readonly UnturnedLabel Team2Player7Credits = new UnturnedLabel("2F8");
-    public readonly UnturnedLabel Team2Player7Captures = new UnturnedLabel("2C8");
-    public readonly UnturnedLabel Team2Player7Damage = new UnturnedLabel("2T8");
-    public readonly UnturnedUIElement Team2Player7VC = new UnturnedUIElement("2VC8");
-
-    public readonly UnturnedLabel Team2Player8Name = new UnturnedLabel("2N9");
-    public readonly UnturnedLabel Team2Player8Kills = new UnturnedLabel("2K9");
-    public readonly UnturnedLabel Team2Player8Deaths = new UnturnedLabel("2D9");
-    public readonly UnturnedLabel Team2Player8XP = new UnturnedLabel("2X9");
-    public readonly UnturnedLabel Team2Player8Credits = new UnturnedLabel("2F9");
-    public readonly UnturnedLabel Team2Player8Captures = new UnturnedLabel("2C9");
-    public readonly UnturnedLabel Team2Player8Damage = new UnturnedLabel("2T9");
-    public readonly UnturnedUIElement Team2Player8VC = new UnturnedUIElement("2VC9");
-
-    public readonly UnturnedLabel Team2Player9Name = new UnturnedLabel("2N10");
-    public readonly UnturnedLabel Team2Player9Kills = new UnturnedLabel("2K10");
-    public readonly UnturnedLabel Team2Player9Deaths = new UnturnedLabel("2D10");
-    public readonly UnturnedLabel Team2Player9XP = new UnturnedLabel("2X10");
-    public readonly UnturnedLabel Team2Player9Credits = new UnturnedLabel("2F10");
-    public readonly UnturnedLabel Team2Player9Captures = new UnturnedLabel("2C10");
-    public readonly UnturnedLabel Team2Player9Damage = new UnturnedLabel("2T10");
-    public readonly UnturnedUIElement Team2Player9VC = new UnturnedUIElement("2VC10");
-
-    public readonly UnturnedLabel Team2Player10Name = new UnturnedLabel("2N11");
-    public readonly UnturnedLabel Team2Player10Kills = new UnturnedLabel("2K11");
-    public readonly UnturnedLabel Team2Player10Deaths = new UnturnedLabel("2D11");
-    public readonly UnturnedLabel Team2Player10XP = new UnturnedLabel("2X11");
-    public readonly UnturnedLabel Team2Player10Credits = new UnturnedLabel("2F11");
-    public readonly UnturnedLabel Team2Player10Captures = new UnturnedLabel("2C11");
-    public readonly UnturnedLabel Team2Player10Damage = new UnturnedLabel("2T11");
-    public readonly UnturnedUIElement Team2Player10VC = new UnturnedUIElement("2VC11");
-
-    public readonly UnturnedLabel Team2Player11Name = new UnturnedLabel("2N12");
-    public readonly UnturnedLabel Team2Player11Kills = new UnturnedLabel("2K12");
-    public readonly UnturnedLabel Team2Player11Deaths = new UnturnedLabel("2D12");
-    public readonly UnturnedLabel Team2Player11XP = new UnturnedLabel("2X12");
-    public readonly UnturnedLabel Team2Player11Credits = new UnturnedLabel("2F12");
-    public readonly UnturnedLabel Team2Player11Captures = new UnturnedLabel("2C12");
-    public readonly UnturnedLabel Team2Player11Damage = new UnturnedLabel("2T12");
-    public readonly UnturnedUIElement Team2Player11VC = new UnturnedUIElement("2VC12");
-
-    public readonly UnturnedLabel Team2Player12Name = new UnturnedLabel("2N13");
-    public readonly UnturnedLabel Team2Player12Kills = new UnturnedLabel("2K13");
-    public readonly UnturnedLabel Team2Player12Deaths = new UnturnedLabel("2D13");
-    public readonly UnturnedLabel Team2Player12XP = new UnturnedLabel("2X13");
-    public readonly UnturnedLabel Team2Player12Credits = new UnturnedLabel("2F13");
-    public readonly UnturnedLabel Team2Player12Captures = new UnturnedLabel("2C13");
-    public readonly UnturnedLabel Team2Player12Damage = new UnturnedLabel("2T13");
-    public readonly UnturnedUIElement Team2Player12VC = new UnturnedUIElement("2VC13");
-
-    public readonly UnturnedLabel Team2Player13Name = new UnturnedLabel("2N14");
-    public readonly UnturnedLabel Team2Player13Kills = new UnturnedLabel("2K14");
-    public readonly UnturnedLabel Team2Player13Deaths = new UnturnedLabel("2D14");
-    public readonly UnturnedLabel Team2Player13XP = new UnturnedLabel("2X14");
-    public readonly UnturnedLabel Team2Player13Credits = new UnturnedLabel("2F14");
-    public readonly UnturnedLabel Team2Player13Captures = new UnturnedLabel("2C14");
-    public readonly UnturnedLabel Team2Player13Damage = new UnturnedLabel("2T14");
-    public readonly UnturnedUIElement Team2Player13VC = new UnturnedUIElement("2VC14");
-    #endregion
+    public readonly UnturnedLabel[] Team2PlayerNames = UnturnedLabel.GetPattern("2N{0}", 14);
+    public readonly UnturnedLabel[] Team2PlayerKills = UnturnedLabel.GetPattern("2K{0}", 14);
+    public readonly UnturnedLabel[] Team2PlayerDeaths = UnturnedLabel.GetPattern("2D{0}", 14);
+    public readonly UnturnedLabel[] Team2PlayerXP = UnturnedLabel.GetPattern("2X{0}", 14);
+    public readonly UnturnedLabel[] Team2PlayerCredits = UnturnedLabel.GetPattern("2F{0}", 14);
+    public readonly UnturnedLabel[] Team2PlayerCaptures = UnturnedLabel.GetPattern("2C{0}", 14);
+    public readonly UnturnedLabel[] Team2PlayerDamage = UnturnedLabel.GetPattern("2T{0}", 14);
+    public readonly UnturnedLabel[] Team2PlayerVCs = UnturnedLabel.GetPattern("2VC{0}", 14);
 
     #region War Stats
     public readonly UnturnedLabel TeamStatsHeader = new UnturnedLabel("WarHeader");
@@ -373,299 +137,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public readonly UnturnedLabel PersonalStats11 = new UnturnedLabel("playerstats_11_v");
     #endregion
 
-    public readonly UnturnedLabel[] Team1PlayerNames;
-    public readonly UnturnedLabel[] Team1PlayerKills;
-    public readonly UnturnedLabel[] Team1PlayerDeaths;
-    public readonly UnturnedLabel[] Team1PlayerXP;
-    public readonly UnturnedLabel[] Team1PlayerCredits;
-    public readonly UnturnedLabel[] Team1PlayerCaptures;
-    public readonly UnturnedLabel[] Team1PlayerDamage;
-    public readonly UnturnedUIElement[] Team1PlayerVCs;
-
-    public readonly UnturnedLabel[] Team2PlayerNames;
-    public readonly UnturnedLabel[] Team2PlayerKills;
-    public readonly UnturnedLabel[] Team2PlayerDeaths;
-    public readonly UnturnedLabel[] Team2PlayerXP;
-    public readonly UnturnedLabel[] Team2PlayerCredits;
-    public readonly UnturnedLabel[] Team2PlayerCaptures;
-    public readonly UnturnedLabel[] Team2PlayerDamage;
-    public readonly UnturnedUIElement[] Team2PlayerVCs;
-
-    public ConventionalLeaderboardUI() : base(12007, Gamemodes.Gamemode.Config.UIConventionalLeaderboard, true, false)
-    {
-        Team1PlayerNames = new UnturnedLabel[]
-        {
-            Team1Player0Name,
-            Team1Player1Name,
-            Team1Player2Name,
-            Team1Player3Name,
-            Team1Player4Name,
-            Team1Player5Name,
-            Team1Player6Name,
-            Team1Player7Name,
-            Team1Player8Name,
-            Team1Player9Name,
-            Team1Player10Name,
-            Team1Player11Name,
-            Team1Player12Name,
-            Team1Player13Name,
-        };
-        Team1PlayerKills = new UnturnedLabel[]
-        {
-            Team1Player0Kills,
-            Team1Player1Kills,
-            Team1Player2Kills,
-            Team1Player3Kills,
-            Team1Player4Kills,
-            Team1Player5Kills,
-            Team1Player6Kills,
-            Team1Player7Kills,
-            Team1Player8Kills,
-            Team1Player9Kills,
-            Team1Player10Kills,
-            Team1Player11Kills,
-            Team1Player12Kills,
-            Team1Player13Kills,
-        };
-        Team1PlayerDeaths = new UnturnedLabel[]
-        {
-            Team1Player0Deaths,
-            Team1Player1Deaths,
-            Team1Player2Deaths,
-            Team1Player3Deaths,
-            Team1Player4Deaths,
-            Team1Player5Deaths,
-            Team1Player6Deaths,
-            Team1Player7Deaths,
-            Team1Player8Deaths,
-            Team1Player9Deaths,
-            Team1Player10Deaths,
-            Team1Player11Deaths,
-            Team1Player12Deaths,
-            Team1Player13Deaths,
-        };
-        Team1PlayerXP = new UnturnedLabel[]
-        {
-            Team1Player0XP,
-            Team1Player1XP,
-            Team1Player2XP,
-            Team1Player3XP,
-            Team1Player4XP,
-            Team1Player5XP,
-            Team1Player6XP,
-            Team1Player7XP,
-            Team1Player8XP,
-            Team1Player9XP,
-            Team1Player10XP,
-            Team1Player11XP,
-            Team1Player12XP,
-            Team1Player13XP,
-        };
-        Team1PlayerCredits = new UnturnedLabel[]
-        {
-            Team1Player0Credits,
-            Team1Player1Credits,
-            Team1Player2Credits,
-            Team1Player3Credits,
-            Team1Player4Credits,
-            Team1Player5Credits,
-            Team1Player6Credits,
-            Team1Player7Credits,
-            Team1Player8Credits,
-            Team1Player9Credits,
-            Team1Player10Credits,
-            Team1Player11Credits,
-            Team1Player12Credits,
-            Team1Player13Credits,
-        };
-        Team1PlayerCaptures = new UnturnedLabel[]
-        {
-            Team1Player0Captures,
-            Team1Player1Captures,
-            Team1Player2Captures,
-            Team1Player3Captures,
-            Team1Player4Captures,
-            Team1Player5Captures,
-            Team1Player6Captures,
-            Team1Player7Captures,
-            Team1Player8Captures,
-            Team1Player9Captures,
-            Team1Player10Captures,
-            Team1Player11Captures,
-            Team1Player12Captures,
-            Team1Player13Captures,
-        };
-        Team1PlayerDamage = new UnturnedLabel[]
-        {
-            Team1Player0Damage,
-            Team1Player1Damage,
-            Team1Player2Damage,
-            Team1Player3Damage,
-            Team1Player4Damage,
-            Team1Player5Damage,
-            Team1Player6Damage,
-            Team1Player7Damage,
-            Team1Player8Damage,
-            Team1Player9Damage,
-            Team1Player10Damage,
-            Team1Player11Damage,
-            Team1Player12Damage,
-            Team1Player13Damage,
-        };
-        Team1PlayerVCs = new UnturnedUIElement[]
-        {
-            Team1Player0VC,
-            Team1Player1VC,
-            Team1Player2VC,
-            Team1Player3VC,
-            Team1Player4VC,
-            Team1Player5VC,
-            Team1Player6VC,
-            Team1Player7VC,
-            Team1Player8VC,
-            Team1Player9VC,
-            Team1Player10VC,
-            Team1Player11VC,
-            Team1Player12VC,
-            Team1Player13VC,
-        };
-        Team2PlayerNames = new UnturnedLabel[]
-        {
-            Team2Player0Name,
-            Team2Player1Name,
-            Team2Player2Name,
-            Team2Player3Name,
-            Team2Player4Name,
-            Team2Player5Name,
-            Team2Player6Name,
-            Team2Player7Name,
-            Team2Player8Name,
-            Team2Player9Name,
-            Team2Player10Name,
-            Team2Player11Name,
-            Team2Player12Name,
-            Team2Player13Name,
-        };
-        Team2PlayerKills = new UnturnedLabel[]
-        {
-            Team2Player0Kills,
-            Team2Player1Kills,
-            Team2Player2Kills,
-            Team2Player3Kills,
-            Team2Player4Kills,
-            Team2Player5Kills,
-            Team2Player6Kills,
-            Team2Player7Kills,
-            Team2Player8Kills,
-            Team2Player9Kills,
-            Team2Player10Kills,
-            Team2Player11Kills,
-            Team2Player12Kills,
-            Team2Player13Kills,
-        };
-        Team2PlayerDeaths = new UnturnedLabel[]
-        {
-            Team2Player0Deaths,
-            Team2Player1Deaths,
-            Team2Player2Deaths,
-            Team2Player3Deaths,
-            Team2Player4Deaths,
-            Team2Player5Deaths,
-            Team2Player6Deaths,
-            Team2Player7Deaths,
-            Team2Player8Deaths,
-            Team2Player9Deaths,
-            Team2Player10Deaths,
-            Team2Player11Deaths,
-            Team2Player12Deaths,
-            Team2Player13Deaths,
-        };
-        Team2PlayerXP = new UnturnedLabel[]
-        {
-            Team2Player0XP,
-            Team2Player1XP,
-            Team2Player2XP,
-            Team2Player3XP,
-            Team2Player4XP,
-            Team2Player5XP,
-            Team2Player6XP,
-            Team2Player7XP,
-            Team2Player8XP,
-            Team2Player9XP,
-            Team2Player10XP,
-            Team2Player11XP,
-            Team2Player12XP,
-            Team2Player13XP,
-        };
-        Team2PlayerCredits = new UnturnedLabel[]
-        {
-            Team2Player0Credits,
-            Team2Player1Credits,
-            Team2Player2Credits,
-            Team2Player3Credits,
-            Team2Player4Credits,
-            Team2Player5Credits,
-            Team2Player6Credits,
-            Team2Player7Credits,
-            Team2Player8Credits,
-            Team2Player9Credits,
-            Team2Player10Credits,
-            Team2Player11Credits,
-            Team2Player12Credits,
-            Team2Player13Credits,
-        };
-        Team2PlayerCaptures = new UnturnedLabel[]
-        {
-            Team2Player0Captures,
-            Team2Player1Captures,
-            Team2Player2Captures,
-            Team2Player3Captures,
-            Team2Player4Captures,
-            Team2Player5Captures,
-            Team2Player6Captures,
-            Team2Player7Captures,
-            Team2Player8Captures,
-            Team2Player9Captures,
-            Team2Player10Captures,
-            Team2Player11Captures,
-            Team2Player12Captures,
-            Team2Player13Captures,
-        };
-        Team2PlayerDamage = new UnturnedLabel[]
-        {
-            Team2Player0Damage,
-            Team2Player1Damage,
-            Team2Player2Damage,
-            Team2Player3Damage,
-            Team2Player4Damage,
-            Team2Player5Damage,
-            Team2Player6Damage,
-            Team2Player7Damage,
-            Team2Player8Damage,
-            Team2Player9Damage,
-            Team2Player10Damage,
-            Team2Player11Damage,
-            Team2Player12Damage,
-            Team2Player13Damage,
-        };
-        Team2PlayerVCs = new UnturnedUIElement[]
-        {
-            Team2Player0VC,
-            Team2Player1VC,
-            Team2Player2VC,
-            Team2Player3VC,
-            Team2Player4VC,
-            Team2Player5VC,
-            Team2Player6VC,
-            Team2Player7VC,
-            Team2Player8VC,
-            Team2Player9VC,
-            Team2Player10VC,
-            Team2Player11VC,
-            Team2Player12VC,
-            Team2Player13VC,
-        };
-    }
+    public ConventionalLeaderboardUI() : base(12007, Gamemodes.Gamemode.Config.UIConventionalLeaderboard, true, false) { }
     public void SendCTFLeaderboard<TStats, TStatTracker>(LanguageSet set, in LongestShot info, List<TStats>? t1Stats, List<TStats>? t2Stats, TStatTracker tracker, string? shutdownReason, ulong winner) where TStats : BaseCTFStats where TStatTracker : BaseCTFTracker<TStats>
     {
 #if DEBUG
@@ -726,18 +198,18 @@ public class ConventionalLeaderboardUI : UnturnedUI
 
         if (tracker is not null)
         {
-            values[29] = tracker.Duration.ToString(STAT_TIME_FORMAT, locale);
+            values[29] = tracker.Duration.ToString(StatFormatTime, locale);
             values[30] = tracker.casualtiesT1.ToString(locale);
             values[31] = tracker.casualtiesT2.ToString(locale);
             values[32] = tracker.flagOwnerChanges.ToString(locale);
-            values[33] = tracker.AverageTeam1Size.ToString(STAT_FLOAT_FORMAT, locale);
-            values[34] = tracker.AverageTeam2Size.ToString(STAT_FLOAT_FORMAT, locale);
+            values[33] = tracker.AverageTeam1Size.ToString(StatFormatFloat, locale);
+            values[34] = tracker.AverageTeam2Size.ToString(StatFormatFloat, locale);
             values[35] = tracker.fobsPlacedT1.ToString(locale);
             values[36] = tracker.fobsPlacedT2.ToString(locale);
             values[37] = tracker.fobsDestroyedT1.ToString(locale);
             values[38] = tracker.fobsDestroyedT2.ToString(locale);
             values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(locale);
-            values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
+            values[40] = !info.IsValue ? LeaderboardEx.EmptyFieldNamePlaceholder :
                 T.LongestShot.Translate(lang, info.Distance,
                     Assets.find<ItemAsset>(info.Gun),
                     info.Name);
@@ -745,7 +217,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
         else
         {
             for (int i = 29; i < 47; ++i)
-                values[i] = LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER;
+                values[i] = LeaderboardEx.EmptyFieldPlaceholder;
         }
 
         int index = 46;
@@ -845,11 +317,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, tracker is not null ? tracker.GetPresence(stats) : 0f));
                 PersonalStats0.SetText(c, stats.Kills.ToString(locale));
                 PersonalStats1.SetText(c, stats.Deaths.ToString(locale));
-                PersonalStats2.SetText(c, stats.KDR.ToString(STAT_PRECISION_FLOAT_FORMAT, locale));
+                PersonalStats2.SetText(c, stats.KDR.ToString(StatFormatPrecisionFloat, locale));
                 PersonalStats3.SetText(c, stats.KillsOnPoint.ToString(locale));
-                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, locale));
+                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(StatFormatTime, locale));
                 PersonalStats5.SetText(c, stats.XPGained.ToString(locale));
-                PersonalStats6.SetText(c, TimeSpan.FromSeconds(stats.timeonpoint).ToString(STAT_TIME_FORMAT, locale));
+                PersonalStats6.SetText(c, TimeSpan.FromSeconds(stats.timeonpoint).ToString(StatFormatTime, locale));
                 PersonalStats7.SetText(c, stats.Captures.ToString(locale));
                 PersonalStats8.SetText(c, stats.DamageDone.ToString(locale));
                 PersonalStats9.SetText(c, stats.Teamkills.ToString(locale));
@@ -859,18 +331,18 @@ public class ConventionalLeaderboardUI : UnturnedUI
             else
             {
                 PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, 0f));
-                PersonalStats0.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats1.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats2.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats3.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats4.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats5.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats6.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats7.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats8.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats9.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats10.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats11.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats0.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats1.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats2.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats3.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats4.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats5.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats6.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats7.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats8.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats9.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats10.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats11.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
             }
 
             TeamDuration.SetText(c, values[29]);
@@ -1048,12 +520,12 @@ public class ConventionalLeaderboardUI : UnturnedUI
 
         if (tracker is not null)
         {
-            values[29] = tracker.Duration.ToString(STAT_TIME_FORMAT, locale);
+            values[29] = tracker.Duration.ToString(StatFormatTime, locale);
             values[30] = tracker.casualtiesT1.ToString(locale);
             values[31] = tracker.casualtiesT2.ToString(locale);
             values[32] = tracker.intelligenceGathered.ToString(locale);
-            values[33] = tracker.AverageTeam1Size.ToString(STAT_FLOAT_FORMAT, locale);
-            values[34] = tracker.AverageTeam2Size.ToString(STAT_FLOAT_FORMAT, locale);
+            values[33] = tracker.AverageTeam1Size.ToString(StatFormatFloat, locale);
+            values[34] = tracker.AverageTeam2Size.ToString(StatFormatFloat, locale);
             values[35] = tracker.fobsPlacedT1.ToString(locale);
             values[36] = tracker.fobsPlacedT2.ToString(locale);
             values[37] = tracker.fobsDestroyedT1.ToString(locale);
@@ -1061,7 +533,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(locale);
             ulong pl = info.Player;
             InsurgencyPlayerStats? s;
-            values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
+            values[40] = !info.IsValue ? LeaderboardEx.EmptyFieldNamePlaceholder :
                 T.LongestShot.Translate(lang, info.Distance,
                     Assets.find<ItemAsset>(info.Gun),
                     UCPlayer.FromID(info.Player) as IPlayer ?? ((s = (info.Team == 1ul ? t1Stats : t2Stats)?.Find(x => x.Steam64 == pl)) == null ? new PlayerNames(pl) : (s.Player == null
@@ -1071,7 +543,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
         else
         {
             for (int i = 29; i < 47; ++i)
-                values[i] = LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER;
+                values[i] = LeaderboardEx.EmptyFieldPlaceholder;
         }
 
         int index = 46;
@@ -1168,15 +640,15 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, tracker is not null ? tracker.GetPresence(stats) : 0f));
                 PersonalStats0.SetText(c, stats.Kills.ToString(locale));
                 PersonalStats1.SetText(c, stats.Deaths.ToString(locale));
-                PersonalStats2.SetText(c, stats.DamageDone.ToString(STAT_FLOAT_FORMAT, locale));
+                PersonalStats2.SetText(c, stats.DamageDone.ToString(StatFormatFloat, locale));
                 if (Data.Gamemode is IAttackDefense iad)
                     PersonalStats3.SetText(c, (team == iad.AttackingTeam ? stats.KillsAttack : stats.KillsDefense).ToString(locale));
                 else
-                    PersonalStats3.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, locale));
+                    PersonalStats3.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(StatFormatTime, locale));
                 PersonalStats5.SetText(c, stats.XPGained.ToString(locale));
                 PersonalStats6.SetText(c, stats._intelligencePointsCollected.ToString(locale));
-                PersonalStats7.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER /* todo */);
+                PersonalStats7.SetText(c, LeaderboardEx.EmptyFieldPlaceholder /* todo */);
                 PersonalStats8.SetText(c, stats._cachesDestroyed.ToString(locale));
                 PersonalStats9.SetText(c, stats.Teamkills.ToString(locale));
                 PersonalStats10.SetText(c, stats.FOBsDestroyed.ToString(locale));
@@ -1185,18 +657,18 @@ public class ConventionalLeaderboardUI : UnturnedUI
             else
             {
                 PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, 0f));
-                PersonalStats0.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats1.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats2.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats3.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats4.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats5.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats6.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats7.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats8.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats9.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats10.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats11.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats0.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats1.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats2.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats3.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats4.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats5.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats6.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats7.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats8.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats9.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats10.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats11.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
             }
 
             TeamDuration.SetText(c, values[29]);
@@ -1376,12 +848,12 @@ public class ConventionalLeaderboardUI : UnturnedUI
 
         if (tracker is not null)
         {
-            values[29] = tracker.Duration.ToString(STAT_TIME_FORMAT, locale);
+            values[29] = tracker.Duration.ToString(StatFormatTime, locale);
             values[30] = tracker.casualtiesT1.ToString(locale);
             values[31] = tracker.casualtiesT2.ToString(locale);
             values[32] = tracker.flagOwnerChanges.ToString(locale);
-            values[33] = tracker.AverageTeam1Size.ToString(STAT_FLOAT_FORMAT, locale);
-            values[34] = tracker.AverageTeam2Size.ToString(STAT_FLOAT_FORMAT, locale);
+            values[33] = tracker.AverageTeam1Size.ToString(StatFormatFloat, locale);
+            values[34] = tracker.AverageTeam2Size.ToString(StatFormatFloat, locale);
             values[35] = tracker.fobsPlacedT1.ToString(locale);
             values[36] = tracker.fobsPlacedT2.ToString(locale);
             values[37] = tracker.fobsDestroyedT1.ToString(locale);
@@ -1389,7 +861,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(locale);
             ulong pl = info.Player;
             ConquestStats? s;
-            values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
+            values[40] = !info.IsValue ? LeaderboardEx.EmptyFieldNamePlaceholder :
                 T.LongestShot.Translate(lang, info.Distance,
                     Assets.find<ItemAsset>(info.Gun),
                     UCPlayer.FromID(info.Player) as IPlayer ?? ((s = (info.Team == 1ul ? t1Stats : t2Stats)?.Find(x => x.Steam64 == pl)) == null ? new PlayerNames(pl) : (s.Player == null
@@ -1399,7 +871,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
         else
         {
             for (int i = 29; i < 47; ++i)
-                values[i] = LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER;
+                values[i] = LeaderboardEx.EmptyFieldPlaceholder;
         }
 
         int index = 46;
@@ -1496,13 +968,13 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, tracker is not null ? tracker.GetPresence(stats) : 0f));
                 PersonalStats0.SetText(c, stats.Kills.ToString(locale));
                 PersonalStats1.SetText(c, stats.Deaths.ToString(locale));
-                PersonalStats2.SetText(c, stats.DamageDone.ToString(STAT_FLOAT_FORMAT, locale));
+                PersonalStats2.SetText(c, stats.DamageDone.ToString(StatFormatFloat, locale));
                 PersonalStats3.SetText(c, stats.KillsOnPoint.ToString(locale));
-                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, locale));
+                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(StatFormatTime, locale));
                 PersonalStats5.SetText(c, stats.XPGained.ToString(locale));
-                PersonalStats6.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, locale));
+                PersonalStats6.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(StatFormatTime, locale));
                 PersonalStats7.SetText(c, stats.Captures.ToString(locale));
-                PersonalStats8.SetText(c, TimeSpan.FromSeconds(stats.timeonpoint).ToString(STAT_TIME_FORMAT, locale));
+                PersonalStats8.SetText(c, TimeSpan.FromSeconds(stats.timeonpoint).ToString(StatFormatTime, locale));
                 PersonalStats9.SetText(c, stats.Teamkills.ToString(locale));
                 PersonalStats10.SetText(c, stats.FOBsDestroyed.ToString(locale));
                 PersonalStats11.SetText(c, stats.Credits.ToString(locale));
@@ -1510,18 +982,18 @@ public class ConventionalLeaderboardUI : UnturnedUI
             else
             {
                 PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, 0f));
-                PersonalStats0.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats1.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats2.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats3.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats4.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats5.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats6.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats7.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats8.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats9.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats10.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
-                PersonalStats11.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats0.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats1.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats2.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats3.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats4.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats5.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats6.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats7.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats8.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats9.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats10.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                PersonalStats11.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
             }
 
             TeamDuration.SetText(c, values[29]);

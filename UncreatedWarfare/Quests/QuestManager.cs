@@ -275,6 +275,7 @@ public static class QuestManager
                         GetCompletedQuests(tracker.Player);
                     tracker.Player.CompletedQuests!.Add(tracker.PresetKey);
                     await Data.Gamemode.HandleQuestCompleted(args, default);
+                    await UCWarfare.ToUpdate();
                 }
 
                 if (args.GiveRewards)
