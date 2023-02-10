@@ -13,7 +13,6 @@ namespace Uncreated.Warfare.Tickets;
 public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartListener, IGameTickListener, IFlagCapturedListener, IFlagNeutralizedListener, IReloadUIListener
 {
     public static TicketManager Singleton;
-    public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
     public static readonly TicketUI TicketUI = new TicketUI();
     private int _t1Tickets;
     private int _t2Tickets;
@@ -176,18 +175,5 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
     void IReloadUIListener.ReloadUI(UCPlayer player)
     {
         SendUI(player);
-    }
-}
-public class TicketData : JSONConfigData
-{
-    public int TicketHandicapDifference;
-    public int FOBCost;
-    public int PlayerDeathCost;
-
-    public override void SetDefaults()
-    {
-        PlayerDeathCost = 1;
-        TicketHandicapDifference = 40;
-        FOBCost = 15;
     }
 }
