@@ -419,6 +419,12 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             }
             if (removed != null && killer != null)
             {
+                if (Data.Is(out ITickets tickets))
+                {
+                    if (team == 1) tickets.TicketManager.Team1Tickets += Config.TicketsFOBRadioLost;
+                    else if (team == 2) tickets.TicketManager.Team2Tickets += Config.TicketsFOBRadioLost;
+                }
+
                 if (killer.GetTeam() == team)
                 {
                     Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, T.XPToastFriendlyFOBDestroyed);
@@ -998,6 +1004,7 @@ public class FOBConfigData : JSONConfigData
     public ushort FOBRequiredBuild;
     public int FOBBuildPickupRadius;
     public byte FobLimit;
+    public int TicketsFOBRadioLost;
 
     public float AmmoCommandCooldown;
     public ushort AmmoCrateRequiredBuild;
@@ -1036,6 +1043,7 @@ public class FOBConfigData : JSONConfigData
         FOBRequiredBuild = 15;
         FOBBuildPickupRadius = 80;
         FobLimit = 10;
+        TicketsFOBRadioLost = -40;
 
         AmmoCrateRequiredBuild = 2;
         AmmoCommandCooldown = 120f;
