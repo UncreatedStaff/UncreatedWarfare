@@ -19,7 +19,7 @@ using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Traits;
-public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IGameStartListener, ILevelStartListener, IPlayerPostInitListener, IReloadUIListener
+public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IGameStartListener, ILevelStartListener, IPlayerPostInitListener, IReloadUIListener, ITimeSyncListener
 {
     public List<Trait> ActiveTraits;
     public static TraitManager Singleton;
@@ -634,5 +634,10 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
     {
         if (player.GetTeam() is 1 or 2 && !player.HasUIHidden && !(Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> lb) && lb.IsScreenUp))
             BuffUI.SendBuffs(player);
+    }
+
+    void ITimeSyncListener.TimeSync(float time)
+    {
+        TraitSigns.TimeSync();
     }
 }

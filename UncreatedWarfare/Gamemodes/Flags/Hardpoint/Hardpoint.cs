@@ -152,11 +152,9 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             L.LogError("Failed to pick a valid objective!!! (picked " + newobj + " out of " + FlagRotation.Count + " loaded flags).");
             if (first)
                 throw new SingletonLoadException(SingletonLoadType.Load, this, "Failed to pick a valid objective.");
-            else
-            {
-                _nextObjectivePickTime = oldTime;
-                return;
-            }
+
+            _nextObjectivePickTime = oldTime;
+            return;
         }
         _objIndex = newobj;
         if (!first)
@@ -194,6 +192,12 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
                 L.LogError("Failed to path...");
                 throw new InvalidOperationException("Invalid pathing data entered.");
             }
+
+            L.LogWarning("Objective pathing for hardpoint failed to create the correct amount of flags (" +
+                         (Config.HardpointFlagAmount - Config.HardpointFlagTolerance).ToString(Data.AdminLocale) +
+                         " to " +
+                         (Config.HardpointFlagAmount + Config.HardpointFlagTolerance).ToString(Data.AdminLocale) +
+                         ").");
         }
         while (FlagRotation.Count > Config.HardpointFlagAmount + Config.HardpointFlagTolerance && FlagRotation.Count < Config.HardpointFlagAmount - Config.HardpointFlagTolerance);
     }
@@ -420,6 +424,7 @@ public class HardpointTicketProvider : BaseTicketProvider
         if (Data.Gamemode is not Hardpoint hp) return;
         if (hp.EveryXSeconds(Gamemode.Config.HardpointTicketTickSeconds))
         {
+            bool t = true;
             switch (hp.ObjectiveState)
             {
                 case 1ul:
@@ -429,12 +434,27 @@ public class HardpointTicketProvider : BaseTicketProvider
                     --Manager.Team1Tickets;
                     break;
                 case 0ul:
-                    // draw
+                    // draw, keeps the game running until someone can win
                     if (Manager.Team1Tickets == 1 && Manager.Team2Tickets == 1)
                         return;
                     --Manager.Team1Tickets;
                     --Manager.Team2Tickets;
                     break;
+                default:
+                    t = false;
+                    break;
+            }
+            if (t && hp.Objective is { } obj)
+            {
+                for (int i = 0; i < hp.WarstatsTracker.stats.Count; ++i)
+                {
+                    UCPlayer pl = hp.WarstatsTracker.stats[i].Player;
+                    if (pl is not { IsOnline: true }) continue;
+                    if (obj.PlayerInRange(pl.Player))
+                    {
+                        ++hp.WarstatsTracker.stats[i].Hardpoints;
+                    }
+                }
             }
         }
     }

@@ -10,11 +10,11 @@ public class BaseCTFLeaderboard<Stats, StatTracker> : ConventionalLeaderboard<St
 {
     public override void Calculate()
     {
-        tracker.GetTopStats(14, out statsT1, out statsT2);
+        tracker.GetTopStats(14, out StatsTeam1, out StatsTeam2);
     }
     public override void SendLeaderboard(in LanguageSet set)
     {
-        LeaderboardUI.SendCTFLeaderboard(set, in tracker.LongestShot, statsT1, statsT2, tracker, shuttingDown ? shuttingDownMessage : null, _winner);
+        LeaderboardUI.SendCTFLeaderboard(set, in tracker.LongestShot, StatsTeam1, StatsTeam2, tracker, shuttingDown ? shuttingDownMessage : null, _winner);
     }
 }
 

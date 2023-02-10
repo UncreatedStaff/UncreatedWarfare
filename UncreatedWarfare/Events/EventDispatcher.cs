@@ -209,9 +209,11 @@ public static class EventDispatcher
         if (vehicle.gameObject.TryGetComponent(out BuiltBuildableComponent comp))
             UnityEngine.Object.Destroy(comp);
 
+        VehicleDestroyed request = new VehicleDestroyed(vehicle, spotted);
+        if (request.Instigator != null && request.Instigator.Player.TryGetPlayerData(out UCPlayerData data))
+            data.LastExplodedVehicle = request.Vehicle.asset.GUID;
         if (VehicleDestroyed != null)
         {
-            VehicleDestroyed request = new VehicleDestroyed(vehicle, spotted);
             foreach (EventDelegate<VehicleDestroyed> inv in VehicleDestroyed.GetInvocationList().Cast<EventDelegate<VehicleDestroyed>>())
             {
                 if (!request.CanContinue) break;

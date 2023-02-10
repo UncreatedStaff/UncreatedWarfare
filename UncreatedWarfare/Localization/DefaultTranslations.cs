@@ -537,6 +537,100 @@ internal static class T
     public static readonly Translation ConquestHeader5 = new Translation("Damage",  TranslationFlags.UnityUI);
     #endregion
 
+    #region Hardpoint
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats0  = new Translation("Kills: ",                 TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats1  = new Translation("Deaths: ",                TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats2  = new Translation("Damage Done: ",           TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats3  = new Translation("Objective Kills: ",       TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats4  = new Translation("Time Deployed: ",         TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats5  = new Translation("XP Gained: ",             TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats6  = new Translation("Revives: ",               TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats7  = new Translation("Points Gained: ",         TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats8  = new Translation("Time on Flag: ",          TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats9  = new Translation("Teamkills: ",             TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats10 = new Translation("FOBs Destroyed: ",        TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointPlayerStats11 = new Translation("Credits Gained: ",        TranslationFlags.UnityUI);
+
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointWarStats0 = new Translation("Duration: ",                                      TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation<FactionInfo> HardpointWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation<FactionInfo> HardpointWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointWarStats3 = new Translation("Contesting Time: ",                               TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation<FactionInfo> HardpointWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation<FactionInfo> HardpointWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation<FactionInfo> HardpointWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation<FactionInfo> HardpointWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation<FactionInfo> HardpointWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation<FactionInfo> HardpointWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.FormatShortName);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.UnityUI);
+
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointHeader0 = new Translation("Kills",    TranslationFlags.UnityUI);
+
+    [TranslationData(SectionLeaderboard)]                                             
+    public static readonly Translation HardpointHeader1 = new Translation("Deaths",   TranslationFlags.UnityUI);
+
+    [TranslationData(SectionLeaderboard)]                                             
+    public static readonly Translation HardpointHeader2 = new Translation("XP",       TranslationFlags.UnityUI);
+
+    [TranslationData(SectionLeaderboard)]                                             
+    public static readonly Translation HardpointHeader3 = new Translation("Credits",  TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointHeader4 = new Translation("Cap Seconds", TranslationFlags.UnityUI);
+    
+    [TranslationData(SectionLeaderboard)]
+    public static readonly Translation HardpointHeader5 = new Translation("Damage",  TranslationFlags.UnityUI);
+    #endregion
+
     #endregion
 
     #region GroupCommand

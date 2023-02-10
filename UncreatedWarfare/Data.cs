@@ -78,6 +78,7 @@ public static class Data
         public static readonly string KitSync = Path.Combine(Sync, "kits.json");
         public static readonly string PlayersSync = Path.Combine(Sync, "players.json");
         public static readonly string CurrentLog = Path.Combine(Logs, "current.txt");
+        public static readonly string FunctionLog = Path.Combine(Logs, "funclog.txt");
         public static string FlagStorage => _flagCache ??= Path.Combine(MapStorage, "Flags") + Path.DirectorySeparatorChar;
         public static string StructureStorage => _structureCache ??= Path.Combine(MapStorage, "Structures") + Path.DirectorySeparatorChar;
         public static string VehicleStorage => _vehicleCache ??= Path.Combine(MapStorage, "Vehicles") + Path.DirectorySeparatorChar;

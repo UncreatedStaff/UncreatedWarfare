@@ -298,7 +298,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     protected abstract void InitUI(UCPlayer player);
     public virtual void OnJoinTeam(UCPlayer player, ulong team)
     {
-        if (team is 1 or 2 && _state == State.Staging)
+        if (team is 1 or 2 && State == State.Staging)
             ShowStagingUI(player);
         if (this is IGameStats gs)
             gs.GameStats.OnPlayerJoin(player);
