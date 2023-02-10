@@ -1,4 +1,6 @@
-﻿using HarmonyLib;
+﻿//#define FUNCTION_LOG
+
+using HarmonyLib;
 using JetBrains.Annotations;
 using SDG.Unturned;
 using StackCleaner;
@@ -26,6 +28,9 @@ public static class L
     private static bool _init;
     private static int _indention;
     private static FileStream _log;
+#if DEBUG && FUNCTION_LOG
+    private static FileStream _flog;
+#endif
     private static bool _inL;
     private static ICommandInputOutput? _defaultIOHandler;
     private delegate void OutputToConsole(string value, ConsoleColor color);
@@ -52,6 +57,20 @@ public static class L
                 File.Move(Data.Paths.CurrentLog, n);
             }
             _log = new FileStream(Data.Paths.CurrentLog, FileMode.Create, FileAccess.Write, FileShare.Read);
+#if DEBUG && FUNCTION_LOG
+            _flog = new FileStream(Data.Paths.FunctionLog, FileMode.Create, FileAccess.Write, FileShare.Read);
+            try
+            {
+                Harmony.Patches.Patcher.Patch(typeof(ProfilingUtils).GetMethod(nameof(ProfilingUtils.StartTracking), BindingFlags.Static | BindingFlags.Public),
+                    prefix: new HarmonyMethod(typeof(L).GetMethod(nameof(StartTracking),
+                        BindingFlags.Static | BindingFlags.NonPublic)));
+            }
+            catch (Exception ex)
+            {
+                CommandWindow.LogError("Error patching ProfilingUtils.StartTracking.");
+                CommandWindow.LogError(ex);
+            }
+#endif
             try
             {
                 FieldInfo? defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -90,7 +109,7 @@ public static class L
                 FieldInfo? logger = typeof(Debug).GetField("s_Logger", BindingFlags.Static | BindingFlags.NonPublic);
                 if (logger != null)
                     logger.SetValue(null, new UCUnityLogger());
-                Log(Debug.unityLogger.GetType().Name);
+                //Log(Debug.unityLogger.GetType().Name);
             }
             catch (Exception ex)
             {
@@ -111,7 +130,34 @@ public static class L
             CommandWindow.LogError(ex);
         }
     }
-
+#if DEBUG && FUNCTION_LOG
+    private static readonly string[] blocked =
+    {
+        "Update",
+        "FixedUpdate",
+        "IsInside",
+        "IsDelayed",
+        "UpdateSign",
+        "UpdateSignInternal",
+    };
+    static void StartTracking(string callerName, string filepath, int linenumber)
+    {
+        if (callerName.IndexOf("Log", StringComparison.Ordinal) != -1 ||
+            callerName.IndexOf("Translate", StringComparison.Ordinal) != -1 ||
+            callerName.IndexOf("Simulate", StringComparison.Ordinal) != -1)
+            return;
+        for (int i = 0; i < blocked.Length; ++i)
+        {
+            if (blocked[i].Equals(callerName, StringComparison.Ordinal)) return;
+        }
+        if (_flog != null)
+        {
+            byte[] bytes = System.Text.Encoding.ASCII.GetBytes(DateTime.Now.ToString("s") + " - " + callerName + " - " + linenumber + " - " + filepath + Environment.NewLine);
+            _flog.Write(bytes, 0, bytes.Length);
+            _flog.Flush();
+        }
+    }
+#endif
     private static void OnUnityLogMessage(string condition, string stacktrace, LogType type)
     {
         switch (type)

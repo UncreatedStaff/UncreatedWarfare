@@ -77,26 +77,37 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         return base.PreUnload(token);
     }
     public static bool CanUseCountermeasures(InteractableVehicle vehicle) => true;
+    private static readonly List<BarricadeDrop> _toUpdate = new List<BarricadeDrop>(32);
     private void OnPlayerEnterMain(UCPlayer player, ulong team)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        WriteWait();
         try
         {
-            for (int i = 0; i < Items.Count; i++)
+            WriteWait();
+            try
             {
-                SavedStructure? sign = Items[i].Item?.Sign?.Item;
-                if (sign?.Buildable?.Drop is not BarricadeDrop drop)
-                    continue;
-                if (team == 1 && TeamManager.Team1Main.IsInside(sign.Position) || team == 2 && TeamManager.Team2Main.IsInside(sign.Position))
-                    Signs.SendSignUpdate(drop, player, false);
+                for (int i = 0; i < Items.Count; i++)
+                {
+                    SavedStructure? sign = Items[i].Item?.Sign?.Item;
+                    if (sign?.Buildable?.Drop is not BarricadeDrop drop)
+                        continue;
+                    if (team == 1 && TeamManager.Team1Main.IsInside(sign.Position) || team == 2 && TeamManager.Team2Main.IsInside(sign.Position))
+                        _toUpdate.Add(drop);
+                }
             }
+            finally
+            {
+                WriteRelease();
+            }
+            for (int i = 0; i < _toUpdate.Count; ++i)
+                Signs.SendSignUpdate(_toUpdate[i], player, false);
         }
         finally
         {
-            WriteRelease();
+            _toUpdate.Clear();
         }
         InteractableVehicle? vehicle = player.CurrentVehicle;
         if (vehicle == null)

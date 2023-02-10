@@ -3,10 +3,10 @@ public class ConquestLeaderboard : ConventionalLeaderboard<ConquestStats, Conque
 {
     public override void Calculate()
     {
-        tracker.GetTopStats(14, out statsT1, out statsT2);
+        tracker.GetTopStats(14, out StatsTeam1, out StatsTeam2);
     }
     public override void SendLeaderboard(in LanguageSet set)
     {
-        LeaderboardUI.SendConquestLeaderboard(set, tracker.LongestShot, statsT1, statsT2, tracker, shuttingDown ? shuttingDownMessage : null, _winner);
+        LeaderboardUI.SendConquestLeaderboard(set, tracker.LongestShot, StatsTeam1, StatsTeam2, tracker, shuttingDown ? shuttingDownMessage : null, _winner);
     }
 }

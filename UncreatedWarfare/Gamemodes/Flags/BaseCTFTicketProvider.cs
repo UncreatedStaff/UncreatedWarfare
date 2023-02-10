@@ -30,9 +30,9 @@ public abstract class BaseCTFTicketProvider : BaseTicketProvider
                 int t1B = GetTeamBleed(1);
                 int t2B = GetTeamBleed(2);
 
-                if (t1B < 0)
+                if (t1B < 0) 
                     Manager.Team1Tickets += t1B;
-                if (t2B < 0)
+                if (t2B < 0) 
                     Manager.Team2Tickets += t2B;
             }
         }
