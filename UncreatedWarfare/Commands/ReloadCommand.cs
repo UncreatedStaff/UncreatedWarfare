@@ -78,6 +78,7 @@ public class ReloadCommand : AsyncCommand
         else if (module.Equals("teams", StringComparison.OrdinalIgnoreCase) || module.Equals("factions", StringComparison.OrdinalIgnoreCase))
         {
             await TeamManager.ReloadFactions(token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             TeamManager.SetupConfig();
             ctx.Reply(T.ReloadedGeneric, "teams and factions");
             ctx.LogAction(ActionLogType.ReloadComponent, "TEAMS & FACTIONS");

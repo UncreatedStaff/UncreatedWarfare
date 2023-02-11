@@ -295,8 +295,6 @@ public class ZoneBuilder
             throw new ZoneAPIException("Zone name not provided.");
         if (ZoneType != ZoneType.Circle && ZoneType != ZoneType.Rectangle && ZoneType != ZoneType.Polygon)
             throw new ZoneAPIException("Zones must declare at least one type-specific property (Radius, SizeX & SizeY, Points).");
-        if (Id < 0)
-            throw new ZoneAPIException("Zones must declare an ID greater than 0.");
         ZoneModel mdl = new ZoneModel
         {
             IsValid = false,

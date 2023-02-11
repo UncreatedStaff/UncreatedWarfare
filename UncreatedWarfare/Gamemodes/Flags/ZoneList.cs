@@ -119,7 +119,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IReloadUIListener
 
         checkPredefs:
         if (term.Equals("lobby", StringComparison.OrdinalIgnoreCase) || term.Equals("spawn", StringComparison.OrdinalIgnoreCase))
-            return FindProxyNoLock(Teams.TeamManager.LobbyZone.Id);
+            return FindProxyNoLock(Teams.TeamManager.LobbyZone.PrimaryKey);
         if (term.Equals("t1main", StringComparison.OrdinalIgnoreCase) || term.Equals("t1", StringComparison.OrdinalIgnoreCase))
             return FindProxyNoLock(Teams.TeamManager.Team1Main);
         if (term.Equals("t2main", StringComparison.OrdinalIgnoreCase) || term.Equals("t2", StringComparison.OrdinalIgnoreCase))

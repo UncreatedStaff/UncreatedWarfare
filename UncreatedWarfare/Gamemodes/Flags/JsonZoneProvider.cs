@@ -111,18 +111,6 @@ public class JsonZoneProvider
             Save();
         }
     }
-    public int NextFreeID()
-    {
-        for (int i = 0;; ++i)
-        {
-            for (int j = 0; j < _zones.Count; ++j)
-            {
-                if (_zones[j].Id == i) goto c;
-            }
-            return i;
-        c:;
-        }
-    }
     public void Save()
     {
         try

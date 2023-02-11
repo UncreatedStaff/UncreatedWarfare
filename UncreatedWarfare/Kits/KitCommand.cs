@@ -94,11 +94,12 @@ public sealed class KitCommand : AsyncCommand
                 @new:
                 FactionInfo? faction = null;
                 Class @class = ctx.Caller.KitClass;
+                if (@class == Class.None) @class = Class.Unarmed;
                 KitType type = KitType.Public;
                 bool def = ctx.MatchParameter(2, "default") || ctx.MatchParameter(2, Default);
                 if (def || ctx.MatchParameter(2, "me") || ctx.TryGet(2, out @class))
                 {
-                    if (def) @class = Class.None;
+                    if (def) @class = Class.Unarmed;
                     if ((ctx.MatchParameter(3, "default") || ctx.MatchParameter(3, Default)) || ctx.TryGet(3, out type))
                     {
                         if (ctx.TryGet(4, out string factionId))
@@ -114,7 +115,10 @@ public sealed class KitCommand : AsyncCommand
                 else if (ctx.HasArg(2))
                     throw ctx.Reply(T.ClassNotFoundCreateKit, ctx.Get(2)!);
 
-                kit = new Kit(kitName, @class, KitManager.GetDefaultBranch(@class), type, SquadLevel.Member, faction);
+                kit = new Kit(kitName, @class, KitManager.GetDefaultBranch(@class), type, SquadLevel.Member, faction)
+                {
+                    Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true),
+                };
                 kit.Creator = kit.LastEditor = ctx.CallerID;
                 await manager.AddOrUpdate(kit, token).ConfigureAwait(false);
                 ctx.LogAction(ActionLogType.CreateKit, kitName);

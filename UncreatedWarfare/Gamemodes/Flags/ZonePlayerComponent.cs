@@ -156,7 +156,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 for (int j = 0; j < Builders.Count; ++j)
                 {
                     ZonePlayerComponent b = Builders[j];
-                    if (b._currentBuilder is not null && b._currentBuilderIsExisting && b._currentBuilder!.Id == zone.Id)
+                    if (b._currentBuilder is not null && b._currentBuilderIsExisting && b._currentBuilder!.Id == zone.PrimaryKey.Key)
                         b.OnDeleted();
                 }
                 ctx.Reply(T.ZoneDeleteZoneSuccess, zone);
@@ -177,7 +177,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         if (_isLoading)
             return;
         ThreadUtil.assertIsGameThread();
-        if (ctx.HasArgs(2))
+        if (!ctx.HasArgs(2))
             throw ctx.SendCorrectUsage("/zone create <polygon|rectange|circle> <name>");
         ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
         if (singleton is null)
@@ -552,7 +552,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         ctx.Reply(T.ZoneEditFinalizeFailure, ex2.Message);
                         return;
                     }
-                    if (singleton.IsNameTaken(mdl.Name, out _))
+                    if (!_currentBuilderIsExisting && singleton.IsNameTaken(mdl.Name, out _))
                         throw ctx.Reply(T.ZoneEditFinalizeExists);
                     Zone zone = mdl.GetZone();
                     bool @new;

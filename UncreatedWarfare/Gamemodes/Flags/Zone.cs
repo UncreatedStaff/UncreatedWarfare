@@ -17,8 +17,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags;
 /// </summary>
 public abstract class Zone : IDeployable, IListItem
 {
-    public PrimaryKey PrimaryKey { get => Id; set => Id = value; }
-    internal int Id;
+    public PrimaryKey PrimaryKey { get; set; }
     private static bool _isReady;
     /// <summary>
     /// For converting between image sources and coordinate sources.
@@ -36,7 +35,7 @@ public abstract class Zone : IDeployable, IListItem
         Name = Name,
         ShortName = ShortName,
         Adjacencies = Data.Adjacencies,
-        Id = Id,
+        Id = PrimaryKey,
         SpawnX = Spawn.x,
         SpawnZ = Spawn.y,
         UseMapCoordinates = false,
@@ -236,7 +235,7 @@ public abstract class Zone : IDeployable, IListItem
         this.Name = data.Name;
         this.MinHeight = data.MinimumHeight;
         this.MaxHeight = data.MaximumHeight;
-        this.Id = data.Id;
+        this.PrimaryKey = data.Id < 0 ? PrimaryKey.NotAssigned : data.Id;
         if (data.UseMapCoordinates)
         {
             this.Center = FromMapCoordinates(new Vector2(data.ZoneData.X, data.ZoneData.Z));
