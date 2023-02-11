@@ -391,6 +391,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         _hasTimeSynced = false;
         if (_useEventLoop)
         {
+            if (EventLoopCoroutine != null) // TODO: will this ever be nullif the gamemode is being reinstantiated here every time?
+            {
+                L.LogError("An ADDITIONAL Gamemode event loop is about to be instantiated, stopping the old one...");
+
+                StopCoroutine(EventLoopCoroutine);
+            }
+
             EventLoopCoroutine = StartCoroutine(EventLoop());
         }
         if (Data.Singletons.TryGetSingleton(out ZoneList list))
@@ -718,12 +725,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             await CommandHandler.LetCommandsFinish().ConfigureAwait(false);
             Type? nextMode = GetNextGamemode();
-            if (GetType() != nextMode)
-            {
-                await TryLoadGamemode(nextMode!, token).ConfigureAwait(false);
-                return;
-            }
-            await Data.Singletons.ReloadSingletonAsync(ReloadKey, token).ConfigureAwait(false);
+            await TryLoadGamemode(nextMode!, token).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
