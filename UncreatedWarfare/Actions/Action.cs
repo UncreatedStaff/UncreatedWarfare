@@ -66,9 +66,9 @@ public class Action
         L.Log("Existing actions: " + existing.Length);
         foreach (ActionComponent component in existing)
         {
-            if (Type == component.Action.Type)
+            if (component.Action != null && Type == component.Action.Type)
             {
-                L.Log("     Attempting to cancel a  ction action...");
+                L.Log("     Attempting to cancel action action...");
                 component.Action.Cancel();
             }
         }

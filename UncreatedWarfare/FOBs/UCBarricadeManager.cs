@@ -935,8 +935,9 @@ public static class UCBarricadeManager
                 List<LevelObject> region = LevelObjects.objects[x, y];
                 for (int i = 0; i < region.Count; i++)
                 {
-                    if (transform == region[i].transform)
-                        return region[i];
+                    LevelObject obj = region[i];
+                    if (transform == obj.transform || transform.IsChildOf(obj.transform))
+                        return obj;
                 }
             }
         }
@@ -1080,8 +1081,9 @@ public static class UCBarricadeManager
         List<LevelObject> region = LevelObjects.objects[x, y];
         for (int i = 0; i < region.Count; i++)
         {
-            if (transform == region[i].transform)
-                return region[i];
+            LevelObject obj = region[i];
+            if (transform == obj.transform || transform.IsChildOf(obj.transform))
+                return obj;
         }
 
         return null;

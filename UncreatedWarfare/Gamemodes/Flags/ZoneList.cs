@@ -342,7 +342,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IReloadUIListener
             ZoneType.Circle => 3,
             ZoneType.Rectangle => 4,
             _ => 0
-        } + mdl.Adjacencies.Length * 2 + mdl.GridObjects.Length * 5];
+        } + mdl.Adjacencies.Length * 2 + mdl.GridObjects.Length * 6];
         int index = 0;
         objs[0] = pk2;
         switch (mdl.ZoneType)
