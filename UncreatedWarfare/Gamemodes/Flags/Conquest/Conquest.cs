@@ -25,7 +25,7 @@ using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 public sealed partial class Conquest :
-    TicketFlagGamemode<ConquestTicketProvider>,
+    TicketFlagGamemode<TeamCTFTicketProvider>,
     IFlagRotation,
     IVehicles,
     IFOBs,
@@ -321,6 +321,7 @@ public sealed partial class Conquest :
     }
 }
 
+[Obsolete]
 public class ConquestTicketProvider : BaseTicketProvider, IFlagCapturedListener, IFlagNeutralizedListener
 {
     private int _t1Bleed;
