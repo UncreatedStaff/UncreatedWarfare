@@ -748,6 +748,21 @@ internal static class T
     public static readonly Translation<string> FactionNotFoundCreateKit              = new Translation<string>("<#ff8c69>Unable to find a faction called <#fff>{0}</color>.");
     public static readonly Translation<string> ClassNotFoundCreateKit                = new Translation<string>("<#ff8c69>There is no kit class named <#fff>{0}</color>.");
     public static readonly Translation<string> TypeNotFoundCreateKit                 = new Translation<string>("<#ff8c69>There is no kit type named <#fff>{0}</color>. Use: 'public', 'elite', 'special', 'loadout'.");
+
+    [TranslationData(SectionKits, "Sent when the caller doesn't enter a valid integer for level.", "Skill name", "Max level")]
+    public static readonly Translation<string, int> KitInvalidSkillsetLevel          = new Translation<string, int>("<#ff8c69>Please give a level between <#fff>0</color> and <#fff>{1}</color> for <#ddd>{0}</color>");
+
+    [TranslationData(SectionKits, "Sent when the caller doesn't enter a valid integer for level.", "Skill name", "Max level")]
+    public static readonly Translation<string> KitInvalidSkillset                    = new Translation<string>("<#ff8c69>\"<#fff>{0}</color>\" is not a valid skill name, use the displayed value in-game.");
+
+    [TranslationData(SectionKits, "Sent when the skillset requested to be removed isn't present.", "Skill set")]
+    public static readonly Translation<Skillset, Kit> KitSkillsetNotFound            = new Translation<Skillset, Kit>("<#ff8c69>\"<#ddd>{0}</color>\" is not overridden by <#fff>{1}</color>.", Skillset.FormatNoLevel, Kit.DisplayNameFormat);
+
+    [TranslationData(SectionKits, "Sent when a skillset is removed.", "Skill set", "Kit target")]
+    public static readonly Translation<Skillset, Kit> KitSkillsetRemoved             = new Translation<Skillset, Kit>("<#a0ad8e>\"<#ddd>{0}</color>\" was removed from <#fff>{1}</color>.", arg1Fmt: Kit.DisplayNameFormat);
+
+    [TranslationData(SectionKits, "Sent when a skillset is added.", "Skill set", "Kit target")]
+    public static readonly Translation<Skillset, Kit> KitSkillsetAdded               = new Translation<Skillset, Kit>("<#a0ad8e>\"<#ddd>{0}</color>\" was added to <#fff>{1}</color>.", arg1Fmt: Kit.DisplayNameFormat);
     #endregion
 
     #region RangeCommand
