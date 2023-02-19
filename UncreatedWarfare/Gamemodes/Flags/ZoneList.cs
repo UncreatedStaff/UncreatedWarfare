@@ -119,7 +119,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IReloadUIListener
 
         checkPredefs:
         if (term.Equals("lobby", StringComparison.OrdinalIgnoreCase) || term.Equals("spawn", StringComparison.OrdinalIgnoreCase))
-            return FindProxyNoLock(Teams.TeamManager.LobbyZone.Id);
+            return FindProxyNoLock(Teams.TeamManager.LobbyZone.PrimaryKey);
         if (term.Equals("t1main", StringComparison.OrdinalIgnoreCase) || term.Equals("t1", StringComparison.OrdinalIgnoreCase))
             return FindProxyNoLock(Teams.TeamManager.Team1Main);
         if (term.Equals("t2main", StringComparison.OrdinalIgnoreCase) || term.Equals("t2", StringComparison.OrdinalIgnoreCase))
@@ -342,7 +342,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IReloadUIListener
             ZoneType.Circle => 3,
             ZoneType.Rectangle => 4,
             _ => 0
-        } + mdl.Adjacencies.Length * 2 + mdl.GridObjects.Length * 5];
+        } + mdl.Adjacencies.Length * 2 + mdl.GridObjects.Length * 6];
         int index = 0;
         objs[0] = pk2;
         switch (mdl.ZoneType)

@@ -1542,10 +1542,7 @@ public class DebugCommand : AsyncCommand
             }
             else ctx.ReplyString(name + " not found.");
         }
-        
     }
-
-
     private void nerd(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.STAFF);

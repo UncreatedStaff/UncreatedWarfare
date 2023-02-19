@@ -220,21 +220,21 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         L.Log("Team 1 objective: " + (ObjectiveTeam1?.Name ?? "null") + ", Team 2 objective: " + (ObjectiveTeam2?.Name ?? "null"), ConsoleColor.Green);
         base.PrintFlagRotation();
     }
-    protected virtual void InvokeOnObjectiveChanged(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj)
+    protected virtual void InvokeOnObjectiveChanged(Flag oldFlag, Flag newFlag, ulong team, int oldObj, int newObj)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Team != 0)
+        if (team != 0)
         {
             if (_gameStats != null)
                 _gameStats.flagOwnerChanges++;
             L.Log("Team 1 objective: " + (ObjectiveTeam1?.Name ?? "null") + ", Team 2 objective: " + (ObjectiveTeam2?.Name ?? "null"), ConsoleColor.Green);
             if (Config.AASDiscoveryForesight > 0)
             {
-                if (Team == 1)
+                if (team == 1)
                 {
-                    for (int i = NewFlagObj.Index; i < NewFlagObj.Index + Config.AASDiscoveryForesight; i++)
+                    for (int i = newFlag.Index; i < newFlag.Index + Config.AASDiscoveryForesight; i++)
                     {
                         if (i >= FlagRotation.Count || i < 0) break;
                         FlagRotation[i].Discover(1);
@@ -244,9 +244,9 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                             CTFUI.ReplicateFlagUpdate(FlagRotation[i]);
                     }
                 }
-                else if (Team == 2)
+                else if (team == 2)
                 {
-                    for (int i = NewFlagObj.Index; i > NewFlagObj.Index - Config.AASDiscoveryForesight; i--)
+                    for (int i = newFlag.Index; i > newFlag.Index - Config.AASDiscoveryForesight; i--)
                     {
                         if (i >= FlagRotation.Count || i < 0) break;
                         FlagRotation[i].Discover(2);
@@ -257,6 +257,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                     }
                 }
             }
+
+            OnObjectiveChangedPowerHandler(oldFlag, newFlag);
         }
     }
     protected override void EventLoopAction()

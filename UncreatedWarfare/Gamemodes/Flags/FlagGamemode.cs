@@ -46,7 +46,29 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     {
         token.CombineIfNeeded(UnloadToken);
         ThreadUtil.assertIsGameThread();
+        Flag? obj1 = null;
+        Flag? obj2 = null;
+        if (this is IFlagObjectiveGamemode gm1)
+            obj1 = gm1.Objective;
+        else if (this is IFlagTeamObjectiveGamemode gm2)
+        {
+            obj1 = gm2.ObjectiveTeam1;
+            obj2 = gm2.ObjectiveTeam2;
+        }
         LoadRotation();
+        OnRotationUpdated();
+        if (this is IFlagObjectiveGamemode gm3)
+        {
+            if (gm3.Objective != obj1)
+                OnObjectiveChangedPowerHandler(obj1, gm3.Objective);
+        }
+        else if (this is IFlagTeamObjectiveGamemode gm4)
+        {
+            if (gm4.ObjectiveTeam1 != obj1)
+                OnObjectiveChangedPowerHandler(obj1, gm4.ObjectiveTeam1);
+            if (gm4.ObjectiveTeam2 != obj2)
+                OnObjectiveChangedPowerHandler(obj2, gm4.ObjectiveTeam2);
+        }
         return base.PreGameStarting(isOnLoad, token);
     }
     protected override void EventLoopAction()
@@ -221,6 +243,9 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     internal virtual bool IsBarricadeObjectEnabled(BarricadeDrop drop)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         Vector3 pos = drop.model.position;
         switch (ElectricalGridBehavior)
         {
@@ -258,6 +283,9 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     internal virtual bool IsPowerObjectEnabled(InteractableObject obj)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         switch (ElectricalGridBehavior)
         {
             case ElectricalGridBehaivor.AllEnabled:
@@ -315,6 +343,9 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     {
         if (ElectricalGridBehavior != ElectricalGridBehaivor.EnabledWhenObjective)
             return;
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         GridObject[]? arr = oldObj?.ZoneData?.Item?.Data.GridObjects;
         if (arr is { Length: > 0 })
         {
@@ -328,13 +359,22 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     protected virtual void OnRotationUpdated()
     {
-        // todo
+        if (ElectricalGridBehavior != ElectricalGridBehaivor.EnabledWhenInRotation)
+            return;
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        SetPowerForAllInGrid(AllFlags.Where(x => !Rotation.Contains(x)).SelectMany(x => x?.ZoneData?.Item?.Data.GridObjects ?? Array.Empty<GridObject>()), false);
+        SetPowerForAllInGrid(Rotation.SelectMany(x => x?.ZoneData?.Item?.Data.GridObjects ?? Array.Empty<GridObject>()), true);
     }
-    private void SetPowerForAllInGrid(GridObject[] arr, bool state)
+    private static void SetPowerForAllInGrid(IEnumerable<GridObject> arr, bool state)
     {
-        for (int i = 0; i < arr.Length; ++i)
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        foreach (GridObject obj in arr)
         {
-            if (arr[i].Object is { interactable: { } inx } && inx != null)
+            if (obj.Object is { interactable: { } inx } && inx != null)
             {
                 if (inx.objectAsset.interactability == EObjectInteractability.BINARY_STATE &&
                     inx.objectAsset.interactabilityHint is EObjectInteractabilityHint.SWITCH or EObjectInteractabilityHint.FIRE or EObjectInteractabilityHint.GENERATOR)

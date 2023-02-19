@@ -695,7 +695,9 @@ public class UCWarfare : MonoBehaviour
                 }
                 else if (task.Task.IsFaulted)
                 {
+                    _tasks.RemoveAtFast(i);
                     RegisterErroredTask(task.Task, task.Context);
+                    return;
                 }
                 if (task.Task.IsCompleted)
                 {

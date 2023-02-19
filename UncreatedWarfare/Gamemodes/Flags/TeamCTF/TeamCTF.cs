@@ -39,11 +39,11 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
         base.EndStagingPhase();
         DestroyBlockers();
     }
-    protected override void InvokeOnObjectiveChanged(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj)
+    protected override void InvokeOnObjectiveChanged(Flag oldFlag, Flag newFlag, ulong team, int oldObj, int newObj)
     {
-        base.InvokeOnObjectiveChanged(OldFlagObj, NewFlagObj, Team, OldObj, NewObj);
-        CTFUI.ReplicateFlagUpdate(OldFlagObj, false);
-        CTFUI.ReplicateFlagUpdate(NewFlagObj, false);
+        base.InvokeOnObjectiveChanged(oldFlag, newFlag, team, oldObj, newObj);
+        CTFUI.ReplicateFlagUpdate(oldFlag, false);
+        CTFUI.ReplicateFlagUpdate(newFlag, false);
     }
     protected override void InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
     {

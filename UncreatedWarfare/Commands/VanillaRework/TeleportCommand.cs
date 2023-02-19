@@ -73,8 +73,8 @@ public class TeleportCommand : Command
                     throw ctx.Reply(T.TeleportLocationNotFound, input);
                 pos = n.transform.position;
                 if (ctx.Caller.Player.teleportToLocation(new Vector3(pos.x, F.GetTerrainHeightAt2DPoint(pos.x, pos.z, 1f), pos.z), 0f))
-                    throw ctx.Reply(T.TeleportSelfLocationSuccess, n.name);
-                throw ctx.Reply(T.TeleportSelfLocationObstructed, n.name);
+                    throw ctx.Reply(T.TeleportSelfLocationSuccess, n.locationName);
+                throw ctx.Reply(T.TeleportSelfLocationObstructed, n.locationName);
             case 2:
                 if (ctx.TryGet(0, out _, out UCPlayer? target) && target is not null)
                 {
@@ -131,10 +131,10 @@ public class TeleportCommand : Command
                     pos = n.transform.position;
                     if (target.Player.teleportToLocation(new Vector3(pos.x, F.GetTerrainHeightAt2DPoint(pos.x, pos.z, 1f), pos.z), 0f))
                     {
-                        target.SendChat(T.TeleportSelfLocationSuccess, n.name);
-                        throw ctx.Reply(T.TeleportOtherSuccessLocation, target, n.name);
+                        target.SendChat(T.TeleportSelfLocationSuccess, n.locationName);
+                        throw ctx.Reply(T.TeleportOtherSuccessLocation, target, n.locationName);
                     }
-                    throw ctx.Reply(T.TeleportOtherObstructedLocation, target, n.name);
+                    throw ctx.Reply(T.TeleportOtherObstructedLocation, target, n.locationName);
                 }
                 throw ctx.Reply(T.TeleportTargetNotFound, ctx.Get(0)!);
             case 3:

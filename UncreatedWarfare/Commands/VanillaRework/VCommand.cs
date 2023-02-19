@@ -21,6 +21,13 @@ public class VCommand : Command
     {
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
+        bool enter = false;
+        if (ctx.MatchParameter(0, "-e"))
+        {
+            enter = true;
+            ctx.Offset = 1;
+        }
+
         ctx.AssertArgs(1, SYNTAX);
 
         ctx.AssertOnDuty();
@@ -31,7 +38,7 @@ public class VCommand : Command
             throw ctx.ReplyString("<color=#8f9494>Unable to find a vehicle by the name or id: <color=#dddddd>" + ctx.GetRange(0) + "</color>.</color>");
 
         Vector3 ppos = ctx.Caller.Position;
-        Vector3 v = ctx.Caller.Player.look.aim.forward with { y = 0 };
+        Vector3 v = ctx.Caller.Player.look.aim.forward.normalized with { y = 0 };
         Vector3 targetPos = ppos + v * 6.5f;
         RaycastHit hit;
         targetPos.y += 500f;
@@ -79,7 +86,8 @@ public class VCommand : Command
             true,
             turrets,
             255);
-
+        if (enter)
+            VehicleManager.ServerForcePassengerIntoVehicle(ctx.Caller.Player, vehicle);
         ctx.ReplyString($"Spawned a <color=#dddddd>{vehicle.asset.vehicleName}</color> (<color=#aaaaaa>{vehicle.asset.id}</color>).", "bfb9ac");
     }
 }

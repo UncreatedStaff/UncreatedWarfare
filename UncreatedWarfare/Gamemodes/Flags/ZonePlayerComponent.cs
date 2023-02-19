@@ -121,6 +121,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
         if (singleton is null)
             throw ctx.SendGamemodeError();
+        string name;
         if (!ctx.HasArgs(1))
         {
             Vector3 pos = _player.Position;
@@ -128,10 +129,11 @@ internal class ZonePlayerComponent : MonoBehaviour
             proxy = singleton.FindInsizeZone(pos, true)!;
             if (proxy is null)
                 throw ctx.Reply(T.ZoneDeleteZoneNotInZone);
+            name = proxy.ToString();
         }
         else
         {
-            if (!ctx.TryGetRange(0, out string name))
+            if (!ctx.TryGetRange(0, out name))
             {
                 ctx.Reply(T.ZoneDeleteZoneNotFound, Translation.Null(T.ZoneDeleteZoneNotFound.Flags));
                 return;
@@ -156,7 +158,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 for (int j = 0; j < Builders.Count; ++j)
                 {
                     ZonePlayerComponent b = Builders[j];
-                    if (b._currentBuilder is not null && b._currentBuilderIsExisting && b._currentBuilder!.Id == zone.Id)
+                    if (b._currentBuilder is not null && b._currentBuilderIsExisting && b._currentBuilder!.Id == zone.PrimaryKey.Key)
                         b.OnDeleted();
                 }
                 ctx.Reply(T.ZoneDeleteZoneSuccess, zone);
@@ -177,7 +179,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         if (_isLoading)
             return;
         ThreadUtil.assertIsGameThread();
-        if (ctx.HasArgs(2))
+        if (!ctx.HasArgs(2))
             throw ctx.SendCorrectUsage("/zone create <polygon|rectange|circle> <name>");
         ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
         if (singleton is null)
@@ -264,10 +266,11 @@ internal class ZonePlayerComponent : MonoBehaviour
         _lastZonePreviewRefresh = Time.time;
         ITransportConnection channel = _player.Player.channel.owner.transportConnection;
         if (Airdrop != null)
-            EffectManager.askEffectClearByID(Airdrop.id, channel);
-        EffectManager.askEffectClearByID(Side.id, channel);
-        EffectManager.askEffectClearByID(Corner.id, channel);
-        EffectManager.askEffectClearByID(Center.id, channel);
+            EffectManager.ClearEffectByGuid(Airdrop.GUID, channel);
+        EffectManager.ClearEffectByGuid(Spawn.GUID, channel);
+        EffectManager.ClearEffectByGuid(Side.GUID, channel);
+        EffectManager.ClearEffectByGuid(Corner.GUID, channel);
+        EffectManager.ClearEffectByGuid(Center.GUID, channel);
         if (_currentBuilder == null) return;
         Vector3 pos = new Vector3(_currentBuilder.SpawnX, 0f, _currentBuilder.SpawnZ);
         pos.y = F.GetHeight(pos, _currentBuilder.MinHeight);
@@ -552,7 +555,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         ctx.Reply(T.ZoneEditFinalizeFailure, ex2.Message);
                         return;
                     }
-                    if (singleton.IsNameTaken(mdl.Name, out _))
+                    if (!_currentBuilderIsExisting && singleton.IsNameTaken(mdl.Name, out _))
                         throw ctx.Reply(T.ZoneEditFinalizeExists);
                     Zone zone = mdl.GetZone();
                     bool @new;
@@ -781,7 +784,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         RefreshPreview();
                     }
                     AddTransaction(new SetPointTransaction(ind, old, @new));
-                    ctx.Reply(T.ZoneEditSetPointSuccess, ind + 1, old, @new);
+                    ctx.Reply(T.ZoneEditSetPointSuccess, ind + 1, @new, old);
                 }
                 else if (ctx.HasArgsExact(4)) // <pt num> <dest x> <dest z>
                 {
@@ -803,7 +806,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         RefreshPreview();
                     }
                     AddTransaction(new SetPointTransaction(index, old, @new));
-                    ctx.Reply(T.ZoneEditSetPointSuccess, index + 1, old, @new);
+                    ctx.Reply(T.ZoneEditSetPointSuccess, index + 1, @new, old);
                 }
                 else if (ctx.HasArgsExact(3)) // <src x> <src z>
                 {
@@ -839,7 +842,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         RefreshPreview();
                     }
                     AddTransaction(new SetPointTransaction(ind, old, @new));
-                    ctx.Reply(T.ZoneEditSetPointSuccess, ind + 1, old, @new);
+                    ctx.Reply(T.ZoneEditSetPointSuccess, ind + 1, @new, old);
                 }
                 else if (ctx.HasArgsExact(2)) // <pt num>
                 {
@@ -861,7 +864,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         RefreshPreview();
                     }
                     AddTransaction(new SetPointTransaction(index, old, @new));
-                    ctx.Reply(T.ZoneEditSetPointSuccess, index + 1, old, @new);
+                    ctx.Reply(T.ZoneEditSetPointSuccess, index + 1, @new, old);
                 }
                 else if (ctx.HasArgsExact(1))
                 {
@@ -895,7 +898,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         RefreshPreview();
                     }
                     AddTransaction(new SetPointTransaction(ind, old, v));
-                    ctx.Reply(T.ZoneEditSetPointSuccess, ind + 1, old, v);
+                    ctx.Reply(T.ZoneEditSetPointSuccess, ind + 1, v, old);
                 }
                 else
                     throw ctx.Reply(T.ZoneEditSetPointInvalid);
@@ -1119,8 +1122,8 @@ internal class ZonePlayerComponent : MonoBehaviour
                 else if (!ctx.TryGet(1, out x) || !ctx.TryGet(2, out z))
                     throw ctx.Reply(T.ZoneEditSpawnInvalid);
 
-                AddTransaction(new SetCenterTransaction(_currentBuilder.CenterX, _currentBuilder.CenterZ, x, z, false));
-                SetCenter(x, z, false);
+                AddTransaction(new SetCenterTransaction(_currentBuilder.CenterX, _currentBuilder.CenterZ, x, z, _currentBuilder.ZoneType != ZoneType.Polygon));
+                SetCenter(x, z, _currentBuilder.ZoneType != ZoneType.Polygon);
             }
             else if (ctx.MatchParameter(0, "name", "title", "longname"))
             {
@@ -1328,15 +1331,16 @@ internal class ZonePlayerComponent : MonoBehaviour
                     break;
             }
         }
+        bool srot = false;
+        float rot = 0f;
         if (isSpawn || _currentBuilder.ZoneType == ZoneType.Polygon)
         {
-            float rot = _player.Player.transform.rotation.eulerAngles.y;
+            rot = _player.Player.transform.rotation.eulerAngles.y;
             for (int i = 1; i < 5; ++i)
             {
                 if (rot > 90 * i - 5f && rot < 90 * i + 5f)
                     rot = 90 * i;
             }
-            bool srot = false;
             switch (_currentBuilder.UseCase)
             {
                 case ZoneUseCase.Team1Main:
@@ -1355,13 +1359,13 @@ internal class ZonePlayerComponent : MonoBehaviour
                     srot = true;
                     break;
             }
-
-            if (srot)
-                _player.SendChat(T.ZoneEditSpawnSuccessRotation, new Vector2(x, z), rot);
-            else
-                _player.SendChat(isSpawn ? T.ZoneEditSpawnSuccess : T.ZoneEditCenterSuccess, new Vector2(x, z));
-            RefreshPreview();
         }
+
+        if (srot)
+            _player.SendChat(T.ZoneEditSpawnSuccessRotation, new Vector2(x, z), rot);
+        else
+            _player.SendChat(isSpawn ? T.ZoneEditSpawnSuccess : T.ZoneEditCenterSuccess, new Vector2(x, z));
+        RefreshPreview();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

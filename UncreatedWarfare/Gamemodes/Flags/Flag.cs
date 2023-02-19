@@ -276,7 +276,7 @@ public class Flag : IDisposable, IObjective
         Zone? z = zone.Item;
         if (z is null)
             throw new ArgumentNullException(nameof(zone));
-        this._id = z.Id;
+        this._id = z.PrimaryKey;
         this._x = z.Spawn.x;
         this._y = z.Spawn3D.y;
         this._z = z.Spawn.y;
