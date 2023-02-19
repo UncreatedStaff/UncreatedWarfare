@@ -12,7 +12,14 @@ public partial class Conquest
 {
     private void IntlLoadRotation()
     {
-        int amt = Config.ConquestPointCount;
+        int amt;
+
+        if (PlayerManager.OnlinePlayers.Count <= 16)
+            amt = Config.ConquestPointCountLowPop;
+        else if (PlayerManager.OnlinePlayers.Count <= 32)
+            amt = Config.ConquestPointCountMediumPop;
+        else
+            amt = Config.ConquestPointCountHighPop;
 
         if (FlagRotation is null)
             FlagRotation = new List<Flag>(amt);
@@ -22,7 +29,7 @@ public partial class Conquest
         if (amt < 3 || amt % 2 == 0)
             throw new InvalidOperationException(
                 "Must have an odd number more than 2 flags for Conquest. Change the \"" +
-                nameof(GamemodeConfigData.ConquestPointCount) + "\" value in Gamemode Config.");
+                nameof(GamemodeConfigData.ConquestPointCountLowPop) + "\" value in Gamemode Config.");
 
         AdjacentFlagData[] adj1 = TeamManager.Team1Main.Data.Adjacencies;
         Flag? flag;

@@ -382,7 +382,7 @@ public class ConquestTicketProvider : BaseTicketProvider, IFlagCapturedListener,
     {
         if (Data.Gamemode != null && Data.Gamemode.State == State.Active)
         {
-            if (Data.Gamemode.EveryXSeconds(Gamemode.Config.ConquestPointCount * Gamemode.Config.ConquestTicketBleedIntervalPerPoint))
+            if (Data.Gamemode.EveryXSeconds(Gamemode.Config.ConquestPointCountLowPop * Gamemode.Config.ConquestTicketBleedIntervalPerPoint))
             {
                 if (_t1Bleed < 0)
                     Manager.Team1Tickets += _t1Bleed;

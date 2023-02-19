@@ -594,22 +594,28 @@ public sealed class GamemodeConfigData : JSONConfigData
     public RotatableConfig<float> ConquestCaptureScale { get; set; }
 
     [Sync(1103)]
-    [JsonPropertyName("conquest_point_count")]
-    public RotatableConfig<int> ConquestPointCount { get; set; }
-
+    [JsonPropertyName("conquest_point_count_low_pop")]
+    public RotatableConfig<int> ConquestPointCountLowPop { get; set; }
     [Sync(1104)]
+    [JsonPropertyName("conquest_point_count_medium_pop")]
+    public RotatableConfig<int> ConquestPointCountMediumPop { get; set; }
+    [Sync(1105)]
+    [JsonPropertyName("conquest_point_count_high_pop")]
+    public RotatableConfig<int> ConquestPointCountHighPop { get; set; }
+
+    [Sync(1106)]
     [JsonPropertyName("conquest_flag_tick_seconds")]
     public RotatableConfig<float> ConquestFlagTickSeconds { get; set; }
 
-    [Sync(1105)]
+    [Sync(1107)]
     [JsonPropertyName("conquest_ticket_bleed_interval_per_point")]
     public RotatableConfig<float> ConquestTicketBleedIntervalPerPoint { get; set; }
 
-    [Sync(1106)]
+    [Sync(1108)]
     [JsonPropertyName("conquest_staging_phase_seconds")]
     public RotatableConfig<int> ConquestStagingPhaseSeconds { get; set; }
 
-    [Sync(1107)]
+    [Sync(1109)]
     [JsonPropertyName("conquest_starting_tickets")]
     public RotatableConfig<int> ConquestStartingTickets { get; set; }
     #endregion
@@ -912,7 +918,9 @@ public sealed class GamemodeConfigData : JSONConfigData
         #region Conquest
         ConquestEvaluateTime = 0.25f;
         ConquestCaptureScale = 3.222f;
-        ConquestPointCount = 5;
+        ConquestPointCountLowPop = 2;
+        ConquestPointCountMediumPop = 3;
+        ConquestPointCountHighPop = 4;
         ConquestFlagTickSeconds = 4f;
         ConquestTicketBleedIntervalPerPoint = 12f;
         ConquestStagingPhaseSeconds = 60;
