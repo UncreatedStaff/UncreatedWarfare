@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.SqlServer.Server;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Json;
@@ -249,7 +250,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public object Clone() => new Kit(Id, this);
 }
 [JsonConverter(typeof(SkillsetConverter))]
-public readonly struct Skillset : IEquatable<Skillset>
+public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
 {
     public static readonly Skillset[] DefaultSkillsets =
     {
@@ -285,7 +286,6 @@ public readonly struct Skillset : IEquatable<Skillset>
         SkillIndex = (byte)skill;
         Level = level;
     }
-
     internal Skillset(EPlayerSpeciality specialty, byte skill, byte level)
     {
         Speciality = specialty;
@@ -434,11 +434,49 @@ public readonly struct Skillset : IEquatable<Skillset>
         hashCode *= -1521134295 + SkillIndex;
         return hashCode;
     }
+
+    [FormatDisplay("No Level")]
+    public const string FormatNoLevel = "nl";
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    {
+        string b = Speciality switch
+        {
+            EPlayerSpeciality.DEFENSE => Localization.TranslateEnum(Defense, language),
+            EPlayerSpeciality.OFFENSE => Localization.TranslateEnum(Offense, language),
+            EPlayerSpeciality.SUPPORT => Localization.TranslateEnum(Support, language),
+            _ => SpecialityIndex.ToString(culture) + "." + SkillIndex.ToString(culture)
+        };
+        if (format != null && format.Equals(FormatNoLevel, StringComparison.Ordinal))
+            return b;
+        return b + " Level " + Level.ToString(culture);
+    }
+
     public bool Equals(Skillset other) => EqualsHelper(in other, true);
     public bool TypeEquals(in Skillset skillset) => EqualsHelper(in skillset, false);
     public static void SetDefaultSkills(UCPlayer player)
     {
         player.EnsureSkillsets(Array.Empty<Skillset>());
+    }
+    /// <returns>-1 if parse failure.</returns>
+    public static int GetSkillsetFromEnglishName(string name, out EPlayerSpeciality speciality)
+    {
+        if (Enum.TryParse(name, true, out EPlayerOffense offense))
+        {
+            speciality = EPlayerSpeciality.OFFENSE;
+            return (int)offense;
+        }
+        if (Enum.TryParse(name, true, out EPlayerDefense defense))
+        {
+            speciality = EPlayerSpeciality.DEFENSE;
+            return (int)defense;
+        }
+        if (Enum.TryParse(name, true, out EPlayerSupport support))
+        {
+            speciality = EPlayerSpeciality.SUPPORT;
+            return (int)support;
+        }
+        speciality = (EPlayerSpeciality)(-1);
+        return -1;
     }
     public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(in b, true);
     public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(in b, true);

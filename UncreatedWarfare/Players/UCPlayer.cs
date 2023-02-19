@@ -674,7 +674,61 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, state);
         Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, state);
     }
+    public void RemoveSkillset(EPlayerSpeciality speciality, byte skill)
+    {
+        ThreadUtil.assertIsGameThread();
+        Skill[][] skills = Player.skills.skills;
+        if ((int)speciality >= skills.Length)
+            throw new ArgumentOutOfRangeException(nameof(speciality), "Speciality index is out of range.");
+        if (skill >= skills[(int)speciality].Length)
+            throw new ArgumentOutOfRangeException(nameof(skill), "Skill index is out of range.");
+        Skill skillObj = skills[(int)speciality][skill];
+        Skillset[] def = Skillset.DefaultSkillsets;
+        for (int d = 0; d < def.Length; ++d)
+        {
+            Skillset s = def[d];
+            if (s.Speciality == speciality && s.SkillIndex == skill)
+            {
+                if (s.Level != skillObj.level)
+                {
+                    L.LogDebug($"Setting server default: {s}.");
+                    s.ServerSet(this);
+                }
+                else
+                    L.LogDebug($"Server default already set: {s}.");
 
+                return;
+            }
+        }
+        byte defaultLvl = GetDefaultSkillLevel(speciality, skill);
+
+        if (skillObj.level != defaultLvl)
+        {
+            Player.skills.ServerSetSkillLevel((int)speciality, skill, defaultLvl);
+            L.LogDebug($"Setting game default: {new Skillset(speciality, skill, defaultLvl)}.");
+        }
+        else
+        {
+            L.LogDebug($"Game default already set: {new Skillset(speciality, skill, defaultLvl)}.");
+        }
+    }
+    public void EnsureSkillset(Skillset skillset)
+    {
+        ThreadUtil.assertIsGameThread();
+        Skill[][] skills = Player.skills.skills;
+        if (skillset.SpecialityIndex >= skills.Length)
+            throw new ArgumentOutOfRangeException(nameof(skillset), "Speciality index is out of range.");
+        if (skillset.SkillIndex >= skills[skillset.SpecialityIndex].Length)
+            throw new ArgumentOutOfRangeException(nameof(skillset), "Skill index is out of range.");
+        Skill skill = skills[skillset.SpecialityIndex][skillset.SkillIndex];
+        if (skillset.Level != skill.level)
+        {
+            L.LogDebug($"Setting override: {skillset}.");
+            skillset.ServerSet(this);
+        }
+        else
+            L.LogDebug($"Override already set: {skillset}.");
+    }
     public void EnsureSkillsets(Skillset[] skillsets)
     {
         ThreadUtil.assertIsGameThread();
@@ -717,25 +771,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                     }
                 }
 
-                byte defaultLvl = 0;
-                if (Provider.modeConfigData.Players.Spawn_With_Max_Skills ||
-                    specIndex == (int)EPlayerSpeciality.OFFENSE &&
-                    (EPlayerOffense)skillIndex is
-                    EPlayerOffense.CARDIO or EPlayerOffense.EXERCISE or
-                    EPlayerOffense.DIVING or EPlayerOffense.PARKOUR &&
-                    Provider.modeConfigData.Players.Spawn_With_Stamina_Skills)
-                {
-                    defaultLvl = skill.max;
-                }
-                else if (Level.getAsset() is { skillRules: { } } asset)
-                {
-                    if (asset.skillRules.Length > specIndex && asset.skillRules[specIndex].Length > skillIndex)
-                    {
-                        LevelAsset.SkillRule rule = asset.skillRules[specIndex][skillIndex];
-                        if (rule != null)
-                            defaultLvl = (byte)rule.defaultLevel;
-                    }
-                }
+                byte defaultLvl = GetDefaultSkillLevel((EPlayerSpeciality)specIndex, (byte)skillIndex);
 
                 if (skill.level != defaultLvl)
                 {
@@ -750,6 +786,36 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             }
         }
     }
+    public byte GetDefaultSkillLevel(EPlayerSpeciality speciality, byte skill)
+    {
+        Skill[][] skills = Player.skills.skills;
+        if ((int)speciality >= skills.Length)
+            throw new ArgumentOutOfRangeException(nameof(speciality), "Speciality index is out of range.");
+        if (skill >= skills[(int)speciality].Length)
+            throw new ArgumentOutOfRangeException(nameof(skill), "Skill index is out of range.");
+        int specIndex = (int)speciality;
+        if (Provider.modeConfigData.Players.Spawn_With_Max_Skills ||
+            specIndex == (int)EPlayerSpeciality.OFFENSE &&
+            (EPlayerOffense)skill is
+            EPlayerOffense.CARDIO or EPlayerOffense.EXERCISE or
+            EPlayerOffense.DIVING or EPlayerOffense.PARKOUR &&
+            Provider.modeConfigData.Players.Spawn_With_Stamina_Skills)
+        {
+            return skills[(int)speciality][skill].max;
+        }
+        if (Level.getAsset() is { skillRules: { } } asset)
+        {
+            if (asset.skillRules.Length > specIndex && asset.skillRules[specIndex].Length > skill)
+            {
+                LevelAsset.SkillRule rule = asset.skillRules[specIndex][skill];
+                if (rule != null)
+                    return (byte)rule.defaultLevel;
+            }
+        }
+
+        return 0;
+    }
+
     public override string ToString() => Name.PlayerName + " [" + Steam64.ToString("G17", Data.AdminLocale) + "]";
     internal void ResetPermissionLevel() => _pLvl = null;
     internal void Update()

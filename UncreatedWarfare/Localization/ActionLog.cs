@@ -862,8 +862,12 @@ public enum ActionLogType : byte
     SetAmmo,
     [Translatable("SET_FIREMODE")]
     SetFiremode,
+    [Translatable("ADD_SKILLSET")]
+    AddSkillset,
+    [Translatable("REMOVE_SKILLSET")]
+    RemoveSkillset,
 
     [Obsolete("Don't use this.")]
-    Max = EnterMain
+    Max = RemoveSkillset
 }
 // ReSharper restore InconsistentNaming
