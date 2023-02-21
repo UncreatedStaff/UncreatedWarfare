@@ -677,7 +677,7 @@ public class LevelUnlockRequirement : UnlockRequirement
     {
         writer.WriteNumber("unlock_level", UnlockLevel);
     }
-    public override object Clone() => new LevelUnlockRequirement() { UnlockLevel = UnlockLevel };
+    public override object Clone() => new LevelUnlockRequirement { UnlockLevel = UnlockLevel };
     protected override void Read(ByteReader reader)
     {
         UnlockLevel = reader.ReadInt32();
