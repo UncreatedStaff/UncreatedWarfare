@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 
 namespace Uncreated.Warfare.Quests;
 public static class QuestRewards

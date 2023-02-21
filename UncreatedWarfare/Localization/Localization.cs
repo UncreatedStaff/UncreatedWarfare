@@ -15,7 +15,7 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -479,7 +479,7 @@ public static class Localization
 
         string unlock = string.Empty;
         if (data.UnlockLevel > 0)
-            unlock += RankData.GetRankAbbreviation(data.UnlockLevel).Colorize("f0b589");
+            unlock += LevelData.GetRankAbbreviation(data.UnlockLevel).Colorize("f0b589");
         if (data.CreditCost > 0)
         {
             if (unlock != string.Empty)

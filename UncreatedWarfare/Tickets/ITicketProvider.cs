@@ -39,6 +39,11 @@ public abstract class BaseTicketProvider : ITicketProvider, IPlayerDeathListener
         ulong team = player.GetTeam();
         GetDisplayInfo(team, out string message, out string tickets, out string bleed);
         ITransportConnection c = player.Connection;
+        if (!player.HasTicketUI)
+        {
+            TicketManager.TicketUI.SendToPlayer(c);
+            player.HasTicketUI = true;
+        }
         TicketManager.TicketUI.Tickets.SetText(c, tickets);
         TicketManager.TicketUI.Bleed.SetText(c, bleed);
         TicketManager.TicketUI.Status.SetText(c, message);
@@ -48,9 +53,15 @@ public abstract class BaseTicketProvider : ITicketProvider, IPlayerDeathListener
         GetDisplayInfo(team, out string message, out string tickets, out string bleed);
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
-            if (PlayerManager.OnlinePlayers[i].GetTeam() == team)
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (pl.GetTeam() == team)
             {
-                ITransportConnection c = PlayerManager.OnlinePlayers[i].Connection;
+                ITransportConnection c = pl.Connection;
+                if (!pl.HasTicketUI)
+                {
+                    TicketManager.TicketUI.SendToPlayer(c);
+                    pl.HasTicketUI = true;
+                }
                 TicketManager.TicketUI.Tickets.SetText(c, tickets);
                 TicketManager.TicketUI.Bleed.SetText(c, bleed);
                 TicketManager.TicketUI.Status.SetText(c, message);

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 

@@ -7,6 +7,7 @@ using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.SQL;
+using Uncreated.Warfare.Levels;
 
 namespace Uncreated.Warfare;
 
@@ -165,7 +166,7 @@ public class WarfareSQL : MySqlDatabase
     public async Task<int> GetCredits(ulong player, ulong team, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-        int xp = Point.Points.CreditsConfig.StartingCredits;
+        int xp = Points.CreditsConfig.StartingCredits;
         await QueryAsync("SELECT `Credits` FROM `" + LEVELS_TABLE + "` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
             new object[] { player, team },
             reader =>

@@ -29,7 +29,7 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
@@ -397,8 +397,9 @@ public class UCWarfare : MonoBehaviour
         {
             if (!uiOnly)
                 Data.Gamemode.InvokeLanguageChanged(player);
-            Data.Gamemode.InvokeReloadUI(player);
         }
+
+        Data.UpdateAllUI(player);
     }
 
     private static Queue<MainThreadTask.MainThreadResult>? _threadActionRequests;

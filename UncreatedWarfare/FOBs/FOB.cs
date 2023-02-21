@@ -10,7 +10,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -127,7 +127,7 @@ public class FOBComponent : MonoBehaviour
         Destroy(this);
     }
 }
-public class FOB : IFOB, IDeployable
+public class FOB : IResourceFOB, IDeployable
 {
     public BarricadeDrop Radio;
     private FOBComponent _component;
@@ -782,6 +782,10 @@ public interface IFOB : ITranslationArgument
     string Name { get; }
     string ClosestLocation { get; }
     GridLocation GridLocation { get; }
+}
+public interface IResourceFOB : IFOB
+{
+    string UIResourceString { get; }
 }
 
 public enum EfobRadius : byte

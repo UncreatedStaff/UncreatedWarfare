@@ -10,7 +10,7 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets;
 
-public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartListener, IGameTickListener, IFlagCapturedListener, IFlagNeutralizedListener, IReloadUIListener
+public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartListener, IGameTickListener, IFlagCapturedListener, IFlagNeutralizedListener, IUIListener
 {
     public static TicketManager Singleton;
     public static readonly TicketUI TicketUI = new TicketUI();
@@ -50,7 +50,6 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
                 UpdateUI(2ul);
         }
     }
-    public TicketManager() { }
     public override void Load()
     {
         Singleton = this;
@@ -81,15 +80,15 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
             Provider.Tick();
         }
     }
-    public void SendUI(UCPlayer player)
+    public void ShowUI(UCPlayer player)
     {
         ulong team = player.GetTeam();
         if (team is 1 or 2)
         {
             if (Provider == null || player is null || !player.IsOnline || player.HasUIHidden)
                 return;
-            L.Log("Sending UI to " + player.CharacterName);
             TicketUI.SendToPlayer(player.Connection);
+            player.HasTicketUI = true;
             string? url = TeamManager.GetFaction(team)?.FlagImageURL;
             if (url is not null)
                 TicketUI.Flag.SetImage(player.Connection, url);
@@ -128,23 +127,26 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
     private void OnGroupChanged(GroupChanged e)
     {
         if (e.NewTeam is > 0 and < 3)
-            SendUI(e.Player);
+            ShowUI(e.Player);
         else
-            ClearUI(e.Player);
+            HideUI(e.Player);
     }
     void IPlayerPreInitListener.OnPrePlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
         if (Provider is IPlayerPreInitListener il)
             il.OnPrePlayerInit(player, wasAlreadyOnline);
-        SendUI(player);
+        ShowUI(player);
     }
     void IGameStartListener.OnGameStarting(bool isOnLoad)
     {
-        if (Provider != null)
-            Provider.OnGameStarting(isOnLoad);
+        Provider?.OnGameStarting(isOnLoad);
     }
-    public void ClearUI(UCPlayer player) => TicketUI.ClearFromPlayer(player.Connection);
-    public void ClearUI(ITransportConnection connection) => TicketUI.ClearFromPlayer(connection);
+    public void HideUI(UCPlayer player)
+    {
+        player.HasTicketUI = false;
+        TicketUI.ClearFromPlayer(player.Connection);
+    }
+
     public void SendWinUI(ulong winner)
     {
         Gamemode.WinToastUI.SendToAllPlayers();
@@ -170,10 +172,5 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
                 Gamemode.WinToastUI.Header.SetText(c, header);
             }
         }
-    }
-
-    void IReloadUIListener.ReloadUI(UCPlayer player)
-    {
-        SendUI(player);
     }
 }

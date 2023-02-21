@@ -12,8 +12,9 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
@@ -228,6 +229,9 @@ internal static class T
     
     [TranslationData(SectionPlayers, "Sent when a player tries to craft a blacklisted blueprint.")]
     public static readonly Translation NoCraftingBlueprint = new Translation("<#b3a6a2>Crafting is disabled for this item.");
+
+    [TranslationData(SectionPlayers, "Shows above the XP UI when divisions are enabled.", "Branch (Division) the player is a part of.")]
+    public static readonly Translation<Branch> XPUIDivision = new Translation<Branch>("{0} Division");
     #endregion
 
     #region Leaderboards
@@ -1196,8 +1200,8 @@ internal static class T
     public static readonly Translation<FactionInfo> RequestKitWrongTeam = new Translation<FactionInfo>("<#a8918a>You must be part of {0} to request this kit.", FactionInfo.FormatShortName);
     public static readonly Translation RequestNotBuyable = new Translation("<#a8918a>This kit cannot be purchased with credits.");
     public static readonly Translation<int> RequestKitLimited = new Translation<int>("<#a8918a>Your team already has a max of <#d9e882>{0}</color> players using this kit. Try again later.");
-    public static readonly Translation<string> RequestKitLowLevel = new Translation<string>("<#b3ab9f>You must be <#ffc29c>{0}</color> to use this kit.", RankData.FormatName);
-    public static readonly Translation<Ranks.RankData> RequestKitLowRank = new Translation<Ranks.RankData>("<#b3ab9f>You must be {0} to use this kit.", Ranks.RankData.FormatColorName);
+    public static readonly Translation<LevelData> RequestKitLowLevel = new Translation<LevelData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to use this kit.", LevelData.FormatName);
+    public static readonly Translation<RankData> RequestKitLowRank = new Translation<RankData>("<#b3ab9f>You must be {0} to use this kit.", RankData.FormatColorName);
     public static readonly Translation<QuestAsset> RequestKitQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this kit.", BaseQuestData.COLOR_QUEST_ASSET_FORMAT);
     public static readonly Translation RequestKitNotSquadleader = new Translation("<#b3ab9f>You must be a <#cedcde>SQUAD LEADER</color> in order to get this kit.");
     public static readonly Translation RequestLoadoutNotOwned = new Translation("<#a8918a>You do not own this loadout.");
@@ -1208,8 +1212,8 @@ internal static class T
     public static readonly Translation RequestVehicleNoKit = new Translation("<#a8918a>Get a kit before you request vehicles.");
     public static readonly Translation<FactionInfo> RequestVehicleOtherTeam = new Translation<FactionInfo>("<#a8918a>You must be on {0} to request this vehicle.", FactionInfo.FormatColorDisplayName);
     public static readonly Translation<Class> RequestVehicleWrongClass = new Translation<Class>("<#b3ab9f>You need a <#cedcde><uppercase>{0}</uppercase></color> kit in order to request this vehicle.");
-    public static readonly Translation<string> RequestVehicleMissingLevels = new Translation<string>("<#b3ab9f>You must be <#ffc29c>{0}</color> to request this vehicle.");
-    public static readonly Translation<Ranks.RankData> RequestVehicleRankIncomplete = new Translation<Ranks.RankData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to request this vehicle.", Ranks.RankData.FormatColorName);
+    public static readonly Translation<LevelData> RequestVehicleMissingLevels = new Translation<LevelData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to request this vehicle.", LevelData.FormatName);
+    public static readonly Translation<RankData> RequestVehicleRankIncomplete = new Translation<RankData>("<#b3ab9f>You must be {0} to request this vehicle.", RankData.FormatColorName);
     public static readonly Translation<QuestAsset> RequestVehicleQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this vehicle.", BaseQuestData.COLOR_QUEST_ASSET_FORMAT);
     public static readonly Translation<IPlayer> RequestVehicleAlreadyRequested = new Translation<IPlayer>("<#a8918a>This vehicle was already requested by {0}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation<VehicleData> RequestVehicleAlreadyOwned = new Translation<VehicleData>("<#a8918a>You already have a nearby {0}.", VehicleData.COLORED_NAME);
@@ -1328,14 +1332,14 @@ internal static class T
     #endregion
 
     #region Officers
-    public static readonly Translation<Ranks.RankData, FactionInfo> OfficerPromoted = new Translation<Ranks.RankData, FactionInfo>("<#9e9788>Congratulations, you have been <#e3b552>PROMOTED</color> to <#e05353>{0}</color> of {1}!", Ranks.RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
-    public static readonly Translation<Ranks.RankData, FactionInfo> OfficerDemoted = new Translation<Ranks.RankData, FactionInfo>("<#9e9788>You have been <#c47f5c>DEMOTED</color> to <#e05353>{0}</color> of {1}.", Ranks.RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<RankData, FactionInfo> OfficerPromoted = new Translation<RankData, FactionInfo>("<#9e9788>Congratulations, you have been <#e3b552>PROMOTED</color> to <#e05353>{0}</color> of {1}!", RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<RankData, FactionInfo> OfficerDemoted = new Translation<RankData, FactionInfo>("<#9e9788>You have been <#c47f5c>DEMOTED</color> to <#e05353>{0}</color> of {1}.", RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
     public static readonly Translation OfficerDischarged = new Translation("<#9e9788>You have been <color=#ab2e2e>DISCHARGED</color> from the officer ranks for unacceptable behaviour.");
-    public static readonly Translation<IPlayer, Ranks.RankData, FactionInfo> OfficerPromotedBroadcast = new Translation<IPlayer, Ranks.RankData, FactionInfo>("<#9e9788>{0} has been <#e3b552>PROMOTED</color> to <#e05353>{1}</color> of {2}!", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Ranks.RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
-    public static readonly Translation<IPlayer, Ranks.RankData, FactionInfo> OfficerDemotedBroadcast = new Translation<IPlayer, Ranks.RankData, FactionInfo>("<#9e9788>{0} has been <#c47f5c>DEMOTED</color> to <#e05353>{1}</color> of {2}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Ranks.RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
-    public static readonly Translation<IPlayer, Ranks.RankData> OfficerDischargedBroadcast = new Translation<IPlayer, Ranks.RankData>("<#9e9788>{0} has been <#ab2e2e>DISCHARGED</color> from the rank of <#e05353>{1}s</color> for unacceptable behaviour.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Ranks.RankData.FormatColorName);
+    public static readonly Translation<IPlayer, RankData, FactionInfo> OfficerPromotedBroadcast = new Translation<IPlayer, RankData, FactionInfo>("<#9e9788>{0} has been <#e3b552>PROMOTED</color> to <#e05353>{1}</color> of {2}!", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<IPlayer, RankData, FactionInfo> OfficerDemotedBroadcast = new Translation<IPlayer, RankData, FactionInfo>("<#9e9788>{0} has been <#c47f5c>DEMOTED</color> to <#e05353>{1}</color> of {2}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<IPlayer, RankData> OfficerDischargedBroadcast = new Translation<IPlayer, RankData>("<#9e9788>{0} has been <#ab2e2e>DISCHARGED</color> from the rank of <#e05353>{1}s</color> for unacceptable behaviour.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.FormatColorName);
     public static readonly Translation<int, int> OfficerInvalidRank = new Translation<int, int>("<#b08989><#ddd>{0}</color> is not a valid officer level. Try numbers <#ddd>1</color> - <#ddd>{1}</color>.");
-    public static readonly Translation<IPlayer, Ranks.RankData, FactionInfo> OfficerChangedRankFeedback = new Translation<IPlayer, Ranks.RankData, FactionInfo>("<#c6d6c1>{0}'s officer rank was successfully changed to <#ddd>{1}</color> of <#ddd>{2}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Ranks.RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
+    public static readonly Translation<IPlayer, RankData, FactionInfo> OfficerChangedRankFeedback = new Translation<IPlayer, RankData, FactionInfo>("<#c6d6c1>{0}'s officer rank was successfully changed to <#ddd>{1}</color> of <#ddd>{2}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
     public static readonly Translation<IPlayer> OfficerDischargedFeedback = new Translation<IPlayer>("<#c6d6c1>{0} was successfully discharged.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     #endregion
 
@@ -1393,9 +1397,9 @@ internal static class T
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait which requires squad leader while not in a squad.", "Trait being requested")]
     public static readonly Translation<TraitData> RequestTraitNoSquad = new Translation<TraitData>("<#ff8c69>You have to be in a <#cedcde>SQUAD</color> to request <#c$trait$>{0}</color>.", TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait while too low of a level.", "Trait being requested", "Required Level")]
-    public static readonly Translation<TraitData, RankData> RequestTraitLowLevel = new Translation<TraitData, RankData>("<#ff8c69>You must be at least <#cedcde>{1}</color> to request <#c$trait$>{0}</color>.", TraitData.FormatName, RankData.FormatName);
+    public static readonly Translation<TraitData, LevelData> RequestTraitLowLevel = new Translation<TraitData, LevelData>("<#ff8c69>You must be at least <#cedcde>{1}</color> to request <#c$trait$>{0}</color>.", TraitData.FormatName, LevelData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait while too low of a rank.", "Trait being requested", "Required Rank")]
-    public static readonly Translation<TraitData, Ranks.RankData> RequestTraitLowRank = new Translation<TraitData, Ranks.RankData>("<#ff8c69>You must be at least {1} to request <#c$trait$>{0}</color>.", TraitData.FormatName, Ranks.RankData.FormatColorName);
+    public static readonly Translation<TraitData, RankData> RequestTraitLowRank = new Translation<TraitData, RankData>("<#ff8c69>You must be at least {1} to request <#c$trait$>{0}</color>.", TraitData.FormatName, RankData.FormatColorName);
     [TranslationData(SectionTraits, "Sent when the player tries to request a trait while missing a completed quest.", "Trait being requested", "Required Rank")]
     public static readonly Translation<TraitData, QuestAsset> RequestTraitQuestIncomplete = new Translation<TraitData, QuestAsset>("<#ff8c69>You must be at least {1} to request <#c$trait$>{0}</color>.", TraitData.FormatName);
     [TranslationData(SectionTraits, "Sent when the player successfully requests a trait.", "Trait being requested")]

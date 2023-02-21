@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs;

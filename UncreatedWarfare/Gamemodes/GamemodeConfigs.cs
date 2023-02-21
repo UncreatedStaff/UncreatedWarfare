@@ -9,6 +9,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
@@ -139,13 +140,13 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("ui_injured")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIInjured { get; set; }
 
-    [Sync(412)]
+    [Sync(412, OnPullMethod = nameof(OnUIXPUpdated))]
     [JsonPropertyName("ui_xp_panel")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIXPPanel { get; set; }
 
-    [Sync(413)]
+    [Sync(413, OnPullMethod = nameof(OnUICreditsUpdated))]
     [JsonPropertyName("ui_xp_officer")]
-    public RotatableConfig<JsonAssetReference<EffectAsset>> UIOfficers { get; set; }
+    public RotatableConfig<JsonAssetReference<EffectAsset>> UICreditsPanel { get; set; }
 
     [Sync(414)]
     [JsonPropertyName("ui_leaderboard_conventional")]
@@ -803,7 +804,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         UIToastProgress = new JsonAssetReference<EffectAsset>("a113a0f2d0af4db8b5e5bcbc17fc96c9");
         UIToastTip = new JsonAssetReference<EffectAsset>("abbf74e86f1c4665925884c70b9433ba");
         UIXPPanel = new JsonAssetReference<EffectAsset>("d6de0a8025de44d29a99a41937a58a59");
-        UIOfficers = new JsonAssetReference<EffectAsset>("9fd31b776b744b72847f2dc00dba93a8");
+        UICreditsPanel = new JsonAssetReference<EffectAsset>("3195b96457d04b9e80699777d2809b4c");
         UIConventionalLeaderboard = new JsonAssetReference<EffectAsset>("b83389df1245438db18889af94f04960");
         UINearbyResources = new JsonAssetReference<EffectAsset>("3775a1e7d84b47e79cacecd5e6b2a224");
         UITickets = new JsonAssetReference<EffectAsset>("aba88eedb84448e8a30bb803a53a7236");
@@ -980,6 +981,8 @@ public sealed class GamemodeConfigData : JSONConfigData
     private void OnUIFOBListUpdated() => FOBManager.ListUI.LoadFromConfig(UIFOBList);
     private void OnUICaptureUpdated() => CTFUI.CaptureUI.LoadFromConfig(UICapture);
     private void OnUIFlagListUpdated() => CTFUI.ListUI.LoadFromConfig(UIFlagList);
+    private void OnUIXPUpdated() => Points.XPUI.LoadFromConfig(UIXPPanel);
+    private void OnUICreditsUpdated() => Points.CreditsUI.LoadFromConfig(UICreditsPanel);
     private void OnConquestEvaluateTimeUpdated()
     {
         if (Data.Is<Flags.Conquest>())

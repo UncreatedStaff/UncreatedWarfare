@@ -17,7 +17,7 @@ using Uncreated.Warfare.Squads.UI;
 
 namespace Uncreated.Warfare.Squads;
 
-public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDeclareWinListener, IJoinedTeamListener, IReloadUIListener
+public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDeclareWinListener, IJoinedTeamListener, IUIListener
 {
     public SquadManager() : base("squad") { }
 
@@ -724,8 +724,13 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         squad.IsLocked = value;
         ReplicateLockSquad(squad);
     }
-
-    void IReloadUIListener.ReloadUI(UCPlayer player)
+    void IUIListener.HideUI(UCPlayer player)
+    {
+        ClearList(player.Player);
+        ClearMenu(player.Player);
+    }
+    void IUIListener.ShowUI(UCPlayer player) => ((IUIListener)this).UpdateUI(player);
+    void IUIListener.UpdateUI(UCPlayer player)
     {
         if (player.Squad == null)
             SendSquadList(player);

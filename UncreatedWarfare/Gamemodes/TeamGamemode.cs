@@ -310,7 +310,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
         else
         {
             if (this is ITickets tickets)
-                tickets.TicketManager.SendUI(player);
+                tickets.TicketManager.ShowUI(player);
             InitUI(player);
         }
 

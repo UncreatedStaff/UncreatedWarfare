@@ -26,8 +26,8 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Point;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
@@ -99,6 +99,7 @@ public static class Data
         public const PlayerKey DropSupplyOverride = PlayerKey.PluginKey3;
     }
 
+    internal static readonly IUncreatedSingleton[] GamemodeListeners = new IUncreatedSingleton[1];
     public const string SuppressCategory = "Microsoft.Performance";
     public const string SuppressID = "IDE0051";
     public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/][il][gqb](?!h)\W{0,1}[gqb]{0,1}\W{0,1}[gqb]{0,1}\W{0,1}[ae]{0,1}\W{0,1}[r]{0,1}(?:ia){0,1})|(?:f\W{0,1}a\W{0,1}g{1,2}\W{0,1}o{0,1}\W{0,1}t{0,1})");
@@ -123,6 +124,7 @@ public static class Data
     internal static MethodInfo ReplicateStance;
     public static Reporter? Reporter;
     public static DeathTracker DeathTracker;
+    public static Points Points;
     internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
     internal static ClientInstanceMethod<byte[]>? SendUpdateBarricadeState;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt;
@@ -234,15 +236,15 @@ public static class Data
 #endif
 
         await UCWarfare.ToUpdate(token);
-        Points.Initialize();
         Gamemode.ReadGamemodes();
         
         if (UCWarfare.Config.EnableReporter)
             Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
 
 
-        DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(false, token: token);
-        await Singletons.LoadSingletonAsync<PlayerList>(false, token: token);
+        DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(true, token: token);
+        GamemodeListeners[0] = Points = await Singletons.LoadSingletonAsync<Points>(true, token: token);
+        await Singletons.LoadSingletonAsync<PlayerList>(true, token: token);
         await UCWarfare.ToUpdate(token);
 
         /* REFLECT PRIVATE VARIABLES */
@@ -393,6 +395,36 @@ public static class Data
             ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.ShutdownPlayer, Gamemode.ShutdownMessage);
         UCWarfare.RunTask(OffenseManager.OnConnected, ctx: "Offense syncing (may take a while if it's been a long time since the bot was connected).");
         ConfigSync.OnConnected(connection);
+    }
+    public static void HideAllUI(UCPlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
+        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
+        for (int i = 0; i < singletons.Length; ++i)
+        {
+            if (singletons[i] is IUIListener ui)
+                ui.HideUI(player);
+        }
+    }
+    public static void ShowAllUI(UCPlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
+        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
+        for (int i = 0; i < singletons.Length; ++i)
+        {
+            if (singletons[i] is IUIListener ui)
+                ui.ShowUI(player);
+        }
+    }
+    public static void UpdateAllUI(UCPlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
+        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
+        for (int i = 0; i < singletons.Length; ++i)
+        {
+            if (singletons[i] is IUIListener ui)
+                ui.UpdateUI(player);
+        }
     }
     public class NetCalls
     {

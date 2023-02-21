@@ -3,7 +3,7 @@ using System.IO;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 
-namespace Uncreated.Warfare.Point;
+namespace Uncreated.Warfare.Levels;
 
 public class OfficerStorage : ListSingleton<OfficerData>
 {
@@ -68,7 +68,6 @@ public class OfficerStorage : ListSingleton<OfficerData>
                 player.SendChat(T.OfficerDemoted, rankdata, f);
                 Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.OfficerDemotedBroadcast, player, rankdata, f);
             }
-            Points.UpdateXPUI(player);
         }
     }
     public static void DischargeOfficer(ulong playerID)
@@ -85,7 +84,6 @@ public class OfficerStorage : ListSingleton<OfficerData>
             ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out _);
             player.SendChat(T.OfficerDischarged);
             Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.OfficerDischargedBroadcast, player, rankdata);
-            Points.UpdateXPUI(player);
         }
     }
 }

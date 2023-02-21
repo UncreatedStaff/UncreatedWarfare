@@ -5,6 +5,7 @@ using System.Globalization;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -234,7 +235,7 @@ public class AceArmor : Buff
             if (!pl.IsOnline)
                 pl = UCPlayer.FromID(pl.Steam64);
             if (pl is not null)
-                Point.Points.AwardXP(pl, Mathf.CeilToInt(amount * _refundMultiplier), T.XPToastAceArmorRefund, true);
+                Points.AwardXP(pl, Mathf.CeilToInt(amount * _refundMultiplier), T.XPToastAceArmorRefund, true);
         }
     }
 }

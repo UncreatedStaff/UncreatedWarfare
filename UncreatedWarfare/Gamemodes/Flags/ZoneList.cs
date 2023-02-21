@@ -18,7 +18,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
 [SingletonDependency(typeof(Level))]
-public sealed class ZoneList : ListSqlSingleton<Zone>, IReloadUIListener
+public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
 {
     public const int MaxNameLength = 48;
     public const int MaxShortNameLength = 24;
@@ -745,7 +745,9 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IReloadUIListener
     }
     #endregion
 
-    void IReloadUIListener.ReloadUI(UCPlayer player)
+    void IUIListener.ShowUI(UCPlayer player) { }
+    void IUIListener.HideUI(UCPlayer player) { }
+    void IUIListener.UpdateUI(UCPlayer player)
     {
         if (player.Player.TryGetComponent(out ZonePlayerComponent comp))
             comp.ReloadLang();

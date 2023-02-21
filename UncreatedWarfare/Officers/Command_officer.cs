@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 
 namespace Uncreated.Warfare.Commands;
 public class OfficerCommand : AsyncCommand
