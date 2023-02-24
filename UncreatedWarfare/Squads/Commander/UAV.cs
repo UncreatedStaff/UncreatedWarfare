@@ -11,6 +11,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using UnityEngine;

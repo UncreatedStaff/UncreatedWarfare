@@ -228,6 +228,8 @@ public class AceArmor : Buff
         float IXPBoostBuff.Multiplier => Trait != null && Trait.IsActivated ? _multiplier : 1f;
         void IXPBoostBuff.OnXPBoostUsed(float amount, bool awardCredits)
         {
+            /*
+            todo is this needed?
             if (Trait is null || !Trait.IsActivated) return;
             UCPlayer? pl = Trait.TargetPlayer;
             if (pl is null)
@@ -235,7 +237,7 @@ public class AceArmor : Buff
             if (!pl.IsOnline)
                 pl = UCPlayer.FromID(pl.Steam64);
             if (pl is not null)
-                Points.AwardXP(pl, Mathf.CeilToInt(amount * _refundMultiplier), T.XPToastAceArmorRefund, true);
+                Points.AwardXP(pl, Mathf.CeilToInt(amount * _refundMultiplier), T.XPToastAceArmorRefund, true);*/
         }
     }
 }

@@ -165,6 +165,7 @@ public class UCPlayerData : MonoBehaviour
     public ToastChannel[] Channels;
     public void QueueMessage(ToastMessage message, bool priority = false)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif

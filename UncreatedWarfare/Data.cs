@@ -59,14 +59,10 @@ public static class Data
         private static string? _flagCache;
         private static string? _structureCache;
         private static string? _vehicleCache;
-        public static readonly string FactionsStorage = Path.Combine(BaseDirectory, "Factions") + Path.DirectorySeparatorChar;
-        public static readonly string TicketStorage = Path.Combine(BaseDirectory, "Tickets") + Path.DirectorySeparatorChar;
         public static readonly string PointsStorage = Path.Combine(BaseDirectory, "Points") + Path.DirectorySeparatorChar;
-        public static readonly string OfficerStorage = Path.Combine(BaseDirectory, "Officers") + Path.DirectorySeparatorChar;
         public static readonly string CooldownStorage = Path.Combine(BaseDirectory, "Cooldowns") + Path.DirectorySeparatorChar;
         public static readonly string SquadStorage = Path.Combine(BaseDirectory, "Squads") + Path.DirectorySeparatorChar;
         public static readonly string KitsStorage = Path.Combine(BaseDirectory, "Kits") + Path.DirectorySeparatorChar;
-        public static readonly string SQLStorage = Path.Combine(BaseDirectory, "SQL") + Path.DirectorySeparatorChar;
         public static readonly string FOBStorage = Path.Combine(BaseDirectory, "FOBs") + Path.DirectorySeparatorChar;
         public static readonly string LangStorage = Path.Combine(BaseDirectory, "Lang") + Path.DirectorySeparatorChar;
         public static readonly string Logs = Path.Combine(BaseDirectory, "Logs") + Path.DirectorySeparatorChar;
@@ -76,7 +72,6 @@ public static class Data
         public static readonly string TraitDataStorage = Path.Combine(BaseDirectory, "traits.json");
         public static readonly string ConfigSync = Path.Combine(Sync, "config.json");
         public static readonly string KitSync = Path.Combine(Sync, "kits.json");
-        public static readonly string PlayersSync = Path.Combine(Sync, "players.json");
         public static readonly string CurrentLog = Path.Combine(Logs, "current.txt");
         public static readonly string FunctionLog = Path.Combine(Logs, "funclog.txt");
         public static string FlagStorage => _flagCache ??= Path.Combine(MapStorage, "Flags") + Path.DirectorySeparatorChar;
@@ -224,7 +219,6 @@ public static class Data
         F.CheckDir(Paths.KitsStorage, out _, true);
         F.CheckDir(Paths.PointsStorage, out _, true);
         F.CheckDir(Paths.FOBStorage, out _, true);
-        F.CheckDir(Paths.OfficerStorage, out _, true);
 
         ZoneList l = await Singletons.LoadSingletonAsync<ZoneList>(token: token);
         L.Log("Read " + l.Items.Count + " zones.", ConsoleColor.Magenta);

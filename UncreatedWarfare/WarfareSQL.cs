@@ -166,7 +166,7 @@ public class WarfareSQL : MySqlDatabase
     public async Task<int> GetCredits(ulong player, ulong team, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-        int xp = Points.CreditsConfig.StartingCredits;
+        int xp = Points.PointsConfig.StartingCredits;
         await QueryAsync("SELECT `Credits` FROM `" + LEVELS_TABLE + "` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
             new object[] { player, team },
             reader =>

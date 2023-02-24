@@ -25,6 +25,8 @@ using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+using Uncreated.Warfare.Players;
+using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.FOBs;
 [SingletonDependency(typeof(Whitelister))]
@@ -427,13 +429,13 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
                 if (killer.GetTeam() == team)
                 {
-                    Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, T.XPToastFriendlyFOBDestroyed);
+                    Points.AwardXP(killer, XPReward.FriendlyRadioDestroyed);
                 }
                 else
                 {
-                    Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, T.XPToastFOBDestroyed);
+                    Points.AwardXP(killer, XPReward.RadioDestroyed);
 
-                    Points.TryAwardDriverAssist(killer.Player, Points.XPConfig.FOBKilledXP, 5);
+                    Points.TryAwardDriverAssist(killer.Player, XPReward.RadioDestroyed, quota: 5);
 
                     Stats.StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
                     Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
@@ -498,11 +500,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         {
             if (killer.GetTeam() == team)
             {
-                Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, T.XPToastFriendlyFOBDestroyed);
+                Points.AwardXP(killer, XPReward.FriendlyRadioDestroyed);
             }
             else
             {
-                Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, T.XPToastFOBDestroyed);
+                Points.AwardXP(killer, XPReward.RadioDestroyed);
                 Stats.StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
                 Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
             }

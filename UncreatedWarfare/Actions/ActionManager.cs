@@ -8,6 +8,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -502,12 +503,15 @@ public class ActionManager : BaseSingleton
             {
                 caller.SuppliesUnloaded = -difference;
 
-                int xp = Points.XPConfig.UnloadSuppliesXP * Mathf.CeilToInt(difference / (float)REQUIRED_UNLOAD_AMOUNT_FOR_REWARD);
+                if (Points.PointsConfig.XPData.TryGetValue(XPReward.UnloadSupplies, out PointsConfig.XPRewardData data))
+                {
+                    int xp = data.Amount * Mathf.CeilToInt(difference / (float)REQUIRED_UNLOAD_AMOUNT_FOR_REWARD);
 
-                if (caller.KitClass == Class.Pilot)
-                    xp *= 2;
+                    if (caller.KitClass == Class.Pilot)
+                        xp *= 2;
 
-                Points.AwardXP(caller, xp, T.XPToastSuppliesUnloaded);
+                    Points.AwardXP(caller, XPReward.UnloadSupplies, xp);
+                }
             }
         }
     }

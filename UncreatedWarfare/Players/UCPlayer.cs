@@ -20,6 +20,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -215,7 +216,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public Dictionary<Buff, float> ShovelSpeedMultipliers { get; } = new Dictionary<Buff, float>(6);
     public List<SpottedComponent> CurrentMarkers { get; }
     /// <summary><see langword="True"/> if rank order <see cref="OfficerStorage.OFFICER_RANK_ORDER"/> has been completed (Receiving officer pass from discord server).</summary>
-    public bool IsOfficer => RankData != null && RankData.Length > OfficerStorage.OFFICER_RANK_ORDER && RankData[OfficerStorage.OFFICER_RANK_ORDER].IsCompelete;
+    public bool IsOfficer => RankData != null && RankData.Length > RankManager.Config.OfficerRankIndex && RankData[RankManager.Config.OfficerRankIndex].IsCompelete;
     public LevelData Level
     {
         get
@@ -383,7 +384,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             Events.Dispose();
             Keys.Dispose();
             KitMenuData = null!;
-            PurchaseSync.Dispose();
         }
     }
     public static UCPlayer? FromID(ulong steamID)
@@ -733,11 +733,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         Skill skill = skills[skillset.SpecialityIndex][skillset.SkillIndex];
         if (skillset.Level != skill.level)
         {
-            L.LogDebug($"Setting override: {skillset}.");
             skillset.ServerSet(this);
         }
-        else
-            L.LogDebug($"Override already set: {skillset}.");
     }
     public void EnsureSkillsets(Skillset[] skillsets)
     {
@@ -757,11 +754,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                     {
                         if (s.Level != skill.level)
                         {
-                            L.LogDebug($"Setting override: {s}.");
                             s.ServerSet(this);
                         }
-                        else
-                            L.LogDebug($"Override already set: {s}.");
                         goto c;
                     }
                 }
@@ -772,11 +766,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                     {
                         if (s.Level != skill.level)
                         {
-                            L.LogDebug($"Setting server default: {s}.");
                             s.ServerSet(this);
                         }
-                        else
-                            L.LogDebug($"Server default already set: {s}.");
                         goto c;
                     }
                 }
@@ -786,11 +777,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                 if (skill.level != defaultLvl)
                 {
                     Player.skills.ServerSetSkillLevel(specIndex, skillIndex, defaultLvl);
-                    L.LogDebug($"Setting game default: {new Skillset((EPlayerSpeciality)specIndex, (byte)skillIndex, defaultLvl)}.");
-                }
-                else
-                {
-                    L.LogDebug($"Game default already set: {new Skillset((EPlayerSpeciality)specIndex, (byte)skillIndex, defaultLvl)}.");
                 }
                 c:;
             }

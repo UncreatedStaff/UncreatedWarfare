@@ -9,10 +9,6 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -163,6 +159,10 @@ public static class PlayerManager
                 L.LogDebug("Semaphore for [" + player + "] has been created.");
                 _semaphores.Add(player.channel.owner.playerID.steamID.m_SteamID, semaphore);
             }
+            else
+            {
+                L.LogDebug("Existing semaphore found for [" + player + "].");
+            }
             ucplayer = new UCPlayer(
                 player.channel.owner.playerID.steamID,
                 player,
@@ -198,8 +198,6 @@ public static class PlayerManager
                 }
             }
         }
-        //if (save.SquadName != null)
-        //    SquadManager.OnPlayerJoined(ucplayer, save.SquadName);
         return ucplayer;
     }
     private static void OnGroupChagned(GroupChanged e)

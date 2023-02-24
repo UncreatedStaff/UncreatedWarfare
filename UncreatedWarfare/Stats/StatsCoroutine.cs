@@ -53,10 +53,10 @@ internal static class StatsCoroutine
                     }
                     else
                         StatsManager.ModifyStats(ucplayer.Steam64, s => s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval);
+
                     /* ON DUTY AWARDER */
-                    bool isOnDuty = ucplayer.OnDuty();
-                    if (Points.XPConfig.OnDutyXP > 0 && isOnDuty)
-                        Points.AwardXP(ucplayer, Points.XPConfig.OnDutyXP, T.XPToastOnDuty);
+                    if (ucplayer.OnDuty())
+                        Points.AwardXP(ucplayer, XPReward.OnDuty);
 
 
                     Vector3 position = ucplayer.Position;

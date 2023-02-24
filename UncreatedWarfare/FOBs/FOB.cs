@@ -16,6 +16,8 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+using Uncreated.Warfare.Players;
+using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.Components;
 
@@ -288,14 +290,14 @@ public class FOB : IResourceFOB, IDeployable
 
                     if (groupsUnloaded > 0)
                     {
-                        int xp = Points.XPConfig.UnloadSuppliesXP;
-
-                        if (creator.KitClass == Class.Pilot)
+                        if (Points.PointsConfig.XPData.TryGetValue(XPReward.UnloadSupplies, out PointsConfig.XPRewardData data) && data.Amount != 0)
                         {
-                            xp *= 2;
-                        }
+                            int xp = data.Amount;
+                            if (creator.KitClass == Class.Pilot)
+                                xp *= 2;
 
-                        Points.AwardXP(creator, groupsUnloaded * xp, T.XPToastSuppliesUnloaded);
+                            Points.AwardXP(creator, XPReward.UnloadSupplies, groupsUnloaded * xp);
+                        }
                     }
                 }
 
@@ -366,24 +368,25 @@ public class FOB : IResourceFOB, IDeployable
                         player.SuppliesUnloaded++;
                         if (player.SuppliesUnloaded >= 6)
                         {
-                            int xp = Points.XPConfig.UnloadSuppliesXP;
-
-                            if (player.KitClass == Class.Pilot)
+                            if (Points.PointsConfig.XPData.TryGetValue(XPReward.UnloadSupplies, out PointsConfig.XPRewardData data) && data.Amount != 0)
                             {
-                                xp *= 2;
+                                int xp = data.Amount;
+
+                                if (player.KitClass == Class.Pilot)
+                                    xp *= 2;
+
+                                QuestManager.OnSuppliesConsumed(this, playerID, player.SuppliesUnloaded);
+
+                                InteractableVehicle? vehicle = player.Player.movement.getVehicle();
+                                if (vehicle != null && vehicle.transform.TryGetComponent(out VehicleComponent component))
+                                {
+                                    component.Quota += 0.33F;
+                                }
+
+                                Points.AwardXP(player, XPReward.UnloadSupplies, xp);
+
+                                player.SuppliesUnloaded = 0;
                             }
-
-                            QuestManager.OnSuppliesConsumed(this, playerID, player.SuppliesUnloaded);
-
-                            InteractableVehicle? vehicle = player.Player.movement.getVehicle();
-                            if (vehicle is not null && vehicle.transform.TryGetComponent(out VehicleComponent component))
-                            {
-                                component.Quota += 0.33F;
-                            }
-
-                            Points.AwardXP(player, xp, T.XPToastSuppliesUnloaded);
-
-                            player.SuppliesUnloaded = 0;
                         }
                     }
                 }
@@ -767,7 +770,7 @@ public class FOB : IResourceFOB, IDeployable
         if (chat)
             player.SendChat(T.DeploySuccess, this);
 
-        Points.TryAwardFOBCreatorXP(this, Points.XPConfig.FOBDeployedXP, T.XPToastFOBUsed);
+        Points.TryAwardFOBCreatorXP(this, XPReward.BunkerDeployment);
 
         if (Bunker != null && Bunker.model.TryGetComponent(out BuiltBuildableComponent comp))
             QuestManager.OnPlayerSpawnedAtBunker(comp, this, player);

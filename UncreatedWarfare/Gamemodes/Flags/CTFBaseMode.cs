@@ -22,6 +22,7 @@ using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
+using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
@@ -273,30 +274,22 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 if (flag.LastDeltaPoints > 0 && flag.Owner != 1)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam1[j],
-                            Points.XPConfig.FlagAttackXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].Steam64));
+                        Points.AwardXP(flag.PlayersOnFlagTeam1[j], XPReward.AttackingFlag);
                 }
                 else if (flag.LastDeltaPoints < 0 && flag.Owner != 2)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam2[j],
-                            Points.XPConfig.FlagAttackXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].Steam64));
+                        Points.AwardXP(flag.PlayersOnFlagTeam2[j], XPReward.AttackingFlag);
                 }
                 else if (flag.Owner == 1 && flag.IsObj(2) && flag.Team2TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam1[j],
-                            Points.XPConfig.FlagDefendXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].Steam64));
+                        Points.AwardXP(flag.PlayersOnFlagTeam1[j], XPReward.DefendingFlag);
                 }
                 else if (flag.Owner == 2 && flag.IsObj(1) && flag.Team1TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam2[j],
-                            Points.XPConfig.FlagDefendXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].Steam64));
+                        Points.AwardXP(flag.PlayersOnFlagTeam2[j], XPReward.DefendingFlag);
                 }
             }
         }

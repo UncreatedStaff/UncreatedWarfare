@@ -1193,7 +1193,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
 {
     public readonly string Language;
     public ulong Team = 0;
-    public readonly List<UCPlayer> Players;
+    public List<UCPlayer> Players { get; private set; }
     public readonly bool IMGUI;
     private int _index;
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
@@ -1244,7 +1244,13 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         Next = null!;
         _index = -1;
     }
-    public void Dispose() => Reset();
+    public void Dispose()
+    {
+        Reset();
+        Players.Clear();
+        Players = null!;
+    }
+
     public override string ToString()
     {
         return _index.ToString(Data.AdminLocale) + "   " + string.Join(", ", Players.Select(x => x == null ? "null" : x.CharacterName)) + "   Current: " + (Next == null ? "null" : Next.CharacterName);
@@ -1256,8 +1262,35 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         {
             Sets = sets;
         }
-        public IEnumerator<LanguageSet> GetEnumerator() => ((IEnumerable<LanguageSet>)Sets).GetEnumerator();
-        IEnumerator IEnumerable.GetEnumerator() => Sets.GetEnumerator();
+        private readonly struct LanguageSetArrayEnumerator : IEnumerator<LanguageSet>
+        {
+            private readonly IEnumerator<LanguageSet> _arrayEnumerator;
+            private readonly LanguageSetEnumerator _set;
+
+            public LanguageSetArrayEnumerator(LanguageSetEnumerator sets)
+            {
+                _arrayEnumerator = (sets.Sets as IEnumerable<LanguageSet>).GetEnumerator();
+                _set = sets;
+            }
+
+            void IDisposable.Dispose()
+            {
+                for (int i = 0; i < _set.Sets.Length; ++i)
+                {
+                    ref LanguageSet set = ref _set.Sets[i];
+                    set.Dispose();
+                }
+                _arrayEnumerator.Dispose();
+            }
+
+            bool IEnumerator.MoveNext() => _arrayEnumerator.MoveNext();
+            void IEnumerator.Reset() => _arrayEnumerator.Dispose();
+            LanguageSet IEnumerator<LanguageSet>.Current => _arrayEnumerator.Current;
+            object IEnumerator.Current => _arrayEnumerator.Current;
+        }
+
+        public IEnumerator<LanguageSet> GetEnumerator() => new LanguageSetArrayEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => new LanguageSetArrayEnumerator(this);
     }
 
     private static readonly List<LanguageSet> Languages = new List<LanguageSet>(JSONMethods.DefaultLanguageAliasSets.Count);

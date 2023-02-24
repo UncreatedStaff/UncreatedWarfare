@@ -8,6 +8,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
@@ -15,6 +16,7 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.Components;
 
@@ -132,8 +134,6 @@ public class BuildableComponent : MonoBehaviour
 
                     fob.UpdateBunker(structure);
 
-                    Orders.OnFOBBunkerBuilt(fob, this);
-
                     //StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.FobsBuilt++, false);
                     StatsManager.ModifyTeam(data.group, t => t.FobsBuilt++, false);
                 }
@@ -172,11 +172,21 @@ public class BuildableComponent : MonoBehaviour
 
             if (contribution >= 0.1F && player != null)
             {
-                float amount = Buildable.Type == BuildableType.Bunker
-                    ? Mathf.RoundToInt(contribution * Points.XPConfig.BuiltFOBXP)
-                    : entry.Value * Points.XPConfig.ShovelXP;
+                float amount = 0f;
+                if (Buildable.Type == BuildableType.Bunker)
+                {
+                    if (Points.PointsConfig.XPData.TryGetValue(XPReward.BunkerBuilt, out PointsConfig.XPRewardData data2))
+                        amount = Mathf.RoundToInt(contribution * data2.Amount);
+                }
+                else
+                {
+                    if (Points.PointsConfig.XPData.TryGetValue(XPReward.Shoveling, out PointsConfig.XPRewardData data2))
+                        amount = Mathf.RoundToInt(entry.Value * data2.Amount);
+                }
 
-                Points.AwardXP(player, Mathf.CeilToInt(amount), structureName.ToUpper() + " BUILT");
+                Points.AwardXP(player,
+                    Buildable.Type == BuildableType.Bunker ? XPReward.BunkerBuilt : XPReward.Shoveling,
+                    structureName.ToUpper() + " BUILT", Mathf.CeilToInt(amount));
                 ActionLog.Add(ActionLogType.HelpBuildBuildable, $"{Foundation.asset.itemName} / {Foundation.asset.id} / {Foundation.asset.GUID:N} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.AdminLocale)}%", player);
                 if (contribution > 1f / 3f)
                     QuestManager.OnBuildableBuilt(player, Buildable);

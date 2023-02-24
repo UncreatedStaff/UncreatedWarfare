@@ -19,6 +19,8 @@ using Random = UnityEngine.Random;
 using UnityEngine.PlayerLoop;
 using System.Diagnostics;
 using Uncreated.Warfare.Actions;
+using Uncreated.Warfare.Players;
+using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.Components;
 
@@ -207,7 +209,8 @@ public class VehicleComponent : MonoBehaviour
                     int amount = (int)(Math.Floor(distance / 100) * 2) + 5;
 
                     Player player = e.Vehicle.passengers[0].player.player;
-                    Points.AwardXP(player, amount, T.XPToastTransportingPlayers.Translate(player.channel.owner.playerID.steamID.m_SteamID));
+                    if (UCPlayer.FromPlayer(player) is { } pl)
+                        Points.AwardXP(pl, XPReward.TransportingPlayer, T.XPToastTransportingPlayers, amount);
 
                     Quota += 0.5F;
 

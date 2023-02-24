@@ -278,9 +278,9 @@ public class SpottedComponent : MonoBehaviour
 
     public void OnTargetKilled(int assistXP)
     {
-        if (CurrentSpotter != null && CurrentSpotter.IsOnline)
+        if (CurrentSpotter != null)
         {
-            Points.AwardXP(CurrentSpotter, assistXP, T.XPToastSpotterAssist);
+            Points.AwardXP(CurrentSpotter, XPReward.KillAssist, assistXP);
         }
     }
     [UsedImplicitly]

@@ -1632,7 +1632,7 @@ public static class F
     {
         if (token == other)
             return;
-        token = token.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(token, other).Token : token;
+        token = token.CanBeCanceled && token != other ? CancellationTokenSource.CreateLinkedTokenSource(token, other).Token : token;
     }
     public static void CombineIfNeeded(this ref CancellationToken token, CancellationToken other1, CancellationToken other2)
     {

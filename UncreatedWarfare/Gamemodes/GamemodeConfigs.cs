@@ -128,10 +128,6 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("ui_rally")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIRally { get; set; }
 
-    [Sync(409, OnPullMethod = nameof(OnUIOrderUpdated))]
-    [JsonPropertyName("ui_order")]
-    public RotatableConfig<JsonAssetReference<EffectAsset>> UIOrder { get; set; }
-
     [Sync(410, OnPullMethod = nameof(OnUIMutedUpdated))]
     [JsonPropertyName("ui_muted")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIMuted { get; set; }
@@ -685,18 +681,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     public RotatableConfig<int> InsurgencyIntelPointsToDiscovery { get; set; }
 
     [Sync(1309)]
-    [JsonPropertyName("insurgency_xp_cache_destroyed")]
-    public RotatableConfig<int> InsurgencyXPCacheDestroyed { get; set; }
-
-    [Sync(1310)]
-    [JsonPropertyName("insurgency_xp_cache_teamkilled")]
-    public RotatableConfig<int> InsurgencyXPCacheTeamkilled { get; set; }
-
-    [Sync(1311)]
     [JsonPropertyName("insurgency_tickets_cache")]
     public RotatableConfig<int> InsurgencyTicketsCache { get; set; }
 
-    [Sync(1312)]
+    [Sync(1310)]
     [JsonPropertyName("insurgency_starting_build")]
     public RotatableConfig<int> InsurgencyCacheStartingBuild { get; set; }
     #endregion
@@ -797,7 +785,6 @@ public sealed class GamemodeConfigData : JSONConfigData
         UISquadList = new JsonAssetReference<EffectAsset>("5acd091f1e7b4f93ac9f5431729ac5cc");
         UISquadMenu = new JsonAssetReference<EffectAsset>("98154002fbcd4b7499552d6497db8fc5");
         UIRally = new JsonAssetReference<EffectAsset>("a280ac3fe8c1486cadc8eca331e8ce32");
-        UIOrder = new JsonAssetReference<EffectAsset>("57a08eb9c4cb4fd2ad30a3e413e29b27");
         UITeamSelector = new JsonAssetReference<EffectAsset>("b5924bc83eb24d7298a47f933d3f16d9");
         UIMuted = new JsonAssetReference<EffectAsset>("c5e31c7357134be09732c1930e0e4ff0");
         UIInjured = new JsonAssetReference<EffectAsset>("27b84636ed8d4c0fb557a67d89254b00");
@@ -947,8 +934,6 @@ public sealed class GamemodeConfigData : JSONConfigData
         InsurgencyCacheDiscoverRange = 75;
         InsurgencyIntelPointsToDiscovery = 20;
         InsurgencyIntelPointsToSpawn = 20;
-        InsurgencyXPCacheDestroyed = 800;
-        InsurgencyXPCacheTeamkilled = -8000;
         InsurgencyTicketsCache = 70;
         InsurgencyCacheStartingBuild = 15;
         #endregion
@@ -976,7 +961,6 @@ public sealed class GamemodeConfigData : JSONConfigData
     private void OnUISquadMenuUpdated() => SquadManager.MenuUI.LoadFromConfig(UISquadMenu);
     private void OnUISquadListUpdated() => SquadManager.ListUI.LoadFromConfig(UISquadList);
     private void OnUIRallyUpdated() => SquadManager.RallyUI.LoadFromConfig(UIRally);
-    private void OnUIOrderUpdated() => SquadManager.OrderUI.LoadFromConfig(UIOrder);
     private void OnUINearbyResourcesUpdated() => FOBManager.ResourceUI.LoadFromConfig(UINearbyResources);
     private void OnUIFOBListUpdated() => FOBManager.ListUI.LoadFromConfig(UIFOBList);
     private void OnUICaptureUpdated() => CTFUI.CaptureUI.LoadFromConfig(UICapture);

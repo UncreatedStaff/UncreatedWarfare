@@ -27,7 +27,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public static readonly SquadMenuUI MenuUI = new SquadMenuUI();
     public static readonly SquadListUI ListUI = new SquadListUI();
     public static readonly UnturnedUI RallyUI = new UnturnedUI(12003, Gamemode.Config.UIRally, true, false, false);
-    public static readonly SquadOrderUI OrderUI = new SquadOrderUI();
     public static readonly string[] SquadNames =
     {
         "ALPHA",

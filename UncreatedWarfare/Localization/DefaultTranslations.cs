@@ -808,46 +808,6 @@ internal static class T
     public static readonly Translation SquadUIExpanded                               = new Translation("...", TranslationFlags.UnityUI);
     #endregion
 
-    #region Orders
-    public static readonly Translation OrderUsageAll                = new Translation("<#9fa1a6>To give orders: <#9dbccf>/order <squad> <type></color>. Type <#d1bd90>/order actions</color> to see a list of actions.");
-    public static readonly Translation OrderUsageNoAction    = new Translation("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase><squad name></lowercase> <action></color>.");
-    public static readonly Translation<Squad> OrderUsageBadAction   = new Translation<Squad>("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase>{0}</lowercase> <b><action></b></color>. Type <#d1bd90>/order actions</color> to see a list of actions.", Squad.FormatName);
-    public static readonly Translation<string> OrderActions         = new Translation<string>("<#9fa1a6>Order actions: <#9dbccf>{0}</color>.");
-    public static readonly Translation<string> OrderSquadNoExist    = new Translation<string>("<#ff8c69>There is no friendly <lowercase><#c$neutral$>{0}</color></lowercase> squad.");
-    public static readonly Translation OrderNotSquadleader          = new Translation("<#ff8c69>You must be a <#cedcde>sqauad leader</color> to give orders.");
-    public static readonly Translation<Squad> OrderAttackMarkerCTF  = new Translation<Squad>("<#ff8c69>Place a map marker on a <#d1bd90>position</color> or <#d1bd90>flag</color> where you want {0} to attack.", Squad.FormatColorName);
-    public static readonly Translation<Squad> OrderAttackMarkerIns  = new Translation<Squad>("<#ff8c69>Place a map marker on a <#d1bd90>position</color> or <#d1bd90>cache</color> where you want {0} to attack.", Squad.FormatColorName);
-    public static readonly Translation<Squad> OrderDefenseMarkerCTF = new Translation<Squad>("<#ff8c69>Place a map marker on a <#d1bd90>position</color> or <#d1bd90>flag</color> where you want {0} to defend.", Squad.FormatColorName);
-    public static readonly Translation<Squad> OrderDefenseMarkerIns = new Translation<Squad>("<#ff8c69>Place a map marker on a <#d1bd90>position</color> or <#d1bd90>cache</color> where you want {0} to defend.", Squad.FormatColorName);
-    public static readonly Translation<Squad> OrderBuildFOBError    = new Translation<Squad>("<#ff8c69>Place a map marker on a <#d1bd90>position</color> you want {0} to build a <color=#d1bd90>FOB</color>.", Squad.FormatColorName);
-    public static readonly Translation<Squad> OrderMoveError        = new Translation<Squad>("<#ff8c69>Place a map marker on a <#d1bd90>position</color> you want {0} to move to.", Squad.FormatColorName);
-    public static readonly Translation OrderBuildFOBExists          = new Translation("<#ff8c69>There is already a friendly FOB near that marker.");
-    public static readonly Translation OrderBuildFOBTooMany         = new Translation("<#ff8c69>There are already too many FOBs on your team.");
-    public static readonly Translation<Squad> OrderSquadTooClose    = new Translation<Squad>("<#ff8c69>{0} is already near that marker. Try placing it further away.");
-    public static readonly Translation<Squad, Order> OrderSent      = new Translation<Squad, Order>("<#9fa1a6>Order sent to {0}: <#9dbccf>{1}</color>.", Squad.FormatColorName, Order.FormatMessage);
-    public static readonly Translation<string, string> OrderActionInvalid    = new Translation<string, string>("<#ff8c69><#fff>{0}</color> is not a valid action. Try one of these: <#9dbccf>{1}</color>.");
-    public static readonly Translation<Squad, IPlayer> OrderAlreadyHasOrder  = new Translation<Squad, IPlayer>("Squad {0} led by {1} already has orders.", Squad.FormatColorName, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
-    public static readonly Translation<IPlayer, Order> OrderReceived         = new Translation<IPlayer, Order>("<#9fa1a6>{0} has given your squad new orders:" + Environment.NewLine + "<#d4d4d4>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Order.FormatMessage);
-    public static readonly Translation<IPlayer> OrderUICommander             = new Translation<IPlayer>("Orders from <#a7becf>{0}</color>:", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT);
-    public static readonly Translation<Order> OrderUIMessage                 = new Translation<Order>("{0}", TranslationFlags.UnityUI, Order.FormatMessage);
-    public static readonly Translation<TimeSpan> OrderUITimeLeft             = new Translation<TimeSpan>("- {0}m left", TranslationFlags.UnityUI, "%m");
-    public static readonly Translation<string> OrderUIReward                 = new Translation<string>("- Reward: {0}", TranslationFlags.UnityUI);
-    public static readonly Translation<IObjective> OrderUIAttackObjective    = new Translation<IObjective>("Attack your objective: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<IObjective> OrderUIAttackFlag         = new Translation<IObjective>("Attack: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<IObjective> OrderUIDefendObjective    = new Translation<IObjective>("Defend your objective: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<IObjective> OrderUIDefendFlag         = new Translation<IObjective>("Defend: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<IObjective> OrderUIAttackCache        = new Translation<IObjective>("Attack: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<IObjective> OrderUIDefendCache        = new Translation<IObjective>("Defend: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<GridLocation> OrderUIAttackNearArea   = new Translation<GridLocation>("Attack near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
-    public static readonly Translation<GridLocation> OrderUIDefendNearArea   = new Translation<GridLocation>("Defend near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
-    public static readonly Translation<IObjective> OrderUIBuildFobFlag       = new Translation<IObjective>("Build a FOB on {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<GridLocation> OrderUIBuildFobNearArea = new Translation<GridLocation>("Build a FOB near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
-    public static readonly Translation<IObjective> OrderUIBuildFobNearCache  = new Translation<IObjective>("Build a FOB near {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<IObjective> OrderUIMoveFlag           = new Translation<IObjective>("Move to {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<GridLocation> OrderUIMoveNearArea     = new Translation<GridLocation>("Move to <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
-    public static readonly Translation<IObjective> OrderUIMoveCache          = new Translation<IObjective>("Move to {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
-    #endregion
-
     #region Rallies
     public static readonly Translation RallySuccess         = new Translation("<#959c8c>You have <#c$rally$>rallied</color> with your squad.");
     //public static readonly Translation RallyNotActive       = new Translation("<#959c8c>Your squad doesn't have an active <#c$rally$>RALLY POINT</color>. Get your squadleader to place one.");
@@ -1330,19 +1290,7 @@ internal static class T
     public static readonly Translation<IPlayer, VehicleAsset, string> VehicleDestroyedUnknown = new Translation<IPlayer, VehicleAsset, string>("<#c$death_background$>{0} took out a <#{2}>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation<IPlayer, VehicleAsset, string> VehicleTeamkilled = new Translation<IPlayer, VehicleAsset, string>("<#c$death_background_teamkill$>{0} blew up a friendly <#{2}>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     #endregion
-
-    #region Officers
-    public static readonly Translation<RankData, FactionInfo> OfficerPromoted = new Translation<RankData, FactionInfo>("<#9e9788>Congratulations, you have been <#e3b552>PROMOTED</color> to <#e05353>{0}</color> of {1}!", RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
-    public static readonly Translation<RankData, FactionInfo> OfficerDemoted = new Translation<RankData, FactionInfo>("<#9e9788>You have been <#c47f5c>DEMOTED</color> to <#e05353>{0}</color> of {1}.", RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
-    public static readonly Translation OfficerDischarged = new Translation("<#9e9788>You have been <color=#ab2e2e>DISCHARGED</color> from the officer ranks for unacceptable behaviour.");
-    public static readonly Translation<IPlayer, RankData, FactionInfo> OfficerPromotedBroadcast = new Translation<IPlayer, RankData, FactionInfo>("<#9e9788>{0} has been <#e3b552>PROMOTED</color> to <#e05353>{1}</color> of {2}!", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
-    public static readonly Translation<IPlayer, RankData, FactionInfo> OfficerDemotedBroadcast = new Translation<IPlayer, RankData, FactionInfo>("<#9e9788>{0} has been <#c47f5c>DEMOTED</color> to <#e05353>{1}</color> of {2}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
-    public static readonly Translation<IPlayer, RankData> OfficerDischargedBroadcast = new Translation<IPlayer, RankData>("<#9e9788>{0} has been <#ab2e2e>DISCHARGED</color> from the rank of <#e05353>{1}s</color> for unacceptable behaviour.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.FormatColorName);
-    public static readonly Translation<int, int> OfficerInvalidRank = new Translation<int, int>("<#b08989><#ddd>{0}</color> is not a valid officer level. Try numbers <#ddd>1</color> - <#ddd>{1}</color>.");
-    public static readonly Translation<IPlayer, RankData, FactionInfo> OfficerChangedRankFeedback = new Translation<IPlayer, RankData, FactionInfo>("<#c6d6c1>{0}'s officer rank was successfully changed to <#ddd>{1}</color> of <#ddd>{2}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.FormatColorName, FactionInfo.FormatColorDisplayName);
-    public static readonly Translation<IPlayer> OfficerDischargedFeedback = new Translation<IPlayer>("<#c6d6c1>{0} was successfully discharged.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
-    #endregion
-
+    
     #region Clear
     public static readonly Translation ClearNoPlayerConsole = new Translation("Specify a player name when clearing from console.", TranslationFlags.NoColorOptimization);
     public static readonly Translation ClearInventorySelf = new Translation("<#e6e3d5>Cleared your inventory.");
@@ -1562,6 +1510,8 @@ internal static class T
     public static readonly Translation XPToastFriendlyKilled = new Translation("TEAMKILLED", TranslationFlags.UnityUI);
     public static readonly Translation XPToastFOBDestroyed = new Translation("FOB DESTROYED", TranslationFlags.UnityUI);
     public static readonly Translation XPToastFriendlyFOBDestroyed = new Translation("FRIENDLY FOB DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastBunkerDestroyed = new Translation("BUNKER DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFriendlyBunkerDestroyed = new Translation("FRIENDLY BUNKER DESTROYED", TranslationFlags.UnityUI);
     public static readonly Translation XPToastFOBUsed = new Translation("FOB IN USE", TranslationFlags.UnityUI);
     public static readonly Translation XPToastSuppliesUnloaded = new Translation("RESUPPLIED FOB", TranslationFlags.UnityUI);
     public static readonly Translation XPToastResuppliedTeammate = new Translation("RESUPPLIED TEAMMATE", TranslationFlags.UnityUI);
