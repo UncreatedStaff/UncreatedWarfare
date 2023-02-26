@@ -249,7 +249,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         string text = Localization.TranslateEnum(type, _player.Steam64);
         if (_edit != null)
         {
-            Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { _player.Player.channel.owner.transportConnection });
+            Data.HideAllUI(_player);
             EffectManager.sendUIEffect(_edit.id, EditKey, tc, true);
             _player.HasUIHidden = true;
             EffectManager.sendUIEffectText(EditKey, tc, true, "Name", name);
@@ -429,7 +429,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             string text = Localization.TranslateEnum(_currentBuilder.ZoneType, _player.Steam64);
             if (_edit != null)
             {
-                Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { _player.Player.channel.owner.transportConnection });
+                Data.HideAllUI(_player);
                 EffectManager.sendUIEffect(_edit.id, EditKey, tc, true);
                 _player.HasUIHidden = true;
                 EffectManager.sendUIEffectText(EditKey, tc, true, "Name", _currentBuilder.Name);

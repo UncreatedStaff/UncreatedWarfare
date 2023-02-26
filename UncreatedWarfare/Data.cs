@@ -131,7 +131,6 @@ public static class Data
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearGlasses;
     internal static ClientInstanceMethod<string> SendChangeText;
     internal static ClientStaticMethod SendMultipleBarricades;
-    internal static ClientStaticMethod SendEffectClearAll;
     internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual;
     internal static ClientInstanceMethod? SendInventory;
     internal static SingletonManager Singletons;
@@ -165,7 +164,6 @@ public static class Data
         Assert.IsNotNull(SendDestroyItem);
         Assert.IsNotNull(SendChangeText);
         Assert.IsNotNull(SendMultipleBarricades);
-        Assert.IsNotNull(SendEffectClearAll);
         Assert.IsNotNull(SendChatIndividual);
     }
     [OperationTest(DisplayName = "Generated Getters and Setters Check")]
@@ -247,7 +245,6 @@ public static class Data
         SendChangeText           = Util.GetRPC<ClientInstanceMethod<string>, InteractableSign>("SendChangeText", true)!;
         SendMultipleBarricades   = Util.GetRPC<ClientStaticMethod, BarricadeManager>("SendMultipleBarricades", true)!;
         SendChatIndividual       = Util.GetRPC<ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>, ChatManager>("SendChatEntry", true)!;
-        SendEffectClearAll       = Util.GetRPC<ClientStaticMethod, EffectManager>("SendEffectClearAll", true)!;
         SendDestroyItem          = Util.GetRPC<ClientStaticMethod<byte, byte, uint, bool>, ItemManager>("SendDestroyItem", true)!;
         SendUpdateBarricadeState = Util.GetRPC<ClientInstanceMethod<byte[]>, BarricadeDrop>("SendUpdateState");
         SendInventory            = Util.GetRPC<ClientInstanceMethod, PlayerInventory>("SendInventory");

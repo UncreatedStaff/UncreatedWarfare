@@ -1,6 +1,7 @@
 ﻿#define SHOW_LEVEL
 #define SHOW_DIVISION
 
+using System;
 using SDG.NetTransport;
 using SDG.Unturned;
 using Uncreated.Framework.UI;
@@ -31,6 +32,7 @@ public class XPUI : UnturnedUI
     {
         ThreadUtil.assertIsGameThread();
         ITransportConnection c = player.Connection;
+        L.LogDebug("Sending xp ui to " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");
 
         LevelData data = player.Level;
         this.SendToPlayer(c,
@@ -63,6 +65,7 @@ public class XPUI : UnturnedUI
 
     public void Update(UCPlayer player, bool full)
     {
+        L.LogDebug("Updating xp ui for " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");
         ThreadUtil.assertIsGameThread();
         if (player.HasUIHidden || Data.Gamemode.LeaderboardUp())
             return;
@@ -98,6 +101,7 @@ public class XPUI : UnturnedUI
 
     public void Clear(UCPlayer player)
     {
+        L.LogDebug("Clearing xp ui for " + player);
         player.PointsDirtyMask |= 0b10100000;
         Parent.SetVisibility(player.Connection, false);
 #if SHOW_DIVISION
@@ -114,6 +118,7 @@ public class CreditsUI : UnturnedUI
     public CreditsUI() : base(26971, Gamemode.Config.UICreditsPanel, false) { }
     public void SendTo(UCPlayer player)
     {
+        L.LogDebug("Sending creds ui to " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");
         ThreadUtil.assertIsGameThread();
         SendToPlayer(player.Connection, GetCreditsString(player));
         player.PointsDirtyMask &= unchecked((byte)~0b01011000);
@@ -126,6 +131,7 @@ public class CreditsUI : UnturnedUI
 
     public void Update(UCPlayer player, bool full)
     {
+        L.LogDebug("Updating creds ui for " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");
         ThreadUtil.assertIsGameThread();
         if ((!full && (player.PointsDirtyMask & 0b00001000) == 0) || player.HasUIHidden || Data.Gamemode.LeaderboardUp())
             return;
@@ -144,6 +150,7 @@ public class CreditsUI : UnturnedUI
 
     public void Clear(UCPlayer player)
     {
+        L.LogDebug("Clearing creds ui for " + player);
         player.PointsDirtyMask |= 0b01010000;
         Parent.SetVisibility(player.Connection, false);
     }

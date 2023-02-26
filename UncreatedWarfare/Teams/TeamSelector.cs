@@ -227,7 +227,7 @@ public class TeamSelector : BaseSingletonComponent
     private static void ClearAllUI(UCPlayer player)
     {
         player.HasUIHidden = true;
-        Data.SendEffectClearAll.Invoke(ENetReliability.Reliable, player.Connection);
+        Data.HideAllUI(player);
     }
     private void JoinTeam(UCPlayer player, ulong team)
     {

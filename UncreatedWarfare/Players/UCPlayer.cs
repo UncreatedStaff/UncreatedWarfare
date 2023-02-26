@@ -94,7 +94,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     internal List<Guid>? CompletedQuests;
     internal bool ModalNeeded;
     // [xp sent][credits sent][xp vis][credits vis][credits][branch][level][xp]
-    internal byte PointsDirtyMask = 0b11111111;
+    internal byte PointsDirtyMask = 0b00111111;
     internal bool HasTicketUI = false;
     internal bool HasFOBUI = false;
     private readonly CancellationTokenSource _disconnectTokenSrc;
