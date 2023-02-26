@@ -3,8 +3,10 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices.ComTypes;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
@@ -374,6 +376,50 @@ public class Flag : IDisposable, IObjective
         else if (team == 2) return T2Obj;
         else return false;
     }
+    public bool IsCapturable(ulong team)
+    {
+        // double neutral feature
+        if (Manager is not IFlagTeamObjectiveGamemode ctf)
+            return false;
+
+        if (PlayersOnFlag.Count > 0)
+        {
+            L.Log("===" + Name + "===");
+            L.Log("     Capturing Team: " + team);
+            L.Log("     ObjectiveTeam1 Owner: " + ctf.ObjectiveTeam1?.Owner);
+            L.Log("     ObjectiveTeam2 Owner: " + ctf.ObjectiveTeam2?.Owner);
+            L.Log("     Index: " + Index);
+            L.Log("     Owner: " + Owner);
+            L.Log("     ObjectiveT2Index: " + ctf.ObjectiveT2Index);
+            L.Log("     ObjectiveT1Index: " + ctf.ObjectiveT1Index);
+        }
+
+        if (IsObj(team))
+            return true;
+
+        if (team == 2)
+        {
+            if (PlayersOnFlag.Count > 0)
+                L.Log("         Team 2 is Double neutralizing");
+
+            if (ctf.ObjectiveTeam1?.Owner == 0 && Index == ctf.ObjectiveT2Index - 1) // if team 1's objective is neutral and there is another point to capture
+            {
+                return Owner == 1; // T2 can capture this flag if it is the next point after their objective and T1 owns it
+            }
+        }
+        else if (team == 1) 
+        {
+            if (PlayersOnFlag.Count > 0)
+                L.Log("         Team 1 is Double neutralizing");
+
+            if (ctf.ObjectiveTeam2?.Owner == 0 && Index == ctf.ObjectiveT1Index + 1) // if team 2's objective is neutral and there is another point to capture
+            {
+                return Owner == 2; // T1 can capture this flag if it is the next point after their objective and T2 owns it
+            }
+        }
+
+        return false;
+    }
     public bool IsAttackSite(ulong team) => Manager.IsAttackSite(team, this);
     public bool IsDefenseSite(ulong team) => Manager.IsDefenseSite(team, this);
     public bool Discovered(ulong team)
@@ -411,7 +457,7 @@ public class Flag : IDisposable, IObjective
 #endif
         if (IsContestedOverride != null)
             return IsContestedOverride(this, out winner);
-        if ((T1Obj && T2Obj) || (T1Obj && Owner == 2) || (T2Obj && Owner == 1)) // must be objective for both teams
+        if (IsCapturable(1) || IsCapturable(2)) // must be objective for both teams
         {
             if (Team1TotalCappers == 0 && Team2TotalCappers == 0)
             {
@@ -475,25 +521,23 @@ public class Flag : IDisposable, IObjective
         }
         if (Manager.State == State.Active || overrideInactiveCheck)
         {
-            if (IsAnObj)
+            if (!IsContested(out ulong winner))
             {
-                if (!IsContested(out ulong winner))
+                if (IsCapturable(winner))
                 {
-                    if (IsObj(winner))
+                    if (winner == 1 || winner == 2)
                     {
-                        if (winner == 1 || winner == 2)
-                        {
-                            Cap(winner, GetCaptureAmount(Gamemode.Config.AASCaptureScale, winner));
-                        }
+                        Cap(winner, GetCaptureAmount(Gamemode.Config.AASCaptureScale, winner));
                     }
                 }
-                else
-                {
-                    // invoke points updated method to show contested.
-                    this.LastDeltaPoints = 0;
-                    OnPointsChanged?.Invoke(_points, _points, this);
-                }
             }
+            else if (IsAnObj)
+            {
+                // invoke points updated method to show contested.
+                this.LastDeltaPoints = 0;
+                OnPointsChanged?.Invoke(_points, _points, this);
+            }
+
         }
     }
 

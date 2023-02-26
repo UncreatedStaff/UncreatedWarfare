@@ -29,7 +29,7 @@ public static class CTFUI
             }
             else
             {
-                if (flag.IsObj(team))
+                if (flag.IsCapturable(team))
                     return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
                 else
                     return new CaptureUIParameters(team, EFlagStatus.NOT_OBJECTIVE, flag);
@@ -313,7 +313,7 @@ public static class CTFUI
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (team != 1 && team != 2) return new CaptureUIParameters(0, EFlagStatus.DONT_DISPLAY, null!);
-        if (flag.IsAnObj)
+        if (flag.IsCapturable(1) || flag.IsCapturable(2))
         {
             return ComputeUI(team, flag, inVehicle); // if flag is objective send capturing ui.
         }
@@ -325,6 +325,7 @@ public static class CTFUI
                 return new CaptureUIParameters(team, EFlagStatus.NOT_OWNED, flag);
             else
                 return new CaptureUIParameters(team, EFlagStatus.NOT_OBJECTIVE, flag);
+
         }
     }
 }
