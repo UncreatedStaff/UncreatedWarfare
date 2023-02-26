@@ -3,8 +3,10 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices.ComTypes;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
@@ -374,6 +376,36 @@ public class Flag : IDisposable, IObjective
         else if (team == 2) return T2Obj;
         else return false;
     }
+    public bool IsCapturable(ulong team)
+    {
+        if (IsObj(team))
+            return true;
+
+        // double neutral feature
+        if (Manager is not IFlagTeamObjectiveGamemode ctf)
+            return false;
+
+        if (team == 2)
+        {
+            if (ctf.ObjectiveTeam1?.Owner == 0 && ctf.ObjectiveT2Index > 0) // if team 1's objective is neutral and there is another point to capture
+            {
+                Flag next = ctf.Rotation[ctf.ObjectiveT2Index - 1];
+
+                return next.Owner == 1; // T2 can capture this flag if it is the next point after their objective and T1 owns it
+            }
+        }
+        else if (team == 1)
+        {
+            if (ctf.ObjectiveTeam2?.Owner == 0 && ctf.ObjectiveT1Index < ctf.Rotation.Count - 1) // if team 2's objective is neutral and there is another point to capture
+            {
+                Flag next = ctf.Rotation[ctf.ObjectiveT1Index + 1]; // T2 can capture if this flag if it is the 
+
+                return next.Owner == 2; // T1 can capture this flag if it is the next point after their objective and T2 owns it
+            }
+        }
+
+        return false;
+    }
     public bool IsAttackSite(ulong team) => Manager.IsAttackSite(team, this);
     public bool IsDefenseSite(ulong team) => Manager.IsDefenseSite(team, this);
     public bool Discovered(ulong team)
@@ -479,7 +511,7 @@ public class Flag : IDisposable, IObjective
             {
                 if (!IsContested(out ulong winner))
                 {
-                    if (IsObj(winner))
+                    if (IsCapturable(winner))
                     {
                         if (winner == 1 || winner == 2)
                         {
