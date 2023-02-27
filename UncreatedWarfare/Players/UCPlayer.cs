@@ -8,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -20,7 +19,8 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -53,7 +53,12 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
     public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UIMuted, false, false);
     public static readonly UnturnedUI LoadingUI = new UnturnedUI(15624, Gamemode.Config.UILoading, false, false, false);
-    public readonly SemaphoreSlim PurchaseSync = new SemaphoreSlim(1, 1);
+    /*
+     * There can never be more than one semaphore per player (even if they've gone offline)
+     * as this object will get reused until the finalizer runs, so don't save the semaphore outside of a sync local scope.
+     * If you need it to stick around save the UCPlayer instead.
+     */
+    public readonly UCSemaphore PurchaseSync;
     public readonly UCPlayerKeys Keys;
     public readonly UCPlayerEvents Events;
     public KitMenuUIData KitMenuData;
@@ -88,6 +93,10 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     internal Action<byte, ItemJar> SendItemRemove;
     internal List<Guid>? CompletedQuests;
     internal bool ModalNeeded;
+    // [xp sent][credits sent][xp vis][credits vis][credits][branch][level][xp]
+    internal byte PointsDirtyMask = 0b00111111;
+    internal bool HasTicketUI = false;
+    internal bool HasFOBUI = false;
     private readonly CancellationTokenSource _disconnectTokenSrc;
     private int _multVersion = -1;
     private bool _isTalking;
@@ -97,11 +106,12 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private string? _lang;
     private CultureInfo? _locale;
     private EAdminType? _pLvl;
-    private RankData? _rank;
+    private LevelData? _level;
     private PlayerNames _cachedName;
-    public UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save)
+    public UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore)
     {
         Steam64 = steamID.m_SteamID;
+        PurchaseSync = semaphore;
         Squad = null;
         Player = player;
         CSteamID = steamID;
@@ -136,7 +146,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     ~UCPlayer()
     {
-        PurchaseSync.Dispose();
+        PlayerManager.DeregisterPlayerSemaphore(Steam64);
+        L.LogDebug("Player finalized: [" + Steam64 + "].");
     }
     public enum NameSearch : byte
     {
@@ -205,14 +216,14 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public Dictionary<Buff, float> ShovelSpeedMultipliers { get; } = new Dictionary<Buff, float>(6);
     public List<SpottedComponent> CurrentMarkers { get; }
     /// <summary><see langword="True"/> if rank order <see cref="OfficerStorage.OFFICER_RANK_ORDER"/> has been completed (Receiving officer pass from discord server).</summary>
-    public bool IsOfficer => RankData != null && RankData.Length > OfficerStorage.OFFICER_RANK_ORDER && RankData[OfficerStorage.OFFICER_RANK_ORDER].IsCompelete;
-    public RankData Rank
+    public bool IsOfficer => RankData != null && RankData.Length > RankManager.Config.OfficerRankIndex && RankData[RankManager.Config.OfficerRankIndex].IsCompelete;
+    public LevelData Level
     {
         get
         {
-            if (!_rank.HasValue)
+            if (!_level.HasValue)
                 return default;
-            return _rank.Value;
+            return _level.Value;
         }
     }
     public float ShovelSpeedMultiplier
@@ -258,8 +269,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     public int CachedXP
     {
-        get => Rank.TotalXP;
-        set => _rank = new RankData(value);
+        get => Level.TotalXP;
+        set => _level = new LevelData(value);
     }
     public PlayerNames Name
     {
@@ -373,7 +384,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             Events.Dispose();
             Keys.Dispose();
             KitMenuData = null!;
-            PurchaseSync.Dispose();
         }
     }
     public static UCPlayer? FromID(ulong steamID)
@@ -723,11 +733,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         Skill skill = skills[skillset.SpecialityIndex][skillset.SkillIndex];
         if (skillset.Level != skill.level)
         {
-            L.LogDebug($"Setting override: {skillset}.");
             skillset.ServerSet(this);
         }
-        else
-            L.LogDebug($"Override already set: {skillset}.");
     }
     public void EnsureSkillsets(Skillset[] skillsets)
     {
@@ -747,11 +754,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                     {
                         if (s.Level != skill.level)
                         {
-                            L.LogDebug($"Setting override: {s}.");
                             s.ServerSet(this);
                         }
-                        else
-                            L.LogDebug($"Override already set: {s}.");
                         goto c;
                     }
                 }
@@ -762,11 +766,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                     {
                         if (s.Level != skill.level)
                         {
-                            L.LogDebug($"Setting server default: {s}.");
                             s.ServerSet(this);
                         }
-                        else
-                            L.LogDebug($"Server default already set: {s}.");
                         goto c;
                     }
                 }
@@ -776,11 +777,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                 if (skill.level != defaultLvl)
                 {
                     Player.skills.ServerSetSkillLevel(specIndex, skillIndex, defaultLvl);
-                    L.LogDebug($"Setting game default: {new Skillset((EPlayerSpeciality)specIndex, (byte)skillIndex, defaultLvl)}.");
-                }
-                else
-                {
-                    L.LogDebug($"Game default already set: {new Skillset((EPlayerSpeciality)specIndex, (byte)skillIndex, defaultLvl)}.");
                 }
                 c:;
             }
@@ -803,7 +799,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         {
             return skills[(int)speciality][skill].max;
         }
-        if (Level.getAsset() is { skillRules: { } } asset)
+        if (SDG.Unturned.Level.getAsset() is { skillRules: { } } asset)
         {
             if (asset.skillRules.Length > specIndex && asset.skillRules[specIndex].Length > skill)
             {
@@ -846,7 +842,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     internal void UpdatePoints(uint xp, uint credits)
     {
-        _rank = new RankData((int)xp);
+        _level = new LevelData((int)xp);
         CachedCredits = (int)credits;
     }
     internal void OnLanguageChanged()

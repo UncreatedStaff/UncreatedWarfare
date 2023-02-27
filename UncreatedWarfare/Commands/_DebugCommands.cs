@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections;
@@ -15,14 +14,13 @@ using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
@@ -32,6 +30,8 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+using XPReward = Uncreated.Warfare.Levels.XPReward;
+
 // ReSharper disable UnusedMember.Local
 // ReSharper disable InconsistentNaming
 
@@ -134,7 +134,7 @@ public class DebugCommand : AsyncCommand
                     if (team is < 1 or > 2)
                         team = onlinePlayer.GetTeam();
                     await XPParameters
-                        .WithTranslation(onlinePlayer, team, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, amount)
+                        .WithTranslation(onlinePlayer, team, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, XPReward.Custom, amount)
                         .Award(token)
                         .ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
@@ -464,7 +464,7 @@ public class DebugCommand : AsyncCommand
         }
         else
         {
-            Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { ctx.Caller.Connection });
+            Data.HideAllUI(ctx.Caller);
         }
         ctx.Caller.HasUIHidden = !ctx.Caller.HasUIHidden;
         ctx.ReplyString("<#a4a5b3>UI " + (ctx.Caller.HasUIHidden ? "hidden." : "visible."));
@@ -1274,7 +1274,7 @@ public class DebugCommand : AsyncCommand
                 throw ctx.ReplyString($"<#ff8c69>Can't find an effect with the term: <#ddd>{ctx.Get(1)}</color>.");
             if (asset == null)
             {
-                Data.SendEffectClearAll.Invoke(ENetReliability.Reliable, ctx.Caller.Connection);
+                Data.HideAllUI(ctx.Caller);
                 throw ctx.ReplyString("<#9fa1a6>Cleared all effects.");
             }
             EffectManager.ClearEffectByGuid(asset.GUID, ctx.Caller.Connection);

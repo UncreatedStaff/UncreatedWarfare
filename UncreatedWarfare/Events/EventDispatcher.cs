@@ -330,6 +330,8 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(PlayerLeft));
         }
+
+        GC.Collect(2, GCCollectionMode.Forced, false, false);
     }
     private static void ProviderOnServerConnected(CSteamID steamID)
     {

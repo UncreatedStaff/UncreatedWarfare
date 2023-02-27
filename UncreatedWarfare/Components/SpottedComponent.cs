@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Maps;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -278,9 +278,9 @@ public class SpottedComponent : MonoBehaviour
 
     public void OnTargetKilled(int assistXP)
     {
-        if (CurrentSpotter != null && CurrentSpotter.IsOnline)
+        if (CurrentSpotter != null)
         {
-            Points.AwardXP(CurrentSpotter, assistXP, T.XPToastSpotterAssist);
+            Points.AwardXP(CurrentSpotter, XPReward.KillAssist, assistXP);
         }
     }
     [UsedImplicitly]

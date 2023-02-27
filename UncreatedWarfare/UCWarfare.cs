@@ -20,22 +20,13 @@ using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Gamemodes.Flags.Invasion;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.Insurgency;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -397,8 +388,9 @@ public class UCWarfare : MonoBehaviour
         {
             if (!uiOnly)
                 Data.Gamemode.InvokeLanguageChanged(player);
-            Data.Gamemode.InvokeReloadUI(player);
         }
+
+        Data.UpdateAllUI(player);
     }
 
     private static Queue<MainThreadTask.MainThreadResult>? _threadActionRequests;

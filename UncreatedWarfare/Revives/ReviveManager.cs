@@ -14,13 +14,14 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
+using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.Revives;
 
@@ -227,7 +228,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                         cooldown.data[0] is ulong id &&
                         id == uctarget.Steam64)))
                     {
-                        Points.AwardXP(ucmedic, Points.XPConfig.FriendlyRevivedXP, T.XPToastHealedTeammate);
+                        Points.AwardXP(ucmedic, XPReward.Revive);
                         if (uctarget != null)
                         {
                             QuestManager.OnRevive(ucmedic, uctarget);

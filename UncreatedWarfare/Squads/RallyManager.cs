@@ -7,6 +7,7 @@ using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Squads;
 

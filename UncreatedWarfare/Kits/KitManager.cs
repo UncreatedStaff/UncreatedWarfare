@@ -21,7 +21,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
@@ -1795,6 +1795,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     public const string COLUMN_COST_CREDITS = "CreditCost";
     public const string COLUMN_COST_PREMIUM = "PremiumCost";
     public const string COLUMN_SQUAD_LEVEL = "SquadLevel";
+    public const string COLUMN_REQUIRES_NITRO = "RequiresNitro";
     public const string COLUMN_MAPS_WHITELIST = "MapFilterIsWhitelist";
     public const string COLUMN_FACTIONS_WHITELIST = "FactionFilterIsWhitelist";
     public const string COLUMN_CREATOR = "Creator";
@@ -1852,6 +1853,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             new Schema.Column(COLUMN_SQUAD_LEVEL, SqlTypes.Enum<SquadLevel>()) { Nullable = true },
             new Schema.Column(COLUMN_MAPS_WHITELIST, SqlTypes.BOOLEAN) { Nullable = true },
             new Schema.Column(COLUMN_FACTIONS_WHITELIST, SqlTypes.BOOLEAN) { Nullable = true },
+            new Schema.Column(COLUMN_REQUIRES_NITRO, SqlTypes.BOOLEAN) { Nullable = true },
             new Schema.Column(COLUMN_CREATOR, SqlTypes.STEAM_64) { Nullable = true },
             new Schema.Column(COLUMN_LAST_EDITOR, SqlTypes.STEAM_64) { Nullable = true },
             new Schema.Column(COLUMN_CREATION_TIME, SqlTypes.DATETIME) { Nullable = true },
@@ -1921,19 +1923,20 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         objs[10] = item.SquadLevel <= SquadLevel.Member ? DBNull.Value : item.SquadLevel.ToString();
         objs[11] = item.CreditCost == 0 ? DBNull.Value : item.CreditCost;
         objs[12] = item.Type is KitType.Public or KitType.Special ? DBNull.Value : item.PremiumCost;
-        objs[13] = item.MapFilterIsWhitelist;
-        objs[14] = item.FactionFilterIsWhitelist;
-        objs[15] = item.Creator;
-        objs[16] = item.LastEditor;
-        objs[17] = item.CreatedTimestamp.UtcDateTime;
-        objs[18] = item.LastEditedTimestamp.UtcDateTime;
+        objs[13] = item.RequiresNitro;
+        objs[14] = item.MapFilterIsWhitelist;
+        objs[15] = item.FactionFilterIsWhitelist;
+        objs[16] = item.Creator;
+        objs[17] = item.LastEditor;
+        objs[18] = item.CreatedTimestamp.UtcDateTime;
+        objs[19] = item.LastEditedTimestamp.UtcDateTime;
         if (hasPk)
-            objs[19] = pk.Key;
+            objs[20] = pk.Key;
         await Sql.QueryAsync(F.BuildInitialInsertQuery(TABLE_MAIN, COLUMN_PK, hasPk, null, null,
                 COLUMN_KIT_ID, COLUMN_FACTION, COLUMN_CLASS, COLUMN_BRANCH,
                 COLUMN_TYPE, COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT, COLUMN_SEASON,
                 COLUMN_DISABLED, COLUMN_WEAPONS, COLUMN_SQUAD_LEVEL, COLUMN_COST_CREDITS,
-                COLUMN_COST_PREMIUM, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
+                COLUMN_COST_PREMIUM, COLUMN_REQUIRES_NITRO, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
                 COLUMN_LAST_EDITOR, COLUMN_CREATION_TIME, COLUMN_LAST_EDIT_TIME),
             objs, reader =>
             {
@@ -2115,7 +2118,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         await Sql.QueryAsync(F.BuildSelectWhereLimit1(TABLE_MAIN, COLUMN_PK, 0, COLUMN_KIT_ID, COLUMN_FACTION,
                 COLUMN_CLASS, COLUMN_BRANCH, COLUMN_TYPE, COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT,
                 COLUMN_SEASON, COLUMN_DISABLED, COLUMN_WEAPONS, COLUMN_SQUAD_LEVEL, COLUMN_COST_CREDITS,
-                COLUMN_COST_PREMIUM, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
+                COLUMN_COST_PREMIUM, COLUMN_REQUIRES_NITRO, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
                 COLUMN_LAST_EDITOR, COLUMN_CREATION_TIME, COLUMN_LAST_EDIT_TIME)
             , pkObjs, reader =>
             {
@@ -2192,7 +2195,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         await Sql.QueryAsync(F.BuildSelect(TABLE_MAIN, COLUMN_PK, COLUMN_KIT_ID, COLUMN_FACTION,
             COLUMN_CLASS, COLUMN_BRANCH, COLUMN_TYPE, COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT,
             COLUMN_SEASON, COLUMN_DISABLED, COLUMN_WEAPONS, COLUMN_SQUAD_LEVEL, COLUMN_COST_CREDITS,
-            COLUMN_COST_PREMIUM, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
+            COLUMN_COST_PREMIUM, COLUMN_REQUIRES_NITRO, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
             COLUMN_LAST_EDITOR, COLUMN_CREATION_TIME, COLUMN_LAST_EDIT_TIME),
             null, reader =>
             {
@@ -2376,16 +2379,17 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 : type is KitType.Loadout
                     ? decimal.Round(UCWarfare.Config.LoadoutCost, 2)
                     : new decimal(Math.Round(reader.GetDouble(colOffset + 13), 2)),
-            MapFilterIsWhitelist = !reader.IsDBNull(colOffset + 14) && reader.GetBoolean(colOffset + 14), 
-            FactionFilterIsWhitelist = !reader.IsDBNull(colOffset + 15) && reader.GetBoolean(colOffset + 15),
-            Creator = reader.IsDBNull(colOffset + 16) ? 0ul : reader.GetUInt64(colOffset + 16),
-            LastEditor = reader.IsDBNull(colOffset + 17) ? 0ul : reader.GetUInt64(colOffset + 17),
-            CreatedTimestamp = reader.IsDBNull(colOffset + 18)
-                ? DateTimeOffset.MinValue
-                : reader.GetDateTimeOffset(colOffset + 18),
-            LastEditedTimestamp = reader.IsDBNull(colOffset + 19)
+            RequiresNitro = !reader.IsDBNull(colOffset + 14) && reader.GetBoolean(colOffset + 14),
+            MapFilterIsWhitelist = !reader.IsDBNull(colOffset + 15) && reader.GetBoolean(colOffset + 15),
+            FactionFilterIsWhitelist = !reader.IsDBNull(colOffset + 16) && reader.GetBoolean(colOffset + 16),
+            Creator = reader.IsDBNull(colOffset + 17) ? 0ul : reader.GetUInt64(colOffset + 17),
+            LastEditor = reader.IsDBNull(colOffset + 18) ? 0ul : reader.GetUInt64(colOffset + 18),
+            CreatedTimestamp = reader.IsDBNull(colOffset + 19)
                 ? DateTimeOffset.MinValue
                 : reader.GetDateTimeOffset(colOffset + 19),
+            LastEditedTimestamp = reader.IsDBNull(colOffset + 20)
+                ? DateTimeOffset.MinValue
+                : reader.GetDateTimeOffset(colOffset + 20)
         };
     }
     /// <exception cref="FormatException"/>

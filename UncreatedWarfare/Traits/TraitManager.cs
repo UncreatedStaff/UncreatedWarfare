@@ -11,7 +11,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -19,7 +19,7 @@ using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Traits;
-public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IGameStartListener, ILevelStartListener, IPlayerPostInitListener, IReloadUIListener, ITimeSyncListener
+public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IGameStartListener, ILevelStartListener, IPlayerPostInitListener, IUIListener, ITimeSyncListener
 {
     public List<Trait> ActiveTraits;
     public static TraitManager Singleton;
@@ -630,10 +630,19 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         return null;
     }
 
-    public void ReloadUI(UCPlayer player)
+    public void UpdateUI(UCPlayer player)
     {
-        if (player.GetTeam() is 1 or 2 && !player.HasUIHidden && !(Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> lb) && lb.IsScreenUp))
+        if (player.GetTeam() is 1 or 2 && !player.HasUIHidden && !Data.Gamemode.LeaderboardUp())
             BuffUI.SendBuffs(player);
+    }
+    public void ShowUI(UCPlayer player)
+    {
+        if (player.GetTeam() is 1 or 2 && !player.HasUIHidden && !Data.Gamemode.LeaderboardUp())
+            BuffUI.SendBuffs(player);
+    }
+    public void HideUI(UCPlayer player)
+    {
+        BuffUI.ClearFromPlayer(player.Connection);
     }
 
     void ITimeSyncListener.TimeSync(float time)

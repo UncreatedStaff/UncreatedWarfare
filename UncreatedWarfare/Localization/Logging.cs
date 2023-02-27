@@ -1,4 +1,4 @@
-﻿//#define FUNCTION_LOG
+﻿#define FUNCTION_LOG
 
 using HarmonyLib;
 using JetBrains.Annotations;
@@ -131,7 +131,7 @@ public static class L
         }
     }
 #if DEBUG && FUNCTION_LOG
-    private static readonly string[] blocked =
+    private static readonly string[] BlockedLoggingFunction =
     {
         "Update",
         "FixedUpdate",
@@ -146,9 +146,9 @@ public static class L
             callerName.IndexOf("Translate", StringComparison.Ordinal) != -1 ||
             callerName.IndexOf("Simulate", StringComparison.Ordinal) != -1)
             return;
-        for (int i = 0; i < blocked.Length; ++i)
+        for (int i = 0; i < BlockedLoggingFunction.Length; ++i)
         {
-            if (blocked[i].Equals(callerName, StringComparison.Ordinal)) return;
+            if (BlockedLoggingFunction[i].Equals(callerName, StringComparison.Ordinal)) return;
         }
         if (_flog != null)
         {

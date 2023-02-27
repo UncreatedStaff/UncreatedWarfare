@@ -9,17 +9,13 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
 
 public static class PlayerManager
 {
-
+    
     // auto added on join and detroyed on leave
     public static readonly Type[] PlayerComponentTypes =
     {
@@ -28,17 +24,30 @@ public static class PlayerManager
 
     public static readonly List<UCPlayer> OnlinePlayers;
     private static readonly Dictionary<ulong, UCPlayer> _dict;
+    private static readonly Dictionary<ulong, UCSemaphore> _semaphores;
     internal static List<KeyValuePair<ulong, CancellationTokenSource>> PlayerConnectCancellationTokenSources = new List<KeyValuePair<ulong, CancellationTokenSource>>(Provider.queueSize);
 
     static PlayerManager()
     {
         OnlinePlayers = new List<UCPlayer>(50);
         _dict = new Dictionary<ulong, UCPlayer>(50);
+        _semaphores = new Dictionary<ulong, UCSemaphore>(128);
         EventDispatcher.GroupChanged += OnGroupChagned;
         Provider.onRejectingPlayer += OnRejectingPlayer;
         EventDispatcher.PlayerPending += OnPlayerPending;
     }
-
+    internal static void DeregisterPlayerSemaphore(ulong player)
+    {
+        lock (_semaphores)
+        {
+            if (FromID(player) == null && _semaphores.TryGetValue(player, out UCSemaphore semaphore))
+            {
+                _semaphores.Remove(player);
+                semaphore.Dispose();
+                L.LogDebug("Semaphore for [" + player + "] has been disposed of.");
+            }
+        }
+    }
     private static void OnPlayerPending(PlayerPending e)
     {
         for (int i = PlayerConnectCancellationTokenSources.Count - 1; i >= 0; --i)
@@ -140,23 +149,42 @@ public static class PlayerManager
         {
             compBuffer[i] = player.gameObject.AddComponent(PlayerComponentTypes[i]);
         }
-        UCPlayer ucplayer = new UCPlayer(
-            player.channel.owner.playerID.steamID,
-            player,
-            player.channel.owner.playerID.characterName,
-            player.channel.owner.playerID.nickName,
-            save.IsOtherDonator,
-            src ?? new CancellationTokenSource(),
-            save
-        );
 
-        Data.OriginalPlayerNames.Remove(ucplayer.Steam64);
-
-
-        OnlinePlayers.Add(ucplayer);
-        lock (_dict)
+        UCPlayer ucplayer;
+        lock (_semaphores)
         {
-            _dict.Add(ucplayer.Steam64, ucplayer);
+            if (!_semaphores.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out UCSemaphore semaphore))
+            {
+                semaphore = new UCSemaphore();
+#if DEBUG
+                semaphore.WaitCallback += () => L.LogDebug("Waiting for " + player.channel.owner.playerID.steamID.m_SteamID + " purchase sync."); 
+                semaphore.ReleaseCallback += amt => L.LogDebug("Released " + amt + " from " + player.channel.owner.playerID.steamID.m_SteamID + " purchase sync.");
+#endif
+                L.LogDebug("Semaphore for [" + player + "] has been created.");
+                _semaphores.Add(player.channel.owner.playerID.steamID.m_SteamID, semaphore);
+            }
+            else
+            {
+                L.LogDebug("Existing semaphore found for [" + player + "].");
+            }
+            ucplayer = new UCPlayer(
+                player.channel.owner.playerID.steamID,
+                player,
+                player.channel.owner.playerID.characterName,
+                player.channel.owner.playerID.nickName,
+                save.IsOtherDonator,
+                src ?? new CancellationTokenSource(),
+                save,
+                semaphore
+            );
+
+            Data.OriginalPlayerNames.Remove(ucplayer.Steam64);
+            
+            OnlinePlayers.Add(ucplayer);
+            lock (_dict)
+            {
+                _dict.Add(ucplayer.Steam64, ucplayer);
+            }
         }
 
         for (int i = 0; i < compBuffer.Length; ++i)
@@ -174,8 +202,6 @@ public static class PlayerManager
                 }
             }
         }
-        //if (save.SquadName != null)
-        //    SquadManager.OnPlayerJoined(ucplayer, save.SquadName);
         return ucplayer;
     }
     private static void OnGroupChagned(GroupChanged e)

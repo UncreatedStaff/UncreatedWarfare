@@ -4,86 +4,111 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
-namespace Uncreated.Warfare.Point;
+namespace Uncreated.Warfare.Levels;
 
-public static class Points
+public sealed class Points : BaseSingletonComponent, IUIListener
 {
     private const string UpdateAllPointsQuery = "SELECT `Steam64`, `Team`, `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` in (";
-    private const int XPUIKey = 26969;
-    private const int CreditsUIKey = 26971;
-    private static readonly Config<XPConfig> XPConfigObj = UCWarfare.IsLoaded ? new Config<XPConfig>(Data.Paths.PointsStorage, "xp.json") : null!;
-    private static readonly Config<CreditsConfig> CreditsConfigObj = UCWarfare.IsLoaded ? new Config<CreditsConfig>(Data.Paths.PointsStorage, "credits.json") : null!;
-    public static XPConfig XPConfig => XPConfigObj.Data;
-    public static CreditsConfig CreditsConfig => CreditsConfigObj.Data;
 
-    public static OfficerStorage Officers;
-    public static List<Task> Transactions = new List<Task>(16);
+    public static readonly XPUI XPUI;
+    public static readonly CreditsUI CreditsUI;
+    public static List<Task> Transactions;
 
-    public static void Initialize()
+    private static readonly Config<PointsConfig> PointsConfigObj;
+    private static bool _first = true;
+
+    public static PointsConfig PointsConfig => PointsConfigObj.Data;
+    static Points()
     {
-        Officers = new OfficerStorage();
+        if (UCWarfare.IsLoaded) // allows external access to this class without initializing everything
+        {
+            PointsConfigObj = new Config<PointsConfig>(Data.Paths.BaseDirectory, "points.json");
+            Transactions = new List<Task>(16);
+            XPUI = new XPUI();
+            CreditsUI = new CreditsUI();
+        }
+    }
+
+    public override void Load()
+    {
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.VehicleDestroyed += OnVehicleDestoryed;
+        KitManager.OnKitChanged += OnKitChanged;
+        EventDispatcher.PlayerLeaving += OnPlayerLeft;
+        if (!_first) ReloadConfig();
+        else _first = false;
+    }
+    public override void Unload()
+    {
+        EventDispatcher.PlayerLeaving -= OnPlayerLeft;
+        KitManager.OnKitChanged -= OnKitChanged;
+        EventDispatcher.VehicleDestroyed -= OnVehicleDestoryed;
+        EventDispatcher.GroupChanged -= OnGroupChanged;
     }
     public static void ReloadConfig()
     {
-        XPConfigObj.Reload();
-        CreditsConfigObj.Reload();
+        PointsConfigObj.Reload();
     }
-    public static void OnPlayerJoined(UCPlayer player, bool isnewGame)
+
+    public void HideUI(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (!isnewGame && (player.IsTeam1 || player.IsTeam2))
-        {
-            UpdateXPUI(player);
-            UpdateCreditsUI(player);
-        }
+        XPUI.Clear(player);
+        CreditsUI.Clear(player);
+    }
+    public void ShowUI(UCPlayer player)
+    {
+        XPUI.SendTo(player);
+        CreditsUI.SendTo(player);
+    }
+    public void UpdateUI(UCPlayer player)
+    {
+        player.PointsDirtyMask = 0b00001111;
+        XPUI.Update(player, true);
+        CreditsUI.Update(player, true);
     }
 
     private static void OnGroupChanged(GroupChanged e)
     {
         UCPlayer player = e.Player;
-        ulong newGroup = e.NewGroup;
-        Task.Run(async () =>
+        player.PointsDirtyMask = 0b00001111;
+        UCWarfare.RunTask(async () =>
         {
-            Task<int> t1 = Data.DatabaseManager.GetXP(player.Steam64, player.GetTeam());
-            Task<int> t2 = Data.DatabaseManager.GetCredits(player.Steam64, player.GetTeam());
-            await UCWarfare.ToUpdate();
-
-            player.CachedXP = await t1;
-            player.CachedCredits = await t2;
-
-            if (newGroup is > 0 and < 3)
+            if (e.NewTeam is 1 or 2)
             {
-                UpdateXPUI(player);
-                UpdateCreditsUI(player);
+                (int credits, int xp) = await Data.DatabaseManager.GetCreditsAndXP(e.Steam64, e.NewTeam).ConfigureAwait(false);
+                await UCWarfare.ToUpdate();
+                player.CachedXP = xp;
+                player.CachedCredits = credits;
+                XPUI.Update(player, true);
+                CreditsUI.Update(player, true);
             }
             else
             {
-                EffectManager.askEffectClearByID(XPConfig.RankUI, player.Player.channel.owner.transportConnection);
-                EffectManager.askEffectClearByID(CreditsConfig.CreditsUI, player.Player.channel.owner.transportConnection);
+                XPUI.Clear(player);
+                CreditsUI.Clear(player);
             }
-        }).ConfigureAwait(false);
+        }, ctx: "Reload xp on group change.");
     }
     public static readonly int[] Levels =
     {
@@ -142,8 +167,6 @@ public static class Points
         int strt = GetLevelXP(lvl);
         return (float)(xp - strt) / (GetNextLevelXP(lvl) - strt);
     }
-    public static void AwardCredits(UCPlayer player, int amount, Translation message, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
-        AwardCredits(player, amount, Localization.Translate(message, player), redmessage, isPurchase, @lock);
     public static void AwardCredits<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
         AwardCredits(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase, @lock);
     public static void AwardCredits<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
@@ -152,10 +175,10 @@ public static class Points
         AwardCreditsAsync(player, amount, Localization.Translate(message, player), redmessage, isPurchase, @lock, token);
     public static async Task AwardCreditsAsync(CreditsParameters parameters, CancellationToken token = default, bool @lock = true)
     {
-        if (!token.CanBeCanceled)
-            token = UCWarfare.UnloadCancel;
+        token.CombineIfNeeded(UCWarfare.UnloadCancel);
         UCPlayer? player = parameters.Player;
         Task? remote = null;
+        bool locked = false;
         try
         {
             ulong team = parameters.Team;
@@ -174,10 +197,13 @@ public static class Points
             }
 
             if (@lock && player != null)
+            {
                 await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-            if (parameters.Amount == 0 || XPConfigObj.Data.XPMultiplier <= 0f || parameters.StartingMultiplier <= 0f)
+                locked = true;
+            }
+            if (parameters.Amount == 0 || PointsConfigObj.Data.GlobalXPMultiplier <= 0f || parameters.StartingMultiplier <= 0f)
                 return;
-            int amount = Mathf.RoundToInt(parameters.Amount * XPConfigObj.Data.XPMultiplier * parameters.StartingMultiplier);
+            int amount = Mathf.RoundToInt(parameters.Amount * PointsConfigObj.Data.GlobalXPMultiplier * parameters.StartingMultiplier);
 
             bool redmessage = amount < 0 && parameters.IsPunishment;
             int currentAmount = await Data.DatabaseManager.AddCredits(parameters.Steam64, team, amount, token).ConfigureAwait(false);
@@ -193,7 +219,7 @@ public static class Points
 
             ActionLog.Add(ActionLogType.CreditsChanged, oldamt + " >> " + currentAmount, parameters.Steam64);
 
-            if (player != null && player.IsOnline && !player.HasUIHidden && !Data.Gamemode.EndScreenUp)
+            if (player != null && player.IsOnline && !player.HasUIHidden && !Data.Gamemode.LeaderboardUp())
             {
                 Translation<int> key = T.XPToastGainCredits;
                 if (amount < 0)
@@ -213,7 +239,8 @@ public static class Points
                         kd.AddCredits(amount);
                 }
 
-                UpdateCreditsUI(player);
+                player.PointsDirtyMask |= 0b00001000;
+                CreditsUI.Update(player, false);
             }
         }
         catch (Exception ex)
@@ -223,8 +250,8 @@ public static class Points
         }
         finally
         {
-            if (@lock && player != null)
-                player.PurchaseSync.Release();
+            if (locked)
+                player!.PurchaseSync.Release();
         }
         if (remote != null && !remote.IsCompleted)
             await remote.ConfigureAwait(false);
@@ -253,41 +280,83 @@ public static class Points
         };
         return AwardCreditsAsync(parameters, token, @lock);
     }
-    public static void AwardXP(UCPlayer player, int amount, Translation message, bool awardCredits = true, ulong team = 0) =>
-        AwardXP(player, amount, Localization.Translate(message, player), awardCredits, team);
-    public static void AwardXP<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool awardCredits = true, ulong team = 0) =>
-        AwardXP(player, amount, Localization.Translate(message, player, arg), awardCredits, team);
-    public static void AwardXP<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool awardCredits = true, ulong team = 0) =>
-        AwardXP(player, amount, Localization.Translate(message, player, arg1, arg2), awardCredits, team);
-    public static void AwardXP(UCPlayer player, int amount, string? message = null, bool awardCredits = true, ulong team = 0)
+    public static void AwardXP(UCPlayer player, XPReward reward, int amount)
     {
-        if (team is < 1 or > 2)
-            team = player.GetTeam();
-        if (team is < 1 or > 2)
-            return;
-        XPParameters parameters = new XPParameters(player, team, amount, message, awardCredits);
-        AwardXP(in parameters);
+        AwardXP(new XPParameters(player, 0, amount)
+        {
+            Reward = reward,
+            Message = PointsConfig.GetDefaultTranslation(player.Language, reward)
+        });
+    }
+    public static void AwardXP(UCPlayer player, XPReward reward, float multiplier = 1f)
+    {
+        AwardXP(new XPParameters(player, 0, reward)
+        {
+            Multiplier = multiplier,
+            Message = PointsConfig.GetDefaultTranslation(player.Language, reward)
+        });
+    }
+    public static void AwardXP(UCPlayer player, XPReward reward, Translation translation, float multiplier = 1f)
+    {
+        string? t;
+        if (translation is Translation<VehicleType> vehicleTranslation &&
+            PointsConfig.TryGetVehicleType(reward, out VehicleType type))
+        {
+            t = vehicleTranslation.Translate(player, type);
+        }
+        else t = translation.Translate(player);
+        AwardXP(new XPParameters(player, 0, reward) { Multiplier = multiplier, Message = t });
+    }
+    public static void AwardXP(UCPlayer player, XPReward reward, Translation translation, int amount)
+    {
+        string? t;
+        if (translation is Translation<VehicleType> vehicleTranslation && PointsConfig.TryGetVehicleType(reward, out VehicleType type))
+        {
+            t = vehicleTranslation.Translate(player, type);
+        }
+        else t = translation.Translate(player);
+        AwardXP(new XPParameters(player, 0, amount) { Reward = reward, Message = t });
+    }
+    public static void AwardXP(UCPlayer player, XPReward reward, string message, float multiplier = 1f)
+    {
+        AwardXP(new XPParameters(player, 0, reward) { Multiplier = multiplier, Message = message });
+    }
+    public static void AwardXP(UCPlayer player, XPReward reward, string message, int amount)
+    {
+        AwardXP(new XPParameters(player, 0, amount) { Reward = reward, Message = message });
     }
     public static void AwardXP(in XPParameters parameters)
     {
-        UCWarfare.RunTask(AwardXPAsync, parameters, UCWarfare.UnloadCancel, ctx: "Award " + parameters.Amount + " xp to " + parameters.Steam64 + ".");
+        UCWarfare.RunTask(AwardXPAsync, parameters, UCWarfare.UnloadCancel, ctx: "Award xp to " + parameters.Steam64 + ".");
     }
     public static async Task AwardXPAsync(XPParameters parameters, CancellationToken token = default)
     {
         try
         {
-            if (!token.CanBeCanceled)
-                token = UCWarfare.UnloadCancel;
+            // cancel on unload
+            token.CombineIfNeeded(UCWarfare.UnloadCancel);
             Task? remote = null;
             await UCWarfare.ToUpdate(token);
-            if (!Data.TrackStats || parameters.Amount == 0 || XPConfigObj.Data.XPMultiplier == 0f) return;
+
+            int origAmt = parameters.Amount;
+            PointsConfig.XPData.TryGetValue(parameters.Reward, out PointsConfig.XPRewardData? data);
+            if (origAmt == 0)
+            {
+                if (data == null || data.Amount == 0)
+                    return;
+                origAmt = data.Amount;
+            }
+
+            if (!Data.TrackStats || PointsConfigObj.Data.GlobalXPMultiplier == 0f) return;
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             float multiplier = -1;
             UCPlayer? player = parameters.Player;
-            if (player != null)
+
+            if (player is { IsOnline: true } && data is not { IgnoresXPBoosts: true })
             {
+                // checks for any xp boost buffs
                 for (int i = 0; i < player.ActiveBuffs.Length; ++i)
                 {
                     if (player.ActiveBuffs[i] is IXPBoostBuff buff)
@@ -302,123 +371,193 @@ public static class Points
                 multiplier = 1f;
             else if (multiplier == 0f)
                 return;
-            float amt = parameters.Amount * XPConfigObj.Data.XPMultiplier * multiplier;
-            if (amt <= 0)
+            float amt = origAmt;
+            if (data is not { IgnoresGlobalMultiplier: true })
+                amt *= PointsConfig.GlobalXPMultiplier;
+
+            if (data is not { IgnoresXPBoosts: true })
+                amt *= multiplier;
+
+            amt *= parameters.Multiplier;
+
+            if (amt == 0)
                 return;
+
             ulong team = parameters.Team;
+            bool awardCredits = data != null ? data.CreditReward is { Amount: not 0 } or { Percentage: not 0 } : parameters.AwardCredits;
+
+            // get current team if not specified
             if (team is < 1 or > 2)
             {
-                if (parameters.Player == null)
+                if (player is not { IsOnline: true })
                 {
                     PlayerSave? save = PlayerManager.GetSave(parameters.Steam64);
                     if (save == null)
                         return;
                     team = save.Team;
                 }
-                else team = parameters.Player.GetTeam();
+                else team = player.GetTeam();
             }
 
             if (team is < 1 or > 2)
                 return;
-            RankData oldRank = default;
-            int amount = Mathf.RoundToInt(amt);
-            int credits = parameters.AwardCredits ? Mathf.RoundToInt((parameters.OverrideCreditPercentage ?? 0.15f) * amt) : 0;
+            LevelData oldLevel = default;
+            int amtXp = Mathf.RoundToInt(amt);
+            int credits = 0;
+
+            // calculate number of credits
+            if (awardCredits)
+            {
+                float mult;
+                if (data != null)
+                {
+                    mult = data.CreditReward!.Percentage;
+                    if (mult == 0)
+                        mult = data.CreditReward.Amount / (float)origAmt;
+                }
+                else mult = (parameters.OverrideCreditPercentage ?? (PointsConfig.DefaultCreditPercentage / 100f));
+                float cAmt = mult * origAmt;
+                if (cAmt > 0)
+                    credits = Mathf.CeilToInt(cAmt);
+                else if (cAmt < 0)
+                    credits = Mathf.FloorToInt(cAmt);
+            }
+            if (player != null)
+            {
+                await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+                oldLevel = player.Level;
+            }
             try
             {
-                if (player != null)
-                {
-                    await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-                    oldRank = player.Rank;
-                }
-
                 int currentAmount;
-                if (player != null)
+                int credsAmt = -1;
+                if (player is { IsOnline: true })
                 {
-                    currentAmount = await Data.DatabaseManager.AddXP(parameters.Steam64, team, amount, token).ConfigureAwait(false);
+                    // Begin adding to remote database. Will not be awaited yet.
                     if (Data.RemoteSQL != null && Data.RemoteSQL.Opened)
                     {
-                        remote = Data.RemoteSQL.AddCredits(parameters.Steam64, team, amount, token);
+                        if (credits != 0)
+                            remote = Data.RemoteSQL.AddCreditsAndXP(parameters.Steam64, team, credits, amtXp, token);
+                        else
+                            remote = Data.RemoteSQL.AddXP(parameters.Steam64, team, amtXp, token);
                     }
-                    if (parameters.AwardCredits)
+                    if (credits != 0)
                     {
-                        await AwardCreditsAsync(
-                                new CreditsParameters(player, team, credits, null, isPunishment: true), token, false)
-                            .ConfigureAwait(false);
+                        (credsAmt, currentAmount) = await Data.DatabaseManager.AddCreditsAndXP(parameters.Steam64, team, credits, amtXp, token).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        currentAmount = await Data.DatabaseManager.AddXP(parameters.Steam64, team, amtXp, token).ConfigureAwait(false);
+                    }
+
+                    // action logs
+                    ActionLog.Add(ActionLogType.XPChanged, (currentAmount - amtXp).ToString(Data.AdminLocale) + " >> " +
+                                                                currentAmount.ToString(Data.AdminLocale) +
+                                                                " (" + (amtXp > 0 ? "+" : "-")
+                                                                + Math.Abs(amtXp).ToString(Data.AdminLocale) +
+                                                                ") (" + parameters.Reward + ")", parameters.Steam64);
+                    if (credits != 0)
+                    {
+                        ActionLog.Add(ActionLogType.CreditsChanged, (credsAmt - credits).ToString(Data.AdminLocale) + " >> " +
+                                                                    credsAmt.ToString(Data.AdminLocale) +
+                                                                    " (" + (credits > 0 ? "+" : "-")
+                                                                    + Math.Abs(credits).ToString(Data.AdminLocale) +
+                                                                    ") (With XP: " + parameters.Reward + ")", parameters.Steam64);
                     }
                     await UCWarfare.ToUpdate(token);
 
-                    player.CachedXP = currentAmount;
-
-                    if (player.Player.TryGetPlayerData(out UCPlayerData c))
+                    if (player.IsOnline)
                     {
-                        if (c.Stats is IExperienceStats kd)
-                            kd.AddXP(amount);
+                        player.CachedXP = currentAmount;
+                        player.CachedCredits = credsAmt;
+
+                        // leaderboard stats
+                        if (data is not { ExcludeFromLeaderboard: true } && player.Player.TryGetPlayerData(out UCPlayerData c) && c.Stats is IExperienceStats kd)
+                        {
+                            kd.AddXP(amtXp);
+                            if (credits != 0)
+                                kd.AddCredits(credits);
+                        }
                     }
 
-                    if (player.IsOnline && !player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.IsScreenUp))
+                    // toasts
+                    if (player.IsOnline && !player.HasUIHidden && !Data.Gamemode.LeaderboardUp())
                     {
-                        string number = Localization.Translate(amount >= 0 ? T.XPToastGainXP : T.XPToastLoseXP, player,
-                            Math.Abs(amount));
+                        string number = Localization.Translate(amtXp >= 0 ? T.XPToastGainXP : T.XPToastLoseXP, player, Math.Abs(amtXp));
 
-                        number = number.Colorize(amount > 0 ? "e3e3e3" : "d69898");
-
+                        number = number.Colorize(amtXp > 0 ? "e3e3e3" : "d69898");
+                        
                         ToastMessage.QueueMessage(player,
                             !string.IsNullOrEmpty(parameters.Message)
                                 ? new ToastMessage(number + "\n" + parameters.Message!.Colorize("adadad"), ToastMessageSeverity.Mini)
                                 : new ToastMessage(number, ToastMessageSeverity.Mini));
-                        UpdateXPUI(player);
+                        if (credits != 0)
+                        {
+                            Translation<int> key = credits < 0 ? T.XPToastLoseCredits : T.XPToastGainCredits;
+
+                            number = Localization.Translate(key, player, Math.Abs(credits));
+                            ToastMessage.QueueMessage(player, !string.IsNullOrEmpty(parameters.Message)
+                                    ? new ToastMessage(number + "\n" + parameters.Message!.Colorize("adadad"), ToastMessageSeverity.Mini)
+                                    : new ToastMessage(number, ToastMessageSeverity.Mini));
+
+                            player.PointsDirtyMask |= 0b00001000;
+                            CreditsUI.Update(player, false);
+                        }
                     }
                 }
-                else if (parameters.AwardCredits)
+                else if (awardCredits)
                 {
                     if (Data.RemoteSQL != null)
                     {
                         (int credits, int xp)[] arr = await Task.WhenAll(
-                                Data.DatabaseManager.AddCreditsAndXP(parameters.Steam64, team, credits, amount, token),
-                                Data.RemoteSQL.AddCreditsAndXP(parameters.Steam64, team, credits, amount, token))
+                                Data.DatabaseManager.AddCreditsAndXP(parameters.Steam64, team, credits, amtXp, token),
+                                Data.RemoteSQL.AddCreditsAndXP(parameters.Steam64, team, credits, amtXp, token))
                             .ConfigureAwait(false);
-                        currentAmount = arr.Length > 0 ? arr[0].xp : amount;
+                        currentAmount = arr.Length > 0 ? arr[0].xp : amtXp;
                     }
                     else
-                        currentAmount = (await Data.DatabaseManager.AddCreditsAndXP(parameters.Steam64, team, credits, amount, token).ConfigureAwait(false)).Item2;
-                    await UCWarfare.ToUpdate();
+                        currentAmount = (await Data.DatabaseManager.AddCreditsAndXP(parameters.Steam64, team, credits, amtXp, token).ConfigureAwait(false)).Item2;
+                    await UCWarfare.ToUpdate(token);
                 }
                 else
                 {
-                    currentAmount = await Data.DatabaseManager.AddXP(parameters.Steam64, team, amount, token).ConfigureAwait(false);
+                    currentAmount = await Data.DatabaseManager.AddXP(parameters.Steam64, team, amtXp, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
                 }
 
                 if (player == null)
-                    oldRank = new RankData(Mathf.RoundToInt(currentAmount - amt));
-
-                ActionLog.Add(ActionLogType.XPChanged, oldRank.TotalXP + " >> " + currentAmount, parameters.Steam64);
+                    oldLevel = new LevelData(Mathf.RoundToInt(currentAmount - amt));
             }
             finally
             {
                 player?.PurchaseSync.Release();
             }
-            if (player != null && player.IsOnline)
-            {
-                if (player.Rank.Level > oldRank.Level)
-                {
-                    ToastMessage.QueueMessage(player,
-                        new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Rank.Name.ToUpper(),
-                            ToastMessageSeverity.Big));
-                }
-                else if (player.Rank.Level < oldRank.Level)
-                {
-                    ToastMessage.QueueMessage(player,
-                        new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Rank.Name.ToUpper(),
-                            ToastMessageSeverity.Big));
-                }
-                else goto skipUpdates;
-                Signs.UpdateAllSigns(player);
 
-                skipUpdates:
+            // check for promotions or demotions
+            if (player is { IsOnline: true })
+            {
+                player.PointsDirtyMask |= 0b00000001;
+                if (player.Level.Level > oldLevel.Level)
+                {
+                    ToastMessage.QueueMessage(player,
+                        new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Level.Name.ToUpper(),
+                            ToastMessageSeverity.Big));
+                    player.PointsDirtyMask |= 0b00000010;
+                    Signs.UpdateAllSigns(player);
+                }
+                else if (player.Level.Level < oldLevel.Level)
+                {
+                    ToastMessage.QueueMessage(player,
+                        new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Level.Name.ToUpper(),
+                            ToastMessageSeverity.Big));
+                    player.PointsDirtyMask |= 0b00000010;
+                    Signs.UpdateAllSigns(player);
+                }
+
+                XPUI.Update(player, false);
                 for (int i = 0; i < player.ActiveBuffs.Length; ++i)
                     if (player.ActiveBuffs[i] is IXPBoostBuff buff)
-                        buff.OnXPBoostUsed(amount, parameters.AwardCredits);
+                        buff.OnXPBoostUsed(amtXp, awardCredits);
             }
 
             if (remote != null && !remote.IsCompleted)
@@ -430,54 +569,6 @@ public static class Points
             L.LogError(ex);
             throw;
         }
-    }
-    public static void AwardXP(Player player, int amount, string? message = null, bool awardCredits = true)
-    {
-        UCPlayer? pl = UCPlayer.FromPlayer(player);
-        if (pl != null)
-            AwardXP(pl, amount, message, awardCredits);
-        else
-            L.LogWarning("Unable to find player.");
-    }
-    public static void UpdateXPUI(UCPlayer player)
-    {
-        ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.IsScreenUp))
-            return;
-
-        EffectManager.sendUIEffect(XPConfig.RankUI, XPUIKey, player.Connection, true);
-        EffectManager.sendUIEffectText(XPUIKey, player.Connection, true,
-            "Rank", player.Rank.Name
-        );
-        //EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
-        //    "Level", player.Rank.Level == 0 ? string.Empty : Translation.Translate("ui_xp_level", player, player.Rank.Level.ToString(Data.Locale))
-        //);
-        EffectManager.sendUIEffectText(XPUIKey, player.Connection, true,
-            "XP", player.Rank.CurrentXP + "/" + player.Rank.RequiredXP
-        );
-        EffectManager.sendUIEffectText(XPUIKey, player.Connection, true,
-            "Next", player.Rank.NextAbbreviation
-        );
-        EffectManager.sendUIEffectText(XPUIKey, player.Connection, true,
-            "Progress", player.Rank.ProgressBar
-        );
-    }
-    public static void UpdateCreditsUI(UCPlayer player)
-    {
-        ThreadUtil.assertIsGameThread();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.IsScreenUp))
-            return;
-
-        EffectManager.sendUIEffect(CreditsConfig.CreditsUI, CreditsUIKey, player.Connection, true);
-        EffectManager.sendUIEffectText(CreditsUIKey, player.Connection, true,
-            "Credits", "<color=#b8ffc1>C</color>  " + player.CachedCredits
-        );
     }
     public static string GetProgressBar(float currentPoints, int totalPoints, int barLength = 50)
     {
@@ -493,22 +584,22 @@ public static class Points
         char[] bars = new char[barLength];
         for (int i = 0; i < progress; i++)
         {
-            bars[i] = XPConfig.ProgressBlockCharacter;
+            bars[i] = PointsConfig.ProgressBlockCharacter;
         }
         return new string(bars);
     }
-
-    public static void TryAwardDriverAssist(PlayerDied args, int amount, float quota = 0)
+    public static void TryAwardDriverAssist(PlayerDied args, XPReward reward, int amount = 0, float quota = 0)
     {
         if (args.DriverAssist is null || !args.DriverAssist.IsOnline) return;
+        if (amount == 0 && PointsConfig.XPData.TryGetValue(reward, out PointsConfig.XPRewardData data))
+            amount = data.Amount;
 
-        AwardXP(args.DriverAssist, amount, Localization.Translate(T.XPToastKillDriverAssist, args.DriverAssist));
+        AwardXP(args.DriverAssist, reward, T.XPToastKillDriverAssist, amount);
         /*
         if (quota != 0 && args.ActiveVehicle != null && args.ActiveVehicle.TryGetComponent(out VehicleComponent comp))
             comp.Quota += quota;*/
     }
-
-    public static void TryAwardDriverAssist(Player gunner, int amount, float quota = 0)
+    public static void TryAwardDriverAssist(Player gunner, XPReward reward, int amount = 0, float quota = 0)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -516,10 +607,14 @@ public static class Points
         InteractableVehicle vehicle = gunner.movement.getVehicle();
         if (vehicle != null)
         {
+            if (amount == 0 && PointsConfig.XPData.TryGetValue(reward, out PointsConfig.XPRewardData data))
+                amount = data.Amount;
             SteamPlayer driver = vehicle.passengers[0].player;
-            if (driver != null && driver.playerID.steamID != gunner.channel.owner.playerID.steamID)
+            if (driver != null &&
+                driver.playerID.steamID.m_SteamID != gunner.channel.owner.playerID.steamID.m_SteamID &&
+                UCPlayer.FromSteamPlayer(driver) is { } ucplayer)
             {
-                AwardXP(driver.player, amount, Localization.Translate(T.XPToastKillDriverAssist, driver.playerID.steamID.m_SteamID));
+                AwardXP(ucplayer, reward, T.XPToastKillDriverAssist, amount);
             }
 
             //if (vehicle.transform.TryGetComponent(out VehicleComponent component))
@@ -528,8 +623,7 @@ public static class Points
             //}
         }
     }
-
-    public static void TryAwardFOBCreatorXP(FOB fob, int amount, Translation translationKey)
+    public static void TryAwardFOBCreatorXP(FOB fob, XPReward reward, float multiplier = 1f)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -538,14 +632,14 @@ public static class Points
 
         if (creator != null)
         {
-            AwardXP(creator, amount, translationKey);
+            AwardXP(creator, reward, multiplier);
         }
 
         if (fob.Placer != fob.Creator)
         {
             UCPlayer? placer = UCPlayer.FromID(fob.Placer);
             if (placer != null)
-                AwardXP(placer, amount, translationKey);
+                AwardXP(placer, reward, multiplier);
         }
     }
     public static void OnPlayerDeath(PlayerDied e)
@@ -553,10 +647,10 @@ public static class Points
         if (e.Killer is null || !e.Killer.IsOnline) return;
         if (e.WasTeamkill)
         {
-            AwardXP(e.Killer, XPConfig.FriendlyKilledXP, T.XPToastFriendlyKilled);
+            AwardXP(e.Killer, XPReward.Teamkill);
             return;
         }
-        AwardXP(e.Killer, XPConfig.EnemyKilledXP, T.XPToastEnemyKilled);
+        AwardXP(e.Killer, XPReward.EnemyKilled);
 
         if (e.Player.Player.TryGetPlayerData(out UCPlayerData component))
         {
@@ -566,21 +660,24 @@ public static class Points
             UCPlayer? assister = UCPlayer.FromID(component.SecondLastAttacker.Key);
             if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.SecondLastAttacker.Value).TotalSeconds <= 30)
             {
-                AwardXP(assister, XPConfig.KillAssistXP, T.XPToastKillAssist);
+                AwardXP(assister, XPReward.KillAssist);
             }
 
-            if (e.Player.Player.TryGetComponent(out SpottedComponent spotted))
+            if (e.Player.Player.TryGetComponent(out SpottedComponent spotted) &&
+                PointsConfig.XPData.TryGetValue(XPReward.EnemyKilled, out PointsConfig.XPRewardData data))
             {
-                spotted.OnTargetKilled(XPConfig.EnemyKilledXP);
+                spotted.OnTargetKilled(Mathf.RoundToInt(data.Amount * 0.75f));
             }
 
             component.ResetAttackers();
         }
-        TryAwardDriverAssist(e, XPConfig.EnemyKilledXP, 1);
+        TryAwardDriverAssist(e, XPReward.EnemyKilled, quota: 1);
     }
-    internal static void OnPlayerLeft(UCPlayer caller)
+    private static void OnPlayerLeft(PlayerEvent e)
     {
         if (Data.RemoteSQL != null && Data.RemoteSQL.Opened)
+        {
+            UCPlayer caller = e.Player;
             Task.Run(async () =>
             {
                 await caller.PurchaseSync.WaitAsync();
@@ -620,10 +717,9 @@ public static class Points
                 finally
                 {
                     caller.PurchaseSync.Release();
-                    caller.PurchaseSync.Dispose();
-                    GC.SuppressFinalize(caller);
                 }
             });
+        }
     }
     public static async Task UpdateAllPointsAsync(CancellationToken token = default)
     {
@@ -698,11 +794,23 @@ public static class Points
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
             pl.IsDownloadingXP = false;
-            UpdateXPUI(pl);
-            UpdateCreditsUI(pl);
+            pl.PointsDirtyMask |= 0b00001011;
+            XPUI.Update(pl, false);
+            CreditsUI.Update(pl, false);
         }
     }
     private record struct XPData(ulong Steam64, ulong Team, uint XP, uint Credits);
+    private static void OnKitChanged(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>? oldkit)
+    {
+        Branch oldbranch = Branch.Default;
+        if (oldkit is { Item: { } oldkit2 })
+            oldbranch = oldkit2.Branch;
+        if (player.Branch != oldbranch)
+        {
+            player.PointsDirtyMask |= 0b00000100;
+            XPUI.Update(player, false);
+        }
+    }
     public static async Task UpdatePointsAsync(UCPlayer caller, bool @lock, CancellationToken token = default)
     {
         if (caller is null) throw new ArgumentNullException(nameof(caller));
@@ -800,8 +908,9 @@ public static class Points
             caller.HasDownloadedXP = true;
         }
         await UCWarfare.ToUpdate(token);
-        UpdateXPUI(caller);
-        UpdateCreditsUI(caller);
+        caller.PointsDirtyMask |= 0b00001011;
+        XPUI.Update(caller, false);
+        CreditsUI.Update(caller, false);
         
         Signs.UpdateAllSigns(caller);
     }
@@ -841,16 +950,34 @@ public static class Points
     {
         if (e.Instigator is null || e.VehicleData == null || e.Component == null)
             return;
-        if (XPConfig.VehicleDestroyedXP.ContainsKey(e.VehicleData.Type))
+        XPReward xpreward = e.VehicleData.Type switch
+        {
+            VehicleType.Humvee => XPReward.VehicleHumvee,
+            VehicleType.TransportGround => XPReward.VehicleTransportGround,
+            VehicleType.ScoutCar => XPReward.VehicleScoutCar,
+            VehicleType.LogisticsGround => XPReward.VehicleLogisticsGround,
+            VehicleType.APC => XPReward.VehicleAPC,
+            VehicleType.IFV => XPReward.VehicleIFV,
+            VehicleType.MBT => XPReward.VehicleMBT,
+            VehicleType.TransportAir => XPReward.VehicleTransportAir,
+            VehicleType.AttackHeli => XPReward.VehicleAttackHeli,
+            VehicleType.Jet => XPReward.VehicleJet,
+            VehicleType.AA => XPReward.VehicleAA,
+            VehicleType.HMG => XPReward.VehicleHMG,
+            VehicleType.ATGM => XPReward.VehicleATGM,
+            VehicleType.Mortar => XPReward.VehicleMortar,
+            _ => XPReward.VehicleOther
+        };
+        if (xpreward != XPReward.VehicleOther)
         {
             ulong dteam = e.Instigator.GetTeam();
             bool vehicleWasEnemy = (dteam == 1 && e.Team == 2) || (dteam == 2 && e.Team == 1);
             bool vehicleWasFriendly = dteam == e.Team;
             if (!vehicleWasFriendly)
                 Stats.StatsManager.ModifyTeam(dteam, t => t.VehiclesDestroyed++, false);
-
-            if (!Points.XPConfig.VehicleDestroyedXP.TryGetValue(e.VehicleData.Type, out int fullXP))
-                fullXP = 0;
+            int fullXP = 0;
+            if (PointsConfig.XPData.TryGetValue(xpreward, out PointsConfig.XPRewardData data) && data.Amount > 0)
+                fullXP = data.Amount;
 
 
             float totalDamage = 0;
@@ -866,8 +993,6 @@ public static class Points
 
             if (vehicleWasEnemy)
             {
-                Translation<VehicleType> message = e.Component.IsAircraft ? T.XPToastAircraftDestroyed : T.XPToastVehicleDestroyed;
-
                 Asset asset = Assets.find(e.Component.LastItem);
                 string reason = string.Empty;
                 if (asset != null)
@@ -908,19 +1033,19 @@ public static class Points
                         {
                             if (entry.Key == e.InstigatorId)
                             {
-                                AwardXP(attacker, reward, message.Translate(e.Instigator, e.VehicleData.Type).ToUpperInvariant());
+                                AwardXP(attacker, xpreward, reward);
                                 UCPlayer? pl = e.LastDriver ?? e.Owner;
                                 if (pl is not null && pl.Steam64 != e.InstigatorId)
-                                    TryAwardDriverAssist(pl, fullXP, e.VehicleData.TicketCost);
+                                    TryAwardDriverAssist(pl, xpreward, reward, e.VehicleData.TicketCost);
 
                                 if (e.Spotter != null)
                                 {
                                     e.Spotter.OnTargetKilled(reward);
-                                    UnityEngine.Object.Destroy(e.Spotter);
+                                    Destroy(e.Spotter);
                                 }
                             }
                             else if (responsibleness > 0.1F)
-                                AwardXP(attacker, reward, T.XPToastKillVehicleAssist);
+                                AwardXP(attacker, xpreward, T.XPToastKillVehicleAssist, reward);
                             if (responsibleness > resMax)
                             {
                                 resMax = responsibleness;
@@ -988,93 +1113,304 @@ public static class Points
         }
     }
 }
-
-public class XPConfig : JSONConfigData
+public enum XPReward
 {
-    public char ProgressBlockCharacter;
-    public int EnemyKilledXP;
-    public int KillAssistXP;
-    public int FriendlyKilledXP;
-    public int FriendlyRevivedXP;
-    public int FOBKilledXP;
-    public int FOBTeamkilledXP;
-    public int FOBBunkerKilledXP;
-    public int FOBBunkerTeamkilledXP;
-    public int FOBDeployedXP;
-    public int FlagCapturedXP;
-    public int FlagAttackXP;
-    public int FlagDefendXP;
-    public int FlagNeutralizedXP;
-    public int TransportPlayerXP;
-    public int ShovelXP;
-    public int BuiltFOBXP;
-    public int OnDutyXP;
-    public int ResupplyFriendlyXP;
-    public int RepairVehicleXP;
-    public int UnloadSuppliesXP;
-    public Dictionary<VehicleType, int> VehicleDestroyedXP;
+    Custom = 0,
+    OnDuty,
+    EnemyKilled,
+    KillAssist,
+    Teamkill,
+    Revive,
+    RadioDestroyed,
+    FriendlyRadioDestroyed,
+    BunkerDestroyed,
+    FriendlyBunkerDestroyed,
+    BunkerDeployment,
+    FortificationDestroyed,
+    FriendlyFortificationDestroyed,
+    BuildableDestroyed,
+    FriendlyBuildableDestroyed,
+    CacheDestroyed,
+    FriendlyCacheDestroyed,
+    FlagCaptured,
+    FlagNeutralized,
+    AttackingFlag,
+    DefendingFlag,
+    TransportingPlayer,
+    Shoveling,
+    BunkerBuilt,
+    Resupply,
+    RepairVehicle,
+    UnloadSupplies,
+    VehicleOther,
+    VehicleHumvee,
+    VehicleTransportGround,
+    VehicleScoutCar,
+    VehicleLogisticsGround,
+    VehicleAPC,
+    VehicleIFV,
+    VehicleMBT,
+    VehicleTransportAir,
+    VehicleAttackHeli,
+    VehicleJet,
+    VehicleAA,
+    VehicleHMG,
+    VehicleATGM,
+    VehicleMortar
+}
 
-    public float XPMultiplier;
+public class PointsConfig : JSONConfigData
+{
+    [JsonIgnore]
+    public const float DefaultCreditPercentage = 15f;
 
-    public ushort RankUI;
+    [JsonPropertyName("player_starting_credits")]
+    public int StartingCredits { get; set; }
+
+    [JsonPropertyName("block_char")]
+    public char ProgressBlockCharacter { get; set; }
+
+    [JsonPropertyName("xp_data")]
+    public Dictionary<XPReward, XPRewardData> XPData { get; set; }
+
+    [JsonPropertyName("global_xp_multiplier")]
+    public float GlobalXPMultiplier { get; set; }
 
     public override void SetDefaults()
     {
         ProgressBlockCharacter = '█';
-        EnemyKilledXP = 10;
-        KillAssistXP = 5;
-        FriendlyKilledXP = -30;
-        FriendlyRevivedXP = 30;
-        FOBKilledXP = 80;
-        FOBTeamkilledXP = -1000;
-        FOBBunkerKilledXP = 60;
-        FOBBunkerTeamkilledXP = -800;
-        FOBDeployedXP = 10;
-        FlagCapturedXP = 50;
-        FlagAttackXP = 7;
-        FlagDefendXP = 7;
-        FlagNeutralizedXP = 80;
-        TransportPlayerXP = 10;
-        ShovelXP = 2;
-        BuiltFOBXP = 100;
-        ResupplyFriendlyXP = 20;
-        RepairVehicleXP = 3;
-        OnDutyXP = 5;
-        UnloadSuppliesXP = 20;
-
-
-        VehicleDestroyedXP = new Dictionary<VehicleType, int>()
+        XPData = new Dictionary<XPReward, XPRewardData>(35)
         {
-            {VehicleType.Humvee, 25},
-            {VehicleType.TransportGround, 20},
-            {VehicleType.LogisticsGround, 25},
-            {VehicleType.ScoutCar, 30},
-            {VehicleType.APC, 60},
-            {VehicleType.IFV, 70},
-            {VehicleType.MBT, 100},
-            {VehicleType.TransportAir, 30},
-            {VehicleType.AA, 20},
-            {VehicleType.HMG, 20},
-            {VehicleType.ATGM, 20},
-            {VehicleType.Mortar, 20},
-            {VehicleType.AttackHeli, 150},
-            {VehicleType.Jet, 200},
+            { XPReward.Custom,
+                new XPRewardData(0)
+                {
+                    IgnoresGlobalMultiplier = true,
+                    IgnoresXPBoosts = true,
+                    CreditReward = null,
+                    ExcludeFromLeaderboard = true
+                }
+            },
+            { XPReward.OnDuty,
+                new XPRewardData(5)
+                {
+                    ExcludeFromLeaderboard = true,
+                }
+            },
+            { XPReward.EnemyKilled, new XPRewardData(10, DefaultCreditPercentage) },
+            { XPReward.CacheDestroyed, new XPRewardData(800, DefaultCreditPercentage) },
+            { XPReward.FriendlyCacheDestroyed,
+                new XPRewardData(-8000)
+                {
+                    CreditReward = new CreditRewardData(DefaultCreditPercentage)
+                    {
+                        IsPunishment = true
+                    }
+                }
+            },
+            { XPReward.KillAssist, new XPRewardData(5, DefaultCreditPercentage) },
+            { XPReward.Teamkill,
+                new XPRewardData(-30)
+                {
+                    CreditReward = new CreditRewardData(DefaultCreditPercentage)
+                    {
+                        IsPunishment = true
+                    }
+                }
+            },
+            { XPReward.Revive, new XPRewardData(30, DefaultCreditPercentage * 1.5f) },
+            { XPReward.RadioDestroyed, new XPRewardData(80, DefaultCreditPercentage * 1.5f) },
+            { XPReward.FriendlyRadioDestroyed,
+                new XPRewardData(-1000)
+                {
+                    CreditReward = new CreditRewardData(DefaultCreditPercentage)
+                    {
+                        IsPunishment = true
+                    }
+                }
+            },
+            { XPReward.BunkerDestroyed, new XPRewardData(60, DefaultCreditPercentage * 1.5f) },
+            { XPReward.FriendlyBunkerDestroyed,
+                new XPRewardData(-800)
+                {
+                    CreditReward = new CreditRewardData(DefaultCreditPercentage)
+                    {
+                        IsPunishment = true
+                    }
+                }
+            },
+            { XPReward.BunkerDeployment, new XPRewardData(10, DefaultCreditPercentage) },
+            { XPReward.FlagCaptured, new XPRewardData(50, DefaultCreditPercentage) },
+            { XPReward.FlagNeutralized, new XPRewardData(80, DefaultCreditPercentage) },
+            { XPReward.AttackingFlag, new XPRewardData(8, DefaultCreditPercentage) },
+            { XPReward.DefendingFlag, new XPRewardData(6, DefaultCreditPercentage) },
+            { XPReward.TransportingPlayer, new XPRewardData(10, DefaultCreditPercentage) },
+            { XPReward.Shoveling, new XPRewardData(2, 50f) },
+            { XPReward.BunkerBuilt, new XPRewardData(100, DefaultCreditPercentage * 1.5f) },
+            { XPReward.Resupply, new XPRewardData(20, DefaultCreditPercentage) },
+            { XPReward.RepairVehicle, new XPRewardData(3, DefaultCreditPercentage) },
+            { XPReward.UnloadSupplies, new XPRewardData(20, DefaultCreditPercentage) },
+            { XPReward.FriendlyFortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
+            { XPReward.FortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
+            { XPReward.FriendlyBuildableDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
+            { XPReward.BuildableDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
+            { XPReward.VehicleHumvee, new XPRewardData(25, DefaultCreditPercentage) },
+            { XPReward.VehicleTransportGround, new XPRewardData(20, DefaultCreditPercentage) },
+            { XPReward.VehicleScoutCar, new XPRewardData(30, DefaultCreditPercentage) },
+            { XPReward.VehicleLogisticsGround, new XPRewardData(25, DefaultCreditPercentage) },
+            { XPReward.VehicleAPC, new XPRewardData(60, DefaultCreditPercentage) },
+            { XPReward.VehicleIFV, new XPRewardData(70, DefaultCreditPercentage) },
+            { XPReward.VehicleMBT, new XPRewardData(100, DefaultCreditPercentage) },
+            { XPReward.VehicleTransportAir, new XPRewardData(30, DefaultCreditPercentage) },
+            { XPReward.VehicleAttackHeli, new XPRewardData(150, DefaultCreditPercentage) },
+            { XPReward.VehicleJet, new XPRewardData(200, DefaultCreditPercentage) },
+            { XPReward.VehicleAA, new XPRewardData(20, DefaultCreditPercentage) },
+            { XPReward.VehicleHMG, new XPRewardData(20, DefaultCreditPercentage) },
+            { XPReward.VehicleATGM, new XPRewardData(20, DefaultCreditPercentage) },
+            { XPReward.VehicleMortar, new XPRewardData(20, DefaultCreditPercentage) }
         };
 
-        XPMultiplier = 1f;
-
-        RankUI = 36031;
+        GlobalXPMultiplier = 1f;
     }
-}
-public class CreditsConfig : JSONConfigData
-{
-    public ushort CreditsUI;
-    public int StartingCredits;
-
-    public override void SetDefaults()
+    internal static bool TryGetVehicleType(XPReward reward, out VehicleType type)
     {
-        CreditsUI = 36070;
-        StartingCredits = 500;
+        switch (reward)
+        {
+            case XPReward.VehicleHumvee:
+                type = VehicleType.Humvee;
+                break;
+            case XPReward.VehicleTransportGround:
+                type = VehicleType.TransportGround;
+                break;
+            case XPReward.VehicleScoutCar:
+                type = VehicleType.ScoutCar;
+                break;
+            case XPReward.VehicleLogisticsGround:
+                type = VehicleType.LogisticsGround;
+                break;
+            case XPReward.VehicleAPC:
+                type = VehicleType.APC;
+                break;
+            case XPReward.VehicleIFV:
+                type = VehicleType.IFV;
+                break;
+            case XPReward.VehicleMBT:
+                type = VehicleType.MBT;
+                break;
+            case XPReward.VehicleTransportAir:
+                type = VehicleType.TransportAir;
+                break;
+            case XPReward.VehicleAttackHeli:
+                type = VehicleType.AttackHeli;
+                break;
+            case XPReward.VehicleJet:
+                type = VehicleType.Jet;
+                break;
+            case XPReward.VehicleAA:
+                type = VehicleType.AA;
+                break;
+            case XPReward.VehicleHMG:
+                type = VehicleType.HMG;
+                break;
+            case XPReward.VehicleATGM:
+                type = VehicleType.ATGM;
+                break;
+            case XPReward.VehicleMortar:
+                type = VehicleType.Mortar;
+                break;
+            default:
+                type = VehicleType.None;
+                return false;
+        }
+
+        return true;
+    }
+    internal static string GetDefaultTranslation(string language, XPReward reward)
+    {
+        if (TryGetVehicleType(reward, out VehicleType vtype))
+        {
+            return T.XPToastVehicleDestroyed.Translate(language, vtype);
+        }
+        Translation? t = reward switch
+        {
+            XPReward.UnloadSupplies => T.XPToastSuppliesUnloaded,
+            XPReward.OnDuty => T.XPToastOnDuty,
+            XPReward.EnemyKilled => T.XPToastEnemyKilled,
+            XPReward.KillAssist => T.XPToastKillAssist,
+            XPReward.Teamkill => T.XPToastFriendlyKilled,
+            XPReward.Revive => T.XPToastHealedTeammate,
+            XPReward.RadioDestroyed => T.XPToastFOBDestroyed,
+            XPReward.FriendlyRadioDestroyed => T.XPToastFriendlyFOBDestroyed,
+            XPReward.BunkerDestroyed => T.XPToastBunkerDestroyed,
+            XPReward.FriendlyBunkerDestroyed => T.XPToastFriendlyBunkerDestroyed,
+            XPReward.BunkerDeployment => T.XPToastFOBUsed,
+            XPReward.FlagCaptured => T.XPToastFlagCaptured,
+            XPReward.FlagNeutralized => T.XPToastFlagNeutralized,
+            XPReward.AttackingFlag => T.XPToastFlagAttackTick,
+            XPReward.DefendingFlag => T.XPToastFlagDefenseTick,
+            XPReward.TransportingPlayer => T.XPToastTransportingPlayers,
+            XPReward.Resupply => T.XPToastResuppliedTeammate,
+            XPReward.RepairVehicle => T.XPToastRepairedVehicle,
+            XPReward.CacheDestroyed => T.XPToastCacheDestroyed,
+            XPReward.FriendlyCacheDestroyed => T.XPToastFriendlyCacheDestroyed,
+            _ => null
+        };
+        if (t == null)
+            return "{" + reward.ToString().ToUpperInvariant() + "}";
+        return t.Translate(language);
+    }
+
+    public sealed class XPRewardData
+    {
+        [JsonPropertyName("amount")]
+        public int Amount { get; set; }
+
+        [JsonPropertyName("ignores_global_multiplier")]
+        public bool IgnoresGlobalMultiplier { get; set; }
+
+        [JsonPropertyName("ignores_xp_boosts")]
+        public bool IgnoresXPBoosts { get; set; }
+
+        [JsonPropertyName("credit_reward")]
+        public CreditRewardData? CreditReward { get; set; }
+
+        [JsonPropertyName("exclude_from_leaderboard")]
+        public bool ExcludeFromLeaderboard { get; set; }
+
+        public XPRewardData() { }
+        public XPRewardData(int amount)
+        {
+            Amount = amount;
+        }
+        public XPRewardData(int amount, float creditPercentage)
+        {
+            Amount = amount;
+            CreditReward = new CreditRewardData(creditPercentage);
+        }
+    }
+
+    public sealed class CreditRewardData
+    {
+        [JsonPropertyName("amount")]
+        public int Amount { get; set; }
+
+        [JsonPropertyName("percentage")]
+        public float Percentage { get; set; }
+
+        [JsonPropertyName("is_punishment")]
+        public bool IsPunishment { get; set; }
+
+        [JsonPropertyName("is_purchase")]
+        public bool IsPurchase { get; set; }
+
+        public CreditRewardData() { }
+        public CreditRewardData(int amount)
+        {
+            Amount = amount;
+        }
+        public CreditRewardData(float percentage)
+        {
+            Percentage = percentage / 100f;
+        }
     }
 }
 public struct CreditsParameters
@@ -1145,16 +1481,16 @@ public struct CreditsParameters
     public Task Award() => Points.AwardCreditsAsync(this);
     public Task Award(CancellationToken token) => Points.AwardCreditsAsync(this, token);
 }
-
 public struct XPParameters
 {
     public readonly UCPlayer? Player;
     public readonly ulong Steam64;
     public readonly int Amount;
     public readonly ulong Team;
+    public XPReward Reward;
     public string? Message;
     public bool AwardCredits;
-    public float StartingMultiplier = 1f;
+    public float Multiplier = 1f;
     public bool IgnoreXPBuff = false;
     public bool IgnoreConfigXPBoost = false;
     public float? OverrideCreditPercentage = null;
@@ -1171,6 +1507,30 @@ public struct XPParameters
         new XPParameters(player, team, amount, translation.Translate(player, arg), awardCredits);
     public static XPParameters WithTranslation<T1, T2>(UCPlayer player, ulong team, Translation<T1, T2> translation, T1 arg1, T2 arg2, int amount, bool awardCredits = true) =>
         new XPParameters(player, team, amount, translation.Translate(player, arg1, arg2), awardCredits);
+    public static XPParameters WithTranslation(UCPlayer player, Translation translation, XPReward reward) =>
+        new XPParameters(player, player.GetTeam(), reward, translation.Translate(player), true);
+    public static XPParameters WithTranslation<T>(UCPlayer player, Translation<T> translation, T arg, XPReward reward) =>
+        new XPParameters(player, player.GetTeam(), reward, translation.Translate(player, arg), true);
+    public static XPParameters WithTranslation<T1, T2>(UCPlayer player, Translation<T1, T2> translation, T1 arg1, T2 arg2, XPReward reward) =>
+        new XPParameters(player, player.GetTeam(), reward, translation.Translate(player, arg1, arg2), true);
+    public static XPParameters WithTranslation(UCPlayer player, ulong team, Translation translation, XPReward reward) =>
+        new XPParameters(player, team, reward, translation.Translate(player), true);
+    public static XPParameters WithTranslation<T>(UCPlayer player, ulong team, Translation<T> translation, T arg, XPReward reward) =>
+        new XPParameters(player, team, reward, translation.Translate(player, arg), true);
+    public static XPParameters WithTranslation<T1, T2>(UCPlayer player, ulong team, Translation<T1, T2> translation, T1 arg1, T2 arg2, XPReward reward) =>
+        new XPParameters(player, team, reward, translation.Translate(player, arg1, arg2), true);
+    public static XPParameters WithTranslation(UCPlayer player, Translation translation, XPReward reward, int amount) =>
+        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player), true) { Reward = reward };
+    public static XPParameters WithTranslation<T>(UCPlayer player, Translation<T> translation, T arg, XPReward reward, int amount) =>
+        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, arg), true) { Reward = reward };
+    public static XPParameters WithTranslation<T1, T2>(UCPlayer player, Translation<T1, T2> translation, T1 arg1, T2 arg2, XPReward reward, int amount) =>
+        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, arg1, arg2), true) { Reward = reward };
+    public static XPParameters WithTranslation(UCPlayer player, ulong team, Translation translation, XPReward reward, int amount) =>
+        new XPParameters(player, team, amount, translation.Translate(player), true) { Reward = reward };
+    public static XPParameters WithTranslation<T>(UCPlayer player, ulong team, Translation<T> translation, T arg, XPReward reward, int amount) =>
+        new XPParameters(player, team, amount, translation.Translate(player, arg), true) { Reward = reward };
+    public static XPParameters WithTranslation<T1, T2>(UCPlayer player, ulong team, Translation<T1, T2> translation, T1 arg1, T2 arg2, XPReward reward, int amount) =>
+        new XPParameters(player, team, amount, translation.Translate(player, arg1, arg2), true) { Reward = reward };
     public XPParameters(ulong player, ulong team, int amount)
     {
         if (!Util.IsValidSteam64Id(player))
@@ -1181,6 +1541,19 @@ public struct XPParameters
         Team = team;
         AwardCredits = true;
         Message = null;
+        Reward = XPReward.Custom;
+    }
+    public XPParameters(ulong player, ulong team, XPReward reward)
+    {
+        if (!Util.IsValidSteam64Id(player))
+            throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
+        Steam64 = player;
+        Player = UCPlayer.FromID(player);
+        Amount = 0;
+        Team = team;
+        AwardCredits = true;
+        Message = null;
+        Reward = reward;
     }
     public XPParameters(ulong player, ulong team, int amount, string? message, bool awardCredits)
     {
@@ -1192,6 +1565,19 @@ public struct XPParameters
         Amount = amount;
         Message = message;
         AwardCredits = awardCredits;
+        Reward = XPReward.Custom;
+    }
+    public XPParameters(ulong player, ulong team, XPReward reward, string? message, bool awardCredits)
+    {
+        if (!Util.IsValidSteam64Id(player))
+            throw new ArgumentException("Invalid Steam64 ID: " + player, nameof(player));
+        Steam64 = player;
+        Player = UCPlayer.FromID(player);
+        Team = team;
+        Amount = 0;
+        Message = message;
+        AwardCredits = awardCredits;
+        Reward = reward;
     }
     public XPParameters(UCPlayer player, ulong team, int amount)
     {
@@ -1201,6 +1587,27 @@ public struct XPParameters
         Team = team;
         AwardCredits = true;
         Message = null;
+        Reward = XPReward.Custom;
+    }
+    public XPParameters(UCPlayer player, ulong team, XPReward reward)
+    {
+        Player = player ?? throw new ArgumentNullException(nameof(player));
+        Steam64 = player.Steam64;
+        Amount = 0;
+        Team = team;
+        AwardCredits = true;
+        Message = null;
+        Reward = reward;
+    }
+    public XPParameters(UCPlayer player, ulong team, XPReward reward, string? message, bool awardCredits)
+    {
+        Player = player ?? throw new ArgumentNullException(nameof(player));
+        Steam64 = player.Steam64;
+        Team = team;
+        Amount = 0;
+        Message = message;
+        AwardCredits = awardCredits;
+        Reward = reward;
     }
     public XPParameters(UCPlayer player, ulong team, int amount, string? message, bool awardCredits)
     {
@@ -1210,6 +1617,7 @@ public struct XPParameters
         Amount = amount;
         Message = message;
         AwardCredits = awardCredits;
+        Reward = XPReward.Custom;
     }
 
     public Task Award() => Points.AwardXPAsync(this);

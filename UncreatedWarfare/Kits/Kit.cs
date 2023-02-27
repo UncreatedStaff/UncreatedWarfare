@@ -14,7 +14,7 @@ using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Maps;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
@@ -32,6 +32,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public Branch Branch { get; set; }
     public KitType Type { get; set; }
     public bool Disabled { get; set; }
+    public bool RequiresNitro { get; set; }
     public bool MapFilterIsWhitelist { get; set; }
     public bool FactionFilterIsWhitelist { get; set; }
     public int Season { get; set; }
@@ -141,6 +142,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         CreatedTimestamp = DateTime.UtcNow;
         LastEditedTimestamp = copy.LastEditedTimestamp;
         LastEditor = copy.LastEditor;
+        RequiresNitro = copy.RequiresNitro;
     }
     public Kit(ulong loadoutOwner, char loadout, Class @class, string? displayName, FactionInfo? faction)
     {
@@ -168,6 +170,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         Disabled = false;
         CreditCost = 0;
         WeaponText = null;
+        RequiresNitro = false;
         */
     }
     public Kit() { }
@@ -656,7 +659,7 @@ public class LevelUnlockRequirement : UnlockRequirement
     public int UnlockLevel = -1;
     public override bool CanAccess(UCPlayer player)
     {
-        return player.Rank.Level >= UnlockLevel;
+        return player.Level.Level >= UnlockLevel;
     }
     public override string GetSignText(UCPlayer player)
     {
@@ -664,7 +667,7 @@ public class LevelUnlockRequirement : UnlockRequirement
             return string.Empty;
 
         int lvl = Points.GetLevel(player.CachedXP);
-        return T.KitRequiredLevel.Translate(player, RankData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
+        return T.KitRequiredLevel.Translate(player, LevelData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
     }
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)
     {
@@ -677,7 +680,7 @@ public class LevelUnlockRequirement : UnlockRequirement
     {
         writer.WriteNumber("unlock_level", UnlockLevel);
     }
-    public override object Clone() => new LevelUnlockRequirement() { UnlockLevel = UnlockLevel };
+    public override object Clone() => new LevelUnlockRequirement { UnlockLevel = UnlockLevel };
     protected override void Read(ByteReader reader)
     {
         UnlockLevel = reader.ReadInt32();
@@ -689,15 +692,17 @@ public class LevelUnlockRequirement : UnlockRequirement
 
     public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
     {
-        return ctx.Reply(T.RequestKitLowLevel, RankData.GetRankName(UnlockLevel));
+        LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
+        return ctx.Reply(T.RequestKitLowLevel, data);
     }
     public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
     {
-        return ctx.Reply(T.RequestVehicleMissingLevels, RankData.GetRankName(UnlockLevel));
+        LevelData data2 = new LevelData(Points.GetLevelXP(UnlockLevel));
+        return ctx.Reply(T.RequestVehicleMissingLevels, data2);
     }
     public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
     {
-        RankData data = new RankData(Points.GetLevelXP(UnlockLevel));
+        LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
         return ctx.Reply(T.RequestTraitLowLevel, trait, data);
     }
 }
@@ -727,7 +732,7 @@ public class RankUnlockRequirement : UnlockRequirement
     {
         writer.WriteNumber("unlock_rank", UnlockRank);
     }
-    public override object Clone() => new RankUnlockRequirement() { UnlockRank = UnlockRank };
+    public override object Clone() => new RankUnlockRequirement { UnlockRank = UnlockRank };
     protected override void Read(ByteReader reader)
     {
         UnlockRank = reader.ReadInt32();
@@ -1065,7 +1070,7 @@ public class PageItem : IItemJar, IItem, IKitItem
         {
             if (kitItem is IItemJar jar)
             {
-                if (jar is not IItem r)
+                if (jar is not IItem)
                     return 1;
                 return Page != jar.Page ? Page.CompareTo(jar.Page) : jar.Y == Y ? X.CompareTo(jar.X) : Y.CompareTo(jar.Y);
             }

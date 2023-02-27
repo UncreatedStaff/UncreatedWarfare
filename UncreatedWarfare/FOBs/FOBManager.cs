@@ -18,17 +18,19 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Maps;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+using Uncreated.Warfare.Players;
+using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.FOBs;
 [SingletonDependency(typeof(Whitelister))]
-public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener, IPlayerDisconnectListener, IGameTickListener, IJoinedTeamListener, IReloadUIListener
+public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener, IPlayerDisconnectListener, IGameTickListener, IJoinedTeamListener, IUIListener
 {
     private const float InsideFOBRangeSqr = 2f * 2f;
 
@@ -427,13 +429,13 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
                 if (killer.GetTeam() == team)
                 {
-                    Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, T.XPToastFriendlyFOBDestroyed);
+                    Points.AwardXP(killer, XPReward.FriendlyRadioDestroyed);
                 }
                 else
                 {
-                    Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, T.XPToastFOBDestroyed);
+                    Points.AwardXP(killer, XPReward.RadioDestroyed);
 
-                    Points.TryAwardDriverAssist(killer.Player, Points.XPConfig.FOBKilledXP, 5);
+                    Points.TryAwardDriverAssist(killer.Player, XPReward.RadioDestroyed, quota: 5);
 
                     Stats.StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
                     Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
@@ -498,11 +500,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         {
             if (killer.GetTeam() == team)
             {
-                Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, T.XPToastFriendlyFOBDestroyed);
+                Points.AwardXP(killer, XPReward.FriendlyRadioDestroyed);
             }
             else
             {
-                Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, T.XPToastFOBDestroyed);
+                Points.AwardXP(killer, XPReward.RadioDestroyed);
                 Stats.StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
                 Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
             }
@@ -694,7 +696,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             list = _singleton.Team2FOBs;
         else return;
 
-        UpdateUIList(team, player.Connection, list, player);
+        UpdateUIList(team, player, list);
     }
     private void OnGroupChanged(GroupChanged e)
     {
@@ -738,27 +740,16 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 ListUI.FOBResources[i].SetText(PlayerManager.OnlinePlayers[j].Connection, fob.UIResourceString);
         }
     }
-    public static void UpdateFOBList(UCPlayer player, FOB? fob = null)
+    public static int GetUIFOBIndex(ulong team, IFOB fob)
     {
-        ThreadUtil.assertIsGameThread();
-        _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        List<FOB> list;
-        ulong team = player.GetTeam();
-        if (team == 1)
-            list = _singleton.Team1FOBs;
-        else if (team == 2)
-            list = _singleton.Team2FOBs;
-        else return;
-
-        if (fob == null)
+        if (fob is FOB fob2)
         {
-            UpdateUIList(team, player.Connection, list, player);
-        }
-        else
-        {
+            List<FOB> list;
+            if (team == 1)
+                list = _singleton.Team1FOBs;
+            else if (team == 2)
+                list = _singleton.Team2FOBs;
+            else return -1;
             int offset = 0;
             for (int b = 0; b < _singleton.SpecialFOBs.Count; b++)
                 if (_singleton.SpecialFOBs[b].Team == team)
@@ -766,32 +757,14 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             for (int b = 0; b < _singleton.Caches.Count; b++)
                 if (_singleton.Caches[b].Team == team)
                     offset++;
-            int i = list.IndexOf(fob);
+            int i = list.IndexOf(fob2);
             if (i == -1)
-            {
-                UpdateUIList(team, player.Connection, list, player);
-                return;
-            }
+                return -1;
             int ii = i + offset;
-            L.LogDebug(ii.ToString());
             if (ListUI.FOBNames.Length > ii)
-            {
-                FOB f = list[i];
-                ListUI.FOBNames[ii].SetText(player.Connection, T.FOBUI.Translate(player, f, f.GridLocation, f.ClosestLocation));
-                ListUI.FOBResources[ii].SetText(player.Connection, f.UIResourceString);
-            }
+                return ii;
         }
-    }
-    public static void UpdateFOBList(UCPlayer player, SpecialFOB? fob = null)
-    {
-        ThreadUtil.assertIsGameThread();
-        _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ITransportConnection c = player.Player.channel.owner.transportConnection;
-        ulong team = player.GetTeam();
-        if (fob != null)
+        else if (fob is SpecialFOB)
         {
             int offset = -1, index = -1;
             for (int b = 0; b < _singleton.SpecialFOBs.Count; b++)
@@ -803,34 +776,13 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                     index = b;
                     break;
                 }
-                else if (specFob.Team == team)
+                if (specFob.Team == team)
                     ++offset;
             }
             if (index != -1 && ListUI.FOBNames.Length > offset)
-            {
-                SpecialFOB spf = _singleton.SpecialFOBs[index];
-                ListUI.FOBNames[offset].SetText(player.Connection, T.FOBUI.Translate(player, spf, spf.GridLocation, spf.ClosestLocation));
-                return;
-            }
+                return offset;
         }
-        List<FOB> list;
-        if (team == 1)
-            list = _singleton.Team1FOBs;
-        else if (team == 2)
-            list = _singleton.Team2FOBs;
-        else return;
-        UpdateUIList(team, c, list, player);
-    }
-    public static void UpdateFOBList(UCPlayer player, Cache? cache = null)
-    {
-        ThreadUtil.assertIsGameThread();
-        _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ulong team = player.GetTeam();
-        ITransportConnection c = player.Player.channel.owner.transportConnection;
-        if (cache != null)
+        else if (fob is Cache)
         {
             int offset = 0;
             for (int b = 0; b < _singleton.SpecialFOBs.Count; b++)
@@ -840,38 +792,68 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             for (int b = 0; b < _singleton.Caches.Count; b++)
             {
                 Cache cache2 = _singleton.Caches[b];
-                if ((object)cache2 == cache)
+                if (cache2 == fob)
                 {
                     ++cacheOffset;
                     index = b;
                     break;
                 }
-                else if (cache2.Team == team)
+                if (cache2.Team == team)
                     ++cacheOffset;
             }
             int ii = cacheOffset + offset;
             if (index != -1 && ListUI.FOBNames.Length > ii)
             {
-                Cache c2 = _singleton.Caches[index];
-                ListUI.FOBNames[ii].SetText(player.Connection, T.FOBUI.Translate(player, c2, c2.GridLocation, c2.ClosestLocation));
-                return;
+                return ii;
             }
         }
+
+        return -1;
+    }
+    public static void UpdateFOBList(UCPlayer player, IFOB? fob = null)
+    {
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ulong team = player.GetTeam();
         List<FOB> list;
         if (team == 1)
             list = _singleton.Team1FOBs;
         else if (team == 2)
             list = _singleton.Team2FOBs;
         else return;
-        UpdateUIList(team, c, list, player);
+        if (!player.HasFOBUI)
+        {
+            UpdateUIList(team, player, list);
+            return;
+        }
+
+        int index;
+        if (fob == null || (index = GetUIFOBIndex(team, fob)) == -1)
+        {
+            UpdateUIList(team, player, list);
+        }
+        else
+        {
+            ListUI.FOBNames[index].SetText(player.Connection, T.FOBUI.Translate(player, (IDeployable)fob, fob.GridLocation, fob.ClosestLocation));
+            if (fob is IResourceFOB rs)
+                ListUI.FOBResources[index].SetText(player.Connection, rs.UIResourceString);
+        }
     }
-    private static void UpdateUIList(ulong team, ITransportConnection connection, List<FOB> fobs, UCPlayer player)
+    private static void UpdateUIList(ulong team, UCPlayer player, List<FOB> fobs)
     {
         _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ListUI.SendToPlayer(connection);
+        ITransportConnection connection = player.Connection;
+        if (!player.HasFOBUI)
+        {
+            ListUI.SendToPlayer(connection);
+            player.HasFOBUI = true;
+        }
 
         int i2 = 0;
         int min = Math.Min(_singleton.SpecialFOBs.Count, ListUI.FOBParents.Length);
@@ -912,8 +894,15 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             ListUI.FOBParents[i2].SetVisibility(connection, false);
         }
     }
-
-    void IReloadUIListener.ReloadUI(UCPlayer player)
+    void IUIListener.HideUI(UCPlayer player)
+    {
+        // todo
+    }
+    void IUIListener.ShowUI(UCPlayer player)
+    {
+        SendFOBList(player);
+    }
+    void IUIListener.UpdateUI(UCPlayer player)
     {
         SendFOBList(player);
     }
