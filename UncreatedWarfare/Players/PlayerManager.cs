@@ -24,14 +24,14 @@ public static class PlayerManager
 
     public static readonly List<UCPlayer> OnlinePlayers;
     private static readonly Dictionary<ulong, UCPlayer> _dict;
-    private static readonly Dictionary<ulong, SemaphoreSlim> _semaphores;
+    private static readonly Dictionary<ulong, UCSemaphore> _semaphores;
     internal static List<KeyValuePair<ulong, CancellationTokenSource>> PlayerConnectCancellationTokenSources = new List<KeyValuePair<ulong, CancellationTokenSource>>(Provider.queueSize);
 
     static PlayerManager()
     {
         OnlinePlayers = new List<UCPlayer>(50);
         _dict = new Dictionary<ulong, UCPlayer>(50);
-        _semaphores = new Dictionary<ulong, SemaphoreSlim>(128);
+        _semaphores = new Dictionary<ulong, UCSemaphore>(128);
         EventDispatcher.GroupChanged += OnGroupChagned;
         Provider.onRejectingPlayer += OnRejectingPlayer;
         EventDispatcher.PlayerPending += OnPlayerPending;
@@ -40,7 +40,7 @@ public static class PlayerManager
     {
         lock (_semaphores)
         {
-            if (FromID(player) == null && _semaphores.TryGetValue(player, out SemaphoreSlim semaphore))
+            if (FromID(player) == null && _semaphores.TryGetValue(player, out UCSemaphore semaphore))
             {
                 _semaphores.Remove(player);
                 semaphore.Dispose();
@@ -153,9 +153,13 @@ public static class PlayerManager
         UCPlayer ucplayer;
         lock (_semaphores)
         {
-            if (!_semaphores.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out SemaphoreSlim semaphore))
+            if (!_semaphores.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out UCSemaphore semaphore))
             {
-                semaphore = new SemaphoreSlim(1, 1);
+                semaphore = new UCSemaphore();
+#if DEBUG
+                semaphore.WaitCallback += () => L.LogDebug("Waiting for " + player.channel.owner.playerID.steamID.m_SteamID + " purchase sync."); 
+                semaphore.ReleaseCallback += amt => L.LogDebug("Released " + amt + " from " + player.channel.owner.playerID.steamID.m_SteamID + " purchase sync.");
+#endif
                 L.LogDebug("Semaphore for [" + player + "] has been created.");
                 _semaphores.Add(player.channel.owner.playerID.steamID.m_SteamID, semaphore);
             }

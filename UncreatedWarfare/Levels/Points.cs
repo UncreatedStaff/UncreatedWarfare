@@ -282,11 +282,19 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     }
     public static void AwardXP(UCPlayer player, XPReward reward, int amount)
     {
-        AwardXP(new XPParameters(player, 0, amount) { Reward = reward});
+        AwardXP(new XPParameters(player, 0, amount)
+        {
+            Reward = reward,
+            Message = PointsConfig.GetDefaultTranslation(player.Language, reward)
+        });
     }
     public static void AwardXP(UCPlayer player, XPReward reward, float multiplier = 1f)
     {
-        AwardXP(new XPParameters(player, 0, reward) { Multiplier = multiplier });
+        AwardXP(new XPParameters(player, 0, reward)
+        {
+            Multiplier = multiplier,
+            Message = PointsConfig.GetDefaultTranslation(player.Language, reward)
+        });
     }
     public static void AwardXP(UCPlayer player, XPReward reward, Translation translation, float multiplier = 1f)
     {
@@ -331,10 +339,10 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             await UCWarfare.ToUpdate(token);
 
             int origAmt = parameters.Amount;
-            PointsConfig.XPRewardData? data = null;
+            PointsConfig.XPData.TryGetValue(parameters.Reward, out PointsConfig.XPRewardData? data);
             if (origAmt == 0)
             {
-                if (!PointsConfig.XPData.TryGetValue(parameters.Reward, out data) || data.Amount == 0)
+                if (data == null || data.Amount == 0)
                     return;
                 origAmt = data.Amount;
             }
@@ -407,7 +415,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     if (mult == 0)
                         mult = data.CreditReward.Amount / (float)origAmt;
                 }
-                else mult = (parameters.OverrideCreditPercentage ?? PointsConfig.DefaultCreditPercentage);
+                else mult = (parameters.OverrideCreditPercentage ?? (PointsConfig.DefaultCreditPercentage / 100f));
                 float cAmt = mult * origAmt;
                 if (cAmt > 0)
                     credits = Mathf.CeilToInt(cAmt);
@@ -435,7 +443,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     }
                     if (credits != 0)
                     {
-                        (credsAmt, currentAmount) = await Data.DatabaseManager.AddCreditsAndXP(parameters.Steam64, team, amtXp, credits, token).ConfigureAwait(false);
+                        (credsAmt, currentAmount) = await Data.DatabaseManager.AddCreditsAndXP(parameters.Steam64, team, credits, amtXp, token).ConfigureAwait(false);
                     }
                     else
                     {
@@ -1316,7 +1324,7 @@ public class PointsConfig : JSONConfigData
 
         return true;
     }
-    internal static string? GetDefaultTranslation(string language, XPReward reward)
+    internal static string GetDefaultTranslation(string language, XPReward reward)
     {
         if (TryGetVehicleType(reward, out VehicleType vtype))
         {

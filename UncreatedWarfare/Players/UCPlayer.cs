@@ -54,11 +54,11 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UIMuted, false, false);
     public static readonly UnturnedUI LoadingUI = new UnturnedUI(15624, Gamemode.Config.UILoading, false, false, false);
     /*
-     * There can never be more than one SemaphoreSlim per player (even if they've gone offline)
+     * There can never be more than one semaphore per player (even if they've gone offline)
      * as this object will get reused until the finalizer runs, so don't save the semaphore outside of a sync local scope.
      * If you need it to stick around save the UCPlayer instead.
      */
-    public readonly SemaphoreSlim PurchaseSync;
+    public readonly UCSemaphore PurchaseSync;
     public readonly UCPlayerKeys Keys;
     public readonly UCPlayerEvents Events;
     public KitMenuUIData KitMenuData;
@@ -108,7 +108,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private EAdminType? _pLvl;
     private LevelData? _level;
     private PlayerNames _cachedName;
-    public UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save, SemaphoreSlim semaphore)
+    public UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore)
     {
         Steam64 = steamID.m_SteamID;
         PurchaseSync = semaphore;

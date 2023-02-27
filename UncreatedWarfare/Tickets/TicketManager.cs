@@ -89,7 +89,7 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
                 return;
             TicketUI.SendToPlayer(player.Connection);
             player.HasTicketUI = true;
-            string? url = TeamManager.GetFaction(team)?.FlagImageURL;
+            string? url = TeamManager.GetFaction(team).FlagImageURL;
             if (url is not null)
                 TicketUI.Flag.SetImage(player.Connection, url);
             Provider.UpdateUI(player);

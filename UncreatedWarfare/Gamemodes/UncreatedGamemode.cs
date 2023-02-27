@@ -860,11 +860,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
         OnGroupChanged(e);
     }
-    internal void InvokeReloadUI(UCPlayer player)
-    {
-        ReloadUI(player);
-        InvokeSingletonEvent<IUIListener>(x => x.UpdateUI(player));
-    }
     internal void InvokeLanguageChanged(UCPlayer player)
     {
         OnLanguageChanged(player);

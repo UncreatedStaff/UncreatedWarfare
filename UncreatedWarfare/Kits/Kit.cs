@@ -32,6 +32,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public Branch Branch { get; set; }
     public KitType Type { get; set; }
     public bool Disabled { get; set; }
+    public bool RequiresNitro { get; set; }
     public bool MapFilterIsWhitelist { get; set; }
     public bool FactionFilterIsWhitelist { get; set; }
     public int Season { get; set; }
@@ -141,6 +142,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         CreatedTimestamp = DateTime.UtcNow;
         LastEditedTimestamp = copy.LastEditedTimestamp;
         LastEditor = copy.LastEditor;
+        RequiresNitro = copy.RequiresNitro;
     }
     public Kit(ulong loadoutOwner, char loadout, Class @class, string? displayName, FactionInfo? faction)
     {
@@ -168,6 +170,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         Disabled = false;
         CreditCost = 0;
         WeaponText = null;
+        RequiresNitro = false;
         */
     }
     public Kit() { }
