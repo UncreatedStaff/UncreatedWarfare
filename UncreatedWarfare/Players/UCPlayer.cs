@@ -939,7 +939,7 @@ public class UCPlayerLocale // todo implement
 
 public class PlayerSave
 {
-    public const uint DataVersion = 3;
+    public const uint DataVersion = 4;
     public readonly ulong Steam64;
     [CommandSettable]
     public ulong Team;
@@ -958,6 +958,8 @@ public class PlayerSave
     public bool IsOtherDonator;
     [CommandSettable]
     public bool IMGUI;
+    [CommandSettable]
+    public bool WasNitroBoosting;
     public PlayerSave(ulong s64)
     {
         this.Steam64 = s64;
@@ -1000,6 +1002,7 @@ public class PlayerSave
         block.writeBoolean(save.ShouldRespawnOnJoin);
         block.writeBoolean(save.IsOtherDonator);
         block.writeBoolean(save.IMGUI);
+        block.writeBoolean(save.WasNitroBoosting);
         ServerSavedata.writeBlock(GetPath(save.Steam64), block);
     }
     public static bool HasPlayerSave(ulong player)
@@ -1043,6 +1046,10 @@ public class PlayerSave
             if (dv > 1)
             {
                 save.IMGUI = block.readBoolean();
+                if (dv > 3)
+                {
+                    save.WasNitroBoosting = block.readBoolean();
+                }
             }
         }
         return true;

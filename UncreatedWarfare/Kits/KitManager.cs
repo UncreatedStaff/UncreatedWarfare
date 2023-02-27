@@ -11,9 +11,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Networking;
+using Uncreated.Networking.Async;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -1768,6 +1770,49 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                                     COLUMN_FAVORITE_PLAYER, COLUMN_EXT_PK) + sb, args, token).ConfigureAwait(false);
         player.KitMenuData.FavoritesDirty = false;
     }
+    public static async Task<bool?> IsNitroBoosting(ulong player)
+    {
+        bool?[]? state = await IsNitroBoosting(new ulong[] { player }).ConfigureAwait(false);
+        return state == null || state.Length < 1 ? null : state[0];
+    }
+    public static async Task<bool?[]?> IsNitroBoosting(ulong[] players)
+    {
+        if (!UCWarfare.CanUseNetCall)
+            return null;
+        bool?[] rtn = new bool?[players.Length];
+
+        RequestResponse response = await KitEx.NetCalls.RequestIsNitroBoosting
+            .Request(KitEx.NetCalls.RespondIsNitroBoosting, UCWarfare.I.NetClient!, players, 8192);
+        if (response.TryGetParameter(0, out byte[] state))
+        {
+            int len = Math.Min(state.Length, rtn.Length);
+            for (int i = 0; i < len; ++i)
+            {
+                byte b = state[i];
+                rtn[i] = b switch { 0 => false, 1 => true, _ => null };
+                if (b is 0 or 1)
+                {
+                    if (!PlayerSave.TryReadSaveFile(players[i], out PlayerSave save))
+                        save = new PlayerSave(players[i]);
+                    save.WasNitroBoosting = b == 1;
+                    PlayerSave.WriteToSaveFile(save);
+                }
+            }
+        }
+        else return null;
+
+        return rtn;
+    }
+    internal void OnNitroBoostingUpdated(ulong player, byte state)
+    {
+        if (state is 0 or 1)
+        {
+            if (!PlayerSave.TryReadSaveFile(player, out PlayerSave save))
+                save = new PlayerSave(player);
+            save.WasNitroBoosting = state == 1;
+            PlayerSave.WriteToSaveFile(save);
+        }
+    }
     #region Sql
     // ReSharper disable InconsistentNaming
     public const string TABLE_MAIN = "kits";
@@ -3029,7 +3074,7 @@ public static class KitEx
         public static readonly NetCall<ulong, ulong, byte, Class, string> RequestCreateLoadout = new NetCall<ulong, ulong, byte, Class, string>(ReceiveCreateLoadoutRequest);
         public static readonly NetCall<string, ulong> RequestKitAccess = new NetCall<string, ulong>(ReceiveKitAccessRequest);
         public static readonly NetCall<string[], ulong> RequestKitsAccess = new NetCall<string[], ulong>(ReceiveKitsAccessRequest);
-
+        public static readonly NetCall<ulong[]> RequestIsNitroBoosting = new NetCall<ulong[]>(1138, capacity: sizeof(ulong) * 48 + sizeof(ushort));
 
         public static readonly NetCall<string, Class, string> SendKitClass = new NetCall<string, Class, string>(1114);
         public static readonly NetCallRaw<Kit?> SendKit = new NetCallRaw<Kit?>(1117, Util.ReadIReadWriteObjectNullable<Kit>, Util.WriteIReadWriteObjectNullable);
@@ -3037,6 +3082,8 @@ public static class KitEx
         public static readonly NetCall<string, int> SendAckCreateLoadout = new NetCall<string, int>(1111);
         public static readonly NetCall<int[]> SendAckSetKitsAccess = new NetCall<int[]>(1133);
         public static readonly NetCall<byte, byte[]> SendKitsAccess = new NetCall<byte, byte[]>(1137);
+        public static readonly NetCall<byte[]> RespondIsNitroBoosting = new NetCall<byte[]>(1139, 50);
+        public static readonly NetCall<ulong[], byte[]> SendNitroBoostingUpdated = new NetCall<ulong[], byte[]>(ReceiveIsNitroBoosting);
 
         [NetCall(ENetCall.FROM_SERVER, 1100)]
         internal static async Task<StandardErrorCode> ReceiveSetKitAccess(MessageContext context, ulong admin, ulong player, string kit, KitAccessType type, bool state)
@@ -3251,6 +3298,26 @@ public static class KitEx
             {
                 context.Reply(SendAckCreateLoadout, string.Empty, (int)StandardErrorCode.GenericError);
             }
+        }
+        [NetCall(ENetCall.FROM_SERVER, 1140)]
+        private static async Task ReceiveIsNitroBoosting(MessageContext context, ulong[] players, byte[] codes)
+        {
+            KitManager? manager = KitManager.GetSingletonQuick();
+            if (manager != null)
+            {
+                await UCWarfare.ToUpdate();
+                if (manager.IsLoaded)
+                {
+                    int len = Math.Min(players.Length, codes.Length);
+                    for (int i = 0; i < len; ++i)
+                    {
+                        manager.OnNitroBoostingUpdated(players[i], codes[i]);
+                    }
+                    context.Acknowledge(StandardErrorCode.Success);
+                    return;
+                }
+            }
+            context.Acknowledge(StandardErrorCode.ModuleNotLoaded);
         }
     }
 }
