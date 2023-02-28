@@ -59,6 +59,10 @@ public interface IGameTickListener
 {
     void Tick();
 }
+public interface ITCPConnectedListener
+{
+    void OnConnected();
+}
 public interface IDeclareWinListener
 {
     void OnWinnerDeclared(ulong winner);

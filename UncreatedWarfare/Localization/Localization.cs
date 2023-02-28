@@ -325,7 +325,14 @@ public static class Localization
 
             string playercount;
 
-            if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
+            if (kit.RequiresNitro)
+            {
+                if (KitManager.IsNitroBoostingQuick(ucplayer.Steam64))
+                    playercount = T.KitNitroBoostOwned.Translate(language);
+                else
+                    playercount = T.KitNitroBoostNotOwned.Translate(language);
+            }
+            else if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
             {
                 playercount = T.KitUnlimited.Translate(language);
             }
@@ -408,6 +415,14 @@ public static class Localization
                 goto n;
             }
         }
+        if (kit.RequiresNitro)
+        {
+            if (KitManager.IsNitroBoostingQuick(ucplayer.Steam64))
+                cost = T.KitNitroBoostOwned.Translate(language);
+            else
+                cost = T.KitNitroBoostNotOwned.Translate(language);
+            goto n;
+        }
         if (kit.Type is KitType.Elite or KitType.Special)
         {
             if (manager != null && KitManager.HasAccessQuick(kit, ucplayer))
@@ -418,7 +433,7 @@ public static class Localization
                 cost = kit.PremiumCost <= 0m ? T.KitFree.Translate(language) : T.KitPremiumCost.Translate(language, kit.PremiumCost);
             goto n;
         }
-        else if (kit.UnlockRequirements != null && kit.UnlockRequirements.Length != 0)
+        if (kit.UnlockRequirements != null && kit.UnlockRequirements.Length != 0)
         {
             for (int i = 0; i < kit.UnlockRequirements.Length; i++)
             {

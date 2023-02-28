@@ -386,6 +386,13 @@ public static class Data
             ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.ShutdownPlayer, Gamemode.ShutdownMessage);
         UCWarfare.RunTask(OffenseManager.OnConnected, ctx: "Offense syncing (may take a while if it's been a long time since the bot was connected).");
         ConfigSync.OnConnected(connection);
+        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
+        for (int i = 0; i < singletons.Length; ++i)
+        {
+            if (singletons[i] is ITCPConnectedListener l)
+                l.OnConnected();
+        }
+
     }
     public static void HideAllUI(UCPlayer player)
     {

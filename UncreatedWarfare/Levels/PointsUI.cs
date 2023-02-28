@@ -1,5 +1,5 @@
-﻿#define SHOW_LEVEL
-#define SHOW_DIVISION
+﻿//#define SHOW_LEVEL
+//#define SHOW_DIVISION
 
 using System;
 using SDG.NetTransport;

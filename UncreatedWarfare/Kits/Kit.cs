@@ -7,16 +7,14 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.SqlServer.Server;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
@@ -28,18 +26,31 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public PrimaryKey PrimaryKey { get; set; }
     public PrimaryKey FactionKey { get; set; }
     public string Id { get; set; }
+    [CommandSettable]
     public Class Class { get; set; }
+    [CommandSettable]
     public Branch Branch { get; set; }
+    [CommandSettable]
     public KitType Type { get; set; }
+    [CommandSettable("IsDisabled")]
     public bool Disabled { get; set; }
+    [CommandSettable("NitroBooster")]
     public bool RequiresNitro { get; set; }
+    [CommandSettable("MapWhitelist")]
     public bool MapFilterIsWhitelist { get; set; }
+    [CommandSettable("FactionWhitelist")]
     public bool FactionFilterIsWhitelist { get; set; }
+    [CommandSettable]
     public int Season { get; set; }
+    [CommandSettable]
     public float RequestCooldown { get; set; }
+    [CommandSettable]
     public float TeamLimit { get; set; }
+    [CommandSettable]
     public int CreditCost { get; set; }
+    [CommandSettable]
     public decimal PremiumCost { get; set; }
+    [CommandSettable]
     public SquadLevel SquadLevel { get; set; }
     public TranslationList SignText { get; set; }
     public IKitItem[] Items { get; set; }
@@ -48,6 +59,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public PrimaryKey[] FactionFilter { get; set; }
     public PrimaryKey[] MapFilter { get; set; }
     public PrimaryKey[] RequestSigns { get; set; }
+    [CommandSettable("Weapons")]
     public string? WeaponText { get; set; }
     public DateTimeOffset CreatedTimestamp { get; set; }
     public ulong Creator { get; set; }
@@ -173,7 +185,15 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         RequiresNitro = false;
         */
     }
-    public Kit() { }
+    public Kit()
+    {
+        Items = Array.Empty<IKitItem>();
+        UnlockRequirements = Array.Empty<UnlockRequirement>();
+        Skillsets = Array.Empty<Skillset>();
+        FactionFilter = Array.Empty<PrimaryKey>();
+        MapFilter = Array.Empty<PrimaryKey>();
+        RequestSigns = Array.Empty<PrimaryKey>();
+    }
     public bool IsFactionAllowed(FactionInfo? faction)
     {
         if (faction == TeamManager.Team1Faction && Faction == TeamManager.Team2Faction ||

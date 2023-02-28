@@ -17,6 +17,7 @@ using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Sync;
@@ -679,8 +680,39 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             Buffer.BlockCopy(group, 0, structure.Metadata, sizeof(ulong), sizeof(ulong));
         }
         else
+        {
             structure.Metadata = Util.CloneBytes(data.barricade.state);
+        }
         save:
+        if (drop.interactable is InteractableSign sign && sign.text.StartsWith(Signs.KitPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            KitManager? manager = KitManager.GetSingletonQuick();
+            if (manager != null)
+            {
+                SqlItem<Kit>? proxy = await manager.FindKit(sign.text.Substring(Signs.KitPrefix.Length), token).ConfigureAwait(false);
+                if (proxy is { Item: { } kit })
+                {
+                    await proxy.Enter(token);
+                    try
+                    {
+                        PrimaryKey[] keys = kit.RequestSigns;
+                        for (int i = 0; i < keys.Length; ++i)
+                        {
+                            if (keys[i].Key == structure.PrimaryKey.Key)
+                                goto save2;
+                        }
+
+                        Util.AddToArray(ref keys!, structure.PrimaryKey);
+                        kit.RequestSigns = keys;
+                    }
+                    finally
+                    {
+                        proxy.Release();
+                    }
+                }
+            }
+        }
+        save2:
         return (await AddOrUpdate(structure, token).ConfigureAwait(false), status);
     }
     public Task RemoveItem(SavedStructure structure, CancellationToken token = default)
