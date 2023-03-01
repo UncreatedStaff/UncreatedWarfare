@@ -378,43 +378,40 @@ public class Flag : IDisposable, IObjective
     }
     public bool IsCapturable(ulong team)
     {
-        // double neutral feature
         if (Manager is not IFlagTeamObjectiveGamemode ctf)
-            return false;
-
-        if (PlayersOnFlag.Count > 0)
-        {
-            L.Log("===" + Name + "===");
-            L.Log("     Capturing Team: " + team);
-            L.Log("     ObjectiveTeam1 Owner: " + ctf.ObjectiveTeam1?.Owner);
-            L.Log("     ObjectiveTeam2 Owner: " + ctf.ObjectiveTeam2?.Owner);
-            L.Log("     Index: " + Index);
-            L.Log("     Owner: " + Owner);
-            L.Log("     ObjectiveT2Index: " + ctf.ObjectiveT2Index);
-            L.Log("     ObjectiveT1Index: " + ctf.ObjectiveT1Index);
-        }
+            return IsObj(team);
 
         if (IsObj(team))
             return true;
 
+        // double neutral feature
+
         if (team == 2)
         {
-            if (PlayersOnFlag.Count > 0)
-                L.Log("         Team 2 is Double neutralizing");
-
-            if (ctf.ObjectiveTeam1?.Owner == 0 && Index == ctf.ObjectiveT2Index - 1) // if team 1's objective is neutral and there is another point to capture
+            if (ctf.ObjectiveTeam2 != null &&
+                ctf.ObjectiveTeam2.Owner == 0 && 
+                ctf.ObjectiveTeam2.Points > 0 && 
+                Index == ctf.ObjectiveT2Index - 1 &&
+                Points > 0)
+            // if team 2's objective is neutralized and being lost to team 1, and this flag is team 2's next attack target and owned by team 1 
+            // i.e.:
+            // if our objective is neutralized and being lost to the enemy, and this flag is enemy controlled and our next attack target
             {
-                return Owner == 1; // T2 can capture this flag if it is the next point after their objective and T1 owns it
+                return true;
             }
         }
         else if (team == 1) 
         {
-            if (PlayersOnFlag.Count > 0)
-                L.Log("         Team 1 is Double neutralizing");
-
-            if (ctf.ObjectiveTeam2?.Owner == 0 && Index == ctf.ObjectiveT1Index + 1) // if team 2's objective is neutral and there is another point to capture
+            if (ctf.ObjectiveTeam1 != null &&
+                ctf.ObjectiveTeam1.Owner == 0 &&
+                ctf.ObjectiveTeam1.Points < 0 &&
+                Index == ctf.ObjectiveT1Index + 1 &&
+                Points < 0)
+                // if team 1's objective is neutralized and being lost to team 2, and this flag is team 1's next attack target and owned by team 2 
+                // i.e.:
+                // if our objective is neutralized and being lost to the enemy, and this flag is enemy controlled and our next attack target
             {
-                return Owner == 2; // T1 can capture this flag if it is the next point after their objective and T2 owns it
+                return true;
             }
         }
 
@@ -457,8 +454,9 @@ public class Flag : IDisposable, IObjective
 #endif
         if (IsContestedOverride != null)
             return IsContestedOverride(this, out winner);
-        if (IsCapturable(1) || IsCapturable(2)) // must be objective for both teams
-        {
+
+        //if (IsCapturable(1) || IsCapturable(2)) // must be objective for both teams
+        //{
             if (Team1TotalCappers == 0 && Team2TotalCappers == 0)
             {
                 winner = 0;
@@ -499,15 +497,18 @@ public class Flag : IDisposable, IObjective
                 }
             }
 
+            if (!IsCapturable(winner))
+                return false;
+
             return winner == 0ul;
-        }
-        else
-        {
-            if (ObjectivePlayerCountCappers == 0) winner = 0;
-            else winner = WhosObj();
-            if (!IsObj(winner)) winner = 0;
-            return false;
-        }
+        //}
+        //else
+        //{
+        //    if (ObjectivePlayerCountCappers == 0) winner = 0;
+        //    else winner = WhosObj();
+        //    if (!IsObj(winner)) winner = 0;
+        //    return false;
+        //}
     }
     public void EvaluatePoints(bool overrideInactiveCheck = false)
     {
@@ -525,6 +526,7 @@ public class Flag : IDisposable, IObjective
             {
                 if (IsCapturable(winner))
                 {
+
                     if (winner == 1 || winner == 2)
                     {
                         Cap(winner, GetCaptureAmount(Gamemode.Config.AASCaptureScale, winner));
