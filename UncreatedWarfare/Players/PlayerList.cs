@@ -36,13 +36,11 @@ public sealed class PlayerList : BaseSingletonComponent
         public static NetCall SendTickPlayerList = new NetCall(ReceivePlayerListTick);
 
         [NetCall(ENetCall.FROM_SERVER, 1102)]
-        private static async Task ReceivePlayerListTick(MessageContext ctx)
+        private static void ReceivePlayerListTick(MessageContext ctx)
         {
-            await UCWarfare.ToUpdate();
-            if (Instance != null)
-            {
-                Instance._lastTick = Time.realtimeSinceStartup;
-            }
+            PlayerList? list = Instance;
+            if (list != null)
+                list._lastTick = Time.realtimeSinceStartup;
         }
     }
 }

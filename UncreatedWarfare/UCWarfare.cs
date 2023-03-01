@@ -181,6 +181,7 @@ public class UCWarfare : MonoBehaviour
             NetClient.OnSentMessage += Data.OnClientSentMessage;
             NetClient.OnReceivedMessage += Data.OnClientReceivedMessage;
             NetClient.ModifyVerifyPacketCallback += OnVerifyPacketMade;
+            NetClient.OnServerConfigRequested += Data.GetServerConfig;
             NetClient.Init(Config.TCPSettings.TCPServerIP, Config.TCPSettings.TCPServerPort, Config.TCPSettings.TCPServerIdentity);
         }
     }
@@ -200,6 +201,7 @@ public class UCWarfare : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        Data.SendUpdateServerConfig();
         EventDispatcher.SubscribeToAll();
 
         Zone.OnLevelLoaded();
@@ -284,7 +286,7 @@ public class UCWarfare : MonoBehaviour
 #endif
         Data.Gamemode?.Subscribe();
         StatsManager.LoadEvents();
-
+        
         GameUpdateMonitor.OnGameUpdateDetected += EventFunctions.OnGameUpdateDetected;
         EventDispatcher.PlayerJoined += EventFunctions.OnPostPlayerConnected;
         EventDispatcher.PlayerLeaving += EventFunctions.OnPlayerDisconnected;
@@ -332,7 +334,7 @@ public class UCWarfare : MonoBehaviour
 #endif
         Data.Gamemode?.Unsubscribe();
         EventDispatcher.UnsubscribeFromAll();
-
+        
         GameUpdateMonitor.OnGameUpdateDetected -= EventFunctions.OnGameUpdateDetected;
         ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
         EventDispatcher.PlayerJoined -= EventFunctions.OnPostPlayerConnected;
@@ -759,9 +761,15 @@ public class UCWarfare : MonoBehaviour
     }
     internal async Task LetTasksUnload(CancellationToken token)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         while (_tasks.Count > 0)
         {
             UCTask task = _tasks[0];
+#if DEBUG
+            using IDisposable profiler2 = ProfilingUtils.StartTracking("Unloading task: " + (task.Context ?? "<no context>") + ".");
+#endif
             if (task.AwaitOnUnload && !task.Task.IsCompleted)
             {
                 L.LogDebug("Letting task \"" + (task.Context ?? "null") + "\" finish for up to 10 seconds before unloading...");
@@ -772,7 +780,7 @@ public class UCWarfare : MonoBehaviour
                 catch
                 {
                     RegisterErroredTask(task.Task, task.Context);
-                    continue;
+                    goto cont;
                 }
                 if (!task.Task.IsCompleted)
                 {
@@ -780,6 +788,7 @@ public class UCWarfare : MonoBehaviour
                 }
                 else L.LogDebug("  ... Done");
             }
+            cont:
             _tasks.RemoveAt(0);
         }
     }
@@ -789,6 +798,7 @@ public class UCWarfare : MonoBehaviour
         ThreadUtil.assertIsGameThread();
 #if DEBUG
         IDisposable profiler = ProfilingUtils.StartTracking();
+        IDisposable profiler2;
 #endif
         FullyLoaded = false;
         try
@@ -805,24 +815,41 @@ public class UCWarfare : MonoBehaviour
             await LetTasksUnload(token).ConfigureAwait(false);
             if (Data.Singletons is not null)
             {
+#if DEBUG
+                profiler2 = ProfilingUtils.StartTracking("Unload DeathTracker");
+#endif
                 await Data.Singletons.UnloadSingletonAsync(Data.DeathTracker, false, token: token);
                 Data.DeathTracker = null!;
+#if DEBUG
+                profiler2.Dispose();
+                profiler2 = ProfilingUtils.StartTracking("Unload UCAnnouncer.");
+#endif
                 if (Announcer != null)
                 {
                     await Data.Singletons.UnloadSingletonAsync(Announcer, token: token);
                     Announcer = null!;
                 }
+#if DEBUG
+                profiler2.Dispose();
+                profiler2 = ProfilingUtils.StartTracking("Unload Gamemode");
+#endif
                 if (Data.Gamemode != null)
                 {
                     Data.Gamemode.IsPendingCancel = true;
                     await Data.Singletons.UnloadSingletonAsync(Data.Gamemode, token: token);
                     Data.Gamemode = null!;
                 }
+#if DEBUG
+                profiler2.Dispose();
+#endif
             }
 
             await LetTasksUnload(token).ConfigureAwait(false);
             await ToUpdate(token);
 
+#if DEBUG
+            profiler2 = ProfilingUtils.StartTracking("Destroy GameObjects");
+#endif
             ThreadUtil.assertIsGameThread();
             if (Solver != null)
             {
@@ -836,13 +863,25 @@ public class UCWarfare : MonoBehaviour
 
             if (Debugger != null)
                 Destroy(Debugger);
+#if DEBUG
+            profiler2.Dispose();
+#endif
             OffenseManager.Deinit();
+#if DEBUG
+            profiler2 = ProfilingUtils.StartTracking("Unload MySQL");
+#endif
             if (Data.DatabaseManager != null)
             {
+                CancellationToken token2 = new CancellationTokenSource(5000).Token;
+                token2.CombineIfNeeded(token);
                 try
                 {
-                    await Data.DatabaseManager.CloseAsync(token);
+                    await Data.DatabaseManager.CloseAsync(token2);
                     Data.DatabaseManager.Dispose();
+                }
+                catch (OperationCanceledException) when (token2.IsCancellationRequested)
+                {
+                    L.LogWarning("Timed out closing local MySql connection.");
                 }
                 finally
                 {
@@ -851,33 +890,61 @@ public class UCWarfare : MonoBehaviour
             }
             if (Data.RemoteSQL != null)
             {
+                CancellationToken token2 = new CancellationTokenSource(5000).Token;
+                token2.CombineIfNeeded(token);
                 try
                 {
-                    await Data.RemoteSQL.CloseAsync(token);
+                    await Data.RemoteSQL.CloseAsync(token2);
                     Data.RemoteSQL.Dispose();
+                }
+                catch (OperationCanceledException) when (token2.IsCancellationRequested)
+                {
+                    L.LogWarning("Timed out closing remote MySql connection.");
                 }
                 finally
                 {
                     Data.RemoteSQL = null!;
                 }
             }
+#if DEBUG
+            profiler2.Dispose();
+#endif
             await LetTasksUnload(token).ConfigureAwait(false);
             await ToUpdate(token);
             ThreadUtil.assertIsGameThread();
+#if DEBUG
+            profiler2 = ProfilingUtils.StartTracking("Stopping Coroutines");
+#endif
             L.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
+#if DEBUG
+            profiler2.Dispose();
+            profiler2 = ProfilingUtils.StartTracking("Unsubscribing from events.");
+#endif
             L.Log("Unsubscribing from events...", ConsoleColor.Magenta);
             UnsubscribeFromEvents();
+#if DEBUG
+            profiler2.Dispose();
+#endif
             CommandWindow.shouldLogDeaths = true;
+#if DEBUG
+            profiler2 = ProfilingUtils.StartTracking("Destroying NetClient.");
+#endif
             if (NetClient != null)
             {
                 Destroy(NetClient);
                 NetClient = null;
             }
+#if DEBUG
+            profiler2.Dispose();
+#endif
             Logging.OnLogInfo -= L.NetLogInfo;
             Logging.OnLogWarning -= L.NetLogWarning;
             Logging.OnLogError -= L.NetLogError;
             Logging.OnLogException -= L.NetLogException;
+#if DEBUG
+            profiler2 = ProfilingUtils.StartTracking("Harmony Cleanup.");
+#endif
             ConfigSync.UnpatchAll();
             try
             {
@@ -889,10 +956,17 @@ public class UCWarfare : MonoBehaviour
                 L.LogError("Unpatching Error, perhaps Nelson changed something:");
                 L.LogError(ex);
             }
+#if DEBUG
+            profiler2.Dispose();
+            profiler2 = ProfilingUtils.StartTracking("Saving Stats.");
+#endif
             for (int i = 0; i < StatsManager.OnlinePlayers.Count; i++)
             {
                 WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.AdminLocale) + ".dat");
             }
+#if DEBUG
+            profiler2.Dispose();
+#endif
         }
         catch (Exception ex)
         {
@@ -900,12 +974,18 @@ public class UCWarfare : MonoBehaviour
             L.LogError(ex);
         }
 
+#if DEBUG
+        profiler2 = ProfilingUtils.StartTracking("Unload remaining Singletons.");
+#endif
         if (Data.Singletons != null)
         {
             await Data.Singletons.UnloadAllAsync(token);
             await ToUpdate(token);
             ThreadUtil.assertIsGameThread();
         }
+#if DEBUG
+        profiler2.Dispose();
+#endif
         L.Log("Warfare unload complete", ConsoleColor.Blue);
 #if DEBUG
         profiler.Dispose();

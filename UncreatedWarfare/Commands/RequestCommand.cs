@@ -268,8 +268,6 @@ public class RequestCommand : AsyncCommand
 
     internal static void GiveVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, VehicleData data)
     {
-        vehicle.tellLocked(ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
-
         VehicleManager.ServerSetVehicleLock(vehicle, ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
 
         if (Data.Is(out IVehicles vgm) && vgm.VehicleSpawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))

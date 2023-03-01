@@ -1538,12 +1538,12 @@ public class VehicleSpawn : IListItem
 #endif
         IBuildable? sign = this.Sign?.Item?.Buildable;
         if (sign is null || sign.Model == null || sign.Drop is not BarricadeDrop drop) return;
-        if (TeamManager.Team1Main.IsInside(sign.Model.transform.position))
+        if (TeamManager.PlayerBaseStatus != null && TeamManager.Team1Main.IsInside(sign.Model.transform.position))
         {
             IEnumerator<SteamPlayer> t1Main = BasesToPlayer(TeamManager.PlayerBaseStatus.GetEnumerator(), 1);
             UpdateSignInternal(t1Main, this, drop, 1ul);
         }
-        else if (TeamManager.Team2Main.IsInside(sign.Model.transform.position))
+        else if (TeamManager.PlayerBaseStatus != null && TeamManager.Team2Main.IsInside(sign.Model.transform.position))
         {
             IEnumerator<SteamPlayer> t2Main = BasesToPlayer(TeamManager.PlayerBaseStatus.GetEnumerator(), 2);
             UpdateSignInternal(t2Main, this, drop, 2ul);

@@ -29,7 +29,7 @@ public static partial class Patches
     public static void DoPatching()
     {
         Patcher.PatchAll();
-        if (UCWarfare.Config.DisableMissingAssetKick)
+        if (!UCWarfare.Config.DisableMissingAssetKick)
             InternalPatches.ServerMessageHandler_ValidateAssets_Patch.Patch(Patcher);
     }
     /// <summary>Unpatch methods</summary>

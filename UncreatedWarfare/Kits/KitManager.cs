@@ -1507,10 +1507,17 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 {
                     if (kit.RequiresNitro)
                     {
-                        bool nitroBoosting = await IsNitroBoosting(ctx.CallerID, token).ConfigureAwait(false) ?? ctx.Caller.Save.WasNitroBoosting;
-                        await UCWarfare.ToUpdate(token);
-                        if (!nitroBoosting)
-                            throw ctx.Reply(T.RequestKitMissingNitro);
+                        try
+                        {
+                            bool nitroBoosting = await IsNitroBoosting(ctx.CallerID, token).ConfigureAwait(false) ?? ctx.Caller.Save.WasNitroBoosting;
+                            await UCWarfare.ToUpdate(token);
+                            if (!nitroBoosting)
+                                throw ctx.Reply(T.RequestKitMissingNitro);
+                        }
+                        catch (TimeoutException)
+                        {
+                            throw ctx.Reply(T.UnknownError);
+                        }
                     }
                     else if (kit.IsPaid)
                         throw ctx.Reply(T.RequestKitMissingAccess);
@@ -1784,11 +1791,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     {
         return PlayerSave.TryReadSaveFile(player, out PlayerSave save) && save.WasNitroBoosting;
     }
+    /// <exception cref="TimeoutException"/>
     public static async Task<bool?> IsNitroBoosting(ulong player, CancellationToken token = default)
     {
         bool?[]? state = await IsNitroBoosting(new ulong[] { player }, token).ConfigureAwait(false);
         return state == null || state.Length < 1 ? null : state[0];
     }
+    /// <exception cref="TimeoutException"/>
     public static async Task<bool?[]?> IsNitroBoosting(ulong[] players, CancellationToken token = default)
     {
         if (!UCWarfare.CanUseNetCall)
@@ -1819,7 +1828,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 }
             }
         }
-        else return null;
+        else throw new TimeoutException("Timed out while checking nitro status.");
 
         return rtn;
     }

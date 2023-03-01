@@ -16,6 +16,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Homebase.Unturned;
 using Uncreated.Homebase.Unturned.Warfare;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -27,11 +28,13 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -184,7 +187,40 @@ public static class Data
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Is<TGamemode>() where TGamemode : class, IGamemode => Gamemode is TGamemode;
-    
+    public static ServerConfig GetServerConfig()
+    {
+        string? ip;
+        try
+        {
+            ip = SteamGameServer.GetPublicIP().ToIPAddress().ToString();
+            L.LogDebug("IP: " + ip);
+        }
+        catch (InvalidOperationException)
+        {
+            L.LogDebug("IP not available.");
+            ip = null;
+        }
+        return new WarfareServerConfig
+        {
+            Address = ip,
+            FactionTeam1 = TeamManager.Team1Faction.PrimaryKey.Key,
+            FactionTeam2 = TeamManager.Team2Faction.PrimaryKey.Key,
+            Identity = UCWarfare.Config.TCPSettings.TCPServerIdentity,
+            MapId = MapScheduler.Current,
+            Port = Provider.port,
+            MaxPlayers = Provider.maxPlayers,
+            Region = UCWarfare.Config.Region,
+            RegionId = UCWarfare.Config.RegionKey,
+            ServerId = Provider.server.m_SteamID,
+            ServerName = Provider.serverName,
+            MapName = Level.info?.name ?? Provider.map
+        };
+    }
+    public static void SendUpdateServerConfig()
+    {
+        L.LogDebug("Updating config to net client: " + (UCWarfare.I.NetClient?.Identity) + ".");
+        UCWarfare.I.NetClient?.UpdateConfig();
+    }
     internal static async Task LoadSQL(CancellationToken token)
     {
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
@@ -208,7 +244,7 @@ public static class Data
         Singletons.OnSingletonUnloaded += OnSingletonUnloaded;
         Singletons.OnSingletonReloaded += OnSingletonReloaded;
 
-         
+
         /* CREATE DIRECTORIES */
         L.Log("Validating directories...", ConsoleColor.Magenta);
         F.CheckDir(Paths.BaseDirectory, out _, true);
@@ -423,9 +459,5 @@ public static class Data
             if (singletons[i] is IUIListener ui)
                 ui.UpdateUI(player);
         }
-    }
-    public class NetCalls
-    {
-        public static readonly NetCallRaw<WarfareServerInfo> SendServerInfo = new NetCallRaw<WarfareServerInfo>(1008, WarfareServerInfo.Read, WarfareServerInfo.Write);
     }
 }

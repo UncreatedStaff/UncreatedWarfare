@@ -214,8 +214,17 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         using IDisposable profiler = ProfilingUtils.StartTracking(Name + " Unload Sequence");
 #endif
         await UCWarfare.ToUpdate(token);
+#if DEBUG
+        IDisposable profiler1 = ProfilingUtils.StartTracking(Name + " Unsubscribe");
+#endif
         Unsubscribe();
         InternalUnsubscribe();
+#if DEBUG
+        profiler1.Dispose();
+#endif
+#if DEBUG
+        IDisposable profiler2 = ProfilingUtils.StartTracking(Name + " Pre Dispose");
+#endif
         Task task = PreDispose(token);
         if (!task.IsCompleted)
         {
@@ -224,9 +233,21 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             ThreadUtil.assertIsGameThread();
         }
         InternalPreDispose();
+#if DEBUG
+        profiler2.Dispose();
+#endif
+#if DEBUG
+        IDisposable profiler3 = ProfilingUtils.StartTracking(Name + " Dispose");
+#endif
         await Data.Singletons.UnloadSingletonsInOrderAsync(_singletons, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
+#if DEBUG
+        profiler3.Dispose();
+#endif
+#if DEBUG
+        IDisposable profiler4 = ProfilingUtils.StartTracking(Name + " Post Dispose");
+#endif
         InternalPostDispose();
         task = PostDispose(token);
         if (!task.IsCompleted)
@@ -235,6 +256,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await UCWarfare.ToUpdate(token);
             ThreadUtil.assertIsGameThread();
         }
+#if DEBUG
+        profiler4.Dispose();
+#endif
 
         UCWarfare.I.ProcessTasks = false;
         try

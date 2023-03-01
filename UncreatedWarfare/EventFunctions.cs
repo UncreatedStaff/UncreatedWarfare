@@ -1359,7 +1359,7 @@ public static class EventFunctions
 #endif
         ulong s64 = e.Steam64;
         DroppedItems.Remove(s64);
-        TeamManager.PlayerBaseStatus.Remove(s64);
+        TeamManager.PlayerBaseStatus?.Remove(s64);
         RemoveDamageMessageTicks(s64);
         Tips.OnPlayerDisconnected(s64);
         UCPlayer ucplayer = e.Player;
