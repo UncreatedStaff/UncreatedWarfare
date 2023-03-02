@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Uncreated.Players;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
@@ -13,6 +14,7 @@ using Uncreated.Warfare.Quests;
 namespace Uncreated.Warfare.Ranks;
 public static class RankManager
 {
+    internal const int OfficerRankIndex = 9;
     public static readonly Config<RankConfig> ConfigSave;
     public static RankConfig Config => ConfigSave.Data;
     private const uint DataVersion = 1;
@@ -398,9 +400,14 @@ public static class RankManager
 
 public class RankConfig : JSONConfigData
 {
+    [JsonPropertyName("rank_data")]
     public RankData[] Ranks;
+
+    [JsonPropertyName("officer_rank_index")]
+    public int OfficerRankIndex;
     public override void SetDefaults()
     {
+        OfficerRankIndex = 9;
         Ranks = new RankData[]
         {
             new RankData(0, "Recruit", "Rec", "common", Guid.Empty),

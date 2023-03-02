@@ -16,6 +16,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Homebase.Unturned;
 using Uncreated.Homebase.Unturned.Warfare;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -26,12 +27,14 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Point;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -59,14 +62,10 @@ public static class Data
         private static string? _flagCache;
         private static string? _structureCache;
         private static string? _vehicleCache;
-        public static readonly string FactionsStorage = Path.Combine(BaseDirectory, "Factions") + Path.DirectorySeparatorChar;
-        public static readonly string TicketStorage = Path.Combine(BaseDirectory, "Tickets") + Path.DirectorySeparatorChar;
         public static readonly string PointsStorage = Path.Combine(BaseDirectory, "Points") + Path.DirectorySeparatorChar;
-        public static readonly string OfficerStorage = Path.Combine(BaseDirectory, "Officers") + Path.DirectorySeparatorChar;
         public static readonly string CooldownStorage = Path.Combine(BaseDirectory, "Cooldowns") + Path.DirectorySeparatorChar;
         public static readonly string SquadStorage = Path.Combine(BaseDirectory, "Squads") + Path.DirectorySeparatorChar;
         public static readonly string KitsStorage = Path.Combine(BaseDirectory, "Kits") + Path.DirectorySeparatorChar;
-        public static readonly string SQLStorage = Path.Combine(BaseDirectory, "SQL") + Path.DirectorySeparatorChar;
         public static readonly string FOBStorage = Path.Combine(BaseDirectory, "FOBs") + Path.DirectorySeparatorChar;
         public static readonly string LangStorage = Path.Combine(BaseDirectory, "Lang") + Path.DirectorySeparatorChar;
         public static readonly string Logs = Path.Combine(BaseDirectory, "Logs") + Path.DirectorySeparatorChar;
@@ -76,7 +75,6 @@ public static class Data
         public static readonly string TraitDataStorage = Path.Combine(BaseDirectory, "traits.json");
         public static readonly string ConfigSync = Path.Combine(Sync, "config.json");
         public static readonly string KitSync = Path.Combine(Sync, "kits.json");
-        public static readonly string PlayersSync = Path.Combine(Sync, "players.json");
         public static readonly string CurrentLog = Path.Combine(Logs, "current.txt");
         public static readonly string FunctionLog = Path.Combine(Logs, "funclog.txt");
         public static string FlagStorage => _flagCache ??= Path.Combine(MapStorage, "Flags") + Path.DirectorySeparatorChar;
@@ -99,6 +97,7 @@ public static class Data
         public const PlayerKey DropSupplyOverride = PlayerKey.PluginKey3;
     }
 
+    internal static readonly IUncreatedSingleton[] GamemodeListeners = new IUncreatedSingleton[1];
     public const string SuppressCategory = "Microsoft.Performance";
     public const string SuppressID = "IDE0051";
     public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/][il][gqb](?!h)\W{0,1}[gqb]{0,1}\W{0,1}[gqb]{0,1}\W{0,1}[ae]{0,1}\W{0,1}[r]{0,1}(?:ia){0,1})|(?:f\W{0,1}a\W{0,1}g{1,2}\W{0,1}o{0,1}\W{0,1}t{0,1})");
@@ -123,6 +122,7 @@ public static class Data
     internal static MethodInfo ReplicateStance;
     public static Reporter? Reporter;
     public static DeathTracker DeathTracker;
+    public static Points Points;
     internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
     internal static ClientInstanceMethod<byte[]>? SendUpdateBarricadeState;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt;
@@ -134,7 +134,6 @@ public static class Data
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearGlasses;
     internal static ClientInstanceMethod<string> SendChangeText;
     internal static ClientStaticMethod SendMultipleBarricades;
-    internal static ClientStaticMethod SendEffectClearAll;
     internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual;
     internal static ClientInstanceMethod? SendInventory;
     internal static SingletonManager Singletons;
@@ -168,7 +167,6 @@ public static class Data
         Assert.IsNotNull(SendDestroyItem);
         Assert.IsNotNull(SendChangeText);
         Assert.IsNotNull(SendMultipleBarricades);
-        Assert.IsNotNull(SendEffectClearAll);
         Assert.IsNotNull(SendChatIndividual);
     }
     [OperationTest(DisplayName = "Generated Getters and Setters Check")]
@@ -189,7 +187,40 @@ public static class Data
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Is<TGamemode>() where TGamemode : class, IGamemode => Gamemode is TGamemode;
-    
+    public static ServerConfig GetServerConfig()
+    {
+        string? ip;
+        try
+        {
+            ip = SteamGameServer.GetPublicIP().ToIPAddress().ToString();
+            L.LogDebug("IP: " + ip);
+        }
+        catch (InvalidOperationException)
+        {
+            L.LogDebug("IP not available.");
+            ip = null;
+        }
+        return new WarfareServerConfig
+        {
+            Address = ip,
+            FactionTeam1 = TeamManager.Team1Faction.PrimaryKey.Key,
+            FactionTeam2 = TeamManager.Team2Faction.PrimaryKey.Key,
+            Identity = UCWarfare.Config.TCPSettings.TCPServerIdentity,
+            MapId = MapScheduler.Current,
+            Port = Provider.port,
+            MaxPlayers = Provider.maxPlayers,
+            Region = UCWarfare.Config.Region,
+            RegionId = UCWarfare.Config.RegionKey,
+            ServerId = Provider.server.m_SteamID,
+            ServerName = Provider.serverName,
+            MapName = Level.info?.name ?? Provider.map
+        };
+    }
+    public static void SendUpdateServerConfig()
+    {
+        L.LogDebug("Updating config to net client: " + (UCWarfare.I.NetClient?.Identity) + ".");
+        UCWarfare.I.NetClient?.UpdateConfig();
+    }
     internal static async Task LoadSQL(CancellationToken token)
     {
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
@@ -213,7 +244,7 @@ public static class Data
         Singletons.OnSingletonUnloaded += OnSingletonUnloaded;
         Singletons.OnSingletonReloaded += OnSingletonReloaded;
 
-         
+
         /* CREATE DIRECTORIES */
         L.Log("Validating directories...", ConsoleColor.Magenta);
         F.CheckDir(Paths.BaseDirectory, out _, true);
@@ -222,7 +253,6 @@ public static class Data
         F.CheckDir(Paths.KitsStorage, out _, true);
         F.CheckDir(Paths.PointsStorage, out _, true);
         F.CheckDir(Paths.FOBStorage, out _, true);
-        F.CheckDir(Paths.OfficerStorage, out _, true);
 
         ZoneList l = await Singletons.LoadSingletonAsync<ZoneList>(token: token);
         L.Log("Read " + l.Items.Count + " zones.", ConsoleColor.Magenta);
@@ -234,15 +264,15 @@ public static class Data
 #endif
 
         await UCWarfare.ToUpdate(token);
-        Points.Initialize();
         Gamemode.ReadGamemodes();
         
         if (UCWarfare.Config.EnableReporter)
             Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
 
 
-        DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(false, token: token);
-        await Singletons.LoadSingletonAsync<PlayerList>(false, token: token);
+        DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(true, token: token);
+        GamemodeListeners[0] = Points = await Singletons.LoadSingletonAsync<Points>(true, token: token);
+        await Singletons.LoadSingletonAsync<PlayerList>(true, token: token);
         await UCWarfare.ToUpdate(token);
 
         /* REFLECT PRIVATE VARIABLES */
@@ -251,7 +281,6 @@ public static class Data
         SendChangeText           = Util.GetRPC<ClientInstanceMethod<string>, InteractableSign>("SendChangeText", true)!;
         SendMultipleBarricades   = Util.GetRPC<ClientStaticMethod, BarricadeManager>("SendMultipleBarricades", true)!;
         SendChatIndividual       = Util.GetRPC<ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>, ChatManager>("SendChatEntry", true)!;
-        SendEffectClearAll       = Util.GetRPC<ClientStaticMethod, EffectManager>("SendEffectClearAll", true)!;
         SendDestroyItem          = Util.GetRPC<ClientStaticMethod<byte, byte, uint, bool>, ItemManager>("SendDestroyItem", true)!;
         SendUpdateBarricadeState = Util.GetRPC<ClientInstanceMethod<byte[]>, BarricadeDrop>("SendUpdateState");
         SendInventory            = Util.GetRPC<ClientInstanceMethod, PlayerInventory>("SendInventory");
@@ -393,9 +422,42 @@ public static class Data
             ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.ShutdownPlayer, Gamemode.ShutdownMessage);
         UCWarfare.RunTask(OffenseManager.OnConnected, ctx: "Offense syncing (may take a while if it's been a long time since the bot was connected).");
         ConfigSync.OnConnected(connection);
+        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
+        for (int i = 0; i < singletons.Length; ++i)
+        {
+            if (singletons[i] is ITCPConnectedListener l)
+                l.OnConnected();
+        }
+
     }
-    public class NetCalls
+    public static void HideAllUI(UCPlayer player)
     {
-        public static readonly NetCallRaw<WarfareServerInfo> SendServerInfo = new NetCallRaw<WarfareServerInfo>(1008, WarfareServerInfo.Read, WarfareServerInfo.Write);
+        ThreadUtil.assertIsGameThread();
+        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
+        for (int i = 0; i < singletons.Length; ++i)
+        {
+            if (singletons[i] is IUIListener ui)
+                ui.HideUI(player);
+        }
+    }
+    public static void ShowAllUI(UCPlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
+        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
+        for (int i = 0; i < singletons.Length; ++i)
+        {
+            if (singletons[i] is IUIListener ui)
+                ui.ShowUI(player);
+        }
+    }
+    public static void UpdateAllUI(UCPlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
+        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
+        for (int i = 0; i < singletons.Length; ++i)
+        {
+            if (singletons[i] is IUIListener ui)
+                ui.UpdateUI(player);
+        }
     }
 }

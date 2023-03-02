@@ -22,7 +22,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Maps;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Singletons;
@@ -35,6 +35,7 @@ using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
+using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.Gamemodes.Insurgency;
 
@@ -541,7 +542,7 @@ public class Insurgency :
         {
             if (destroyer.GetTeam() == AttackingTeam)
             {
-                Points.AwardXP(destroyer.Player, Config.InsurgencyXPCacheDestroyed, T.XPToastCacheDestroyed.Translate(destroyer));
+                Points.AwardXP(destroyer, XPReward.CacheDestroyed);
                 StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
                 StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
                 if (_gameStats != null)
@@ -558,7 +559,7 @@ public class Insurgency :
             }
             else
             {
-                Points.AwardXP(destroyer.Player, Config.InsurgencyXPCacheTeamkilled, T.XPToastFriendlyCacheDestroyed.Translate(destroyer));
+                Points.AwardXP(destroyer, XPReward.FriendlyCacheDestroyed);
             }
         }
         for (int i = 0; i < Caches.Count; i++)
@@ -925,10 +926,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
             if (cache.IsActive && !cache.IsDestroyed)
             {
                 for (int j = 0; j < cache.Cache.NearbyDefenders.Count; j++)
-                {
-                    UCPlayer nd = cache.Cache.NearbyDefenders[j];
-                    Points.AwardXP(nd, Points.XPConfig.FlagDefendXP, T.XPToastFlagDefenseTick.Translate(nd));
-                }
+                    Points.AwardXP(cache.Cache.NearbyDefenders[j], XPReward.DefendingFlag);
             }
         }
     }

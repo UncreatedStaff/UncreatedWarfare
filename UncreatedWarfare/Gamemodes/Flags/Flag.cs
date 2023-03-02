@@ -3,10 +3,8 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Runtime.InteropServices.ComTypes;
 using Uncreated.Framework;
 using Uncreated.SQL;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
@@ -526,7 +524,6 @@ public class Flag : IDisposable, IObjective
             {
                 if (IsCapturable(winner))
                 {
-
                     if (winner == 1 || winner == 2)
                     {
                         Cap(winner, GetCaptureAmount(Gamemode.Config.AASCaptureScale, winner));

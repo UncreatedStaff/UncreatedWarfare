@@ -12,10 +12,9 @@ using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
-using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
@@ -27,17 +26,31 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public PrimaryKey PrimaryKey { get; set; }
     public PrimaryKey FactionKey { get; set; }
     public string Id { get; set; }
+    [CommandSettable]
     public Class Class { get; set; }
+    [CommandSettable]
     public Branch Branch { get; set; }
+    [CommandSettable]
     public KitType Type { get; set; }
+    [CommandSettable("IsDisabled")]
     public bool Disabled { get; set; }
+    [CommandSettable("NitroBooster")]
+    public bool RequiresNitro { get; set; }
+    [CommandSettable("MapWhitelist")]
     public bool MapFilterIsWhitelist { get; set; }
+    [CommandSettable("FactionWhitelist")]
     public bool FactionFilterIsWhitelist { get; set; }
+    [CommandSettable]
     public int Season { get; set; }
+    [CommandSettable]
     public float RequestCooldown { get; set; }
+    [CommandSettable]
     public float TeamLimit { get; set; }
+    [CommandSettable]
     public int CreditCost { get; set; }
+    [CommandSettable]
     public decimal PremiumCost { get; set; }
+    [CommandSettable]
     public SquadLevel SquadLevel { get; set; }
     public TranslationList SignText { get; set; }
     public IKitItem[] Items { get; set; }
@@ -46,6 +59,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public PrimaryKey[] FactionFilter { get; set; }
     public PrimaryKey[] MapFilter { get; set; }
     public PrimaryKey[] RequestSigns { get; set; }
+    [CommandSettable("Weapons")]
     public string? WeaponText { get; set; }
     public DateTimeOffset CreatedTimestamp { get; set; }
     public ulong Creator { get; set; }
@@ -140,6 +154,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         CreatedTimestamp = DateTime.UtcNow;
         LastEditedTimestamp = copy.LastEditedTimestamp;
         LastEditor = copy.LastEditor;
+        RequiresNitro = copy.RequiresNitro;
     }
     public Kit(ulong loadoutOwner, char loadout, Class @class, string? displayName, FactionInfo? faction)
     {
@@ -167,9 +182,18 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
         Disabled = false;
         CreditCost = 0;
         WeaponText = null;
+        RequiresNitro = false;
         */
     }
-    public Kit() { }
+    public Kit()
+    {
+        Items = Array.Empty<IKitItem>();
+        UnlockRequirements = Array.Empty<UnlockRequirement>();
+        Skillsets = Array.Empty<Skillset>();
+        FactionFilter = Array.Empty<PrimaryKey>();
+        MapFilter = Array.Empty<PrimaryKey>();
+        RequestSigns = Array.Empty<PrimaryKey>();
+    }
     public bool IsFactionAllowed(FactionInfo? faction)
     {
         if (faction == TeamManager.Team1Faction && Faction == TeamManager.Team2Faction ||
@@ -249,7 +273,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public object Clone() => new Kit(Id, this);
 }
 [JsonConverter(typeof(SkillsetConverter))]
-public readonly struct Skillset : IEquatable<Skillset>
+public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
 {
     public static readonly Skillset[] DefaultSkillsets =
     {
@@ -285,7 +309,6 @@ public readonly struct Skillset : IEquatable<Skillset>
         SkillIndex = (byte)skill;
         Level = level;
     }
-
     internal Skillset(EPlayerSpeciality specialty, byte skill, byte level)
     {
         Speciality = specialty;
@@ -434,11 +457,49 @@ public readonly struct Skillset : IEquatable<Skillset>
         hashCode *= -1521134295 + SkillIndex;
         return hashCode;
     }
+
+    [FormatDisplay("No Level")]
+    public const string FormatNoLevel = "nl";
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    {
+        string b = Speciality switch
+        {
+            EPlayerSpeciality.DEFENSE => Localization.TranslateEnum(Defense, language),
+            EPlayerSpeciality.OFFENSE => Localization.TranslateEnum(Offense, language),
+            EPlayerSpeciality.SUPPORT => Localization.TranslateEnum(Support, language),
+            _ => SpecialityIndex.ToString(culture) + "." + SkillIndex.ToString(culture)
+        };
+        if (format != null && format.Equals(FormatNoLevel, StringComparison.Ordinal))
+            return b;
+        return b + " Level " + Level.ToString(culture);
+    }
+
     public bool Equals(Skillset other) => EqualsHelper(in other, true);
     public bool TypeEquals(in Skillset skillset) => EqualsHelper(in skillset, false);
     public static void SetDefaultSkills(UCPlayer player)
     {
         player.EnsureSkillsets(Array.Empty<Skillset>());
+    }
+    /// <returns>-1 if parse failure.</returns>
+    public static int GetSkillsetFromEnglishName(string name, out EPlayerSpeciality speciality)
+    {
+        if (Enum.TryParse(name, true, out EPlayerOffense offense))
+        {
+            speciality = EPlayerSpeciality.OFFENSE;
+            return (int)offense;
+        }
+        if (Enum.TryParse(name, true, out EPlayerDefense defense))
+        {
+            speciality = EPlayerSpeciality.DEFENSE;
+            return (int)defense;
+        }
+        if (Enum.TryParse(name, true, out EPlayerSupport support))
+        {
+            speciality = EPlayerSpeciality.SUPPORT;
+            return (int)support;
+        }
+        speciality = (EPlayerSpeciality)(-1);
+        return -1;
     }
     public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(in b, true);
     public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(in b, true);
@@ -618,7 +679,7 @@ public class LevelUnlockRequirement : UnlockRequirement
     public int UnlockLevel = -1;
     public override bool CanAccess(UCPlayer player)
     {
-        return player.Rank.Level >= UnlockLevel;
+        return player.Level.Level >= UnlockLevel;
     }
     public override string GetSignText(UCPlayer player)
     {
@@ -626,7 +687,7 @@ public class LevelUnlockRequirement : UnlockRequirement
             return string.Empty;
 
         int lvl = Points.GetLevel(player.CachedXP);
-        return T.KitRequiredLevel.Translate(player, RankData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
+        return T.KitRequiredLevel.Translate(player, LevelData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
     }
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)
     {
@@ -639,7 +700,7 @@ public class LevelUnlockRequirement : UnlockRequirement
     {
         writer.WriteNumber("unlock_level", UnlockLevel);
     }
-    public override object Clone() => new LevelUnlockRequirement() { UnlockLevel = UnlockLevel };
+    public override object Clone() => new LevelUnlockRequirement { UnlockLevel = UnlockLevel };
     protected override void Read(ByteReader reader)
     {
         UnlockLevel = reader.ReadInt32();
@@ -651,15 +712,17 @@ public class LevelUnlockRequirement : UnlockRequirement
 
     public override Exception RequestKitFailureToMeet(CommandInteraction ctx, Kit kit)
     {
-        return ctx.Reply(T.RequestKitLowLevel, RankData.GetRankName(UnlockLevel));
+        LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
+        return ctx.Reply(T.RequestKitLowLevel, data);
     }
     public override Exception RequestVehicleFailureToMeet(CommandInteraction ctx, VehicleData data)
     {
-        return ctx.Reply(T.RequestVehicleMissingLevels, RankData.GetRankName(UnlockLevel));
+        LevelData data2 = new LevelData(Points.GetLevelXP(UnlockLevel));
+        return ctx.Reply(T.RequestVehicleMissingLevels, data2);
     }
     public override Exception RequestTraitFailureToMeet(CommandInteraction ctx, TraitData trait)
     {
-        RankData data = new RankData(Points.GetLevelXP(UnlockLevel));
+        LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
         return ctx.Reply(T.RequestTraitLowLevel, trait, data);
     }
 }
@@ -689,7 +752,7 @@ public class RankUnlockRequirement : UnlockRequirement
     {
         writer.WriteNumber("unlock_rank", UnlockRank);
     }
-    public override object Clone() => new RankUnlockRequirement() { UnlockRank = UnlockRank };
+    public override object Clone() => new RankUnlockRequirement { UnlockRank = UnlockRank };
     protected override void Read(ByteReader reader)
     {
         UnlockRank = reader.ReadInt32();
@@ -1027,7 +1090,7 @@ public class PageItem : IItemJar, IItem, IKitItem
         {
             if (kitItem is IItemJar jar)
             {
-                if (jar is not IItem r)
+                if (jar is not IItem)
                     return 1;
                 return Page != jar.Page ? Page.CompareTo(jar.Page) : jar.Y == Y ? X.CompareTo(jar.X) : Y.CompareTo(jar.Y);
             }

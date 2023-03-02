@@ -6,17 +6,6 @@ using System.Reflection;
 namespace Uncreated.Warfare.Harmony;
 internal static class PatchUtil
 {
-    internal delegate void ReceiveMethodDelegate(in ClientInvocationContext ctx);
-    internal delegate void ReceiveMethodDelegate<in T>(in ClientInvocationContext ctx, T arg1);
-    internal delegate void ReceiveMethodDelegate<in T1, in T2>(in ClientInvocationContext ctx, T1 arg1, T2 arg2);
-    internal delegate void ReceiveMethodDelegate<in T1, in T2, in T3>(in ClientInvocationContext ctx, T1 arg1, T2 arg2, T3 arg3);
-    internal delegate void ReceiveMethodDelegate<in T1, in T2, in T3, in T4>(in ClientInvocationContext ctx, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
-    internal delegate void ReceiveMethodDelegate<in T1, in T2, in T3, in T4, in T5>(in ClientInvocationContext ctx, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
-    internal delegate void ReceiveMethodDelegate<in T1, in T2, in T3, in T4, in T5, in T6>(in ClientInvocationContext ctx, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6);
-    internal delegate void ReceiveMethodDelegate<in T1, in T2, in T3, in T4, in T5, in T6, in T7>(in ClientInvocationContext ctx, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7);
-    internal delegate void ReceiveMethodDelegate<in T1, in T2, in T3, in T4, in T5, in T6, in T7, in T8>(in ClientInvocationContext ctx, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8);
-    internal delegate void ReceiveMethodDelegate<in T1, in T2, in T3, in T4, in T5, in T6, in T7, in T8, in T9>(in ClientInvocationContext ctx, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9);
-    internal delegate void ReceiveMethodDelegate<in T1, in T2, in T3, in T4, in T5, in T6, in T7, in T8, in T9, in T10>(in ClientInvocationContext ctx, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10);
     internal static MethodInfo GetMethodInfo(Delegate method)
     {
         try

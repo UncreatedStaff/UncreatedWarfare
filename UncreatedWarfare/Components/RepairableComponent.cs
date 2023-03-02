@@ -5,7 +5,7 @@ using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
@@ -44,10 +44,11 @@ internal class RepairableComponent : MonoBehaviour
         else
             PlayerHits.Add(builder.Steam64, amount);
 
+        /*
         if (Structure.GetServersideData().barricade.health >= Structure.asset.health)
         {
-            // give XP?
-        }
+            // todo give XP?
+        }*/
     }
     public void Destroy(BarricadeDestroyed e)
     {
@@ -59,6 +60,7 @@ internal class RepairableComponent : MonoBehaviour
         if (buildable != null && buildable.Foundation.ValidReference(out ItemBarricadeAsset asset))
         {
             string structureName = asset.itemName;
+            // todo translation
             string message = structureName + " DESTROYED";
 
             UCPlayer? player = e.Instigator;
@@ -67,44 +69,45 @@ internal class RepairableComponent : MonoBehaviour
                 ulong bteam = Structure.GetServersideData().group.GetTeam();
                 bool teamkilled = bteam != 0 && bteam == player.GetTeam();
 
-                int amount = 0;
-                float vehicleQuota = 0;
                 if (buildable.Type == BuildableType.Bunker)
                 {
                     if (teamkilled)
                     {
-                        amount = Points.XPConfig.FOBTeamkilledXP;
+                        Points.AwardXP(player, XPReward.FriendlyBunkerDestroyed);
                     }
                     else
                     {
-                        amount = Points.XPConfig.FOBKilledXP;
-                        vehicleQuota = 5;
+                        Points.AwardXP(player, XPReward.BunkerDestroyed);
+                        Points.TryAwardDriverAssist(player.Player, XPReward.BunkerDestroyed, quota: 5);
                     }
                 }
-                if (buildable.Type == BuildableType.Fortification)
+                else if (buildable.Type == BuildableType.Fortification)
                 {
-                    amount = (int)Math.Round(buildable.RequiredHits * 0.1F);
+                    int amount = Mathf.RoundToInt(buildable.RequiredHits * 0.1f);
 
 
-                    if (teamkilled) amount *= -1;
-                    else vehicleQuota = 0.1F;
+                    if (teamkilled)
+                    {
+                        Points.AwardXP(player, XPReward.FriendlyFortificationDestroyed, "FRIENDLY " + message, -amount);
+                    }
+                    else
+                    {
+                        Points.AwardXP(player, XPReward.FortificationDestroyed, message, amount);
+                        Points.TryAwardDriverAssist(player.Player, XPReward.FortificationDestroyed, quota: 0.1f);
+                    }
                 }
                 else
                 {
-                    amount = (int)Math.Round(buildable.RequiredHits * 0.75F);
-                    if (teamkilled) amount *= -1;
-                    else vehicleQuota = amount * 0.02F;
-                }
-
-                if (teamkilled)
-                {
-                    message = "FRIENDLY " + message;
-                }
-
-                if (amount != 0)
-                {
-                    Points.AwardXP(player, amount, message.ToUpper());
-                    Points.TryAwardDriverAssist(player.Player, amount, vehicleQuota);
+                    int amount = Mathf.RoundToInt(buildable.RequiredHits * 0.75f);
+                    if (teamkilled)
+                    {
+                        Points.AwardXP(player, XPReward.FriendlyBuildableDestroyed, "FRIENDLY " + message, -amount);
+                    }
+                    else
+                    {
+                        Points.AwardXP(player, XPReward.BuildableDestroyed, message, amount);
+                        Points.TryAwardDriverAssist(player.Player, XPReward.BuildableDestroyed, quota: amount * 0.02f);
+                    }
                 }
             }
         }

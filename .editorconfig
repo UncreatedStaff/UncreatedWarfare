@@ -46,6 +46,9 @@ csharp_style_unused_value_expression_statement_preference = discard_variable:sil
 csharp_style_prefer_readonly_struct = true:suggestion
 csharp_prefer_static_local_function = true:suggestion
 
+# IDE0002: Simplify Member Access
+dotnet_diagnostic.IDE0002.severity = silent
+
 [*.{cs,vb}]
 #### Naming styles ####
 

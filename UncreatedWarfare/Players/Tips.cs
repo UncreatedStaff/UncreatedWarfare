@@ -4,7 +4,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Players;
 
 public class Tips : BaseSingleton
 {

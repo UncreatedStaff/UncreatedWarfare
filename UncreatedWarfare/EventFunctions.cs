@@ -27,7 +27,8 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Structures;
@@ -1358,13 +1359,12 @@ public static class EventFunctions
 #endif
         ulong s64 = e.Steam64;
         DroppedItems.Remove(s64);
-        TeamManager.PlayerBaseStatus.Remove(s64);
+        TeamManager.PlayerBaseStatus?.Remove(s64);
         RemoveDamageMessageTicks(s64);
         Tips.OnPlayerDisconnected(s64);
         UCPlayer ucplayer = e.Player;
         try
         {
-            Points.OnPlayerLeft(ucplayer);
             if (!UCWarfare.Config.DisableDailyQuests)
                 DailyQuests.DeregisterDailyTrackers(ucplayer);
             QuestManager.DeregisterOwnedTrackers(ucplayer);

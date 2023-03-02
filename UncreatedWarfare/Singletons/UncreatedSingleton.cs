@@ -59,6 +59,10 @@ public interface IGameTickListener
 {
     void Tick();
 }
+public interface ITCPConnectedListener
+{
+    void OnConnected();
+}
 public interface IDeclareWinListener
 {
     void OnWinnerDeclared(ulong winner);
@@ -139,11 +143,13 @@ public interface IPlayerDeathListener
 {
     void OnPlayerDeath(PlayerDied e);
 }
-public interface IReloadUIListener
-{
-    void ReloadUI(UCPlayer player);
-}
 
+public interface IUIListener
+{
+    void HideUI(UCPlayer player);
+    void ShowUI(UCPlayer player);
+    void UpdateUI(UCPlayer player);
+}
 public interface ILanguageChangedListener
 {
     void OnLanguageChanged(UCPlayer player);

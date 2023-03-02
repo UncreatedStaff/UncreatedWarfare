@@ -36,7 +36,6 @@ public readonly struct GridLocation : ITranslationArgument
                 Vector3 pos = cartographyVolume.transform.TransformPoint(
                     bdrx + sizeX * ((float)subgridx / (sectionsX * SUBGRID_AMOUNT)) - 0.5f + sizeX / (sectionsX * SUBGRID_AMOUNT * 2f), 0,
                     -(bdry + sizeY * ((float)subgridy / (sectionsY * SUBGRID_AMOUNT)) - 0.5f + sizeY / (sectionsY * SUBGRID_AMOUNT * 2f)));
-                L.LogDebug($"Box: {box.x},{box.z}. sect: {sectionsX},{sectionsY}. bdr: {border}. out: {pos.x},{pos.z}");
                 return new Vector2(pos.x, pos.z);
             }
             int sqrCt = GetLegacyGridSize() * SUBGRID_AMOUNT;
@@ -201,7 +200,6 @@ public readonly struct GridLocation : ITranslationArgument
                 Index = 0;
             else
                 Index = (byte)(subgridx % SUBGRID_AMOUNT + ((SUBGRID_AMOUNT - 1) - subgridy % SUBGRID_AMOUNT) * SUBGRID_AMOUNT + 1);
-            L.LogDebug($"Local: {local.x},{local.z}. Box: {box.x},{box.z}. sect: {sectionsX},{sectionsY}. subg: {subgridx},{subgridy}. bdr: {border}. out: {X},{Y},{Index}");
             _toStringCache = ToString(X, Y, Index);
             return;
         }

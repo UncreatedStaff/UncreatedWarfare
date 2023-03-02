@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using JetBrains.Annotations;
+using Uncreated.Warfare.Events;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
@@ -24,29 +25,52 @@ internal class DebugComponent : MonoBehaviour
     private readonly Queue<UCPlayer> _pingUpdates = new Queue<UCPlayer>(48);
     private readonly List<UCPlayer> _lagging = new List<UCPlayer>(48);
     private readonly List<ulong> _lagged = new List<ulong>(96);
+    private static bool _hasPatched;
     [UsedImplicitly]
     private void Start()
     {
         Reset();
-        try
+        EventDispatcher.PlayerLeft += OnDisconnect;
+        if (!_hasPatched)
         {
-            Harmony.Patches.Patcher.Patch(typeof(SteamPlayer).GetMethod(nameof(SteamPlayer.lag), BindingFlags.Instance | BindingFlags.Public),
-                postfix: new HarmonyMethod(typeof(DebugComponent).GetMethod(nameof(LagPostfix), BindingFlags.Static | BindingFlags.NonPublic)));
+            _hasPatched = true;
+            try
+            {
+                Harmony.Patches.Patcher.Patch(typeof(SteamPlayer).GetMethod(nameof(SteamPlayer.lag), BindingFlags.Instance | BindingFlags.Public),
+                    postfix: new HarmonyMethod(typeof(DebugComponent).GetMethod(nameof(LagPostfix), BindingFlags.Static | BindingFlags.NonPublic)));
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Failed to patch SteamPlayer.lag, ping spike monitoring won't be active.");
+                L.LogError(ex);
+            }
+            try
+            {
+                Harmony.Patches.Patcher.Patch(typeof(Provider).Assembly.GetType("SDG.Unturned.NetMessages", true, false).GetMethod("ReceiveMessageFromClient", BindingFlags.Static | BindingFlags.Public),
+                    postfix: new HarmonyMethod(typeof(DebugComponent).GetMethod(nameof(ReceiveClientMessagePostfix), BindingFlags.Static | BindingFlags.NonPublic)));
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Failed to patch NetMessages.ReceiveMessageFromClient, network monitoring won't be active.");
+                L.LogError(ex);
+            }
         }
-        catch (Exception ex)
+    }
+    [UsedImplicitly]
+    private void OnDestroy()
+    {
+        EventDispatcher.PlayerLeft -= OnDisconnect;
+    }
+    public void OnDisconnect(PlayerEvent e)
+    {
+        ulong id = e.Steam64;
+        for (int i = 0; i < _lagging.Count; i++)
         {
-            L.LogError("Failed to patch SteamPlayer.lag, ping spike monitoring won't be active.");
-            L.LogError(ex);
-        }
-        try
-        {
-            Harmony.Patches.Patcher.Patch(typeof(Provider).Assembly.GetType("SDG.Unturned.NetMessages", true, false).GetMethod("ReceiveMessageFromClient", BindingFlags.Static | BindingFlags.Public),
-                postfix: new HarmonyMethod(typeof(DebugComponent).GetMethod(nameof(ReceiveClientMessagePostfix), BindingFlags.Static | BindingFlags.NonPublic)));
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Failed to patch NetMessages.ReceiveMessageFromClient, network monitoring won't be active.");
-            L.LogError(ex);
+            if (_lagging[i].Steam64 == id)
+            {
+                _lagging.RemoveAtFast(i);
+                break;
+            }
         }
     }
     public void Reset()

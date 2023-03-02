@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Stats;
@@ -53,10 +53,10 @@ internal static class StatsCoroutine
                     }
                     else
                         StatsManager.ModifyStats(ucplayer.Steam64, s => s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval);
+
                     /* ON DUTY AWARDER */
-                    bool isOnDuty = ucplayer.OnDuty();
-                    if (Points.XPConfig.OnDutyXP > 0 && isOnDuty)
-                        Points.AwardXP(ucplayer, Points.XPConfig.OnDutyXP, T.XPToastOnDuty);
+                    if (ucplayer.OnDuty())
+                        Points.AwardXP(ucplayer, XPReward.OnDuty);
 
 
                     Vector3 position = ucplayer.Position;

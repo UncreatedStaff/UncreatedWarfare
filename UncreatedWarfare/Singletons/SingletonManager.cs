@@ -15,6 +15,18 @@ internal delegate void ReloadSingletonDelegate(IReloadableSingleton singleton, b
 internal class SingletonManager : MonoBehaviour
 {
     private readonly List<SingletonInformation> _singletons = new List<SingletonInformation>(32);
+
+    public IUncreatedSingleton[] GetSingletons()
+    {
+        ThreadUtil.assertIsGameThread();
+        IUncreatedSingleton[] list = new IUncreatedSingleton[_singletons.Count];
+        int i = -1;
+        foreach (SingletonInformation singleton in _singletons)
+        {
+            list[++i] = singleton.Singleton;
+        }
+        return list;
+    }
     /// <summary>Called when a singleton is loaded.</summary>
     public event SingletonDelegate? OnSingletonLoaded;
 
@@ -52,6 +64,7 @@ internal class SingletonManager : MonoBehaviour
             await WaitOrThrow(info, token).ConfigureAwait(false);
         try
         {
+            await UCWarfare.ToUpdate(token);
             for (int i = 0; i < _singletons.Count; ++i)
             {
                 if (_singletons[i].SingletonType == inputType)
@@ -60,6 +73,7 @@ internal class SingletonManager : MonoBehaviour
                     if (ucs.IsLoaded)
                     {
                         await UnloadIntlAsync(ucs, throwErrors, token).ConfigureAwait(false);
+                        await UCWarfare.ToUpdate(token);
                     }
                     _singletons[i] = info;
                     goto load;
@@ -96,6 +110,7 @@ internal class SingletonManager : MonoBehaviour
             await WaitOrThrow(info, token).ConfigureAwait(false);
         try
         {
+            await UCWarfare.ToUpdate(token);
             for (int i = 0; i < _singletons.Count; ++i)
             {
                 if (_singletons[i].SingletonType == type)
@@ -104,6 +119,7 @@ internal class SingletonManager : MonoBehaviour
                     if (ucs.IsLoaded)
                     {
                         await UnloadIntlAsync(ucs, throwErrors, token).ConfigureAwait(false);
+                        await UCWarfare.ToUpdate(token);
                     }
                     _singletons[i] = info;
                     goto load;
@@ -144,6 +160,7 @@ internal class SingletonManager : MonoBehaviour
             await WaitOrThrow(info, token).ConfigureAwait(false);
         try
         {
+            await UCWarfare.ToUpdate(token);
             for (int i = 0; i < _singletons.Count; ++i)
             {
                 if (_singletons[i].SingletonType == inputType)
@@ -155,6 +172,7 @@ internal class SingletonManager : MonoBehaviour
                         try
                         {
                             await UnloadIntlAsync(ucs, throwErrors, token).ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(token);
                         }
                         finally
                         {
@@ -406,6 +424,7 @@ internal class SingletonManager : MonoBehaviour
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         SingletonInformation? info = null;
+        await UCWarfare.ToUpdate(token);
         for (int i = _singletons.Count - 1; i >= 0; --i)
         {
             if (_singletons[i].SingletonType == type)
@@ -452,6 +471,7 @@ internal class SingletonManager : MonoBehaviour
 #endif
         Type inputType = field?.GetType() ?? typeof(T);
         SingletonInformation? info = null;
+        await UCWarfare.ToUpdate(token);
         for (int i = _singletons.Count - 1; i >= 0; --i)
         {
             if (_singletons[i].SingletonType == inputType)
@@ -520,6 +540,7 @@ internal class SingletonManager : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        await UCWarfare.ToUpdate(token);
         for (int i = 0; i < _singletons.Count; ++i)
         {
             string? k1 = _singletons[i].ReloadKey;
@@ -546,6 +567,8 @@ internal class SingletonManager : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        await UCWarfare.ToUpdate(token);
+        await UCWarfare.ToUpdate(token);
         for (int i = 0; i < _singletons.Count; ++i)
         {
             if (ReferenceEquals(_singletons[i].Singleton, singleton))
@@ -568,7 +591,7 @@ internal class SingletonManager : MonoBehaviour
     private async Task<IReloadableSingleton?> ReloadIntlAsync(SingletonInformation singleton, bool rethrow, CancellationToken token = default)
     {
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "Reloading " + singleton.SingletonType.Name + ".");
 #endif
         if (singleton.Singleton is IReloadableSingleton reloadable)
         {
@@ -605,8 +628,9 @@ internal class SingletonManager : MonoBehaviour
     /// <returns>Singleton of type <typeparamref name="T"/>, or <see langword="null"/> if it isn't found.</returns>
     public T? GetSingleton<T>() where T : class, IUncreatedSingleton
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "GetSingleton<" + typeof(T).Name + ">");
 #endif
         for (int i = 0; i < _singletons.Count; ++i)
             if (_singletons[i].Singleton is T v)
@@ -616,8 +640,9 @@ internal class SingletonManager : MonoBehaviour
 
     public bool TryGetSingleton<T>(out T loaded) where T : class, IUncreatedSingleton
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "TryGetSingleton<" + typeof(T).Name + ">");
 #endif
         for (int i = 0; i < _singletons.Count; ++i)
         {
@@ -636,8 +661,9 @@ internal class SingletonManager : MonoBehaviour
     /// <returns>Singleton of type <typeparamref name="T"/>, or <see langword="null"/> if it isn't found.</returns>
     public IUncreatedSingleton? GetSingleton(Type type)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "Get Singleton type :" + type.Name + ".");
 #endif
         for (int i = 0; i < _singletons.Count; ++i)
             if (_singletons[i].SingletonType == type)
@@ -649,8 +675,9 @@ internal class SingletonManager : MonoBehaviour
     /// <returns><see langword="True"/> if <typeparamref name="T"/> singleton is loaded, otherwise <see langword="false"/>.</returns>
     public bool IsLoaded<T>() where T : class, IUncreatedSingleton
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "IsLoaded<" + typeof(T).Name + ">");
 #endif
         for (int i = 0; i < _singletons.Count; ++i)
             if (_singletons[i].SingletonType is T)
@@ -662,12 +689,16 @@ internal class SingletonManager : MonoBehaviour
     /// </summary>
     public async Task UnloadAllAsync(CancellationToken token = default)
     {
-        foreach (SingletonInformation info in _singletons)
+        await UCWarfare.ToUpdate(token);
+        List<SingletonInformation> list = new List<SingletonInformation>(_singletons);
+        _singletons.Clear();
+        foreach (SingletonInformation info in list)
         {
             if (info.IsLoaded)
+            {
                 await UnloadIntlAsync(info, false, token).ConfigureAwait(false);
+            }
         }
-        _singletons.Clear();
     }
     private class SingletonInformation
     {
@@ -680,12 +711,12 @@ internal class SingletonManager : MonoBehaviour
         public bool RequiresLevel;
         public SingletonInformation(IUncreatedSingleton singleton)
         {
+            SingletonType = singleton.GetType();
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+            using IDisposable profiler = ProfilingUtils.StartTracking("SingletonInformation Constructor Type: " + SingletonType.Name + ".");
 #endif
             Singleton = singleton;
             IsLoaded = false;
-            SingletonType = singleton.GetType();
             if (Attribute.GetCustomAttributes(SingletonType, 
                     typeof(SingletonDependencyAttribute))
                 .Any(x => x is SingletonDependencyAttribute attr &&
@@ -701,7 +732,7 @@ internal class SingletonManager : MonoBehaviour
         public async Task UnloadAsync(CancellationToken token = default)
         {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+            using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "Unloading " + SingletonType.Name + ".");
 #endif
             await UCWarfare.ToUpdate(token);
             if (Singleton.LoadAsynchrounously)
@@ -720,7 +751,7 @@ internal class SingletonManager : MonoBehaviour
         public async Task LoadAsync(CancellationToken token = default)
         {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+            using IDisposable profiler = ProfilingUtils.StartTracking(callerName: "Loading " + SingletonType.Name + ".");
 #endif
             await UCWarfare.ToUpdate(token);
             if (RequiresLevel && !Level.isLoaded)

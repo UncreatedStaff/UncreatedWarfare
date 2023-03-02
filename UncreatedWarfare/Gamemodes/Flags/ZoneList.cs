@@ -18,7 +18,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
 [SingletonDependency(typeof(Level))]
-public sealed class ZoneList : ListSqlSingleton<Zone>, IReloadUIListener
+public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
 {
     public const int MaxNameLength = 48;
     public const int MaxShortNameLength = 24;
@@ -342,7 +342,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IReloadUIListener
             ZoneType.Circle => 3,
             ZoneType.Rectangle => 4,
             _ => 0
-        } + mdl.Adjacencies.Length * 2 + mdl.GridObjects.Length * 6];
+        } + mdl.Adjacencies.Length * 2 + mdl.GridObjects.Length * 5];
         int index = 0;
         objs[0] = pk2;
         switch (mdl.ZoneType)
@@ -419,10 +419,8 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IReloadUIListener
                 if (i > 0)
                     sb.Append(',');
                 GridObject a = mdl.GridObjects[i];
-                objs[++index] = a.PrimaryKey;
-                sb.Append("(@0,@").Append(index.ToString(Data.AdminLocale));
                 objs[++index] = a.ObjectInstanceId;
-                sb.Append(",@").Append(index.ToString(Data.AdminLocale));
+                sb.Append("(@0,@").Append(index.ToString(Data.AdminLocale));
                 objs[++index] = a.Guid.ToString("N");
                 sb.Append(",@").Append(index.ToString(Data.AdminLocale));
                 objs[++index] = a.X;
@@ -745,7 +743,9 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IReloadUIListener
     }
     #endregion
 
-    void IReloadUIListener.ReloadUI(UCPlayer player)
+    void IUIListener.ShowUI(UCPlayer player) { }
+    void IUIListener.HideUI(UCPlayer player) { }
+    void IUIListener.UpdateUI(UCPlayer player)
     {
         if (player.Player.TryGetComponent(out ZonePlayerComponent comp))
             comp.ReloadLang();

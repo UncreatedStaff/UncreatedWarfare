@@ -1,16 +1,23 @@
-﻿using System;
-using Uncreated.Encoding;
+﻿using Uncreated.Encoding;
 
 namespace Uncreated.Homebase.Unturned.Warfare;
-public class WarfareServerInfo : ServerInfo
+public class WarfareServerConfig : ServerConfig
 {
-    public WarfareServerInfo() : base(EServer.WARFARE) { }
-    internal static WarfareServerInfo Read(ByteReader reader)
+    public int FactionTeam1;
+    public int FactionTeam2;
+    public int MapId;
+
+    protected override void Read(ByteReader reader)
     {
-        throw new NotImplementedException();
+        FactionTeam1 = reader.ReadInt32();
+        FactionTeam2 = reader.ReadInt32();
+        MapId = reader.ReadInt32();
     }
-    internal static void Write(ByteWriter writer, WarfareServerInfo info)
+
+    protected override void Write(ByteWriter writer)
     {
-        throw new NotImplementedException();
+        writer.Write(FactionTeam1);
+        writer.Write(FactionTeam2);
+        writer.Write(MapId);
     }
 }

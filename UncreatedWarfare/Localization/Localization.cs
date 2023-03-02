@@ -15,7 +15,7 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -325,7 +325,14 @@ public static class Localization
 
             string playercount;
 
-            if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
+            if (kit.RequiresNitro)
+            {
+                if (KitManager.IsNitroBoostingQuick(ucplayer.Steam64))
+                    playercount = T.KitNitroBoostOwned.Translate(language);
+                else
+                    playercount = T.KitNitroBoostNotOwned.Translate(language);
+            }
+            else if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
             {
                 playercount = T.KitUnlimited.Translate(language);
             }
@@ -408,6 +415,14 @@ public static class Localization
                 goto n;
             }
         }
+        if (kit.RequiresNitro)
+        {
+            if (KitManager.IsNitroBoostingQuick(ucplayer.Steam64))
+                cost = T.KitNitroBoostOwned.Translate(language);
+            else
+                cost = T.KitNitroBoostNotOwned.Translate(language);
+            goto n;
+        }
         if (kit.Type is KitType.Elite or KitType.Special)
         {
             if (manager != null && KitManager.HasAccessQuick(kit, ucplayer))
@@ -418,7 +433,7 @@ public static class Localization
                 cost = kit.PremiumCost <= 0m ? T.KitFree.Translate(language) : T.KitPremiumCost.Translate(language, kit.PremiumCost);
             goto n;
         }
-        else if (kit.UnlockRequirements != null && kit.UnlockRequirements.Length != 0)
+        if (kit.UnlockRequirements != null && kit.UnlockRequirements.Length != 0)
         {
             for (int i = 0; i < kit.UnlockRequirements.Length; i++)
             {
@@ -479,7 +494,7 @@ public static class Localization
 
         string unlock = string.Empty;
         if (data.UnlockLevel > 0)
-            unlock += RankData.GetRankAbbreviation(data.UnlockLevel).Colorize("f0b589");
+            unlock += LevelData.GetRankAbbreviation(data.UnlockLevel).Colorize("f0b589");
         if (data.CreditCost > 0)
         {
             if (unlock != string.Empty)
@@ -1193,7 +1208,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
 {
     public readonly string Language;
     public ulong Team = 0;
-    public readonly List<UCPlayer> Players;
+    public List<UCPlayer> Players { get; private set; }
     public readonly bool IMGUI;
     private int _index;
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
@@ -1244,7 +1259,13 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         Next = null!;
         _index = -1;
     }
-    public void Dispose() => Reset();
+    public void Dispose()
+    {
+        Reset();
+        Players.Clear();
+        Players = null!;
+    }
+
     public override string ToString()
     {
         return _index.ToString(Data.AdminLocale) + "   " + string.Join(", ", Players.Select(x => x == null ? "null" : x.CharacterName)) + "   Current: " + (Next == null ? "null" : Next.CharacterName);
@@ -1256,8 +1277,35 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         {
             Sets = sets;
         }
-        public IEnumerator<LanguageSet> GetEnumerator() => ((IEnumerable<LanguageSet>)Sets).GetEnumerator();
-        IEnumerator IEnumerable.GetEnumerator() => Sets.GetEnumerator();
+        private readonly struct LanguageSetArrayEnumerator : IEnumerator<LanguageSet>
+        {
+            private readonly IEnumerator<LanguageSet> _arrayEnumerator;
+            private readonly LanguageSetEnumerator _set;
+
+            public LanguageSetArrayEnumerator(LanguageSetEnumerator sets)
+            {
+                _arrayEnumerator = (sets.Sets as IEnumerable<LanguageSet>).GetEnumerator();
+                _set = sets;
+            }
+
+            void IDisposable.Dispose()
+            {
+                for (int i = 0; i < _set.Sets.Length; ++i)
+                {
+                    ref LanguageSet set = ref _set.Sets[i];
+                    set.Dispose();
+                }
+                _arrayEnumerator.Dispose();
+            }
+
+            bool IEnumerator.MoveNext() => _arrayEnumerator.MoveNext();
+            void IEnumerator.Reset() => _arrayEnumerator.Dispose();
+            LanguageSet IEnumerator<LanguageSet>.Current => _arrayEnumerator.Current;
+            object IEnumerator.Current => _arrayEnumerator.Current;
+        }
+
+        public IEnumerator<LanguageSet> GetEnumerator() => new LanguageSetArrayEnumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => new LanguageSetArrayEnumerator(this);
     }
 
     private static readonly List<LanguageSet> Languages = new List<LanguageSet>(JSONMethods.DefaultLanguageAliasSets.Count);

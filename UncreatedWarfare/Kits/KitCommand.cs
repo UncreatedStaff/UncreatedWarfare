@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using SDG.Unturned;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.SQL;
@@ -16,7 +17,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Commands;
 public sealed class KitCommand : AsyncCommand
 {
-    private const string Syntax = "/kit <search|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
+    private const string Syntax = "/kit <search|skills|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
     private const string Help = "Admin command to manage kits; creating, deleting, editing, and giving/removing access is done through this command.";
 
     public KitCommand() : base("kit", EAdminType.STAFF) { }
@@ -53,7 +54,7 @@ public sealed class KitCommand : AsyncCommand
         {
             ctx.AssertRanByPlayer();
 
-            ctx.AssertHelpCheck(1, "/kit <create|c|override> <id> [class] [type] [faction] - Creates (or overrides if it already exits) a kit with default values based on the items in your inventory and your clothes.");
+            ctx.AssertHelpCheck(1, "/kit <create|c|override> <id> <class> [type] [faction] - Creates (or overrides if it already exits) a kit with default values based on the items in your inventory and your clothes.");
 
             if (ctx.TryGet(1, out string kitName))
             {
@@ -99,7 +100,7 @@ public sealed class KitCommand : AsyncCommand
                 bool def = ctx.MatchParameter(2, "default") || ctx.MatchParameter(2, Default);
                 if (def || ctx.MatchParameter(2, "me") || ctx.TryGet(2, out @class))
                 {
-                    if (def) @class = Class.Unarmed;
+                    if (def || @class == Class.None) @class = Class.Unarmed;
                     if ((ctx.MatchParameter(3, "default") || ctx.MatchParameter(3, Default)) || ctx.TryGet(3, out type))
                     {
                         if (ctx.TryGet(4, out string factionId))
@@ -115,6 +116,7 @@ public sealed class KitCommand : AsyncCommand
                 else if (ctx.HasArg(2))
                     throw ctx.Reply(T.ClassNotFoundCreateKit, ctx.Get(2)!);
 
+                if (@class == Class.None) @class = Class.Unarmed;
                 kit = new Kit(kitName, @class, KitManager.GetDefaultBranch(@class), type, SquadLevel.Member, faction)
                 {
                     Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true),
@@ -506,6 +508,92 @@ public sealed class KitCommand : AsyncCommand
             }
             else
                 throw ctx.SendCorrectUsage("/kit <createloadout|cloadout|cl> <player> <faction> <class> [sign text...]");
+        }
+        else if (ctx.MatchParameter(0, "skills", "skillset", "skillsets"))
+        {
+            ctx.AssertHelpCheck(1, "/kit skills <kit> <add|remove> <skill> [level]");
+            bool add = ctx.MatchParameter(2, "add", "set");
+            if (add || ctx.MatchParameter(2, "delete", "remove", "clear"))
+            {
+                if (ctx.TryGet(3, out string skillsetStr))
+                {
+                    int skillset = Skillset.GetSkillsetFromEnglishName(skillsetStr, out EPlayerSpeciality specialty);
+                    if (skillset < 0)
+                        throw ctx.Reply(T.KitInvalidSkillset, skillsetStr);
+                    byte level = 0;
+                    if (!add || ctx.TryGet(4, out level))
+                    {
+                        Skill skill = ctx.Caller.Player.skills.skills[(int)specialty][skillset];
+                        int max = skill.GetClampedMaxUnlockableLevel();
+                        if (!add || max >= level)
+                        {
+                            Skillset set = new Skillset(specialty, (byte)skillset, level);
+                            string kitName = ctx.Get(1)!;
+                            SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
+                            if (proxy is null)
+                                throw ctx.Reply(T.KitNotFound, kitName);
+                            await proxy.Enter(token).ConfigureAwait(false);
+                            try
+                            {
+                                if (proxy.Item is not { } kit)
+                                    throw ctx.Reply(T.KitNotFound, kitName);
+                                Skillset[] skillsets = kit.Skillsets;
+                                for (int i = 0; i < skillsets.Length; ++i)
+                                {
+                                    if (skillsets[i].SkillIndex == set.SkillIndex && skillsets[i].SpecialityIndex == set.SpecialityIndex)
+                                    {
+                                        if (add)
+                                            skillsets[i] = set;
+                                        else
+                                        {
+                                            set = skillsets[i];
+                                            Util.RemoveFromArray(ref skillsets, i);
+                                            kit.Skillsets = skillsets;
+                                        }
+                                        
+                                        goto reply;
+                                    }
+                                }
+
+                                if (!add)
+                                    throw ctx.Reply(T.KitSkillsetNotFound, set, kit);
+                                Util.AddToArray(ref skillsets!, set);
+                                kit.Skillsets = skillsets;
+                                reply:
+                                await proxy.SaveItem(token);
+                                ctx.LogAction(add ? ActionLogType.AddSkillset : ActionLogType.RemoveSkillset, set + " ON " + kit.Id);
+                                await UCWarfare.ToUpdate(token);
+                                ctx.Reply(add ? T.KitSkillsetAdded : T.KitSkillsetRemoved, set, kit);
+                                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                                {
+                                    UCPlayer player = PlayerManager.OnlinePlayers[i];
+                                    if (player.ActiveKit is { Item: { } } && player.ActiveKit.LastPrimaryKey.Key == proxy.LastPrimaryKey.Key)
+                                    {
+                                        if (add)
+                                            player.EnsureSkillset(set);
+                                        else
+                                            player.RemoveSkillset(set.Speciality, set.SkillIndex);
+                                    }
+                                }
+
+                                return;
+                            }
+                            finally
+                            {
+                                proxy.Release();
+                            }
+                        }
+                    }
+                    throw ctx.Reply(T.KitInvalidSkillsetLevel, specialty switch
+                    {
+                        EPlayerSpeciality.DEFENSE => Localization.TranslateEnum((EPlayerDefense)skillset, ctx.CallerID),
+                        EPlayerSpeciality.OFFENSE => Localization.TranslateEnum((EPlayerOffense)skillset, ctx.CallerID),
+                        EPlayerSpeciality.SUPPORT => Localization.TranslateEnum((EPlayerSupport)skillset, ctx.CallerID),
+                        _ => skillset.ToString()
+                    }, level);
+                }
+            }
+            throw ctx.SendCorrectUsage("/kit skills <kit> <add|remove> <skill> [level]");
         }
         else ctx.SendCorrectUsage(Syntax);
     }

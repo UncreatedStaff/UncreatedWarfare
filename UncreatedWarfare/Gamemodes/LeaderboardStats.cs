@@ -19,6 +19,7 @@ public static class LeaderboardEx
 {
     public const string EmptyFieldNamePlaceholder = "---";
     public const string EmptyFieldPlaceholder = "--";
+    public static bool LeaderboardUp(this Gamemode? gamemode) => gamemode is IEndScreen { IsScreenUp: true };
     public static void RemoveLeaderboardModifiers(UCPlayer player)
     {
         player.Player.movement.sendPluginSpeedMultiplier(1f);

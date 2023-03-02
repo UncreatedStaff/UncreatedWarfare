@@ -4,6 +4,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -11,9 +12,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Networking;
+using Uncreated.Networking.Async;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -21,7 +24,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
@@ -32,9 +35,11 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Kits;
 // todo add delays to kits
-public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync, IGameTickListener, IPlayerDisconnectListener
+public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync, IGameTickListener, IPlayerDisconnectListener, ITCPConnectedListener
 {
+    private static int _v = 0;
     public static readonly KitMenuUI MenuUI = new KitMenuUI();
+    private readonly List<Kit> _kitListTemp = new List<Kit>(64);
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
     public static event KitChanged? OnKitChanged;
@@ -905,7 +910,6 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     private void OnPlayerLeaving(PlayerEvent e) => OnTeamPlayerCountChanged();
     private void OnPlayerJoined(PlayerJoined e) => OnTeamPlayerCountChanged();
     private void OnGroupChanged(GroupChanged e) => OnTeamPlayerCountChanged(e.Player);
-    private readonly List<Kit> _kitListTemp = new List<Kit>(64);
     internal void OnTeamPlayerCountChanged(UCPlayer? allPlayer = null)
     {
         if (allPlayer != null)
@@ -1433,6 +1437,18 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         await proxy.Enter(token).ConfigureAwait(false);
         try
         {
+            await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                if (!ctx.Caller.HasDownloadedKits)
+                    await ctx.Caller.DownloadKits(false, token).ConfigureAwait(false);
+            }
+            finally
+            {
+                ctx.Caller.PurchaseSync.Release();
+            }
+
+            await UCWarfare.ToUpdate(token);
             ulong team = ctx.Caller.GetTeam();
             Kit? kit;
             await WriteWaitAsync(token).ConfigureAwait(false);
@@ -1464,7 +1480,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                         throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
                 }
             }
-            else if (!HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
+            else if (!kit.RequiresNitro && !HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
                 throw ctx.Reply(T.RequestKitMissingAccess);
             if (kit.IsLimited(out _, out int allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
                 throw ctx.Reply(T.RequestKitLimited, allowedPlayers);
@@ -1484,13 +1500,15 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 !ctx.Caller.OnDutyOrAdmin() &&
                 !UCWarfare.Config.OverrideKitRequirements)
                 throw ctx.Reply(T.KitOnCooldown, premiumCooldown);
-
-            for (int i = 0; i < kit.UnlockRequirements.Length; i++)
+            if (kit.UnlockRequirements != null)
             {
-                UnlockRequirement req = kit.UnlockRequirements[i];
-                if (req.CanAccess(ctx.Caller))
-                    continue;
-                throw req.RequestKitFailureToMeet(ctx, kit);
+                for (int i = 0; i < kit.UnlockRequirements.Length; i++)
+                {
+                    UnlockRequirement req = kit.UnlockRequirements[i];
+                    if (req == null || req.CanAccess(ctx.Caller))
+                        continue;
+                    throw req.RequestKitFailureToMeet(ctx, kit);
+                }
             }
             bool hasAccess = kit.CreditCost == 0 && kit.IsPublicKit || UCWarfare.Config.OverrideKitRequirements;
             if (!hasAccess)
@@ -1499,13 +1517,26 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 await UCWarfare.ToUpdate(token);
                 if (!hasAccess)
                 {
-                    if (kit.IsPaid)
-                        ctx.Reply(T.RequestKitMissingAccess);
+                    if (kit.RequiresNitro)
+                    {
+                        try
+                        {
+                            bool nitroBoosting = await IsNitroBoosting(ctx.CallerID, token).ConfigureAwait(false) ?? ctx.Caller.Save.WasNitroBoosting;
+                            await UCWarfare.ToUpdate(token);
+                            if (!nitroBoosting)
+                                throw ctx.Reply(T.RequestKitMissingNitro);
+                        }
+                        catch (TimeoutException)
+                        {
+                            throw ctx.Reply(T.UnknownError);
+                        }
+                    }
+                    else if (kit.IsPaid)
+                        throw ctx.Reply(T.RequestKitMissingAccess);
                     else if (ctx.Caller.CachedCredits >= kit.CreditCost)
-                        ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
+                        throw ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
                     else
-                        ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
-                    return;
+                        throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
                 }
             }
             // recheck limits to make sure people can't request at the same time to avoid limits.
@@ -1663,14 +1694,14 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     {
         if (Data.Gamemode is not TeamGamemode { UseTeamSelector: true })
         {
-            Task t = SetupPlayer(player, token);
-            await RefreshFavorites(player, false, token).ConfigureAwait(false);
-            await t.ConfigureAwait(false);
+            _ = RefreshFavorites(player, false, token);
+            await SetupPlayer(player, token).ConfigureAwait(false);
             return;
         }
         UCInventoryManager.ClearInventory(player);
         player.EnsureSkillsets(Array.Empty<Skillset>());
-        await RefreshFavorites(player, false, token).ConfigureAwait(false);
+        _ = RefreshFavorites(player, false, token);
+        _ = IsNitroBoosting(player.Steam64, token);
     }
     Task IJoinedTeamListenerAsync.OnJoinTeamAsync(UCPlayer player, ulong team, CancellationToken token)
     {
@@ -1768,6 +1799,129 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                                     COLUMN_FAVORITE_PLAYER, COLUMN_EXT_PK) + sb, args, token).ConfigureAwait(false);
         player.KitMenuData.FavoritesDirty = false;
     }
+    public static bool IsNitroBoostingQuick(ulong player)
+    {
+        return PlayerSave.TryReadSaveFile(player, out PlayerSave save) && save.WasNitroBoosting;
+    }
+    /// <exception cref="TimeoutException"/>
+    public static async Task<bool?> IsNitroBoosting(ulong player, CancellationToken token = default)
+    {
+        bool?[]? state = await IsNitroBoosting(new ulong[] { player }, token).ConfigureAwait(false);
+        return state == null || state.Length < 1 ? null : state[0];
+    }
+    /// <exception cref="TimeoutException"/>
+    public static async Task<bool?[]?> IsNitroBoosting(ulong[] players, CancellationToken token = default)
+    {
+        if (!UCWarfare.CanUseNetCall)
+            return null;
+        bool?[] rtn = new bool?[players.Length];
+
+        RequestResponse response = await KitEx.NetCalls.RequestIsNitroBoosting
+            .Request(KitEx.NetCalls.RespondIsNitroBoosting, UCWarfare.I.NetClient!, players, 8192);
+        if (response.TryGetParameter(0, out byte[] state))
+        {
+            int len = Math.Min(state.Length, rtn.Length);
+            for (int i = 0; i < len; ++i)
+            {
+                byte b = state[i];
+                rtn[i] = b switch { 0 => false, 1 => true, _ => null };
+                if (b is 0 or 1)
+                {
+                    if (!PlayerSave.TryReadSaveFile(players[i], out PlayerSave save))
+                    {
+                        if (b != 1)
+                            continue;
+                        save = new PlayerSave(players[i]);
+                    }
+                    else if (save.WasNitroBoosting == (b == 1))
+                        continue;
+                    save.WasNitroBoosting = b == 1;
+                    PlayerSave.WriteToSaveFile(save);
+                }
+            }
+        }
+        else throw new TimeoutException("Timed out while checking nitro status.");
+
+        return rtn;
+    }
+    internal void OnNitroBoostingUpdated(ulong player, byte state)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        if (state is 0 or 1)
+        {
+            if (!PlayerSave.TryReadSaveFile(player, out PlayerSave save))
+            {
+                if (state != 1)
+                    return;
+                save = new PlayerSave(player);
+            }
+            else if (save.WasNitroBoosting == (state == 1))
+                return;
+            save.WasNitroBoosting = state == 1;
+            PlayerSave.WriteToSaveFile(save);
+            if (UCPlayer.FromID(player) is { } pl)
+            {
+                pl.SendChat(state == 1 ? T.StartedNitroBoosting : T.StoppedNitroBoosting);
+                WriteWait();
+                try
+                {
+                    for (int i = 0; i < Items.Count; ++i)
+                    {
+                        if (Items[i] is { Item: { RequiresNitro: true, Id: { } id } })
+                            Signs.UpdateKitSigns(pl, id);
+                    }
+                }
+                finally
+                {
+                    WriteRelease();
+                }
+                if (state == 0 && pl.ActiveKit is { Item.RequiresNitro: true })
+                {
+                    UCWarfare.RunTask(TryGiveRiflemanKit, pl, Data.Gamemode.UnloadToken,
+                        ctx: "Giving rifleman kit to " + player + " after losing nitro boost.");
+                }
+            }
+        }
+
+        string stateStr = state switch { 0 => "Not Boosting", 1 => "Boosting", _ => "Unknown" };
+        ActionLog.Add(ActionLogType.NitroBoostStateUpdated, "State: \"" + stateStr + "\".", player);
+        L.Log("Player {" + player + "} nitro boost status updated: \"" + stateStr + "\".", ConsoleColor.Magenta);
+    }
+    void ITCPConnectedListener.OnConnected()
+    {
+        int v = _v;
+        if (PlayerManager.OnlinePlayers.Count < 1)
+            return;
+        UCWarfare.RunTask(async () =>
+        {
+            CheckLoaded();
+
+            await UCWarfare.ToUpdate();
+            CheckLoaded();
+
+            ulong[] players = new ulong[PlayerManager.OnlinePlayers.Count];
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                players[i] = PlayerManager.OnlinePlayers[i].Steam64;
+            RequestResponse response = await KitEx.NetCalls.RequestIsNitroBoosting.Request(KitEx.NetCalls.RespondIsNitroBoosting,
+                UCWarfare.I.NetClient!, players, 8192);
+            CheckLoaded();
+            if (response.Responded && response.TryGetParameter(0, out byte[] bytes))
+            {
+                int len = Math.Min(bytes.Length, players.Length);
+                for (int i = 0; i < len; ++i)
+                    OnNitroBoostingUpdated(players[i], bytes[i]);
+            }
+
+            void CheckLoaded()
+            {
+                if (v != _v || !IsLoaded || !UCWarfare.CanUseNetCall)
+                    throw new OperationCanceledException();
+            }
+
+        }, ctx: "On Connected for KitManager.");
+    }
     #region Sql
     // ReSharper disable InconsistentNaming
     public const string TABLE_MAIN = "kits";
@@ -1795,6 +1949,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     public const string COLUMN_COST_CREDITS = "CreditCost";
     public const string COLUMN_COST_PREMIUM = "PremiumCost";
     public const string COLUMN_SQUAD_LEVEL = "SquadLevel";
+    public const string COLUMN_REQUIRES_NITRO = "RequiresNitro";
     public const string COLUMN_MAPS_WHITELIST = "MapFilterIsWhitelist";
     public const string COLUMN_FACTIONS_WHITELIST = "FactionFilterIsWhitelist";
     public const string COLUMN_CREATOR = "Creator";
@@ -1852,6 +2007,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             new Schema.Column(COLUMN_SQUAD_LEVEL, SqlTypes.Enum<SquadLevel>()) { Nullable = true },
             new Schema.Column(COLUMN_MAPS_WHITELIST, SqlTypes.BOOLEAN) { Nullable = true },
             new Schema.Column(COLUMN_FACTIONS_WHITELIST, SqlTypes.BOOLEAN) { Nullable = true },
+            new Schema.Column(COLUMN_REQUIRES_NITRO, SqlTypes.BOOLEAN) { Nullable = true },
             new Schema.Column(COLUMN_CREATOR, SqlTypes.STEAM_64) { Nullable = true },
             new Schema.Column(COLUMN_LAST_EDITOR, SqlTypes.STEAM_64) { Nullable = true },
             new Schema.Column(COLUMN_CREATION_TIME, SqlTypes.DATETIME) { Nullable = true },
@@ -1907,7 +2063,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         }
         bool hasPk = pk.IsValid;
         int pk2 = PrimaryKey.NotAssigned;
-        object[] objs = new object[hasPk ? 20 : 19];
+        object[] objs = new object[hasPk ? 21 : 20];
         objs[0] = item.Id ??= (hasPk ? pk.ToString() : "invalid_" + unchecked((uint)DateTime.UtcNow.Ticks));
         objs[1] = item.FactionKey.IsValid && item.FactionKey.Key != 0 ? item.FactionKey.Key : DBNull.Value;
         objs[2] = item.Class.ToString();
@@ -1921,19 +2077,20 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         objs[10] = item.SquadLevel <= SquadLevel.Member ? DBNull.Value : item.SquadLevel.ToString();
         objs[11] = item.CreditCost == 0 ? DBNull.Value : item.CreditCost;
         objs[12] = item.Type is KitType.Public or KitType.Special ? DBNull.Value : item.PremiumCost;
-        objs[13] = item.MapFilterIsWhitelist;
-        objs[14] = item.FactionFilterIsWhitelist;
-        objs[15] = item.Creator;
-        objs[16] = item.LastEditor;
-        objs[17] = item.CreatedTimestamp.UtcDateTime;
-        objs[18] = item.LastEditedTimestamp.UtcDateTime;
+        objs[13] = item.RequiresNitro;
+        objs[14] = item.MapFilterIsWhitelist;
+        objs[15] = item.FactionFilterIsWhitelist;
+        objs[16] = item.Creator;
+        objs[17] = item.LastEditor;
+        objs[18] = item.CreatedTimestamp.UtcDateTime;
+        objs[19] = item.LastEditedTimestamp.UtcDateTime;
         if (hasPk)
-            objs[19] = pk.Key;
+            objs[20] = pk.Key;
         await Sql.QueryAsync(F.BuildInitialInsertQuery(TABLE_MAIN, COLUMN_PK, hasPk, null, null,
                 COLUMN_KIT_ID, COLUMN_FACTION, COLUMN_CLASS, COLUMN_BRANCH,
                 COLUMN_TYPE, COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT, COLUMN_SEASON,
                 COLUMN_DISABLED, COLUMN_WEAPONS, COLUMN_SQUAD_LEVEL, COLUMN_COST_CREDITS,
-                COLUMN_COST_PREMIUM, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
+                COLUMN_COST_PREMIUM, COLUMN_REQUIRES_NITRO, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
                 COLUMN_LAST_EDITOR, COLUMN_CREATION_TIME, COLUMN_LAST_EDIT_TIME),
             objs, reader =>
             {
@@ -1941,10 +2098,10 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }, token).ConfigureAwait(false);
         if (pk2 >= 0)
             item.PrimaryKey = pk2;
-        StringBuilder builder = new StringBuilder(128);
+        StringBuilder builder = new StringBuilder(168);
         if (item.Items is { Length: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_ITEMS}` ({SqlTypes.ColumnList(
+            builder.Append($"DELETE FROM `{TABLE_ITEMS}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_ITEMS}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_ITEM_GUID, COLUMN_ITEM_X, COLUMN_ITEM_Y, COLUMN_ITEM_ROTATION, COLUMN_ITEM_PAGE,
                 COLUMN_ITEM_CLOTHING, COLUMN_ITEM_REDIRECT, COLUMN_ITEM_AMOUNT, COLUMN_ITEM_METADATA)}) VALUES ");
             objs = new object[item.Items.Length * 10];
@@ -1985,6 +2142,10 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 await Sql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
             builder.Clear();
         }
+        else
+        {
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_ITEMS}` WHERE `{COLUMN_EXT_PK}` = @0;", new object[] { pk2 }, token).ConfigureAwait(false);
+        }
 
         objs = new object[
             (item.UnlockRequirements != null ? item.UnlockRequirements.Length * 2 : 0) +
@@ -1996,7 +2157,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         int index = 0;
         if (item.UnlockRequirements is { Length: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_UNLOCK_REQUIREMENTS}` ({SqlTypes.ColumnList(
+            builder.Append($"DELETE FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_UNLOCK_REQUIREMENTS}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, UnlockRequirement.COLUMN_JSON)}) VALUES ");
             using MemoryStream str = new MemoryStream(48);
             for (int i = 0; i < item.UnlockRequirements.Length; ++i)
@@ -2015,10 +2176,14 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
             builder.Append("; ");
         }
+        else
+        {
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}` = @0;", new object[] { pk2 }, token).ConfigureAwait(false);
+        }
 
         if (item.Skillsets is { Length: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_SKILLSETS}` ({SqlTypes.ColumnList(
+            builder.Append($"DELETE FROM `{TABLE_SKILLSETS}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_SKILLSETS}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, Skillset.COLUMN_SKILL, Skillset.COLUMN_LEVEL)}) VALUES ");
             for (int i = 0; i < item.Skillsets.Length; ++i)
             {
@@ -2034,9 +2199,14 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
             builder.Append("; ");
         }
+        else
+        {
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_SKILLSETS}` WHERE `{COLUMN_EXT_PK}` = @0;", new object[] { pk2 }, token).ConfigureAwait(false);
+        }
+
         if (item.FactionFilter is { Length: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_FACTION_FILTER}` ({SqlTypes.ColumnList(
+            builder.Append($"DELETE FROM `{TABLE_SKILLSETS}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_FACTION_FILTER}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_FILTER_FACTION)}) VALUES ");
             for (int i = 0; i < item.FactionFilter.Length; ++i)
             {
@@ -2050,9 +2220,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
             builder.Append("; ");
         }
+        else
+        {
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_FACTION_FILTER}` WHERE `{COLUMN_EXT_PK}` = @0;", new object[] { pk2 }, token).ConfigureAwait(false);
+        }
         if (item.MapFilter is { Length: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_MAP_FILTER}` ({SqlTypes.ColumnList(
+            builder.Append($"DELETE FROM `{TABLE_MAP_FILTER}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_MAP_FILTER}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_FILTER_MAP)}) VALUES ");
             for (int i = 0; i < item.MapFilter.Length; ++i)
             {
@@ -2066,9 +2240,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
             builder.Append("; ");
         }
+        else
+        {
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_MAP_FILTER}` WHERE `{COLUMN_EXT_PK}` = @0;", new object[] { pk2 }, token).ConfigureAwait(false);
+        }
         if (item.RequestSigns is { Length: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_REQUEST_SIGNS}` ({SqlTypes.ColumnList(
+            builder.Append($"DELETE FROM `{TABLE_REQUEST_SIGNS}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_REQUEST_SIGNS}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_REQUEST_SIGN)}) VALUES ");
             for (int i = 0; i < item.RequestSigns.Length; ++i)
             {
@@ -2082,9 +2260,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
             builder.Append("; ");
         }
+        else
+        {
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_REQUEST_SIGNS}` WHERE `{COLUMN_EXT_PK}` = @0;", new object[] { pk2 }, token).ConfigureAwait(false);
+        }
         if (item.SignText is { Count: > 0 })
         {
-            builder.Append($"INSERT INTO `{TABLE_SIGN_TEXT}` ({SqlTypes.ColumnList(
+            builder.Append($"DELETE FROM `{TABLE_SIGN_TEXT}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_SIGN_TEXT}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, F.COLUMN_LANGUAGE, F.COLUMN_VALUE)}) VALUES ");
             int i = 0;
             foreach (KeyValuePair<string, string> pair in item.SignText)
@@ -2096,6 +2278,10 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 index += 3;
             }
             builder.Append(';');
+        }
+        else
+        {
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_SIGN_TEXT}` WHERE `{COLUMN_EXT_PK}` = @0;", new object[] { pk2 }, token).ConfigureAwait(false);
         }
 
         if (builder.Length > 0)
@@ -2115,7 +2301,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         await Sql.QueryAsync(F.BuildSelectWhereLimit1(TABLE_MAIN, COLUMN_PK, 0, COLUMN_KIT_ID, COLUMN_FACTION,
                 COLUMN_CLASS, COLUMN_BRANCH, COLUMN_TYPE, COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT,
                 COLUMN_SEASON, COLUMN_DISABLED, COLUMN_WEAPONS, COLUMN_SQUAD_LEVEL, COLUMN_COST_CREDITS,
-                COLUMN_COST_PREMIUM, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
+                COLUMN_COST_PREMIUM, COLUMN_REQUIRES_NITRO, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
                 COLUMN_LAST_EDITOR, COLUMN_CREATION_TIME, COLUMN_LAST_EDIT_TIME)
             , pkObjs, reader =>
             {
@@ -2192,7 +2378,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         await Sql.QueryAsync(F.BuildSelect(TABLE_MAIN, COLUMN_PK, COLUMN_KIT_ID, COLUMN_FACTION,
             COLUMN_CLASS, COLUMN_BRANCH, COLUMN_TYPE, COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT,
             COLUMN_SEASON, COLUMN_DISABLED, COLUMN_WEAPONS, COLUMN_SQUAD_LEVEL, COLUMN_COST_CREDITS,
-            COLUMN_COST_PREMIUM, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
+            COLUMN_COST_PREMIUM, COLUMN_REQUIRES_NITRO, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
             COLUMN_LAST_EDITOR, COLUMN_CREATION_TIME, COLUMN_LAST_EDIT_TIME),
             null, reader =>
             {
@@ -2376,16 +2562,17 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 : type is KitType.Loadout
                     ? decimal.Round(UCWarfare.Config.LoadoutCost, 2)
                     : new decimal(Math.Round(reader.GetDouble(colOffset + 13), 2)),
-            MapFilterIsWhitelist = !reader.IsDBNull(colOffset + 14) && reader.GetBoolean(colOffset + 14), 
-            FactionFilterIsWhitelist = !reader.IsDBNull(colOffset + 15) && reader.GetBoolean(colOffset + 15),
-            Creator = reader.IsDBNull(colOffset + 16) ? 0ul : reader.GetUInt64(colOffset + 16),
-            LastEditor = reader.IsDBNull(colOffset + 17) ? 0ul : reader.GetUInt64(colOffset + 17),
-            CreatedTimestamp = reader.IsDBNull(colOffset + 18)
-                ? DateTimeOffset.MinValue
-                : reader.GetDateTimeOffset(colOffset + 18),
-            LastEditedTimestamp = reader.IsDBNull(colOffset + 19)
+            RequiresNitro = !reader.IsDBNull(colOffset + 14) && reader.GetBoolean(colOffset + 14),
+            MapFilterIsWhitelist = !reader.IsDBNull(colOffset + 15) && reader.GetBoolean(colOffset + 15),
+            FactionFilterIsWhitelist = !reader.IsDBNull(colOffset + 16) && reader.GetBoolean(colOffset + 16),
+            Creator = reader.IsDBNull(colOffset + 17) ? 0ul : reader.GetUInt64(colOffset + 17),
+            LastEditor = reader.IsDBNull(colOffset + 18) ? 0ul : reader.GetUInt64(colOffset + 18),
+            CreatedTimestamp = reader.IsDBNull(colOffset + 19)
                 ? DateTimeOffset.MinValue
                 : reader.GetDateTimeOffset(colOffset + 19),
+            LastEditedTimestamp = reader.IsDBNull(colOffset + 20)
+                ? DateTimeOffset.MinValue
+                : reader.GetDateTimeOffset(colOffset + 20)
         };
     }
     /// <exception cref="FormatException"/>
@@ -3025,7 +3212,7 @@ public static class KitEx
         public static readonly NetCall<ulong, ulong, byte, Class, string> RequestCreateLoadout = new NetCall<ulong, ulong, byte, Class, string>(ReceiveCreateLoadoutRequest);
         public static readonly NetCall<string, ulong> RequestKitAccess = new NetCall<string, ulong>(ReceiveKitAccessRequest);
         public static readonly NetCall<string[], ulong> RequestKitsAccess = new NetCall<string[], ulong>(ReceiveKitsAccessRequest);
-
+        public static readonly NetCall<ulong[]> RequestIsNitroBoosting = new NetCall<ulong[]>(1138, capacity: sizeof(ulong) * 48 + sizeof(ushort));
 
         public static readonly NetCall<string, Class, string> SendKitClass = new NetCall<string, Class, string>(1114);
         public static readonly NetCallRaw<Kit?> SendKit = new NetCallRaw<Kit?>(1117, Util.ReadIReadWriteObjectNullable<Kit>, Util.WriteIReadWriteObjectNullable);
@@ -3033,6 +3220,8 @@ public static class KitEx
         public static readonly NetCall<string, int> SendAckCreateLoadout = new NetCall<string, int>(1111);
         public static readonly NetCall<int[]> SendAckSetKitsAccess = new NetCall<int[]>(1133);
         public static readonly NetCall<byte, byte[]> SendKitsAccess = new NetCall<byte, byte[]>(1137);
+        public static readonly NetCall<byte[]> RespondIsNitroBoosting = new NetCall<byte[]>(1139, 50);
+        public static readonly NetCall<ulong[], byte[]> SendNitroBoostingUpdated = new NetCall<ulong[], byte[]>(ReceiveIsNitroBoosting);
 
         [NetCall(ENetCall.FROM_SERVER, 1100)]
         internal static async Task<StandardErrorCode> ReceiveSetKitAccess(MessageContext context, ulong admin, ulong player, string kit, KitAccessType type, bool state)
@@ -3247,6 +3436,26 @@ public static class KitEx
             {
                 context.Reply(SendAckCreateLoadout, string.Empty, (int)StandardErrorCode.GenericError);
             }
+        }
+        [NetCall(ENetCall.FROM_SERVER, 1140)]
+        private static async Task ReceiveIsNitroBoosting(MessageContext context, ulong[] players, byte[] codes)
+        {
+            KitManager? manager = KitManager.GetSingletonQuick();
+            if (manager != null)
+            {
+                await UCWarfare.ToUpdate();
+                if (manager.IsLoaded)
+                {
+                    int len = Math.Min(players.Length, codes.Length);
+                    for (int i = 0; i < len; ++i)
+                    {
+                        manager.OnNitroBoostingUpdated(players[i], codes[i]);
+                    }
+                    context.Acknowledge(StandardErrorCode.Success);
+                    return;
+                }
+            }
+            context.Acknowledge(StandardErrorCode.ModuleNotLoaded);
         }
     }
 }

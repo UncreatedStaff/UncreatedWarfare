@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs;
@@ -220,10 +220,10 @@ public class RepairStationComponent : MonoBehaviour
                                 if (stationPlacer != null)
                                 {
                                     if (stationPlacer.CSteamID != nearby[i].lockedOwner)
-                                        Points.AwardXP(stationPlacer, Points.XPConfig.RepairVehicleXP, T.XPToastRepairedVehicle);
+                                        Points.AwardXP(stationPlacer, XPReward.RepairVehicle);
 
                                     if (!(stationPlacer.Steam64 == fob.Creator || stationPlacer.Steam64 == fob.Placer))
-                                        Points.TryAwardFOBCreatorXP(fob, Mathf.RoundToInt(Points.XPConfig.RepairVehicleXP * 0.5F), T.XPToastFOBRepairedVehicle);
+                                        Points.TryAwardFOBCreatorXP(fob, XPReward.RepairVehicle, 0.5f);
                                 }
                             }
                         }

@@ -1098,20 +1098,7 @@ public static class UCBarricadeManager
     {
         ThreadUtil.assertIsGameThread();
         Data.SendDestroyItem.Invoke(SDG.NetTransport.ENetReliability.Reliable,
-            Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instanceId, false);
-    }
-    public static void DestroyItem(byte x, byte y, uint instanceId, bool shouldPlayEffect)
-    {
-        SendRemoveItem(x, y, instanceId, false);
-        ItemRegion region = ItemManager.regions[x, y];
-        for (int i = region.items.Count - 1; i >= 0; --i)
-        {
-            if (region.items[i].instanceID == instanceId)
-            {
-                region.items.RemoveAt(i);
-                break;
-            }
-        }
+            Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instanceId, shouldPlayEffect);
     }
     public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius, List<RegionCoordinate> search)
     {

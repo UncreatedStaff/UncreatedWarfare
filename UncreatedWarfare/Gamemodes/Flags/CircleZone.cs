@@ -17,7 +17,7 @@ public sealed class CircleZone : Zone
     {
         if (data.UseMapCoordinates)
         {
-            _radius = data.ZoneData.Radius * ImageMultiplier;
+            _radius = FromMapCoordinates(data.ZoneData.Radius);
         }
         else
         {
@@ -85,7 +85,7 @@ public sealed class CircleZone : Zone
         DrawData d = new DrawData()
         {
             Center = ToMapCoordinates(Center),
-            Radius = _radius / ImageMultiplier
+            Radius = ToMapCoordinates(_radius)
         };
         d.Bounds = new Vector4(d.Center.x - d.Radius, d.Center.y - d.Radius, d.Center.x + d.Radius, d.Center.y + d.Radius);
         return d;

@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
 
@@ -23,6 +25,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     private bool _currentBuilderIsExisting;
     private List<Vector2>? _currentPoints;
     private List<KeyValuePair<Vector3, GridObject>>? _currentGridObjects;
+    private List<AdjacentFlagData>? _currentAdj;
     private float _lastZonePreviewRefresh;
     private static readonly List<ZonePlayerComponent> Builders = new List<ZonePlayerComponent>(2);
     internal static EffectAsset? Airdrop;
@@ -233,6 +236,8 @@ internal class ZonePlayerComponent : MonoBehaviour
         _currentBuilder.ZoneData.Z = pos.z;
         _undoBuffer.Clear();
         _redoBuffer.Clear();
+        _currentGridObjects?.Clear();
+        _currentAdj?.Clear();
         _currentBuilderIsExisting = false;
         switch (type)
         {
@@ -249,7 +254,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         string text = Localization.TranslateEnum(type, _player.Steam64);
         if (_edit != null)
         {
-            Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { _player.Player.channel.owner.transportConnection });
+            Data.HideAllUI(_player);
             EffectManager.sendUIEffect(_edit.id, EditKey, tc, true);
             _player.HasUIHidden = true;
             EffectManager.sendUIEffectText(EditKey, tc, true, "Name", name);
@@ -393,6 +398,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             _currentBuilderIsExisting = true;
             _currentBuilder = zone.Builder;
             _currentPoints?.Clear();
+            _currentAdj?.Clear();
             _currentGridObjects?.Clear();
             _undoBuffer.Clear();
             _redoBuffer.Clear();
@@ -424,12 +430,17 @@ internal class ZonePlayerComponent : MonoBehaviour
                         _currentGridObjects.Add(new KeyValuePair<Vector3, GridObject>(@object.transform.position, obj));
                 }
             }
+            if (_currentBuilder.Adjacencies is { Length: > 0 })
+            {
+                _currentAdj ??= new List<AdjacentFlagData>(_currentBuilder.Adjacencies.Length);
+                _currentAdj.AddRange(_currentBuilder.Adjacencies);
+            }
             Builders.Add(this);
             ITransportConnection tc = _player.Player.channel.owner.transportConnection;
             string text = Localization.TranslateEnum(_currentBuilder.ZoneType, _player.Steam64);
             if (_edit != null)
             {
-                Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { _player.Player.channel.owner.transportConnection });
+                Data.HideAllUI(_player);
                 EffectManager.sendUIEffect(_edit.id, EditKey, tc, true);
                 _player.HasUIHidden = true;
                 EffectManager.sendUIEffectText(EditKey, tc, true, "Name", _currentBuilder.Name);
@@ -540,6 +551,10 @@ internal class ZonePlayerComponent : MonoBehaviour
                             objs[i] = _currentGridObjects[i].Value;
                         _currentBuilder.GridObjects = objs;
                     }
+                    if (_currentAdj is { Count: > 0 })
+                    {
+                        _currentBuilder.Adjacencies = _currentAdj.ToArray();
+                    }
                     ZoneModel mdl;
                     try
                     {
@@ -577,8 +592,10 @@ internal class ZonePlayerComponent : MonoBehaviour
                             Builders.Remove(this);
                             _currentPoints = null;
                             _currentBuilder = null;
+                            _currentAdj = null;
                             _undoBuffer.Clear();
                             _redoBuffer.Clear();
+                            _currentGridObjects?.Clear();
                             if (_edit != null)
                                 EffectManager.askEffectClearByID(_edit.id, _player.Player.channel.owner.transportConnection);
                             _player.HasUIHidden = false;
@@ -599,6 +616,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 ctx.Reply(T.ZoneEditCancelled, _currentBuilder.Name ?? Translation.Null(T.ZoneEditCancelled.Flags));
                 _currentBuilder = null;
                 _currentPoints = null;
+                _currentAdj = null;
                 _undoBuffer.Clear();
                 _redoBuffer.Clear();
                 Builders.Remove(this);
@@ -1068,7 +1086,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     if (@object == null)
                         throw ctx.Reply(T.ZoneEditAddGridObjInvalid);
                     AddTransaction(new AddDelGridObjTransaction(@object, false, false));
-                    AddGridObject(@object);
+                    RemoveGridObject(@object);
                 }
                 else
                     throw ctx.Reply(T.ZoneEditAddGridObjInvalid);
@@ -1083,6 +1101,25 @@ internal class ZonePlayerComponent : MonoBehaviour
 
                 AddTransaction(new SetFloatTransaction(_currentBuilder.ZoneData.SizeX, sizex, SetFloatTransaction.FloatType.SizeX));
                 SetSizeX(sizex);
+            }
+            else if (ctx.MatchParameter(0, "size"))
+            {
+                float sizex;
+                if (!ctx.HasArgs(2))
+                    sizex = Mathf.Abs(pos.x - _currentBuilder.CenterX) * 2;
+                else if (!ctx.TryGet(1, out sizex))
+                    throw ctx.Reply(T.ZoneEditSizeXInvalid);
+
+                AddTransaction(new SetFloatTransaction(_currentBuilder.ZoneData.SizeX, sizex, SetFloatTransaction.FloatType.SizeX));
+                SetSizeX(sizex);
+                float sizez;
+                if (!ctx.HasArgs(2))
+                    sizez = Mathf.Abs(pos.z - _currentBuilder.CenterZ) * 2;
+                else if (!ctx.TryGet(1, out sizez))
+                    throw ctx.Reply(T.ZoneEditSizeZInvalid);
+
+                AddTransaction(new SetFloatTransaction(_currentBuilder.ZoneData.SizeZ, sizez, SetFloatTransaction.FloatType.SizeZ));
+                SetSizeZ(sizez);
             }
             else if (ctx.MatchParameter(0, "sizez", "height", "depth"))
             {
@@ -1179,6 +1216,148 @@ internal class ZonePlayerComponent : MonoBehaviour
                 else
                     ctx.Reply(T.ZoneEditRedoEmpty);
             }
+            else if (ctx.MatchParameter(0, "seeadj", "adj", "adjacencies"))
+            {
+                StringBuilder sb = new StringBuilder(127);
+                List<KeyValuePair<Zone, float>> adjacencies = new List<KeyValuePair<Zone, float>>(8);
+                List<KeyValuePair<Zone, float>> adjacents = new List<KeyValuePair<Zone, float>>(8);
+                ZoneList? list = Data.Singletons.GetSingleton<ZoneList>();
+                if (list != null)
+                {
+                    list.WriteWait();
+                    try
+                    {
+                        if (_currentAdj is { Count: > 0 })
+                        {
+                            for (int i = 0; i < _currentAdj.Count; ++i)
+                            {
+                                AdjacentFlagData adj = _currentAdj[i];
+                                if (adj.Weight <= 0) continue;
+                                Zone? zone = list.Items.FirstOrDefault(x => x.PrimaryKey.Key == adj.PrimaryKey.Key)?.Item;
+                                if (zone != null)
+                                {
+                                    adjacencies.Add(new KeyValuePair<Zone, float>(zone, adj.Weight));
+                                }
+                            }
+                        }
+                        if (_currentBuilder.Id > 0)
+                        {
+                            foreach (Zone zone in list.Items.Select(x => x.Item!).Where(x => x != null))
+                            {
+                                AdjacentFlagData adj = zone.Data.Adjacencies.FirstOrDefault(x => x.PrimaryKey.Key == _currentBuilder.Id);
+                                if (adj.PrimaryKey.Key == _currentBuilder.Id && adj.Weight > 0f)
+                                {
+                                    adjacents.Add(new KeyValuePair<Zone, float>(zone, adj.Weight));
+                                }
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        list.WriteRelease();
+                    }
+                }
+
+                foreach (KeyValuePair<Zone, float> fl in adjacents.OrderByDescending(x => x.Value).ThenBy(x => x.Key.Name))
+                {
+                    if (sb.Length != 0)
+                        sb.Append(", ");
+                    sb.Append(fl.Key.ShortName ?? fl.Key.Name);
+                    if (Mathf.Abs(fl.Value - 1f) > 0.0005f)
+                        sb.Append(" (").Append(fl.Value.ToString("0.##", ctx.Caller.Culture)).Append(')');
+                }
+
+                string adjt = sb.ToString();
+                if (_currentAdj is not { Count: > 0 })
+                {
+                    if (adjacencies.Count < 1)
+                        throw ctx.Reply(T.ZoneEditSeeAdjacenciesNone);
+
+                    ctx.Reply(T.ZoneEditSeeAdjacenciesNoneWithAdjacents);
+                    throw ctx.ReplyString(adjt);
+                }
+
+                sb.Clear();
+                foreach (KeyValuePair<Zone, float> adjacency in adjacencies)
+                {
+                    if (sb.Length != 0)
+                        sb.Append(", ");
+                    sb.Append(adjacency.Key.ShortName ?? adjacency.Key.Name);
+                    if (Mathf.Abs(adjacency.Value - 1f) > 0.0005f)
+                        sb.Append(" (").Append(adjacency.Value.ToString("0.##", ctx.Caller.Culture)).Append(')');
+                }
+
+                ctx.Reply(T.ZoneEditSeeAdjacencies);
+                ctx.ReplyString(sb.ToString());
+                if (adjacents.Count > 0)
+                {
+                    ctx.Reply(T.ZoneEditSeeAdjacents);
+                    throw ctx.ReplyString(adjt);
+                }
+                return;
+            }
+            else if (ctx.MatchParameter(0, "addadj", "addadjacency", "adj"))
+            {
+                string zonestr;
+                float weight = 1f;
+                if (ctx.HasArgsExact(2) || (ctx.HasArgsExact(3) && ctx.TryGet(2, out weight) && weight > 0f))
+                    zonestr = ctx.Get(1)!;
+                else throw ctx.Reply(T.ZoneEditAddAdjacencyInvalid);
+
+                Zone? zone = ZoneCommand.GetZone(zonestr);
+                if (zone == null)
+                    throw ctx.Reply(T.ZoneEditAddAdjacencyInvalid);
+                if (_currentAdj == null)
+                {
+                    _currentAdj = new List<AdjacentFlagData>(6);
+                }
+                else
+                {
+                    for (int index = 0; index < _currentAdj.Count; index++)
+                    {
+                        AdjacentFlagData adj = _currentAdj[index];
+                        if (adj.PrimaryKey.Key == zone.PrimaryKey.Key)
+                        {
+                            if (adj.Weight == weight)
+                                throw ctx.Reply(T.ZoneEditAddAdjacencyAlreadyAdded, zone);
+
+                            _currentAdj[index] = adj with { Weight = weight };
+                            throw ctx.Reply(T.ZoneEditAddAdjacencySuccess, zone, weight);
+                        }
+                    }
+                }
+                _currentAdj.Add(new AdjacentFlagData(zone.PrimaryKey.Key, weight));
+                throw ctx.Reply(T.ZoneEditAddAdjacencySuccess, zone, weight);
+            }
+            else if (ctx.MatchParameter(0, "deladj", "remadj"))
+            {
+                string zonestr;
+                float weight = 1f;
+                if (ctx.HasArgsExact(2))
+                    zonestr = ctx.Get(1)!;
+                else throw ctx.Reply(T.ZoneEditDeleteAdjacencyInvalid);
+
+                Zone? zone = ZoneCommand.GetZone(zonestr);
+                if (zone == null)
+                    throw ctx.Reply(T.ZoneEditDeleteAdjacencyInvalid);
+                if (_currentAdj != null)
+                {
+                    bool rem = false;
+                    for (int index = 0; index < _currentAdj.Count; index++)
+                    {
+                        AdjacentFlagData adj = _currentAdj[index];
+                        if (adj.PrimaryKey.Key == zone.PrimaryKey.Key)
+                        {
+                            weight = adj.Weight;
+                            _currentAdj.RemoveAt(index--);
+                            rem = true;
+                        }
+                    }
+                    if (rem)
+                        throw ctx.Reply(T.ZoneEditDeleteAdjacencySuccess, zone, weight);
+                }
+                throw ctx.Reply(T.ZoneEditDeleteAdjacencyNotFound, zone);
+            }
             else
             {
                 ctx.SendCorrectUsage(ZoneEditUsage);
@@ -1267,6 +1446,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         Vector3 pos = obj.GetPosition();
         _currentGridObjects.Add(new KeyValuePair<Vector3, GridObject>(pos, new GridObject(_currentBuilder!.Id, obj.instanceID, obj.GUID, pos.x, pos.y, pos.z, obj)));
         _player.SendChat(T.ZoneEditAddGridObjSuccess, obj.asset);
+        RefreshPreview();
     }
     private List<KeyValuePair<Vector3, GridObject>> RemoveAllGridObjects()
     {
@@ -1274,6 +1454,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         _player.SendChat(T.ZoneEditDelGridObjAllSuccess, old.Count, old.Count.S());
         if (old.Count > 0)
             _currentGridObjects!.Clear();
+        RefreshPreview();
         return old;
     }
     private void AddAllGridObjectsBack(List<KeyValuePair<Vector3, GridObject>> objs)
@@ -1284,6 +1465,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         else
             _currentGridObjects.AddRange(objs);
         _player.SendChat(T.ZoneEditAddGridObjAllSuccess, c, c.S());
+        RefreshPreview();
     }
     private void RemoveGridObject(LevelObject obj)
     {
@@ -1302,6 +1484,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 return;
             }
         }
+        RefreshPreview();
     }
     private void SetCenter(float x, float z, bool isSpawn)
     {

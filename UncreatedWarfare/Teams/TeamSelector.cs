@@ -161,7 +161,8 @@ public class TeamSelector : BaseSingletonComponent
         }
         if (player.TeamSelectorData is not { IsSelecting: true, SelectedTeam: 1 or 2, JoiningCoroutine: null } ||
             Data.Gamemode == null ||
-            Data.Gamemode.State is not State.Staging and not State.Active)
+            Data.Gamemode.State is not State.Staging and not State.Active ||
+            player.Player.life.isDead)
             return;
         
         JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, false);
@@ -172,11 +173,15 @@ public class TeamSelector : BaseSingletonComponent
         ITransportConnection c = player.Connection;
         JoinUI.LabelConfirm.SetText(c, T.TeamsUIJoining.Translate(player));
         yield return new WaitForSeconds(1f);
-
         if (player.TeamSelectorData is not null)
             player.TeamSelectorData.JoiningCoroutine = null;
 
         if (!player.IsOnline) yield break;
+        if (player.Player.life.isDead)
+        {
+            JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, true);
+            yield break;
+        }
 
         JoinTeam(player, targetTeam);
     }
@@ -227,7 +232,7 @@ public class TeamSelector : BaseSingletonComponent
     private static void ClearAllUI(UCPlayer player)
     {
         player.HasUIHidden = true;
-        Data.SendEffectClearAll.Invoke(ENetReliability.Reliable, player.Connection);
+        Data.HideAllUI(player);
     }
     private void JoinTeam(UCPlayer player, ulong team)
     {

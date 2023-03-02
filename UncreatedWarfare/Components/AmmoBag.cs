@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
 using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs;
@@ -40,7 +40,7 @@ public class AmmoBagComponent : MonoBehaviour
 
         UCPlayer? owner = UCPlayer.FromID(Drop.GetServersideData().owner);
         if (owner != null && owner.Steam64 != player.Steam64)
-            Points.AwardXP(owner, Points.XPConfig.ResupplyFriendlyXP, T.XPToastResuppliedTeammate);
+            Points.AwardXP(owner, XPReward.Resupply);
 
         if (Ammo <= 0 && Regions.tryGetCoordinate(Drop.model.position, out byte x, out byte y))
         {

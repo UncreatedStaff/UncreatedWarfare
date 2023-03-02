@@ -49,7 +49,7 @@ public class ActionLog : MonoBehaviour
             if (_types is null)
             {
                 FieldInfo[] fields = typeof(ActionLogType).GetFields(BindingFlags.Static | BindingFlags.Public);
-                _types = new char[(int)ActionLogType.Max][];
+                _types = new char[(int)ActionLogType.Max + 1][];
                 for (int i = 0; i < _types.Length; ++i)
                 {
                     FieldInfo? field = fields.FirstOrDefault(x => (byte)x.GetValue(null) == (byte)i && !x.Name.Equals(nameof(ActionLogType.Max)));
@@ -862,8 +862,14 @@ public enum ActionLogType : byte
     SetAmmo,
     [Translatable("SET_FIREMODE")]
     SetFiremode,
+    [Translatable("ADD_SKILLSET")]
+    AddSkillset,
+    [Translatable("REMOVE_SKILLSET")]
+    RemoveSkillset,
+    [Translatable("NITRO_BOOST_STATE_UPDATED")]
+    NitroBoostStateUpdated,
 
     [Obsolete("Don't use this.")]
-    Max = EnterMain
+    Max = NitroBoostStateUpdated
 }
 // ReSharper restore InconsistentNaming

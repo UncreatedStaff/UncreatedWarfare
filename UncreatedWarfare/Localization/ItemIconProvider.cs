@@ -5,12 +5,9 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Uncreated.Framework;
-using Uncreated.Framework.Assets;
 using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
-using UnityEngine;
 
 namespace Uncreated.Warfare;
 internal static class ItemIconProvider

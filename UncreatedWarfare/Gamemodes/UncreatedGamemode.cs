@@ -8,7 +8,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
@@ -23,7 +22,8 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Gamemodes.UI;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Singletons;
@@ -109,7 +109,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public virtual bool CustomSigns => true;
     public virtual GamemodeType GamemodeType => GamemodeType.Undefined;
     protected bool HasOnReadyRan => _hasOnReadyRan;
-    public bool EndScreenUp => this is IEndScreen es && es.IsScreenUp;
     public CancellationToken UnloadToken => _tokenSrc == null ? CancellationToken.None : _tokenSrc.Token;
     protected Gamemode(string name, float eventLoopSpeed)
     {
@@ -215,8 +214,17 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         using IDisposable profiler = ProfilingUtils.StartTracking(Name + " Unload Sequence");
 #endif
         await UCWarfare.ToUpdate(token);
+#if DEBUG
+        IDisposable profiler1 = ProfilingUtils.StartTracking(Name + " Unsubscribe");
+#endif
         Unsubscribe();
         InternalUnsubscribe();
+#if DEBUG
+        profiler1.Dispose();
+#endif
+#if DEBUG
+        IDisposable profiler2 = ProfilingUtils.StartTracking(Name + " Pre Dispose");
+#endif
         Task task = PreDispose(token);
         if (!task.IsCompleted)
         {
@@ -225,9 +233,21 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             ThreadUtil.assertIsGameThread();
         }
         InternalPreDispose();
+#if DEBUG
+        profiler2.Dispose();
+#endif
+#if DEBUG
+        IDisposable profiler3 = ProfilingUtils.StartTracking(Name + " Dispose");
+#endif
         await Data.Singletons.UnloadSingletonsInOrderAsync(_singletons, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
+#if DEBUG
+        profiler3.Dispose();
+#endif
+#if DEBUG
+        IDisposable profiler4 = ProfilingUtils.StartTracking(Name + " Post Dispose");
+#endif
         InternalPostDispose();
         task = PostDispose(token);
         if (!task.IsCompleted)
@@ -236,6 +256,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await UCWarfare.ToUpdate(token);
             ThreadUtil.assertIsGameThread();
         }
+#if DEBUG
+        profiler4.Dispose();
+#endif
 
         UCWarfare.I.ProcessTasks = false;
         try
@@ -700,6 +723,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     internal static async Task FailToLoadGame(Exception? ex, CancellationToken token)
     {
+        await UCWarfare.ToUpdate(token);
         L.LogError("Failed to load gamemode , shutting down in 10 seconds.");
         if (ex is not null)
         {
@@ -716,6 +740,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
         EffectManager.askEffectClearAll();
         await Data.Singletons.UnloadAllAsync(token).ConfigureAwait(false);
+        await UCWarfare.ToUpdate(token);
         Data.Gamemode = null!;
         UCWarfare.ForceUnload();
     }
@@ -860,15 +885,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 ShowStagingUI(e.Player);
         }
         OnGroupChanged(e);
-    }
-    internal void InvokeReloadUI(UCPlayer player)
-    {
-        ReloadUI(player);
-        if (ShowXPUI)
-            Points.UpdateXPUI(player);
-        if (ShowOFPUI)
-            Points.UpdateCreditsUI(player);
-        InvokeSingletonEvent<IReloadUIListener>(x => x.ReloadUI(player));
     }
     internal void InvokeLanguageChanged(UCPlayer player)
     {
@@ -1190,7 +1206,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         return Config.BarricadeAmmoCrate.MatchGuid(barricade.GUID);
     }
 
-    private void InvokeSingletonEvent<T>(Action<T> action, EventState? e = null)
+    protected void InvokeSingletonEvent<T>(Action<T> action, EventState? e = null)
     {
         ThreadUtil.assertIsGameThread();
 #if DEBUG
@@ -1234,8 +1250,17 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 }
             }
         }
+        for (int i = 0; i < Data.GamemodeListeners.Length; ++i)
+        {
+            if (Data.GamemodeListeners[i] is T t)
+            {
+                action(t);
+                if (e is { CanContinue: false })
+                    return;
+            }
+        }
     }
-    private async Task InvokeSingletonEvent<TSync, TAsync>(Action<TSync> action1, Func<TAsync, Task> action2, CancellationToken token = default, EventState? args = null, UCPlayer? onlineCheck = null)
+    protected async Task InvokeSingletonEvent<TSync, TAsync>(Action<TSync> action1, Func<TAsync, Task> action2, CancellationToken token = default, EventState? args = null, UCPlayer? onlineCheck = null)
     {
         if (!UCWarfare.IsMainThread)
             await UCWarfare.ToUpdate(token);
@@ -1269,6 +1294,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             {
                 tmFound |= t is TicketManager;
                 action1(t);
+                CheckContinue(args, onlineCheck);
             }
             else if (_singletons[i] is TAsync t2)
             {
@@ -1287,7 +1313,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (!tmFound && this is ITickets tickets && tickets.TicketManager.Provider != null)
         {
             if (tickets.TicketManager.Provider is TSync t)
+            {
                 action1(t);
+                CheckContinue(args, onlineCheck);
+            }
             else if (tickets.TicketManager.Provider is TAsync t2)
             {
                 Task task = action2(t2);
@@ -1302,7 +1331,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (this is IGameStats stats)
         {
             if (stats.GameStats is TSync t)
+            {
                 action1(t);
+                CheckContinue(args, onlineCheck);
+            }
             else if (stats.GameStats is TAsync t2)
             {
                 Task task = action2(t2);
@@ -1318,7 +1350,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 for (int i = 0; i < b.stats.Count; ++i)
                 {
                     if (b.stats[i] is TSync t2)
+                    {
                         action1(t2);
+                        CheckContinue(args, onlineCheck);
+                    }
                     else if (b.stats[i] is TAsync t3)
                     {
                         Task task = action2(t3);
@@ -1330,6 +1365,24 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                         }
                     }
                     else break;
+                }
+            }
+        }
+        for (int i = 0; i < Data.GamemodeListeners.Length; ++i)
+        {
+            if (Data.GamemodeListeners[i] is TSync t)
+            {
+                action1(t);
+                CheckContinue(args, onlineCheck);
+            }
+            else if (Data.GamemodeListeners[i] is TAsync t3)
+            {
+                Task task = action2(t3);
+                if (!task.IsCompleted)
+                {
+                    await task.ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
+                    CheckContinue(args, onlineCheck);
                 }
             }
         }
