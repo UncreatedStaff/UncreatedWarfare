@@ -723,6 +723,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     internal static async Task FailToLoadGame(Exception? ex, CancellationToken token)
     {
+        await UCWarfare.ToUpdate(token);
         L.LogError("Failed to load gamemode , shutting down in 10 seconds.");
         if (ex is not null)
         {
@@ -739,6 +740,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
         EffectManager.askEffectClearAll();
         await Data.Singletons.UnloadAllAsync(token).ConfigureAwait(false);
+        await UCWarfare.ToUpdate(token);
         Data.Gamemode = null!;
         UCWarfare.ForceUnload();
     }

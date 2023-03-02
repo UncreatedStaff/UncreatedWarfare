@@ -1712,7 +1712,27 @@ internal static class T
     // Zone > Edit > Radius
     public static readonly Translation ZoneEditRadiusInvalid = new Translation("<#ff8c69>Radius must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.");
     public static readonly Translation<float> ZoneEditRadiusSuccess = new Translation<float>("<#e6e3d5>Set radius to <#ff9999>{0}</color>.", "0.##");
-    
+
+    // Zone > Edit > See Adjacencies
+    public static readonly Translation ZoneEditSeeAdjacenciesNone = new Translation("<#ff8c69>This zone has no adjacencies.");
+    public static readonly Translation ZoneEditSeeAdjacenciesNoneWithAdjacents = new Translation("<#e6e3d5>This zone has no adjacencies, but is adjacent to:");
+    public static readonly Translation ZoneEditSeeAdjacencies = new Translation("<#e6e3d5>This zone has the following adjacencies:");
+    public static readonly Translation ZoneEditSeeAdjacents = new Translation("<#e6e3d5>It's adjacent to:");
+
+    // Zone > Edit > Add Adjacency
+    public static readonly Translation ZoneEditAddAdjacencyInvalid = new Translation("<#ff8c69>Adding an adjacency requires either: <zone> or <zone> <weight (float)> parameters.");
+    public static readonly Translation<Zone> ZoneEditAddAdjacencyAlreadyAdded = new Translation<Zone>("<#ff8c69>This zone already has <#ff9999>{0}</color> as an adjacency.");
+    public static readonly Translation<Zone, float> ZoneEditAddAdjacencySuccess = new Translation<Zone, float>("<#e6e3d5>Added adjacency to <#ff9999>{0}</color> with a weight of <#ff9999>{1}</color>.", arg1Fmt: "0.##");
+
+    // Zone > Edit > Delete Adjacency
+    public static readonly Translation ZoneEditDeleteAdjacencyInvalid = new Translation("<#ff8c69>Deleting an adjacency requires a <zone> parameter.");
+    public static readonly Translation<Zone> ZoneEditDeleteAdjacencyNotFound = new Translation<Zone>("<#ff8c69>This zone is not adjacent to <#ff9999>{0}</color>.");
+    public static readonly Translation<Zone, float> ZoneEditDeleteAdjacencySuccess = new Translation<Zone, float>("<#e6e3d5>Removed adjacency to <#ff9999>{0}</color> with a weight of <#ff9999>{1}</color>.", arg1Fmt: "0.##");
+
+    // Zone > Edit > Clear Adjacencies
+    public static readonly Translation ZoneEditClearAdjacencyInvalid = new Translation("<#ff8c69>This zone has no adjacencies.");
+    public static readonly Translation<Zone, float> ZoneEditClearAdjacenciesSuccess = new Translation<Zone, float>("<#e6e3d5>Removed adjacency to <#ff9999>{0}</color> with a weight of <#ff9999>{1}</color>.", arg1Fmt: "0.##");
+
     // Zone > Edit > Add Grid Object
     public static readonly Translation ZoneEditAddGridObjInvalid = new Translation("<#ff8c69>You must be looking at an interactable object.");
     public static readonly Translation ZoneEditAddGridObjAlreadyExists = new Translation("<#ff8c69>That object is already a grid object.");

@@ -342,7 +342,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
             ZoneType.Circle => 3,
             ZoneType.Rectangle => 4,
             _ => 0
-        } + mdl.Adjacencies.Length * 2 + mdl.GridObjects.Length * 6];
+        } + mdl.Adjacencies.Length * 2 + mdl.GridObjects.Length * 5];
         int index = 0;
         objs[0] = pk2;
         switch (mdl.ZoneType)
@@ -419,10 +419,8 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
                 if (i > 0)
                     sb.Append(',');
                 GridObject a = mdl.GridObjects[i];
-                objs[++index] = a.PrimaryKey;
-                sb.Append("(@0,@").Append(index.ToString(Data.AdminLocale));
                 objs[++index] = a.ObjectInstanceId;
-                sb.Append(",@").Append(index.ToString(Data.AdminLocale));
+                sb.Append("(@0,@").Append(index.ToString(Data.AdminLocale));
                 objs[++index] = a.Guid.ToString("N");
                 sb.Append(",@").Append(index.ToString(Data.AdminLocale));
                 objs[++index] = a.X;

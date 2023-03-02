@@ -17,7 +17,7 @@ public sealed class RectZone : Zone
     {
         if (data.UseMapCoordinates)
         {
-            _size = new Vector2(data.ZoneData.SizeX * ImageMultiplier, data.ZoneData.SizeZ * ImageMultiplier);
+            _size = new Vector2(FromMapCoordinates(data.ZoneData.SizeX), FromMapCoordinates(data.ZoneData.SizeZ));
         }
         else
         {
@@ -105,9 +105,9 @@ public sealed class RectZone : Zone
         DrawData d = new DrawData
         {
             Center = ToMapCoordinates(Center),
-            Size = new Vector2(_size.x / ImageMultiplier, _size.y / ImageMultiplier),
+            Size = new Vector2(ToMapCoordinates(_size.x), ToMapCoordinates(_size.y)),
             Lines = new Line[this._lines.Length],
-            Bounds = Bound / ImageMultiplier
+            Bounds = new Vector4(ToMapCoordinates(Bound.x), ToMapCoordinates(Bound.y), ToMapCoordinates(Bound.z), ToMapCoordinates(Bound.w))
         };
         for (int i = 0; i < _lines.Length; ++i)
         {

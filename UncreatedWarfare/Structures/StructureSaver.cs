@@ -684,12 +684,12 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             structure.Metadata = Util.CloneBytes(data.barricade.state);
         }
         save:
-        if (drop.interactable is InteractableSign sign && sign.text.StartsWith(Signs.KitPrefix, StringComparison.OrdinalIgnoreCase))
+        if (drop.interactable is InteractableSign sign && sign.text.StartsWith(Signs.Prefix + Signs.KitPrefix, StringComparison.OrdinalIgnoreCase))
         {
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {
-                SqlItem<Kit>? proxy = await manager.FindKit(sign.text.Substring(Signs.KitPrefix.Length), token).ConfigureAwait(false);
+                SqlItem<Kit>? proxy = await manager.FindKit(sign.text.Substring(Signs.Prefix.Length + Signs.KitPrefix.Length), token).ConfigureAwait(false);
                 if (proxy is { Item: { } kit })
                 {
                     await proxy.Enter(token);

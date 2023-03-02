@@ -675,6 +675,9 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             if (@lock)
                 PurchaseSync.Release();
         }
+
+        await UCWarfare.ToUpdate(token);
+        Signs.UpdateKitSigns(this, null);
     }
 
     public void SetCosmeticStates(bool state)

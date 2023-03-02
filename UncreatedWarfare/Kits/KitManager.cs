@@ -1437,6 +1437,18 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         await proxy.Enter(token).ConfigureAwait(false);
         try
         {
+            await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                if (!ctx.Caller.HasDownloadedKits)
+                    await ctx.Caller.DownloadKits(false, token).ConfigureAwait(false);
+            }
+            finally
+            {
+                ctx.Caller.PurchaseSync.Release();
+            }
+
+            await UCWarfare.ToUpdate(token);
             ulong team = ctx.Caller.GetTeam();
             Kit? kit;
             await WriteWaitAsync(token).ConfigureAwait(false);

@@ -690,12 +690,13 @@ public class DebugCommand : AsyncCommand
             {
                 for (byte b2 = 0; b2 < Regions.WORLD_SIZE; b2++)
                 {
-                    for (int i = 0; i < LevelObjects.objects[b, b2].Count; i++)
+                    List<LevelObject> objs = LevelObjects.objects[b, b2];
+                    for (int i = 0; i < objs.Count; i++)
                     {
-                        LevelObject obj = LevelObjects.objects[b, b2][i];
+                        LevelObject obj = objs[i];
                         if (obj.transform == t)
                         {
-                            ctx.ReplyString($"Vehicle {VehicleManager.vehicles[i].asset.vehicleName}: #{VehicleManager.vehicles[i].instanceID.ToString(Data.LocalLocale)}");
+                            ctx.ReplyString($"Vehicle {obj.asset.objectName} ({obj.asset.name}, {obj.asset.GUID:N}): #{obj.instanceID.ToString(Data.LocalLocale)}");
                             return;
                         }
                     }

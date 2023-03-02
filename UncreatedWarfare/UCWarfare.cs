@@ -1175,7 +1175,7 @@ public class UCWarfareNexus : IModuleNexus
             ShutdownCommand.ShutdownIn(10, "Uncreated Warfare unloading.");
         });
     }
-    public async Task Unload()
+    public async Task Unload(bool shutdown = true)
     {
         try
         {
@@ -1195,12 +1195,16 @@ public class UCWarfareNexus : IModuleNexus
             else
                 throw new SingletonLoadException(SingletonLoadType.Unload, null, ex);
         }
+        if (shutdown)
+        {
+            Provider.shutdown(0);
+        }
     }
     void IModuleNexus.shutdown()
     {
         Level.onPostLevelLoaded -= OnLevelLoaded;
         if (!UCWarfare.IsLoaded) return;
-        Unload().Wait();
+        Unload(false).Wait();
     }
 }
 

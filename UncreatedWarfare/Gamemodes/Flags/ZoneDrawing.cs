@@ -155,7 +155,7 @@ public static class ZoneDrawing
                 {
                     if (zone.IsInside(Zone.FromMapCoordinates(ptsToTest[i])))
                     {
-                        img.SetPixelClamp(Mathf.RoundToInt(ptsToTest[i].x), -(Mathf.RoundToInt(ptsToTest[i].y) - img.height / 2) + img.height / 2, zonecolor);
+                        img.SetPixelClamp(Mathf.RoundToInt(ptsToTest[i].x) + img.width / 2, img.height - (-(Mathf.RoundToInt(ptsToTest[i].y) - img.height / 2)), zonecolor);
                     }
                 }
                 for (int i = 0; i < 4; i++)

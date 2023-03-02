@@ -22,9 +22,12 @@ public abstract class Zone : IDeployable, IListItem
     /// <summary>
     /// For converting between image sources and coordinate sources.
     /// </summary>
-    protected static float ImageMultiplier;
+    private static float _imageMultiplier;
     internal static ushort LvlSize;
     internal static ushort LvlBrdr;
+    internal static bool HasCartographyVolume;
+    internal static Transform? CartographyTransform;
+    internal static Vector3 CartographyBoxSize;
 
     /// <summary>Returns a zone builder scaled to world coordinates.</summary>
     internal virtual ZoneBuilder Builder => new ZoneBuilder
@@ -44,18 +47,26 @@ public abstract class Zone : IDeployable, IListItem
     };
     internal static void OnLevelLoaded()
     {
-        LvlSize = Level.size;
-        LvlBrdr = Level.border;
-        ImageMultiplier = (LvlSize - LvlBrdr * 2) / (float)LvlSize;
+        CartographyVolume? volume = CartographyVolumeManager.Get()?.GetMainVolume();
+        if (volume != null)
+        {
+            HasCartographyVolume = true;
+            _imageMultiplier = 1;
+            CartographyTransform = volume.transform;
+            LvlBrdr = 0;
+            LvlSize = (ushort)Mathf.RoundToInt(Mathf.Max(volume.GetBoxSize().x, volume.GetBoxSize().z));
+            CartographyBoxSize = volume.GetBoxSize();
+        }
+        else
+        {
+            LvlSize = Level.size;
+            LvlBrdr = Level.border;
+            _imageMultiplier = (LvlSize - LvlBrdr * 2) / (float)LvlSize;
+            HasCartographyVolume = false;
+            CartographyTransform = null;
+            CartographyBoxSize = Vector3.one;
+        }
         _isReady = true;
-    }
-    /// <summary>
-    /// Convert 2 <see langword="float"/> that was gotten from the Map image to world coordinates.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static (float x, float y) FromMapCoordinates(float x, float y)
-    {
-        return ((x - LvlSize / 2) * ImageMultiplier, (y - LvlSize / 2) * -ImageMultiplier);
     }
     /// <summary>
     /// Convert a <see cref="Vector2"/> that was gotten from the Map image to world coordinates.
@@ -63,7 +74,26 @@ public abstract class Zone : IDeployable, IListItem
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector2 FromMapCoordinates(Vector2 v2)
     {
-        return new Vector2((v2.x - LvlSize / 2) * ImageMultiplier, (v2.y - LvlSize / 2) * -ImageMultiplier);
+        if (HasCartographyVolume && CartographyTransform != null)
+        {
+            Vector3 v3 = CartographyTransform.TransformPoint(new Vector3(v2.x, 0, v2.y));
+            v3 = new Vector3(v3.x / CartographyBoxSize.x, 0, v3.z / CartographyBoxSize.z);
+            return new Vector2(v3.x, v3.z);
+        }
+        return new Vector2((v2.x - LvlSize / 2) * _imageMultiplier, (v2.y - LvlSize / 2) * -_imageMultiplier);
+    }
+    /// <summary>
+    /// Convert a <see cref="float"/> scalar that was gotten from map image measurements to world measurements.
+    /// </summary>
+    protected static float FromMapCoordinates(float scalar)
+    {
+        if (HasCartographyVolume && CartographyTransform != null)
+        {
+            Vector3 v3 = CartographyTransform.TransformVector(scalar, 0, 0);
+            v3 = new Vector3(v3.x / CartographyBoxSize.x, 0, 0);
+            return v3.x;
+        }
+        return scalar * _imageMultiplier;
     }
     /// <summary>
     /// Convert a <see cref="Vector2"/> that was gotten from world coordinates to Map image coordinates.
@@ -71,7 +101,27 @@ public abstract class Zone : IDeployable, IListItem
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected static Vector2 ToMapCoordinates(Vector2 v2)
     {
-        return new Vector2(v2.x / ImageMultiplier, v2.y / ImageMultiplier);
+        if (HasCartographyVolume && CartographyTransform != null)
+        {
+            Vector3 v3 = CartographyTransform.InverseTransformPoint(new Vector3(v2.x, 0, v2.y));
+            v3 = new Vector3(v3.x * CartographyBoxSize.x, 0, v3.z * CartographyBoxSize.z);
+            return new Vector2(v3.x, v3.z);
+        }
+        return new Vector2(v2.x / _imageMultiplier, v2.y / _imageMultiplier);
+    }
+    /// <summary>
+    /// Convert a <see cref="float"/> scalar that was gotten from map world measurements to map image measurements.
+    /// </summary>
+    protected static float ToMapCoordinates(float scalar)
+    {
+        if (HasCartographyVolume && CartographyTransform != null)
+        {
+            Vector3 v3 = CartographyTransform.InverseTransformVector(scalar, 0, 0);
+            v3 = new Vector3(v3.x * CartographyBoxSize.x, 0, 0);
+            L.LogDebug($"to {scalar} -> {v3.x}");
+            return v3.x;
+        }
+        return scalar / _imageMultiplier;
     }
     internal readonly bool UseMapCoordinates;
     /// <summary>
