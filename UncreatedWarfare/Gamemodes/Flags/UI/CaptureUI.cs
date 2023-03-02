@@ -50,10 +50,10 @@ public class CaptureUI : UnturnedUI
     }
     private static void GetColors(ulong team, EFlagStatus type, out string backcolor, out string forecolor)
     {
-        if (type is EFlagStatus.LOSING)
+        if (type is EFlagStatus.LOSING or EFlagStatus.LOST)
             team = TeamManager.Other(team);
         const float darkness = 0.3f;
-        if (type is EFlagStatus.CAPTURING or EFlagStatus.CLEARING or EFlagStatus.LOSING)
+        if (type is EFlagStatus.CAPTURING or EFlagStatus.CLEARING or EFlagStatus.LOSING or EFlagStatus.LOST)
         {
             forecolor = TeamManager.GetTeamHexColor(team);
             Color tc = TeamManager.GetTeamColor(team);
@@ -65,6 +65,7 @@ public class CaptureUI : UnturnedUI
             {
                 EFlagStatus.CONTESTED => "contested",
                 EFlagStatus.SECURED => "secured",
+                EFlagStatus.NEUTRALIZED => "neutral",
                 EFlagStatus.LOCKED => "locked",
                 EFlagStatus.IN_VEHICLE => "invehicle",
                 _ => "nocap"

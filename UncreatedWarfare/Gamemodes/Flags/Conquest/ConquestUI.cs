@@ -132,11 +132,14 @@ public static class ConquestUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+
         if (flag.IsContested(out _))
         {
             return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
         }
 
+        if (flag.Points == 0)
+            return new CaptureUIParameters(team, EFlagStatus.NEUTRALIZED, flag);
         if (flag.Owner == 0)
             return new CaptureUIParameters(team, EFlagStatus.CAPTURING, flag);
         else if (flag.Owner == team)

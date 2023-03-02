@@ -21,125 +21,165 @@ public static class CTFUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (flag.LastDeltaPoints == 0)
+
+        L.Log(flag.LastDeltaPoints + " - FLAG DELTA");
+
+        if (inVehicle)
+            return new CaptureUIParameters(team, EFlagStatus.IN_VEHICLE, flag);
+
+        if (flag.Points == Flag.MaxPoints)
+        // flag is fully capped by team 1
         {
-            if (flag.IsContested(out _))
+            if (flag.IsCapturable(2))
             {
-                return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CONTESTED, flag);
+                if (flag.IsContested(out ulong winner))
+                    return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
+                else
+                {
+                    if (winner == 1)
+                    {
+                        if (team == 1)
+                            return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
+                        else if (team == 2)
+                            return new CaptureUIParameters(team, EFlagStatus.LOST, flag);
+
+                        return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+                    }
+                    else if (winner == 2)
+                    {
+                        if (team == 1)
+                            return new CaptureUIParameters(team, EFlagStatus.CLEARING, flag);
+                        else if (team == 2)
+                            return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+
+                        return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+                    }
+
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+                }
             }
             else
             {
-                if (flag.IsObj(team))
-                    return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
-                else
-                    return new CaptureUIParameters(team, EFlagStatus.NOT_OBJECTIVE, flag);
+                if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
+                else if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+
+                return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
             }
         }
-        else if (flag.LastDeltaPoints > 0)
+        else if (flag.Points == -Flag.MaxPoints)
+        // flag is fully capped by team 2
         {
-            if (team == 1)
+            if (flag.IsCapturable(1))
             {
-                if (flag.Points > 0)
-                {
-                    if (flag.Points < Flag.MaxPoints)
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
-                    }
-                }
+                if (flag.IsContested(out ulong winner))
+                    return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
                 else
                 {
-                    if (flag.Points > -Flag.MaxPoints)
+                    if (winner == 2)
                     {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CLEARING, flag);
+                        if (team == 2)
+                            return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
+                        else if (team == 1)
+                            return new CaptureUIParameters(team, EFlagStatus.LOST, flag);
+
+                        return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
                     }
-                    else
+                    else if (winner == 1)
                     {
-                        return new CaptureUIParameters(team, EFlagStatus.NOT_OWNED, flag);
+                        if (team == 2)
+                            return new CaptureUIParameters(team, EFlagStatus.CLEARING, flag);
+                        else if (team == 1)
+                            return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+
+                        return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
                     }
+
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
                 }
             }
             else
             {
-                if (flag.Points < 0)
-                {
-                    if (flag.Points > -Flag.MaxPoints)
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
-                    }
-                }
+                if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
+                else if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+
+                return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+        }
+        else if (flag.Points > 0)
+        // cap is on team 1's side
+        {
+            if (flag.LastDeltaPoints > 0)
+            // team 1 is capping
+            {
+                if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.CAPTURING, flag);
+                else if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+
+                return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+            else if (flag.LastDeltaPoints < 0)
+            // team 2 is capping
+            {
+                if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+                else if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.CLEARING, flag);
+
+                return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+            else
+            // no cap
+            {
+                if (flag.IsContested(out _))
+                    return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
                 else
-                {
-                    if (flag.Points < Flag.MaxPoints)
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, EFlagStatus.NOT_OWNED, flag);
-                    }
-                }
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+        }
+        else if (flag.Points < 0)
+        // cap is on team 2's side
+        {
+            if (flag.LastDeltaPoints > 0)
+            // team 1 is capping
+            {
+                if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.CLEARING, flag);
+                else if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+                else
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+            else if (flag.LastDeltaPoints < 0)
+            // team 2 is capping
+            {
+                if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+                else if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.CAPTURING, flag);
+                else
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+            else
+            // no cap
+            {
+                if (flag.IsContested(out _))
+                    return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
+                else
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
             }
         }
         else
+        // flag is neutral
         {
-            if (team == 2)
-            {
-                if (flag.Points < 0)
-                {
-                    if (flag.Points > -Flag.MaxPoints)
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
-                    }
-                }
-                else
-                {
-                    if (flag.Points < Flag.MaxPoints)
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CLEARING, flag);
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, EFlagStatus.NOT_OWNED, flag);
-                    }
-                }
-            }
+            if (flag.IsCapturable(team))
+                return new CaptureUIParameters(team, EFlagStatus.NEUTRALIZED, flag);
             else
-            {
-                if (flag.Points > 0)
-                {
-                    if (flag.Points < Flag.MaxPoints)
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
-                    }
-                }
-                else
-                {
-                    if (flag.Points > -Flag.MaxPoints)
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, EFlagStatus.NOT_OWNED, flag);
-                    }
-                }
-            }
+                return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
         }
     }
     public static void ClearCaptureUI(UCPlayer player)
@@ -313,19 +353,8 @@ public static class CTFUI
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (team != 1 && team != 2) return new CaptureUIParameters(0, EFlagStatus.DONT_DISPLAY, null!);
-        if (flag.IsAnObj)
-        {
-            return ComputeUI(team, flag, inVehicle); // if flag is objective send capturing ui.
-        }
-        else
-        {
-            if (flag.Owner == team)
-                return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
-            else if (flag.Owner == TeamManager.Other(team))
-                return new CaptureUIParameters(team, EFlagStatus.NOT_OWNED, flag);
-            else
-                return new CaptureUIParameters(team, EFlagStatus.NOT_OBJECTIVE, flag);
-        }
+
+        return ComputeUI(team, flag, inVehicle);
     }
 }
 
@@ -338,16 +367,18 @@ public enum EFlagStatus
     LOSING,
     [Translatable("SECURED")]
     SECURED,
+    [Translatable("NEUTRALIZED")]
+    NEUTRALIZED,
+    [Translatable("LOST")]
+    LOST,
     [Translatable("CONTESTED")]
     CONTESTED,
-    [Translatable("NOT OBJECTIVE")]
-    NOT_OBJECTIVE,
+    [Translatable("INEFFECTIVE")]
+    INEFFECTIVE,
     [Translatable("CLEARING")]
     CLEARING,
     [Translatable("")]
     BLANK,
-    [Translatable("NOT OWNED")]
-    NOT_OWNED,
     [Translatable("")]
     DONT_DISPLAY,
     [Translatable("IN VEHICLE")]

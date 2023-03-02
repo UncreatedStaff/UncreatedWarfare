@@ -387,9 +387,10 @@ partial class JSONMethods
         // capture ui
         { "contested", "ffdc8a" },
         { "secured", "80ff80" },
-        { "nocap", "855a5a" },
-        { "locked", "855a5a" },
-        { "invehicle", "855a5a" },
+        { "neutral", "b5b5b5" },
+        { "nocap", "8c8582" },
+        { "locked", "8c8582" },
+        { "invehicle", "8c8582" },
 
         // Other Flag Chats
         { "flag_neutralized", "e6e3d5" },

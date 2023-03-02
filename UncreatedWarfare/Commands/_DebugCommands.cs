@@ -220,6 +220,7 @@ public class DebugCommand : AsyncCommand
             {
                 flag.CapT1(Flag.MaxPoints - flag.Points - 1);
             }
+            ctx.ReplyString("Flag quick-capped.");
         }
         else if (team == 2)
         {
@@ -231,6 +232,7 @@ public class DebugCommand : AsyncCommand
             {
                 flag.CapT2(Flag.MaxPoints - flag.Points - 2);
             }
+            ctx.ReplyString("Flag quick-capped.");
         }
         else ctx.SendGamemodeError();
     }

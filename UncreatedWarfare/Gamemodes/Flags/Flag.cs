@@ -374,6 +374,47 @@ public class Flag : IDisposable, IObjective
         else if (team == 2) return T2Obj;
         else return false;
     }
+    public bool IsCapturable(ulong team)
+    {
+        if (Manager is not IFlagTeamObjectiveGamemode ctf)
+            return IsObj(team);
+
+        if (IsObj(team))
+            return true;
+
+        // double neutral feature
+
+        if (team == 2)
+        {
+            if (ctf.ObjectiveTeam2 != null &&
+                ctf.ObjectiveTeam2.Owner == 0 && 
+                ctf.ObjectiveTeam2.Points > 0 && 
+                Index == ctf.ObjectiveT2Index - 1 &&
+                Points > 0)
+            // if team 2's objective is neutralized and being lost to team 1, and this flag is team 2's next attack target and owned by team 1 
+            // i.e.:
+            // if our objective is neutralized and being lost to the enemy, and this flag is enemy controlled and our next attack target
+            {
+                return true;
+            }
+        }
+        else if (team == 1) 
+        {
+            if (ctf.ObjectiveTeam1 != null &&
+                ctf.ObjectiveTeam1.Owner == 0 &&
+                ctf.ObjectiveTeam1.Points < 0 &&
+                Index == ctf.ObjectiveT1Index + 1 &&
+                Points < 0)
+                // if team 1's objective is neutralized and being lost to team 2, and this flag is team 1's next attack target and owned by team 2 
+                // i.e.:
+                // if our objective is neutralized and being lost to the enemy, and this flag is enemy controlled and our next attack target
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
     public bool IsAttackSite(ulong team) => Manager.IsAttackSite(team, this);
     public bool IsDefenseSite(ulong team) => Manager.IsDefenseSite(team, this);
     public bool Discovered(ulong team)
@@ -411,8 +452,9 @@ public class Flag : IDisposable, IObjective
 #endif
         if (IsContestedOverride != null)
             return IsContestedOverride(this, out winner);
-        if ((T1Obj && T2Obj) || (T1Obj && Owner == 2) || (T2Obj && Owner == 1)) // must be objective for both teams
-        {
+
+        //if (IsCapturable(1) || IsCapturable(2)) // must be objective for both teams
+        //{
             if (Team1TotalCappers == 0 && Team2TotalCappers == 0)
             {
                 winner = 0;
@@ -453,15 +495,18 @@ public class Flag : IDisposable, IObjective
                 }
             }
 
+            if (!IsCapturable(winner))
+                return false;
+
             return winner == 0ul;
-        }
-        else
-        {
-            if (ObjectivePlayerCountCappers == 0) winner = 0;
-            else winner = WhosObj();
-            if (!IsObj(winner)) winner = 0;
-            return false;
-        }
+        //}
+        //else
+        //{
+        //    if (ObjectivePlayerCountCappers == 0) winner = 0;
+        //    else winner = WhosObj();
+        //    if (!IsObj(winner)) winner = 0;
+        //    return false;
+        //}
     }
     public void EvaluatePoints(bool overrideInactiveCheck = false)
     {
@@ -475,25 +520,23 @@ public class Flag : IDisposable, IObjective
         }
         if (Manager.State == State.Active || overrideInactiveCheck)
         {
-            if (IsAnObj)
+            if (!IsContested(out ulong winner))
             {
-                if (!IsContested(out ulong winner))
+                if (IsCapturable(winner))
                 {
-                    if (IsObj(winner))
+                    if (winner == 1 || winner == 2)
                     {
-                        if (winner == 1 || winner == 2)
-                        {
-                            Cap(winner, GetCaptureAmount(Gamemode.Config.AASCaptureScale, winner));
-                        }
+                        Cap(winner, GetCaptureAmount(Gamemode.Config.AASCaptureScale, winner));
                     }
                 }
-                else
-                {
-                    // invoke points updated method to show contested.
-                    this.LastDeltaPoints = 0;
-                    OnPointsChanged?.Invoke(_points, _points, this);
-                }
             }
+            else if (IsAnObj)
+            {
+                // invoke points updated method to show contested.
+                this.LastDeltaPoints = 0;
+                OnPointsChanged?.Invoke(_points, _points, this);
+            }
+
         }
     }
 

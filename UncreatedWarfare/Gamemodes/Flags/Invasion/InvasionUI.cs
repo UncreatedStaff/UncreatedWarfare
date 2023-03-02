@@ -18,173 +18,164 @@ public static class InvasionUI
         if (flag.Owner == atkTeam)
         {
             if (team == atkTeam)
-            {
                 return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
-            }
             else
-            {
                 return new CaptureUIParameters(team, EFlagStatus.LOCKED, flag);
-            }
         }
-        if (flag.LastDeltaPoints == 0)
+
+        if (flag.Points == Flag.MaxPoints)
+        // flag is fully capped by team 1
         {
-            if (flag.IsContested(out ulong winner))
+            if (flag.IsCapturable(2))
             {
-                return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CONTESTED, flag);
-            }
-            else
-            {
-                if (winner == team)
-                {
-                    if (flag.IsFull(team))
-                    {
-                        return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
-                    }
-                    else if (team == atkTeam || flag.Owner != atkTeam)
-                    {
-                        if (team == 1)
-                        {
-                            if (flag.Points < 0)
-                            {
-                                return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CLEARING, flag);
-                            }
-                            else
-                            {
-                                return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
-                            }
-                        }
-                        else
-                        {
-                            if (flag.Points > 0)
-                            {
-                                return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CLEARING, flag);
-                            }
-                            else
-                            {
-                                return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
-                    }
-                }
-                else if (winner == TeamManager.Other(team))
-                {
-                    return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
-                }
+                if (flag.IsContested(out ulong winner))
+                    return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
                 else
                 {
-                    return new CaptureUIParameters(team, EFlagStatus.NOT_OBJECTIVE, flag);
-                }
-            }
-        }
-        else if (flag.LastDeltaPoints > 0)
-        {
-            if (team == 1) // us
-            {
-                if (atkTeam == 1) // us team is capturing on attack
-                {
-                    if (flag.Points > 0)
+                    if (winner == 1)
                     {
-                        if (flag.Points < Flag.MaxPoints)
-                        {
-                            return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
-                        }
-                        else
-                        {
+                        if (team == 1)
                             return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
-                        }
+                        else if (team == 2)
+                            return new CaptureUIParameters(team, EFlagStatus.LOST, flag);
+
+                        return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
                     }
-                    else
+                    else if (winner == 2)
                     {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CLEARING, flag);
+                        if (team == 1)
+                            return new CaptureUIParameters(team, EFlagStatus.CLEARING, flag);
+                        else if (team == 2)
+                            return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+
+                        return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
                     }
-                }
-                else // us team is capturing on defence
-                {
-                    if (flag.Owner != 2)
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, EFlagStatus.LOCKED, flag);
-                    }
-                }
-            }
-            else // ru
-            {
-                if (atkTeam == 2) // ru team is losing on attack
-                {
-                    if (flag.Owner == 2)
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CONTESTED, flag);
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
-                    }
-                }
-                else // ru team is losing on defence
-                {
-                    return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
-                }
-            }
-        }
-        else // flag.LastDeltaPoints < 0
-        {
-            if (team == 1)
-            {
-                if (atkTeam == 1) // us team is losing on attack
-                {
-                    if (flag.Owner == 1)
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CONTESTED, flag);
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
-                    }
-                }
-                else // us team is losing on defence
-                {
-                    return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
+
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
                 }
             }
             else
             {
-                if (atkTeam == 2) // ru team is capturing on attack
+                if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
+                else if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+
+                return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+        }
+        else if (flag.Points == -Flag.MaxPoints)
+        // flag is fully capped by team 2
+        {
+            if (flag.IsCapturable(1))
+            {
+                if (flag.IsContested(out ulong winner))
+                    return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
+                else
                 {
-                    if (flag.Points < 0)
+                    if (winner == 2)
                     {
-                        if (flag.Points > -Flag.MaxPoints)
-                        {
-                            return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
-                        }
-                        else
-                        {
+                        if (team == 2)
                             return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
-                        }
+                        else if (team == 1)
+                            return new CaptureUIParameters(team, EFlagStatus.LOST, flag);
+
+                        return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
                     }
-                    else
+                    else if (winner == 1)
                     {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CLEARING, flag);
+                        if (team == 2)
+                            return new CaptureUIParameters(team, EFlagStatus.CLEARING, flag);
+                        else if (team == 1)
+                            return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+
+                        return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
                     }
-                }
-                else // ru team is capturing on defence
-                {
-                    if (flag.Owner != 1)
-                    {
-                        return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.CAPTURING, flag);
-                    }
-                    else
-                    {
-                        return new CaptureUIParameters(team, EFlagStatus.LOCKED, flag);
-                    }
+
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
                 }
             }
+            else
+            {
+                if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
+                else if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+
+                return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+        }
+        else if (flag.Points > 0)
+        // cap is on team 1's side
+        {
+            if (flag.LastDeltaPoints > 0)
+            // team 1 is capping
+            {
+                if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.CAPTURING, flag);
+                else if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+
+                return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+            else if (flag.LastDeltaPoints < 0)
+            // team 2 is capping
+            {
+                if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+                else if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.CLEARING, flag);
+
+                return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+            else
+            // no cap
+            {
+                if (flag.IsContested(out _))
+                    return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
+                else
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+        }
+        else if (flag.Points < 0)
+        // cap is on team 2's side
+        {
+            if (flag.LastDeltaPoints > 0)
+            // team 1 is capping
+            {
+                if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.CLEARING, flag);
+                else if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+                else
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+            else if (flag.LastDeltaPoints < 0)
+            // team 2 is capping
+            {
+                if (team == 1)
+                    return new CaptureUIParameters(team, EFlagStatus.LOSING, flag);
+                else if (team == 2)
+                    return new CaptureUIParameters(team, EFlagStatus.CAPTURING, flag);
+                else
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+            else
+            // no cap
+            {
+                if (flag.IsContested(out _))
+                    return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
+                else
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
+            }
+        }
+        else
+        // flag is neutral
+        {
+            if (flag.IsCapturable(team))
+                return new CaptureUIParameters(team, EFlagStatus.NEUTRALIZED, flag);
+            else
+                return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
         }
     }
     public static void SendFlagList(UCPlayer player)
@@ -358,7 +349,7 @@ public static class InvasionUI
             {
                 if (flag.Owner == TeamManager.Other(atkTeam))
                 {
-                    return new CaptureUIParameters(team, EFlagStatus.NOT_OBJECTIVE, flag);
+                    return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
                 }
                 else
                 {
@@ -367,7 +358,7 @@ public static class InvasionUI
             }
             else
             {
-                return new CaptureUIParameters(team, EFlagStatus.NOT_OBJECTIVE, flag);
+                return new CaptureUIParameters(team, EFlagStatus.INEFFECTIVE, flag);
             }
         }
     }
