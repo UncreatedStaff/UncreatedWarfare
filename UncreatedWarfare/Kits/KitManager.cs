@@ -73,13 +73,15 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         {
             WriteRelease();
         }
-        
-        foreach (SqlItem<Kit> kit in dirty)
+        if (dirty != null)
         {
-            if (kit.Item != null)
+            foreach (SqlItem<Kit> kit in dirty)
             {
-                await kit.SaveItem(token).ConfigureAwait(false);
-                kit.Item.IsLoadDirty = false;
+                if (kit.Item != null)
+                {
+                    await kit.SaveItem(token).ConfigureAwait(false);
+                    kit.Item.IsLoadDirty = false;
+                }
             }
         }
     }
