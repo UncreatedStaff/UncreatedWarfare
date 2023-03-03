@@ -59,7 +59,29 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         EventDispatcher.PlayerLeft += OnPlayerLeaving;
         OnItemsRefreshed += OnItemsRefreshedIntl;
         //await MigrateOldKits(token).ConfigureAwait(false);
-        await base.PostLoad(token).ConfigureAwait(false);
+        List<SqlItem<Kit>>? dirty = null;
+        WriteWait();
+        try
+        {
+            foreach (SqlItem<Kit> kit in List)
+            {
+                if (kit.Item is { IsLoadDirty: true })
+                    dirty!.Add(kit);
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+        
+        foreach (SqlItem<Kit> kit in dirty)
+        {
+            if (kit.Item != null)
+            {
+                await kit.SaveItem(token).ConfigureAwait(false);
+                kit.Item.IsLoadDirty = false;
+            }
+        }
     }
     private void OnItemsRefreshedIntl()
     {
@@ -297,7 +319,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         await kit.Enter(token).ConfigureAwait(false);
         try
         {
-            await WriteWaitAsync(token).ConfigureAwait(false);
+            WriteWait();
             Kit? kitItem;
             try
             {
@@ -1922,6 +1944,28 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
 
         }, ctx: "On Connected for KitManager.");
     }
+
+    private static void CheckKitForDuplicateItems(Kit kit)
+    {
+        if (kit.Items == null)
+            return;
+        for (int i = 0; i < kit.Items.Length; ++i)
+        {
+            IKitItem comparator = kit.Items[i];
+            for (int j = kit.Items.Length - 1; j > i; --j)
+            {
+                if (comparator.Equals(kit.Items[j]))
+                {
+                    IKitItem[] items = kit.Items;
+                    L.LogWarning("Duplicate item found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ":" + Environment.NewLine + comparator);
+                    Util.RemoveFromArray(ref items, j);
+                    kit.Items = items;
+                    kit.IsLoadDirty = true;
+                }
+            }
+        }
+    }
+
     #region Sql
     // ReSharper disable InconsistentNaming
     public const string TABLE_MAIN = "kits";
@@ -2369,6 +2413,9 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 F.ReadToTranslationList(reader, obj.SignText ??= new TranslationList(1), -1);
             }, token).ConfigureAwait(false);
         }
+
+        CheckKitForDuplicateItems(obj);
+        GC.Collect();
         return obj;
     }
     [Obsolete]
@@ -2529,7 +2576,9 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 }
             }
         }, token).ConfigureAwait(false);
-        
+        for (int i = 0; i < list.Count; ++i)
+            CheckKitForDuplicateItems(list[i]);
+        GC.Collect();
         return list.ToArray();
     }
     /// <exception cref="FormatException"/>

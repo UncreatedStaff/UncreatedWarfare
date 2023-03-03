@@ -54,6 +54,7 @@ public class UCWarfare : MonoBehaviour
     private Task? _earlyLoadTask;
     private readonly CancellationTokenSource _unloadCancellationTokenSource = new CancellationTokenSource();
     public readonly SemaphoreSlim PlayerJoinLock = new SemaphoreSlim(0, 1);
+    public float LastUpdateDetected = -1f;
     public bool FullyLoaded { get; private set; }
     public static CancellationToken UnloadCancel => IsLoaded ? I._unloadCancellationTokenSource.Token : CancellationToken.None;
     public static int Season => Version.Major;
@@ -659,6 +660,10 @@ public class UCWarfare : MonoBehaviour
     [UsedImplicitly]
     private void Update()
     {
+        if (LastUpdateDetected > 0 && (Provider.clients.Count == 0 || (Time.realtimeSinceStartup - LastUpdateDetected) > 3600))
+        {
+            StartCoroutine(ShutdownIn("Unturned Update", 0f));
+        }
         ProcessQueues();
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             PlayerManager.OnlinePlayers[i].Update();
@@ -1042,6 +1047,7 @@ public class UCWarfare : MonoBehaviour
         Task.Run(async () =>
         {
             await ToUpdate();
+            Provider.shutdown(seconds + 60, reason);
             await Nexus.Unload();
             Provider.shutdown(seconds, reason);
         });

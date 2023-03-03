@@ -65,6 +65,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public ulong Creator { get; set; }
     public DateTimeOffset LastEditedTimestamp { get; set; }
     public ulong LastEditor { get; set; }
+    internal bool IsLoadDirty;
     [JsonIgnore]
     internal List<KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>>? ItemListCache { get; set; }
 
@@ -979,6 +980,8 @@ public class AssetRedirectItem : IItemJar, IAssetRedirect, IKitItem
 
         return -1;
     }
+    public override bool Equals(object obj) => obj is AssetRedirectItem c && c.RedirectType == RedirectType && c.X == X && c.Y == Y && c.Page == Page;
+    public override string ToString() => $"AssetRedirectItem:     {RedirectType}, Pos: {X}, {Y}, Page: {Page}, Rot: {Rotation}";
 }
 public class AssetRedirectClothing : IClothingJar, IAssetRedirect, IKitItem
 {
@@ -1015,6 +1018,8 @@ public class AssetRedirectClothing : IClothingJar, IAssetRedirect, IKitItem
 
         return -1;
     }
+    public override bool Equals(object obj) => obj is AssetRedirectClothing c && c.Type == Type && c.RedirectType == RedirectType;
+    public override string ToString() => $"AssetRedirectClothing: {RedirectType}, Type: {Type}";
 }
 public class PageItem : IItemJar, IItem, IKitItem
 {
@@ -1166,6 +1171,8 @@ public class PageItem : IItemJar, IItem, IKitItem
         amount = default;
         return null;
     }
+    public override bool Equals(object obj) => obj is PageItem c && c.Item == Item && c.X == X && c.Y == Y && c.Page == Page && c.Rotation == Rotation && c.Amount == Amount && c.State.CompareBytes(State);
+    public override string ToString() => $"PageItem:              {_item:N}, Pos: {X}, {Y}, Page: {Page}, Rot: {Rotation}, Amount: {Amount}, State: byte[{State?.Length ?? 0}]";
 }
 public class ClothingItem : IClothingJar, IBaseItem, IKitItem
 {
@@ -1252,6 +1259,8 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
 
         return -1;
     }
+    public override bool Equals(object obj) => obj is ClothingItem c && c.Item == Item && c.Type == Type && c.State.CompareBytes(State);
+    public override string ToString() => $"ClothingItem:          {_item:N}, Type: {Type}, State: byte[{State?.Length ?? 0}]";
 }
 
 /// <summary>Max field character limit: <see cref="KitEx.SquadLevelMaxCharLimit"/>.</summary>

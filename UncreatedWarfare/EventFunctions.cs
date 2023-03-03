@@ -1601,6 +1601,7 @@ public static class EventFunctions
     {
         shouldShutdown = false;
         ShutdownCommand.ShutdownAfterGame("Unturned update \"v" + newVersion + "\".", false);
+        UCWarfare.I.LastUpdateDetected = Time.realtimeSinceStartup;
     }
     internal static void OnCraftRequested(CraftRequested e)
     {
