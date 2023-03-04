@@ -3,16 +3,12 @@ using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Networking;
@@ -25,6 +21,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
@@ -66,7 +63,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             foreach (SqlItem<Kit> kit in List)
             {
                 if (kit.Item is { IsLoadDirty: true })
-                    dirty!.Add(kit);
+                    (dirty ??= new List<SqlItem<Kit>>()).Add(kit);
             }
         }
         finally
@@ -79,6 +76,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             {
                 if (kit.Item != null)
                 {
+                    L.Log("Saving kit " + kit.Item.Id + " after dirty load.");
                     await kit.SaveItem(token).ConfigureAwait(false);
                     kit.Item.IsLoadDirty = false;
                 }
@@ -89,24 +87,127 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     {
         UCWarfare.RunTask(async () =>
         {
+            bool needsT1Unarmed = false, needsT2Unarmed = false, needsDefault = false;
             await WaitAsync().ConfigureAwait(false);
             try
             {
                 SqlItem<Kit>? kit = string.IsNullOrEmpty(TeamManager.Team1UnarmedKit) ? null : FindKitNoLock(TeamManager.Team1UnarmedKit!);
                 if (kit?.Item == null)
-                    L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to the " + TeamManager.Team2Faction.Name + " faction.");
+                {
+                    needsT1Unarmed = true;
+                    L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, an attempt will be made to auto-generate one.");
+                }
                 kit = string.IsNullOrEmpty(TeamManager.Team2UnarmedKit) ? null : FindKitNoLock(TeamManager.Team2UnarmedKit!);
                 if (kit?.Item == null)
-                    L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to the " + TeamManager.Team2Faction.Name + " faction.");
+                {
+                    needsT2Unarmed = true;
+                    L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, an attempt will be made to auto-generate one.");
+                }
                 kit = string.IsNullOrEmpty(TeamManager.DefaultKit) ? null : FindKitNoLock(TeamManager.DefaultKit);
                 if (kit?.Item == null)
-                    L.LogError("The default kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to the team config.");
+                {
+                    needsDefault = true;
+                    L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, an attempt will be made to auto-generate one.");
+                }
             }
             finally
             {
                 Release();
             }
+
+            if (!needsDefault && !needsT1Unarmed && !needsT2Unarmed)
+                return;
+            if (needsT1Unarmed && !string.IsNullOrEmpty(TeamManager.Team1UnarmedKit))
+            {
+                SqlItem<Kit> proxy = await CreateDefaultKit(TeamManager.Team1Faction, TeamManager.Team1UnarmedKit!);
+                L.Log("Created default kit for team 1: \"" + proxy.Item?.Id + "\".");
+            }
+            if (needsT2Unarmed && !string.IsNullOrEmpty(TeamManager.Team2UnarmedKit))
+            {
+                SqlItem<Kit> proxy = await CreateDefaultKit(TeamManager.Team2Faction, TeamManager.Team2UnarmedKit!);
+                L.Log("Created default kit for team 2: \"" + proxy.Item?.Id + "\".");
+            }
+            if (needsDefault && !string.IsNullOrEmpty(TeamManager.DefaultKit))
+            {
+                SqlItem<Kit> proxy = await CreateDefaultKit(null, TeamManager.DefaultKit);
+                L.Log("Created default kit: \"" + proxy.Item?.Id + "\".");
+            }
         });
+    }
+
+    private static readonly IKitItem[] DefaultKitItems =
+    {
+        // MRE
+        new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 0, 0, 0, Array.Empty<byte>(), 1, Page.Hands),
+        new PageItem(new Guid("acf7e825832f4499bb3b7cbec4f634ca"), 1, 0, 0, Array.Empty<byte>(), 1, Page.Hands),
+
+        // Bottled Soda
+        new PageItem(new Guid("c83390665c6546b8befbf6f15ef202c4"), 2, 0, 0, Array.Empty<byte>(), 1, Page.Hands),
+
+        // Bottled Water
+        new PageItem(new Guid("f81d68ebb2a8490dbe1545d432b9c099"), 2, 1, 0, Array.Empty<byte>(), 1, Page.Hands),
+
+        // Binoculars
+        new PageItem(new Guid("f260c581cf504098956f424d62345982"), 0, 2, 0, Array.Empty<byte>(), 1, Page.Hands),
+
+        // Earpiece
+        new ClothingItem(new Guid("2ecf1b15a59f4125a2d55c88479529c2"), ClothingType.Mask, Array.Empty<byte>())
+    };
+
+    private static readonly IKitItem[] DefaultKitClothes =
+    {
+        new ClothingItem(new Guid("c3adf16156004b40a839ed1b80583c32"), ClothingType.Shirt, Array.Empty<byte>()),
+        new ClothingItem(new Guid("67a6ec52e4b24ffd89f75ceee0eb5179"), ClothingType.Pants, Array.Empty<byte>())
+    };
+    private async Task<SqlItem<Kit>> CreateDefaultKit(FactionInfo? faction, string name, CancellationToken token = default)
+    {
+        List<IKitItem> items = new List<IKitItem>(DefaultKitItems.Length + 6);
+        items.AddRange(DefaultKitItems);
+        SqlItem<Kit>? proxy = await FindKit(name, token, true).ConfigureAwait(false);
+        if (proxy is not null)
+            return proxy;
+        if (faction != null)
+        {
+            if (faction.DefaultShirt.ValidReference(out ItemShirtAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Shirt }))
+                items.Add(new AssetRedirectClothing(RedirectType.Shirt, ClothingType.Shirt));
+            if (faction.DefaultPants.ValidReference(out ItemPantsAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Pants }))
+                items.Add(new AssetRedirectClothing(RedirectType.Pants, ClothingType.Pants));
+            if (faction.DefaultVest.ValidReference(out ItemVestAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Vest }))
+                items.Add(new AssetRedirectClothing(RedirectType.Vest, ClothingType.Vest));
+            if (faction.DefaultHat.ValidReference(out ItemHatAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Hat }))
+                items.Add(new AssetRedirectClothing(RedirectType.Hat, ClothingType.Hat));
+            if (faction.DefaultMask.ValidReference(out ItemMaskAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Mask }))
+                items.Add(new AssetRedirectClothing(RedirectType.Mask, ClothingType.Mask));
+            if (faction.DefaultBackpack.ValidReference(out ItemBackpackAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Backpack }))
+                items.Add(new AssetRedirectClothing(RedirectType.Backpack, ClothingType.Backpack));
+            if (faction.DefaultGlasses.ValidReference(out ItemGlassesAsset _) && !items.Exists(x => x is IClothingJar { Type: ClothingType.Glasses }))
+                items.Add(new AssetRedirectClothing(RedirectType.Glasses, ClothingType.Glasses));
+            Kit kit = new Kit(name, Class.Unarmed, GetDefaultBranch(Class.Unarmed), KitType.Special, SquadLevel.Member, faction)
+            {
+                Items = items.ToArray(),
+                FactionFilter = new PrimaryKey[] { faction.PrimaryKey },
+                FactionFilterIsWhitelist = true
+            };
+            proxy = await AddOrUpdate(kit, token).ConfigureAwait(false);
+        }
+        else
+        {
+            for (int i = 0; i < DefaultKitClothes.Length; ++i)
+            {
+                if (DefaultKitClothes[i] is IClothingJar jar && !items.Exists(x => x is IClothingJar jar2 && jar2.Type == jar.Type))
+                {
+                    items.Add(DefaultKitClothes[i]);
+                }
+            }
+            Kit kit = new Kit(name, Class.Unarmed, GetDefaultBranch(Class.Unarmed), KitType.Special, SquadLevel.Member, null)
+            {
+                Items = items.ToArray()
+            };
+            proxy = await AddOrUpdate(kit, token).ConfigureAwait(false);
+        }
+        ActionLog.Add(ActionLogType.CreateKit, name);
+        UpdateSigns(proxy);
+        return proxy;
     }
     public override async Task PreUnload(CancellationToken token)
     {
@@ -576,23 +677,30 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     ReportItemError(kit, item, asset);
                     continue;
                 }
-                flag |= (byte)(1 << (int)clothingJar.Type);
-                ClientInstanceMethod<Guid, byte, byte[], bool>? inv =
-                    clothingJar.Type switch
-                    {
-                        ClothingType.Shirt => Data.SendWearShirt,
-                        ClothingType.Pants => Data.SendWearPants,
-                        ClothingType.Hat => Data.SendWearHat,
-                        ClothingType.Backpack => Data.SendWearBackpack,
-                        ClothingType.Vest => Data.SendWearVest,
-                        ClothingType.Mask => Data.SendWearMask,
-                        ClothingType.Glasses => Data.SendWearGlasses,
-                        _ => null
-                    };
-                if (inv != null)
+                if ((flag & (1 << (int)clothingJar.Type)) == 0)
                 {
-                    inv.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), asset.GUID, 100, state, !hasPlayedEffect);
-                    hasPlayedEffect = true;
+                    flag |= (byte)(1 << (int)clothingJar.Type);
+                    ClientInstanceMethod<Guid, byte, byte[], bool>? inv =
+                        clothingJar.Type switch
+                        {
+                            ClothingType.Shirt => Data.SendWearShirt,
+                            ClothingType.Pants => Data.SendWearPants,
+                            ClothingType.Hat => Data.SendWearHat,
+                            ClothingType.Backpack => Data.SendWearBackpack,
+                            ClothingType.Vest => Data.SendWearVest,
+                            ClothingType.Mask => Data.SendWearMask,
+                            ClothingType.Glasses => Data.SendWearGlasses,
+                            _ => null
+                        };
+                    if (inv != null)
+                    {
+                        inv.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), asset.GUID, 100, state, !hasPlayedEffect);
+                        hasPlayedEffect = true;
+                    }
+                }
+                else
+                {
+                    L.LogWarning("Duplicate " + clothingJar.Type + " defined for " + kit.Id + ", " + item + ".");
                 }
             }
             byte[] blank = Array.Empty<byte>();
@@ -624,7 +732,30 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     continue;
                 ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
                 if ((int)jar.Page < PlayerInventory.PAGES - 2 && asset != null)
-                    p[(int)jar.Page].addItem(jar.X, jar.Y, jar.Rotation, new Item(asset.id, amt, 100, state));
+                {
+                    Items page = p[(int)jar.Page];
+                    if (jar.Page is Page.Primary or Page.Secondary && page.getItemCount() > 0)
+                    {
+                        L.LogWarning("Duplicate " + jar.Page.ToString().ToLowerInvariant() + " defined for " + kit.Id + ", " + item + ".");
+                        L.Log("Removing " + (page.items[0].GetAsset().itemName) + " in place of duplicate.");
+                        page.removeItem(0);
+                    }
+#if DEBUG
+                    // checks for overlapping items
+                    int ic2 = page.getItemCount();
+                    for (int j = 0; j < ic2; ++j)
+                    {
+                        ItemJar? jar2 = page.getItem((byte)j);
+                        if (jar2 != null && UCInventoryManager.IsOverlapping(jar, asset, jar2.x, jar2.y, jar2.size_x, jar2.size_y, jar2.rot))
+                        {
+                            L.LogWarning("Overlapping item in " + jar.Page.ToString().ToLowerInvariant() + " defined for " + kit.Id + ", " + item + ".");
+                            L.Log("Removing " + (jar2.GetAsset().itemName) + " (" + jar2.x + ", " + jar2.y + " @ " + jar2.rot + "), in place of duplicate.");
+                            page.removeItem((byte)j--);
+                        }
+                    }
+#endif
+                    page.addItem(jar.X, jar.Y, jar.Rotation, new Item(asset.id, amt, 100, state));
+                }
                 else
                     ReportItemError(kit, item, asset);
             }
@@ -636,14 +767,14 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         {
             foreach (IKitItem item in kit.Items)
             {
-                ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
-                if (asset is null)
-                {
-                    ReportItemError(kit, item, null);
-                    return;
-                }
                 if (item is IClothingJar clothing)
                 {
+                    ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
+                    if (asset is null)
+                    {
+                        ReportItemError(kit, item, null);
+                        return;
+                    }
                     if (clothing.Type == ClothingType.Shirt)
                     {
                         if (asset is ItemShirtAsset shirt)
@@ -688,18 +819,35 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     }
                     else
                         goto e;
+
                     continue;
-                }
-
-                e:
-                ReportItemError(kit, item, asset);
-                Item uitem = new Item(asset.id, amt, 100, state);
-
-                if (item is not IItemJar jar || !player.Player.inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation))
-                {
+                    e:
+                    ReportItemError(kit, item, asset);
+                    Item uitem = new Item(asset.id, amt, 100, state);
                     if (!player.Player.inventory.tryAddItem(uitem, true))
                     {
                         ItemManager.dropItem(uitem, player.Position, false, true, true);
+                    }
+                }
+            }
+            foreach (IKitItem item in kit.Items)
+            {
+                if (item is not IClothingJar)
+                {
+                    ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
+                    if (asset is null)
+                    {
+                        ReportItemError(kit, item, null);
+                        return;
+                    }
+                    Item uitem = new Item(asset.id, amt, 100, state);
+
+                    if (item is not IItemJar jar || !player.Player.inventory.tryAddItem(uitem, jar.X, jar.Y, (byte)jar.Page, jar.Rotation))
+                    {
+                        if (!player.Player.inventory.tryAddItem(uitem, true))
+                        {
+                            ItemManager.dropItem(uitem, player.Position, false, true, true);
+                        }
                     }
                 }
             }
@@ -1722,7 +1870,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             await SetupPlayer(player, token).ConfigureAwait(false);
             return;
         }
-        UCInventoryManager.ClearInventory(player);
+        //UCInventoryManager.ClearInventory(player);
         player.EnsureSkillsets(Array.Empty<Skillset>());
         _ = RefreshFavorites(player, false, token);
         _ = IsNitroBoosting(player.Steam64, token);
@@ -1947,22 +2095,155 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         }, ctx: "On Connected for KitManager.");
     }
 
-    private static void CheckKitForDuplicateItems(Kit kit)
+    private static void CheckKitForDuplicateEntries(Kit kit)
     {
-        if (kit.Items == null)
-            return;
-        for (int i = 0; i < kit.Items.Length; ++i)
+        if (kit.FactionFilter != null)
         {
-            IKitItem comparator = kit.Items[i];
-            for (int j = kit.Items.Length - 1; j > i; --j)
+            for (int i = 0; i < kit.FactionFilter.Length; ++i)
             {
-                if (comparator.Equals(kit.Items[j]))
+                PrimaryKey comparator = kit.FactionFilter[i];
+                for (int j = kit.FactionFilter.Length - 1; j > i; --j)
                 {
-                    IKitItem[] items = kit.Items;
-                    L.LogWarning("Duplicate item found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ":" + Environment.NewLine + comparator);
-                    Util.RemoveFromArray(ref items, j);
-                    kit.Items = items;
-                    kit.IsLoadDirty = true;
+                    if (comparator.Key == kit.FactionFilter[j].Key)
+                    {
+                        PrimaryKey[] keys = kit.FactionFilter;
+                        L.LogWarning("Duplicate faction filter found in kit \"" + kit.Id + "\" " + kit.PrimaryKey +
+                                     ": " + TeamManager.GetFactionInfo(keys[i])?.Name + ".");
+                        Util.RemoveFromArray(ref keys, j);
+                        kit.FactionFilter = keys;
+                        kit.IsLoadDirty = true;
+                    }
+                }
+            }
+        }
+        if (kit.MapFilter != null)
+        {
+            for (int i = 0; i < kit.MapFilter.Length; ++i)
+            {
+                PrimaryKey comparator = kit.MapFilter[i];
+                for (int j = kit.MapFilter.Length - 1; j > i; --j)
+                {
+                    if (comparator.Key == kit.MapFilter[j].Key)
+                    {
+                        PrimaryKey[] keys = kit.MapFilter;
+                        L.LogWarning("Duplicate map filter found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ": " + MapScheduler.GetMapName(keys[i]) + ".");
+                        Util.RemoveFromArray(ref keys, j);
+                        kit.MapFilter = keys;
+                        kit.IsLoadDirty = true;
+                    }
+                }
+            }
+        }
+        if (kit.Skillsets != null)
+        {
+            for (int i = 0; i < kit.Skillsets.Length; ++i)
+            {
+                Skillset comparator = kit.Skillsets[i];
+                for (int j = kit.Skillsets.Length - 1; j > i; --j)
+                {
+                    if (comparator == kit.Skillsets[j])
+                    {
+                        Skillset[] skillsets = kit.Skillsets;
+                        L.LogWarning("Duplicate skillset found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ": " + skillsets[i] + ".");
+                        Util.RemoveFromArray(ref skillsets, j);
+                        kit.Skillsets = skillsets;
+                        kit.IsLoadDirty = true;
+                    }
+                }
+            }
+        }
+        if (kit.UnlockRequirements != null)
+        {
+            for (int i = 0; i < kit.UnlockRequirements.Length; ++i)
+            {
+                UnlockRequirement comparator = kit.UnlockRequirements[i];
+                for (int j = kit.UnlockRequirements.Length - 1; j > i; --j)
+                {
+                    if (comparator.Equals(kit.UnlockRequirements[j]))
+                    {
+                        UnlockRequirement[] reqs = kit.UnlockRequirements;
+                        L.LogWarning("Duplicate unlock requirement found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ": " + reqs[i] + ".");
+                        Util.RemoveFromArray(ref reqs, j);
+                        kit.UnlockRequirements = reqs;
+                        kit.IsLoadDirty = true;
+                    }
+                }
+            }
+        }
+        if (kit.RequestSigns != null)
+        {
+            for (int i = 0; i < kit.RequestSigns.Length; ++i)
+            {
+                PrimaryKey comparator = kit.RequestSigns[i];
+                for (int j = kit.RequestSigns.Length - 1; j > i; --j)
+                {
+                    if (comparator.Key == kit.RequestSigns[j].Key)
+                    {
+                        PrimaryKey[] keys = kit.RequestSigns;
+                        L.LogWarning("Duplicate request sign found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ": " + keys[i] + ".");
+                        Util.RemoveFromArray(ref keys, j);
+                        kit.RequestSigns = keys;
+                        kit.IsLoadDirty = true;
+                    }
+                }
+            }
+        }
+        if (kit.Items != null)
+        {
+            for (int i = 0; i < kit.Items.Length; ++i)
+            {
+                IKitItem comparator = kit.Items[i];
+                for (int j = kit.Items.Length - 1; j > i; --j)
+                {
+                    if (comparator.Equals(kit.Items[j]))
+                    {
+                        IKitItem[] items = kit.Items;
+                        L.LogWarning("Duplicate item found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ":" + Environment.NewLine + comparator);
+                        Util.RemoveFromArray(ref items, j);
+                        kit.Items = items;
+                        kit.IsLoadDirty = true;
+                    }
+                }
+            }
+
+            List<int>? alreadyChecked = null;
+            for (int i = 0; i < kit.Items.Length; ++i)
+            {
+                IKitItem comparator = kit.Items[i];
+                if (alreadyChecked != null && alreadyChecked.Contains(i))
+                    continue;
+                if (comparator is IClothingJar cjar)
+                {
+                    for (int j = kit.Items.Length - 1; j >= 0; --j)
+                    {
+                        if (i == j)
+                            continue;
+                        if (kit.Items[j] is IClothingJar cjar2 && cjar.Type == cjar2.Type)
+                            L.LogError("Conflicting item found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ":" + Environment.NewLine + comparator + " / " + kit.Items[j]);
+                    }
+                }
+                else if (comparator is IItemJar ijar)
+                {
+                    for (int j = kit.Items.Length - 1; j >= 0; --j)
+                    {
+                        if (i == j)
+                            continue;
+                        if (kit.Items[j] is IItemJar ijar2)
+                        {
+                            if (ijar.Page != ijar2.Page) continue;
+                            ItemAsset? asset1 = comparator.GetItem(kit, null, out _, out _);
+                            ItemAsset? asset2 = kit.Items[j].GetItem(kit, null, out _, out _);
+                            if (asset1 != null && asset2 != null && UCInventoryManager.IsOverlapping(ijar, ijar2, asset1, asset2))
+                            {
+                                if (alreadyChecked != null && alreadyChecked.Contains(j))
+                                    continue;
+                                alreadyChecked ??= new List<int>();
+                                alreadyChecked.Add(j);
+                                L.LogError("Overlapping item found in kit \"" + kit.Id + "\" " + kit.PrimaryKey + ":" + Environment.NewLine
+                                           + comparator + " / " + kit.Items[j]);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -2038,7 +2319,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 ForeignKeyColumn = FactionInfo.COLUMN_PK,
                 ForeignKeyTable = FactionInfo.TABLE_MAIN,
                 Nullable = true,
-                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull
+                ForeignKeyDeleteBehavior = ConstraintBehavior.NoAction
             },
             new Schema.Column(COLUMN_CLASS, SqlTypes.Enum(Class.None)),
             new Schema.Column(COLUMN_BRANCH, SqlTypes.Enum(Branch.Default)),
@@ -2080,7 +2361,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         UnlockRequirement.GetDefaultSchema(TABLE_UNLOCK_REQUIREMENTS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK),
         Skillset.GetDefaultSchema(TABLE_SKILLSETS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK),
         F.GetForeignKeyListSchema(TABLE_FACTION_FILTER, COLUMN_EXT_PK, COLUMN_FILTER_FACTION, TABLE_MAIN, COLUMN_PK, FactionInfo.TABLE_MAIN, FactionInfo.COLUMN_PK),
-        F.GetForeignKeyListSchema(TABLE_MAP_FILTER, COLUMN_EXT_PK, COLUMN_FILTER_MAP, TABLE_MAIN, COLUMN_PK, FactionInfo.TABLE_MAIN, FactionInfo.COLUMN_PK),
+        F.GetForeignKeyListSchema(TABLE_MAP_FILTER, COLUMN_EXT_PK, COLUMN_FILTER_MAP, TABLE_MAIN, COLUMN_PK, null, null),
         F.GetTranslationListSchema(TABLE_SIGN_TEXT, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, KitEx.SignTextMaxCharLimit),
         new Schema(TABLE_ACCESS, new Schema.Column[]
         {
@@ -2093,7 +2374,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             new Schema.Column(COLUMN_ACCESS_STEAM_64, SqlTypes.STEAM_64),
             new Schema.Column(COLUMN_ACCESS_TYPE, SqlTypes.Enum<KitAccessType>()),
         }, false, null),
-        F.GetForeignKeyListSchema(TABLE_REQUEST_SIGNS, COLUMN_EXT_PK, COLUMN_REQUEST_SIGN, TABLE_MAIN, COLUMN_PK, StructureSaver.TABLE_MAIN, StructureSaver.COLUMN_PK),
+        F.GetForeignKeyListSchema(TABLE_REQUEST_SIGNS, COLUMN_EXT_PK, COLUMN_REQUEST_SIGN, TABLE_MAIN, COLUMN_PK, StructureSaver.TABLE_MAIN, StructureSaver.COLUMN_PK, deleteBehavior: ConstraintBehavior.Cascade, updateBehavior: ConstraintBehavior.Cascade),
         F.GetListSchema<ulong>(TABLE_FAVORITES, COLUMN_EXT_PK, COLUMN_FAVORITE_PLAYER, TABLE_MAIN, COLUMN_PK)
     };
     // ReSharper restore InconsistentNaming
@@ -2252,7 +2533,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
 
         if (item.FactionFilter is { Length: > 0 })
         {
-            builder.Append($"DELETE FROM `{TABLE_SKILLSETS}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_FACTION_FILTER}` ({SqlTypes.ColumnList(
+            builder.Append($"DELETE FROM `{TABLE_FACTION_FILTER}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_FACTION_FILTER}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_FILTER_FACTION)}) VALUES ");
             for (int i = 0; i < item.FactionFilter.Length; ++i)
             {
@@ -2416,7 +2697,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }, token).ConfigureAwait(false);
         }
 
-        CheckKitForDuplicateItems(obj);
+        CheckKitForDuplicateEntries(obj);
         GC.Collect();
         return obj;
     }
@@ -2579,7 +2860,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
         }, token).ConfigureAwait(false);
         for (int i = 0; i < list.Count; ++i)
-            CheckKitForDuplicateItems(list[i]);
+            CheckKitForDuplicateEntries(list[i]);
         GC.Collect();
         return list.ToArray();
     }

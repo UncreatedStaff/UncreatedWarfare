@@ -1188,7 +1188,7 @@ public static class F
     {
         return Mathf.Abs(left - right) < tolerance;
     }
-    public static Schema GetForeignKeyListSchema(string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, string foreignTableName, string foreignTablePkColumn, bool hasPk = false, bool oneToOne = false, bool nullable = false, bool unique = false, string pkName = "pk")
+    public static Schema GetForeignKeyListSchema(string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, string? foreignTableName, string? foreignTablePkColumn, bool hasPk = false, bool oneToOne = false, bool nullable = false, bool unique = false, string pkName = "pk", ConstraintBehavior deleteBehavior = ConstraintBehavior.NoAction, ConstraintBehavior updateBehavior = ConstraintBehavior.NoAction)
     {
         Schema.Column[] columns = new Schema.Column[hasPk ? 3 : 2];
 
@@ -1214,9 +1214,11 @@ public static class F
         {
             Nullable = nullable,
             UniqueKey = unique,
-            ForeignKey = true,
+            ForeignKey = foreignTableName != null && foreignTablePkColumn != null,
             ForeignKeyColumn = foreignTablePkColumn,
-            ForeignKeyTable = foreignTableName
+            ForeignKeyTable = foreignTableName,
+            ForeignKeyUpdateBehavior = updateBehavior,
+            ForeignKeyDeleteBehavior = deleteBehavior
         };
         return new Schema(tableName, columns, false, typeof(PrimaryKey));
     }

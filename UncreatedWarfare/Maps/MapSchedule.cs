@@ -46,8 +46,10 @@ internal class MapScheduler : MonoBehaviour
     public static readonly string GulfOfAqaba   = MapRotation[3].Name;
     public static readonly string S3Map         = MapRotation[4].Name;
 
+    public static string GetMapName(int index) => MapRotation[index].Name;
+
     // Map to load if rotation is undefined
-    private static readonly string DefaultMap = GulfOfAqaba;
+    private static readonly string DefaultMap = S3Map;
 
     private static List<ulong> _originalMods;
     private static List<ulong> _originalIgnoreChildren;

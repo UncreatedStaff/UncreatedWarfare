@@ -351,7 +351,7 @@ public static class TeamManager
         }
     }
     public static string? Team1UnarmedKit => Team1Faction.UnarmedKit;
-    public static string? Team2UnarmedKit => Team1Faction.UnarmedKit;
+    public static string? Team2UnarmedKit => Team2Faction.UnarmedKit;
     public static float Team1SpawnAngle => _data.Data.Team1SpawnYaw;
     public static float Team2SpawnAngle => _data.Data.Team2SpawnYaw;
     public static float LobbySpawnAngle => _data.Data.LobbySpawnpointYaw;
@@ -611,7 +611,6 @@ public static class TeamManager
             _ => null
         };
     }
-
     public static FactionInfo? GetFactionInfo(PrimaryKey id)
     {
         int pk = id.Key;
@@ -734,7 +733,6 @@ public static class TeamManager
 
         return true;
     }
-
     public static void TeleportToMain(UCPlayer player) => TeleportToMain(player, player.GetTeam());
     public static void TeleportToMain(UCPlayer player, ulong team)
     {
