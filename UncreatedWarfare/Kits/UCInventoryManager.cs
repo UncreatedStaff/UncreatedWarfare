@@ -41,7 +41,12 @@ public static class UCInventoryManager
             {
                 Items it = ia[page];
                 byte ct = it.getItemCount();
-                for (byte index = 0; index < ct; ++index)
+                if (ct > 1 && page < PlayerInventory.SLOTS)
+                {
+                    L.LogWarning("More than one item detected in gun slot: " + (Page)page + ".");
+                    ct = 1;
+                }
+                for (int index = ct - 1; index >= 0; --index)
                 {
                     ItemJar jar = it.items[index];
                     ItemAsset asset = jar.GetAsset();
@@ -118,10 +123,11 @@ public static class UCInventoryManager
             NetId id = player.Player.inventory.GetNetId();
             player.Player.equipment.dequip();
 
-            ITransportConnection tc = player.Connection;
             Items[] inv = player.Player.inventory.items;
-            inv[0].removeItem(0);
-            inv[1].removeItem(0);
+            while (inv[0].getItemCount() > 0)
+                inv[0].removeItem(0);
+            while (inv[1].getItemCount() > 0)
+                inv[1].removeItem(0);
             
             byte m = (byte)(PlayerInventory.PAGES - 2);
             for (byte i = PlayerInventory.SLOTS; i < m; ++i)
@@ -231,6 +237,29 @@ public static class UCInventoryManager
                     }
                 }
             });
+    }
+    public static bool IsOverlapping(IItemJar jar1, IItemJar jar2, ItemAsset asset1, ItemAsset asset2) =>
+        jar1.Page == jar2.Page &&
+        (jar1.Page is Page.Primary or Page.Secondary || 
+         IsOverlapping(jar1.X, jar1.Y, asset1.size_x, asset1.size_y, jar2.X, jar2.Y, asset2.size_x, asset2.size_y, jar1.Rotation, jar2.Rotation));
+    public static bool IsOverlapping(IItemJar jar1, ItemAsset asset1, byte x, byte y, byte sizeX, byte sizeY, byte rotation) =>
+        IsOverlapping(jar1.X, jar1.Y, asset1.size_x, asset1.size_y, x, y, sizeX, sizeY, jar1.Rotation, rotation);
+    public static bool IsOverlapping(byte posX1, byte posY1, byte sizeX1, byte sizeY1, byte posX2, byte posY2, byte sizeX2, byte sizeY2, byte rotation1, byte rotation2)
+    {
+        if (rotation1 % 2 == 1)
+            (sizeX1, sizeY1) = (sizeY1, sizeX1);
+        if (rotation2 % 2 == 1)
+            (sizeX2, sizeY2) = (sizeY2, sizeX2);
+        for (int x = posX1; x < posX1 + sizeX1; ++x)
+        {
+            for (int y = posY1; y < posY1 + sizeY1; ++y)
+            {
+                if (x >= posX2 && x < posX2 + sizeX2 && y >= posY2 && y < posY2 + sizeY2)
+                    return true;
+            }
+        }
+
+        return false;
     }
     public static void RemoveNumberOfItemsFromStorage(InteractableStorage storage, ushort itemID, int amount)
     {

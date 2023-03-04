@@ -102,7 +102,7 @@ public static class TeamManager
             TMProSpriteIndex = 3,
             Emoji = "938653900913901598|938654469518950410"
         },
-        new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "deunarmed", @"https://i.imgur.com/lgrkCdY.png")
+        new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/lgrkCdY.png")
         {
             PrimaryKey = 4,
             DefaultHat = "835dc9e72f46431a9bed591bcbbfb081",
@@ -113,7 +113,7 @@ public static class TeamManager
             TMProSpriteIndex = 4,
             Emoji = "🇩🇪"
         },
-        new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "cnunarmed", @"https://i.imgur.com/Yns89Yk.png")
+        new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "chunarmed", @"https://i.imgur.com/Yns89Yk.png")
         {
             PrimaryKey = 5,
             DefaultShirt = "2c1a9c62b30a49e7bda2ef6a2727eb8c",
@@ -351,7 +351,7 @@ public static class TeamManager
         }
     }
     public static string? Team1UnarmedKit => Team1Faction.UnarmedKit;
-    public static string? Team2UnarmedKit => Team1Faction.UnarmedKit;
+    public static string? Team2UnarmedKit => Team2Faction.UnarmedKit;
     public static float Team1SpawnAngle => _data.Data.Team1SpawnYaw;
     public static float Team2SpawnAngle => _data.Data.Team2SpawnYaw;
     public static float LobbySpawnAngle => _data.Data.LobbySpawnpointYaw;
@@ -611,7 +611,6 @@ public static class TeamManager
             _ => null
         };
     }
-
     public static FactionInfo? GetFactionInfo(PrimaryKey id)
     {
         int pk = id.Key;
@@ -734,7 +733,6 @@ public static class TeamManager
 
         return true;
     }
-
     public static void TeleportToMain(UCPlayer player) => TeleportToMain(player, player.GetTeam());
     public static void TeleportToMain(UCPlayer player, ulong team)
     {

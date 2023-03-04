@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Linq;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Kits;
@@ -41,6 +42,31 @@ public class ICommand : Command
 
         int similarNamesCount = 0;
 
+        if (ctx.MatchParameter(0, "ammo") && ctx.Caller.Player.equipment.useable is UseableGun)
+        {
+            // held item
+            ItemJar item = ctx.Caller.Player.inventory.items[ctx.Caller.Player.equipment.equippedPage].getItem(
+                ctx.Caller.Player.inventory.items[ctx.Caller.Player.equipment.equippedPage]
+                    .getIndex(ctx.Caller.Player.equipment.equipped_x, ctx.Caller.Player.equipment.equipped_y));
+            if (item != null && item.item.GetAsset() is ItemGunAsset gun)
+            {
+                ushort oldItem = BitConverter.ToUInt16(item.item.state, (int)AttachmentType.Magazine);
+                if (Assets.find(EAssetType.ITEM, oldItem) is ItemMagazineAsset magAsset)
+                    asset = magAsset;
+                else if (Assets.find(EAssetType.ITEM, gun.getMagazineID()) is ItemMagazineAsset magAsset2)
+                    asset = magAsset2;
+                else
+                    asset = Assets.find(EAssetType.ITEM).OfType<ItemMagazineAsset>().FirstOrDefault(x => x.calibers.Any(y => gun.magazineCalibers.Contains(y)));
+                itemSt = Array.Empty<byte>();
+                if (asset != null)
+                    itemAmt = asset.amount;
+                if (ctx.TryGet(1, out int amt) && amount <= MaxItems && amount > 0)
+                    amount = amt;
+                else if (ctx.HasArg(1))
+                    amountWasValid = false;
+                goto foundItem;
+            }
+        }
         if (ctx.HasArgsExact(1)) // if there is only one argument, we only have to check a single word
         {
             if (ctx.TryGet(0, out RedirectType type))

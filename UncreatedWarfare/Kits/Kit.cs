@@ -65,6 +65,8 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     public ulong Creator { get; set; }
     public DateTimeOffset LastEditedTimestamp { get; set; }
     public ulong LastEditor { get; set; }
+
+    [JsonIgnore]
     internal bool IsLoadDirty;
     [JsonIgnore]
     internal List<KeyValuePair<KeyValuePair<ItemAsset?, RedirectType>, int>>? ItemListCache { get; set; }
@@ -726,6 +728,8 @@ public class LevelUnlockRequirement : UnlockRequirement
         LevelData data = new LevelData(Points.GetLevelXP(UnlockLevel));
         return ctx.Reply(T.RequestTraitLowLevel, trait, data);
     }
+
+    public override bool Equals(object obj) => obj is LevelUnlockRequirement r && r.UnlockLevel == UnlockLevel;
 }
 [UnlockRequirement(2, "unlock_rank")]
 public class RankUnlockRequirement : UnlockRequirement
@@ -784,6 +788,7 @@ public class RankUnlockRequirement : UnlockRequirement
             L.LogWarning("Invalid rank order in trait requirement: " + trait.TypeName + " :: " + UnlockRank + ".");
         return ctx.Reply(T.RequestTraitLowRank, trait, data);
     }
+    public override bool Equals(object obj) => obj is RankUnlockRequirement r && r.UnlockRank == UnlockRank;
 }
 [UnlockRequirement(3, "unlock_presets", "quest_id")]
 public class QuestUnlockRequirement : UnlockRequirement
@@ -889,6 +894,22 @@ public class QuestUnlockRequirement : UnlockRequirement
             return ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
         }
         return ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);
+    }
+    public override bool Equals(object obj)
+    {
+        if (!(obj is QuestUnlockRequirement r && r.QuestID == QuestID))
+            return false;
+        if (r.UnlockPresets is not { Length: > 0 } && UnlockPresets is not { Length: > 0 })
+            return true;
+        if (r.UnlockPresets.Length != UnlockPresets.Length)
+            return false;
+        for (int i = 0; i < UnlockPresets.Length; ++i)
+        {
+            if (r.UnlockPresets[i] != UnlockPresets[i])
+                return false;
+        }
+
+        return true;
     }
 }
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
