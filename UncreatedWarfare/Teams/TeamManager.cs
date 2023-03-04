@@ -102,18 +102,18 @@ public static class TeamManager
             TMProSpriteIndex = 3,
             Emoji = "938653900913901598|938654469518950410"
         },
-        new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "deunarmed", @"https://i.imgur.com/lgrkCdY.png")
+        new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/lgrkCdY.png")
         {
             PrimaryKey = 4,
             DefaultHat = "835dc9e72f46431a9bed591bcbbfb081",
             DefaultShirt = "fc4a2a49f335489a84e294ca03031a82",
-            DefaultBackpack = "9addb6f54920495cb4826cb5c000ed4b",
+            DefaultBackpack = "d77a232ad1fb4cf78dde280fd7c14a0b",
             DefaultVest = "2499cebdfc6646c59103a48f06c4838a",
             DefaultPants = "31ed5cd8918e4693bc7431483b130e05",
             TMProSpriteIndex = 4,
             Emoji = "🇩🇪"
         },
-        new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "cnunarmed", @"https://i.imgur.com/Yns89Yk.png")
+        new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "chunarmed", @"https://i.imgur.com/Yns89Yk.png")
         {
             PrimaryKey = 5,
             DefaultShirt = "2c1a9c62b30a49e7bda2ef6a2727eb8c",
