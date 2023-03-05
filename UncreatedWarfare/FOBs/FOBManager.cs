@@ -1215,6 +1215,24 @@ public class FOBConfigData : JSONConfigData
             },
             new BuildableData
             {
+                // QJC-88
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("beaa260d7f844724bd26993569d9e42a"),
+                Type = BuildableType.Emplacement,
+                RequiredHits = 16,
+                RequiredBuild = 6,
+                Team = 2,
+                Limit = 2,
+                Emplacement = new EmplacementData
+                {
+                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("9525ef43b9674343bb9561b5db078c1b"),
+                    BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
+                    Ammo = new JsonAssetReference<ItemAsset>("6e9bc2083a1246b49b1656c2ec6f535a"),
+                    AmmoCount = 2,
+                }
+            },
+            new BuildableData
+            {
                 // TOW
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = new JsonAssetReference<ItemBarricadeAsset>("a68ae466fb804829a0eb0d4556071801"),
@@ -1246,6 +1264,24 @@ public class FOBConfigData : JSONConfigData
                     EmplacementVehicle = new JsonAssetReference<VehicleAsset>("677b1084-dffa-4633-84d2-9167a3fae25b"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = new JsonAssetReference<ItemAsset>("d7774b017c404adbb0a0fe8e902b9689"),
+                    AmmoCount = 1
+                }
+            },
+            new BuildableData
+            {
+                // HJ-8
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("f76572f13c214a138415f20bbc1a31c3"),
+                Type = BuildableType.Emplacement,
+                RequiredHits = 25,
+                RequiredBuild = 14,
+                Team = 2,
+                Limit = 1,
+                Emplacement = new EmplacementData
+                {
+                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("b63e9c2999c34ff3894138592dd9cb2e"),
+                    BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
+                    Ammo = new JsonAssetReference<ItemAsset>("9ba5db5cbd2c4b51bc236122a4c6b2059"),
                     AmmoCount = 1
                 }
             },
