@@ -648,7 +648,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(StatFormatTime, locale));
                 PersonalStats5.SetText(c, stats.XPGained.ToString(locale));
                 PersonalStats6.SetText(c, stats._intelligencePointsCollected.ToString(locale));
-                PersonalStats7.SetText(c, LeaderboardEx.EmptyFieldPlaceholder /* todo */);
+                PersonalStats7.SetText(c, stats._cachesDiscovered.ToString(locale));
                 PersonalStats8.SetText(c, stats._cachesDestroyed.ToString(locale));
                 PersonalStats9.SetText(c, stats.Teamkills.ToString(locale));
                 PersonalStats10.SetText(c, stats.FOBsDestroyed.ToString(locale));

@@ -1,10 +1,17 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using SDG.NetPak;
+using SDG.NetTransport;
 using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Color = UnityEngine.Color;
@@ -13,305 +20,308 @@ namespace Uncreated.Warfare.Gamemodes.Flags;
 
 public static class ZoneDrawing
 {
-    private static int _overlayStep;
-    public static void CreateFlagTestAreaOverlay(IFlagRotation gamemode, Player? player, List<Zone> zones, bool drawpath, bool drawrange, bool drawIsInTest, bool drawsearchangles, bool lockthreaduntildone = false, string? filename = default)
+    private static readonly Color Multidimensionalcolor = new Color(1, 1, 0, 0.8f);
+    private static readonly Color Color1 = new Color(0.1f, 1, 0.15f, 0.8f);
+    private static readonly Color Color2 = new Color(0.15f, 0.2f, 0.15f, 0.8f);
+    private static readonly Color Color2Path = new Color(0.15f, 0, 0, 0.8f);
+    private static readonly Color Color1Path = new Color(1, 0, 0, 0.8f);
+    public static IEnumerator CreateFlagOverlay(CommandInteraction ctx, string? fileName = null, bool openOutput = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (lockthreaduntildone)
-        {
-            List<Zone> newZones = zones;
-            newZones.Sort((a, b) => b.BoundsArea.CompareTo(a.BoundsArea));
-            Texture2D img = new Texture2D(Level.size, Level.size);
-            List<Vector2> ptsToTest = new List<Vector2>(img.width * img.height);
-            for (int i = 0; i < img.width; i++)
-            {
-                for (int j = 0; j < img.height; j++)
-                {
-                    ptsToTest.Add(new Vector2(i, j));
-                }
-            }
-            if (drawIsInTest)
-            {
-                int step = 0;
-                bool done = false;
-                while (!done)
-                {
-                    GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, step, out done, filename, false);
-                    step++;
-                }
-            }
-            else
-                GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, 0, out _, filename, false);
-            if (drawrange)
-                GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, -3, out _, filename, drawsearchangles);
-            if (drawpath)
-                GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, -2, out _, filename, false);
-            GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, -1, out _, filename, false);
-            if (player != null)
-                player.SendString("Picture finished generating, check the Config/Maps/Flags folder menu.");
-            else L.Log("Picture finished generating, check the Config/Maps/Flags folder menu");
-        }
+        bool includeUnloadedZones = !ctx.MatchFlag("rot", "rotation", "noAll");
+        bool extraZones = !ctx.MatchFlag("flags", "noExtra", "noMains");
+        bool drawCurrentPath = ctx.MatchFlag("path", "pathing", "drawPath");
+        bool drawIn = !ctx.MatchFlag("noFill", "noArea");
+        bool drawAdjacencies = !ctx.MatchFlag("noAdj");
+        bool chart = ctx.MatchFlag("chart");
+        string msg = "Generating overlay with options: ";
+        if (includeUnloadedZones)
+            msg += "allZones";
         else
+            msg += "rot";
+
+        if (extraZones)
+            msg += ", extraZones";
+        else
+            msg += ", noExtra";
+
+        if (drawCurrentPath)
+            msg += ", path";
+        else
+            msg += ", noPath";
+
+        if (drawIn)
+            msg += ", fill";
+        else
+            msg += ", noFill";
+
+        if (drawAdjacencies)
+            msg += ", adj";
+        else
+            msg += ", noAdj";
+
+        if (chart)
+            msg += ", chart";
+        else
+            msg += ", gps";
+        msg += ".";
+        ctx.ReplyString(msg);
+
+        ZoneList? list = Data.Singletons.GetSingleton<ZoneList>();
+        if (list == null)
         {
-            if (_overlayStep == 0)
+            ctx.SendGamemodeError();
+            yield break;
+        }
+        List<Zone> zones = new List<Zone>(16);
+        if (!includeUnloadedZones && Data.Is(out IFlagRotation rotationGm))
+            zones.AddRange(rotationGm.Rotation.Select(x => x.ZoneData.Item!).Where(x => x != null));
+        else if (includeUnloadedZones)
+        {
+            list.WriteWait();
+            try
             {
-                List<Zone> newZones = zones;
-                newZones.Sort((a, b) => b.BoundsArea.CompareTo(a.BoundsArea));
-                Texture2D img = new Texture2D(Level.size, Level.size);
-                List<Vector2> pointsToTest = new List<Vector2>();
-                for (int i = -1 * img.width / 2; i < img.width / 2; i += 1)
-                {
-                    for (int j = -1 * img.height / 2; j < img.height / 2; j += 1)
-                    {
-                        pointsToTest.Add(new Vector2(i, j));
-                    }
-                }
-                UCWarfare.I.StartCoroutine(Enumerator());
-                IEnumerator<WaitForSeconds> Enumerator()
-                {
-                    bool done = !drawIsInTest;
-                    if (drawIsInTest)
-                    {
-                        GenerateZoneOverlay(gamemode, img, player, newZones, pointsToTest, _overlayStep, out done, filename, false);
-                    }
-                    else if (_overlayStep == 0)
-                    {
-                        GenerateZoneOverlay(gamemode, img, player, newZones, pointsToTest, 0, out done, filename, false);
-                    }
-                    _overlayStep++;
-                    yield return new WaitForSeconds(0.5f);
-                    if (!done)
-                        UCWarfare.I.StartCoroutine(Enumerator());
-                    else
-                    {
-                        if (drawrange)
-                            GenerateZoneOverlay(gamemode, img, player, newZones, pointsToTest, -3, out _, filename, drawsearchangles);
-                        if (drawpath)
-                            GenerateZoneOverlay(gamemode, img, player, newZones, pointsToTest, -2, out _, filename, false);
-                        GenerateZoneOverlay(gamemode, img, player, newZones, pointsToTest, -1, out _, filename, false);
-                        if (player != default)
-                            player.SendString("Picture finished generating, check the Config/Maps/Flags folder menu.");
-                        _overlayStep = 0;
-                    }
-                }
+                zones.AddRange(list.Items.Where(x => x.Item is { Data.UseCase: ZoneUseCase.Flag }).Select(x => x.Item!).Where(x => x != null));
             }
-            else
+            finally
             {
-                if (player != default)
-                    player.SendString("A player is already running this procedure, try again in a few minutes.");
+                list.WriteRelease();
             }
         }
-    }
-    internal static void GenerateZoneOverlay(IFlagRotation gamemode, Texture2D img, Player? player, List<Zone> zones, List<Vector2> ptsToTest, int step, out bool complete, string? filename, bool drawAngles)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        complete = false;
-        L.Log("STEP " + step.ToString(Data.AdminLocale));
-        if (step == 0)
+        else if (!extraZones)
         {
-            string levelMap = Path.Combine(Level.info.path, "Map.png");
-            if (File.Exists(levelMap))
+            ctx.SendGamemodeError();
+            yield break;
+        }
+
+        if (extraZones)
+        {
+            list.WriteWait();
+            try
             {
-                byte[] fileData = File.ReadAllBytes(levelMap);
-                img.LoadImage(fileData, false);
+                zones.AddRange(list.Items.Where(x => x.Item is { Data.UseCase: not ZoneUseCase.Flag }).Select(x => x.Item!).Where(x => x != null));
             }
-            img.Apply();
-        }
-        else if (step == 1)
-        {
-            foreach (Zone zone in zones)
+            finally
             {
-                Zone.DrawData d = zone.DrawingData;
-                if (zone is PolygonZone || zone is RectZone)
-                {
-                    for (int i = 0; i < d.Lines!.Length; i++)
-                    {
-                        DrawLine(img, d.Lines[i], Color.black, false);
-                    }
-                }
-                else if (zone is CircleZone)
-                {
-                    FillCircle(img, d.Center.x, d.Center.y, d.Radius, Color.black, false);
-                }
+                list.WriteRelease();
             }
-            //player.SendChat("Completed step 2", UCWarfare.GetColor("default"));
-            img.Apply();
         }
-        else if (step > 1)
+
+        yield return null;
+        
+        Texture2D img = new Texture2D(GridLocation.ImageSize.X, GridLocation.ImageSize.Y);
+        string levelMap = Path.Combine(Level.info.path, chart ? "Chart.png" : "Map.png");
+        if (File.Exists(levelMap))
         {
-            int z = (step - 2) * 3;    //0
-            int next = (step - 1) * 3; //3
-            if (zones.Count <= next) complete = true;
-            for (int e = z; e < (zones.Count > next ? next : zones.Count); e++)
-            {
-                Zone zone = zones[e];
-                Zone.DrawData zoneData = zone.DrawingData;
-                Color zonecolor = $"{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}".Hex();
-                for (int i = 0; i < ptsToTest.Count; i++)
-                {
-                    if (zone.IsInside(Zone.FromMapCoordinates(ptsToTest[i])))
-                    {
-                        img.SetPixelClamp(Mathf.RoundToInt(ptsToTest[i].x) + img.width / 2, img.height - (-(Mathf.RoundToInt(ptsToTest[i].y) - img.height / 2)), zonecolor);
-                    }
-                }
-                for (int i = 0; i < 4; i++)
-                {
-                    ref Vector4 bounds = ref zoneData.Bounds;
-                    DrawLine(img, new Line(new Vector2(bounds.x, bounds.y), new Vector2(bounds.x, bounds.w)), Color.gray, false, 1);
-                    DrawLine(img, new Line(new Vector2(bounds.x, bounds.y), new Vector2(bounds.z, bounds.y)), Color.gray, false, 1);
-                    DrawLine(img, new Line(new Vector2(bounds.z, bounds.w), new Vector2(bounds.x, bounds.w)), Color.gray, false, 1);
-                    DrawLine(img, new Line(new Vector2(bounds.z, bounds.w), new Vector2(bounds.z, bounds.y)), Color.gray, false, 1);
-                }
-            }
-            //player.SendChat("Completed step " + (step + 1).ToString(Data.Locale), UCWarfare.GetColor("default"));
-            img.Apply();
-        }
-        else if (step == -1) // finalizing image
-        {
-            img.Apply();
-            F.SavePhotoToDisk(filename == default ? Path.Combine(Data.Paths.FlagStorage, "zonearea.png") : (filename + ".png"), img);
-            UnityEngine.Object.Destroy(img);
-            complete = true;
-        }
-        else if (step == -2) // drawing path
-        {
-            for (int i = 0; i <= gamemode.Rotation.Count; i++)
-            {
-                DrawLine(img, new Line(i == gamemode.Rotation.Count ? TeamManager.Team2Main.DrawingData.Center : gamemode.Rotation[i].ZoneData.Item?.DrawingData.Center ?? Vector2.zero,
-                    i == 0 ? TeamManager.Team1Main.DrawingData.Center : gamemode.Rotation[i - 1].ZoneData.Item?.DrawingData.Center ?? Vector2.zero), Color.cyan, false, 8);
-            }
-            img.Apply();
-        }
-    }
-    public static void DrawZoneMap(List<Flag> selection, List<Flag> rotation, string? filename)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        Color multidimensionalcolor = new Color(1, 1, 0);
-        Color multidimensionalcolorpath = new Color(1, 0.25f, 0);
-        Color color1 = new Color(0.1f, 1, 0.15f);
-        Color color2 = new Color(0.15f, 0.2f, 0.15f);
-        Color color2Path = new Color(0.15f, 0, 0);
-        Color color1Path = new Color(1, 0, 0);
-        Color color1Missingpath = new Color(0, 0, 0.15f);
-        Color color2Missingpath = new Color(0, 0, 1);
-        int thickness = 8;
-        Texture2D img = new Texture2D(Level.size, Level.size);
-        string mapPath = Path.Combine(Level.info.path, "Map.png");
-        if (File.Exists(mapPath))
-        {
-            byte[] fileData = File.ReadAllBytes(mapPath);
+            byte[] fileData = File.ReadAllBytes(levelMap);
             img.LoadImage(fileData, false);
         }
-
-        AdjacentFlagData[] t1Adjacencies = TeamManager.Team1Main.Data.Adjacencies;
-        AdjacentFlagData[] t2Adjacencies = TeamManager.Team2Main.Data.Adjacencies;
-
-        for (int i = 0; i < t1Adjacencies.Length; ++i)
+        
+        if (drawAdjacencies)
         {
-            ref AdjacentFlagData d = ref t1Adjacencies[i];
-            if (ObjectivePathing.TryGetFlag(d.PrimaryKey, selection, out Flag flag) && flag is { ZoneData.Item: { } z })
+            for (int i = 0; i < zones.Count; ++i)
             {
-                DrawLineGradient(
-                    new Line(TeamManager.Team1Main.DrawingData.Center, z.DrawingData.Center), thickness,
-                    img, TeamManager.Team1Color,
-                    rotation.Count > 0 && rotation[0].ID == flag.ID ? color1Path : color2);
-            }
-        }
-        for (int i = 0; i < t2Adjacencies.Length; ++i)
-        {
-            ref AdjacentFlagData d = ref t2Adjacencies[i];
-            if (ObjectivePathing.TryGetFlag(d.PrimaryKey, selection, out Flag flag) && flag is { ZoneData.Item: { } z })
-            {
-                DrawLineGradient(
-                    new Line(z.DrawingData.Center, TeamManager.Team2Main.DrawingData.Center), thickness,
-                    img, rotation.Count > 0 && rotation[rotation.Count - 1].ID == flag.ID ? color1Path : color2,
-                    TeamManager.Team2Color);
-            }
-        }
-
-        List<int> drewPaths = new List<int>();
-        List<KeyValuePair<int, int>> drawnLines = new List<KeyValuePair<int, int>>();
-        foreach (Flag flag in selection)
-        {
-            AdjacentFlagData[] adj = flag.Adjacencies;
-            int i = rotation.FindIndex(x => x.ID == flag.ID);
-            for (int j = 0; j < adj.Length; ++j)
-            {
-                ref AdjacentFlagData d = ref adj[j];
-                int id = d.PrimaryKey;
-                if (drawnLines.Exists(x => (x.Value == id && x.Key == flag.ID) || (x.Value == flag.ID && x.Key == id))) // multi-directional
+                Zone zone = zones[i];
+                if (zone.Data.UseCase is not ZoneUseCase.Flag and not ZoneUseCase.Team1Main and not ZoneUseCase.Team2Main)
+                    continue;
+                AdjacentFlagData[] adjs = zone.Data.Adjacencies;
+                Vector2 c = zone.Center;
+                c = GridLocation.WorldCoordsToMapCoords(new Vector3(c.x, 0, c.y));
+                (float x1, float y1) = (c.x, c.y);
+                foreach (AdjacentFlagData adj in adjs)
                 {
-                    Color c1 = multidimensionalcolor;
-                    if (i != -1 && ((rotation.Count > i + 1 && rotation[i + 1].ID == id) || (i != 0 && rotation[i - 1].ID == id)))
+                    if (adj.PrimaryKey == zone.PrimaryKey)
+                        continue;
+                    Zone? zone2 = zones.FirstOrDefault(x => x.PrimaryKey == adj.PrimaryKey);
+                    if (zone2 == null)
+                        continue;
+                    c = zone2.Center;
+                    c = GridLocation.WorldCoordsToMapCoords(new Vector3(c.x, 0, c.y));
+                    (float x2, float y2) = (c.x, c.y);
+                    Color c1 = Color1;
+                    Color c2 = Color2;
+                    if (Array.Exists(zone2.Data.Adjacencies, x => x.PrimaryKey == zone.PrimaryKey))
                     {
-                        c1 = multidimensionalcolorpath;
-                        drewPaths.Add(flag.ID);
+                        c1 = Multidimensionalcolor;
+                        c2 = Multidimensionalcolor;
                     }
-
-                    if (ObjectivePathing.TryGetFlag(d.PrimaryKey, selection, out Flag flag2) && flag2 is { ZoneData.Item: { } z })
-                    {
-                        DrawLineGradient(
-                            new Line(z.DrawingData.Center, z.DrawingData.Center),
-                            thickness, img, c1, c1, false);
-                    }
-                }
-                else
-                {
-                    Color c1 = color1;
-                    Color c2 = color2;
-                    if (i != -1 && rotation.Count > i + 1 && rotation[i + 1].ID == id)
-                    {
-                        c1 = color1Path;
-                        c2 = color2Path;
-                        drewPaths.Add(flag.ID);
-                    }
-                    drawnLines.Add(new KeyValuePair<int, int>(flag.ID, id));
-                    if (ObjectivePathing.TryGetFlag(d.PrimaryKey, selection, out Flag flag2) && flag2 is { ZoneData.Item: { } z })
-                    {
-                        DrawLineGradient(
-                            new Line(z.DrawingData.Center, z.DrawingData.Center),
-                            thickness, img, c1, c2, false);
-                    }
+                    DrawLineGradient(new Line(x1, y1, x2, y2), 3f, img, c1, c2, false);
                 }
             }
+
+            yield return null;
         }
-        for (int i = 0; i <= rotation.Count; i++)
+        if (drawCurrentPath && Data.Is(out IFlagRotation gm))
         {
-            if (i == 0 || i == rotation.Count || drewPaths.Contains(rotation[i - 1].ID)) continue; // line already drawn
-            Line line = i == rotation.Count
-                ? new Line(rotation[i - 1].ZoneData.Item?.DrawingData.Center ?? Vector2.zero, TeamManager.Team2Main.DrawingData.Center)
-                : new Line(rotation[i - 1].ZoneData.Item?.DrawingData.Center ?? Vector2.zero, rotation[i].ZoneData.Item?.DrawingData.Center ?? Vector2.zero);
-            DrawLineGradient(line, thickness / 2f, img, color1Missingpath, color2Missingpath, false);
+            // draw path
+            List<Flag> rot = gm.Rotation;
+            float x2, y2;
+            Vector2 c = TeamManager.Team1Main.Center;
+            c = GridLocation.WorldCoordsToMapCoords(new Vector3(c.x, 0, c.y));
+            (float x1, float y1) = (c.x, c.y);
+            if (rot.Count == 0)
+            {
+                c = TeamManager.Team2Main.Center;
+                c = GridLocation.WorldCoordsToMapCoords(new Vector3(c.x, 0, c.y));
+                (x2, y2) = (c.x, c.y);
+                DrawLineGradient(new Line(x1, y1, x2, y2), 4f, img, TeamManager.Team1Color, TeamManager.Team2Color, false);
+            }
+            else
+            {
+                list.WriteWait();
+                try
+                {
+                    List<Zone> zones2 = rot.Select(x => x.ZoneData?.Item!).Where(x => x != null).ToList();
+                    for (int i = 0; i < zones2.Count; i++)
+                    {
+                        Zone flag = zones2[i];
+                        c = flag.Center;
+                        c = GridLocation.WorldCoordsToMapCoords(new Vector3(c.x, 0, c.y));
+                        (x2, y2) = (c.x, c.y);
+                        Color c1 = i == 0 ? Color1Path : TeamManager.Team1Color;
+                        Color c2 = Color2Path;
+                        DrawLineGradient(new Line(x1, y1, x2, y2), 2f, img, c1, c2, false);
+                        c = zones2.Count > i + 1 ? zones2[i + 1].Center : TeamManager.Team2Main.Center;
+                        (x1, y1) = (c.x, c.y);
+                    }
+
+                    c = TeamManager.Team2Main.Center;
+                    c = GridLocation.WorldCoordsToMapCoords(new Vector3(c.x, 0, c.y));
+                    (x2, y2) = (c.x, c.y);
+                    DrawLineGradient(new Line(x1, y1, x2, y2), 2f, img, Color1Path, TeamManager.Team2Color, false);
+                }
+                finally
+                {
+                    list.WriteRelease();
+                }
+            }
+
+            yield return null;
+        }
+
+        foreach (Zone zone in zones.OrderByDescending(x => x.BoundsArea))
+        {
+            Color color = new Color(UnityEngine.Random.value * 0.5f + 0.25f, UnityEngine.Random.value * 0.5f + 0.25f, UnityEngine.Random.value * 0.5f + 0.25f, 0.5f);
+            switch (zone)
+            {
+                case CircleZone circle:
+                    float radx = GridLocation.WorldDistanceToMapDistanceX(circle.Radius);
+                    float rady = GridLocation.WorldDistanceToMapDistanceX(circle.Radius);
+                    Vector2 c = GridLocation.WorldCoordsToMapCoords(new Vector3(circle.Center.x, 0f, circle.Center.y));
+                    (float x, float y) = (c.x, c.y);
+
+                    if (drawIn)
+                        FillCircle(img, x, y, radx, rady, color, false);
+                    DrawCircle(img, x, y, Mathf.Max(radx, rady), Color.yellow, 1f, false);
+                    DrawLine(img, new Line(new Vector2(x + radx, y + rady), new Vector2(x - radx, y + rady)), Color.red with { a = 0.33f });
+                    DrawLine(img, new Line(new Vector2(x - radx, y + rady), new Vector2(x - radx, y - rady)), Color.red with { a = 0.33f });
+                    DrawLine(img, new Line(new Vector2(x - radx, y - rady), new Vector2(x + radx, y - rady)), Color.red with { a = 0.33f });
+                    DrawLine(img, new Line(new Vector2(x + radx, y - rady), new Vector2(x + radx, y + rady)), Color.red with { a = 0.33f });
+                    break;
+                case RectZone rect:
+                    c = GridLocation.WorldCoordsToMapCoords(new Vector3(rect.Center.x, 0f, rect.Center.y));
+                    (x, y) = (c.x, c.y);
+                    c = GridLocation.WorldCoordsToMapCoords(new Vector3(rect.Center.x + rect.Size.x, 0f, rect.Center.y + rect.Size.y));
+                    (float x1, float y1) = (c.x, c.y);
+
+                    if (drawIn)
+                        FillRectangle(img, x, y, x1 - x, y1 - y, color, false);
+                    x -= (x1 - x);
+                    y -= (y1 - y);
+                    x1 -= (x1 - x);
+                    y1 -= (y1 - y);
+                    DrawLine(img, new Line(new Vector2(x, y), new Vector2(x1, y)), Color.red with { a = 0.33f });
+                    DrawLine(img, new Line(new Vector2(x1, y), new Vector2(x1, y1)), Color.red with { a = 0.33f });
+                    DrawLine(img, new Line(new Vector2(x1, y1), new Vector2(x, y1)), Color.red with { a = 0.33f });
+                    DrawLine(img, new Line(new Vector2(x, y1), new Vector2(x, y)), Color.red with { a = 0.33f });
+                    break;
+                case PolygonZone polygon:
+                    Vector4 bounds = polygon.Bounds;
+                    c = GridLocation.WorldCoordsToMapCoords(new Vector3(bounds.x, 0f, bounds.y));
+                    (x, y) = (c.x, c.y);
+                    c = GridLocation.WorldCoordsToMapCoords(new Vector3(bounds.z, 0f, bounds.w));
+                    (x1, y1) = (c.x, c.y);
+                    
+                    if (drawIn)
+                    {
+                        for (float x2 = x; x2 < x1; ++x2)
+                        {
+                            for (float y2 = y; y2 < y1; ++y2)
+                            {
+                                Vector3 wpos = GridLocation.MapCoordsToWorldCoords(new Vector2(x2, y2));
+                                if (polygon.IsInside(new Vector2(wpos.x, wpos.z)))
+                                    img.SetPixelClamp(Mathf.RoundToInt(x2), Mathf.RoundToInt(y2), color);
+                            }
+                        }
+                    }
+
+                    Vector2[] pts = polygon.Data.ZoneData.Points;
+                    for (int i = 0; i < pts.Length; ++i)
+                    {
+                        int i2 = (i + 1) % pts.Length;
+                        c = GridLocation.WorldCoordsToMapCoords(new Vector3(pts[i].x, 0f, pts[i].y));
+                        (float px1, float py1) = (c.x, c.y);
+                        c = GridLocation.WorldCoordsToMapCoords(new Vector3(pts[i2].x, 0f, pts[i2].y));
+                        (float px2, float py2) = (c.x, c.y);
+                        DrawLine(img, new Line(new Vector2(px1, py1), new Vector2(px2, py2)), Color.yellow with { a = 0.75f });
+                    }
+
+                    DrawLine(img, new Line(new Vector2(x, y), new Vector2(x1, y)), Color.red with { a = 0.33f });
+                    DrawLine(img, new Line(new Vector2(x1, y), new Vector2(x1, y1)), Color.red with { a = 0.33f });
+                    DrawLine(img, new Line(new Vector2(x1, y1), new Vector2(x, y1)), Color.red with { a = 0.33f });
+                    DrawLine(img, new Line(new Vector2(x, y1), new Vector2(x, y)), Color.red with { a = 0.33f });
+                    break;
+            }
+
+            yield return null;
         }
         img.Apply();
-        F.SavePhotoToDisk(filename == default ? Path.Combine(Data.Paths.FlagStorage, "zonemap.png") : (filename + ".png"), img);
+        if (fileName != null && !fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+            fileName += ".png";
+        fileName ??= Path.Combine(Data.Paths.FlagStorage, "zonearea.png");
+        yield return null;
+        F.SavePhotoToDisk(fileName, img);
+        yield return null;
+        img.Resize(img.width / 8, img.height / 8);
+        if (!ctx.IsConsole && Data.SendScreenshotDestination != null)
+        {
+            byte[] jpeg = img.EncodeToJPG(75);
+            L.LogDebug(jpeg.Length.ToString());
+            if (jpeg.Length > 30000)
+            {
+                jpeg = img.EncodeToJPG(33);
+                L.LogDebug(jpeg.Length.ToString());
+            }
+            if (jpeg.Length <= 30000)
+            {
+                Data.SendScreenshotDestination.Invoke(ctx.Caller.Player.GetNetId(), ENetReliability.Reliable, ctx.Caller.Connection, writer =>
+                {
+                    writer.WriteUInt16((ushort)jpeg.Length);
+                    writer.WriteBytes(jpeg);
+                });
+            }
+        }
+        yield return null;
         UnityEngine.Object.Destroy(img);
-    }
-
-    public static void DrawArrow(Texture2D texture, Line line, Color color, bool apply = true, float thickness = 1, float arrowHeadLength = 12)
-    {
-        DrawLine(texture, line, color, false, thickness);
-        float mult = line.Length / arrowHeadLength;
-        Vector2 d = (line.Point1 - line.Point2) * mult;
-        Vector2 endLeft = line.Point1 - d;
-        Vector2 endRight = line.Point1 + d;
-        Line left = new Line(line.Point1, endLeft);
-        Line right = new Line(line.Point1, endRight);
-        DrawLine(texture, left, color, false, thickness);
-        DrawLine(texture, right, color, false, thickness);
-        if (apply) texture.Apply();
+#if DEBUG
+        if (openOutput)
+        {
+            try
+            {
+                Process.Start(fileName);
+            }
+            catch (Exception ex)
+            {
+                L.Log("Unable to open output photo.");
+                L.LogError(ex, method: "ZONE DRAWING");
+            }
+        }
+#endif
     }
     public static void DrawLineGradient(Line line, float thickness, Texture2D texture, Color color1, Color color2, bool apply = true)
     {
         if (thickness == 0) return;
-        Vector2 point1 = new Vector2(line.Point1.x + texture.width / 2, line.Point1.y + texture.height / 2);
-        Vector2 point2 = new Vector2(line.Point2.x + texture.width / 2, line.Point2.y + texture.height / 2);
+        Vector2 point1 = new Vector2(line.Point1.x, line.Point1.y);
+        Vector2 point2 = new Vector2(line.Point2.x, line.Point2.y);
         Vector2 t = point1;
         float frac = 1 / Mathf.Sqrt(Mathf.Pow(point2.x - point1.x, 2) + Mathf.Pow(point2.y - point1.y, 2));
         float ctr = 0;
@@ -336,8 +346,8 @@ public static class ZoneDrawing
     public static void DrawLine(Texture2D texture, Line line, Color color, bool apply = true, float thickness = 1)
     {
         if (thickness == 0) return;
-        Vector2 point1 = new Vector2(line.Point1.x + texture.width / 2, line.Point1.y + texture.height / 2);
-        Vector2 point2 = new Vector2(line.Point2.x + texture.width / 2, line.Point2.y + texture.height / 2);
+        Vector2 point1 = line.Point1;
+        Vector2 point2 = line.Point2;
         Vector2 t = point1;
         float frac = 1 / Mathf.Sqrt(Mathf.Pow(point2.x - point1.x, 2) + Mathf.Pow(point2.y - point1.y, 2));
         float ctr = 0;
@@ -358,20 +368,43 @@ public static class ZoneDrawing
             texture.Apply();
     }
     // https://stackoverflow.com/questions/30410317/how-to-draw-circle-on-texture-in-unity
-    public static void FillCircle(Texture2D texture, float x, float y, float radius, Color color, bool apply = true)
+    public static void FillCircle(Texture2D texture, float x, float y, float radiusX, float radiusY, Color color, bool apply = true)
     {
-        float rSquared = radius * radius;
-
-        for (float u = x - radius; u < x + radius + 1; u++)
-        for (float v = y - radius; v < y + radius + 1; v++)
+        float rSquared = Mathf.Pow(Mathf.Max(radiusX, radiusY), 2);
+        
+        for (float u = x - radiusX; u < x + radiusX + 1; u++)
+        for (float v = y - radiusY; v < y + radiusY + 1; v++)
             if ((x - u) * (x - u) + (y - v) * (y - v) < rSquared)
                 texture.SetPixelClamp((int)Math.Round(u), (int)Math.Round(v), color);
         if (apply)
             texture.Apply();
     }
+    public static void FillRectangle(Texture2D texture, float x, float y, float sizeX, float sizeY, Color color, bool apply = true)
+    {
+        sizeX = Mathf.Abs(sizeX) / 2f;
+        sizeY = Mathf.Abs(sizeY) / 2f;
+        for (float x2 = x - sizeX; x2 < x + sizeX; ++x2)
+        {
+            for (float y2 = y - sizeY; y2 < y + sizeY; ++y2)
+            {
+                texture.SetPixelClamp(Mathf.RoundToInt(x2), Mathf.RoundToInt(y2), color);
+            }
+        }
+
+        if (apply)
+            texture.Apply();
+    }
     public static void SetPixelClamp(this Texture2D texture, int x, int y, Color color)
     {
-        if (x <= texture.width && x >= 0 && y <= texture.height && y >= 0) texture.SetPixel(x, y, color);
+        if (x <= texture.width && x >= 0 && y <= texture.height && y >= 0)
+        {
+            if (color.a < 1f)
+            {
+                Color old = texture.GetPixel(x, y);
+                color = old * ((1f - color.a) * old.a) + color * color.a;
+            }
+            texture.SetPixel(x, y, color);
+        }
     }
     public static void DrawCircle(Texture2D texture, float x, float y, float radius, Color color, float thickness = 1, bool apply = true, bool drawLineToOutside = false, float polygonResolutionScale = 1f)
     {

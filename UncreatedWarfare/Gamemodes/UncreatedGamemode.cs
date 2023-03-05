@@ -414,7 +414,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         _hasTimeSynced = false;
         if (_useEventLoop)
         {
-            if (EventLoopCoroutine != null) // TODO: will this ever be nullif the gamemode is being reinstantiated here every time?
+            if (EventLoopCoroutine != null)
             {
                 L.LogError("An ADDITIONAL Gamemode event loop is about to be instantiated, stopping the old one...");
 

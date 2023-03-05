@@ -271,8 +271,6 @@ public class ReloadCommand : AsyncCommand
                     L.LogError(ex);
                 }
             }
-            // todo FIX: Invocations
-            //Invocations.Warfare.SendRankInfo.NetInvoke(XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks, OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
         }
         catch (Exception ex)
         {

@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -18,16 +19,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags;
 public abstract class Zone : IDeployable, IListItem
 {
     public PrimaryKey PrimaryKey { get; set; }
-    private static bool _isReady;
-    /// <summary>
-    /// For converting between image sources and coordinate sources.
-    /// </summary>
-    private static float _imageMultiplier;
-    internal static ushort LvlSize;
-    internal static ushort LvlBrdr;
-    internal static bool HasCartographyVolume;
-    internal static Transform? CartographyTransform;
-    internal static Vector3 CartographyBoxSize;
 
     /// <summary>Returns a zone builder scaled to world coordinates.</summary>
     internal virtual ZoneBuilder Builder => new ZoneBuilder
@@ -45,84 +36,6 @@ public abstract class Zone : IDeployable, IListItem
         UseCase = Data.UseCase,
         GridObjects = Data.GridObjects
     };
-    internal static void OnLevelLoaded()
-    {
-        CartographyVolume? volume = CartographyVolumeManager.Get()?.GetMainVolume();
-        if (volume != null)
-        {
-            HasCartographyVolume = true;
-            _imageMultiplier = 1;
-            CartographyTransform = volume.transform;
-            LvlBrdr = 0;
-            LvlSize = (ushort)Mathf.RoundToInt(Mathf.Max(volume.GetBoxSize().x, volume.GetBoxSize().z));
-            CartographyBoxSize = volume.GetBoxSize();
-        }
-        else
-        {
-            LvlSize = Level.size;
-            LvlBrdr = Level.border;
-            _imageMultiplier = (LvlSize - LvlBrdr * 2) / (float)LvlSize;
-            HasCartographyVolume = false;
-            CartographyTransform = null;
-            CartographyBoxSize = Vector3.one;
-        }
-        _isReady = true;
-    }
-    /// <summary>
-    /// Convert a <see cref="Vector2"/> that was gotten from the Map image to world coordinates.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector2 FromMapCoordinates(Vector2 v2)
-    {
-        if (HasCartographyVolume && CartographyTransform != null)
-        {
-            Vector3 v3 = CartographyTransform.TransformPoint(new Vector3(v2.x, 0, v2.y));
-            v3 = new Vector3(v3.x / CartographyBoxSize.x, 0, v3.z / CartographyBoxSize.z);
-            return new Vector2(v3.x, v3.z);
-        }
-        return new Vector2((v2.x - LvlSize / 2) * _imageMultiplier, (v2.y - LvlSize / 2) * -_imageMultiplier);
-    }
-    /// <summary>
-    /// Convert a <see cref="float"/> scalar that was gotten from map image measurements to world measurements.
-    /// </summary>
-    protected static float FromMapCoordinates(float scalar)
-    {
-        if (HasCartographyVolume && CartographyTransform != null)
-        {
-            Vector3 v3 = CartographyTransform.TransformVector(scalar, 0, 0);
-            v3 = new Vector3(v3.x / CartographyBoxSize.x, 0, 0);
-            return v3.x;
-        }
-        return scalar * _imageMultiplier;
-    }
-    /// <summary>
-    /// Convert a <see cref="Vector2"/> that was gotten from world coordinates to Map image coordinates.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected static Vector2 ToMapCoordinates(Vector2 v2)
-    {
-        if (HasCartographyVolume && CartographyTransform != null)
-        {
-            Vector3 v3 = CartographyTransform.InverseTransformPoint(new Vector3(v2.x, 0, v2.y));
-            v3 = new Vector3(v3.x * CartographyBoxSize.x, 0, v3.z * CartographyBoxSize.z);
-            return new Vector2(v3.x, v3.z);
-        }
-        return new Vector2(v2.x / _imageMultiplier, v2.y / _imageMultiplier);
-    }
-    /// <summary>
-    /// Convert a <see cref="float"/> scalar that was gotten from map world measurements to map image measurements.
-    /// </summary>
-    protected static float ToMapCoordinates(float scalar)
-    {
-        if (HasCartographyVolume && CartographyTransform != null)
-        {
-            Vector3 v3 = CartographyTransform.InverseTransformVector(scalar, 0, 0);
-            v3 = new Vector3(v3.x * CartographyBoxSize.x, 0, 0);
-            L.LogDebug($"to {scalar} -> {v3.x}");
-            return v3.x;
-        }
-        return scalar / _imageMultiplier;
-    }
     internal readonly bool UseMapCoordinates;
     /// <summary>
     /// The highest Y level where the zone takes effect.
@@ -244,32 +157,14 @@ public abstract class Zone : IDeployable, IListItem
     {
         return location.x >= Bounds.x && location.x <= Bounds.z && location.z >= Bounds.y && location.z <= Bounds.w && (float.IsNaN(MinHeight) || location.y >= MinHeight) && (float.IsNaN(MaxHeight) || location.y <= MaxHeight);
     }
-    private bool _drawDataGenerated;
-    private DrawData _drawData;
-    internal DrawData DrawingData
+
+    protected static Vector2 LegacyMappingFromMapPos(float x, float z)
     {
-        get
-        {
-            if (!_drawDataGenerated)
-            {
-                _drawData = GenerateDrawData();
-                _drawDataGenerated = true;
-            }
-            return _drawData;
-        }
+        return new Vector2((x - GridLocation.ImageSize.X / 2f) * GridLocation.DistanceScale.x, -z * GridLocation.DistanceScale.y);
     }
 
     Vector3 IDeployable.Position => Spawn3D + new Vector3(0, 1.5f, 0);
-
-    protected abstract DrawData GenerateDrawData();
-    public struct DrawData
-    {
-        internal Vector2 Center;
-        internal float Radius;
-        internal Vector2 Size;
-        internal Line[]? Lines;
-        internal Vector4 Bounds;
-    }
+    
     /// <summary>
     /// Zones must set <see cref="SucessfullyParsed"/> to <see langword="true"/>.
     /// </summary>
@@ -277,7 +172,7 @@ public abstract class Zone : IDeployable, IListItem
     internal Zone(in ZoneModel data)
     {
         this.UseMapCoordinates = data.UseMapCoordinates;
-        if (UseMapCoordinates && !_isReady)
+        if (UseMapCoordinates && !Level.isLoaded)
             throw new InvalidOperationException("Tried to construct a zone before the level has loaded.");
         this.Data = data;
         this.Type = data.ZoneType;
@@ -288,10 +183,20 @@ public abstract class Zone : IDeployable, IListItem
         this.PrimaryKey = data.Id < 0 ? PrimaryKey.NotAssigned : data.Id;
         if (data.UseMapCoordinates)
         {
-            this.Center = FromMapCoordinates(new Vector2(data.ZoneData.X, data.ZoneData.Z));
-            this._center = new Vector3(Center.x, 0f, Center.y);
-            this.Spawn = FromMapCoordinates(new Vector2(data.SpawnX, data.SpawnZ));
-            this._spawn = new Vector3(Spawn.x, 0f, Spawn.y);
+            if (GridLocation.LegacyMapping)
+            {
+                Center = LegacyMappingFromMapPos(data.ZoneData.X, data.ZoneData.Z);
+                Spawn = LegacyMappingFromMapPos(data.SpawnX, data.SpawnZ);
+                _center = new Vector3(Center.x, 0f, Center.y);
+                _spawn = new Vector3(Spawn.x, 0f, Spawn.y);
+            }
+            else
+            {
+                this._center = GridLocation.MapCoordsToWorldCoords(new Vector2(data.ZoneData.X, data.ZoneData.Z));
+                this.Center = new Vector2(_center.x, _center.z);
+                this._spawn = GridLocation.MapCoordsToWorldCoords(new Vector2(data.SpawnX, data.SpawnZ));
+                this.Spawn = new Vector2(_spawn.x, _spawn.z);
+            }
         }
         else
         {

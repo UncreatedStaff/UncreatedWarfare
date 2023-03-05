@@ -254,6 +254,8 @@ public class DebugCommand : AsyncCommand
     }
     private void savemanyzones(CommandInteraction ctx)
     {
+        throw ctx.SendNotImplemented();
+        /*
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         ctx.AssertGamemode(out IFlagRotation fg);
@@ -276,9 +278,12 @@ public class DebugCommand : AsyncCommand
             ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, true, true, false, false, true, Path.Combine(directory, "zonearea_" + i.ToString(Data.AdminLocale)));
             L.Log("Done with " + (i + 1).ToString(Data.LocalLocale) + '/' + times.ToString(Data.LocalLocale));
         }
+        */
     }
     private void savemanygraphs(CommandInteraction ctx)
     {
+        throw ctx.SendNotImplemented();
+        /*
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         ctx.AssertGamemode(out IFlagRotation fg);
@@ -295,7 +300,7 @@ public class DebugCommand : AsyncCommand
             ZoneDrawing.DrawZoneMap(fg.LoadedFlags, rot, Path.Combine(directory, "zonegraph_" + i.ToString(Data.AdminLocale)));
             L.Log("Done with " + (i + 1).ToString(Data.LocalLocale) + '/' + times.ToString(Data.LocalLocale));
             rot.Clear();
-        }
+        } */
     }
     private void zone(CommandInteraction ctx)
     {
@@ -344,78 +349,9 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         ctx.AssertGamemode(out IFlagRotation fg);
-        ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
-        if (singleton == null)
-            throw ctx.SendGamemodeError();
-        bool all = true;
-        bool extra = true;
-        bool path = true;
-        bool range = false;
-        bool drawIn = true;
-        bool drawAngles = false;
-        if (ctx.HasArgs(6))
-        {
-            if (ctx.MatchParameter(0, "active", "false")) all = false;
-            else if (!ctx.MatchParameter(0, "all", "true")) ctx.ReplyString(ZONEAREA_SYNTAX);
-            if (ctx.MatchParameter(1, "false")) extra = false;
-            else if (!ctx.MatchParameter(1, "true")) ctx.ReplyString(ZONEAREA_SYNTAX);
-            if (ctx.MatchParameter(2, "false")) path = false;
-            else if (!ctx.MatchParameter(2, "true")) ctx.ReplyString(ZONEAREA_SYNTAX);
-            if (ctx.MatchParameter(3, "true")) range = true;
-            else if (!ctx.MatchParameter(3, "false")) ctx.ReplyString(ZONEAREA_SYNTAX);
-            if (ctx.MatchParameter(4, "false")) drawIn = false;
-            else if (!ctx.MatchParameter(4, "true")) ctx.ReplyString(ZONEAREA_SYNTAX);
-            if (ctx.MatchParameter(5, "true")) drawAngles = true;
-            else if (!ctx.MatchParameter(5, "false")) ctx.ReplyString(ZONEAREA_SYNTAX);
-        }
-        else if (ctx.ArgumentCount != 1)
-        {
-            ctx.ReplyString(ZONEAREA_SYNTAX);
-            return;
-        }
-        List<Zone> zones = new List<Zone>();
-        if (all)
-        {
-            zones.AddRange((extra
-                ? singleton.Items.Select(x => x.Item).Where(x => x is not null)
-                : singleton.Items.Where(x => x.Item is { } item && item.Data.UseCase == ZoneUseCase.Flag).Select(x => x.Item))!);
-        }
-        else
-            zones.AddRange(fg.Rotation.Select(x => x.ZoneData.Item).Where(x => x != null)!);
-        ctx.ReplyString("Picture has to generate, wait a few seconds then check " + Path.Combine(Data.Paths.FlagStorage, "zonearea.png") + ".");
-        ctx.LogAction(ActionLogType.BuildZoneMap, "ZONEAREA");
-        ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, path, range, drawIn, drawAngles, true);
-    }
-    private void drawzone(CommandInteraction ctx)
-    {
-        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
-        ctx.AssertGamemode(out IFlagRotation fg);
-        Vector3 pos = ctx.Caller.Position;
-        if (pos == Vector3.zero) return;
-        Flag? flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(pos));
-        if (flag == null)
-        {
-            ctx.Reply(T.ZoneNoResultsLocation);
-            return;
-        }
-        Zone? zone = flag.ZoneData.Item;
-        string zoneName = flag.Name;
-        if (zone is null)
-            throw ctx.Reply(T.ZoneNoResultsLocation);
-
-        List<Zone> zones = new List<Zone>(1) { zone };
-        ctx.LogAction(ActionLogType.BuildZoneMap, "DRAWZONE");
-        ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, false, true, false, true, true, Path.Combine(Data.Paths.FlagStorage, "zonerange_" + zoneName));
-    }
-    private void drawgraph(CommandInteraction ctx)
-    {
-        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
-
-        ctx.AssertGamemode(out IFlagRotation fg);
-
-        ctx.LogAction(ActionLogType.BuildZoneMap, "DRAWGRAPH");
-        ZoneDrawing.DrawZoneMap(fg.LoadedFlags, fg.Rotation, null);
+        UCWarfare.I.StartCoroutine(ZoneDrawing.CreateFlagOverlay(ctx, openOutput: true));
+        ctx.Defer();
     }
     private void rotation(CommandInteraction ctx)
     {

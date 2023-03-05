@@ -16,6 +16,7 @@ public sealed class KitsCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
+        throw ctx.SendNotImplemented();
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         
         KitManager.MenuUI.OpenUI(ctx.Caller);

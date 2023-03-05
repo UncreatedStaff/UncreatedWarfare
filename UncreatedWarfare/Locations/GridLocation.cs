@@ -8,6 +8,7 @@ namespace Uncreated.Warfare.Locations;
 
 public readonly struct GridLocation : ITranslationArgument
 {
+    private static LevelData? _lvl;
     public const int SUBGRID_AMOUNT = 3; // dont set at 10 or higher
     public const int OPTIMAL_GRID_SIZE_WORLD_SCALE = 150;
     public const float BORDER_PERCENTAGE = 1f / 30f;
@@ -309,6 +310,96 @@ public readonly struct GridLocation : ITranslationArgument
         {
             sectionsY = 26;
             sectionWidthY = w2 / sectionsY;
+        }
+    }
+
+    public static (int X, int Y) ImageSize => (_lvl ??= new LevelData()).MapImageSize;
+    public static bool LegacyMapping => (_lvl ??= new LevelData()).LegacyMapping;
+    public static Vector2 CaptureSize => (_lvl ??= new LevelData()).CaptureSize;
+    public static Vector2 DistanceScale => (_lvl ??= new LevelData()).DistanceScale;
+    public static Matrix4x4 TransformMatrix => (_lvl ??= new LevelData()).TransformMatrix;
+    public static Matrix4x4 TransformMatrixInverse => (_lvl ??= new LevelData()).TransformMatrixInverse;
+    public static float WorldDistanceToMapDistanceX(float x)
+    {
+        _lvl ??= new LevelData();
+        
+        return x / _lvl.DistanceScale.x;
+    }
+    public static float WorldDistanceToMapDistanceY(float y)
+    {
+        _lvl ??= new LevelData();
+        
+        return y / _lvl.DistanceScale.x;
+    }
+    public static float MapDistanceToWorldDistanceX(float x)
+    {
+        _lvl ??= new LevelData();
+        
+        return x * _lvl.DistanceScale.x;
+    }
+    public static float MapDistanceToWorldDistanceY(float y)
+    {
+        _lvl ??= new LevelData();
+        
+        return y * _lvl.DistanceScale.x;
+    }
+    public static Vector2 WorldCoordsToMapCoords(Vector3 worldPos)
+    {
+        _lvl ??= new LevelData();
+
+        Vector3 n = new Vector3((worldPos.x / _lvl.CaptureSize.x + 0.5f) * _lvl.MapImageSize.X, 0f, (worldPos.z / _lvl.CaptureSize.y + 0.5f) * _lvl.MapImageSize.Y);
+        return _lvl.TransformMatrixInverse.MultiplyPoint3x4(n);
+    }
+    public static Vector3 MapCoordsToWorldCoords(Vector2 mapPos)
+    {
+        _lvl ??= new LevelData();
+
+        Vector3 n = new Vector3((mapPos.x / _lvl.MapImageSize.X - 0.5f) * _lvl.CaptureSize.x, (mapPos.y / _lvl.MapImageSize.Y - 0.5f) * _lvl.CaptureSize.y, 0f);
+        return _lvl.TransformMatrix.MultiplyPoint3x4(n);
+    }
+    private sealed class LevelData
+    {
+        public bool LegacyMapping;
+        public Matrix4x4 TransformMatrix;
+        public Matrix4x4 TransformMatrixInverse;
+        public (int X, int Y) MapImageSize;
+        public Vector2 CaptureSize;
+        public Vector2 DistanceScale; // * = map to world, / = world to map
+        public LevelData()
+        {
+            if (Level.isLoaded)
+                Reset(Level.BUILD_INDEX_GAME);
+            else
+                Level.onPrePreLevelLoaded += Reset;
+        }
+        private void Reset(int lvlLoaded)
+        {
+            if (lvlLoaded != Level.BUILD_INDEX_GAME)
+                return;
+            CartographyVolume vol = CartographyVolumeManager.Get().GetMainVolume();
+            if (vol != null)
+            {
+                LegacyMapping = false;
+                TransformMatrix = Matrix4x4.TRS(vol.transform.position, vol.transform.rotation * Quaternion.Euler(90f, 0.0f, 0.0f), Vector3.one);
+                TransformMatrixInverse = TransformMatrix.inverse;
+                Vector3 size = vol.CalculateLocalBounds().size;
+                MapImageSize = (Mathf.CeilToInt(size.x), Mathf.CeilToInt(size.z));
+                CaptureSize = new Vector2(size.x, size.z);
+                DistanceScale = new Vector2(CaptureSize.x / MapImageSize.X, CaptureSize.y / MapImageSize.Y);
+            }
+            else
+            {
+                LegacyMapping = true;
+                TransformMatrix = Matrix4x4.TRS(new Vector3(0.0f, 1028f, 0.0f), Quaternion.Euler(90f, 0.0f, 0.0f), Vector3.one);
+                TransformMatrixInverse = TransformMatrix.inverse;
+                ushort s = Level.size;
+                float w = s - Level.border * 2f;
+                MapImageSize = (s, s);
+                CaptureSize = new Vector2(w, w);
+                DistanceScale = new Vector2(w / s, w / s);
+            }
+
+            Level.onPrePreLevelLoaded -= Reset;
         }
     }
 }

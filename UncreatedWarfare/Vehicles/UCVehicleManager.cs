@@ -59,7 +59,7 @@ public static class UCVehicleManager
         VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
         for (int v = 0; v < vehicles.Count; v++)
         {
-            if (vehicles[v].asset.GUID == id && team != 0 && vehicles[v].lockedGroup.m_SteamID == team)
+            if (vehicles[v].asset.GUID == id && team != 0 && vehicles[v].lockedGroup.m_SteamID.GetTeam() == team)
                 ++amt;
         }
         vehicles.Clear();

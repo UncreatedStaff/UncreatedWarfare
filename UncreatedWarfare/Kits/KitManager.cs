@@ -2095,7 +2095,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         }, ctx: "On Connected for KitManager.");
     }
 
-    private static void CheckKitForDuplicateEntries(Kit kit)
+    private static void VerifyKitIntegrity(Kit kit)
     {
         if (kit.FactionFilter != null)
         {
@@ -2114,6 +2114,15 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                         kit.IsLoadDirty = true;
                     }
                 }
+            }
+            if (kit.FactionFilterIsWhitelist && kit.FactionKey.IsValid && !Array.Exists(kit.FactionFilter, x => x.Key == kit.FactionKey.Key))
+            {
+                PrimaryKey[] keys = kit.FactionFilter;
+                Util.AddToArray(ref keys!, kit.FactionKey);
+                L.LogWarning("Faction was not in whitelist for kit \"" + kit.Id + "\" " + kit.PrimaryKey +
+                             ": " + TeamManager.GetFactionInfo(kit.FactionKey)?.Name + ".");
+                kit.FactionFilter = keys;
+                kit.IsLoadDirty = true;
             }
         }
         if (kit.MapFilter != null)
@@ -2697,7 +2706,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }, token).ConfigureAwait(false);
         }
 
-        CheckKitForDuplicateEntries(obj);
+        VerifyKitIntegrity(obj);
         GC.Collect();
         return obj;
     }
@@ -2860,7 +2869,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
         }, token).ConfigureAwait(false);
         for (int i = 0; i < list.Count; ++i)
-            CheckKitForDuplicateEntries(list[i]);
+            VerifyKitIntegrity(list[i]);
         GC.Collect();
         return list.ToArray();
     }
@@ -2985,7 +2994,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         Dictionary<int, OldKit> kits = new Dictionary<int, OldKit>(256);
         int rows = 0;
         // todo actually import loadouts later, too much work rn
-        await Sql.QueryAsync("SELECT * FROM `kit_data` WHERE `IsLoadout` != 1;", null, reader =>
+        await Sql.QueryAsync("SELECT * FROM `kit_data`;", null, reader =>
         {
             OldKit kit = new OldKit
             {
@@ -3432,6 +3441,31 @@ public static class KitEx
         return count;
     }
 
+    public static byte GetKitItemTypeId(IKitItem item)
+    {
+        if (item is PageItem)
+            return 1;
+        if (item is ClothingItem)
+            return 2;
+        if (item is AssetRedirectItem)
+            return 3;
+        if (item is AssetRedirectClothing)
+            return 4;
+
+        return 0;
+    }
+    public static IKitItem? GetEmptyKitItem(byte id)
+    {
+        if (id is 0 or > 4)
+            return null;
+        return (IKitItem)Activator.CreateInstance(id switch
+        {
+            1 => typeof(PageItem),
+            2 => typeof(ClothingItem),
+            3 => typeof(AssetRedirectItem),
+            4 => typeof(AssetRedirectClothing),
+        });
+    }
     public static string GetFlagIcon(this FactionInfo? faction)
     {
         if (faction is not { TMProSpriteIndex: { } })
@@ -3554,6 +3588,7 @@ public static class KitEx
         public static readonly NetCall<byte, byte[]> SendKitsAccess = new NetCall<byte, byte[]>(1137);
         public static readonly NetCall<byte[]> RespondIsNitroBoosting = new NetCall<byte[]>(1139, 50);
         public static readonly NetCall<ulong[], byte[]> SendNitroBoostingUpdated = new NetCall<ulong[], byte[]>(ReceiveIsNitroBoosting);
+
 
         [NetCall(ENetCall.FROM_SERVER, 1100)]
         internal static async Task<StandardErrorCode> ReceiveSetKitAccess(MessageContext context, ulong admin, ulong player, string kit, KitAccessType type, bool state)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Uncreated.Warfare.Locations;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -41,7 +42,13 @@ public sealed class PolygonZone : Zone
             for (int i = 0; i < _points.Length; ++i)
             {
                 ref Vector2 point = ref _points[i];
-                point = FromMapCoordinates(point);
+                if (GridLocation.LegacyMapping)
+                    point = LegacyMappingFromMapPos(point.x, point.y);
+                else
+                {
+                    Vector3 v = GridLocation.MapCoordsToWorldCoords(point);
+                    point = new Vector2(v.x, v.z);
+                }
             }
         }
         _lines = new Line[_points.Length];
@@ -143,20 +150,6 @@ public sealed class PolygonZone : Zone
             sb.Append($"Line {i + 1}: ({_lines[i].Point1.x}, {_lines[i].Point1.y}) to ({_lines[i].Point2.x}, {_lines[i].Point2.y}).\n");
         }
         return sb.ToString();
-    }
-    protected override DrawData GenerateDrawData()
-    {
-        DrawData d = new DrawData
-        {
-            Center = ToMapCoordinates(Center),
-            Lines = new Line[this._points.Length]
-        };
-        for (int i = 0; i < _points.Length; i++)
-            d.Lines[i] = new Line(ToMapCoordinates(_points[i]), ToMapCoordinates(_points[i == _points.Length - 1 ? 0 : i + 1]));
-        Vector2 b1 = ToMapCoordinates(Bound);
-        Vector2 b2 = ToMapCoordinates(new Vector2(Bound.z, Bound.w));
-        d.Bounds = new Vector4(b1.x, b1.y, b2.x, b2.y);
-        return d;
     }
     /// <inheritdoc/>
     internal override ZoneBuilder Builder

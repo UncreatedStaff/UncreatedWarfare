@@ -100,7 +100,7 @@ public class DevCommand : AsyncCommand
 
             if (ctx.TryGet(1, out int points))
             {
-                insurgency.AddIntelligencePoints(points);
+                insurgency.AddIntelligencePoints(points, ctx.Caller);
 
                 ctx.LogAction(ActionLogType.AddIntel, "ADDED " + points.ToString(Data.AdminLocale) + " OF INTEL");
                 ctx.ReplyString($"Added {points} intelligence points.".Colorize("ebd491"));

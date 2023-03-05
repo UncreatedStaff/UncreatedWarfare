@@ -148,7 +148,7 @@ public class InsurgencyPlayerStats : TeamPlayerStats, IExperienceStats, IFOBStat
     internal int _killsAttack;
     internal int _killsDefense;
     internal int _cachesDestroyed;
-    //internal int _cachesDiscovered;
+    internal int _cachesDiscovered;
     internal int _intelligencePointsCollected;
     public int XPGained => _xp;
     public int Credits => _credits;

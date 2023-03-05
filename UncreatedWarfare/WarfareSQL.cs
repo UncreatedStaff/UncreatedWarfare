@@ -198,7 +198,7 @@ public class WarfareSQL : MySqlDatabase
         if (total >= 0)
         {
             await NonQueryAsync(
-                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Experience`) VALUES (@0, @1, @2) ON DUPLICATE KEY UPDATE `Experience` = `Experience` + @2;",
+                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Experience`) VALUES (@0, @1, 0) ON DUPLICATE KEY UPDATE `Experience` = `Experience` + @2;",
                 new object[] { player, team, amount }, token).ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             return total;
@@ -232,7 +232,7 @@ public class WarfareSQL : MySqlDatabase
         if (ttl >= 0)
         {
             await NonQueryAsync(
-                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`) VALUES (@0, @1, @2) ON DUPLICATE KEY UPDATE `Credits` = `Credits` + @2;",
+                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`) VALUES (@0, @1, 0) ON DUPLICATE KEY UPDATE `Credits` = `Credits` + @2;",
                 new object[] { player, team, amount }, token).ConfigureAwait(false);
             return ttl;
         }
@@ -266,7 +266,9 @@ public class WarfareSQL : MySqlDatabase
         if (ttlc >= 0 && ttlx >= 0)
         {
             await NonQueryAsync(
-                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, @2, @3) ON DUPLICATE KEY UPDATE `Credits` = `Credits` + @2, `Experience` = `Experience` + @3;",
+                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, " +
+                (credits < 0 ? "0" : "@2" ) + ", " + (xp < 0 ? "0" : "@3" ) + ") " +
+                "ON DUPLICATE KEY UPDATE `Credits` = `Credits` + @2, `Experience` = `Experience` + @3;",
                 new object[] { player, team, credits, xp }, token).ConfigureAwait(false);
             return (ttlc, ttlx);
         }
@@ -274,14 +276,14 @@ public class WarfareSQL : MySqlDatabase
         if (ttlc >= 0)
         {
             await NonQueryAsync(
-                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, @2, 0) ON DUPLICATE KEY UPDATE `Credits` = `Credits` + @2, `Experience` = 0;",
+                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, " + (credits < 0 ? "0" : "@2") + ", 0) ON DUPLICATE KEY UPDATE `Credits` = `Credits` + @2, `Experience` = 0;",
                 new object[] { player, team, credits }, token).ConfigureAwait(false);
             return (ttlc, 0);
         }
         if (ttlx >= 0)
         {
             await NonQueryAsync(
-                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, 0, @2) ON DUPLICATE KEY UPDATE `Credits` = 0, `Experience` = `Experience` + @3;",
+                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, 0, " + (xp < 0 ? "0" : "@2") + ") ON DUPLICATE KEY UPDATE `Credits` = 0, `Experience` = `Experience` + @3;",
                 new object[] { player, team, xp }, token).ConfigureAwait(false);
             return (0, ttlx);
         }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Locations;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -17,7 +18,7 @@ public sealed class CircleZone : Zone
     {
         if (data.UseMapCoordinates)
         {
-            _radius = FromMapCoordinates(data.ZoneData.Radius);
+            _radius = GridLocation.MapDistanceToWorldDistanceX(data.ZoneData.Radius);
         }
         else
         {
@@ -80,16 +81,6 @@ public sealed class CircleZone : Zone
     }
     /// <inheritdoc/>
     public override string ToString() => $"{base.ToString()} Radius: {_radius}";
-    protected override DrawData GenerateDrawData()
-    {
-        DrawData d = new DrawData()
-        {
-            Center = ToMapCoordinates(Center),
-            Radius = ToMapCoordinates(_radius)
-        };
-        d.Bounds = new Vector4(d.Center.x - d.Radius, d.Center.y - d.Radius, d.Center.x + d.Radius, d.Center.y + d.Radius);
-        return d;
-    }
 
     /// <inheritdoc/>
     internal override ZoneBuilder Builder
