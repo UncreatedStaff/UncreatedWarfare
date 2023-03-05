@@ -319,8 +319,7 @@ public static class EventFunctions
             }
 
             guid = barricade.asset.GUID;
-            FactionInfo? info = TeamManager.GetFactionSafe(team);
-            if (info != null && info.FOBRadio.MatchGuid(guid))
+            if (Gamemode.Config.FOBRadios.Value.Any(r => r.MatchGuid(asset.GUID)))
             {
                 shouldAllow = BuildableComponent.TryPlaceRadio(barricade, player, point);
                 return;

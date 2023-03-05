@@ -746,15 +746,19 @@ public sealed class GamemodeConfigData : JSONConfigData
         };
         FOBRadios = new JsonAssetReference<ItemBarricadeAsset>[]
         {
-            "7715ad81f1e24f60bb8f196dd09bd4ef",
-            "fb910102ad954169abd4b0cb06a112c8",
-            "c7754ac78083421da73006b12a56811a"
+            "7715ad81f1e24f60bb8f196dd09bd4ef", // USA
+            "fb910102ad954169abd4b0cb06a112c8", // Russia
+            "c7754ac78083421da73006b12a56811a", // MEC
+            "439c32cced234f358e101294ea0ce3e4", // Germany
+            "7bde55f70c494418bdd81926fb7d6359" //China
         };
         RallyPoints = new JsonAssetReference<ItemBarricadeAsset>[]
         {
             "5e1db525179341d3b0c7576876212a81", // USA
             "0d7895360c80440fbe4a45eba28b2007", // Russia
-            "c03352d9e6bb4e2993917924b604ee76" // MEC
+            "c03352d9e6bb4e2993917924b604ee76", // MEC
+            "49663078b594410b98b8a51e8eff3609", // Germany
+            "7720ced42dba4c1eac16d14453cd8bc4" //China
         };
         BarricadeZoneBlockerTeam1 = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(
             new JsonAssetReference<ItemBarricadeAsset>(Guid.Empty),

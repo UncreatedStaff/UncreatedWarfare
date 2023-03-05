@@ -105,9 +105,13 @@ public static class TeamManager
         new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/lgrkCdY.png")
         {
             PrimaryKey = 4,
+            Build = "35eabf178e4e4d82aac34fcbf8e690e3",
+            Ammo = "15857c3f693b4209b7b92a0b8438be34",
+            FOBRadio = "439c32cced234f358e101294ea0ce3e4",
+            RallyPoint = "49663078b594410b98b8a51e8eff3609",
             DefaultHat = "835dc9e72f46431a9bed591bcbbfb081",
             DefaultShirt = "fc4a2a49f335489a84e294ca03031a82",
-            DefaultBackpack = "9addb6f54920495cb4826cb5c000ed4b",
+            DefaultBackpack = "d77a232ad1fb4cf78dde280fd7c14a0b",
             DefaultVest = "2499cebdfc6646c59103a48f06c4838a",
             DefaultPants = "31ed5cd8918e4693bc7431483b130e05",
             TMProSpriteIndex = 4,
@@ -116,6 +120,10 @@ public static class TeamManager
         new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "chunarmed", @"https://i.imgur.com/Yns89Yk.png")
         {
             PrimaryKey = 5,
+            Build = "de7c4cafd0304848a7141e3860b2248a",
+            Ammo = "2f3cfa9c6bb645fbab8f49ce556d1a1a",
+            FOBRadio = "7bde55f70c494418bdd81926fb7d6359",
+            RallyPoint = "7720ced42dba4c1eac16d14453cd8bc4",
             DefaultShirt = "2c1a9c62b30a49e7bda2ef6a2727eb8c",
             DefaultBackpack = "5ac771b71bb7496bb2042d3e8cc2015c",
             DefaultVest = "b74265e7af1c4d52866907e489206f86",
