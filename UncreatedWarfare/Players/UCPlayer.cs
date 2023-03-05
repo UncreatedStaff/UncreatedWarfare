@@ -79,7 +79,16 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public string NickName;
     public SqlItem<Kit>? ActiveKit;
     public string? MuteReason;
-    public Class KitClass;
+    public Class KitClass
+    {
+        get
+        {
+            if (ActiveKit?.Item is { } kit)
+                return kit.Class;
+            else
+                return Class.None;
+        }
+    }
     public Branch Branch;
     public EMuteType MuteType;
     public DateTime TimeUnmuted;
@@ -116,6 +125,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         Player = player;
         CSteamID = steamID;
         Save = save;
+        ActiveKit = KitManager.GetSingletonQuick()?.FindKit(Save.KitName, default, true).Result;
+
         if (!Data.OriginalPlayerNames.TryGetValue(Steam64, out _cachedName))
             _cachedName = new PlayerNames(player);
         else Data.OriginalPlayerNames.Remove(Steam64);
@@ -539,12 +550,10 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         if (kit?.Item == null)
         {
             ActiveKit = null;
-            KitClass = Class.None;
         }
         else
         {
             ActiveKit = kit;
-            KitClass = kit.Item.Class;
         }
 
         Apply();
