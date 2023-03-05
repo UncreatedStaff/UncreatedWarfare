@@ -379,7 +379,7 @@ public static class TeamManager
                     {
                         for (int i = 0; i < singleton.Items.Count; ++i)
                         {
-                            if (singleton.Items[i] is { Item: { Data: { UseCase: ZoneUseCase.Team1Main } } })
+                            if (singleton.Items[i] is { Item.Data.UseCase: ZoneUseCase.Team1Main })
                             {
                                 _t1Main = singleton.Items[i];
                                 break;
@@ -424,7 +424,7 @@ public static class TeamManager
                     {
                         for (int i = 0; i < singleton.Items.Count; ++i)
                         {
-                            if (singleton.Items[i] is { Item: { Data: { UseCase: ZoneUseCase.Team2Main } } })
+                            if (singleton.Items[i] is { Item.Data.UseCase: ZoneUseCase.Team2Main })
                             {
                                 _t2Main = singleton.Items[i];
                                 break;
@@ -469,7 +469,7 @@ public static class TeamManager
                     {
                         for (int i = 0; i < singleton.Items.Count; ++i)
                         {
-                            if (singleton.Items[i] is { Item: { Data: { UseCase: ZoneUseCase.Team1MainCampZone } } })
+                            if (singleton.Items[i] is { Item.Data.UseCase: ZoneUseCase.Team1MainCampZone })
                             {
                                 _t1AMC = singleton.Items[i];
                                 break;
@@ -514,7 +514,7 @@ public static class TeamManager
                     {
                         for (int i = 0; i < singleton.Items.Count; ++i)
                         {
-                            if (singleton.Items[i] is { Item: { Data: { UseCase: ZoneUseCase.Team2MainCampZone }}} )
+                            if (singleton.Items[i] is { Item.Data.UseCase: ZoneUseCase.Team2MainCampZone } )
                             {
                                 _t2AMC = singleton.Items[i];
                                 break;
@@ -559,7 +559,7 @@ public static class TeamManager
                     {
                         for (int i = 0; i < singleton.Items.Count; ++i)
                         {
-                            if (singleton.Items[i] is { Item: { Data: { UseCase: ZoneUseCase.Lobby } } })
+                            if (singleton.Items[i] is { Item.Data.UseCase: ZoneUseCase.Lobby })
                             {
                                 _lobbyZone = singleton.Items[i];
                                 break;

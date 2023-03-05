@@ -239,6 +239,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                                 F.SetOwnerOrGroup(bdrop, structure.Owner, structure.Group);
                                 ReportInfo(structure, "Found barricade owner or group was incorrect, successfully corrected to saved values.");
                             }
+                            LoadItemsInto(structure, bdrop);
                             goto save;
                         }
                         // barricade found from instance id, update positions if needed.
@@ -263,7 +264,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                         bmatched.Add(structure.InstanceID);
                         FillHp(bdrop);
                         bdata = bdrop.GetServersideData();
-                        if (!structure.Metadata.CompareBytes(bdata.barricade.state))
+                        if (bdata.barricade.asset is not ItemStorageAsset && !structure.Metadata.CompareBytes(bdata.barricade.state))
                         {
                             ReportInfo(structure, "Barricade metadata was incorrect, successfully corrected to saved values.");
                             bdata.barricade.state = Util.CloneBytes(structure.Metadata);
@@ -275,6 +276,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                             ReportInfo(structure, "Barricade owner or group was incorrect, successfully corrected to saved values.");
                         }
                         structure.Buildable = new UCBarricade(bdrop);
+                        LoadItemsInto(structure, bdrop);
                         continue;
                         structure:
                         ItemStructureAsset stAsset = (ItemStructureAsset)itemAsset;
@@ -375,7 +377,17 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
     {
         return Level.isLoaded ? (this as ILevelStartListenerAsync).OnLevelReady(token) : Task.CompletedTask;
     }
-    private static void FillHp(BarricadeDrop drop)
+
+    public static void FillHp(IBuildable buildable)
+    {
+        if (buildable.Drop is StructureDrop str)
+            FillHp(str);
+        else if (buildable.Drop is BarricadeDrop brc)
+            FillHp(brc);
+        else
+            ThreadUtil.assertIsGameThread();
+    }
+    public static void FillHp(BarricadeDrop drop)
     {
         ThreadUtil.assertIsGameThread();
         if (drop.asset.health > drop.GetServersideData().barricade.health)
@@ -383,7 +395,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             BarricadeManager.repair(drop.model, drop.asset.health, 1f, Provider.server);
         }
     }
-    private static void FillHp(StructureDrop drop)
+    public static void FillHp(StructureDrop drop)
     {
         ThreadUtil.assertIsGameThread();
         if (drop.asset.health > drop.GetServersideData().structure.health)
@@ -401,55 +413,78 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         if (drop == null)
             return false;
         structure.Buildable = new UCBarricade(drop);
-        if (asset is ItemStorageAsset storage && drop.interactable is InteractableStorage intx)
-        {
-            bool a = false;
-            if (structure.Items != null && Data.SetStorageInventory != null)
-            {
-                Items inv = new Items(PlayerInventory.STORAGE);
-                inv.resize(storage.storage_x, storage.storage_y);
-                for (int i = 0; i < structure.Items.Length; ++i)
-                {
-                    ref ItemJarData data = ref structure.Items[i];
-                    if (Assets.find(data.Item) is ItemAsset item)
-                        inv.loadItem(data.X, data.Y, data.Rotation,
-                            new Item(item.id, data.Amount, data.Quality, data.Metadata));
-                }
-
-                if (OnStateUpdatedInteractableStorageMethod != null)
-                {
-                    inv.onStateUpdated = (StateUpdated)Delegate.Combine(inv.onStateUpdated,
-                        OnStateUpdatedInteractableStorageMethod.CreateDelegate(typeof(StateUpdated), intx));
-                }
-                else L.LogWarning("Unknown method: void onStateUpdated() in InteractableStorage.");
-                Data.SetStorageInventory(intx, inv);
-                a = true;
-            }
-
-            if (storage.isDisplay && structure.DisplayData.HasValue)
-            {
-                ItemDisplayData data = structure.DisplayData.Value;
-                intx.displaySkin = data.Skin;
-                intx.displayMythic = data.Mythic;
-                intx.displayTags = data.Tags ?? string.Empty;
-                intx.displayDynamicProps = data.DynamicProps ?? string.Empty;
-                intx.applyRotation(data.Rotation);
-                UpdateDisplayMethod?.Invoke(intx, Array.Empty<object>());
-                intx.refreshDisplay();
-                a = true;
-            }
-
-            if (a)
-            {
-                intx.rebuildState();
-            }
-        }
+        LoadItemsInto(structure, drop);
         structure.Metadata = drop.GetServersideData().barricade.state;
         structure.Position = drop.model.position;
         structure.Rotation = drop.model.rotation.eulerAngles;
         structure.InstanceID = drop.instanceID;
 
         return true;
+    }
+    private static void LoadItemsInto(SavedStructure structure, BarricadeDrop drop)
+    {
+        if (drop.asset is ItemStorageAsset asset && drop.interactable is InteractableStorage storage)
+        {
+            bool a = false;
+            if (structure.Items != null && Data.SetStorageInventory != null)
+            {
+                Items inv = new Items(PlayerInventory.STORAGE);
+                inv.resize(asset.storage_x, asset.storage_y);
+                Item? displayItem = null;
+                for (int i = 0; i < structure.Items.Length; ++i)
+                {
+                    ref ItemJarData data = ref structure.Items[i];
+                    if (Assets.find(data.Item) is ItemAsset item)
+                    {
+                        Item item2 = new Item(item.id, data.Amount, data.Quality, data.Metadata);
+                        displayItem ??= item2;
+                        inv.loadItem(data.X, data.Y, data.Rotation, item2);
+                    }
+                }
+                if (asset.isDisplay && displayItem != null)
+                {
+                    if (structure.DisplayData.HasValue)
+                    {
+                        ItemDisplayData data = structure.DisplayData.Value;
+                        storage.displaySkin = data.Skin;
+                        storage.displayMythic = data.Mythic;
+                        storage.displayTags = data.Tags;
+                        storage.displayDynamicProps = data.DynamicProps;
+                    }
+                    storage.displayItem = displayItem;
+                    storage.refreshDisplay();
+                }
+
+                if (OnStateUpdatedInteractableStorageMethod != null)
+                {
+                    inv.onStateUpdated = (StateUpdated)Delegate.Combine(inv.onStateUpdated,
+                        OnStateUpdatedInteractableStorageMethod.CreateDelegate(typeof(StateUpdated), storage));
+                    OnStateUpdatedInteractableStorageMethod.Invoke(storage, null);
+                }
+                else L.LogWarning("Unknown method: void onStateUpdated() in InteractableStorage.");
+                inv.onStateUpdated.Invoke();
+                Data.SetStorageInventory(storage, inv);
+                a = true;
+            }
+
+            if (asset.isDisplay && structure.DisplayData.HasValue)
+            {
+                ItemDisplayData data = structure.DisplayData.Value;
+                storage.displaySkin = data.Skin;
+                storage.displayMythic = data.Mythic;
+                storage.displayTags = data.Tags ?? string.Empty;
+                storage.displayDynamicProps = data.DynamicProps ?? string.Empty;
+                storage.applyRotation(data.Rotation);
+                UpdateDisplayMethod?.Invoke(storage, Array.Empty<object>());
+                storage.refreshDisplay();
+                a = true;
+            }
+
+            if (a)
+            {
+                storage.rebuildState();
+            }
+        }
     }
     private static bool Replace(SavedStructure structure, ItemStructureAsset asset)
     {
@@ -511,6 +546,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                 state = owner;
                 break;
             case EBuild.STORAGE:
+            case EBuild.STORAGE_WALL:
             case EBuild.SENTRY:
             case EBuild.SENTRY_FREEFORM:
             case EBuild.SIGN:
@@ -519,10 +555,11 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             case EBuild.LIBRARY:
             case EBuild.MANNEQUIN:
                 state = Util.CloneBytes(st2);
-                if (state.Length > 15)
+                if (state.Length > 7)
                 {
                     Buffer.BlockCopy(owner, 0, state, 0, sizeof(ulong));
-                    Buffer.BlockCopy(group, 0, state, sizeof(ulong), sizeof(ulong));
+                    if (state.Length > 15)
+                        Buffer.BlockCopy(group, 0, state, sizeof(ulong), sizeof(ulong));
                 }
                 break;
             case EBuild.SPIKE:

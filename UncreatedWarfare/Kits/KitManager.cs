@@ -2704,9 +2704,9 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             {
                 F.ReadToTranslationList(reader, obj.SignText ??= new TranslationList(1), -1);
             }, token).ConfigureAwait(false);
-        }
 
-        VerifyKitIntegrity(obj);
+            VerifyKitIntegrity(obj);
+        }
         GC.Collect();
         return obj;
     }
@@ -3458,7 +3458,9 @@ public static class KitEx
     {
         if (id is 0 or > 4)
             return null;
+#pragma warning disable CS8509
         return (IKitItem)Activator.CreateInstance(id switch
+#pragma warning restore CS8509
         {
             1 => typeof(PageItem),
             2 => typeof(ClothingItem),
