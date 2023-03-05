@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Locations;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -7,6 +8,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags;
 public sealed class RectZone : Zone
 {
     private const float Spacing = 10f;
+    public Vector2 Size => _size;
 
     private readonly Vector2 _size;
     private readonly Line[] _lines;
@@ -17,7 +19,7 @@ public sealed class RectZone : Zone
     {
         if (data.UseMapCoordinates)
         {
-            _size = new Vector2(FromMapCoordinates(data.ZoneData.SizeX), FromMapCoordinates(data.ZoneData.SizeZ));
+            _size = new Vector2(GridLocation.MapDistanceToWorldDistanceX(data.ZoneData.SizeX), GridLocation.MapDistanceToWorldDistanceY(data.ZoneData.SizeZ));
         }
         else
         {
@@ -100,22 +102,6 @@ public sealed class RectZone : Zone
     }
     /// <inheritdoc/>
     public override string ToString() => $"{base.ToString()} Size: {_size.x}x{_size.y}";
-    protected override DrawData GenerateDrawData()
-    {
-        DrawData d = new DrawData
-        {
-            Center = ToMapCoordinates(Center),
-            Size = new Vector2(ToMapCoordinates(_size.x), ToMapCoordinates(_size.y)),
-            Lines = new Line[this._lines.Length],
-            Bounds = new Vector4(ToMapCoordinates(Bound.x), ToMapCoordinates(Bound.y), ToMapCoordinates(Bound.z), ToMapCoordinates(Bound.w))
-        };
-        for (int i = 0; i < _lines.Length; ++i)
-        {
-            d.Lines[i] = new Line(ToMapCoordinates(_lines[i].Point1), ToMapCoordinates(_lines[i].Point2));
-        }
-        d.Bounds = new Vector4(d.Center.x - d.Size.x / 2, d.Center.y - d.Size.y / 2, d.Center.x + d.Size.x / 2, d.Center.y + d.Size.y / 2);
-        return d;
-    }
     /// <inheritdoc/>
     internal override ZoneBuilder Builder
     {

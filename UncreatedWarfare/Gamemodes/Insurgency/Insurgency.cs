@@ -244,7 +244,7 @@ public class Insurgency :
         if (ActiveCaches.Count > 0 && !ActiveCaches.First().IsDiscovered)
         {
             IntelligencePoints = 0;
-            OnCacheDiscovered(ActiveCaches.First().Cache);
+            OnCacheDiscovered(ActiveCaches.First().Cache, null);
         }
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
@@ -289,7 +289,7 @@ public class Insurgency :
     {
         if (e.Killer is not null && !e.WasTeamkill && e.DeadTeam == _defendTeam)
         {
-            AddIntelligencePoints(1);
+            AddIntelligencePoints(1, e.Killer);
             if (e.Killer!.Player.TryGetPlayerData(out UCPlayerData c) && c.Stats is InsurgencyPlayerStats s)
                 s._intelligencePointsCollected++;
             ((IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>)this).WarstatsTracker.intelligenceGathered++;
@@ -316,7 +316,7 @@ public class Insurgency :
         }
         base.OnGroupChanged(e);
     }
-    public bool AddIntelligencePoints(int points)
+    public bool AddIntelligencePoints(int points, UCPlayer? instigator)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -333,7 +333,7 @@ public class Insurgency :
                 if (IntelligencePoints >= Config.InsurgencyIntelPointsToDiscovery)
                 {
                     IntelligencePoints = 0;
-                    OnCacheDiscovered(first.Cache);
+                    OnCacheDiscovered(first.Cache, instigator);
                     return true;
                 }
                 return false;
@@ -359,19 +359,22 @@ public class Insurgency :
             if (IntelligencePoints >= Config.InsurgencyIntelPointsToDiscovery)
             {
                 IntelligencePoints = 0;
-                OnCacheDiscovered(last.Cache);
+                OnCacheDiscovered(last.Cache, instigator);
                 return true;
             }
             return false;
         }
         return false;
     }
-    public void OnCacheDiscovered(Cache cache)
+    public void OnCacheDiscovered(Cache cache, UCPlayer? instigator)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         cache.IsDiscovered = true;
+
+        if (instigator != null && instigator.Player.TryGetPlayerData(out UCPlayerData data) && data.Stats is InsurgencyPlayerStats ips)
+            ++ips._cachesDiscovered;
 
         foreach (UCPlayer player in PlayerManager.OnlinePlayers)
         {

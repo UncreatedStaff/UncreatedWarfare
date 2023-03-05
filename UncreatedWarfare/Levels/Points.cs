@@ -469,7 +469,8 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     if (player.IsOnline)
                     {
                         player.CachedXP = currentAmount;
-                        player.CachedCredits = credsAmt;
+                        if (credits != 0)
+                            player.CachedCredits = credsAmt;
 
                         // leaderboard stats
                         if (data is not { ExcludeFromLeaderboard: true } && player.Player.TryGetPlayerData(out UCPlayerData c) && c.Stats is IExperienceStats kd)

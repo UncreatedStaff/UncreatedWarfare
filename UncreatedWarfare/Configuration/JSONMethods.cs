@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
@@ -205,7 +206,7 @@ public struct SerializableTransform : IJsonReadWrite
 /// <summary>Wrapper for a <see cref="Dictionary{TKey, TValue}"/>, has custom JSON reading to take a string or dictionary of translations.<br/><see langword="null"/> = empty list.</summary>
 /// <remarks>Extension methods located in <see cref="T"/>.</remarks>
 [JsonConverter(typeof(TranslationListConverter))]
-public sealed class TranslationList : Dictionary<string, string>, ICloneable
+public sealed class TranslationList : Dictionary<string, string>, ICloneable, IReadWrite
 {
     public const int DefaultCharLength = 255;
     public TranslationList() { }
@@ -233,6 +234,25 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable
     }
 
     public object Clone() => new TranslationList(this);
+    public void Read(ByteReader reader)
+    {
+        Clear();
+        int len = reader.ReadUInt16();
+        for (int i = 0; i < len; ++i)
+        {
+            Add(reader.ReadShortString(), reader.ReadNullableString()!);
+        }
+    }
+
+    public void Write(ByteWriter writer)
+    {
+        writer.Write((ushort)Count);
+        foreach (KeyValuePair<string, string> vals in this)
+        {
+            writer.WriteShort(vals.Key);
+            writer.WriteNullable(vals.Value);
+        }
+    }
 }
 public sealed class TranslationListConverter : JsonConverter<TranslationList>
 {

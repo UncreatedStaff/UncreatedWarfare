@@ -897,7 +897,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     void IUIListener.HideUI(UCPlayer player)
     {
-        // todo
+        ListUI.ClearFromPlayer(player.Connection);
+        ResourceUI.ClearFromPlayer(player.Connection);
     }
     void IUIListener.ShowUI(UCPlayer player)
     {

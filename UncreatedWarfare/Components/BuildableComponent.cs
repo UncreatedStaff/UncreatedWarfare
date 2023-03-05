@@ -429,7 +429,7 @@ public class BuildableComponent : MonoBehaviour
                 if (buildable.Type != BuildableType.Emplacement)
                     existing = UCBarricadeManager.CountNearbyBarricades(buildable.BuildableBarricade.Value, fob.Radius, fob.Position, fob.Team);
                 else
-                    existing = UCVehicleManager.CountNearbyVehicles(buildable.Emplacement!.EmplacementVehicle, fob.Radius, fob.Position, placer.GetTeam()); // TODO: Check vehicle team
+                    existing = UCVehicleManager.CountNearbyVehicles(buildable.Emplacement!.EmplacementVehicle, fob.Radius, fob.Position, placer.GetTeam());
 
                 if (existing >= buildable.Limit)
                 {

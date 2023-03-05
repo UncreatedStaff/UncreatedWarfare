@@ -718,6 +718,78 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         return false;
     }
+    /// <summary>Compare the value of all flags with <paramref name="value"/>. Case insensitive.</summary>
+    /// <returns><see langword="true"/> if the parameter matches.</returns>
+    public bool MatchFlag(string value)
+    {
+        value = "-" + value;
+        for (int i = _offset; i < Parameters.Length; ++i)
+        {
+            if (Parameters[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+    /// <summary>Compare the value of all flags with <paramref name="value"/> and <paramref name="alternate"/>. Case insensitive.</summary>
+    /// <returns><see langword="true"/> if one of the parameters match.</returns>
+    public bool MatchFlag(string value, string alternate)
+    {
+        value = "-" + value;
+        for (int i = _offset; i < Parameters.Length; ++i)
+        {
+            if (Parameters[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
+                return true;
+        }
+        alternate = "-" + alternate;
+        for (int i = _offset; i < Parameters.Length; ++i)
+        {
+            if (Parameters[i].Equals(alternate, StringComparison.InvariantCultureIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+    /// <summary>Compare the value of all flags with <paramref name="value"/>, <paramref name="alternate1"/>, and <paramref name="alternate2"/>. Case insensitive.</summary>
+    /// <returns><see langword="true"/> if one of the parameters match.</returns>
+    public bool MatchFlag(string value, string alternate1, string alternate2)
+    {
+        value = "-" + value;
+        for (int i = _offset; i < Parameters.Length; ++i)
+        {
+            if (Parameters[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
+                return true;
+        }
+        alternate1 = "-" + alternate1;
+        for (int i = _offset; i < Parameters.Length; ++i)
+        {
+            if (Parameters[i].Equals(alternate1, StringComparison.InvariantCultureIgnoreCase))
+                return true;
+        }
+        alternate2 = "-" + alternate2;
+        for (int i = _offset; i < Parameters.Length; ++i)
+        {
+            if (Parameters[i].Equals(alternate2, StringComparison.InvariantCultureIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+    /// <summary>Compare the value of all flags with all <paramref name="alternates"/>. Case insensitive.</summary>
+    /// <returns><see langword="true"/> if one of the parameters match.</returns>
+    public bool MatchFlag(params string[] alternates)
+    {
+        for (int i = 0; i < alternates.Length; ++i)
+        {
+            string value = "-" + alternates[i];
+            for (int j = _offset; j < Parameters.Length; ++j)
+            {
+                if (Parameters[j].Equals(value, StringComparison.InvariantCultureIgnoreCase))
+                    return true;
+            }
+        }
+        return false;
+    }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private string GetParamForParse(int index) => Parameters[index];
     public string? Get(int parameter)

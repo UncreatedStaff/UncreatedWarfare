@@ -217,7 +217,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             byte tteam = target.Player.GetTeamByte();
             if (team == tteam)
             {
-                // TODO: better points calculations
                 UCPlayer? ucmedic = UCPlayer.FromPlayer(medic);
                 UCPlayer? uctarget = UCPlayer.FromPlayer(target);
                 if (ucmedic != null)

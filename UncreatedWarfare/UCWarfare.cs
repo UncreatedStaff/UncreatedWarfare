@@ -205,8 +205,6 @@ public class UCWarfare : MonoBehaviour
         Data.SendUpdateServerConfig();
         EventDispatcher.SubscribeToAll();
 
-        Zone.OnLevelLoaded();
-
         try
         {
             /* DATA CONSTRUCTION */

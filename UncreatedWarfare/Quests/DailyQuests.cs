@@ -12,6 +12,7 @@ using Uncreated.Framework.Quests;
 using Uncreated.Json;
 using Uncreated.Networking;
 using Uncreated.Players;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -351,11 +352,11 @@ public static class DailyQuests
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (tracker.QuestData != null)
+        {
             L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.GetDisplayString() + "\"", ConsoleColor.Cyan);
+        }
         ToastMessage.QueueMessage(tracker.Player!, new ToastMessage("Daily Quest Completed!", tracker.GetDisplayString(), "good job man idk does this need filled?", ToastMessageSeverity.Progress));
-        // todo UI or something, xp reward?
         tracker.TryGiveRewards();
-        tracker.Player?.SendString("Daily Quest Completed!");
     }
 
     public static void OnDailyQuestUpdated(BaseQuestTracker tracker)

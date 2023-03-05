@@ -21,8 +21,9 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Kits;
 
-public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
+public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, ICloneable
 {
+    public const byte DataVersion = 0;
     public PrimaryKey PrimaryKey { get; set; }
     public PrimaryKey FactionKey { get; set; }
     public string Id { get; set; }
@@ -73,6 +74,7 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
 
     [JsonIgnore]
     internal string? ClothingSetCache { get; set; }
+    byte IVersionableReadWrite.Version { get; set; }
     public FactionInfo? Faction
     {
         get => FactionKey.IsValid ? TeamManager.GetFactionInfo(FactionKey) : null;
@@ -246,11 +248,182 @@ public class Kit : IListItem, ITranslationArgument, IReadWrite, ICloneable
     }
     public void Write(ByteWriter writer)
     {
-        throw new NotImplementedException(); // todo
+        writer.Write(DataVersion);
+
+        writer.Write(PrimaryKey.Key);
+        writer.Write(FactionKey.Key);
+        writer.WriteShort(Id);
+        writer.Write(Class);
+        writer.Write(Branch);
+        writer.Write(Type);
+        writer.Write(Disabled);
+        writer.Write(RequiresNitro);
+        writer.Write(MapFilterIsWhitelist);
+        writer.Write(FactionFilterIsWhitelist);
+        writer.Write((byte)Season);
+        writer.Write(RequestCooldown);
+        writer.Write(TeamLimit);
+        writer.Write(CreditCost);
+        writer.Write(PremiumCost);
+        writer.Write(SquadLevel);
+        writer.WriteNullable(WeaponText);
+        writer.Write(CreatedTimestamp);
+        writer.Write(Creator);
+        writer.Write(LastEditedTimestamp);
+        writer.Write(LastEditor);
+        SignText.Write(writer);
+        writer.Write(Items == null ? (ushort)0 : (ushort)Items.Length);
+        if (Items != null)
+        {
+            for (int i = 0; i < Items.Length; ++i)
+            {
+                IKitItem item = Items[i];
+                byte id = KitEx.GetKitItemTypeId(item);
+                writer.Write(id);
+                if (id == 0)
+                    writer.Write(item.GetType().AssemblyQualifiedName);
+                item.Write(writer);
+            }
+        }
+        writer.Write(UnlockRequirements == null ? (ushort)0 : (ushort)UnlockRequirements.Length);
+        if (UnlockRequirements != null)
+        {
+            for (int i = 0; i < UnlockRequirements.Length; ++i)
+            {
+                UnlockRequirement.WriteRequirement(writer, UnlockRequirements[i]);
+            }
+        }
+        writer.Write(Skillsets == null ? (ushort)0 : (ushort)Skillsets.Length);
+        if (Skillsets != null)
+        {
+            for (int i = 0; i < Skillsets.Length; ++i)
+            {
+                Skillset.Write(writer, Skillsets[i]);
+            }
+        }
+        writer.Write(FactionFilter == null ? (ushort)0 : (ushort)FactionFilter.Length);
+        if (FactionFilter != null)
+        {
+            for (int i = 0; i < FactionFilter.Length; ++i)
+            {
+                writer.Write(FactionFilter[i].Key);
+            }
+        }
+        writer.Write(MapFilter == null ? (ushort)0 : (ushort)MapFilter.Length);
+        if (MapFilter != null)
+        {
+            for (int i = 0; i < MapFilter.Length; ++i)
+            {
+                writer.Write(MapFilter[i].Key);
+            }
+        }
+        writer.Write(RequestSigns == null ? (ushort)0 : (ushort)RequestSigns.Length);
+        if (RequestSigns != null)
+        {
+            for (int i = 0; i < RequestSigns.Length; ++i)
+            {
+                writer.Write(RequestSigns[i].Key);
+            }
+        }
     }
     public void Read(ByteReader reader)
     {
-        throw new NotImplementedException(); // todo
+        ((IVersionableReadWrite)this).Version = reader.ReadUInt8();
+
+        PrimaryKey = reader.ReadInt32();
+        FactionKey = reader.ReadInt32();
+        Id = reader.ReadShortString();
+        Class = reader.ReadEnum<Class>();
+        Branch = reader.ReadEnum<Branch>();
+        Type = reader.ReadEnum<KitType>();
+        Disabled = reader.ReadBool();
+        RequiresNitro = reader.ReadBool();
+        MapFilterIsWhitelist = reader.ReadBool();
+        FactionFilterIsWhitelist = reader.ReadBool();
+        Season = reader.ReadUInt8();
+        RequestCooldown = reader.ReadFloat();
+        TeamLimit = reader.ReadFloat();
+        CreditCost = reader.ReadInt32();
+        PremiumCost = reader.ReadDecimal();
+        SquadLevel = reader.ReadEnum<SquadLevel>();
+        WeaponText = reader.ReadNullableString();
+        CreatedTimestamp = reader.ReadDateTimeOffset();
+        Creator = reader.ReadUInt64();
+        LastEditedTimestamp = reader.ReadDateTimeOffset();
+        LastEditor = reader.ReadUInt64();
+
+        (SignText ??= new TranslationList()).Read(reader);
+        int len = reader.ReadUInt16();
+
+        Items = len == 0 ? Array.Empty<IKitItem>() : new IKitItem[len];
+
+        for (int i = 0; i < len; ++i)
+        {
+            byte id = reader.ReadUInt8();
+            IKitItem item;
+            if (id == 0)
+            {
+                string str = reader.ReadString();
+                Type? type = System.Type.GetType(str);
+                if (type == null || !typeof(IKitItem).IsAssignableFrom(type))
+                    throw new Exception("Kit item type not valid: \"" + str + "\".");
+                item = (IKitItem)Activator.CreateInstance(type);
+            }
+            else if (id > 4)
+                throw new Exception("Kit item type id not valid: \"" + id + "\".");
+            else
+            {
+                item = KitEx.GetEmptyKitItem(id)!;
+            }
+
+            item.Read(reader);
+            Items[i] = item;
+        }
+
+        len = reader.ReadUInt16();
+
+        UnlockRequirements = len == 0 ? Array.Empty<UnlockRequirement>() : new UnlockRequirement[len];
+        
+        for (int i = 0; i < len; ++i)
+        {
+            UnlockRequirements[i] = UnlockRequirement.ReadRequirement(reader)!;
+        }
+
+        len = reader.ReadUInt16();
+
+        Skillsets = len == 0 ? Array.Empty<Skillset>() : new Skillset[len];
+
+        for (int i = 0; i < len; ++i)
+        {
+            Skillsets[i] = Skillset.Read(reader);
+        }
+
+        len = reader.ReadUInt16();
+
+        FactionFilter = len == 0 ? Array.Empty<PrimaryKey>() : new PrimaryKey[len];
+
+        for (int i = 0; i < len; ++i)
+        {
+            FactionFilter[i] = reader.ReadInt32();
+        }
+
+        len = reader.ReadUInt16();
+
+        MapFilter = len == 0 ? Array.Empty<PrimaryKey>() : new PrimaryKey[len];
+
+        for (int i = 0; i < len; ++i)
+        {
+            MapFilter[i] = reader.ReadInt32();
+        }
+
+        len = reader.ReadUInt16();
+
+        RequestSigns = len == 0 ? Array.Empty<PrimaryKey>() : new PrimaryKey[len];
+
+        for (int i = 0; i < len; ++i)
+        {
+            RequestSigns[i] = reader.ReadInt32();
+        }
     }
 
     [FormatDisplay("Kit Id")]
@@ -506,9 +679,11 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
     }
     public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(in b, true);
     public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(in b, true);
+    // ReSharper disable InconsistentNaming
     public const string COLUMN_PK = "pk";
     public const string COLUMN_SKILL = "Skill";
     public const string COLUMN_LEVEL = "Level";
+    // ReSharper restore InconsistentNaming
 
     private static readonly string SkillEnumName = "enum('" + string.Join("','",
         typeof(EPlayerOffense).GetEnumNames().Concat(typeof(EPlayerDefense).GetEnumNames())
@@ -546,18 +721,24 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
 }
 
 [JsonConverter(typeof(UnlockRequirementConverter))]
-public abstract class UnlockRequirement : ICloneable
+public abstract class UnlockRequirement : ICloneable, IVersionableReadWrite
 {
-    private static readonly Dictionary<int, KeyValuePair<Type, string[]>> Types = new Dictionary<int, KeyValuePair<Type, string[]>>(4);
+    public const byte DataVersion = 0;
+    private static readonly Dictionary<byte, KeyValuePair<Type, string[]>> Types = new Dictionary<byte, KeyValuePair<Type, string[]>>(4);
+    private static readonly Dictionary<Type, byte> TypesInverse = new Dictionary<Type, byte>(4);
     private static bool _hasReflected;
+
     private static void Reflect()
     {
+        if (_hasReflected)
+            return;
         Types.Clear();
         foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(typeof(UnlockRequirement).IsAssignableFrom))
         {
-            if (Attribute.GetCustomAttribute(type, typeof(UnlockRequirementAttribute)) is UnlockRequirementAttribute att && !Types.ContainsKey(att.Type))
+            if (!TypesInverse.ContainsKey(type) && Attribute.GetCustomAttribute(type, typeof(UnlockRequirementAttribute)) is UnlockRequirementAttribute att && !Types.ContainsKey(att.Type))
             {
                 Types.Add(att.Type, new KeyValuePair<Type, string[]>(type, att.Properties));
+                TypesInverse.Add(type, att.Type);
             }
         }
         _hasReflected = true;
@@ -574,7 +755,7 @@ public abstract class UnlockRequirement : ICloneable
             {
                 if (t == null)
                 {
-                    foreach (KeyValuePair<int, KeyValuePair<Type, string[]>> propertyList in Types)
+                    foreach (KeyValuePair<byte, KeyValuePair<Type, string[]>> propertyList in Types)
                     {
                         for (int i = 0; i < propertyList.Value.Value.Length; i++)
                         {
@@ -617,9 +798,59 @@ public abstract class UnlockRequirement : ICloneable
     public abstract string GetSignText(UCPlayer player);
     public abstract object Clone();
     protected abstract void Read(ByteReader reader);
+    
+    byte IVersionableReadWrite.Version { get; set; }
+
+    public static void WriteRequirement(ByteWriter writer, UnlockRequirement? req)
+    {
+        if (req == null)
+        {
+            writer.Write(false);
+            return;
+        }
+
+        writer.Write(true);
+        Reflect();
+        if (!TypesInverse.TryGetValue(req.GetType(), out byte val))
+            throw new ArgumentException("Unknown type: " + req.GetType().Name, nameof(req));
+        writer.Write(val);
+
+        req.Write(writer);
+    }
+
+    public static UnlockRequirement? ReadRequirement(ByteReader reader)
+    {
+        if (!reader.ReadBool())
+            return null;
+
+        byte type = reader.ReadUInt8();
+        if (Types.TryGetValue(type, out KeyValuePair<Type, string[]> typeData) && Activator.CreateInstance(typeData.Key) is UnlockRequirement t)
+        {
+            return t;
+        }
+
+        throw new Exception("Unable to create unlock requirement with type id " + type + "!");
+    }
+
+    void IReadWrite.Write(ByteWriter writer)
+    {
+        writer.Write(DataVersion);
+
+        Write(writer);
+    }
+
+    void IReadWrite.Read(ByteReader reader)
+    {
+        ((IVersionableReadWrite)this).Version = reader.ReadUInt8();
+
+        Read(reader);
+    }
+
     protected abstract void Write(ByteWriter writer);
+    // ReSharper disable InconsistentNaming
     public const string COLUMN_PK = "pk";
     public const string COLUMN_JSON = "JSON";
+    // ReSharper restore InconsistentNaming
     public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool oneToOne = false, bool hasPk = false)
     {
         if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
@@ -664,6 +895,7 @@ public abstract class UnlockRequirement : ICloneable
         L.LogWarning("Unhandled trait requirement type: " + GetType().Name);
         return ctx.SendUnknownError();
     }
+
 }
 public class UnlockRequirementConverter : JsonConverter<UnlockRequirement>
 {
@@ -730,6 +962,8 @@ public class LevelUnlockRequirement : UnlockRequirement
     }
 
     public override bool Equals(object obj) => obj is LevelUnlockRequirement r && r.UnlockLevel == UnlockLevel;
+    // ReSharper disable once NonReadonlyMemberInGetHashCode
+    public override int GetHashCode() => UnlockLevel;
 }
 [UnlockRequirement(2, "unlock_rank")]
 public class RankUnlockRequirement : UnlockRequirement
@@ -789,6 +1023,8 @@ public class RankUnlockRequirement : UnlockRequirement
         return ctx.Reply(T.RequestTraitLowRank, trait, data);
     }
     public override bool Equals(object obj) => obj is RankUnlockRequirement r && r.UnlockRank == UnlockRank;
+    // ReSharper disable once NonReadonlyMemberInGetHashCode
+    public override int GetHashCode() => UnlockRank;
 }
 [UnlockRequirement(3, "unlock_presets", "quest_id")]
 public class QuestUnlockRequirement : UnlockRequirement
@@ -911,26 +1147,41 @@ public class QuestUnlockRequirement : UnlockRequirement
 
         return true;
     }
+
+    protected bool Equals(QuestUnlockRequirement other)
+    {
+        return QuestID.Equals(other.QuestID) && UnlockPresets.Equals(other.UnlockPresets);
+    }
+
+    public override int GetHashCode()
+    {
+        // ReSharper disable NonReadonlyMemberInGetHashCode
+        unchecked
+        {
+            return (QuestID.GetHashCode() * 397) ^ UnlockPresets.GetHashCode();
+        }
+        // ReSharper restore NonReadonlyMemberInGetHashCode
+    }
 }
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class UnlockRequirementAttribute : Attribute
 {
     public string[] Properties => _properties;
-    public int Type => _type;
+    public byte Type => _type;
     /// <param name="properties">Must be unique among other unlock requirements.</param>
-    public UnlockRequirementAttribute(int type, params string[] properties)
+    public UnlockRequirementAttribute(byte type, params string[] properties)
     {
         _properties = properties;
         _type = type;
     }
     private readonly string[] _properties;
-    private readonly int _type;
+    private readonly byte _type;
 }
 public interface IClothingJar
 {
     ClothingType Type { get; set; }
 }
-public interface IKitItem : ICloneable, IComparable
+public interface IKitItem : ICloneable, IComparable, IVersionableReadWrite
 {
     public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state);
 }
@@ -1002,7 +1253,44 @@ public class AssetRedirectItem : IItemJar, IAssetRedirect, IKitItem
         return -1;
     }
     public override bool Equals(object obj) => obj is AssetRedirectItem c && c.RedirectType == RedirectType && c.X == X && c.Y == Y && c.Page == Page;
+    public override int GetHashCode()
+    {
+        // ReSharper disable NonReadonlyMemberInGetHashCode
+        unchecked
+        {
+            int hashCode = (int)RedirectType;
+            hashCode = (hashCode * 397) ^ X.GetHashCode();
+            hashCode = (hashCode * 397) ^ Y.GetHashCode();
+            hashCode = (hashCode * 397) ^ Rotation.GetHashCode();
+            hashCode = (hashCode * 397) ^ (int)Page;
+            return hashCode;
+        }
+        // ReSharper restore NonReadonlyMemberInGetHashCode
+    }
+
     public override string ToString() => $"AssetRedirectItem:     {RedirectType}, Pos: {X}, {Y}, Page: {Page}, Rot: {Rotation}";
+
+    public const byte DataVersion = 0;
+    byte IVersionableReadWrite.Version { get; set; }
+    void IReadWrite.Read(ByteReader reader)
+    {
+        ((IVersionableReadWrite)this).Version = reader.ReadUInt8();
+        RedirectType = reader.ReadEnum<RedirectType>();
+        X = reader.ReadUInt8();
+        Y = reader.ReadUInt8();
+        Rotation = reader.ReadUInt8();
+        Page = reader.ReadEnum<Page>();
+    }
+    void IReadWrite.Write(ByteWriter writer)
+    {
+        writer.Write(DataVersion);
+
+        writer.Write(RedirectType);
+        writer.Write(X);
+        writer.Write(Y);
+        writer.Write(Rotation);
+        writer.Write(Page);
+    }
 }
 public class AssetRedirectClothing : IClothingJar, IAssetRedirect, IKitItem
 {
@@ -1040,16 +1328,40 @@ public class AssetRedirectClothing : IClothingJar, IAssetRedirect, IKitItem
         return -1;
     }
     public override bool Equals(object obj) => obj is AssetRedirectClothing c && c.Type == Type && c.RedirectType == RedirectType;
+    public override int GetHashCode()
+    {
+        // ReSharper disable NonReadonlyMemberInGetHashCode
+        unchecked
+        {
+            return ((int)RedirectType * 397) ^ (int)Type;
+        }
+        // ReSharper restore NonReadonlyMemberInGetHashCode
+    }
+
     public override string ToString() => $"AssetRedirectClothing: {RedirectType}, Type: {Type}";
+
+    public const byte DataVersion = 0;
+    byte IVersionableReadWrite.Version { get; set; }
+    void IReadWrite.Read(ByteReader reader)
+    {
+        ((IVersionableReadWrite)this).Version = reader.ReadUInt8();
+        RedirectType = reader.ReadEnum<RedirectType>();
+        Type = reader.ReadEnum<ClothingType>();
+    }
+    void IReadWrite.Write(ByteWriter writer)
+    {
+        writer.Write(DataVersion);
+
+        writer.Write(RedirectType);
+        writer.Write(Type);
+    }
 }
 public class PageItem : IItemJar, IItem, IKitItem
 {
     private Guid _item;
-#if DEBUG
     private bool _isLegacyRedirect;
     private RedirectType _legacyRedirect;
     public RedirectType? LegacyRedirect => _isLegacyRedirect ? _legacyRedirect : null;
-#endif
 
     [JsonPropertyName("id")]
     public Guid Item
@@ -1065,6 +1377,12 @@ public class PageItem : IItemJar, IItem, IKitItem
             if (_legacyRedirect == RedirectType.None)
                 _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, false);
             _isLegacyRedirect = _legacyRedirect != RedirectType.None;
+#else
+            if (_isLegacyRedirect)
+            {
+                _legacyRedirect = RedirectType.None;
+                _isLegacyRedirect = false;
+            }
 #endif
         }
     }
@@ -1128,6 +1446,7 @@ public class PageItem : IItemJar, IItem, IKitItem
 
         return -1;
     }
+    // ReSharper disable InconsistentNaming
     public const string COLUMN_PK = "pk";
     public const string COLUMN_GUID = "Item";
     public const string COLUMN_X = "X";
@@ -1136,6 +1455,7 @@ public class PageItem : IItemJar, IItem, IKitItem
     public const string COLUMN_PAGE = "Page";
     public const string COLUMN_AMOUNT = "Amount";
     public const string COLUMN_METADATA = "Metadata";
+    // ReSharper restore InconsistentNaming
     public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool guidString, bool includePage = true, bool oneToOne = false, bool hasPk = false)
     {
         if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
@@ -1193,7 +1513,57 @@ public class PageItem : IItemJar, IItem, IKitItem
         return null;
     }
     public override bool Equals(object obj) => obj is PageItem c && c.Item == Item && c.X == X && c.Y == Y && c.Page == Page && c.Rotation == Rotation && c.Amount == Amount && c.State.CompareBytes(State);
+    public override int GetHashCode()
+    {
+        // ReSharper disable NonReadonlyMemberInGetHashCode
+        unchecked
+        {
+            int hashCode = _item.GetHashCode();
+            hashCode = (hashCode * 397) ^ _isLegacyRedirect.GetHashCode();
+            hashCode = (hashCode * 397) ^ (int)_legacyRedirect;
+            hashCode = (hashCode * 397) ^ X.GetHashCode();
+            hashCode = (hashCode * 397) ^ Y.GetHashCode();
+            hashCode = (hashCode * 397) ^ Rotation.GetHashCode();
+            hashCode = (hashCode * 397) ^ (int)Page;
+            hashCode = (hashCode * 397) ^ Amount.GetHashCode();
+            hashCode = (hashCode * 397) ^ State.GetHashCode();
+            return hashCode;
+        }
+        // ReSharper restore NonReadonlyMemberInGetHashCode
+    }
+
     public override string ToString() => $"PageItem:              {_item:N}, Pos: {X}, {Y}, Page: {Page}, Rot: {Rotation}, Amount: {Amount}, State: byte[{State?.Length ?? 0}]";
+
+    public const byte DataVersion = 0;
+    byte IVersionableReadWrite.Version { get; set; }
+    void IReadWrite.Read(ByteReader reader)
+    {
+        ((IVersionableReadWrite)this).Version = reader.ReadUInt8();
+        Item = reader.ReadGuid();
+        X = reader.ReadUInt8();
+        Y = reader.ReadUInt8();
+        Rotation = reader.ReadUInt8();
+        Page = reader.ReadEnum<Page>();
+        Amount = reader.ReadUInt8();
+        int len = reader.ReadUInt8();
+        State = len == 0 ? Array.Empty<byte>() : reader.ReadBlock(len);
+    }
+    void IReadWrite.Write(ByteWriter writer)
+    {
+        writer.Write(DataVersion);
+
+        writer.Write(Item);
+        writer.Write(X);
+        writer.Write(Y);
+        writer.Write(Rotation);
+        writer.Write(Page);
+        writer.Write(Amount);
+        writer.Write(State == null ? (byte)0 : (byte)State.Length);
+        if (State is { Length: > 0 })
+        {
+            writer.WriteBlock(State);
+        }
+    }
 }
 public class ClothingItem : IClothingJar, IBaseItem, IKitItem
 {
@@ -1218,6 +1588,12 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
             if (_legacyRedirect == RedirectType.None)
                 _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, true);
             _isLegacyRedirect = _legacyRedirect != RedirectType.None;
+#else
+            if (_isLegacyRedirect)
+            {
+                _legacyRedirect = RedirectType.None;
+                _isLegacyRedirect = false;
+            }
 #endif
         }
     }
@@ -1281,7 +1657,45 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
         return -1;
     }
     public override bool Equals(object obj) => obj is ClothingItem c && c.Item == Item && c.Type == Type && c.State.CompareBytes(State);
+    public override int GetHashCode()
+    {
+        // ReSharper disable NonReadonlyMemberInGetHashCode
+        unchecked
+        {
+            int hashCode = _item.GetHashCode();
+            hashCode = (hashCode * 397) ^ _isLegacyRedirect.GetHashCode();
+            hashCode = (hashCode * 397) ^ (int)_legacyRedirect;
+            hashCode = (hashCode * 397) ^ (int)Type;
+            hashCode = (hashCode * 397) ^ State.GetHashCode();
+            return hashCode;
+        }
+        // ReSharper restore NonReadonlyMemberInGetHashCode
+    }
+
     public override string ToString() => $"ClothingItem:          {_item:N}, Type: {Type}, State: byte[{State?.Length ?? 0}]";
+
+    public const byte DataVersion = 0;
+    byte IVersionableReadWrite.Version { get; set; }
+    void IReadWrite.Read(ByteReader reader)
+    {
+        ((IVersionableReadWrite)this).Version = reader.ReadUInt8();
+        Item = reader.ReadGuid();
+        Type = reader.ReadEnum<ClothingType>();
+        int len = reader.ReadUInt8();
+        State = len == 0 ? Array.Empty<byte>() : reader.ReadBlock(len);
+    }
+    void IReadWrite.Write(ByteWriter writer)
+    {
+        writer.Write(DataVersion);
+
+        writer.Write(Item);
+        writer.Write(Type);
+        writer.Write(State == null ? (byte)0 : (byte)State.Length);
+        if (State is { Length: > 0 })
+        {
+            writer.WriteBlock(State);
+        }
+    }
 }
 
 /// <summary>Max field character limit: <see cref="KitEx.SquadLevelMaxCharLimit"/>.</summary>

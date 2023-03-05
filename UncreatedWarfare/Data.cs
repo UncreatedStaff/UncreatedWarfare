@@ -136,6 +136,7 @@ public static class Data
     internal static ClientStaticMethod SendMultipleBarricades;
     internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual;
     internal static ClientInstanceMethod? SendInventory;
+    internal static ClientInstanceMethod? SendScreenshotDestination;
     internal static SingletonManager Singletons;
     internal static InstanceSetter<PlayerStance, EPlayerStance> SetPrivateStance;
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
@@ -278,19 +279,20 @@ public static class Data
         /* REFLECT PRIVATE VARIABLES */
         L.Log("Getting RPCs...", ConsoleColor.Magenta);
         IDisposable indent = L.IndentLog(1);
-        SendChangeText           = Util.GetRPC<ClientInstanceMethod<string>, InteractableSign>("SendChangeText", true)!;
-        SendMultipleBarricades   = Util.GetRPC<ClientStaticMethod, BarricadeManager>("SendMultipleBarricades", true)!;
-        SendChatIndividual       = Util.GetRPC<ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>, ChatManager>("SendChatEntry", true)!;
-        SendDestroyItem          = Util.GetRPC<ClientStaticMethod<byte, byte, uint, bool>, ItemManager>("SendDestroyItem", true)!;
-        SendUpdateBarricadeState = Util.GetRPC<ClientInstanceMethod<byte[]>, BarricadeDrop>("SendUpdateState");
-        SendInventory            = Util.GetRPC<ClientInstanceMethod, PlayerInventory>("SendInventory");
-        SendWearShirt            = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearShirt");
-        SendWearPants            = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearPants");
-        SendWearHat              = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearHat");
-        SendWearBackpack         = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearBackpack");
-        SendWearVest             = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearVest");
-        SendWearMask             = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearMask");
-        SendWearGlasses          = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearGlasses");
+        SendChangeText            = Util.GetRPC<ClientInstanceMethod<string>, InteractableSign>("SendChangeText", true)!;
+        SendMultipleBarricades    = Util.GetRPC<ClientStaticMethod, BarricadeManager>("SendMultipleBarricades", true)!;
+        SendChatIndividual        = Util.GetRPC<ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>, ChatManager>("SendChatEntry", true)!;
+        SendDestroyItem           = Util.GetRPC<ClientStaticMethod<byte, byte, uint, bool>, ItemManager>("SendDestroyItem", true)!;
+        SendUpdateBarricadeState  = Util.GetRPC<ClientInstanceMethod<byte[]>, BarricadeDrop>("SendUpdateState");
+        SendInventory             = Util.GetRPC<ClientInstanceMethod, PlayerInventory>("SendInventory");
+        SendWearShirt             = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearShirt");
+        SendWearPants             = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearPants");
+        SendWearHat               = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearHat");
+        SendWearBackpack          = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearBackpack");
+        SendWearVest              = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearVest");
+        SendWearMask              = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearMask");
+        SendWearGlasses           = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearGlasses");
+        SendScreenshotDestination = Util.GetRPC<ClientInstanceMethod, Player>("SendScreenshotDestination");
         UseFastKits = true;
         if (SendWearShirt is null || SendWearPants is null || SendWearHat is null || SendWearBackpack is null || SendWearVest is null || SendWearMask is null || SendWearGlasses is null || SendInventory is null)
         {
