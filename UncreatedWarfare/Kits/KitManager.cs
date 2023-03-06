@@ -1606,19 +1606,19 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     }
     public async Task RequestKit(SqlItem<Kit> proxy, CommandInteraction ctx, CancellationToken token = default)
     {
+        await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            if (!ctx.Caller.HasDownloadedKits)
+                await ctx.Caller.DownloadKits(false, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            ctx.Caller.PurchaseSync.Release();
+        }
         await proxy.Enter(token).ConfigureAwait(false);
         try
         {
-            await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                if (!ctx.Caller.HasDownloadedKits)
-                    await ctx.Caller.DownloadKits(false, token).ConfigureAwait(false);
-            }
-            finally
-            {
-                ctx.Caller.PurchaseSync.Release();
-            }
 
             await UCWarfare.ToUpdate(token);
             ulong team = ctx.Caller.GetTeam();
@@ -1745,20 +1745,15 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     /// <exception cref="BaseCommandInteraction"/>
     public async Task BuyKit(CommandInteraction ctx, SqlItem<Kit> proxy, Vector3? effectPos = null, CancellationToken token = default)
     {
+        if (!ctx.Caller.HasDownloadedKits)
+            await ctx.Caller.DownloadKits(true, token).ConfigureAwait(false);
+
         ulong team = ctx.Caller.GetTeam();
         await proxy.Enter(token).ConfigureAwait(false);
         Kit? kit;
         try
         {
-            await WriteWaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                kit = proxy.Item;
-            }
-            finally
-            {
-                WriteRelease();
-            }
+            kit = proxy.Item;
             if (kit == null)
                 throw ctx.Reply(T.KitNotFound, proxy.LastPrimaryKey.ToString());
             if (!kit.IsPublicKit)
@@ -1769,8 +1764,6 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
 
             await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-            if (!ctx.Caller.HasDownloadedKits)
-                await ctx.Caller.DownloadKits(false, token).ConfigureAwait(false);
             try
             {
                 await Points.UpdatePointsAsync(ctx.Caller, false, token).ConfigureAwait(false);
@@ -1792,11 +1785,16 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 ctx.Caller.PurchaseSync.Release();
             }
 
-            if (!await GiveAccess(kit, ctx.Caller, KitAccessType.Credits, token).ConfigureAwait(false))
+            bool access = await AddAccessRow(kit.PrimaryKey, ctx.CallerID, KitAccessType.Credits, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
+            if (access)
             {
-                await UCWarfare.ToUpdate(token);
-                throw ctx.SendUnknownError();
+                (ctx.Caller.AccessibleKits ??= new List<SqlItem<Kit>>(4)).Add(proxy);
+                if (OnKitAccessChanged != null)
+                    UCWarfare.RunOnMainThread(() => OnKitAccessChanged?.Invoke(proxy, ctx.CallerID, true, KitAccessType.Credits), default);
             }
+            else throw ctx.SendUnknownError();
+            
             ctx.LogAction(ActionLogType.BuyKit, "BOUGHT KIT " + kit.Id + " FOR " + kit.CreditCost + " CREDITS");
             L.Log(ctx.Caller.Name.PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Id);
         }
