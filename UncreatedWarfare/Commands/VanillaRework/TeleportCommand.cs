@@ -11,7 +11,7 @@ using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 namespace Uncreated.Warfare.Commands.VanillaRework;
 public class TeleportCommand : Command
 {
-    private const string Syntax = "/tp <x y z|player|location|wp> - or - /tp <player> <x y z|player|location|wp>";
+    private const string Syntax = "/tp <x y z|player|location|wp|jump [dstance]> - or - /tp <player> <x y z|player|location|wp>";
     private const string Help = "Teleport you or another player to a location.";
 
     public TeleportCommand() : base("teleport", EAdminType.TRIAL_ADMIN_ON_DUTY, 1)
@@ -24,6 +24,31 @@ public class TeleportCommand : Command
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 
         ctx.AssertArgs(1, Syntax);
+
+        if (ctx.MatchParameter(0, "jump"))
+        {
+            ctx.AssertRanByPlayer();
+            bool raycast = !ctx.TryGet(1, out float distance);
+            Vector3 castPt = default;
+            if (raycast)
+            {
+                distance = 10f;
+                raycast = Physics.Raycast(new Ray(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward), out RaycastHit hit,
+                    1024, RayMasks.BLOCK_COLLISION);
+                if (raycast)
+                    castPt = hit.point;
+            }
+            if (!raycast)
+                castPt = ctx.Caller.Position + ctx.Caller.Player.look.aim.forward * distance;
+            int c = 0;
+            while (!PlayerStance.hasStandingHeightClearanceAtPosition(castPt) && ++c < 12)
+                castPt += new Vector3(0, 1f, 0);
+
+            ctx.Caller.Player.teleportToLocationUnsafe(castPt, ctx.Caller.Player.transform.rotation.y);
+            throw ctx.Reply(T.TeleportSelfLocationSuccess,
+                $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
+        }
+
         Vector3 pos;
         switch (ctx.ArgumentCount)
         {

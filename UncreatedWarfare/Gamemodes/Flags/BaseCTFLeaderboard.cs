@@ -3,18 +3,60 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Gamemodes.UI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
 public class BaseCTFLeaderboard<Stats, StatTracker> : ConventionalLeaderboard<Stats, StatTracker> where Stats : BaseCTFStats where StatTracker : BaseCTFTracker<Stats>
 {
+    public BaseCTFLeaderboard()
+    {
+        LeaderboardOverrides = new StatValue[]
+        {
+            new StatValue(T.CTFHeader0, (_, b, l) => b!.Kills.ToString(l)),
+            new StatValue(T.CTFHeader1, (_, b, l) => b!.Deaths.ToString(l)),
+            new StatValue(T.CTFHeader2, (_, b, l) => b!.XPGained.ToString(l)),
+            new StatValue(T.CTFHeader3, (_, b, l) => b!.Credits.ToString(l)),
+            new StatValue(T.CTFHeader4, (_, b, l) => b!.Captures.ToString(l)),
+            new StatValue(T.CTFHeader5, (_, b, l) => b!.DamageDone.ToString(l))
+        };
+        PlayerStatOverrides = new StatValue[]
+        {
+            new StatValue(T.CTFPlayerStats0, (_, b, l) => b!.Kills.ToString(l)),
+            new StatValue(T.CTFPlayerStats1, (_, b, l) => b!.Deaths.ToString(l)),
+            new StatValue(T.CTFPlayerStats2, (_, b, l) => b!.KDR.ToString(ConventionalLeaderboardUI.StatFormatFloat, l)),
+            new StatValue(T.CTFPlayerStats3, (_, b, l) => b!.KillsOnPoint.ToString(l)),
+            new StatValue(T.CTFPlayerStats4, (_, b, l) => TimeSpan.FromSeconds(b!.timedeployed).ToString(ConventionalLeaderboardUI.StatFormatTime, l)),
+            new StatValue(T.CTFPlayerStats5, (_, b, l) => b!.XPGained.ToString(l)),
+            new StatValue(T.CTFPlayerStats6, (_, b, l) => TimeSpan.FromSeconds(b!.timeonpoint).ToString(ConventionalLeaderboardUI.StatFormatTime, l)),
+            new StatValue(T.CTFPlayerStats7, (_, b, l) => b!.Captures.ToString(l)),
+            new StatValue(T.CTFPlayerStats8, (_, b, l) => TimeSpan.FromSeconds(b!.timeinvehicle).ToString(ConventionalLeaderboardUI.StatFormatTime, l)),
+            new StatValue(T.CTFPlayerStats9, (_, b, l) => b!.Teamkills.ToString(l)),
+            new StatValue(T.CTFPlayerStats10, (_, b, l) => b!.FOBsDestroyed.ToString(l)),
+            new StatValue(T.CTFPlayerStats11, (_, b, l) => b!.Credits.ToString(l))
+        };
+        WarStatOverrides = new StatValue[]
+        {
+            new StatValue(T.CTFWarStats0, (a, _, l) => a!.Duration.ToString(ConventionalLeaderboardUI.StatFormatTime, l)),
+            new StatValue(T.CTFWarStats1, (a, _, l) => a!.casualtiesT1.ToString(l), 1ul),
+            new StatValue(T.CTFWarStats2, (a, _, l) => a!.casualtiesT2.ToString(l), 2ul),
+            new StatValue(T.CTFWarStats3, (a, _, l) => TimeSpan.FromSeconds(a!.flagOwnerChanges).ToString(ConventionalLeaderboardUI.StatFormatTime, l)),
+            new StatValue(T.CTFWarStats4, (a, _, l) => a!.AverageTeam1Size.ToString(ConventionalLeaderboardUI.StatFormatFloat, l), 1ul),
+            new StatValue(T.CTFWarStats5, (a, _, l) => a!.AverageTeam2Size.ToString(ConventionalLeaderboardUI.StatFormatFloat,l), 2ul),
+            new StatValue(T.CTFWarStats6, (a, _, l) => a!.fobsPlacedT1.ToString(l), 1ul),
+            new StatValue(T.CTFWarStats7, (a, _, l) => a!.fobsPlacedT2.ToString(l), 2ul),
+            new StatValue(T.CTFWarStats8, (a, _, l) => a!.fobsDestroyedT1.ToString(l), 1ul),
+            new StatValue(T.CTFWarStats9, (a, _, l) => a!.fobsDestroyedT2.ToString(l), 2ul),
+            new StatValue(T.CTFWarStats10, (a, _, l) => (a!.teamkillsT1 + a.teamkillsT2).ToString(l))
+        };
+    }
     public override void Calculate()
     {
         tracker.GetTopStats(14, out StatsTeam1, out StatsTeam2);
     }
     public override void SendLeaderboard(in LanguageSet set)
     {
-        LeaderboardUI.SendCTFLeaderboard(set, in tracker.LongestShot, StatsTeam1, StatsTeam2, tracker, shuttingDown ? shuttingDownMessage : null, _winner);
+        SendLeaderboardPreset(set);
     }
 }
 

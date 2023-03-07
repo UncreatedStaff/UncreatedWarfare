@@ -427,6 +427,7 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats, ITea
     public float damage;
     public float timeonpoint;
     public float timedeployed;
+    public float timeinvehicle;
     public TeamPlayerStats(UCPlayer player) : base(player) { }
     public TeamPlayerStats(ulong player) : base(player) { }
     public int Teamkills => teamkills;
@@ -450,6 +451,9 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats, ITea
         }
         else if (!_player.Player.IsInMain())
             timedeployed += dt;
+
+        if (_player.IsInVehicle)
+            timeinvehicle += dt;
     }
 
     public override void Reset()

@@ -54,7 +54,8 @@ public static class TeamManager
             DefaultMask = "3a7ff1898393450187e970abfc3efbf1",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.RUSSIAN, "США" }
+                { LanguageAliasSet.RUSSIAN, "США" },
+                { LanguageAliasSet.ROMANIAN, "Statele Unite ale Americi" },
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
@@ -78,7 +79,13 @@ public static class TeamManager
             DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.RUSSIAN, "РОССИЯ" }
+                { LanguageAliasSet.RUSSIAN, "РОССИЯ" },
+                { LanguageAliasSet.ROMANIAN, "Rusia" }
+            },
+            ShortNameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.RUSSIAN, "РОССИЯ" },
+                { LanguageAliasSet.ROMANIAN, "Rusia" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
@@ -100,7 +107,11 @@ public static class TeamManager
             DefaultVest = "b9b61f2d8b1d472d8430991e08e9450e",
             DefaultPants = "3c0e787a6f034545800023ac3aa589e4",
             TMProSpriteIndex = 3,
-            Emoji = "938653900913901598|938654469518950410"
+            Emoji = "938653900913901598|938654469518950410",
+            NameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Coalitia Orientului Mijlociu" }
+            }
         },
         new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/lgrkCdY.png")
         {
@@ -115,7 +126,15 @@ public static class TeamManager
             DefaultVest = "2499cebdfc6646c59103a48f06c4838a",
             DefaultPants = "31ed5cd8918e4693bc7431483b130e05",
             TMProSpriteIndex = 4,
-            Emoji = "🇩🇪"
+            Emoji = "🇩🇪",
+            NameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Germania" }
+            },
+            ShortNameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Germania" }
+            }
         },
         new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "chunarmed", @"https://i.imgur.com/Yns89Yk.png")
         {
@@ -154,7 +173,15 @@ public static class TeamManager
             DefaultVest = "b9b61f2d8b1d472d8430991e08e9450e",
             DefaultPants = "ef9852b99d9e4591904fb42ab9f46134",
             TMProSpriteIndex = 7,
-            Emoji = "989037438972334091|989037438972334091"
+            Emoji = "989037438972334091|989037438972334091",
+            NameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Sovietic" }
+            },
+            ShortNameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Sovietic" }
+            }
         },
         new FactionInfo(FactionInfo.Poland, "Poland", "PL", "Poland", "dc143c", null, @"https://i.imgur.com/fu3nCS3.png")
         {
@@ -166,12 +193,28 @@ public static class TeamManager
             DefaultPants = "bf302a8dda994fc08897ed372d8c8cd7",
             DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
             TMProSpriteIndex = 8,
-            Emoji = "🇵🇱"
+            Emoji = "🇵🇱",
+            NameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Polonia" }
+            },
+            ShortNameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Polonia" }
+            }
         },
         new FactionInfo(FactionInfo.Militia, "Militia", "MIL", "Militia", "526257", null)
         {
             PrimaryKey = 9,
-            TMProSpriteIndex = 9
+            TMProSpriteIndex = 9,
+            NameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Militie" }
+            },
+            ShortNameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Militie" }
+            }
         },
         new FactionInfo(FactionInfo.Israel, "Israel Defense Forces", "IDF", "IDF", "005eb8", null, @"https://i.imgur.com/Wzdspd3.png")
         {
@@ -183,7 +226,15 @@ public static class TeamManager
             DefaultPants = "bc16600f78d248c7b108c912ee6a759f",
             DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
             TMProSpriteIndex = 10,
-            Emoji = "🇮🇱"
+            Emoji = "🇮🇱",
+            NameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Forta de aparare a Israelului" }
+            },
+            ShortNameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "IDF" }
+            }
         },
         new FactionInfo(FactionInfo.France, "France", "FR", "France", "002654", null, @"https://i.imgur.com/TYY0kwp.png")
         {
@@ -194,7 +245,15 @@ public static class TeamManager
             DefaultVest = "5ead83aa50984bc085e1dcf34afc606c",
             DefaultPants = "af4625a9a5e04aa8b9105e08c869998f",
             TMProSpriteIndex = 11,
-            Emoji = "🇫🇷"
+            Emoji = "🇫🇷",
+            NameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Franta" }
+            },
+            ShortNameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Franta" }
+            }
         },
         new FactionInfo(FactionInfo.Canada, "Canadian Armed Forces", "CAF", "Canada", "d80621", null, @"https://i.imgur.com/zs81UMe.png")
         {
@@ -206,7 +265,15 @@ public static class TeamManager
             DefaultPants = "573275f5925c452c96805e9fc5e52d37",
             DefaultGlasses = "588933b9da0043d6896d3f6d3f2105b4",
             TMProSpriteIndex = 12,
-            Emoji = "🇨🇦"
+            Emoji = "🇨🇦",
+            NameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Forta armata canadiene" }
+            },
+            ShortNameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Canada" }
+            }
         },
         new FactionInfo(FactionInfo.SouthAfrica, "South Africa", "ZA", "S. Africa", "007749", null, @"https://i.imgur.com/2orfzTh.png")
         {
@@ -218,7 +285,15 @@ public static class TeamManager
             DefaultPants = "b1ca137776964c1f9bb2cd4f19b4d7b5",
             DefaultMask = "9c2b4e15517e434fac0cf0f4bdf0c278",
             TMProSpriteIndex = 13,
-            Emoji = "🇿🇦"
+            Emoji = "🇿🇦",
+            NameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Africa de Sud" }
+            },
+            ShortNameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "S. Africa" }
+            }
         },
         new FactionInfo(FactionInfo.Mozambique, "Mozambique", "MZ", "Mozambique", "ffd100", null, @"https://i.imgur.com/9nXhlMH.png")
         {
@@ -229,7 +304,15 @@ public static class TeamManager
             DefaultVest = "5ead83aa50984bc085e1dcf34afc606c",
             DefaultPants = "3f0ad0fd305f4deea96a84d4c9ebaae0",
             TMProSpriteIndex = 14,
-            Emoji = "🇲🇿"
+            Emoji = "🇲🇿",
+            NameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Mozambic" }
+            },
+            ShortNameTranslations = new Dictionary<string, string>(4)
+            {
+                { LanguageAliasSet.ROMANIAN, "Mozambic" }
+            }
         }
     };
     internal static Dictionary<ulong, byte>? PlayerBaseStatus;

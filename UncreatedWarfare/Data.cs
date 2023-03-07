@@ -94,7 +94,7 @@ public static class Data
         public const PlayerKey SelfRevive = PlayerKey.PluginKey2;
         public const PlayerKey SpawnCountermeasures = PlayerKey.PluginKey3;
         public const PlayerKey ActionMenu = PlayerKey.PluginKey2;
-        public const PlayerKey DropSupplyOverride = PlayerKey.PluginKey3;
+        public const PlayerKey DropSupplyOverride = PlayerKey.PluginKey1;
     }
 
     internal static readonly IUncreatedSingleton[] GamemodeListeners = new IUncreatedSingleton[1];

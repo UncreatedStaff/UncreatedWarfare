@@ -1,11 +1,12 @@
 ﻿using SDG.Unturned;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Gamemodes.UI;
 using Uncreated.Warfare.Singletons;
-using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -78,7 +79,6 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
 
 public class TeamCTFLeaderboard : BaseCTFLeaderboard<BaseCTFStats, TeamCTFTracker>
 {
-
 }
 
 public sealed class TeamCTFTicketProvider : BaseCTFTicketProvider, IFlagCapturedListener

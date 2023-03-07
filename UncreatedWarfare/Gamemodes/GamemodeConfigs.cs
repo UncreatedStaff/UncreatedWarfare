@@ -910,7 +910,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         #region Conquest
         ConquestEvaluateTime = 0.25f;
         ConquestCaptureScale = 3.222f;
-        ConquestPointCountLowPop = 2;
+        ConquestPointCountLowPop = 3;
         ConquestPointCountMediumPop = 3;
         ConquestPointCountHighPop = 4;
         ConquestFlagTickSeconds = 4f;

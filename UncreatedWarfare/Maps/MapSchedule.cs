@@ -36,7 +36,7 @@ internal class MapScheduler : MonoBehaviour
         new MapData("Goose Bay",        new ulong[] { 2301006771 }),
         new MapData("Nuijamaa",         new ulong[] { 2557112412 }),
         new MapData("Gulf of Aqaba",    new ulong[] { 2726964335 }),
-        new MapData("S3_Uncreated",     new ulong[] { 2407740920 }),
+        new MapData("S3_Uncreated",     new ulong[] { 2943688379, 2407740920 }),
     };
 
     /* MAP NAMES */
