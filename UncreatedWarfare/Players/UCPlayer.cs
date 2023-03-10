@@ -656,7 +656,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             if (singleton == null)
                 throw new SingletonUnloadedException(typeof(KitManager));
             List<int> kits = new List<int>();
-            await Data.AdminSql.QueryAsync("SELECT `Kit` FROM `kit_access` WHERE `Steam64` = @0;",
+            await Data.AdminSql.QueryAsync("SELECT `" + KitManager.COLUMN_EXT_PK + "` FROM `" + KitManager.TABLE_ACCESS +
+                                           "` WHERE `" + KitManager.COLUMN_ACCESS_STEAM_64 + "` = @0;",
                 new object[] { Steam64 },
                 reader =>
                 {
