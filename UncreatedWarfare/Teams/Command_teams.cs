@@ -11,7 +11,13 @@ public class TeamsCommand : Command
     private const string SYNTAX = "/teams";
     private const string HELP = "Switch teams without rejoining the server.";
 
-    public TeamsCommand() : base("teams", EAdminType.MEMBER) { }
+    public TeamsCommand() : base("teams", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = HELP
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

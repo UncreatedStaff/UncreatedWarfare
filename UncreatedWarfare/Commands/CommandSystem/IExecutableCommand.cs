@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 
 namespace Uncreated.Warfare.Commands.CommandSystem;
+
+[Translatable("Command")]
 public interface IExecutableCommand
 {
     string CommandName { get; }
@@ -23,6 +25,7 @@ public interface IExecutableCommand
     bool CheckPermission(CommandInteraction ctx);
     IReadOnlyList<string>? Aliases { get; }
     CommandInteraction SetupCommand(UCPlayer? caller, string[] args, string message, bool keepSlash);
+    CommandStructure? Structure { get; set; }
 }
 
 public interface IInteractableCommand : IExecutableCommand, _Exception

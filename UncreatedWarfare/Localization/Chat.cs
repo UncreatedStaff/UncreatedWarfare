@@ -10,7 +10,7 @@ namespace Uncreated.Warfare;
 
 public static class Chat
 {
-    const int MAX_CHAT_MESSAGE_SIZE = 2047;
+    public const int MaxMessageSize = 2047;
     internal static void SendSingleMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, SteamPlayer recipient)
     {
         ThreadUtil.assertIsGameThread();
@@ -508,10 +508,10 @@ public static class Chat
     }
     private static void CheckTranslationLength(string lang, ref string value, Translation translation, ref Color textColor, bool imgui)
     {
-        if (System.Text.Encoding.UTF8.GetByteCount(value) > MAX_CHAT_MESSAGE_SIZE)
+        if (System.Text.Encoding.UTF8.GetByteCount(value) > MaxMessageSize)
         {
             value = translation.Translate((string?)null, out textColor, imgui);
-            if (System.Text.Encoding.UTF8.GetByteCount(value) > MAX_CHAT_MESSAGE_SIZE)
+            if (System.Text.Encoding.UTF8.GetByteCount(value) > MaxMessageSize)
             {
                 value = translation.Key;
                 L.LogWarning(lang + " and default translation for {" + value + "} is too large for chat.");

@@ -20,6 +20,15 @@ public class ICommand : Command
     {
         AddAlias("i");
         AddAlias("item");
+        Structure = new CommandStructure
+        {
+            Description = "Gives the caller a specificed amount of an item.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Item", typeof(ItemAsset), "Ammo"),
+                new CommandParameter("Redirect", typeof(RedirectType))
+            }
+        };
     }
     public override void Execute(CommandInteraction ctx)
     {

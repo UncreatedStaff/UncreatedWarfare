@@ -18,6 +18,10 @@ public class AbandonCommand : AsyncCommand
     public AbandonCommand() : base("abandon", EAdminType.MEMBER)
     {
         AddAlias("av");
+        Structure = new CommandStructure
+        {
+            Description = "If you no longer want to use your vehicle, you can return it to the vehicle pool."
+        };
     }
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)

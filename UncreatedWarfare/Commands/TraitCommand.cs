@@ -12,7 +12,56 @@ public class TraitCommand : Command
     private const string Syntax = "/trait <give|take|clear|set>";
     private const string Help = "Manage properties of traits";
 
-    public TraitCommand() : base("trait", EAdminType.ADMIN_ON_DUTY) { }
+    public TraitCommand() : base("trait", EAdminType.ADMIN_ON_DUTY)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Manage properties of traits.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Give")
+                {
+                    Description = "Give the caller a trait.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Trait", typeof(TraitData))
+                    }
+                },
+                new CommandParameter("Take")
+                {
+                    Description = "Remove a trait from the caller.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Trait", typeof(TraitData))
+                    }
+                },
+                new CommandParameter("Clear")
+                {
+                    Description = "Clear all traits from the caller."
+                },
+                new CommandParameter("Set")
+                {
+                    Description = "Set a config value for a trait.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Trait", typeof(TraitData))
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Property", typeof(string))
+                                {
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("Value", typeof(object))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

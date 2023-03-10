@@ -20,6 +20,56 @@ public class StructureCommand : AsyncCommand
     public StructureCommand() : base("structure", EAdminType.MEMBER)
     {
         AddAlias("struct");
+        Structure = new CommandStructure
+        {
+            Description = "Manage barricades and structures.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Save")
+                {
+                    Description = "Saves a barricade or structure so it will stay around after games.",
+                    Permission = EAdminType.HELPER
+                },
+                new CommandParameter("Remove")
+                {
+                    Description = "Removes a barricade or structure from being saved between games.",
+                    Permission = EAdminType.HELPER
+                },
+                new CommandParameter("Pop")
+                {
+                    Description = "Destroy a barricade or structure.",
+                    Permission = EAdminType.HELPER
+                },
+                new CommandParameter("Set")
+                {
+                    Description = "Set the owner or group of any barricade or structure.",
+                    Permission = EAdminType.MODERATOR,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Owner")
+                        {
+                            Description = "Set the owner of any barricade or structure.",
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Owner", typeof(ulong), "Me")
+                            }
+                        },
+                        new CommandParameter("Group")
+                        {
+                            Description = "Set the owner of any barricade or structure.",
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Owner", typeof(ulong), "Me")
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("Examine")
+                {
+                    Description = "Get the owner and team of any barricade or structure."
+                }
+            }
+        };
     }
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)

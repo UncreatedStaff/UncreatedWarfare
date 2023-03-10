@@ -14,7 +14,13 @@ public class BuyCommand : AsyncCommand
 {
     const string Help = "Must be looking at a kit request sign. Purchases a kit for credits.";
     const string Syntax = "/buy [help]";
-    public BuyCommand() : base("buy", EAdminType.MEMBER) { }
+    public BuyCommand() : base("buy", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Purchase a kit for credits, must be looking at a kit sign."
+        };
+    }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG

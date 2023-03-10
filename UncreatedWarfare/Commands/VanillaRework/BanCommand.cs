@@ -13,7 +13,33 @@ namespace Uncreated.Warfare.Commands.VanillaRework;
 public class BanCommand : AsyncCommand
 {
     private const string Syntax = "/ban <player> <duration> <reason ...>";
-    public BanCommand() : base("ban", EAdminType.MODERATOR, 1) { }
+
+    public BanCommand() : base("ban", EAdminType.MODERATOR, 1)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Prevents a player from joining the server for a specified amount of time.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Player", typeof(IPlayer))
+                {
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("duration", typeof(TimeSpan), "permanent")
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Reason", typeof(string))
+                                {
+                                    IsRemainder = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+    }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertArgs(3, Syntax);

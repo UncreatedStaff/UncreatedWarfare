@@ -26,6 +26,10 @@ public class RequestCommand : AsyncCommand
     public RequestCommand() : base("request", EAdminType.MEMBER, sync: true)
     {
         AddAlias("req");
+        Structure = new CommandStructure
+        {
+            Description = "Request a kit or a vehicle by looking at their respective signs (or the actual vehicle)."
+        };
     }
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)

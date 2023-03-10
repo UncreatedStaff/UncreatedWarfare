@@ -12,7 +12,13 @@ public sealed class KitsCommand : Command
     private const string Syntax = "/kits";
     private const string Help = "Open the kit menu.";
 
-    public KitsCommand() : base("kits", EAdminType.MEMBER) { }
+    public KitsCommand() : base("kits", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = Help
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

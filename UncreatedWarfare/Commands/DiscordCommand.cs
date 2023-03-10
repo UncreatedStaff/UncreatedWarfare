@@ -7,7 +7,13 @@ public class DiscordCommand : Command
 {
     const string HELP = "Sends the Discord link to the Uncreated Network server.";
     const string SYNTAX = "/discord";
-    public DiscordCommand() : base("discord", EAdminType.MEMBER) { }
+    public DiscordCommand() : base("discord", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Sends a link to our discord server."
+        };
+    }
     public override void Execute(CommandInteraction ctx)
     {
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);

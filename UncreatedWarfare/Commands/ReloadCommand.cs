@@ -27,7 +27,24 @@ public class ReloadCommand : AsyncCommand
 
     public ReloadCommand() : base("reload", EAdminType.ADMIN, 1)
     {
-
+        Structure = new CommandStructure
+        {
+            Description = Help,
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Translations"),
+                new CommandParameter("Flags"),
+                new CommandParameter("Permissions"),
+                new CommandParameter("Colors"),
+                new CommandParameter("TCP"),
+                new CommandParameter("SQL"),
+                new CommandParameter("Teams"),
+                new CommandParameter("Module", typeof(string))
+                {
+                    Description = "Reload a module with a reload key."
+                }
+            }
+        };
     }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
@@ -82,19 +99,6 @@ public class ReloadCommand : AsyncCommand
             TeamManager.SetupConfig();
             ctx.Reply(T.ReloadedGeneric, "teams and factions");
             ctx.LogAction(ActionLogType.ReloadComponent, "TEAMS & FACTIONS");
-        }
-        else if (module.Equals("all", StringComparison.OrdinalIgnoreCase))
-        {
-            ReloadTranslations();
-            ReloadFlags();
-            ReloadTCPServer();
-            ReloadSQLServer(null);
-            ReloadKits();
-            foreach (KeyValuePair<string, IConfiguration> config in ReloadableConfigs)
-                config.Value.Reload();
-
-            ctx.Reply(T.ReloadedAll);
-            ctx.LogAction(ActionLogType.ReloadComponent, "ALL");
         }
         else
         {

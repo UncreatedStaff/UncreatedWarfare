@@ -1,9 +1,11 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections.Generic;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
@@ -12,7 +14,49 @@ public class ClearCommand : Command
 {
     private const string Syntax = "/clear <inventory|items|vehicles|structures> [player for inventory]";
     private const string Help = "Either clears a player's inventory or wipes items, vehicles, or structures and barricades from the map.";
-    public ClearCommand() : base("clear", EAdminType.MODERATOR) { }
+    public ClearCommand() : base("clear", EAdminType.MODERATOR)
+    {
+        Structure = new CommandStructure
+        {
+            Description = Help,
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("inventory")
+                {
+                    Description = "Clear you or another player's inventory.",
+                    ChainDisplayCount = 1,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Player", typeof(IPlayer))
+                        {
+                            Description = "Clear another player's inventory.",
+                            IsOptional = true
+                        }
+                    }
+                },
+                new CommandParameter("items")
+                {
+                    Description = "Clear all dropped items.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Range", typeof(IPlayer))
+                        {
+                            Description = "Clear all items with a certain range (in meters).",
+                            IsOptional = true
+                        }
+                    }
+                },
+                new CommandParameter("vehicles")
+                {
+                    Description = "Clear all spawned vehicles.",
+                },
+                new CommandParameter("structures")
+                {
+                    Description = "Clear all barricades and structures.",
+                }
+            }
+        };
+    }
     public override void Execute(CommandInteraction ctx)
     {
 #if DEBUG
@@ -46,6 +90,28 @@ public class ClearCommand : Command
         }
         else if (ctx.MatchParameter(0, "items", "item", "i"))
         {
+            if (ctx.TryGet(1, out float range))
+            {
+                ctx.AssertRanByPlayer();
+                Vector3 pos = ctx.Caller.Position;
+                List<RegionCoordinate> c = new List<RegionCoordinate>(8);
+                Regions.getRegionsInRadius(pos, range, c);
+                float r2 = range * range;
+                for (int i = 0; i < c.Count; ++i)
+                {
+                    RegionCoordinate c2 = c[i];
+                    ItemRegion region = ItemManager.regions[c2.x, c2.y];
+                    for (int j = region.items.Count - 1; j >= 0; --j)
+                    {
+                        ItemData item = region.items[j];
+                        if ((item.point - pos).sqrMagnitude <= r2)
+                            EventFunctions.OnItemRemoved(item);
+                    }
+                }
+                ItemManager.ServerClearItemsInSphere(pos, range);
+                ctx.LogAction(ActionLogType.ClearItems, "RANGE: " + range.ToString("F0") + "m");
+                throw ctx.Reply(T.ClearItemsInRange);
+            }
             ClearItems();
             ctx.LogAction(ActionLogType.ClearItems);
             ctx.Reply(T.ClearItems);

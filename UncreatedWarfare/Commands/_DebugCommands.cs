@@ -3,7 +3,6 @@ using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -16,7 +15,6 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
@@ -36,13 +34,43 @@ using XPReward = Uncreated.Warfare.Levels.XPReward;
 // ReSharper disable InconsistentNaming
 
 namespace Uncreated.Warfare.Commands;
-
 public class DebugCommand : AsyncCommand
 {
     public DebugCommand() : base("test", EAdminType.MEMBER, sync: true)
     {
         AddAlias("dev");
         AddAlias("tests");
+        List<MethodInfo> methods = typeof(DebugCommand)
+            .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+            .ToList();
+        List<CommandParameter> parameters = new List<CommandParameter>();
+        CommandParameter[] args =
+        {
+            new CommandParameter("Arguments", typeof(object))
+            {
+                IsRemainder = true
+            }
+        };
+        foreach (MethodInfo method in methods)
+        {
+            ParameterInfo[] p = method.GetParameters();
+            if (p.Length is not 1 and not 2)
+                continue;
+            if (!p[0].ParameterType.IsAssignableFrom(typeof(CommandInteraction)))
+                continue;
+            if (p.Length == 2 && (method.ReturnType != typeof(Task) || p[1].ParameterType.IsAssignableFrom(typeof(CancellationToken))))
+                continue;
+            parameters.Add(new CommandParameter(method.Name.ToProperCase())
+            {
+                Parameters = args
+            });
+        }
+
+        Structure = new CommandStructure
+        {
+            Description = "Commands used for development and basic actions not worth a full command.",
+            Parameters = parameters.ToArray()
+        };
     }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
@@ -252,56 +280,6 @@ public class DebugCommand : AsyncCommand
         }
         UCWarfare.RunTask(Data.Gamemode.DeclareWin, team, ctx: "/test quickwin executed for " + team + ".");
     }
-    private void savemanyzones(CommandInteraction ctx)
-    {
-        throw ctx.SendNotImplemented();
-        /*
-        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
-
-        ctx.AssertGamemode(out IFlagRotation fg);
-
-        if (!ctx.TryGet(0, out uint times))
-            times = 1U;
-        List<Zone> zones = new List<Zone>();
-        string directory = Path.Combine(Data.Paths.FlagStorage, "ZoneExport", Path.DirectorySeparatorChar.ToString());
-        if (!Directory.Exists(directory))
-            Directory.CreateDirectory(directory);
-        for (int i = 0; i < times; i++)
-        {
-            zones.Clear();
-            ReloadCommand.ReloadFlags();
-            fg.Rotation.ForEach(x =>
-            {
-                if (x.ZoneData.Item is { } z)
-                    zones.Add(z);
-            });
-            ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, true, true, false, false, true, Path.Combine(directory, "zonearea_" + i.ToString(Data.AdminLocale)));
-            L.Log("Done with " + (i + 1).ToString(Data.LocalLocale) + '/' + times.ToString(Data.LocalLocale));
-        }
-        */
-    }
-    private void savemanygraphs(CommandInteraction ctx)
-    {
-        throw ctx.SendNotImplemented();
-        /*
-        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
-
-        ctx.AssertGamemode(out IFlagRotation fg);
-
-        if (!ctx.TryGet(0, out uint times))
-            times = 1U;
-        string directory = Path.Combine(Data.Paths.FlagStorage, "GraphExport", Path.DirectorySeparatorChar.ToString());
-        if (!Directory.Exists(directory))
-            Directory.CreateDirectory(directory);
-        List<Flag> rot = new List<Flag>();
-        for (int i = 0; i < times; i++)
-        {
-            ObjectivePathing.TryPath(rot);
-            ZoneDrawing.DrawZoneMap(fg.LoadedFlags, rot, Path.Combine(directory, "zonegraph_" + i.ToString(Data.AdminLocale)));
-            L.Log("Done with " + (i + 1).ToString(Data.LocalLocale) + '/' + times.ToString(Data.LocalLocale));
-            rot.Clear();
-        } */
-    }
     private void zone(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.STAFF);
@@ -348,7 +326,7 @@ public class DebugCommand : AsyncCommand
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
-        ctx.AssertGamemode(out IFlagRotation fg);
+        ctx.AssertGamemode<IFlagRotation>();
 
         UCWarfare.I.StartCoroutine(ZoneDrawing.CreateFlagOverlay(ctx, openOutput: true));
         ctx.Defer();
@@ -1464,7 +1442,6 @@ public class DebugCommand : AsyncCommand
         if (ctx.TryGet(0, out string name))
         {
             ctx.TryGet(1, out bool imgui);
-            ctx.TryGet(2, out TranslationFlags flags);
 
             if (T.Translations.FirstOrDefault(x => x.Key.Equals(name, StringComparison.Ordinal)) is { } translation)
             {
@@ -1472,8 +1449,8 @@ public class DebugCommand : AsyncCommand
                 L.Log($"Translation: {translation.Id}... {name}.");
                 L.Log($"Type: {translation.GetType()}");
                 L.Log($"Args: {string.Join(", ", translation.GetType().GetGenericArguments().Select(x => x.Name))}");
-                L.Log($"Color: " + color.ToString("F2"));
-                L.Log($"Value: \"" + val + "\".");
+                L.Log( "Color: " + color.ToString("F2"));
+                L.Log( "Value: \"" + val + "\".");
                 L.Log("Dump:");
                 using IDisposable indent = L.IndentLog(1);
                 translation.Dump();
@@ -1485,21 +1462,21 @@ public class DebugCommand : AsyncCommand
     private void nerd(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.STAFF);
-        if (ctx.TryGet(0, out ulong s64, out _))
+        if (ctx.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer))
         {
             if (!UCWarfare.Config.Nerds.Contains(s64))
                 UCWarfare.Config.Nerds.Add(s64);
-            ctx.ReplyString($"{s64} is now a nerd.");
+            ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} is now a nerd.");
         }
         else ctx.SendCorrectUsage("/text nerd <player>");
     }
     private void unnerd(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.STAFF);
-        if (ctx.TryGet(0, out ulong s64, out _))
+        if (ctx.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer))
         {
             UCWarfare.Config.Nerds.RemoveAll(x => x == s64);
-            ctx.ReplyString($"{s64} is not a nerd.");
+            ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} is not a nerd.");
         }
         else ctx.SendCorrectUsage("/text unnerd <player>");
     }

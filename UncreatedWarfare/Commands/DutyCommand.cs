@@ -12,7 +12,13 @@ public class DutyCommand : Command
     private const string Syntax = "/duty";
     private const string Help = "Swap your duty status between on and off. For admins and trial admins.";
 
-    public DutyCommand() : base("duty", EAdminType.TRIAL_ADMIN | EAdminType.ADMIN) { }
+    public DutyCommand() : base("duty", EAdminType.TRIAL_ADMIN | EAdminType.ADMIN)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Switch between being on and off duty."
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

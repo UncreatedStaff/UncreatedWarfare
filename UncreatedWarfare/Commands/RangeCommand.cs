@@ -10,7 +10,13 @@ public class RangeCommand : Command
     private const string SYNTAX = "/range";
     private const string HELP = "Shows you your distance from your squad leader's marker.";
 
-    public RangeCommand() : base("range", EAdminType.MEMBER) { }
+    public RangeCommand() : base("range", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = HELP
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

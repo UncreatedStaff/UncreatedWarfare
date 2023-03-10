@@ -16,8 +16,41 @@ namespace Uncreated.Warfare.Commands;
 public class ReportCommand : AsyncCommand
 {
     private const string Syntax = "/report <\"reasons\" | player> <reason> <custom message...>";
-    private const string Help = "Use to report a player for specific actions. Use /report reasons for examples.";
-    public ReportCommand() : base("report", EAdminType.MEMBER) { }
+    private const string Help = "Use to report a player for specific actions.";
+    public ReportCommand() : base("report", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = Help,
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Reasons")
+                {
+                    Description = "Lists the various report types."
+                },
+                new CommandParameter("Player", typeof(IPlayer))
+                {
+                    Description = "Report a player for breaking the rules.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Reason", typeof(string))
+                        {
+                            IsRemainder = false,
+                            Description = "Report a player for a special reason (do <#fff>/report reasons</color> for examples).",
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Message", typeof(string))
+                                {
+                                    IsRemainder = true,
+                                    Description = "Report a player for breaking the rules. Message is only required for custom reports."
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+    }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG

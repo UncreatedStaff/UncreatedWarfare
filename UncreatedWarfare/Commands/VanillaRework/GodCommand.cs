@@ -7,9 +7,15 @@ namespace Uncreated.Warfare.Commands;
 public class GodCommand : Command
 {
     private const string SYNTAX = "/god";
-    private const string HELP = "Toggle your ability to take damage.";
+    private const string HELP = "Toggles your ability to take damage.";
 
-    public GodCommand() : base("god", EAdminType.ADMIN) { }
+    public GodCommand() : base("god", EAdminType.ADMIN)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Toggles your ability to take damage."
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

@@ -3,7 +3,6 @@ using Steamworks;
 using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -14,7 +13,22 @@ public class GroupCommand : Command
     private const string Syntax = "/group [join <team>]";
     private const string Help = "View or manage your current group/team.";
 
-    public GroupCommand() : base("group", EAdminType.MEMBER) { }
+    public GroupCommand() : base("group", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "View your current group or join a different one.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("join", typeof(int))
+                {
+                    Permission = EAdminType.MODERATOR,
+                    Description = "Join a group with a team number.",
+                    IsOptional = true
+                }
+            }
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

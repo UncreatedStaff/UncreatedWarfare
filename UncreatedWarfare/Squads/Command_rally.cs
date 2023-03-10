@@ -1,8 +1,6 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Squads;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -13,7 +11,26 @@ public class RallyCommand : Command
     private const string SYNTAX = "/rally";
     private const string HELP = "Deploys you to a rallypoint.";
 
-    public RallyCommand() : base("rally", EAdminType.MEMBER) { }
+    public RallyCommand() : base("rally", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = HELP,
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Cancel")
+                {
+                    Description = "Cancels pending deployment to a rallypoint for your squadmembers.",
+                    IsOptional = true
+                },
+                new CommandParameter("Deny")
+                {
+                    Description = "Cancels pending deployment to a rallypoint for just you.",
+                    IsOptional = true
+                }
+            }
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {
@@ -73,7 +90,7 @@ public class RallyCommand : Command
 
                 rallypoint.StartDeployment();
                 CooldownManager.StartCooldown(ctx.Caller, CooldownType.Rally, SquadManager.Config.RallyCooldown);
-                ctx.ReplyString("");
+                ctx.Defer();
             }
             else throw ctx.Reply(T.RallyAlreadyDeploying);
         }

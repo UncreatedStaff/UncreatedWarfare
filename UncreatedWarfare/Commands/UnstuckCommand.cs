@@ -10,7 +10,13 @@ public class UnstuckCommand : Command
     private const string SYNTAX = "/unstuck";
     private const string HELP = "Run this command if you're somehow stuck in the lobby.";
 
-    public UnstuckCommand() : base("unstuck", EAdminType.MEMBER) { }
+    public UnstuckCommand() : base("unstuck", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = HELP
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

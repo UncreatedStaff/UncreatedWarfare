@@ -25,13 +25,13 @@ public static class CommandHandler
     internal static CancellationTokenSource GlobalCommandCancel = new CancellationTokenSource();
     internal static List<CommandInteraction> ActiveCommands = new List<CommandInteraction>(8);
     internal static bool TryingToCancel;
+    private static readonly List<PendingChatMessage> PendingMessages = new List<PendingChatMessage>(32);
     static CommandHandler()
     {
         RegisteredCommands = Commands.AsReadOnly();
         ChatManager.onCheckPermissions += OnChatProcessing;
         CommandWindow.onCommandWindowInputted += OnCommandInput;
     }
-    private static readonly List<KeyValuePair<KeyValuePair<UCPlayer?, bool>, string>> PendingMessages = new List<KeyValuePair<KeyValuePair<UCPlayer?, bool>, string>>(32);
     public static async Task LetCommandsFinish()
     {
         TryingToCancel = true;
@@ -53,22 +53,45 @@ public static class CommandHandler
         TryingToCancel = false;
         for (int i = 0; i < PendingMessages.Count; i++)
         {
-            KeyValuePair<KeyValuePair<UCPlayer?, bool>, string> msg = PendingMessages[i];
-            if (msg.Key.Key == null || msg.Key.Key.IsOnline)
+            PendingChatMessage msg = PendingMessages[i];
+            if (msg.Player == null || msg.Player.IsOnline)
             {
-                CheckRunCommand(msg.Key.Key, msg.Value, msg.Key.Value);
+                bool shouldList = true;
+                CheckRunCommand(msg.Player, msg.Message, ref shouldList, msg.RequirePrefix);
+                if (shouldList && msg.Player is { IsOnline: true } pl)
+                    ChatManager.serverSendMessage(msg.Message, Palette.AMBIENT, pl.SteamPlayer, null, msg.ChatMode);
             }
         }
 
         PendingMessages.Clear();
     }
+
+    private readonly struct PendingChatMessage
+    {
+        public readonly UCPlayer? Player;
+        public readonly string Message;
+        public readonly bool RequirePrefix;
+        public readonly EChatMode ChatMode;
+        public PendingChatMessage(UCPlayer? player, string message, bool requirePrefix, EChatMode chatMode)
+        {
+            Player = player;
+            Message = message;
+            RequirePrefix = requirePrefix;
+            ChatMode = chatMode;
+        }
+    }
     private static void OnChatProcessing(SteamPlayer player, string text, ref bool shouldExecuteCommand, ref bool shouldList)
     {
         UCPlayer? pl = UCPlayer.FromSteamPlayer(player);
-        if (pl is null) return;
+        if (pl is null || string.IsNullOrWhiteSpace(text)) return;
         shouldExecuteCommand = false;
-        if (CheckRunCommand(pl, text, true))
-            shouldList = false;
+        // remove accidental \
+        if (text.EndsWith("\\", StringComparison.Ordinal))
+            text = text.Substring(0, text.Length - 1);
+        if (!CheckRunCommand(pl, text, ref shouldList, true) && !shouldList)
+        {
+            player.SendChat(T.UnknownCommand);
+        }
     }
     public static void LoadCommands()
     {
@@ -166,23 +189,47 @@ public static class CommandHandler
             interaction.ExecuteCommandSync();
         }
     }
-    
+    public static IExecutableCommand? FindCommand(string search)
+    {
+        IExecutableCommand? cmd = F.StringFind(Commands, x => x.CommandName, x => x.Priority,
+            x => x.CommandName.Length, search, descending: true, equalsOnly: true);
+        if (cmd != null)
+            return cmd;
+
+        foreach (IExecutableCommand command in Commands.OrderByDescending(x => x.Priority))
+        {
+            if (command.Aliases != null)
+            {
+                if (command.Aliases.Any(x => x.Equals(search, StringComparison.InvariantCultureIgnoreCase)))
+                    return command;
+            }
+        }
+        cmd = F.StringFind(Commands, x => x.CommandName, x => x.Priority,
+            x => x.CommandName.Length, search, descending: true, equalsOnly: false);
+
+        return cmd;
+    }
     private static void OnCommandInput(string text, ref bool shouldExecuteCommand)
     {
-        if (shouldExecuteCommand && CheckRunCommand(null, text, false))
+        if (shouldExecuteCommand && CheckRunCommand(null, text, ref shouldExecuteCommand, false))
             shouldExecuteCommand = false;
+        else if (!shouldExecuteCommand)
+        {
+            L.Log("Unknown command.");
+        }
     }
     private struct ArgumentInfo
     {
         public int Start;
         public int End;
-    }
-    private static unsafe bool CheckRunCommand(UCPlayer? player, string message, bool requirePrefix)
+    } 
+    private static unsafe bool CheckRunCommand(UCPlayer? player, string message, ref bool shouldList, bool requirePrefix, EChatMode chatmode = EChatMode.SAY)
     {
         ThreadUtil.assertIsGameThread();
         if (TryingToCancel)
         {
-            PendingMessages.Add(new KeyValuePair<KeyValuePair<UCPlayer?, bool>, string>(new KeyValuePair<UCPlayer?, bool>(player, requirePrefix), message));
+            PendingMessages.Add(new PendingChatMessage(player, message, requirePrefix, chatmode));
+            shouldList = false;
             return true;
         }
 
@@ -345,6 +392,7 @@ public static class CommandHandler
                 }
                 continue;
             getCommand:
+                shouldList = false;
                 for (int k = 0; k < Commands.Count; ++k)
                 {
                     string c2 = Commands[k].CommandName;
@@ -458,6 +506,8 @@ public static class CommandHandler
             }
             RunCommand(cmdInd, player, args, message, message[message.Length - 1] == '\\');
         }
+
+        shouldList = false;
         return true;
     notCommand:
         return false;
@@ -493,10 +543,15 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public CSteamID CallerCSteamID => _ctx.CallerCSteamID;
     public string OriginalMessage => _ctx.OriginalMessage;
     public int Offset { get => _offset; set => _offset = value; }
+    public bool IMGUI { get; }
+    public string Language { get; }
+
     public CommandInteraction(ContextData ctx, IExecutableCommand? cmd)
         : base(cmd, ctx.IsConsole ? ("Console Command: " + ctx.OriginalMessage) :
             ("Command ran by " + ctx.CallerID + ": " + ctx.OriginalMessage))
     {
+        IMGUI = _ctx.Caller != null && _ctx.Caller.Save.IMGUI;
+        Language = _ctx.Caller?.Language ?? L.Default;
         this._ctx = ctx;
         _offset = 0;
     }
@@ -720,10 +775,10 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     /// <summary>Compare the value of all flags with <paramref name="value"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if the parameter matches.</returns>
-    public bool MatchFlag(string value)
+    public bool MatchFlag(string value, bool offset = true)
     {
         value = "-" + value;
-        for (int i = _offset; i < Parameters.Length; ++i)
+        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
         {
             if (Parameters[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
                 return true;
@@ -733,16 +788,16 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     /// <summary>Compare the value of all flags with <paramref name="value"/> and <paramref name="alternate"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
-    public bool MatchFlag(string value, string alternate)
+    public bool MatchFlag(string value, string alternate, bool offset = true)
     {
         value = "-" + value;
-        for (int i = _offset; i < Parameters.Length; ++i)
+        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
         {
             if (Parameters[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
                 return true;
         }
         alternate = "-" + alternate;
-        for (int i = _offset; i < Parameters.Length; ++i)
+        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
         {
             if (Parameters[i].Equals(alternate, StringComparison.InvariantCultureIgnoreCase))
                 return true;
@@ -752,22 +807,22 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     /// <summary>Compare the value of all flags with <paramref name="value"/>, <paramref name="alternate1"/>, and <paramref name="alternate2"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
-    public bool MatchFlag(string value, string alternate1, string alternate2)
+    public bool MatchFlag(string value, string alternate1, string alternate2, bool offset = true)
     {
         value = "-" + value;
-        for (int i = _offset; i < Parameters.Length; ++i)
+        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
         {
             if (Parameters[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
                 return true;
         }
         alternate1 = "-" + alternate1;
-        for (int i = _offset; i < Parameters.Length; ++i)
+        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
         {
             if (Parameters[i].Equals(alternate1, StringComparison.InvariantCultureIgnoreCase))
                 return true;
         }
         alternate2 = "-" + alternate2;
-        for (int i = _offset; i < Parameters.Length; ++i)
+        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
         {
             if (Parameters[i].Equals(alternate2, StringComparison.InvariantCultureIgnoreCase))
                 return true;
@@ -777,12 +832,12 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     /// <summary>Compare the value of all flags with all <paramref name="alternates"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
-    public bool MatchFlag(params string[] alternates)
+    public bool MatchFlag(bool offset, params string[] alternates)
     {
         for (int i = 0; i < alternates.Length; ++i)
         {
             string value = "-" + alternates[i];
-            for (int j = _offset; j < Parameters.Length; ++j)
+            for (int j = offset ? _offset : 0; j < Parameters.Length; ++j)
             {
                 if (Parameters[j].Equals(value, StringComparison.InvariantCultureIgnoreCase))
                     return true;
@@ -1184,7 +1239,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         return false;
     }
-    public bool TryGet(int parameter, out ulong steam64, out UCPlayer? onlinePlayer)
+    public bool TryGet(int parameter, out ulong steam64, out UCPlayer? onlinePlayer, bool remainder = false)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
@@ -1193,21 +1248,26 @@ public sealed class CommandInteraction : BaseCommandInteraction
             onlinePlayer = null;
             return false;
         }
+        
+        string? s = remainder ? GetRange(parameter - _offset) : GetParamForParse(parameter);
+        if (s != null)
+        {
+            if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && Util.IsValidSteam64Id(steam64))
+            {
+                onlinePlayer = UCPlayer.FromID(steam64);
+                return true;
+            }
+            onlinePlayer = UCPlayer.FromName(s, true);
+            if (onlinePlayer is not null)
+            {
+                steam64 = onlinePlayer.Steam64;
+                return true;
+            }
+        }
 
-        string s = GetParamForParse(parameter);
-        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && Util.IsValidSteam64Id(steam64))
-        {
-            onlinePlayer = UCPlayer.FromID(steam64);
-            return true;
-        }
-        onlinePlayer = UCPlayer.FromName(s, true);
-        if (onlinePlayer is not null)
-        {
-            steam64 = onlinePlayer.Steam64;
-            return true;
-        }
-        else
-            return false;
+        steam64 = default;
+        onlinePlayer = null;
+        return false;
     }
     public bool TryGet(int parameter, out ulong steam64, out UCPlayer onlinePlayer, IEnumerable<UCPlayer> selection)
     {

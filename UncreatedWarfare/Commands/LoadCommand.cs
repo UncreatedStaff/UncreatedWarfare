@@ -16,7 +16,32 @@ public class LoadCommand : AsyncCommand
     private const string Syntax = "/load <build|ammo> <amount|'half'>";
     private const string Help = "Loads supplies into a logistics truck. If no amount is given, it fills the vehicle. If 'half' is supplied, it fills half the empty slots.";
 
-    public LoadCommand() : base("load", EAdminType.MEMBER) { }
+    public LoadCommand() : base("load", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Loads supplies into a logistics truck.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Type", "Build", "Ammo")
+                {
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Amount", typeof(float))
+                        {
+                            IsOptional = true,
+                            Description = "Loads your vehicle's trunk with a set amount of supplies (or until it's full)."
+                        },
+                        new CommandParameter("Half")
+                        {
+                            IsOptional = true,
+                            Description = "Loads half of the empty space in your vehicle's trunk."
+                        }
+                    }
+                }
+            }
+        };
+    }
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
@@ -46,7 +71,7 @@ public class LoadCommand : AsyncCommand
                         {
                             int amount = 0;
                             bool half = true;
-                            if (!ctx.MatchParameter(1, "half"))
+                            if (!ctx.MatchParameter(1, "half", "1/2"))
                             {
                                 if (!(ctx.TryGet(1, out amount) && amount > 0) && ctx.HasArg(1))
                                     throw ctx.Reply(T.LoadInvalidAmount, ctx.Get(1)!);

@@ -13,7 +13,51 @@ public class ShutdownCommand : Command
     private const string Syntax = "/shutdown [instant|after|cancel|*time*] [reason]";
     private const string Help = "Schedule shutdowns for the server.";
     public static Coroutine? Messager;
-    public ShutdownCommand() : base("shutdown", EAdminType.VANILLA_ADMIN, 1) { }
+
+    public ShutdownCommand() : base("shutdown", EAdminType.VANILLA_ADMIN, 1)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Schedule shutdowns for the server.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Delay", typeof(TimeSpan))
+                {
+                    IsOptional = true,
+                    Description = "Shut down the server in a specified amount of time.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Reason", typeof(string))
+                    }
+                },
+                new CommandParameter("Instant")
+                {
+                    IsOptional = true,
+                    Description = "Shut down the server immediately.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Reason", typeof(string))
+                        {
+                            IsOptional = true
+                        }
+                    }
+                },
+                new CommandParameter("After")
+                {
+                    IsOptional = true,
+                    Description = "Shut down the server after the current game.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Reason", typeof(string))
+                    }
+                },
+                new CommandParameter("Cancel")
+                {
+                    IsOptional = true
+                }
+            }
+        };
+    }
     public override void Execute(CommandInteraction ctx)
     {
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
@@ -26,16 +70,11 @@ public class ShutdownCommand : Command
         }
         if (ctx.MatchParameter(0, "inst", "instant"))
         {
-            if (ctx.TryGetRange(1, out string reason))
-            {
-                ActionLog.AddPriority(ActionLogType.ShutdownServer, "INSTANT: " + reason, ctx.CallerID);
-                UCWarfare.ShutdownNow(reason, ctx.CallerID);
-            }
-            else
-            {
-                ActionLog.AddPriority(ActionLogType.ShutdownServer, "INSTANT", ctx.CallerID);
-                UCWarfare.ShutdownNow("None specified", ctx.CallerID);
-            }
+            if (!ctx.TryGetRange(1, out string reason))
+                reason = "None Specified";
+
+            ActionLog.AddPriority(ActionLogType.ShutdownServer, "INSTANT: " + reason, ctx.CallerID);
+            UCWarfare.ShutdownNow(reason, ctx.CallerID);
             ctx.Defer();
         }
         else if (ctx.MatchParameter(0, "cancel", "abort"))

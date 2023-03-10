@@ -11,7 +11,26 @@ public class KickCommand : Command
     private const string Syntax = "/kick <player> <reason>";
     private const string Help = "Kick players who are misbehaving.";
 
-    public KickCommand() : base("kick", EAdminType.MODERATOR, 1) { }
+    public KickCommand() : base("kick", EAdminType.MODERATOR, 1)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Temporarily removes a player from the server.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Player", typeof(IPlayer))
+                {
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Reason", typeof(string))
+                        {
+                            IsRemainder = true
+                        }
+                    }
+                }
+            }
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {
@@ -23,7 +42,7 @@ public class KickCommand : Command
         if (!ctx.TryGet(0, out ulong targetId, out UCPlayer? target) || target is null)
             throw ctx.Reply(T.PlayerNotFound);
 
-        if (!ctx.TryGet(1, out string reason))
+        if (!ctx.TryGetRange(1, out string reason))
             throw ctx.Reply(T.NoReasonProvided);
 
         PlayerNames names = target.Name;

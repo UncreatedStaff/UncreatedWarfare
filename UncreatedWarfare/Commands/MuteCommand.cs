@@ -10,7 +10,39 @@ public class MuteCommand : Command
     private const string SYNTAX = "/mute <voice|text|both> <name or steam64> <permanent | duration in minutes> <reason...>";
     private const string HELP = "Mute players in either voice chat or text chat.";
 
-    public MuteCommand() : base("mute", EAdminType.MODERATOR) { }
+    public MuteCommand() : base("mute", EAdminType.MODERATOR)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Mute players in either voice chat or text chat.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Type", "Voice", "Text", "Both")
+                {
+                    ChainDisplayCount = 4,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Player", typeof(IPlayer))
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Duration", typeof(TimeSpan), "Permanent")
+                                {
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("Reason", typeof(string))
+                                        {
+                                            IsRemainder = true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {
