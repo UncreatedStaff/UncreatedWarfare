@@ -9,7 +9,26 @@ public class WarnCommand : Command
     private const string SYNTAX = "/warn";
     private const string HELP = "Warn misbehaving players.";
 
-    public WarnCommand() : base("warn", EAdminType.MODERATOR) { }
+    public WarnCommand() : base("warn", EAdminType.MODERATOR)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Send a warning to a player.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Player", typeof(IPlayer))
+                {
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Reason", typeof(string))
+                        {
+                            IsRemainder = true
+                        }
+                    }
+                }
+            }
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

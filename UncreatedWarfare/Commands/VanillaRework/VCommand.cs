@@ -15,6 +15,19 @@ public class VCommand : Command
     {
         AddAlias("v");
         AddAlias("veh");
+        Structure = new CommandStructure
+        {
+            Description = "Spawns a vehicle in front of you.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Enter")
+                {
+                    FlagName = "e",
+                    Description = "Enter the vehicle after it spawns."
+                },
+                new CommandParameter("Vehicle", typeof(VehicleAsset))
+            }
+        };
     }
 
     public override void Execute(CommandInteraction ctx)
@@ -25,7 +38,7 @@ public class VCommand : Command
         if (ctx.MatchParameter(0, "-e"))
         {
             enter = true;
-            ctx.Offset = 1;
+            ++ctx.Offset;
         }
 
         ctx.AssertArgs(1, SYNTAX);

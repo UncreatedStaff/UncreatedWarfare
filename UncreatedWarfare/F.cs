@@ -1471,7 +1471,7 @@ public static class F
 
         for (int i = 0; i < collection.Count; ++i)
         {
-            if (string.Equals(selector(collection[i]), input, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(selector(collection[i]), input, StringComparison.InvariantCultureIgnoreCase))
                 return i;
         }
         if (!equalsOnly)
@@ -1479,7 +1479,7 @@ public static class F
             for (int i = 0; i < collection.Count; ++i)
             {
                 string? n = selector(collection[i]);
-                if (n != null && n.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
+                if (n != null && n.IndexOf(input, StringComparison.InvariantCultureIgnoreCase) != -1)
                     return i;
             }
 
@@ -1487,7 +1487,7 @@ public static class F
             for (int i = 0; i < collection.Count; ++i)
             {
                 string? name = selector(collection[i]);
-                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
                     return i;
             }
         }
@@ -1501,7 +1501,7 @@ public static class F
 
         for (int i = 0; i < collection.Count; ++i)
         {
-            if (string.Equals(selector(collection[i]), input, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(selector(collection[i]), input, StringComparison.InvariantCultureIgnoreCase))
                 return collection[i];
         }
         if (!equalsOnly)
@@ -1509,7 +1509,7 @@ public static class F
             for (int i = 0; i < collection.Count; ++i)
             {
                 string? n = selector(collection[i]);
-                if (n != null && n.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
+                if (n != null && n.IndexOf(input, StringComparison.InvariantCultureIgnoreCase) != -1)
                     return collection[i];
             }
 
@@ -1517,7 +1517,7 @@ public static class F
             for (int i = 0; i < collection.Count; ++i)
             {
                 string? name = selector(collection[i]);
-                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
                     return collection[i];
             }
         }
@@ -1531,7 +1531,7 @@ public static class F
         T[] buffer = (descending ? collection.OrderByDescending(orderBy) : collection.OrderBy(orderBy)).ToArray();
         for (int i = 0; i < buffer.Length; i++)
         {
-            if (string.Equals(selector(buffer[i]), input, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(selector(buffer[i]), input, StringComparison.InvariantCultureIgnoreCase))
                 return buffer[i];
         }
 
@@ -1540,7 +1540,7 @@ public static class F
             for (int i = 0; i < buffer.Length; i++)
             {
                 string? n = selector(buffer[i]);
-                if (n != null && n.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
+                if (n != null && n.IndexOf(input, StringComparison.InvariantCultureIgnoreCase) != -1)
                     return buffer[i];
             }
 
@@ -1548,7 +1548,40 @@ public static class F
             for (int i = 0; i < buffer.Length; i++)
             {
                 string? name = selector(buffer[i]);
-                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                    return buffer[i];
+            }
+        }
+
+        return default;
+    }
+    public static T? StringFind<T, TKey, TKey2>(IReadOnlyList<T> collection, Func<T, string?> selector, Func<T, TKey> orderBy, Func<T, TKey2> thenBy, string input, bool equalsOnly = false, bool descending = false, bool thenDescending = false)
+    {
+        if (input == null)
+            return default;
+        IOrderedEnumerable<T> e = descending ? collection.OrderByDescending(orderBy) : collection.OrderBy(orderBy);
+        e = thenDescending ? e.ThenByDescending(thenBy) : e.ThenBy(thenBy);
+        T[] buffer = e.ToArray();
+        for (int i = 0; i < buffer.Length; i++)
+        {
+            if (string.Equals(selector(buffer[i]), input, StringComparison.InvariantCultureIgnoreCase))
+                return buffer[i];
+        }
+
+        if (!equalsOnly)
+        {
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                string? n = selector(buffer[i]);
+                if (n != null && n.IndexOf(input, StringComparison.InvariantCultureIgnoreCase) != -1)
+                    return buffer[i];
+            }
+
+            string[] inSplits = input.Split(splits);
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                string? name = selector(buffer[i]);
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
                     return buffer[i];
             }
         }
@@ -1562,7 +1595,7 @@ public static class F
 
         for (int i = 0; i < collection.Count; ++i)
         {
-            if (string.Equals(selector(collection[i]), input, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(selector(collection[i]), input, StringComparison.InvariantCultureIgnoreCase))
                 output.Add(collection[i]);
         }
         if (!equalsOnly)
@@ -1570,7 +1603,7 @@ public static class F
             for (int i = 0; i < collection.Count; ++i)
             {
                 string? n = selector(collection[i]);
-                if (n != null && n.IndexOf(input, StringComparison.OrdinalIgnoreCase) != -1)
+                if (n != null && n.IndexOf(input, StringComparison.InvariantCultureIgnoreCase) != -1)
                     output.Add(collection[i]);
             }
 
@@ -1578,7 +1611,7 @@ public static class F
             for (int i = 0; i < collection.Count; ++i)
             {
                 string? name = selector(collection[i]);
-                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
                     output.Add(collection[i]);
             }
         }

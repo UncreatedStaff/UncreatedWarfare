@@ -8,7 +8,13 @@ public class VanishCommand : Command
     private const string SYNTAX = "/vanish";
     private const string HELP = "Toggle your visibility to other players.";
 
-    public VanishCommand() : base("vanish", EAdminType.ADMIN) { }
+    public VanishCommand() : base("vanish", EAdminType.ADMIN)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Toggle your visibility to other players."
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

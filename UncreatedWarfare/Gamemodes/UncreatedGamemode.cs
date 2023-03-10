@@ -364,6 +364,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await t3.ConfigureAwait(false);
             await t4.ConfigureAwait(false);
         }
+        else await player.DownloadKits(false, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)

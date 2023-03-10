@@ -1121,6 +1121,7 @@ public static class UCBarricadeManager
                     {
                         SendRemoveItem(r.x, r.y, item.instanceID, false);
                         region.items.RemoveAt(j);
+                        EventFunctions.OnItemRemoved(item);
                         ++ct;
                     }
                 }

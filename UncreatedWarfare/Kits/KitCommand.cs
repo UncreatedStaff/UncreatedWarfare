@@ -20,7 +20,232 @@ public sealed class KitCommand : AsyncCommand
     private const string Syntax = "/kit <search|skills|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
     private const string Help = "Admin command to manage kits; creating, deleting, editing, and giving/removing access is done through this command.";
 
-    public KitCommand() : base("kit", EAdminType.STAFF) { }
+    public KitCommand() : base("kit", EAdminType.STAFF)
+    {
+        Structure = new CommandStructure
+        {
+            Description = Help,
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Search")
+                {
+                    Description = "Finds a kit Id from a localized name.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Term", typeof(string))
+                        {
+                            IsRemainder = true
+                        }
+                    }
+                },
+                new CommandParameter("Create")
+                {
+                    Description = "Creates or overwrites a kit. Class is not required to overwrite a kit.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Id", typeof(Kit))
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Class", typeof(Class))
+                                {
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("Type", "Public", "Elite", "Loadout", "Special")
+                                        {
+                                            IsOptional = true,
+                                            Parameters = new CommandParameter[]
+                                            {
+                                                new CommandParameter("Faction", typeof(FactionInfo))
+                                                {
+                                                    IsOptional = true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("Delete")
+                {
+                    Description = "Delete a kit.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Kit", typeof(Kit))
+                    }
+                },
+                new CommandParameter("Give")
+                {
+                    Description = "Gives the caller a kit.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Kit", typeof(Kit))
+                    }
+                },
+                new CommandParameter("Set")
+                {
+                    Description = "Sets a property of a kit.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Sign")
+                        {
+                            Description = "Sets the sign text of a kit for a language. Default language is " + L.Default + ".",
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Kit", typeof(Kit))
+                                {
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("Language", typeof(string))
+                                        {
+                                            Parameters = new CommandParameter[]
+                                            {
+                                                new CommandParameter("Text", typeof(string))
+                                                {
+                                                    IsRemainder = true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        new CommandParameter("Property", typeof(string))
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Kit", typeof(Kit))
+                                {
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("Value", typeof(object))
+                                        {
+                                            IsRemainder = true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("GiveAccess")
+                {
+                    Description = "Give a player access to a non-public kit.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Player", typeof(IPlayer))
+                        {
+                            ChainDisplayCount = 3,
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Kit", typeof(Kit))
+                                {
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("AccessType", typeof(KitAccessType))
+                                        {
+                                            IsOptional = true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("RemoveAccess")
+                {
+                    Description = "Remove a player's access to a non-public kit.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Player", typeof(IPlayer))
+                        {
+                            ChainDisplayCount = 2,
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Kit", typeof(Kit))
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("CopyFrom")
+                {
+                    Description = "Create a copy of a kit with a different id.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Kit", typeof(Kit))
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Id", typeof(string))
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("CreateLoadout")
+                {
+                    Description = "Create a loadout with some default parameters.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Player", typeof(IPlayer))
+                        {
+                            ChainDisplayCount = 4,
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Faction", typeof(FactionInfo))
+                                {
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("Class", typeof(Class))
+                                        {
+                                            Parameters = new CommandParameter[]
+                                            {
+                                                new CommandParameter("SignText", typeof(string))
+                                                {
+                                                    IsOptional = false,
+                                                    IsRemainder = true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("Skills")
+                {
+                    Description = "Modify the skillset overrides on a kit.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Add")
+                        {
+                            ChainDisplayCount = 3,
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Skill", typeof(string))
+                                {
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("Level", typeof(byte))
+                                    }
+                                }
+                            }
+                        },
+                        new CommandParameter("Remove")
+                        {
+                            ChainDisplayCount = 2,
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Skill", typeof(string))
+                            }
+                        }
+                    }
+                }
+            }
+        };
+    }
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
@@ -240,7 +465,7 @@ public sealed class KitCommand : AsyncCommand
                         }
                         else if (ctx.MatchParameter(1, "sign", "text"))
                         {
-                            ctx.AssertHelpCheck(2, "/kit <set|s> <sign> <language (default: en-us> <text> - Sets the display text for the kit's kit sign.");
+                            ctx.AssertHelpCheck(2, "/kit <set|s> <sign> <language (default: " + L.Default + "> <text> - Sets the display text for the kit's kit sign.");
 
                             string language = newValue;
                             if (ctx.TryGetRange(4, out newValue))

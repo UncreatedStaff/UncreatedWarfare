@@ -14,6 +14,59 @@ public class WhitelistCommand : Command
     public WhitelistCommand() : base("whitelist", EAdminType.STAFF)
     {
         AddAlias("wh");
+        Structure = new CommandStructure
+        {
+            Description = "Add or remove items from the global whitelist.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Add")
+                {
+                    Description = "Add an item to the global whitelist.",
+                    ChainDisplayCount = 3,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Item", typeof(ItemAsset))
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Amount", typeof(int))
+                                {
+                                    IsOptional = true
+                                }
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("Remove")
+                {
+                    Description = "Remove an item from the global whitelist.",
+                    ChainDisplayCount = 2,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Item", typeof(ItemAsset))
+                        {
+                            IsRemainder = true
+                        }
+                    }
+                },
+                new CommandParameter("Set")
+                {
+                    Description = "Set the whitelist amount for an item.",
+                    ChainDisplayCount = 3,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Amount")
+                        {
+                            IsRemainder = true,
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Amount", typeof(byte))
+                            }
+                        }
+                    }
+                }
+            }
+        };
     }
 
     public override void Execute(CommandInteraction ctx)

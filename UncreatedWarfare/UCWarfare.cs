@@ -391,7 +391,7 @@ public class UCWarfare : MonoBehaviour
                 Data.Gamemode.InvokeLanguageChanged(player);
         }
 
-        Data.UpdateAllUI(player);
+        Data.ShowAllUI(player);
     }
 
     private static Queue<MainThreadTask.MainThreadResult>? _threadActionRequests;

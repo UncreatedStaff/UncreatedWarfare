@@ -49,6 +49,16 @@ public static class EventFunctions
     internal static Dictionary<Item, PlayerInventory> ItemsTempBuffer = new Dictionary<Item, PlayerInventory>();
     internal static Dictionary<ulong, List<uint>> DroppedItems = new Dictionary<ulong, List<uint>>();
     internal static Dictionary<uint, ulong> DroppedItemsOwners = new Dictionary<uint, ulong>();
+    internal static void OnItemRemoved(ItemData item)
+    {
+        ItemsTempBuffer.Remove(item.item);
+        if (DroppedItemsOwners.TryGetValue(item.instanceID, out ulong pl))
+        {
+            DroppedItemsOwners.Remove(item.instanceID);
+            if (DroppedItems.TryGetValue(pl, out List<uint> items))
+                items.Remove(item.item.id);
+        }
+    }
     internal static void OnDropItemTry(PlayerInventory inv, Item item, ref bool allow)
     {
         if (!ItemsTempBuffer.ContainsKey(item))
@@ -310,7 +320,7 @@ public static class EventFunctions
             if (Data.Gamemode.UseWhitelist && hit != null)
                 Data.Gamemode.Whitelister.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angleX, ref angleY, ref angleZ, ref owner, ref group, ref shouldAllow);
             if (!(shouldAllow && Data.Gamemode is TeamGamemode)) return;
-            ulong team = group.GetTeam();
+            
             if (!perms && TeamManager.IsInAnyMainOrAMCOrLobby(point))
             {
                 shouldAllow = false;

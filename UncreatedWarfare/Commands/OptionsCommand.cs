@@ -1,7 +1,5 @@
 ﻿using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -16,6 +14,21 @@ public sealed class OptionsCommand : Command
         AddAlias("settings");
         AddAlias("option");
         AddAlias("config");
+        Structure = new CommandStructure
+        {
+            Description = "Configure player-specific settings.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("IMGUI")
+                {
+                    Description = "Enables chat support for the <nobr><b>-Glazier IMGUI</b></nobr> launch option. Allows support for some special characters.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Enabled", typeof(bool))
+                    }
+                }
+            }
+        };
     }
 
     public override void Execute(CommandInteraction ctx)

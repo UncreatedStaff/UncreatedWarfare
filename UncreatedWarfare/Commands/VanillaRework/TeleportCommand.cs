@@ -17,6 +17,86 @@ public class TeleportCommand : Command
     public TeleportCommand() : base("teleport", EAdminType.TRIAL_ADMIN_ON_DUTY, 1)
     {
         AddAlias("tp");
+        Structure = new CommandStructure
+        {
+            Description = "Teleport you or another player to a location.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Player", typeof(IPlayer))
+                {
+                    Description = "Teleport another player to a location.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("X", typeof(float))
+                        {
+                            Description = "Teleport another player to a set of coordinates.",
+                            ChainDisplayCount = 3,
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Y", typeof(float))
+                                {
+                                    Description = "Teleport another player to a set of coordinates.",
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("Z", typeof(float))
+                                        {
+                                            Description = "Teleport another player to a set of coordinates.",
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        new CommandParameter("Location", typeof(string), typeof(GridLocation))
+                        {
+                            Description = "Teleport another player to a location or grid location.",
+                        },
+                        new CommandParameter("WP")
+                        {
+                            Description = "Teleport another player to your waypoint.",
+                        }
+                    }
+                },
+                new CommandParameter("X", typeof(float))
+                {
+                    Description = "Teleport yourself to a set of coordinates.",
+                    ChainDisplayCount = 3,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Y", typeof(float))
+                        {
+                            Description = "Teleport yourself to a set of coordinates.",
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Z", typeof(float))
+                                {
+                                    Description = "Teleport yourself to a set of coordinates.",
+                                }
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("Location", typeof(string), typeof(GridLocation))
+                {
+                    Description = "Teleport yourself to a location or grid location.",
+                },
+                new CommandParameter("WP")
+                {
+                    Description = "Teleport yourself to your waypoint.",
+                },
+                new CommandParameter("Jump")
+                {
+                    Description = "Teleport to where you're looking.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Distance", typeof(float))
+                        {
+                            Description = "Teleport yourself a certain distance in the direction you're looking.",
+                            IsOptional = true
+                        }
+                    }
+                }
+            }
+        };
     }
 
     public override void Execute(CommandInteraction ctx)

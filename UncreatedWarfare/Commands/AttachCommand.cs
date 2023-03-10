@@ -11,7 +11,48 @@ public class AttachCommand : Command
     private const string Syntax = "/attach <item...> | (<remove> <sight|tact|grip|barrel|ammo>) | (<setammo> <amt>) | (<firemode> <safety|semi|auto|burst>)";
 
     private static readonly JsonAssetReference<EffectAsset> FiremodeEffect = new JsonAssetReference<EffectAsset>("bc41e0feaebe4e788a3612811b8722d3");
-    public AttachCommand() : base("attach", EAdminType.MODERATOR) { }
+
+    public AttachCommand() : base("attach", EAdminType.MODERATOR)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Modify guns past what vanilla Unturned allows.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Item", typeof(ItemCaliberAsset))
+                {
+                    Description = "Attach an item to your gun."
+                },
+                new CommandParameter("Remove")
+                {
+                    Description = "Remove an item from your gun.",
+                    ChainDisplayCount = 2,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Slot", "Sight", "Tactical", "Grip", "Barrel", "Ammo")
+                    }
+                },
+                new CommandParameter("Ammo")
+                {
+                    Description = "Set the amount of ammo in your gun (up to 255).",
+                    ChainDisplayCount = 2,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Amount", typeof(int))
+                    }
+                },
+                new CommandParameter("Firemode")
+                {
+                    Description = "Change the firemode of your gun.",
+                    ChainDisplayCount = 2,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Mode", "Safety", "Semi", "Auto", "Burst")
+                    }
+                }
+            }
+        };
+    }
 
     public override unsafe void Execute(CommandInteraction ctx)
     {

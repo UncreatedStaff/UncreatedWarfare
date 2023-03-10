@@ -13,6 +13,47 @@ public class PermissionCommand : Command
     {
         AddAlias("p");
         AddAlias("perms");
+        Structure = new CommandStructure
+        {
+            Description = "See your permission level or manage other's permission levels.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Grant")
+                {
+                    Description = "Set a player's permission level.",
+                    IsOptional = true,
+                    Permission = EAdminType.VANILLA_ADMIN,
+                    ChainDisplayCount = 2,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Player", typeof(IPlayer))
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Level", "Admin", "Intern", "Helper", "Member")
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("Revoke")
+                {
+                    Description = "Set a player's permission level to member (remove their permissions).",
+                    IsOptional = true,
+                    Permission = EAdminType.VANILLA_ADMIN,
+                    ChainDisplayCount = 2,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Player", typeof(IPlayer))
+                    }
+                },
+                new CommandParameter("Reload")
+                {
+                    Description = "Reload cached values from the permission file.",
+                    Permission = EAdminType.VANILLA_ADMIN,
+                    IsOptional = true
+                }
+            }
+        };
     }
     public override void Execute(CommandInteraction ctx)
     {
@@ -32,7 +73,7 @@ public class PermissionCommand : Command
 
             if (TryGetType(ctx, out EAdminType type))
             {
-                Task.Run(async () =>
+                UCWarfare.RunTask(async () =>
                 {
                     PlayerNames name = await F.GetPlayerOriginalNamesAsync(steam64);
                     await UCWarfare.ToUpdate();
@@ -52,7 +93,9 @@ public class PermissionCommand : Command
         }
         else if (ctx.MatchParameter(0, "revoke", "remove", "leave"))
         {
-            Task.Run(async () =>
+            ctx.AssertHelpCheck(1, "/permisions revoke <player>");
+
+            UCWarfare.RunTask(async () =>
             {
                 PlayerNames name = await F.GetPlayerOriginalNamesAsync(steam64);
                 await UCWarfare.ToUpdate();

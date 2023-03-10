@@ -12,7 +12,18 @@ public class UnbanCommand : AsyncCommand
 {
     private const string Syntax = "/unban <player>";
     private const string Help = "Unban players who have served their time.";
-    public UnbanCommand() : base("unban", Framework.EAdminType.MODERATOR, 1) { }
+
+    public UnbanCommand() : base("unban", Framework.EAdminType.MODERATOR, 1)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Unban players who have served their time.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Player", typeof(IPlayer))
+            }
+        };
+    }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);

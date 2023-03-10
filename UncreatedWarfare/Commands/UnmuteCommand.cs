@@ -8,9 +8,19 @@ namespace Uncreated.Warfare.Commands;
 public class UnmuteCommand : Command
 {
     private const string SYNTAX = "/unmute";
-    private const string HELP = "Does nothing.";
+    private const string HELP = "Lift a mute offense from a player.";
 
-    public UnmuteCommand() : base("unmute", EAdminType.MODERATOR) { }
+    public UnmuteCommand() : base("unmute", EAdminType.MODERATOR)
+    {
+        Structure = new CommandStructure
+        {
+            Description = HELP,
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Player", typeof(IPlayer))
+            }
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

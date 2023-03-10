@@ -18,6 +18,15 @@ public class DeployCommand : Command
     public DeployCommand() : base("deploy", EAdminType.MEMBER)
     {
         AddAlias("dep");
+        Structure = new CommandStructure
+        {
+            Description = "Deploy to a point of interest such as a main base, FOB, VCP, or cache.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Location", typeof(IDeployable), "Lobby", "Main"),
+                new CommandParameter("Cancel")
+            }
+        };
     }
 
     public override void Execute(CommandInteraction ctx)

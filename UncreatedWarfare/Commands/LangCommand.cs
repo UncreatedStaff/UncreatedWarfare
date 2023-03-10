@@ -11,7 +11,31 @@ public class LangCommand : Command
     private const string Help = "Switch your language to some of our supported languages.";
     public static event LanguageChanged? OnPlayerChangedLanguage;
 
-    public LangCommand() : base("lang", EAdminType.MEMBER) { }
+    public LangCommand() : base("lang", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Switch your language to some of our supported languages or see a list.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Current")
+                {
+                    IsOptional = true,
+                    Description = "See your current language."
+                },
+                new CommandParameter("Reset")
+                {
+                    IsOptional = true,
+                    Description = "Changes your language back to default."
+                },
+                new CommandParameter("Language", typeof(string))
+                {
+                    IsOptional = true,
+                    Description = "Changes your language to your choice of supported language."
+                }
+            }
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

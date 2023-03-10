@@ -5,6 +5,12 @@ using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 namespace Uncreated.Warfare.Commands;
 public class BuildCommand : Command
 {
-    public BuildCommand() : base("build", EAdminType.MEMBER) { }
+    public BuildCommand() : base("build", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Legacy command, tells you to use your shovel."
+        };
+    }
     public override void Execute(CommandInteraction ctx) => ctx.Reply(T.BuildLegacyExplanation);
 }

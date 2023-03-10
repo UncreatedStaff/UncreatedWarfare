@@ -211,6 +211,9 @@ public static partial class Patches
                 chatted = Palette.ADMIN;
             bool isRich = true;
             bool isVisible = true;
+            if (caller != null)
+                caller.LastChatMode = mode;
+            
             ChatManager.onChatted?.Invoke(callingPlayer, mode, ref chatted, ref isRich, text, ref isVisible);
             if (!(ChatManager.process(callingPlayer, text, fromUnityEvent) && isVisible))
                 return false;

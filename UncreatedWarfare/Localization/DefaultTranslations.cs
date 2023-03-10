@@ -40,6 +40,9 @@ internal static class T
     [TranslationData(SectionCommonErrors, "A command or feature hasn't been completed or implemented.")]
     public static readonly Translation NotImplemented = new Translation("<#ff8c69>This command hasn't been implemented yet.");
 
+    [TranslationData(SectionCommonErrors, "A player ran an unknown command.")]
+    public static readonly Translation UnknownCommand = new Translation("<#ff8c69>Unknown command. <#b3ffb3>Type <#fff>/help</color> to learn more.");
+
     [TranslationData(SectionCommonErrors, "A command or feature can only be used by the server console.")]
     public static readonly Translation ConsoleOnly = new Translation("<#ff8c69>This command can only be called from console.");
 
@@ -1304,6 +1307,7 @@ internal static class T
     public static readonly Translation ClearInventorySelf = new Translation("<#e6e3d5>Cleared your inventory.");
     public static readonly Translation<IPlayer> ClearInventoryOther = new Translation<IPlayer>("<#e6e3d5>Cleared {0}'s inventory.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation ClearItems = new Translation("<#e6e3d5>Cleared all dropped items.");
+    public static readonly Translation<float> ClearItemsInRange = new Translation<float>("<#e6e3d5>Cleared all dropped items in {0}m.", "F0");
     public static readonly Translation<IPlayer> ClearItemsOther = new Translation<IPlayer>("<#e6e3d5>Cleared {0}'s dropped items.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation ClearStructures = new Translation("<#e6e3d5>Cleared all placed structures and barricades.");
     public static readonly Translation ClearVehicles = new Translation("<#e6e3d5>Cleared all vehicles.");
@@ -2211,6 +2215,19 @@ internal static class T
 
     [TranslationData(SectionOptions, "Sent to the caller when the value given for the option is set.", "Option name", "Value of option")]
     public static readonly Translation<string, string> OptionsSet = new Translation<string, string>("<#ff8c69>Option <#ddd>{0}</color> sucessfully set to <#ddd>{1}</color>.");
+    #endregion
+
+    #region Help Command
+    private const string SectionHelp = "Help";
+
+    [TranslationData(SectionHelp, "Output from help describing how to use /discord.")]
+    public static readonly Translation HelpOutputDiscord = new Translation("<#b3ffb3>For more info, join our <#7483c4>Discord</color> server: <#fff>/discord</color>.");
+    
+    [TranslationData(SectionHelp, "Output from help describing how to use /request.")]
+    public static readonly Translation HelpOutputRequest = new Translation("<#b3ffb3>To get gear, look at a sign in the barracks and type <#fff>/request</color> (or <#fff>/req</color>).");
+    
+    [TranslationData(SectionHelp, "Output from help describing how to use /deploy.")]
+    public static readonly Translation HelpOutputDeploy = new Translation("<#b3ffb3>To deploy to battle, type <#fff>/deploy <location></color>. The locations are on the left side of your screen.");
     #endregion
 
     [FormatDisplay(typeof(object), "Plural")]

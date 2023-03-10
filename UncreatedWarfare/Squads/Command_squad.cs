@@ -15,6 +15,60 @@ public class SquadCommand : Command
     public SquadCommand() : base("squad", EAdminType.MEMBER)
     {
         AddAlias("sqaud");
+        Structure = new CommandStructure
+        {
+            Description = HELP,
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Create")
+                {
+                    Description = "Create a new squad with the next available name."
+                },
+                new CommandParameter("Join")
+                {
+                    Description = "Join an existing squad.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Name", typeof(string))
+                        {
+                            Description = "The name or first letter of the squad."
+                        }
+                    }
+                },
+                new CommandParameter("Promote")
+                {
+                    Description = "Give squad leader to one of your squad members.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Member", typeof(IPlayer))
+                    }
+                },
+                new CommandParameter("Kick")
+                {
+                    Description = "Removes a player from your squad",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Member", typeof(IPlayer))
+                    }
+                },
+                new CommandParameter("Leave")
+                {
+                    Description = "Leave your current squad. If you are the leader, a new one will be chosen."
+                },
+                new CommandParameter("Disband")
+                {
+                    Description = "Leave your current squad and delete it."
+                },
+                new CommandParameter("Lock")
+                {
+                    Description = "Limit your squad to only members in your Steam group."
+                },
+                new CommandParameter("Unlock")
+                {
+                    Description = "Allow anyone to join your squad."
+                }
+            }
+        };
     }
 
     public override void Execute(CommandInteraction ctx)

@@ -1708,7 +1708,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     }
 }
 
-[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field, Inherited = false, AllowMultiple = true)]
+[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface, Inherited = false, AllowMultiple = true)]
 public sealed class TranslatableAttribute : Attribute
 {
     private readonly string? _default;

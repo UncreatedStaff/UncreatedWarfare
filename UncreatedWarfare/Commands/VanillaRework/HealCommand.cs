@@ -9,7 +9,21 @@ public class HealCommand : Command
     private const string SYNTAX = "/heal [player]";
     private const string HELP = "Heal yourself or someone else to max health and revive them if they're injured.";
 
-    public HealCommand() : base("heal", EAdminType.ADMIN) { }
+    public HealCommand() : base("heal", EAdminType.ADMIN)
+    {
+        Structure = new CommandStructure
+        {
+            Description = HELP,
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Player", typeof(IPlayer))
+                {
+                    IsOptional = true,
+                    IsRemainder = true
+                }
+            }
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {

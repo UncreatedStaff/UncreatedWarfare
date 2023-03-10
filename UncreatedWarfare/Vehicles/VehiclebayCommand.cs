@@ -20,6 +20,172 @@ public class VehicleBayCommand : AsyncCommand
     public VehicleBayCommand() : base("vehiclebay", EAdminType.STAFF)
     {
         AddAlias("vb");
+        Structure = new CommandStructure
+        {
+            Description = "Manage vehicle data and vehicle spawners.",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Add")
+                {
+                    Description = "Adds the vehicle you're looking at to the vehicle bay."
+                },
+                new CommandParameter("Remove")
+                {
+                    Description = "Removes the vehicle you're looking at from the vehicle bay."
+                },
+                new CommandParameter("SaveMeta")
+                {
+                    Description = "Saves the barricades that are placed on the current vehicle to the vehicle bay."
+                },
+                new CommandParameter("Set")
+                {
+                    Description = "Sets the trunk items to your current inventory or any other property to the given value.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Items")
+                        {
+                            Description = "Sets the trunk items to your current inventory."
+                        },
+                        new CommandParameter("Property", typeof(string))
+                        {
+                            Description = "Sets a property of your target vehicle's data.",
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Value", typeof(object))
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("Delay")
+                {
+                    Description = "Modify request delays of your target vehicle.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Add")
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Type", "Time", "Flag", "Percent", "Staging", "None")
+                                {
+                                    Description = "Remove the first matching delay.",
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("Gamemode", typeof(string))
+                                        {
+                                            Description = "Put an exclamation point before to act as a blacklist.",
+                                            Parameters = new CommandParameter[]
+                                            {
+                                                new CommandParameter("Value", typeof(float))
+                                                {
+                                                    Description = "Value is not allowed on all types of delays."
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        new CommandParameter("Remove")
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("All")
+                                {
+                                    Description = "Clears all delays.",
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("Gamemode", typeof(string))
+                                        {
+                                            Description = "Put an exclamation point before to act as a blacklist.",
+                                            Parameters = new CommandParameter[]
+                                            {
+                                                new CommandParameter("Value", typeof(float))
+                                                {
+                                                    Description = "Value is not allowed on all types of delays."
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                new CommandParameter("Type", "Time", "Flag", "Percent", "Staging", "None")
+                                {
+                                    Description = "Remove the first matching delay.",
+                                    Parameters = new CommandParameter[]
+                                    {
+                                        new CommandParameter("Gamemode", typeof(string))
+                                        {
+                                            Description = "Put an exclamation point before to act as a blacklist.",
+                                            Parameters = new CommandParameter[]
+                                            {
+                                                new CommandParameter("Value", typeof(float))
+                                                {
+                                                    Description = "Value is not allowed on all types of delays."
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                        }
+                    }
+                },
+                new CommandParameter("CrewSeats")
+                {
+                    Description = "Specify which seats must be manned by crew kits (pilots, crewmen, etc).",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Add")
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Seat", typeof(byte))
+                                {
+                                    Description = "Seat index starts at zero (for driver)."
+                                }
+                            }
+                        },
+                        new CommandParameter("Remove")
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Seat", typeof(byte))
+                                {
+                                    Description = "Seat index starts at zero (for driver)."
+                                }
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("Register")
+                {
+                    Description = "Link a vehicle spawn to a vehicle and save it.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Vehicle", typeof(VehicleAsset))
+                    }
+                },
+                new CommandParameter("Deregister")
+                {
+                    Description = "Unlink a vehicle spawn and unsave it."
+                },
+                new CommandParameter("Force")
+                {
+                    Description = "Force a vehicle spawn to despawn it's active vehicle and respawn it."
+                },
+                new CommandParameter("Link")
+                {
+                    Description = "Begin or end a vehicle sign link."
+                },
+                new CommandParameter("Unlink")
+                {
+                    Description = "Unlink a sign and vehicle spawn."
+                },
+                new CommandParameter("Check")
+                {
+                    Description = "Get which vehicle is linked to the targetted spawner."
+                }
+            }
+        };
     }
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
@@ -37,7 +203,7 @@ public class VehicleBayCommand : AsyncCommand
 
         ctx.AssertHelpCheck(0, "/vehiclebay <help|add|remove|savemeta|set|delay|crewseats|register|deregister|force|link|unlink|check> [help|parameters...] - Manage vehicle spawners, signs, and the vehicle bay.");
 
-        if (ctx.MatchParameter(0, "delay"))
+        if (ctx.MatchParameter(0, "delay", "delays"))
         {
             ctx.AssertPermissions(EAdminType.MODERATOR);
 

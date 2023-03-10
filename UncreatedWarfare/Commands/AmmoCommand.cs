@@ -19,7 +19,13 @@ namespace Uncreated.Warfare.Commands;
 
 public class AmmoCommand : AsyncCommand
 {
-    public AmmoCommand() : base("ammo", EAdminType.MEMBER, sync: true) { }
+    public AmmoCommand() : base("ammo", EAdminType.MEMBER, sync: true)
+    {
+        Structure = new CommandStructure
+        {
+            Description = "Refill your kit while looking at an ammo crate or ammo bag or your vehicle's trunk while in main."
+        };
+    }
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG
@@ -209,6 +215,7 @@ public class AmmoCommand : AsyncCommand
 
                             Data.SendDestroyItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i], false);
                             ItemManager.regions[x, y].items.RemoveAt(index);
+                            EventFunctions.OnItemRemoved(it);
                         }
                     }
                 }

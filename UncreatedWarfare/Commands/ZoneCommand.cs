@@ -17,7 +17,27 @@ public class ZeCommand : Command
     private const string SYNTAX = "/ze <existing|maxheight|minheight|finalize|cancel|addpoint|delpoint|clearpoints|setpoint|orderpoint|radius|sizex|sizez|center|name|shortname|type> [value]";
     private const string HELP = "Shortcut for /zone edit.";
 
-    public ZeCommand() : base("ze", EAdminType.MODERATOR) { }
+    public ZeCommand() : base("ze", EAdminType.MODERATOR)
+    {
+        Structure = new CommandStructure
+        {
+            Description = HELP,
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Parameter", typeof(string))
+                {
+                    ChainDisplayCount = 2,
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Value", typeof(object))
+                        {
+                            IsRemainder = true
+                        }
+                    }
+                }
+            }
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {
@@ -38,10 +58,68 @@ public class ZeCommand : Command
 
 public class ZoneCommand : Command
 {
-    private const string SYNTAX = "/zone <visualize|go|list|delete|create|util>";
-    private const string HELP = "Shortcut for /zone edit.";
+    private const string SYNTAX = "/zone <visualize|go|delete|create|util>";
+    private const string HELP = "Manage zones.";
 
-    public ZoneCommand() : base("zone", EAdminType.MEMBER) { }
+    public ZoneCommand() : base("zone", EAdminType.MEMBER)
+    {
+        Structure = new CommandStructure
+        {
+            Description = HELP,
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Visualize")
+                {
+                    Description = "Spawns particles highlighting the zone border.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Zone", typeof(Zone))
+                    }
+                },
+                new CommandParameter("Go")
+                {
+                    Description = "Teleport to the spawn of a zone.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Zone", typeof(Zone))
+                    }
+                },
+                new CommandParameter("Delete")
+                {
+                    Description = "Deletes a zone.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Zone", typeof(Zone))
+                    }
+                },
+                new CommandParameter("Create")
+                {
+                    Description = "Starts creating a zone.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Type", "Rectangle", "Polygon", "Circle")
+                        {
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Name", typeof(string))
+                            }
+                        }
+                    }
+                },
+                new CommandParameter("Util")
+                {
+                    Description = "Random zone utilities.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Location")
+                        {
+                            Description = "Responds with the player's coordinates and yaw."
+                        }
+                    }
+                }
+            }
+        };
+    }
 
     public override void Execute(CommandInteraction ctx)
     {
