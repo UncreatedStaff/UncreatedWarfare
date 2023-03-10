@@ -518,7 +518,7 @@ public static class EventFunctions
             // reset the player to spawn if they have joined in a different game as they last played in.
             UCPlayer ucplayer = e.Player;
             ucplayer.Loading = true;
-            ucplayer.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+            //ucplayer.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
             UCPlayer.LoadingUI.SendToPlayer(ucplayer.Connection, T.LoadingOnJoin.Translate(ucplayer));
             bool isNewPlayer = e.IsNewPlayer;
             if (TeamManager.LobbyZone.IsInside(ucplayer.Position) || Data.Gamemode == null || ucplayer.Save.LastGame != Data.Gamemode.GameID || Data.Gamemode.State is not State.Active and not State.Staging)
