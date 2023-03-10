@@ -52,7 +52,7 @@ internal class ProjectileComponent : MonoBehaviour
     private Vector3 _lastpos;
     void FixedUpdate()
     {
-        if (!_isExploded && Physics.Linecast(_lastpos, transform.position, out RaycastHit hit, RayMasks.VEHICLE | RayMasks.GROUND | RayMasks.GROUND2 | RayMasks.LARGE))
+        if (!_isExploded && Physics.Linecast(_lastpos, transform.position, out RaycastHit hit, /*RayMasks.VEHICLE | */RayMasks.GROUND | RayMasks.GROUND2 | RayMasks.LARGE))
         {
             Collider other = hit.collider;
             if (other.isTrigger || (RocketComponent.ignoreTransform != null &&
@@ -65,8 +65,8 @@ internal class ProjectileComponent : MonoBehaviour
 #if DEBUG
                 string gun = Assets.find(GunID)?.FriendlyName ?? GunID.ToString("N");
                 L.LogWarning("Ghost rocket prevented: " + gun);
-                foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                    player.SteamPlayer.SendString("Ghost Rocket Prevented for " + gun + "!", Color.green);
+                //foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+                //    player.SteamPlayer.SendString("Ghost Rocket Prevented for " + gun + "!", Color.green);
 #endif
             }
         }
