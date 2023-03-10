@@ -339,8 +339,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     private async Task InternalPlayerInit(UCPlayer player, bool wasAlreadyOnline, CancellationToken token)
     {
-        L.LogDebug("COSMETICS: init player");
-
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
             return;
@@ -356,16 +354,16 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             .ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
-        Task t1 = player.DownloadKits(false, token);
         if (!wasAlreadyOnline)
         {
             Task t2 = Points.UpdatePointsAsync(player, false, token);
-            Task t3 = OffenseManager.ApplyMuteSettings(player, token);
+            Task t3 = player.DownloadKits(false, token);
+            Task t4 = OffenseManager.ApplyMuteSettings(player, token);
             await Data.DatabaseManager.RegisterLogin(player.Player, token).ConfigureAwait(false);
             await t2.ConfigureAwait(false);
             await t3.ConfigureAwait(false);
+            await t4.ConfigureAwait(false);
         }
-        await t1.ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
@@ -381,8 +379,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     private void PlayerInitIntl(UCPlayer player, bool wasAlreadyOnline)
     {
-        L.LogDebug("COSMETICS: Allowed=" + AllowCosmetics);
-
         if (!AllowCosmetics)
             player.SetCosmeticStates(false);
         if (!wasAlreadyOnline)
