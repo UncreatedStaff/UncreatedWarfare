@@ -377,9 +377,9 @@ public class Flag : IDisposable, IObjective
     public bool IsCapturable(ulong team)
     {
         if (Manager is not IFlagTeamObjectiveGamemode ctf)
-            return IsObj(team);
+            return IsAttackSite(team) || IsDefenseSite(team);
 
-        if (IsObj(team))
+        if (IsAttackSite(team) || IsDefenseSite(team))
             return true;
 
         // double neutral feature
