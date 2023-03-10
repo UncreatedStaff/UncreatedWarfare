@@ -225,7 +225,10 @@ public class RallyPoint : MonoBehaviour
         foreach (var player in Squad.Members)
         {
             AwaitingPlayers.Add(player);
-            player.SendChat(T.RallyWait, SecondsLeft);
+            if (player.IsSquadLeader())
+                player.SendChat(T.RallyWaitSL, SecondsLeft);
+            else
+                player.SendChat(T.RallyWait, SecondsLeft);
             Tips.TryGiveTip(player, 5, T.RallyToast, SecondsLeft);
         }
 
