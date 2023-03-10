@@ -619,8 +619,10 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         UpdateUIMemberCount(squad.Team);
 
         if (squad.HasRally)
+        {
+            squad.RallyPoint = null;
             squad.RallyPoint!.Destroy();
-
+        }
     }
     public static void KickPlayerFromSquad(UCPlayer player, Squad squad)
     {

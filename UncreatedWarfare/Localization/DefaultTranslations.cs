@@ -822,7 +822,8 @@ internal static class T
     //public static readonly Translation RallyNotActive       = new Translation("<#959c8c>Your squad doesn't have an active <#c$rally$>RALLY POINT</color>. Get your squadleader to place one.");
     public static readonly Translation RallyNotActiveSL     = new Translation("<#959c8c>Your squad doesn't have an active <#c$rally$>RALLY POINT</color>. Place one to allow you and your squad to deploy to it.");
     public static readonly Translation RallyActiveSL          = new Translation("<#959c8c><#c$rally$>RALLY POINT</color> is now active. Do <#bfbfbf>/rally</color> to rally your squad to this position.");
-    public static readonly Translation<int> RallyWait       = new Translation<int>("<#959c8c>Standby for <#c$rally$>RALLY</color> in: <#ffe4b5>{0} seconds</color>. Do <#a3b4c7>/rally deny</color> to be excluded.");
+    public static readonly Translation<int> RallyWait       = new Translation<int>("<#959c8c>Standby for <#c$rally$>RALLY</color> in: <#ffe4b5>{0} seconds</color>. Do <#a3b4c7>/rally cancel</color> to be excluded.");
+    public static readonly Translation<int> RallyWaitSL       = new Translation<int>("<#959c8c>Standby for <#c$rally$>RALLY</color> in: <#ffe4b5>{0} seconds</color>. Do <#a3b4c7>/rally cancel</color> to cancel deployment.");
     public static readonly Translation RallyCancel           = new Translation("<#a1a1a1>Cancelled rally deployment.");
     public static readonly Translation RallyObstructed      = new Translation("<#959c8c><#bfbfbf>RALLY</color> is no longer available - there are enemies nearby.");
     public static readonly Translation RallyNoSquadmates    = new Translation("<#99918d>You need more squad members to use a <#bfbfbf>rally point</color>.");

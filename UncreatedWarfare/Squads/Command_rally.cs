@@ -50,7 +50,7 @@ public class RallyCommand : Command
             return;
         }
 
-        if (ctx.Caller.Squad is null || !ctx.Caller.IsSquadLeader())
+        if (ctx.Caller.Squad is null)
             throw ctx.Reply(T.RallyNotSquadleader);
 
         var rallypoint = ctx.Caller.Squad.RallyPoint;
@@ -60,29 +60,28 @@ public class RallyCommand : Command
 
         if (ctx.MatchParameter(0, "cancel", "c", "abort"))
         {
-            if (!ctx.Caller.IsSquadLeader())
-                throw ctx.Reply(T.RallyNoCancelPerm);
-
             if (rallypoint.IsDeploying)
             {
-                rallypoint.AwaitingPlayers.Clear();
-                rallypoint.ShowUIForPlayer(ctx.Caller);
-                ctx.Reply(T.RallyCancel);
-            }
-            else throw ctx.Reply(T.RallyNoCancel);
-        }
-        else if (ctx.MatchParameter(0, "deny", "d"))
-        {
-            if (rallypoint.IsDeploying)
-            {
-                rallypoint.AwaitingPlayers.RemoveAll(p => p.Steam64 == ctx.CallerID);
-                rallypoint.ShowUIForPlayer(ctx.Caller);
-                ctx.Reply(T.RallyCancel);
+                if (ctx.Caller.IsSquadLeader())
+                {
+                    rallypoint.AwaitingPlayers.Clear();
+                    rallypoint.ShowUIForPlayer(ctx.Caller);
+                    ctx.Reply(T.RallyCancel);
+                }
+                else
+                {
+                    rallypoint.AwaitingPlayers.RemoveAll(p => p.Steam64 == ctx.CallerID);
+                    rallypoint.ShowUIForPlayer(ctx.Caller);
+                    ctx.Reply(T.RallyCancel);
+                }
             }
             else throw ctx.Reply(T.RallyNoDeny);
         }
         else if (ctx.HasArgsExact(0))
         {
+            if (ctx.Caller.Squad is null || !ctx.Caller.IsSquadLeader())
+                throw ctx.Reply(T.RallyNotSquadleader);
+
             if (!rallypoint.IsDeploying)
             {
                 if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.Rally, out Cooldown cooldown))
