@@ -185,7 +185,7 @@ public class RequestCommand : AsyncCommand
             if (data.RequiredClass != Class.None && kit.Class != data.RequiredClass)
                 throw ctx.Reply(T.RequestVehicleWrongClass, data.RequiredClass);
             if (ctx.Caller.CachedCredits < data.CreditCost)
-                throw ctx.Reply(T.RequestVehicleCantAfford, data.CreditCost - ctx.Caller.CachedCredits, data.CreditCost);
+                throw ctx.Reply(T.RequestVehicleCantAfford, ctx.Caller.CachedCredits, data.CreditCost);
             if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.RequestVehicle, out Cooldown cooldown, vehicle.id))
                 throw ctx.Reply(T.RequestVehicleCooldown, cooldown);
 
@@ -242,7 +242,7 @@ public class RequestCommand : AsyncCommand
                         else
                         {
                             await UCWarfare.ToUpdate(token);
-                            ctx.Caller.SendChat(T.RequestVehicleCantAfford, data.CreditCost - ctx.Caller.CachedCredits, data.CreditCost);
+                            ctx.Caller.SendChat(T.RequestVehicleCantAfford, ctx.Caller.CachedCredits, data.CreditCost);
                             return;
                         }
                     }

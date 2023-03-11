@@ -517,7 +517,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                     if (ctx.Caller.CachedCredits < trait.CreditCost)
                     {
                         await UCWarfare.ToUpdate();
-                        ctx.Reply(T.RequestKitCantAfford, trait.CreditCost - ctx.Caller.CachedCredits, trait.CreditCost);
+                        ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, trait.CreditCost);
                         return;
                     }
                     await Points.AwardCreditsAsync(ctx.Caller, -trait.CreditCost, isPurchase: true, @lock: false);

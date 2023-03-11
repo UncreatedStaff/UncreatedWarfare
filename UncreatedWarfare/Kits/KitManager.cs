@@ -1649,7 +1649,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     if (ctx.Caller.CachedCredits >= kit.CreditCost)
                         throw ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
                     else
-                        throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+                        throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
                 }
             }
             else if (!kit.RequiresNitro && !HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
@@ -1708,7 +1708,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     else if (ctx.Caller.CachedCredits >= kit.CreditCost)
                         throw ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
                     else
-                        throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+                        throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
                 }
             }
             // recheck limits to make sure people can't request at the same time to avoid limits.
@@ -1761,7 +1761,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             if (kit.CreditCost == 0 || HasAccessQuick(kit, ctx.Caller))
                 throw ctx.Reply(T.RequestKitAlreadyOwned);
             if (ctx.Caller.CachedCredits < kit.CreditCost)
-                throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+                throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
 
             await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try
@@ -1770,7 +1770,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 if (ctx.Caller.CachedCredits < kit.CreditCost)
                 {
                     await UCWarfare.ToUpdate();
-                    throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+                    throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
                 }
 
                 CreditsParameters parameters = new CreditsParameters(ctx.Caller, team, -kit.CreditCost)
