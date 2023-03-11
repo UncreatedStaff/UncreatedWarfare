@@ -155,7 +155,8 @@ public class BuildableComponent : MonoBehaviour
                 L.LogWarning($"Emplacement {vehicleasset.FriendlyName}'s ammo id is not a valid item.");
 
             Buildable.Emplacement.BaseBarricade.ValidReference(out Guid guid);
-            InteractableVehicle vehicle = SpawnImplacement(vehicleasset, Foundation.model.transform.position, Foundation.model.rotation.eulerAngles, data.owner, data.group, guid);
+            Vector3 rotation = Foundation.model.rotation.eulerAngles;
+            InteractableVehicle vehicle = SpawnImplacement(vehicleasset, Foundation.model.transform.position, new Vector3(rotation.x + 90, rotation.y, rotation.z), data.owner, data.group, guid);
             structureName = vehicle.asset.vehicleName;
 
             BuiltBuildableComponent comp = vehicle.transform.gameObject.AddComponent<BuiltBuildableComponent>();
