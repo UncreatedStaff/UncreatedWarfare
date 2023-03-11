@@ -620,7 +620,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         if (squad.HasRally)
         {
-            squad.RallyPoint = null;
             squad.RallyPoint!.Destroy();
         }
     }
