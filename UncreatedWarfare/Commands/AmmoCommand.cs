@@ -88,6 +88,9 @@ public class AmmoCommand : AsyncCommand
                     if (Assets.find(item) is ItemAsset a)
                         ItemManager.dropItem(new Item(a.id, true), ctx.Caller.Position, true, true, true);
 
+                if (vehicle.TryGetComponent(out VehicleComponent c))
+                    c.ReloadCountermeasures();
+
                 if (!isInMain)
                 {
                     fob!.ReduceAmmo(vehicleData.RearmCost);
