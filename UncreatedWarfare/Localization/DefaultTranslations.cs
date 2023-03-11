@@ -835,8 +835,8 @@ internal static class T
     public static readonly Translation<Cooldown> RallyCooldown = new Translation<Cooldown>("<#959c8c>You can rally your squad again in: <#e3c27f>{0}</color>", Cooldown.FormatTimeLong);
     //public static readonly Translation RallyNotInSquad      = new Translation("<#959c8c>You must be in a squad to use <#c$rally$>rallies</color>.");
     public static readonly Translation RallyObstructedPlace = new Translation("<#959c8c>This rally point is obstructed, find a more open place to put it.");
-    public static readonly Translation RallyEnemiesNearby   = new Translation("<#959c8c>There are enemies near this <#c$rally$>rally</color>.");
-    public static readonly Translation RallyEnemiesNearbyTp = new Translation("<#959c8c>There are enemies near your pending <#c$rally$>rally</color>. Deployment cancelled.");
+    public static readonly Translation RallyEnemiesNearby   = new Translation("<#9e7a6c>Cannot place rally when there are enemies nearby.");
+    public static readonly Translation RallyEnemiesNearbyTp = new Translation("<#9e7a6c>There are enemies near your RALLY. Deployment is no longer possible.");
     public static readonly Translation<int> RallyToast = new Translation<int>("<#959c8c><#c$rally$>RALLY</color> IN <#ffe4b5>{0}</color>", TranslationFlags.UnityUI);
     public static readonly Translation<string> RallyUI      = new Translation<string>("<#c$rally$>RALLY</color> {0}", TranslationFlags.UnityUI);
     public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationFlags.UnityUI, "mm\\:ss");
@@ -1522,6 +1522,7 @@ internal static class T
     public static readonly Translation XPToastKillDriverAssist = new Translation("DRIVER ASSIST", TranslationFlags.UnityUI);
     public static readonly Translation XPToastSpotterAssist = new Translation("SPOTTER", TranslationFlags.UnityUI);
     public static readonly Translation XPToastFriendlyKilled = new Translation("TEAMKILLED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastSuicide = new Translation("SUICIDE", TranslationFlags.UnityUI);
     public static readonly Translation XPToastFOBDestroyed = new Translation("FOB DESTROYED", TranslationFlags.UnityUI);
     public static readonly Translation XPToastFriendlyFOBDestroyed = new Translation("FRIENDLY FOB DESTROYED", TranslationFlags.UnityUI);
     public static readonly Translation XPToastBunkerDestroyed = new Translation("BUNKER DESTROYED", TranslationFlags.UnityUI);

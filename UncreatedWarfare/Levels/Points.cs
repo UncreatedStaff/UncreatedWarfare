@@ -651,7 +651,10 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             AwardXP(e.Killer, XPReward.Teamkill);
             return;
         }
-        AwardXP(e.Killer, XPReward.EnemyKilled);
+        if (e.WasSuicide)
+            AwardXP(e.Killer, XPReward.Suicide);
+        else
+            AwardXP(e.Killer, XPReward.EnemyKilled);
 
         if (e.Player.Player.TryGetPlayerData(out UCPlayerData component))
         {
@@ -1121,6 +1124,7 @@ public enum XPReward
     EnemyKilled,
     KillAssist,
     Teamkill,
+    Suicide,
     Revive,
     RadioDestroyed,
     FriendlyRadioDestroyed,
@@ -1211,6 +1215,15 @@ public class PointsConfig : JSONConfigData
             { XPReward.KillAssist, new XPRewardData(5, DefaultCreditPercentage) },
             { XPReward.Teamkill,
                 new XPRewardData(-30)
+                {
+                    CreditReward = new CreditRewardData(DefaultCreditPercentage)
+                    {
+                        IsPunishment = true
+                    }
+                }
+            },
+            { XPReward.Suicide,
+                new XPRewardData(-20)
                 {
                     CreditReward = new CreditRewardData(DefaultCreditPercentage)
                     {
@@ -1338,6 +1351,7 @@ public class PointsConfig : JSONConfigData
             XPReward.EnemyKilled => T.XPToastEnemyKilled,
             XPReward.KillAssist => T.XPToastKillAssist,
             XPReward.Teamkill => T.XPToastFriendlyKilled,
+            XPReward.Suicide => T.XPToastSuicide,
             XPReward.Revive => T.XPToastHealedTeammate,
             XPReward.RadioDestroyed => T.XPToastFOBDestroyed,
             XPReward.FriendlyRadioDestroyed => T.XPToastFriendlyFOBDestroyed,

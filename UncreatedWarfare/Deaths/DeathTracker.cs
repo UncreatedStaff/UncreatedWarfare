@@ -108,6 +108,7 @@ public class DeathTracker : BaseReloadSingleton
         args.Limb = limb;
         args.Flags = DeathFlags.None;
         e.WasTeamkill = false;
+        e.WasSuicide = false;
         e.Instigator = instigator;
         e.Limb = limb;
         e.Cause = cause;
@@ -261,6 +262,8 @@ public class DeathTracker : BaseReloadSingleton
                     e.WasTeamkill = true;
                 }
             }
+            else
+                e.WasSuicide = true;
         }
 
         switch (cause)
