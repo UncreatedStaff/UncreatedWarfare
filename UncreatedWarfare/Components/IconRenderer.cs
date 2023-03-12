@@ -57,13 +57,6 @@ public static class IconManager
         else if (Gamemode.Config.BarricadeRepairStation.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerRepair.ValidReference(out guid))
             AttachIcon(guid, drop.model, data.group, 4.5f);
 
-        else if (Data.Is<Insurgency>())
-        {
-            // cache
-            if (Gamemode.Config.BarricadeInsurgencyCache.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerCacheDefend.ValidReference(out guid))
-                AttachIcon(guid, drop.model, data.group, 2.25f);
-        }
-
         // buildable
         else if (Gamemode.Config.EffectMarkerBuildable.ValidReference(out guid) && FOBManager.Config.Buildables.Exists(b => b.Foundation.MatchGuid(drop.asset.GUID) && b.Type != BuildableType.Fortification))
             AttachIcon(guid, drop.model, data.group, 2f);

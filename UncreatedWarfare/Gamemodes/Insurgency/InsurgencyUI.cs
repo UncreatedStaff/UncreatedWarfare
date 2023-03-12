@@ -21,10 +21,9 @@ public static class InsurgencyUI
         for (; i < num; i++)
         {
             Insurgency.CacheData cache = gm.Caches[i];
-            ulong team = player.GetTeam();
 
             CTFUI.ListUI.Parents[i].SetVisibility(c, true);
-            CTFUI.ListUI.Names[i].SetText(c, GetCacheLabel(cache, player, team, gm));
+            CTFUI.ListUI.Names[i].SetText(c, GetCacheLabel(cache, player, gm));
         }
         for (; i < CTFUI.ListUI.Parents.Length; i++)
             CTFUI.ListUI.Parents[i].SetVisibility(c, false);
@@ -41,14 +40,16 @@ public static class InsurgencyUI
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
             UCPlayer player = PlayerManager.OnlinePlayers[i];
-            CTFUI.ListUI.Names[index].SetText(player.Connection, GetCacheLabel(cache, player, player.GetTeam(), gm));
+            CTFUI.ListUI.Names[index].SetText(player.Connection, GetCacheLabel(cache, player, gm));
         }
     }
-    public static string GetCacheLabel(Insurgency.CacheData cache, UCPlayer player, ulong team, Insurgency insurgency)
+    public static string GetCacheLabel(Insurgency.CacheData cache, UCPlayer player, Insurgency insurgency)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        ulong team = player.GetTeam();
+
         if (!cache.IsActive)
         {
             if (team == insurgency.AttackingTeam)
@@ -92,7 +93,7 @@ public static class InsurgencyUI
                 }
                 else
                 {
-                    return T.InsurgencyUnknownCacheDefense.Translate(player);
+                    return T.InsurgencyCacheDefenseUndiscovered.Translate(player, cache.Cache, cache.Cache);
                 }
             }
         }

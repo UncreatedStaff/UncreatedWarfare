@@ -393,6 +393,8 @@ public class Insurgency :
             }
         }
 
+        FOBManager.UpdateFOBListForTeam(DefendingTeam, cache);
+
         cache.SpawnAttackIcon();
 
         for (int i = 0; i < Singletons.Count; ++i)
@@ -418,14 +420,14 @@ public class Insurgency :
 
         if (viableSpawns.Length == 0)
         {
-            L.LogWarning("NO VIABLE CACHE SPAWNS");
+            L.LogWarning("CACHE: NO VIABLE CACHE SPAWNS");
             return;
         }
         SerializableTransform transform = viableSpawns[UnityEngine.Random.Range(0, viableSpawns.Length)];
 
         if (!Config.BarricadeInsurgencyCache.ValidReference(out ItemBarricadeAsset asset))
         {
-            L.LogWarning("Invalid barricade GUID for Insurgency Cache!");
+            L.LogWarning("CACHE: Invalid barricade GUID for Insurgency Cache!");
             return;
         }
         Barricade barricade = new Barricade(asset);
@@ -435,16 +437,16 @@ public class Insurgency :
         BarricadeDrop foundationDrop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
         if (foundationDrop == null)
         {
-            L.LogWarning("Foundation drop is null.");
+            L.LogWarning("CACHE: Foundation drop is null.");
             return;
         }
         Cache cache = FOBManager.RegisterNewCache(foundationDrop);
-        CacheData d = Caches[CachesDestroyed];
-        CacheData d2 = Caches[CachesDestroyed + 1];
-        if (!d.IsActive)
-            d.Activate(cache);
+        CacheData currentCache = Caches[CachesDestroyed];
+        CacheData nextCache = Caches[CachesDestroyed + 1];
+        if (!currentCache.IsActive)
+            currentCache.Activate(cache);
         else
-            d2.Activate(cache);
+            nextCache.Activate(cache);
 
 
         _seenCaches.Add(transform.Position);
@@ -459,8 +461,8 @@ public class Insurgency :
             }
         }
 
-        InsurgencyUI.ReplicateCacheUpdate(d);
-        InsurgencyUI.ReplicateCacheUpdate(d2);
+        InsurgencyUI.ReplicateCacheUpdate(currentCache);
+        InsurgencyUI.ReplicateCacheUpdate(nextCache);
 
         SpawnCacheItems(cache);
     }
@@ -504,6 +506,7 @@ public class Insurgency :
     }
     private IEnumerator<WaitForSeconds> WaitToSpawnNewCache()
     {
+        L.Log("CACHE: New cache spawning in 60 seconds");
         yield return new WaitForSeconds(60);
         SpawnNewCache(true);
     }
@@ -669,7 +672,7 @@ public class Insurgency :
     {
         public int Number => Cache != null ? Cache.Number : 0;
         public bool IsActive => Cache != null;
-        public bool IsDestroyed => Cache != null && Cache.Structure.GetServersideData().barricade.isDead;
+        public bool IsDestroyed => Cache != null && Cache.IsDestroyed;
         public bool IsDiscovered => Cache != null && Cache.IsDiscovered;
         public Cache Cache { get; private set; }
         public string Name => ((IObjective)Cache).Name;
