@@ -48,6 +48,11 @@ public class ActionManager : BaseSingleton
         ActionMenuUI.Move.OnClicked += Move;
         ActionMenuUI.Build.OnClicked += Build;
 
+        ActionMenuUI.AttackMarker.OnClicked += AttackMarker;
+        ActionMenuUI.DefendMarker.OnClicked += DefendMarker;
+        ActionMenuUI.MoveMarker.OnClicked += MoveMarker;
+        ActionMenuUI.BuildMarker.OnClicked += BuildMarker;
+
         ActionMenuUI.Cancel.OnClicked += Cancel;
         Singleton = this;
     }
@@ -80,6 +85,11 @@ public class ActionManager : BaseSingleton
         ActionMenuUI.Move.OnClicked -= Move;
         ActionMenuUI.Build.OnClicked -= Build;
 
+        ActionMenuUI.AttackMarker.OnClicked -= AttackMarker;
+        ActionMenuUI.DefendMarker.OnClicked -= DefendMarker;
+        ActionMenuUI.MoveMarker.OnClicked -= MoveMarker;
+        ActionMenuUI.BuildMarker.OnClicked -= BuildMarker;
+
         ActionMenuUI.Cancel.OnClicked -= Cancel;
     }
     private static bool _uiWarnSent;
@@ -106,7 +116,8 @@ public class ActionManager : BaseSingleton
         FOB? fob = FOB.GetNearestFOB(player.Position, EfobRadius.FULL_WITH_BUNKER_CHECK, player.GetTeam());
         if (fob != null)
         {
-            ActionMenuUI.LogiSection.SetVisibility(player.Connection, true);
+            // TODO: fully test this later
+            //ActionMenuUI.LogiSection.SetVisibility(player.Connection, true);
         }
 
         player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
@@ -593,6 +604,87 @@ public class ActionManager : BaseSingleton
 
         var action = new Action(caller, Gamemode.Config.EffectActionBuild, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_LOOK, EActionType.ORDER, null, T.BuildToast, squadWide: true);
         action.CheckValid = () => !F.IsInMain(caller);
+        action.Start();
+        CloseUI(caller);
+    }
+    private static void AttackMarker(UnturnedButton button, Player player)
+    {
+        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+
+        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+
+        var action = new Action(caller, Gamemode.Config.EffectActionAttack.Value, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_MARKER, EActionType.ORDER, null, T.AttackToast, squadWide: true);
+        action.CheckValid = () =>
+        {
+            if (!caller.Player.quests.isMarkerPlaced)
+            {
+                Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
+                return false;
+            }
+            return !F.IsInMain(caller);
+        };
+        
+        action.Start();
+        CloseUI(caller);
+    }
+    private static void DefendMarker(UnturnedButton button, Player player)
+    {
+        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+
+        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+
+        var action = new Action(caller, Gamemode.Config.EffectActionDefend.Value, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_MARKER, EActionType.ORDER, null, T.DefendToast, squadWide: true);
+        action.CheckValid = () =>
+        {
+            if (!caller.Player.quests.isMarkerPlaced)
+            {
+                Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
+                return false;
+            }
+            return !F.IsInMain(caller);
+        };
+        action.Start();
+        CloseUI(caller);
+    }
+    private static void MoveMarker(UnturnedButton button, Player player)
+    {
+        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+
+        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+
+        var action = new Action(caller, Gamemode.Config.EffectActionMove.Value, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_MARKER, EActionType.ORDER, null, T.MoveToast, squadWide: true);
+        action.CheckValid = () =>
+        {
+            if (!caller.Player.quests.isMarkerPlaced)
+            {
+                Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
+                return false;
+            }
+            return !F.IsInMain(caller);
+        };
+        action.Start();
+        CloseUI(caller);
+    }
+    private static void BuildMarker(UnturnedButton button, Player player)
+    {
+        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+
+        var viewers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller));
+        var toastReceivers = PlayerManager.OnlinePlayers.Where(p => p.IsInSameSquadAs(caller) && p != caller);
+
+        var action = new Action(caller, Gamemode.Config.EffectActionBuild, null, viewers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_MARKER, EActionType.ORDER, null, T.BuildToast, squadWide: true);
+        action.CheckValid = () =>
+        {
+            if (!caller.Player.quests.isMarkerPlaced)
+            {
+                Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
+                return false;
+            }
+            return !F.IsInMain(caller);
+        };
         action.Start();
         CloseUI(caller);
     }
