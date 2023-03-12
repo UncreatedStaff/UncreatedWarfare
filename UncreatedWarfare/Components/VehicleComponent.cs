@@ -276,6 +276,9 @@ public class VehicleComponent : MonoBehaviour
     private int _flaresLeft;
     public void ReloadCountermeasures()
     {
+        if (Data?.Item == null)
+            return;
+
         if (Data.Item.Type == VehicleType.AttackHeli)
             _flaresLeft = STARTING_FLARES_ATTACKHELI;
         else if (Data.Item.Type == VehicleType.TransportAir)
