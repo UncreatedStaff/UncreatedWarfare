@@ -279,6 +279,7 @@ public class DebugCommand : AsyncCommand
             return;
         }
         UCWarfare.RunTask(Data.Gamemode.DeclareWin, team, ctx: "/test quickwin executed for " + team + ".");
+        ctx.Defer();
     }
     private void zone(CommandInteraction ctx)
     {

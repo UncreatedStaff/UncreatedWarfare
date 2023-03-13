@@ -409,6 +409,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (this is ISquads)
             RallyManager.WipeAllRallies();
 
+        ItemManager.askClearAllItems();
+        EventFunctions.OnClearAllItems();
         ReplaceBarricadesAndStructures();
         Signs.CheckAllSigns();
 
@@ -417,7 +419,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             if (EventLoopCoroutine != null)
             {
-                L.LogError("An ADDITIONAL Gamemode event loop is about to be instantiated, stopping the old one...");
+                L.LogWarning("An ADDITIONAL Gamemode event loop is about to be instantiated, stopping the old one...");
 
                 StopCoroutine(EventLoopCoroutine);
             }
@@ -1393,7 +1395,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 public enum State : byte
 {
     Active,
-    Paused,
     Finished,
     Loading,
     Staging,

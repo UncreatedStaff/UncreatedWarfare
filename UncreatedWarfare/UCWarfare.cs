@@ -90,6 +90,9 @@ public class UCWarfare : MonoBehaviour
 #endif
         L.Log("Started loading - Uncreated Warfare version " + Version + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
               "Please stop using this plugin now.", ConsoleColor.Green);
+
+        L.IsBufferingLogs = true;
+
         /* INITIALIZE UNCREATED NETWORKING */
         Logging.OnLogInfo += L.NetLogInfo;
         Logging.OnLogWarning += L.NetLogWarning;
@@ -272,6 +275,14 @@ public class UCWarfare : MonoBehaviour
         UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
         FullyLoaded = true;
         PlayerJoinLock.Release();
+
+        L.IsBufferingLogs = false;
+        RunTask(async token =>
+        {
+            await Task.Delay(500, token).ConfigureAwait(false);
+            await ToUpdate(token);
+            L.FlushBadLogs();
+        }, UnloadCancel);
     }
     private IEnumerator<WaitForSecondsRealtime> RestartIn(float seconds)
     {

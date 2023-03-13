@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using SDG.Unturned;
 using StackCleaner;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -27,8 +28,10 @@ public static class L
     private const char ConsoleEscapeCharacter = '\u001B';
     private static readonly byte[] NewLineBytes = System.Text.Encoding.UTF8.GetBytes(Environment.NewLine);
     private static bool _init;
+    private static bool _bufferBadLogs;
     private static int _indention;
     private static FileStream _log;
+    private static readonly List<LogMessage> BadLogBuffer = new List<LogMessage>(0);
 #if DEBUG && FUNCTION_LOG
     private static FileStream _flog;
 #endif
@@ -43,6 +46,50 @@ public static class L
         IncludeNamespaces = false,
         IncludeFileData = true
     });
+    public static bool IsBufferingLogs { get; set; }
+    public static void FlushBadLogs()
+    {
+        lock (BadLogBuffer)
+        {
+            if (BadLogBuffer is not { Count: > 0 })
+                return;
+            LogWarning("Errors:");
+            using (IndentLog(1))
+            {
+                foreach (LogMessage msg in BadLogBuffer.Where(x => x.Error))
+                {
+                    AddLine(msg.Message, msg.Color);
+                }
+            }
+
+            Log(string.Empty);
+            LogWarning("Warnings:");
+            using (IndentLog(1))
+            {
+                foreach (LogMessage msg in BadLogBuffer.Where(x => !x.Error))
+                {
+                    AddLine(msg.Message, msg.Color);
+                }
+            }
+
+            Log(string.Empty);
+
+            BadLogBuffer.Clear();
+        }
+    }
+
+    private readonly struct LogMessage
+    {
+        public readonly bool Error;
+        public readonly ConsoleColor Color;
+        public readonly string Message;
+        public LogMessage(bool error, ConsoleColor color, string message)
+        {
+            Error = error;
+            Color = color;
+            Message = message;
+        }
+    }
     internal static void Init()
     {
         try
@@ -242,26 +289,27 @@ public static class L
             }
         }
 
+        string time = "[" + DateTime.UtcNow.ToString(ActionLog.DateLineFormat) + "] ";
         if (_indention == 0)
         {
             _outputToConsoleMethod.Invoke(text, color);
-            AddLog(text);
+            AddLog(time + text);
         }
         else if (text.IndexOf('\n') < 0)
         {
-            AddLog(text = new string(' ', _indention) + text);
+            AddLog(time + (text = new string(' ', _indention) + text));
             _outputToConsoleMethod.Invoke(text, color);
         }
         else
         {
-            string[] lines = text.Split(SplitChars);
+            string[] lines = RemoveANSIFormatting(text).Split(SplitChars);
             string ind = new string(' ', _indention);
             lock (_log)
             {
                 for (int i = 0; i < lines.Length; ++i)
                 {
                     string l = ind + lines[i].Trim(TrimChars);
-                    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(l + Environment.NewLine);
+                    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(time + l + Environment.NewLine);
                     _log.Write(bytes, 0, bytes.Length);
                     _outputToConsoleMethod.Invoke(l, color);
                 }
@@ -313,11 +361,17 @@ public static class L
     }
     public static void LogWarning(string warning, ConsoleColor color = ConsoleColor.Yellow, [CallerMemberName] string method = "")
     {
+        string msg = "[WARN]  [" + method.ToUpper() + "] " + warning;
+        if (IsBufferingLogs)
+        {
+            lock (BadLogBuffer)
+                BadLogBuffer.Add(new LogMessage(false, color, msg));
+        }
         if (!UCWarfare.IsLoaded)
-            LogAsLibrary("[WARN]  [" + method.ToUpper() + "] " + warning, color);
+            LogAsLibrary(msg, color);
         else
         {
-            AddLine("[WARN]  [" + method.ToUpper() + "] " + warning, color);
+            AddLine(msg, color);
             if (_outputToConsoleMethod is not null)
             {
                 _inL = true;
@@ -328,11 +382,17 @@ public static class L
     }
     public static void LogError(string error, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "")
     {
+        string msg = "[ERROR] [" + method.ToUpper() + "] " + error;
+        if (IsBufferingLogs)
+        {
+            lock (BadLogBuffer)
+                BadLogBuffer.Add(new LogMessage(true, color, msg));
+        }
         if (!UCWarfare.IsLoaded)
-            LogAsLibrary("[ERROR] [" + method.ToUpper() + "] " + error, color);
+            LogAsLibrary(msg, color);
         else
         {
-            AddLine("[ERROR] [" + method.ToUpper() + "] " + error, color);
+            AddLine(msg, color);
             if (_outputToConsoleMethod is not null)
             {
                 _inL = true;
@@ -344,7 +404,14 @@ public static class L
     public static void LogError(Exception ex, bool cleanStack = true, [CallerMemberName] string method = "")
     {
         if (!UCWarfare.IsLoaded)
+        {
+            if (IsBufferingLogs)
+            {
+                lock (BadLogBuffer)
+                    BadLogBuffer.Add(new LogMessage(false, ConsoleColor.Red, "[ERROR] [" + method.ToUpperInvariant() + "]\n" + ex));
+            }
             Logging.LogException(ex, cleanStack);
+        }
         else
         {
             WriteExceptionIntl(ex, cleanStack, _indention, method);
@@ -357,60 +424,58 @@ public static class L
     {
         string ind = indent == 0 ? string.Empty : new string(' ', indent);
         bool inner = false;
-        if (indent == 0)
-            Monitor.Enter(_log);
-        try
+        void AddLine2(string error, ConsoleColor color)
         {
-            while (ex != null)
+            if (IsBufferingLogs)
             {
-                if (inner)
-                {
-                    AddLine(string.Empty, ConsoleColor.Red);
-                }
-                AddLine(ind + (inner ? "Inner Exception: " : ((string.IsNullOrEmpty(method) ? string.Empty : ("[" + method!.ToUpper() + "] ")) + "Exception: ")) + ex.GetType().Name, ConsoleColor.Red);
-                AddLine(ind + (ex.Message ?? "No message"), ConsoleColor.DarkRed);
-                if (ex is TypeLoadException t)
-                {
-                    AddLine(ind + "Type: " + t.TypeName, ConsoleColor.DarkRed);
-                }
-                else if (ex is ReflectionTypeLoadException t2)
-                {
-                    AddLine(ind + "Type load exceptions:", ConsoleColor.DarkRed);
-                    foreach (Exception ex2 in t2.LoaderExceptions)
-                    {
-                        WriteExceptionIntl(ex2, cleanStack, indent + 1);
-                    }
-                }
-                else if (ex is AggregateException t3)
-                {
-                    AddLine(ind + "Inner exceptions:", ConsoleColor.DarkRed);
-                    foreach (Exception ex2 in t3.InnerExceptions)
-                    {
-                        WriteExceptionIntl(ex2, cleanStack, indent + 1);
-                    }
-                }
-                if (ex.StackTrace != null)
-                {
-                    if (cleanStack)
-                    {
-                        string str = Cleaner.GetString(ex);
-                        AddLine(str, ConsoleColor.DarkGray);
-                    }
-                    
-                    AddLine(indent != 0
-                        ? string.Join(Environment.NewLine, ex.StackTrace.Split(SplitChars).Select(x => ind + x.Trim(TrimChars)))
-                        : ex.StackTrace, ConsoleColor.DarkGray);
-                }
-                if (ex is AggregateException) break;
-                ex = ex.InnerException!;
-                inner = true;
+                lock (BadLogBuffer)
+                    BadLogBuffer.Add(new LogMessage(true, color, error));
             }
-            _log.Flush();
+            AddLine(error, color);
         }
-        finally
+        while (ex != null)
         {
-            if (indent == 0)
-                Monitor.Exit(_log);
+            if (inner)
+            {
+                AddLine2(string.Empty, ConsoleColor.Red);
+            }
+            AddLine2(ind + (inner ? "Inner Exception: " : ((string.IsNullOrEmpty(method) ? string.Empty : ("[" + method!.ToUpper() + "] ")) + "Exception: ")) + ex.GetType().Name, ConsoleColor.Red);
+            AddLine2(ind + (ex.Message ?? "No message"), ConsoleColor.DarkRed);
+            if (ex is TypeLoadException t)
+            {
+                AddLine2(ind + "Type: " + t.TypeName, ConsoleColor.DarkRed);
+            }
+            else if (ex is ReflectionTypeLoadException t2)
+            {
+                AddLine2(ind + "Type load exceptions:", ConsoleColor.DarkRed);
+                foreach (Exception ex2 in t2.LoaderExceptions)
+                {
+                    WriteExceptionIntl(ex2, cleanStack, indent + 1);
+                }
+            }
+            else if (ex is AggregateException t3)
+            {
+                AddLine2(ind + "Inner exceptions:", ConsoleColor.DarkRed);
+                foreach (Exception ex2 in t3.InnerExceptions)
+                {
+                    WriteExceptionIntl(ex2, cleanStack, indent + 1);
+                }
+            }
+            if (ex.StackTrace != null)
+            {
+                if (cleanStack)
+                {
+                    string str = Cleaner.GetString(ex);
+                    AddLine2(str, ConsoleColor.DarkGray);
+                }
+                
+                AddLine2(indent != 0
+                    ? string.Join(Environment.NewLine, ex.StackTrace.Split(SplitChars).Select(x => ind + x.Trim(TrimChars)))
+                    : ex.StackTrace, ConsoleColor.DarkGray);
+            }
+            if (ex is AggregateException) break;
+            ex = ex.InnerException!;
+            inner = true;
         }
     }
     internal static void RunCommand(string command)

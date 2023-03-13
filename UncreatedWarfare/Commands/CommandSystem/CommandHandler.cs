@@ -151,9 +151,9 @@ public static class CommandHandler
         }
 
         if (cmd is VanillaCommand)
-            L.Log("Command /" + name.ToLower() + " registered from Unturned.", ConsoleColor.DarkGray);
+            L.Log("Command /" + name.ToLower() + " registered from Unturned.", ConsoleColor.DarkGreen);
         else
-            L.Log("Command /" + name.ToLower() + " registered from assembly: " + cmd.GetType().Assembly.GetName().Name, ConsoleColor.DarkGray);
+            L.Log("Command /" + name.ToLower() + " registered from assembly: " + cmd.GetType().Assembly.GetName().Name, ConsoleColor.Green);
     }
     internal static EAdminType GetVanillaPermissions(SDG.Unturned.Command command)
     {
@@ -215,7 +215,7 @@ public static class CommandHandler
             shouldExecuteCommand = false;
         else if (!shouldExecuteCommand)
         {
-            L.Log("Unknown command.");
+            L.Log("Unknown command.", ConsoleColor.Red);
         }
     }
     private struct ArgumentInfo
@@ -674,7 +674,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
                         return;
                     Reply(T.ErrorCommandCancelled);
                     MarkComplete();
-                    L.Log("Execution of " + Command.CommandName + " was cancelled (" + CallerID + ").");
+                    L.LogDebug("Execution of " + Command.CommandName + " was cancelled (" + CallerID + ").");
                 }
                 catch (BaseCommandInteraction i)
                 {

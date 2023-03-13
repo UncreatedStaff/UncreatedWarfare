@@ -47,10 +47,10 @@ public class DevCommand : AsyncCommand
                 SerializableTransform transform = new SerializableTransform(cache.model);
 
                 ins.AddCacheSpawn(transform);
-                ctx.ReplyString("Added new cache spawn: " + transform.ToString().Colorize("ebd491"));
+                ctx.ReplyString("Added new cache spawn: " + transform.ToString(), "ebd491");
                 ctx.LogAction(ActionLogType.AddCache, "ADDED CACHE SPAWN AT " + transform.ToString());
             }
-            else throw ctx.ReplyString("You must be looking at a CACHE barricade.".Colorize("c7a29f"));
+            else throw ctx.ReplyString("You must be looking at a CACHE barricade.", "c7a29f");
         }
         else if (ctx.MatchParameter(0, "gencaches"))
         {
@@ -103,9 +103,9 @@ public class DevCommand : AsyncCommand
                 insurgency.AddIntelligencePoints(points, ctx.Caller);
 
                 ctx.LogAction(ActionLogType.AddIntel, "ADDED " + points.ToString(Data.AdminLocale) + " OF INTEL");
-                ctx.ReplyString($"Added {points} intelligence points.".Colorize("ebd491"));
+                ctx.ReplyString($"Added {points} intelligence points.", "ebd491");
             }
-            else throw ctx.ReplyString($"You must supply a valid number of intelligence points (negative or positive).".Colorize("c7a29f"));
+            else throw ctx.ReplyString($"You must supply a valid number of intelligence points (negative or positive).", "c7a29f");
         }
         else if (ctx.MatchParameter(0, "quickbuild", "build", "qb"))
         {
@@ -118,11 +118,11 @@ public class DevCommand : AsyncCommand
                 if (drop.model.TryGetComponent<BuildableComponent>(out BuildableComponent? buildable))
                 {
                     buildable.Build();
-                    ctx.ReplyString($"Successfully built {drop.asset.itemName}".Colorize("ebd491"));
+                    ctx.ReplyString($"Successfully built {drop.asset.itemName}", "ebd491");
                 }
-                else throw ctx.ReplyString($"This barricade ({drop.asset.itemName}) is not buildable.".Colorize("c7a29f"));
+                else throw ctx.ReplyString($"This barricade ({drop.asset.itemName}) is not buildable.", "c7a29f");
             }
-            else throw ctx.ReplyString($"You are not looking at a barricade.".Colorize("c7a29f"));
+            else throw ctx.ReplyString($"You are not looking at a barricade.", "c7a29f");
         }
         else if (ctx.MatchParameter(0, "logmeta", "logstate", "metadata"))
         {
@@ -134,10 +134,10 @@ public class DevCommand : AsyncCommand
             {
                 BarricadeData data = drop.GetServersideData();
                 string state = Convert.ToBase64String(data.barricade.state);
-                L.Log($"BARRICADE STATE: {state}");
-                ctx.ReplyString($"Metadata state has been logged to console. State: {state}".Colorize("ebd491"));
+                L.Log($"BARRICADE STATE: {state}", ConsoleColor.DarkCyan);
+                ctx.ReplyString($"Metadata state has been logged to console. State: {state}", "ebd491");
             }
-            else throw ctx.ReplyString($"You are not looking at a barricade.".Colorize("c7a29f"));
+            else throw ctx.ReplyString($"You are not looking at a barricade.", "c7a29f");
         }
         else if (ctx.MatchParameter(0, "checkvehicle", "cv"))
         {
@@ -149,38 +149,38 @@ public class DevCommand : AsyncCommand
 
             InteractableVehicle vehicle = ctx.Caller!.Player.movement.getVehicle();
             if (vehicle is null && !(ctx.TryGetTarget(out vehicle) && vehicle is not null))
-                throw ctx.ReplyString("You are not inside or looking at a vehicle.".Colorize("c7a29f"));
+                throw ctx.ReplyString("You are not inside or looking at a vehicle.", "c7a29f");
             if (vehicle.transform.TryGetComponent(out VehicleComponent component))
             {
-                ctx.ReplyString("Vehicle logged successfully. Check console".Colorize("ebd491"));
+                ctx.ReplyString("Vehicle logged successfully. Check console", "ebd491");
 
-                L.Log($"{vehicle.asset.vehicleName.ToUpper()}");
+                L.Log($"{vehicle.asset.vehicleName.ToUpper()}", ConsoleColor.Cyan);
 
-                L.Log($"    Is In VehicleBay: {component.IsInVehiclebay}\n");
+                L.Log($"    Is In VehicleBay: {component.IsInVehiclebay}\n", ConsoleColor.Cyan);
 
                 if (component.IsInVehiclebay)
                 {
-                    L.Log($"    Team:    {component.Data!.Item!.Team}");
-                    L.Log($"    Type:    {component.Data.Item.Type}");
-                    L.Log($"    Tickets: {component.Data.Item.TicketCost}");
-                    L.Log($"    Branch:  {component.Data.Item.Branch}\n");
+                    L.Log($"    Team:    {component.Data!.Item!.Team}", ConsoleColor.Cyan);
+                    L.Log($"    Type:    {component.Data.Item.Type}", ConsoleColor.Cyan);
+                    L.Log($"    Tickets: {component.Data.Item.TicketCost}", ConsoleColor.Cyan);
+                    L.Log($"    Branch:  {component.Data.Item.Branch}\n", ConsoleColor.Cyan);
                 }
 
-                L.Log($"    Quota: {component.Quota}/{component.RequiredQuota}\n");
+                L.Log($"    Quota: {component.Quota}/{component.RequiredQuota}\n", ConsoleColor.Cyan);
 
-                L.Log("    Usage Table:");
+                L.Log("    Usage Table:", ConsoleColor.Cyan);
                 foreach (KeyValuePair<ulong, double> entry in component.UsageTable)
-                    L.Log($"        {entry.Key}'s time in vehicle: {entry.Value} s");
+                    L.Log($"        {entry.Key}'s time in vehicle: {entry.Value} s", ConsoleColor.Cyan);
 
-                L.Log("    Transport Table:");
+                L.Log("    Transport Table:", ConsoleColor.Cyan);
                 foreach (KeyValuePair<ulong, Vector3> entry in component.TransportTable)
-                    L.Log($"        {entry.Key}'s starting position: {entry.Value}");
+                    L.Log($"        {entry.Key}'s starting position: {entry.Value}", ConsoleColor.Cyan);
 
-                L.Log("    Damage Table:");
+                L.Log("    Damage Table:", ConsoleColor.Cyan);
                 foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in component.DamageTable)
-                    L.Log($"        {entry.Key}'s damage so far: {entry.Value.Key} ({(DateTime.Now - entry.Value.Value).TotalSeconds} seconds ago)");
+                    L.Log($"        {entry.Key}'s damage so far: {entry.Value.Key} ({(DateTime.Now - entry.Value.Value).TotalSeconds} seconds ago)", ConsoleColor.Cyan);
             }
-            else throw ctx.ReplyString($"This vehicle does have a VehicleComponent".Colorize("c7a29f"));
+            else throw ctx.ReplyString($"This vehicle does have a VehicleComponent", "c7a29f");
         }
         else if (ctx.MatchParameter(0, "getpos", "cvc"))
         {
@@ -188,7 +188,7 @@ public class DevCommand : AsyncCommand
 
             ctx.AssertHelpCheck(1, "/dev <getpos|cvc>. Gets your current rotation and position (like /test zone).");
 
-            ctx.ReplyString($"Your position: {ctx.Caller!.Position} - Your rotation: {ctx.Caller!.Player.transform.eulerAngles.y}".Colorize("ebd491"));
+            ctx.ReplyString($"Your position: {ctx.Caller!.Position} - Your rotation: {ctx.Caller!.Player.transform.eulerAngles.y}", "ebd491");
         }
         else if (ctx.MatchParameter(0, "onfob", "fob"))
         {
@@ -201,7 +201,7 @@ public class DevCommand : AsyncCommand
             FOB? fob = FOB.GetNearestFOB(ctx.Caller!.Position, EfobRadius.FULL_WITH_BUNKER_CHECK, ctx.Caller!.GetTeam());
             ctx.ReplyString((fob != null
                 ? $"Your nearest FOB is: {fob.Name.Colorize(fob.UIColor)} ({(ctx.Caller.Position - fob.Position).magnitude}m away)"
-                : "You are not near a FOB.").Colorize("ebd491"));
+                : "You are not near a FOB."), "ebd491");
         }
         else if (ctx.MatchParameter(0, "aatest", "aa"))
         {
@@ -217,12 +217,12 @@ public class DevCommand : AsyncCommand
             {
                 InteractableVehicle? vehicle = await VehicleSpawner.SpawnLockedVehicle(asset.GUID, ctx.Caller!.Player.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0), token: token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate(token);
-                ctx.ReplyString($"Successfully spawned AA target: {(vehicle == null ? asset.GUID.ToString("N") : vehicle.asset.vehicleName)}".Colorize("ebd491"));
+                ctx.ReplyString($"Successfully spawned AA target: {(vehicle == null ? asset.GUID.ToString("N") : vehicle.asset.vehicleName)}", "ebd491");
             }
             else if (!ctx.HasArgs(2))
-                throw ctx.ReplyString($"Please specify a vehicle name.".Colorize("ebd491"));
+                throw ctx.ReplyString($"Please specify a vehicle name.", "ebd491");
             else
-                throw ctx.ReplyString($"A vehicle called '{ctx.Get(1)!} does not exist".Colorize("ebd491"));
+                throw ctx.ReplyString($"A vehicle called '{ctx.Get(1)!} does not exist", "ebd491");
         }
         else throw ctx.SendCorrectUsage(Syntax);
     }
