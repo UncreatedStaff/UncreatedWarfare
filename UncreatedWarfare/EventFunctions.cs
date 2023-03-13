@@ -534,19 +534,21 @@ public static class EventFunctions
             if (TeamManager.LobbyZone.IsInside(ucplayer.Position) || Data.Gamemode == null || ucplayer.Save.LastGame != Data.Gamemode.GameID || Data.Gamemode.State is not State.Active and not State.Staging)
             {
                 L.LogDebug("Player " + ucplayer + " did not play this game, leaving group.");
-                if (Data.Gamemode is ITeams teams && teams.UseTeamSelector && teams.TeamSelector is { IsLoaded: true })
+                if (Data.Gamemode.LeaderboardUp(out ILeaderboard lb))
                 {
-                    if (Data.Gamemode.State is not State.Active and not State.Staging && Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> impl) && impl.IsScreenUp && impl.Leaderboard != null)
-                    {
-                        L.LogDebug("Joining leaderboard...");
-                        impl.Leaderboard.OnPlayerJoined(ucplayer);
-                        ucplayer.Player.quests.leaveGroup(true);
-                        TeamManager.TeleportToMain(ucplayer, 0);
-                    }
-                    else teams.TeamSelector.JoinSelectionMenu(ucplayer);
+                    L.LogDebug("Joining leaderboard...");
+                    lb.OnPlayerJoined(ucplayer);
+                    ucplayer.Player.quests.leaveGroup(true);
+                    TeamManager.TeleportToMain(ucplayer, 0);
                 }
                 else
-                    ucplayer.Player.quests.leaveGroup(true);
+                {
+                    L.LogDebug("Leaderboard not open.");
+                    if (Data.Gamemode is ITeams teams && teams.UseTeamSelector && teams.TeamSelector is { IsLoaded: true })
+                        teams.TeamSelector.JoinSelectionMenu(ucplayer);
+                    else
+                        ucplayer.Player.quests.leaveGroup(true);
+                }
             }
             else if (ucplayer.Save.Team is 1 or 2 && TeamManager.CanJoinTeam(ucplayer, ucplayer.Save.Team))
             {

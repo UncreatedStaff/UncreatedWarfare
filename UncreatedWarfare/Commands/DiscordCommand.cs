@@ -19,7 +19,10 @@ public class DiscordCommand : Command
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
         if (ctx.Caller is not null)
+        {
             ctx.Caller.Player.channel.owner.SendURL("Join our Discord Server", "https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
+            ctx.Defer();
+        }
         else
             ctx.ReplyString("https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
     }

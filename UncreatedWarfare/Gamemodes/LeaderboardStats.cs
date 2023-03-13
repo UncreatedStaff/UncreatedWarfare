@@ -20,6 +20,30 @@ public static class LeaderboardEx
     public const string EmptyFieldNamePlaceholder = "---";
     public const string EmptyFieldPlaceholder = "--";
     public static bool LeaderboardUp(this Gamemode? gamemode) => gamemode is IEndScreen { IsScreenUp: true };
+    public static bool LeaderboardUp(this Gamemode? gamemode, out ILeaderboard lb)
+    {
+        if (gamemode is IImplementsLeaderboard { State: not State.Active and not State.Staging, IsScreenUp: true, Leaderboard: { } lb2 }
+            && (lb2 is not MonoBehaviour o || o.isActiveAndEnabled))
+        {
+            lb = lb2;
+            return true;
+        }
+
+        lb = null!;
+        return false;
+    }
+    public static bool LeaderboardUp<TStats, TStatTracker>(this Gamemode? gamemode, out ILeaderboard<TStats, TStatTracker> lb) where TStats : BasePlayerStats where TStatTracker : BaseStatTracker<TStats>
+    {
+        if (gamemode is IImplementsLeaderboard<TStats, TStatTracker> { State: not State.Active and not State.Staging, IsScreenUp: true, Leaderboard: { } lb2 }
+            && (lb2 is not MonoBehaviour o || o.isActiveAndEnabled))
+        {
+            lb = lb2;
+            return true;
+        }
+
+        lb = null!;
+        return false;
+    }
     public static void RemoveLeaderboardModifiers(UCPlayer player)
     {
         player.Player.movement.sendPluginSpeedMultiplier(1f);
@@ -61,42 +85,56 @@ public static class LeaderboardEx
     }
 }
 
-public abstract class Leaderboard<Stats, StatTracker> : MonoBehaviour where Stats : BasePlayerStats where StatTracker : BaseStatTracker<Stats>
+public interface ILeaderboard<in TStats, in TStatTracker> : ILeaderboard where TStats : BasePlayerStats where TStatTracker : BaseStatTracker<TStats>
 {
-    public ulong Winner => _winner;
-    protected ulong _winner;
-    protected StatTracker tracker;
-    private Coroutine endGameUpdateTimer;
-    protected float secondsLeft;
-    protected bool shuttingDown;
-    protected string? shuttingDownMessage = null;
+    void StartLeaderboard(ulong winner, TStatTracker tracker);
+}
+public interface ILeaderboard
+{
+    ulong Winner { get; }
+    void OnPlayerJoined(UCPlayer player);
+    void SetShutdownConfig(bool isShuttingDown, string? reason = null);
+    void UpdateLeaderboardTimer();
+    void Calculate();
+    void SendLeaderboard();
+
+    event VoidDelegate? OnLeaderboardExpired;
+}
+
+public abstract class Leaderboard<TStats, TStatTracker> : MonoBehaviour, ILeaderboard<TStats, TStatTracker> where TStats : BasePlayerStats where TStatTracker : BaseStatTracker<TStats>
+{
+    public ulong Winner { get; protected set; }
+    protected TStatTracker Tracker;
+    protected float SecondsLeft;
+    protected bool ShuttingDown;
+    protected string? ShuttingDownMessage;
     protected abstract UnturnedUI UI { get; }
     public void SetShutdownConfig(bool isShuttingDown, string? reason = null)
     {
-        shuttingDown = isShuttingDown;
-        shuttingDownMessage = reason;
+        ShuttingDown = isShuttingDown;
+        ShuttingDownMessage = reason;
     }
-    public VoidDelegate? OnLeaderboardExpired;
-    public void StartLeaderboard(ulong winner, StatTracker tracker)
+    public event VoidDelegate? OnLeaderboardExpired;
+    public void StartLeaderboard(ulong winner, TStatTracker tracker)
     {
-        this._winner = winner;
-        this.tracker = tracker;
+        this.Winner = winner;
+        this.Tracker = tracker;
         Calculate();
         SendLeaderboard();
-        secondsLeft = Gamemode.Config.GeneralLeaderboardTime;
-        endGameUpdateTimer = StartCoroutine(StartUpdatingTimer());
+        SecondsLeft = Gamemode.Config.GeneralLeaderboardTime;
+        StartCoroutine(StartUpdatingTimer());
     }
     protected virtual IEnumerator<WaitForSeconds> StartUpdatingTimer()
     {
-        while (secondsLeft > 0)
+        while (SecondsLeft > 0)
         {
-            secondsLeft -= 1f;
+            SecondsLeft -= 1f;
             yield return new WaitForSeconds(1f);
             UpdateLeaderboardTimer();
         }
-        if (shuttingDown)
+        if (ShuttingDown)
         {
-            Provider.shutdown(0, shuttingDownMessage);
+            Provider.shutdown(0, ShuttingDownMessage);
         }
         else
         {
@@ -123,13 +161,13 @@ public interface IStatTracker
     void ClearAllStats();
     void StartTracking();
 }
-public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTracker where IndividualStats : BasePlayerStats
+public abstract class BaseStatTracker<TIndividualStats> : MonoBehaviour, IStatTracker where TIndividualStats : BasePlayerStats
 {
     private DateTime start;
     public TimeSpan Duration { get => DateTime.Now - start; }
     public int Ticks => coroutinect;
     protected int coroutinect;
-    public List<IndividualStats> stats;
+    public List<TIndividualStats> stats;
     protected Coroutine ticker;
     protected float deltaTime;
     private float lastTickTime;
@@ -142,7 +180,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        stats ??= new List<IndividualStats>();
+        stats ??= new List<TIndividualStats>();
         coroutinect = 0;
 
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
@@ -153,7 +191,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
             {
                 if (stats[j].Steam64 == pl.Steam64)
                 {
-                    IndividualStats st = stats[j];
+                    TIndividualStats st = stats[j];
                     st.Player = pl;
                     if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
                         pt.Stats = st;
@@ -163,7 +201,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
             }
             if (!found)
             {
-                IndividualStats s = BasePlayerStats.New<IndividualStats>(pl);
+                TIndividualStats s = BasePlayerStats.New<TIndividualStats>(pl);
                 stats.Add(s);
                 if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
                     pt.Stats = s;
@@ -172,7 +210,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
 
         for (int i = stats.Count - 1; i >= 0; --i)
         {
-            IndividualStats s = stats[i];
+            TIndividualStats s = stats[i];
             if (s.Player != null) continue;
             SteamPlayer player = PlayerTool.getSteamPlayer(s.Steam64);
             if (player == null) stats.RemoveAt(i);
@@ -193,7 +231,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
             {
                 if (stats[j].Steam64 == pl.Steam64)
                 {
-                    IndividualStats st = stats[j];
+                    TIndividualStats st = stats[j];
                     st.Player = pl;
                     if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
                         pt.Stats = st;
@@ -202,7 +240,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour, IStatTra
             }
             if (!found)
             {
-                IndividualStats s = BasePlayerStats.New<IndividualStats>(pl);
+                TIndividualStats s = BasePlayerStats.New<TIndividualStats>(pl);
                 stats.Add(s);
                 if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
                     pt.Stats = s;

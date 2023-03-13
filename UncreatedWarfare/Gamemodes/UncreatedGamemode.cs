@@ -1021,6 +1021,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        ThreadUtil.assertIsGameThread();
         L.Log("Destroying unknown barricades and structures...", ConsoleColor.Magenta);
         if (StructureManager.regions is null)
             L.LogWarning("Structure regions have not been initialized.");

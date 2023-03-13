@@ -24,6 +24,7 @@ public static class L
 {
     /// <summary>Default Language (previously <see cref="JSONMethods"/>.DEFAULT_LANGUAGE)</summary>
     public const string Default = LanguageAliasSet.ENGLISH;
+    private const char ConsoleEscapeCharacter = '\u001B';
     private static readonly byte[] NewLineBytes = System.Text.Encoding.UTF8.GetBytes(Environment.NewLine);
     private static bool _init;
     private static int _indention;
@@ -434,6 +435,7 @@ public static class L
     {
         lock (_log)
         {
+            log = RemoveANSIFormatting(log);
             int c = System.Text.Encoding.UTF8.GetByteCount(log);
             byte[] bytes = new byte[c + NewLineBytes.Length];
             Buffer.BlockCopy(NewLineBytes, 0, bytes, c, NewLineBytes.Length);
@@ -441,6 +443,60 @@ public static class L
             _log.Write(bytes, 0, bytes.Length);
             _log.Flush();
         }
+    }
+    private static unsafe string RemoveANSIFormatting(string orig)
+    {
+        if (orig.Length < 5)
+            return orig;
+        bool found = false;
+        int l = orig.Length;
+        for (int i = 0; i < l; ++i)
+        {
+            if (orig[i] == ConsoleEscapeCharacter)
+            {
+                found = true;
+            }
+        }
+
+        if (!found)
+            return orig;
+
+        // regex: \u001B\[[\d;]*m
+
+        int outpInd = 0;
+        char* outp = stackalloc char[l - 3];
+        fixed (char* chars = orig)
+        {
+            int lastCpy = -1;
+            for (int i = 0; i < l - 2; ++i)
+            {
+                if (l > i + 3 && chars[i] == ConsoleEscapeCharacter && chars[i + 1] == '[' && char.IsDigit(chars[i + 2]))
+                {
+                    int st = i;
+                    int c = i + 3;
+                    for (; c < l; ++c)
+                    {
+                        if (chars[c] != ';' && !char.IsDigit(chars[c]))
+                        {
+                            if (chars[c] == 'm')
+                                i = c;
+
+                            break;
+                        }
+
+                        i = c;
+                    }
+
+                    Buffer.MemoryCopy(chars + lastCpy + 1, outp + outpInd, (l - outpInd) * sizeof(char), (st - lastCpy - 1) * sizeof(char));
+                    outpInd += st - lastCpy - 1;
+                    lastCpy += st - lastCpy + (c - st);
+                }
+            }
+            Buffer.MemoryCopy(chars + lastCpy + 1, outp + outpInd, (l - outpInd) * sizeof(char), (l - lastCpy) * sizeof(char));
+            outpInd += l - lastCpy;
+        }
+
+        return new string(outp, 0, outpInd - 1);
     }
 
     public static class NetCalls

@@ -96,8 +96,9 @@ public class Insurgency :
     public List<CacheData> DiscoveredCaches => Caches.Where(c => c.IsActive && !c.IsDestroyed && c.IsDestroyed).ToList();
     public int ActiveCachesCount => Caches.Count(c => c.IsActive && !c.IsDestroyed);
     public bool IsScreenUp => _isScreenUp;
+    public ILeaderboard<InsurgencyPlayerStats, InsurgencyTracker>? Leaderboard => _endScreen;
+    ILeaderboard? IImplementsLeaderboard.Leaderboard => _endScreen;
     InsurgencyTracker IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
-    Leaderboard<InsurgencyPlayerStats, InsurgencyTracker> IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.Leaderboard => _endScreen;
     IStatTracker IGameStats.GameStats => _gameStats;
     public Insurgency() : base("Insurgency", 0.25F) { }
     protected override Task PreInit(CancellationToken token)
@@ -258,7 +259,7 @@ public class Insurgency :
         Commands.ClearCommand.ClearItems();
 
         _endScreen = UCWarfare.I.gameObject.AddComponent<InsurgencyLeaderboard>();
-        _endScreen.OnLeaderboardExpired = OnShouldStartNewGame;
+        _endScreen.OnLeaderboardExpired += OnShouldStartNewGame;
         _endScreen.SetShutdownConfig(ShouldShutdownAfterGame, ShutdownMessage);
         _isScreenUp = true;
         _endScreen.StartLeaderboard(winner, _gameStats);
@@ -270,7 +271,7 @@ public class Insurgency :
 #endif
         if (_endScreen != null)
         {
-            _endScreen.OnLeaderboardExpired = null;
+            _endScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
             Destroy(_endScreen);
         }
         _isScreenUp = false;
