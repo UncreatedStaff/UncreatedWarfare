@@ -30,6 +30,8 @@ public class HeatSeekingMissileComponent : MonoBehaviour
     private float _startTime;
     private bool _lost;
 
+    private const float TIMEOUT = 10;
+
     public void Initialize(GameObject projectile, UCPlayer firer, float projectileSpeed, float responsiveness, float guidanceRampTime)
     {
 #if DEBUG
@@ -118,13 +120,23 @@ public class HeatSeekingMissileComponent : MonoBehaviour
             idealDirection = (_lastKnownTarget.Find("Center") ?? _lastKnownTarget).position - _projectile.transform.position;
         }
 
-        float guidanceMultiplier = Mathf.Clamp((Time.time - _startTime) / _guidanceRampTime, 0, _guidanceRampTime);
+        if ((Time.time - _startTime) > TIMEOUT)
+        {
+            if (!_rigidbody.useGravity)
+                _rigidbody.useGravity = true;
+        }
+        else
+        {
+            float guidanceMultiplier = Mathf.Clamp((Time.time - _startTime) / _guidanceRampTime, 0, _guidanceRampTime);
 
-        Vector3 targetDirection = Vector3.RotateTowards(transform.forward, idealDirection, Mathf.Deg2Rad * guidanceMultiplier * turnDegrees, 0);
+            Vector3 targetDirection = Vector3.RotateTowards(transform.forward, idealDirection, Mathf.Deg2Rad * guidanceMultiplier * turnDegrees, 0);
 
-        _projectile.transform.forward = targetDirection;
-        _rigidbody.velocity = _projectile.transform.forward * _projectileSpeed;
+            _projectile.transform.forward = targetDirection;
+            _rigidbody.velocity = _projectile.transform.forward * _projectileSpeed;
+        }
+
         float timeDifference = Time.time - _timeOfLastLoop;
+
         if (timeDifference > 0.05f)
         {
             JsonAssetReference<EffectAsset> id = Gamemode.Config.EffectHeatSeekingMissileNoSound;

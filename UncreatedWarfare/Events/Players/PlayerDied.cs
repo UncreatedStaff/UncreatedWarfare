@@ -10,6 +10,7 @@ public class PlayerDied : PlayerEvent
     public UCPlayer? Killer { get; internal set; }
     public CSteamID Instigator { get; internal set; }
     public bool WasTeamkill { get; internal set; }
+    public bool WasSuicide { get; internal set; }
     public ulong DeadTeam { get; internal set; }
     public ulong KillerTeam { get; internal set; }
     public Guid PrimaryAsset { get; internal set; }

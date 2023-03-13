@@ -8,6 +8,7 @@ using UnityEngine;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Players;
+using UnityEngine.Profiling;
 
 namespace Uncreated.Warfare.Squads;
 
@@ -190,14 +191,12 @@ public class RallyPoint : MonoBehaviour
     }
     public void TeleportPlayer(UCPlayer player)
     {
-        if (!player.IsOnline || player.Player.life.isDead || player.Player.movement.getVehicle() != null)
-            return;
-
-        ActionLog.Add(ActionLogType.TeleportedToRally, "AT " + transform.position.ToString() + " PLACED BY " + Squad.Leader.Steam64.ToString(), player);
-
-        player.Player.teleportToLocation(new Vector3(transform.position.x, transform.position.y + RallyManager.TELEPORT_HEIGHT_OFFSET, transform.position.z), transform.rotation.eulerAngles.y);
-
-        player.SendChat(T.RallySuccess);
+        if (player.IsOnline && !player.Player.life.isDead && player.Player.movement.getVehicle() == null)
+        {
+            player.Player.teleportToLocation(new Vector3(transform.position.x, transform.position.y + RallyManager.TELEPORT_HEIGHT_OFFSET, transform.position.z), transform.rotation.eulerAngles.y);
+            ActionLog.Add(ActionLogType.TeleportedToRally, "AT " + transform.position.ToString() + " PLACED BY " + Squad.Leader.Steam64.ToString(), player);
+            player.SendChat(T.RallySuccess);
+        }
 
         ShowUIForPlayer(player);
     }
@@ -240,31 +239,6 @@ public class RallyPoint : MonoBehaviour
 
             UpdateUIForAwaitingPlayers(SecondsLeft);
 
-            if (SecondsLeft % 5 == 0)
-            {
-                ulong enemyTeam = 0;
-                if (Squad.Team == TeamManager.Team1ID)
-                    enemyTeam = TeamManager.Team2ID;
-                else if (Squad.Team == TeamManager.Team2ID)
-                    enemyTeam = TeamManager.Team1ID;
-
-                // check for enemies nearby rally points every 5 seconds
-                List<UCPlayer> enemies = PlayerManager.OnlinePlayers.Where(p =>
-                    p.GetTeam() == enemyTeam &&
-                    (p.Position - transform.position).sqrMagnitude < Math.Pow(SquadManager.Config.RallyDespawnDistance, 2)
-                ).ToList();
-
-                if (enemies.Count > 0)
-                {
-                    foreach (UCPlayer member in Squad.Members)
-                        member.SendChat(T.RallyEnemiesNearbyTp);
-#if DEBUG
-                    profiler.Dispose();
-#endif
-                    yield break;
-                }
-            }
-
 #if DEBUG
             profiler.Dispose();
 #endif
@@ -281,5 +255,33 @@ public class RallyPoint : MonoBehaviour
         AwaitingPlayers.Clear();
         IsDeploying = false;
         QuestManager.OnRallyActivated(this);
+    }
+
+    private float _timeLastTick;
+    private void FixedUpdate()
+    {
+        if (Time.time - _timeLastTick > 5)
+        {
+            ulong enemyTeam = 0;
+            if (Squad.Team == TeamManager.Team1ID)
+                enemyTeam = TeamManager.Team2ID;
+            else if (Squad.Team == TeamManager.Team2ID)
+                enemyTeam = TeamManager.Team1ID;
+
+            List<UCPlayer> enemies = PlayerManager.OnlinePlayers.Where(p =>
+                p.GetTeam() == enemyTeam &&
+                (p.Position - transform.position).sqrMagnitude < Math.Pow(SquadManager.Config.RallyDespawnDistance, 2)
+            ).ToList();
+
+            if (enemies.Count > 0)
+            {
+                foreach (UCPlayer member in Squad.Members)
+                    member.SendChat(T.RallyEnemiesNearbyTp);
+
+                Destroy();
+            }
+
+            _timeLastTick = Time.time;
+        }
     }
 }

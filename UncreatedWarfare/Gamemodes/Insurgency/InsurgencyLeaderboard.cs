@@ -102,8 +102,8 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
                 for (int i = 0; i < ins.Caches.Count; i++)
                 {
                     Insurgency.CacheData d = ins.Caches[i];
-                    if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
-                        (d.Cache.Structure.model.transform.position - pos)
+                    if (d.IsActive && !d.IsDestroyed && d.Cache != null &&
+                        (d.Cache.Position - pos)
                         .sqrMagnitude <=
                         Gamemode.ConfigObj.Data.InsurgencyCacheDiscoverRange *
                         Gamemode.ConfigObj.Data.InsurgencyCacheDiscoverRange)
@@ -119,8 +119,8 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
                 for (int i = 0; i < ins.Caches.Count; i++)
                 {
                     Insurgency.CacheData d = ins.Caches[i];
-                    if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
-                        (d.Cache.Structure.model.transform.position - pos)
+                    if (d.IsActive && !d.IsDestroyed && d.Cache != null &&
+                        (d.Cache.Position - pos)
                         .sqrMagnitude <=
                         Gamemode.ConfigObj.Data.InsurgencyCacheDiscoverRange *
                         Gamemode.ConfigObj.Data.InsurgencyCacheDiscoverRange)

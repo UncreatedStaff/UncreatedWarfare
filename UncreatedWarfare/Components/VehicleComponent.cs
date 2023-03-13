@@ -276,7 +276,13 @@ public class VehicleComponent : MonoBehaviour
     private int _flaresLeft;
     public void ReloadCountermeasures()
     {
-        _flaresLeft = STARTING_FLARES;
+        if (Data.Item.Type == VehicleType.AttackHeli)
+            _flaresLeft = STARTING_FLARES_ATTACKHELI;
+        else if (Data.Item.Type == VehicleType.TransportAir)
+            _flaresLeft = STARTING_FLARES_TRANSHELI;
+        else if (Data.Item.Type == VehicleType.Jet)
+            _flaresLeft = STARTING_FLARES_JET;
+
         UpdateHUDFlares();
     }
     public void ReceiveMissileWarning(HeatSeekingMissileComponent heatseeker)
@@ -472,8 +478,10 @@ public class VehicleComponent : MonoBehaviour
     }
     private float _timeLastFlare;
     private int _flareBurst = 0;
-    const int STARTING_FLARES = 20;
-    const int FLARE_BURST_COUNT = 4;
+    const int STARTING_FLARES_ATTACKHELI = 20;
+    const int STARTING_FLARES_TRANSHELI = 26;
+    const int STARTING_FLARES_JET = 16;
+    const int FLARE_BURST_COUNT = 2;
     private void FixedUpdate()
     {
         if (_flaresLeft > 0 && Time.time - _timeLastFlare > 0.15f)

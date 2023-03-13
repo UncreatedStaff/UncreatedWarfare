@@ -103,7 +103,7 @@ public class WhitelistCommand : Command
             else
                 throw ctx.Reply(T.WhitelistItemNotID, ctx.Get(1)!);
         }
-        else if (ctx.MatchParameter(1, "remove", "delete", "rem"))
+        else if (ctx.MatchParameter(0, "remove", "delete", "rem"))
         {
             ctx.AssertHelpCheck(1, "/whitelist remove <item>");
             if (ctx.TryGet(1, out ItemAsset asset, out bool multiple, true, selector: x => Whitelister.IsWhitelistedFast(x.GUID)))

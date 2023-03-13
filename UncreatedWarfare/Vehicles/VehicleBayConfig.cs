@@ -26,6 +26,7 @@ public class VehicleBayData : JSONConfigData
             "d900a6de5bb344f887855ce351e3bb41", // Kornet
             "9ed685df6df34527b104ab227465489d", // M2 Bradley TOW
             "d6312ceb00ad4530bdb07735bc02f070",  // BMP-2 Konkurs
+            "0c12296d4e954fe0a4a82809b6ac597d",  // BMP-2 Konkurs
             "70e099314d1946fd84b3d35e2e5453c8",  // HJ-8
             "e88e40a0ba494177ba452f276e2b01ce"  // Type 86G HJ-8
         };

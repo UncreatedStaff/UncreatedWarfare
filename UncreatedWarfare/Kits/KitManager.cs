@@ -566,7 +566,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         if (kit?.Item != null)
         {
             UpdateSigns(kit);
-            GiveKitToPlayerInventory(player, kit.Item, true);
+            GiveKitToPlayerInventory(player, kit.Item, true, false);
         }
         else
             UCInventoryManager.ClearInventory(player, true);
@@ -633,7 +633,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 }
             }
 
-            GiveKitToPlayerInventory(player, k, true);
+            GiveKitToPlayerInventory(player, k, true, ignoreAmmoBags);
             foreach (KeyValuePair<ItemJar, Page> jar in nonKitItems)
             {
                 if (!player.Player.inventory.tryAddItem(jar.Key.item, jar.Key.x, jar.Key.y, (byte)jar.Value, jar.Key.rot) &&
@@ -646,7 +646,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             kit.Release();
         }
     }
-    private static void GiveKitToPlayerInventory(UCPlayer player, Kit? kit, bool clear = true)
+    private static void GiveKitToPlayerInventory(UCPlayer player, Kit? kit, bool clear, bool ignoreAmmobags)
     {
         if (player == null) throw new ArgumentNullException(nameof(player));
 #if DEBUG
@@ -731,6 +731,11 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 if (item is not IItemJar jar)
                     continue;
                 ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
+
+                // ignore ammo bag if enabled
+                if (asset != null && ignoreAmmobags && Gamemode.Config.BarricadeAmmoBag.MatchGuid(asset.GUID))
+                    continue;
+
                 if ((int)jar.Page < PlayerInventory.PAGES - 2 && asset != null)
                 {
                     Items page = p[(int)jar.Page];
@@ -1649,7 +1654,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     if (ctx.Caller.CachedCredits >= kit.CreditCost)
                         throw ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
                     else
-                        throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+                        throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
                 }
             }
             else if (!kit.RequiresNitro && !HasAccessQuick(kit, ctx.Caller) && !UCWarfare.Config.OverrideKitRequirements)
@@ -1708,7 +1713,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     else if (ctx.Caller.CachedCredits >= kit.CreditCost)
                         throw ctx.Reply(T.RequestKitNotBought, kit.CreditCost);
                     else
-                        throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+                        throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
                 }
             }
             // recheck limits to make sure people can't request at the same time to avoid limits.
@@ -1761,7 +1766,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             if (kit.CreditCost == 0 || HasAccessQuick(kit, ctx.Caller))
                 throw ctx.Reply(T.RequestKitAlreadyOwned);
             if (ctx.Caller.CachedCredits < kit.CreditCost)
-                throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+                throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
 
             await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try
@@ -1770,7 +1775,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 if (ctx.Caller.CachedCredits < kit.CreditCost)
                 {
                     await UCWarfare.ToUpdate();
-                    throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+                    throw ctx.Reply(T.RequestKitCantAfford, ctx.Caller.CachedCredits, kit.CreditCost);
                 }
 
                 CreditsParameters parameters = new CreditsParameters(ctx.Caller, team, -kit.CreditCost)

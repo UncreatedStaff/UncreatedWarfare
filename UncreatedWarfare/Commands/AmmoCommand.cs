@@ -88,6 +88,9 @@ public class AmmoCommand : AsyncCommand
                     if (Assets.find(item) is ItemAsset a)
                         ItemManager.dropItem(new Item(a.id, true), ctx.Caller.Position, true, true, true);
 
+                if (vehicle.TryGetComponent(out VehicleComponent c))
+                    c.ReloadCountermeasures();
+
                 if (!isInMain)
                 {
                     fob!.ReduceAmmo(vehicleData.RearmCost);
@@ -128,8 +131,9 @@ public class AmmoCommand : AsyncCommand
                 }
 
                 bool isInMain = false;
+                bool isCache = Gamemode.Config.BarricadeInsurgencyCache.MatchGuid(barricade.asset.GUID);
 
-                if (!ctx.Caller.IsOnFOB(out FOB? fob))
+                if (!ctx.Caller.IsOnFOB(out FOB? fob) && !isCache)
                 {
                     if (F.IsInMain(barricade.model.transform.position))
                         isInMain = true;
@@ -139,8 +143,11 @@ public class AmmoCommand : AsyncCommand
                 if (isInMain && FOBManager.Config.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(ctx.Caller, CooldownType.Ammo, out Cooldown cooldown))
                     throw ctx.Reply(T.AmmoCooldown, cooldown);
 
-                if (!isInMain && fob.Ammo < ammoCost)
+                if (!isInMain && !isCache && fob.Ammo < ammoCost)
                     throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, ammoCost);
+
+                if (barricade.GetServersideData().group != ctx.Caller.GetTeam())
+                    throw ctx.Reply(T.AmmoWrongTeam);
 
                 WipeDroppedItems(ctx.CallerID);
                 await req.KitManager.ResupplyKit(ctx.Caller, kit!, token: token).ConfigureAwait(false);
@@ -157,6 +164,11 @@ public class AmmoCommand : AsyncCommand
                     if (FOBManager.Config.AmmoCommandCooldown > 0)
                         CooldownManager.StartCooldown(ctx.Caller, CooldownType.Ammo, FOBManager.Config.AmmoCommandCooldown);
                 }
+                else if (isCache)
+                {
+                    ctx.Reply(T.AmmoResuppliedKitMain, ammoCost);
+                    ctx.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM CACHE");
+                }
                 else
                 {
                     fob.ReduceAmmo(ammoCost);
@@ -168,6 +180,9 @@ public class AmmoCommand : AsyncCommand
             {
                 if (barricade.model.TryGetComponent(out AmmoBagComponent ammobag))
                 {
+                    if (barricade.GetServersideData().group != ctx.Caller.GetTeam())
+                        throw ctx.Reply(T.AmmoWrongTeam);
+
                     if (ammobag.Ammo < ammoCost)
                         throw ctx.Reply(T.AmmoOutOfStock, ammobag.Ammo, ammoCost);
 

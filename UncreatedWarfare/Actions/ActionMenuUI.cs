@@ -28,6 +28,11 @@ public class ActionMenuUI : UnturnedUI
     public readonly UnturnedButton Move = new UnturnedButton("AC_Move");
     public readonly UnturnedButton Build = new UnturnedButton("AC_Build");
 
+    public readonly UnturnedButton AttackMarker = new UnturnedButton("AC_Attackarker");
+    public readonly UnturnedButton DefendMarker = new UnturnedButton("AC_Defendarker");
+    public readonly UnturnedButton MoveMarker = new UnturnedButton("AC_Movearker");
+    public readonly UnturnedButton BuildMarker = new UnturnedButton("AC_Buildarker");
+
     public readonly UnturnedButton LoadBuild = new UnturnedButton("AC_LoadBuild10");
     public readonly UnturnedButton LoadAmmo = new UnturnedButton("AC_LoadAmmo10");
     public readonly UnturnedButton UnloadBuild = new UnturnedButton("AC_UnloadBuild10");
