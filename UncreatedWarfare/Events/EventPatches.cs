@@ -1,10 +1,13 @@
-﻿using JetBrains.Annotations;
+﻿using HarmonyLib;
+using JetBrains.Annotations;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -59,6 +62,32 @@ internal static class EventPatches
 
         PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(new Action<SteamPending>(Provider.accept)), ref _fail,
             prefix: PatchUtil.GetMethodInfo(OnAcceptingPlayer));
+
+        if (MthdRemoveItem != null)
+        {
+            if (MthdAddItem != null)
+            {
+                PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveDragItem), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+                    transpiler: PatchUtil.GetMethodInfo(TranspileReceiveDragItem));
+
+                PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveSwapItem), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+                    transpiler: PatchUtil.GetMethodInfo(TranspileReceiveSwapItem));
+            }
+            else
+            {
+                L.LogError("Unable to find Items.addItem to transpile player inventory events.");
+            }
+
+            PatchUtil.PatchMethod(typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.ReceiveDropItem), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+                transpiler: PatchUtil.GetMethodInfo(TranspileReceiveDropItem));
+        }
+        else
+        {
+            L.LogError("Unable to find PlayerInventory.removeItem to transpile player inventory events.");
+        }
+
+        PatchUtil.PatchMethod(typeof(ItemManager).GetMethod(nameof(ItemManager.ReceiveTakeItemRequest), BindingFlags.Public | BindingFlags.Static), ref _fail,
+            transpiler: PatchUtil.GetMethodInfo(TranspileReceiveTakeItemRequest));
 
         if (!PatchUtil.PatchMethod(typeof(InteractablePower).GetMethod("CalculateIsConnectedToPower", BindingFlags.NonPublic | BindingFlags.Instance), prefix: PatchUtil.GetMethodInfo(OnCalculatingPower)))
             Data.UseElectricalGrid = false;
@@ -500,5 +529,171 @@ internal static class EventPatches
         }
 
         return true;
+    }
+    private static readonly MethodInfo? MthdRemoveItem = typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.removeItem));
+    private static readonly MethodInfo? MthdAddItem = typeof(SDG.Unturned.Items).GetMethod(nameof(SDG.Unturned.Items.addItem));
+    private static IEnumerable<CodeInstruction> TranspileReceiveSwapOrDragItem(IEnumerable<CodeInstruction> instructions, ILGenerator generator, bool swap)
+    {
+        List<CodeInstruction> insts = instructions.ToList();
+        Label lbl = generator.DefineLabel();
+        int c = 0;
+        int c2 = 0;
+        for (int i = 0; i < insts.Count; ++i)
+        {
+            CodeInstruction instruction = insts[i];
+            if (instruction.Calls(MthdAddItem!))
+            {
+                ++c2;
+                if (c2 == (swap ? 2 : 1))
+                {
+                    yield return instruction;
+
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);                        // this
+                    yield return new CodeInstruction(OpCodes.Ldarg_1);                        // page_0
+                    yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)(swap ? 5 : 4));  // page_1
+                    yield return new CodeInstruction(OpCodes.Ldarg_2);                        // x_0
+                    yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)(swap ? 6 : 5));  // x_1
+                    yield return new CodeInstruction(OpCodes.Ldarg_3);                        // y_0
+                    yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)(swap ? 7 : 6));  // y_1
+                    if (swap)
+                        yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)4);           // rot_0
+                    else
+                        yield return new CodeInstruction(OpCodes.Ldc_I4_0);                 
+                    yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)(swap ? 8 : 7));  // rot_1
+                    yield return new CodeInstruction(swap ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                    yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(EventDispatcher.OnDraggedOrSwappedItem));
+                    L.LogDebug("Patched " + (swap ? "ReceiveSwapItem" : "ReceiveDragItem") + " post event.");
+                    continue;
+                }
+            }
+            else if (instruction.opcode == OpCodes.Ldloc_0 && insts.Count > i + 3 && insts[i + 3].Calls(MthdRemoveItem))
+            {
+                ++c;
+                if (c == (swap ? 2 : 1))
+                {
+                    yield return new CodeInstruction(OpCodes.Ldarg_0);           // this
+                    yield return new CodeInstruction(OpCodes.Ldarg_1);           // page_0
+                    yield return new CodeInstruction(OpCodes.Ldarga_S, (byte)4); // page_1
+                    yield return new CodeInstruction(OpCodes.Ldarg_2);           // x_0
+                    yield return new CodeInstruction(OpCodes.Ldarga_S, (byte)5); // x_1
+                    yield return new CodeInstruction(OpCodes.Ldarg_3);           // y_0
+                    yield return new CodeInstruction(OpCodes.Ldarga_S, (byte)6); // y_1
+                    yield return new CodeInstruction(OpCodes.Ldarga_S, (byte)7); // rot_1
+                    yield return new CodeInstruction(swap ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                    yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(EventDispatcher.OnDraggingOrSwappingItem));
+                    yield return new CodeInstruction(OpCodes.Brtrue, lbl);       // return if cancelled
+                    yield return new CodeInstruction(OpCodes.Ret);
+                    L.LogDebug("Patched " + (swap ? "ReceiveSwapItem" : "ReceiveDragItem") + " requested event.");
+                    generator.MarkLabel(lbl);
+                }
+            }
+
+            yield return instruction;
+        }
+    }
+    private static IEnumerable<CodeInstruction> TranspileReceiveSwapItem(IEnumerable<CodeInstruction> instructions,
+        ILGenerator generator) => TranspileReceiveSwapOrDragItem(instructions, generator, true);
+    private static IEnumerable<CodeInstruction> TranspileReceiveDragItem(IEnumerable<CodeInstruction> instructions,
+        ILGenerator generator) => TranspileReceiveSwapOrDragItem(instructions, generator, false);
+    private static IEnumerable<CodeInstruction> TranspileReceiveDropItem(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase method)
+    {
+        int lcl2 = method.FindLocalOfType<ItemJar>();
+        if (lcl2 < 0)
+            L.LogWarning("Unable to find local for ItemJar while transpiling ReceiveDropItem.");
+
+        MethodInfo? itemGetter = typeof(ItemJar).GetProperty(nameof(ItemJar.item), BindingFlags.Public | BindingFlags.Instance)?.GetMethod;
+        if (itemGetter == null)
+            L.LogWarning("Unable to find 'get ItemJar.item' while transpiling ReceiveDropItem.");
+        
+        FieldInfo? rotField = typeof(ItemJar).GetField(nameof(ItemJar.rot), BindingFlags.Public | BindingFlags.Instance);
+        if (rotField == null)
+            L.LogWarning("Unable to find 'ItemJar.rot' while transpiling ReceiveDropItem.");
+        
+        bool foundOne = false;
+        foreach (CodeInstruction instruction in instructions)
+        {
+            yield return instruction;
+            if (!foundOne && instruction.Calls(MthdRemoveItem!))
+            {
+                foundOne = true;
+                yield return new CodeInstruction(OpCodes.Ldarg_0);                 // this
+                yield return new CodeInstruction(OpCodes.Ldarg_1);                 // page
+                yield return new CodeInstruction(OpCodes.Ldarg_2);                 // x
+                yield return new CodeInstruction(OpCodes.Ldarg_3);                 // y
+                if (lcl2 > -1)
+                {
+                    if (rotField != null)
+                    {
+                        yield return new CodeInstruction(OpCodes.Ldloc_S, (byte)lcl2); // itemjar local
+                        yield return new CodeInstruction(OpCodes.Ldfld, rotField);    // .rot
+                    }
+                    else
+                        yield return new CodeInstruction(OpCodes.Ldc_I4_0);           // load 0 as backup
+
+                    if (itemGetter != null)
+                    {
+                        yield return new CodeInstruction(OpCodes.Ldloc_S, (byte)lcl2); // itemjar local
+                        yield return new CodeInstruction(OpCodes.Callvirt, itemGetter); // .item
+                    }
+                    else
+                        yield return new CodeInstruction(OpCodes.Ldnull);           // load null as backup
+                }
+                else
+                {
+                    yield return new CodeInstruction(OpCodes.Ldc_I4_0);               // load 0 as backup
+                    yield return new CodeInstruction(OpCodes.Ldnull);               // load null as backup
+                }
+
+                yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(EventDispatcher.OnDroppedItem));
+                L.LogDebug("Patched ReceiveDropItem.");
+            }
+        }
+    }
+    private static IEnumerable<CodeInstruction> TranspileReceiveTakeItemRequest(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase method)
+    {
+        FieldInfo? rpcField = typeof(ItemManager).GetField("SendDestroyItem", BindingFlags.NonPublic | BindingFlags.Static);
+        if (rpcField == null)
+            L.LogWarning("Unable to find 'ItemManager.SendDestroyItem' while transpiling ReceiveTakeItemRequest.");
+
+        int lcl = method.FindLocalOfType<ItemData>();
+        if (lcl < 0)
+            L.LogWarning("Unable to find local for ItemData while transpiling ReceiveTakeItemRequest.");
+
+        int lcl2 = method.FindLocalOfType<Player>();
+        if (lcl2 < 0)
+            L.LogWarning("Unable to find local for Player while transpiling ReceiveTakeItemRequest.");
+
+        List<CodeInstruction> insts = instructions.ToList();
+        bool foundOne = false;
+        bool nextRtnCallEvent = false;
+        for (int i = 0; i < insts.Count; ++i)
+        {
+            CodeInstruction instruction = insts[i];
+            if (!foundOne && rpcField != null && instruction.LoadsField(rpcField))
+            {
+                foundOne = true;
+                nextRtnCallEvent = true;
+            }
+            else if (nextRtnCallEvent && instruction.opcode == OpCodes.Ret)
+            {
+                nextRtnCallEvent = false;
+                yield return new CodeInstruction(OpCodes.Ldloc_S, (byte)lcl2);  // player
+                yield return new CodeInstruction(OpCodes.Ldarg_1);              // x
+                yield return new CodeInstruction(OpCodes.Ldarg_2);              // y
+                yield return new CodeInstruction(OpCodes.Ldarg_3);              // instanceID
+                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)4);     // to_x
+                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)5);     // to_y
+                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)6);     // to_rot
+                yield return new CodeInstruction(OpCodes.Ldarg_S, (byte)7);     // to_page
+                if (lcl > -1)
+                    yield return new CodeInstruction(OpCodes.Ldloc_S, (byte)lcl); // to_page
+                else
+                    yield return new CodeInstruction(OpCodes.Ldnull);
+                yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(EventDispatcher.OnPickedUpItem));
+                L.LogDebug("Patched ReceiveTakeItemRequest.");
+            }
+
+            yield return instruction;
+        }
     }
 }

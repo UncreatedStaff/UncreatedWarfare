@@ -17,18 +17,42 @@ using UnityEngine;
 namespace Uncreated.Warfare.Commands;
 public sealed class KitCommand : AsyncCommand
 {
-    private const string Syntax = "/kit <search|skills|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
+    private const string Syntax = "/kit <keybind|search|skills|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
     private const string Help = "Admin command to manage kits; creating, deleting, editing, and giving/removing access is done through this command.";
 
-    public KitCommand() : base("kit", EAdminType.STAFF)
+    public KitCommand() : base("kit", EAdminType.MEMBER)
     {
         Structure = new CommandStructure
         {
             Description = Help,
             Parameters = new CommandParameter[]
             {
+                new CommandParameter("Keybind")
+                {
+                    Description = "Add or remove default keybinds for this kit.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Add")
+                        {
+                            Description = "Add held item as a default keybind at [slot].",
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Slot", typeof(byte))
+                            }
+                        },
+                        new CommandParameter("Remove")
+                        {
+                            Description = "Remove held item as a default keybind at [slot].",
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Slot", typeof(byte))
+                            }
+                        }
+                    }
+                },
                 new CommandParameter("Search")
                 {
+                    Permission = EAdminType.STAFF,
                     Description = "Finds a kit Id from a localized name.",
                     Parameters = new CommandParameter[]
                     {
@@ -40,6 +64,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("Create")
                 {
+                    Permission = EAdminType.STAFF,
                     Description = "Creates or overwrites a kit. Class is not required to overwrite a kit.",
                     Parameters = new CommandParameter[]
                     {
@@ -70,6 +95,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("Delete")
                 {
+                    Permission = EAdminType.STAFF,
                     Description = "Delete a kit.",
                     Parameters = new CommandParameter[]
                     {
@@ -78,6 +104,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("Give")
                 {
+                    Permission = EAdminType.STAFF,
                     Description = "Gives the caller a kit.",
                     Parameters = new CommandParameter[]
                     {
@@ -86,6 +113,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("Set")
                 {
+                    Permission = EAdminType.STAFF,
                     Description = "Sets a property of a kit.",
                     Parameters = new CommandParameter[]
                     {
@@ -132,6 +160,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("GiveAccess")
                 {
+                    Permission = EAdminType.STAFF,
                     Description = "Give a player access to a non-public kit.",
                     Parameters = new CommandParameter[]
                     {
@@ -156,6 +185,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("RemoveAccess")
                 {
+                    Permission = EAdminType.STAFF,
                     Description = "Remove a player's access to a non-public kit.",
                     Parameters = new CommandParameter[]
                     {
@@ -171,6 +201,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("CopyFrom")
                 {
+                    Permission = EAdminType.STAFF,
                     Description = "Create a copy of a kit with a different id.",
                     Parameters = new CommandParameter[]
                     {
@@ -185,6 +216,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("CreateLoadout")
                 {
+                    Permission = EAdminType.STAFF,
                     Description = "Create a loadout with some default parameters.",
                     Parameters = new CommandParameter[]
                     {
@@ -216,6 +248,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("Skills")
                 {
+                    Permission = EAdminType.STAFF,
                     Description = "Modify the skillset overrides on a kit.",
                     Parameters = new CommandParameter[]
                     {
@@ -260,6 +293,108 @@ public sealed class KitCommand : AsyncCommand
         ctx.AssertOnDuty();
 
         ctx.AssertArgs(1, Syntax + " - " + Help);
+
+        if (ctx.MatchParameter(0, "hotkey", "keybind", "bind"))
+        {
+            ctx.AssertRanByPlayer();
+
+            bool add = ctx.MatchParameter(1, "add", "create", "new");
+            if ((add || ctx.MatchParameter(1, "remove", "delete", "cancel")) && ctx.TryGet(2, out byte slot) && KitEx.ValidSlot(slot))
+            {
+                await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    PlayerEquipment equipment = ctx.Caller.Player.equipment;
+                    if (add)
+                    {
+                        SqlItem<Kit>? proxy = ctx.Caller.ActiveKit;
+                        IItemJar? item = await manager.GetHeldItemFromKit(ctx.Caller, token).ConfigureAwait(false);
+                        if (proxy is null)
+                        {
+                            await UCWarfare.ToUpdate(token);
+                            throw ctx.Reply(T.AmmoNoKit);
+                        }
+                        await proxy.Enter(token).ConfigureAwait(false);
+                        try
+                        {
+                            await UCWarfare.ToUpdate(token);
+                            Kit? kit = proxy.Item;
+                            if (kit is null)
+                                throw ctx.Reply(T.AmmoNoKit);
+
+                            if (item == null)
+                                throw ctx.Reply(T.KitHotkeyNotHoldingItem);
+
+                            ItemAsset? asset = item is IItem i2
+                                ? Assets.find<ItemAsset>(i2.Item)
+                                : ((IKitItem)item).GetItem(kit, TeamManager.GetFactionSafe(ctx.Caller.GetTeam()), out _, out _);
+                            if (asset == null)
+                                throw ctx.Reply(T.KitHotkeyNotHoldingItem);
+
+                            if (!KitEx.CanBindHotkeyTo(asset, item.Page))
+                                throw ctx.Reply(T.KitHotkeyNotHoldingValidItem, asset);
+
+                            bool added = await KitManager.AddHotkey(proxy!.LastPrimaryKey, ctx.CallerID, slot, item, token).ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(token);
+                            if (!added)
+                                throw ctx.SendUnknownError();
+                            (ctx.Caller.HotkeyBindings ??= new List<HotkeyBinding>(32)).Add(new HotkeyBinding(proxy.LastPrimaryKey, slot, item));
+
+                            byte index = KitEx.GetHotkeyIndex(slot);
+
+                            if (KitEx.CanBindHotkeyTo(asset, (Page)equipment.equippedPage))
+                                equipment.ServerBindItemHotkey(index, asset,
+                                    equipment.equippedPage, equipment.equipped_x,
+                                    equipment.equipped_x);
+                            throw ctx.Reply(T.KitHotkeyBinded, asset, slot, kit);
+                        }
+                        finally
+                        {
+                            proxy.Release();
+                        }
+                    }
+                    else
+                    {
+                        SqlItem<Kit>? proxy = ctx.Caller.ActiveKit;
+                        if (proxy is null)
+                        {
+                            await UCWarfare.ToUpdate(token);
+                            throw ctx.Reply(T.AmmoNoKit);
+                        }
+
+                        await proxy.Enter(token).ConfigureAwait(false);
+                        try
+                        {
+                            Kit? kit = proxy.Item;
+                            if (kit == null)
+                            {
+                                await UCWarfare.ToUpdate(token);
+                                throw ctx.Reply(T.AmmoNoKit);
+                            }
+                            bool removed = await KitManager.RemoveHotkey(proxy.LastPrimaryKey, ctx.CallerID, slot, token).ConfigureAwait(false);
+                            await UCWarfare.ToUpdate(token);
+                            if (!removed)
+                                throw ctx.Reply(T.KitHotkeyNotFound, slot, kit);
+
+                            byte index = KitEx.GetHotkeyIndex(slot);
+                            equipment.ServerClearItemHotkey(index);
+                            throw ctx.Reply(T.KitHotkeyUnbinded, slot, kit);
+                        }
+                        finally
+                        {
+                            proxy.Release();
+                        }
+                    }
+                }
+                finally
+                {
+                    ctx.Caller.PurchaseSync.Release();
+                }
+            }
+            throw ctx.SendCorrectUsage("/kit keybind <add|remove> <key (3-9 or 0)>");
+        }
+
+        ctx.AssertPermissions(EAdminType.STAFF);
 
         if (ctx.MatchParameter(0, "search", "find"))
         {

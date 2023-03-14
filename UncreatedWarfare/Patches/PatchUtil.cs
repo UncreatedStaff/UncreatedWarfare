@@ -1,11 +1,20 @@
 ﻿using HarmonyLib;
-using SDG.Unturned;
 using System;
+using System.Linq;
 using System.Reflection;
 
 namespace Uncreated.Warfare.Harmony;
 internal static class PatchUtil
 {
+    internal static int FindLocalOfType<T>(this MethodBase method)
+    {
+        MethodBody? body = method.GetMethodBody();
+        if (body == null)
+            return -1;
+        Type t = typeof(T);
+        LocalVariableInfo? v = body.LocalVariables.FirstOrDefault(x => x.LocalType == t);
+        return v == null ? -1 : v.LocalIndex;
+    }
     internal static MethodInfo GetMethodInfo(Delegate method)
     {
         try

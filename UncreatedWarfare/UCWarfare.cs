@@ -1005,7 +1005,7 @@ public class UCWarfare : MonoBehaviour
         profiler.Dispose();
         F.SaveProfilingData();
 #endif
-        await Task.Delay(1000, token);
+        await Task.Delay(100, token);
     }
     public static Color GetColor(string key)
     {

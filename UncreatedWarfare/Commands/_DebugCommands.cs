@@ -1469,7 +1469,7 @@ public class DebugCommand : AsyncCommand
                 UCWarfare.Config.Nerds.Add(s64);
             ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} is now a nerd.");
         }
-        else ctx.SendCorrectUsage("/text nerd <player>");
+        else ctx.SendCorrectUsage("/test nerd <player>");
     }
     private void unnerd(CommandInteraction ctx)
     {
@@ -1479,6 +1479,59 @@ public class DebugCommand : AsyncCommand
             UCWarfare.Config.Nerds.RemoveAll(x => x == s64);
             ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} is not a nerd.");
         }
-        else ctx.SendCorrectUsage("/text unnerd <player>");
+        else ctx.SendCorrectUsage("/test unnerd <player>");
+    }
+
+    private void findassets(CommandInteraction ctx)
+    {
+        ctx.AssertRanByConsole();
+        ctx.AssertHelpCheck(0, "/test findassets <type>.<field/property> <value> - List assets by their value");
+        ctx.AssertArgs(2, "/test findassets <type>.<field/property> <value>");
+
+        string str1 = ctx.Get(0)!;
+        string str2 = ctx.GetRange(1)!;
+
+        Type type = typeof(Asset);
+        int ind1 = str1.IndexOf('.');
+        if (ind1 != -1)
+        {
+            string tStr = str1.Substring(0, ind1);
+            type = typeof(Provider).Assembly.GetType("SDG.Unturned." + tStr, false, true)!;
+            if (type == null || !typeof(Asset).IsAssignableFrom(type))
+            {
+                L.LogWarning("Unable to find type: SDG.Unturned." + tStr + ".");
+                type = typeof(Asset);
+            }
+            else
+                str1 = str1.Substring(ind1 + 1);
+        } 
+
+        MemberInfo? field = (MemberInfo?)type.GetProperty(str1) ?? type.GetField(str1);
+        if (field == null || field is PropertyInfo p && p.GetMethod == null)
+            throw ctx.ReplyString("<#ff8c69>Field or property not found: <#fff>" + type.Name + "</color>.<#fff>" + str1 + "</color>.");
+        Type fldType = field is FieldInfo f ? f.FieldType : ((PropertyInfo)field).PropertyType;
+
+        if (!Util.TryParseAny(str2, fldType, out object val))
+            throw ctx.ReplyString("<#ff8c69>Failed to parse <#fff>" + str2 + "</color> as <#fff>" + fldType.Name + "</color>.");
+        MethodInfo? assetsFind = typeof(Assets).GetMethods(BindingFlags.Static | BindingFlags.Public)
+                                                        .FirstOrDefault(x => x.Name.Equals("find", StringComparison.Ordinal) &&
+                                                        x.IsGenericMethod &&
+                                                        x.GetParameters().FirstOrDefault()?.ParameterType is { IsGenericType: true } ptype &&
+                                                        ptype.GetGenericTypeDefinition() == typeof(List<>))?.MakeGenericMethod(type);
+        IList allassets = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(type));
+        assetsFind!.Invoke(null, new object[] { allassets });
+
+        foreach (Asset asset in allassets.Cast<Asset>().Where(val is null ? x => GetValue(x) == null : x => val.Equals(GetValue(x))))
+        {
+            L.Log(ActionLog.AsAsset(asset));
+        }
+
+        object GetValue(Asset asset)
+        {
+            if (field is FieldInfo f)
+                return f.GetValue(asset);
+
+            return ((PropertyInfo)field).GetMethod.Invoke(asset, Array.Empty<object>());
+        }
     }
 }

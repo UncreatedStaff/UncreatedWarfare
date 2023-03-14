@@ -468,10 +468,12 @@ public static class L
                     string str = Cleaner.GetString(ex);
                     AddLine2(str, ConsoleColor.DarkGray);
                 }
-                
-                AddLine2(indent != 0
-                    ? string.Join(Environment.NewLine, ex.StackTrace.Split(SplitChars).Select(x => ind + x.Trim(TrimChars)))
-                    : ex.StackTrace, ConsoleColor.DarkGray);
+                else
+                {
+                    AddLine2(indent != 0
+                        ? string.Join(Environment.NewLine, ex.StackTrace.Split(SplitChars).Select(x => ind + x.Trim(TrimChars)))
+                        : ex.StackTrace, ConsoleColor.DarkGray);
+                }
             }
             if (ex is AggregateException) break;
             ex = ex.InnerException!;
