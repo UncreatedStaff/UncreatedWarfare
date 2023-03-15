@@ -218,7 +218,7 @@ public class Insurgency :
         token.CombineIfNeeded(UnloadToken);
         RallyManager.WipeAllRallies();
 
-        SpawnNewCache();
+        TrySpawnNewCache();
         if (_attackTeam == 1)
             SpawnBlockerOnT1();
         else
@@ -344,7 +344,7 @@ public class Insurgency :
                 if (IntelligencePoints >= Config.InsurgencyIntelPointsToSpawn)
                 {
                     IntelligencePoints = 0;
-                    SpawnNewCache(true);
+                    TrySpawnNewCache(true);
                     return true;
                 }
                 return false;
@@ -404,8 +404,9 @@ public class Insurgency :
         }
         TicketManager.UpdateUI(AttackingTeam);
     }
-    public void SpawnNewCache(bool message = false)
+    public void TrySpawnNewCache(bool message = false)
     {
+
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -442,11 +443,20 @@ public class Insurgency :
         }
         Cache cache = FOBManager.RegisterNewCache(foundationDrop);
         CacheData currentCache = Caches[CachesDestroyed];
-        CacheData nextCache = Caches[CachesDestroyed + 1];
+
+
         if (!currentCache.IsActive)
+        {
             currentCache.Activate(cache);
-        else
+            InsurgencyUI.ReplicateCacheUpdate(currentCache);
+            
+        }
+        else if (CachesDestroyed < Caches.Count - 1)
+        {
+            CacheData nextCache = Caches[CachesDestroyed + 1]; // todo: ERROR HERE
             nextCache.Activate(cache);
+            InsurgencyUI.ReplicateCacheUpdate(nextCache);
+        }
 
 
         _seenCaches.Add(transform.Position);
@@ -460,9 +470,6 @@ public class Insurgency :
                     ToastMessage.QueueMessage(set.Next, msg);
             }
         }
-
-        InsurgencyUI.ReplicateCacheUpdate(currentCache);
-        InsurgencyUI.ReplicateCacheUpdate(nextCache);
 
         SpawnCacheItems(cache);
     }
@@ -508,7 +515,7 @@ public class Insurgency :
     {
         L.Log("CACHE: New cache spawning in 60 seconds");
         yield return new WaitForSeconds(60);
-        SpawnNewCache(true);
+        TrySpawnNewCache(true);
     }
     public void OnCacheDestroyed(Cache cache, UCPlayer? destroyer)
     {
@@ -563,7 +570,7 @@ public class Insurgency :
                     }
                 }
             }
-            else
+            else if (destroyer.GetTeam() == DefendingTeam)
             {
                 Points.AwardXP(destroyer, XPReward.FriendlyCacheDestroyed);
             }
@@ -878,7 +885,12 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
             }
             else if (ins.AttackingTeam == team)
             {
-                tickets = string.Empty;
+                tickets = "";
+                if (ins.AttackingTeam == 1)
+                    tickets = TicketManager.Singleton.Team1Tickets.ToString();
+                else if (ins.AttackingTeam == 2)
+                    tickets = TicketManager.Singleton.Team2Tickets.ToString();
+
                 message = ins.DiscoveredCaches.Count == 0 ? "FIND THE WEAPONS CACHES\n(kill enemies for intel)" : "DESTROY THE WEAPONS CACHES";
                 return;
             }
