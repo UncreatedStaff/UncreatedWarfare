@@ -56,7 +56,7 @@ public class HardpointLeaderboard : ConventionalLeaderboard<HardpointPlayerStats
     }
     public override void Calculate()
     {
-        tracker.GetTopStats(14, out StatsTeam1, out StatsTeam2);
+        Tracker.GetTopStats(14, out StatsTeam1, out StatsTeam2);
     }
     public override void SendLeaderboard(in LanguageSet set)
     {

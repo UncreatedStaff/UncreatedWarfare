@@ -83,7 +83,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     public StructureSaver StructureSaver => _structureSaver;
     public TraitManager TraitManager => _traitManager;
     public ActionManager ActionManager => _actionManager;
-    Leaderboard<Stats, StatTracker>? IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
+    ILeaderboard<Stats, StatTracker>? IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
+    ILeaderboard? IImplementsLeaderboard.Leaderboard => _endScreen;
     public bool IsScreenUp => _isScreenUp;
     StatTracker IImplementsLeaderboard<Stats, StatTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     IStatTracker IGameStats.GameStats => ((IImplementsLeaderboard<Stats, StatTracker>)this).WarstatsTracker;
@@ -127,7 +128,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         Commands.ClearCommand.ClearItems();
 
         _endScreen = UCWarfare.I.gameObject.AddComponent<Leaderboard>();
-        _endScreen.OnLeaderboardExpired = OnShouldStartNewGame;
+        _endScreen.OnLeaderboardExpired += OnShouldStartNewGame;
         _endScreen.SetShutdownConfig(ShouldShutdownAfterGame, ShutdownMessage);
         _isScreenUp = true;
         _endScreen.StartLeaderboard(winner, _gameStats);
@@ -139,7 +140,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #endif
         if (_endScreen != null)
         {
-            _endScreen.OnLeaderboardExpired = null;
+            _endScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
             Destroy(_endScreen);
             _endScreen = null!;
         }

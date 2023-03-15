@@ -907,58 +907,57 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SqlItem<VehicleData>? dataProxy = VehicleBay.GetSingletonQuick()?.GetDataProxySync(vehicleId);
+        await UCWarfare.ToUpdate(token);
+        ThreadUtil.assertIsGameThread();
+        if (checkExisting)
+        {
+            VehicleManager.getVehiclesInRadius(position, 2.5f, NearbyTempOutput);
+            if (NearbyTempOutput.Count > 0)
+            {
+                try
+                {
+                    for (int i = 0; i < NearbyTempOutput.Count; ++i)
+                    {
+                        InteractableVehicle veh = NearbyTempOutput[i];
+                        if (veh.asset.GUID != vehicleId) continue;
+                        L.LogDebug("Found nearby " + veh.asset.FriendlyName + " when spawning one at " + position.ToString("0.#") + ", removing vehicle.");
+                        DeleteVehicle(NearbyTempOutput[i]);
+                    }
+                }
+                finally
+                {
+                    NearbyTempOutput.Clear();
+                }
+            }
+        }
+        if (Assets.find(vehicleId) is not VehicleAsset asset)
+        {
+            L.LogError("Unable to find vehicle asset of " + vehicleId.ToString("N") + ".");
+            return null;
+        }
+        InteractableVehicle vehicle;
+        try
+        {
+            vehicle = VehicleManager.SpawnVehicleV3(asset, 0, 0, 0f, position, rotation, false, false, false, false, asset.fuel,
+                asset.health, MaxBatteryCharge, new CSteamID(owner), new CSteamID(groupOwner), true, null, byte.MaxValue);
+            if (vehicle == null)
+            {
+                L.LogError("Unknown internal error encountered spawning " + ActionLog.AsAsset(asset) + ", SpawnVehicleV3 returned null.");
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Internal error encountered spawning " + ActionLog.AsAsset(asset) + ".");
+            L.LogError(ex);
+            return null;
+        }
 
+        SqlItem<VehicleData>? dataProxy = VehicleBay.GetSingletonQuick()?.GetDataProxySync(vehicleId);
         if (@lock && dataProxy is not null)
             await dataProxy.Enter(token).ConfigureAwait(false);
         try
         {
-            await UCWarfare.ToUpdate(token);
-            if (checkExisting)
-            {
-                VehicleManager.getVehiclesInRadius(position, 2.5f, NearbyTempOutput);
-                if (NearbyTempOutput.Count > 0)
-                {
-                    try
-                    {
-                        for (int i = 0; i < NearbyTempOutput.Count; ++i)
-                        {
-                            InteractableVehicle veh = NearbyTempOutput[i];
-                            if (veh.asset.GUID != vehicleId) continue;
-                            L.LogDebug("Found nearby " + veh.asset.FriendlyName + " when spawning one at " + position.ToString("0.#") + ", removing.veh");
-                            DeleteVehicle(NearbyTempOutput[i]);
-                        }
-                    }
-                    finally
-                    {
-                        NearbyTempOutput.Clear();
-                    }
-                }
-            }
-            if (Assets.find(vehicleId) is not VehicleAsset asset)
-            {
-                L.LogError("Unable to find vehicle asset of " + vehicleId.ToString("N") + ".");
-                return null;
-            }
-            ThreadUtil.assertIsGameThread();
-            InteractableVehicle vehicle;
-            try
-            {
-                vehicle = VehicleManager.SpawnVehicleV3(asset, 0, 0, 0f, position, rotation, false, false, false, false, asset.fuel,
-                    asset.health, MaxBatteryCharge, new CSteamID(owner), new CSteamID(groupOwner), true, null, byte.MaxValue);
-                if (vehicle == null)
-                {
-                    L.LogError("Unknown internal error encountered spawning " + asset.vehicleName + ", SpawnVehicleV3 returned null.");
-                    return null;
-                }
-            }
-            catch (Exception ex)
-            {
-                L.LogError("Internal error encountered spawning " + asset.vehicleName + ".");
-                L.LogError(ex);
-                return null;
-            }
-
             VehicleData? data = dataProxy?.Item;
             if (data?.Metadata != null)
             {

@@ -1,9 +1,13 @@
 ﻿namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
-    public interface IImplementsLeaderboard<Stats, StatTracker> : IEndScreen where Stats : BasePlayerStats where StatTracker : BaseStatTracker<Stats>
+    public interface IImplementsLeaderboard<in TStats, TStatTracker> : IImplementsLeaderboard where TStats : BasePlayerStats where TStatTracker : BaseStatTracker<TStats>
     {
-        Leaderboard<Stats, StatTracker>? Leaderboard { get; }
-        StatTracker WarstatsTracker { get; internal set; }
+        new ILeaderboard<TStats, TStatTracker>? Leaderboard { get; }
+        TStatTracker WarstatsTracker { get; internal set; }
+    }
+    public interface IImplementsLeaderboard : IEndScreen
+    {
+        ILeaderboard? Leaderboard { get; }
     }
     public interface IEndScreen : IGamemode
     {

@@ -65,7 +65,10 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
                 if (Items[i] is { Item: { } zone } proxy && zone.IsInside(pos))
                 {
                     if (current is null)
+                    {
+                        if (!noOverlap) return proxy;
                         current = proxy;
+                    }
                     else return noOverlap ? null : current;
                 }
             }

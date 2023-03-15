@@ -17,6 +17,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -54,6 +55,9 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.PlayerJoined += OnPlayerJoined;
         EventDispatcher.PlayerLeft += OnPlayerLeaving;
+        EventDispatcher.ItemMoved += OnItemMoved;
+        EventDispatcher.ItemDropped += OnItemDropped;
+        EventDispatcher.ItemPickedUp += OnItemPickedUp;
         OnItemsRefreshed += OnItemsRefreshedIntl;
         //await MigrateOldKits(token).ConfigureAwait(false);
         List<SqlItem<Kit>>? dirty = null;
@@ -82,6 +86,18 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 }
             }
         }
+    }
+    public override async Task PreUnload(CancellationToken token)
+    {
+        EventDispatcher.ItemPickedUp -= OnItemPickedUp;
+        EventDispatcher.ItemDropped -= OnItemDropped;
+        EventDispatcher.ItemMoved -= OnItemMoved;
+        EventDispatcher.PlayerLeft -= OnPlayerLeaving;
+        EventDispatcher.PlayerJoined -= OnPlayerJoined;
+        EventDispatcher.GroupChanged -= OnGroupChanged;
+        PlayerLife.OnPreDeath -= OnPreDeath;
+        await SaveAllPlayerFavorites(token).ConfigureAwait(false);
+        await base.PreUnload(token).ConfigureAwait(false);
     }
     private void OnItemsRefreshedIntl()
     {
@@ -208,15 +224,6 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         ActionLog.Add(ActionLogType.CreateKit, name);
         UpdateSigns(proxy);
         return proxy;
-    }
-    public override async Task PreUnload(CancellationToken token)
-    {
-        EventDispatcher.PlayerLeft -= OnPlayerLeaving;
-        EventDispatcher.PlayerJoined -= OnPlayerJoined;
-        EventDispatcher.GroupChanged -= OnGroupChanged;
-        PlayerLife.OnPreDeath -= OnPreDeath;
-        await SaveAllPlayerFavorites(token).ConfigureAwait(false);
-        await base.PreUnload(token).ConfigureAwait(false);
     }
     public static KitManager? GetSingletonQuick() => Data.Is(out IKitRequests r) ? r.KitManager : null;
     public static float GetDefaultTeamLimit(Class @class) => @class switch
@@ -560,13 +567,26 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        Kit? k = kit?.Item;
         if (UCWarfare.Config.ModifySkillLevels)
-            player.EnsureSkillsets(kit?.Item?.Skillsets ?? Array.Empty<Skillset>());
+            player.EnsureSkillsets(k?.Skillsets ?? Array.Empty<Skillset>());
         player.ChangeKit(kit);
-        if (kit?.Item != null)
+        if (k != null)
         {
-            UpdateSigns(kit);
-            GiveKitToPlayerInventory(player, kit.Item, true, false);
+            UpdateSigns(k);
+            GiveKitToPlayerInventory(player, k, true, false);
+            if (player.HotkeyBindings != null)
+            {
+                foreach (HotkeyBinding binding in player.HotkeyBindings)
+                {
+                    if (binding.Kit.Key == k.PrimaryKey.Key)
+                    {
+                        byte index = KitEx.GetHotkeyIndex(binding.Slot);
+                        if (index != byte.MaxValue)
+                            player.Player.equipment.ServerBindItemHotkey(index, binding.GetAsset(k, player.GetTeam()), (byte)binding.Item.Page, binding.Item.X, binding.Item.Y);
+                    }
+                }
+            }
         }
         else
             UCInventoryManager.ClearInventory(player, true);
@@ -634,11 +654,21 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
 
             GiveKitToPlayerInventory(player, k, true, ignoreAmmoBags);
+            player.ItemTransformations.Clear();
+            player.ItemDropTransformations.Clear();
+            bool playEffectEquip = true;
+            bool playEffectDrop = true;
             foreach (KeyValuePair<ItemJar, Page> jar in nonKitItems)
             {
-                if (!player.Player.inventory.tryAddItem(jar.Key.item, jar.Key.x, jar.Key.y, (byte)jar.Value, jar.Key.rot) &&
-                    !player.Player.inventory.tryAddItem(jar.Key.item, true))
-                    ItemManager.dropItem(jar.Key.item, player.Position, false, true, true);
+                if (!player.Player.inventory.tryAddItem(jar.Key.item, jar.Key.x, jar.Key.y, (byte)jar.Value, jar.Key.rot))
+                {
+                    if (!player.Player.inventory.tryAddItem(jar.Key.item, false, playEffectEquip))
+                    {
+                        ItemManager.dropItem(jar.Key.item, player.Position, playEffectDrop, true, true);
+                        playEffectDrop = false;
+                    }
+                    else playEffectEquip = false;
+                }
             }
         }
         finally
@@ -931,6 +961,9 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         await WaitAsync(token).ConfigureAwait(false);
+        PlayerEquipment equipment = player.Player.equipment;
+        for (int i = 0; i < 8; ++i)
+            equipment.ServerClearItemHotkey((byte)i);
         try
         {
             await UCWarfare.ToUpdate(token);
@@ -1471,6 +1504,47 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         if (pl != null && pl.IsOnline)
             return new ValueTask<bool>(HasAccessQuick(kit, pl));
         return new ValueTask<bool>(HasAccess(kit, player, token));
+    }
+    /// <remarks>Thread Safe</remarks>
+    public static async Task<bool> RemoveHotkey(PrimaryKey kit, ulong player, byte slot, CancellationToken token = default)
+    {
+        if (!KitEx.ValidSlot(slot))
+            throw new ArgumentException("Invalid slot number.", nameof(slot));
+        int ct = await Data.DatabaseManager.NonQueryAsync($"DELETE FROM `{TABLE_HOTKEYS}` " +
+                                                          $"WHERE `{COLUMN_HOTKEY_PLAYER}`=@0 " +
+                                                          $"AND `{COLUMN_HOTKEY_SLOT}`=@1 " +
+                                                          $"AND `{COLUMN_EXT_PK}`=@2;",
+            new object[] { player, slot, kit.Key }, token);
+        return ct > 0;
+    }
+    /// <remarks>Thread Safe</remarks>
+    public static async Task<bool> AddHotkey(PrimaryKey kit, ulong player, byte slot, IItemJar item, CancellationToken token = default)
+    {
+        if (item is not IItem and not IAssetRedirect)
+            throw new ArgumentException("Item must also implement IItem or IAssetRedirect.", nameof(item));
+        if (!KitEx.ValidSlot(slot))
+            throw new ArgumentException("Invalid slot number.", nameof(slot));
+
+        await RemoveHotkey(kit, player, slot, token).ConfigureAwait(false);
+
+        int ct = await Data.DatabaseManager.NonQueryAsync(
+            $"INSERT INTO `{TABLE_HOTKEYS}` ({
+                SqlTypes.ColumnList(COLUMN_HOTKEY_PLAYER, COLUMN_HOTKEY_SLOT, COLUMN_EXT_PK,
+                    COLUMN_ITEM_PAGE, COLUMN_ITEM_X, COLUMN_ITEM_Y, COLUMN_ITEM_GUID,
+                    COLUMN_ITEM_REDIRECT)
+            }) VALUES (@0, @1, @2, @3, @4, @5, @6, @7);",
+            new object[]
+            {
+                player,
+                slot,
+                kit.Key,
+                item.Page.ToString(),
+                item.X,
+                item.Y,
+                item is IItem item2 ? item2.Item.ToString("N") : DBNull.Value,
+                item is IAssetRedirect redir ? redir.RedirectType.ToString() : DBNull.Value
+            }, token).ConfigureAwait(false);
+        return ct > 0;
     }
     /// <summary>Will not update signs.</summary>
     public static void SetTextNoLock(ulong setter, Kit kit, string? text, string language = L.Default)
@@ -2098,6 +2172,307 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         }, ctx: "On Connected for KitManager.");
     }
 
+    public Task<IItemJar?> GetHeldItemFromKit(UCPlayer player, CancellationToken token = default)
+    {
+        ItemJar? held = player.GetHeldItem(out byte page);
+        return held == null
+            ? Task.FromResult<IItemJar?>(null)
+            : GetItemFromKit(player, held, (Page)page, token);
+    }
+    /// <summary>Gets the exact <see cref="IKitItem"/> and <see cref="IItemJar"/> that the player is holding from their kit (accounts for the item being moved).</summary>
+    public async Task<IItemJar?> GetItemFromKit(UCPlayer player, ItemJar jar, Page page, CancellationToken token = default)
+    {
+        SqlItem<Kit>? proxy = player.ActiveKit!;
+        if (proxy?.Item is null)
+            return null;
+        await proxy.Enter(token);
+        try
+        {
+            await UCWarfare.ToUpdate(token);
+            WriteWait();
+            try
+            {
+                byte x = jar.x, y = jar.y;
+                L.LogDebug("Looking for kit item: " + (jar.item.GetAsset()?.itemName ?? "null") + $" at {page}, ({x}, {y}).");
+                for (int i = 0; i < player.ItemTransformations.Count; ++i)
+                {
+                    ItemTransformation t = player.ItemTransformations[i];
+                    if (t.Item != jar.item)
+                        continue;
+                    if (t.NewX == x && t.NewY == y && t.NewPage == page)
+                    {
+                        L.LogDebug($"Transforming: {t.OldPage} <- {page}, ({t.OldX} <- {x}, {t.OldY} <- {y}).");
+                        x = t.OldX;
+                        y = t.OldY;
+                        page = t.OldPage;
+                        break;
+                    }
+                }
+
+                ItemAsset asset = jar.item.GetAsset();
+                if (asset == null)
+                    return null;
+                foreach (IKitItem item in proxy.Item.Items)
+                {
+                    if (item is IItemJar jar2 && jar2.Page == page && jar2.X == x && jar2.Y == y)
+                    {
+                        if (jar2 is IItem pgItem)
+                        {
+                            if (pgItem.Item == asset.GUID)
+                                return jar2;
+                        }
+                        else
+                        {
+                            if (item.GetItem(proxy.Item, TeamManager.GetFactionSafe(player.GetTeam()), out _, out _) is { } asset2 && asset2.GUID == asset.GUID)
+                                return jar2;
+                        }
+
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                WriteRelease();
+            }
+        }
+        finally
+        {
+            proxy.Release();
+        }
+
+        L.LogDebug($"Kit item at: {page}, ({jar.x}, {jar.y}) not found.");
+        return null;
+    }
+    private static void OnItemDropped(ItemDropped e)
+    {
+        UCPlayer pl = e.Player;
+        if (e.Item != null)
+        {
+            L.LogDebug($"Added drop transformation: {e.OldPage}, ({e.OldX}, {e.OldY}).");
+            pl.ItemDropTransformations.Add(new ItemDropTransformation(e.OldPage, e.OldX, e.OldY, e.Item));
+        }
+    }
+    private static void OnItemPickedUp(ItemPickedUp e)
+    {
+        UCPlayer pl = e.Player;
+        if (e.Jar != null)
+        {
+            byte origX = byte.MaxValue, origY = byte.MaxValue;
+            Page origPage = (Page)byte.MaxValue;
+            for (int i = 0; i < pl.ItemDropTransformations.Count; ++i)
+            {
+                ItemDropTransformation d = pl.ItemDropTransformations[i];
+                if (d.Item == e.Jar.item)
+                {
+                    for (int j = 0; j < pl.ItemTransformations.Count; ++j)
+                    {
+                        ItemTransformation t = pl.ItemTransformations[j];
+                        if (t.Item == e.Jar.item)
+                        {
+                            pl.ItemTransformations[j] = new ItemTransformation(t.OldPage, e.Page, t.OldX, t.OldY, e.X, e.Y, t.Item);
+                            L.LogDebug($"Existing transformation updated (picked up): {t.OldPage} -> {e.Page}, ({t.OldX} -> {e.X}, {t.OldY} -> {e.Y}).");
+                            origX = t.OldX;
+                            origY = t.OldY;
+                            origPage = t.OldPage;
+                            goto rebind;
+                        }
+                    }
+
+                    L.LogDebug($"Added new transformation (picked up): {d.OldPage} -> {e.Page}, ({d.OldX} -> {e.X}, {d.OldY} -> {e.Y}).");
+                    origX = d.OldX;
+                    origY = d.OldY;
+                    origPage = d.OldPage;
+                    pl.ItemTransformations.Add(new ItemTransformation(d.OldPage, e.Page, d.OldX, d.OldY, e.X, e.Y, e.Jar.item));
+                    break;
+                }
+            }
+            rebind:
+            // resend hotkeys from picked up item
+            if (UCWarfare.IsLoaded && e.Player.HotkeyBindings != null && origX < byte.MaxValue)
+            {
+                CancellationToken tkn = UCWarfare.UnloadCancel;
+                if (Data.Gamemode != null)
+                    tkn.CombineIfNeeded(Data.Gamemode.UnloadToken);
+                tkn.CombineIfNeeded(e.Player.DisconnectToken);
+                UCWarfare.RunTask(async token =>
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    await e.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+                    try
+                    {
+                        if (e.Player.HotkeyBindings == null)
+                            return;
+
+                        SqlItem<Kit>? proxy = e.Player.ActiveKit;
+                        if (proxy?.Item is null)
+                            return;
+
+                        await proxy.Enter(token).ConfigureAwait(false);
+                        try
+                        {
+                            Kit? kit = e.Player.ActiveKit?.Item;
+                            if (kit == null) return;
+                            foreach (HotkeyBinding binding in e.Player.HotkeyBindings)
+                            {
+                                if (binding.Kit.Key == kit.PrimaryKey.Key)
+                                {
+                                    if (binding.Item.X == origX && binding.Item.Y == origY && binding.Item.Page == origPage)
+                                    {
+                                        ItemAsset? asset = binding.GetAsset(kit, e.Player.GetTeam());
+                                        if (asset != null)
+                                        {
+                                            byte index = KitEx.GetHotkeyIndex(binding.Slot);
+                                            if (index == byte.MaxValue || !KitEx.CanBindHotkeyTo(asset, e.Page)) continue;
+                                            e.Player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)e.Page, e.X, e.Y);
+                                            L.LogDebug($"Updating old hotkey (picked up): {asset.itemName} at {e.Page}, ({e.X}, {e.Y}).");
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            proxy.Release();
+                        }
+                    }
+                    finally
+                    {
+                        e.Player.PurchaseSync.Release();
+                    }
+
+                }, tkn, ctx: "Checking for new binding of picked up item.");
+            }
+        }
+    }
+    private static void OnItemMoved(ItemMoved e)
+    {
+        if (e.NewX == e.OldX && e.NewY == e.OldY && e.NewPage == e.OldPage)
+            return;
+        UCPlayer pl = e.Player;
+        byte origX = byte.MaxValue, origY = byte.MaxValue;
+        Page origPage = (Page)byte.MaxValue;
+        byte swapOrigX = byte.MaxValue, swapOrigY = byte.MaxValue;
+        Page swapOrigPage = (Page)byte.MaxValue;
+        if (e.Jar != null)
+        {
+            for (int i = 0; i < pl.ItemTransformations.Count; ++i)
+            {
+                ItemTransformation t = pl.ItemTransformations[i];
+                if (t.Item == e.Jar.item)
+                {
+                    pl.ItemTransformations[i] = new ItemTransformation(t.OldPage, e.NewPage, t.OldX, t.OldY, e.NewX, e.NewY, t.Item);
+                    L.LogDebug($"Existing transformation updated: {t.OldPage} -> {e.NewPage}, ({t.OldX} -> {e.NewX}, {t.OldY} -> {e.NewY}).");
+                    origX = t.OldX;
+                    origY = t.OldY;
+                    origPage = t.OldPage;
+                    goto swap;
+                }
+            }
+
+            L.LogDebug($"Added new transformation: {e.OldPage} -> {e.NewPage}, ({e.OldX} -> {e.NewX}, {e.OldY} -> {e.NewY}).");
+            pl.ItemTransformations.Add(new ItemTransformation(e.OldPage, e.NewPage, e.OldX, e.OldY, e.NewX, e.NewY, e.Jar.item));
+            origX = e.OldX;
+            origY = e.OldY;
+            origPage = e.OldPage;
+        }
+
+        swap:
+        if (e.IsSwap && e.SwappedJar != null)
+        {
+            for (int i = 0; i < pl.ItemTransformations.Count; ++i)
+            {
+                ItemTransformation t = pl.ItemTransformations[i];
+                if (t.Item == e.SwappedJar.item)
+                {
+                    pl.ItemTransformations[i] = new ItemTransformation(t.OldPage, e.OldPage, t.OldX, t.OldY, e.OldX, e.OldY, t.Item);
+                    L.LogDebug($"Existing swap transformation updated: {t.OldPage} -> {e.OldPage}, ({t.OldX} -> {e.OldX}, {t.OldY} -> {e.OldY}).");
+                    swapOrigX = t.OldX;
+                    swapOrigY = t.OldY;
+                    swapOrigPage = t.OldPage;
+                    goto rebind;
+                }
+            }
+
+            L.LogDebug($"Added new swap transformation: {e.NewPage} -> {e.OldPage}, ({e.NewX} -> {e.OldX}, {e.NewY} -> {e.OldY}).");
+            pl.ItemTransformations.Add(new ItemTransformation(e.NewPage, e.OldPage, e.NewX, e.NewY, e.OldX, e.OldY, e.SwappedJar.item));
+            swapOrigX = e.NewX;
+            swapOrigY = e.NewY;
+            swapOrigPage = e.NewPage;
+        }
+        
+        rebind:
+        // resend hotkeys from moved item(s)
+        if (UCWarfare.IsLoaded && e.Player.HotkeyBindings != null && (origX < byte.MaxValue || swapOrigX < byte.MaxValue))
+        {
+            CancellationToken tkn = UCWarfare.UnloadCancel;
+            if (Data.Gamemode != null)
+                tkn.CombineIfNeeded(Data.Gamemode.UnloadToken);
+            tkn.CombineIfNeeded(e.Player.DisconnectToken);
+            UCWarfare.RunTask(async token =>
+            {
+                token.ThrowIfCancellationRequested();
+                
+                await e.Player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    if (e.Player.HotkeyBindings == null)
+                        return;
+
+                    SqlItem<Kit>? proxy = e.Player.ActiveKit;
+                    if (proxy?.Item is null)
+                        return;
+
+                    await proxy.Enter(token).ConfigureAwait(false);
+                    try
+                    {
+                        Kit? kit = e.Player.ActiveKit?.Item;
+                        if (kit == null) return;
+                        foreach (HotkeyBinding binding in e.Player.HotkeyBindings)
+                        {
+                            if (binding.Kit.Key == kit.PrimaryKey.Key)
+                            {
+                                byte index = KitEx.GetHotkeyIndex(binding.Slot);
+                                if (index == byte.MaxValue) continue;
+                                if (binding.Item.X == origX && binding.Item.Y == origY && binding.Item.Page == origPage)
+                                {
+                                    ItemAsset? asset = binding.GetAsset(kit, e.Player.GetTeam());
+                                    if (asset != null && KitEx.CanBindHotkeyTo(asset, e.NewPage))
+                                    {
+                                        e.Player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)e.NewPage, e.NewX, e.NewY);
+                                        L.LogDebug($"Updating old hotkey: {asset.itemName} at {e.NewPage}, ({e.NewX}, {e.NewY}).");
+                                    }
+                                    if (!e.IsSwap)
+                                        break;
+                                }
+                                else if (binding.Item.X == swapOrigX && binding.Item.Y == swapOrigY && binding.Item.Page == swapOrigPage)
+                                {
+                                    ItemAsset? asset = binding.GetAsset(kit, e.Player.GetTeam());
+                                    if (asset != null && !KitEx.CanBindHotkeyTo(asset, e.OldPage))
+                                    {
+                                        e.Player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)e.OldPage, e.OldX, e.OldY);
+                                        L.LogDebug($"Updating old swap hotkey: {asset.itemName} at {e.OldPage}, ({e.OldX}, {e.OldY}).");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        proxy.Release();
+                    }
+                }
+                finally
+                {
+                    e.Player.PurchaseSync.Release();
+                }
+
+            }, tkn, ctx: "Checking for new binding of moved item.");
+        }
+    }
+
     private static void VerifyKitIntegrity(Kit kit)
     {
         if (kit.FactionFilter != null)
@@ -2273,6 +2648,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     public const string TABLE_ACCESS = "kits_access";
     public const string TABLE_REQUEST_SIGNS = "kits_request_signs";
     public const string TABLE_FAVORITES = "kits_favorites";
+    public const string TABLE_HOTKEYS = "kits_hotkeys";
 
     public const string COLUMN_PK = "pk";
     public const string COLUMN_KIT_ID = "Id";
@@ -2315,6 +2691,9 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
 
     public const string COLUMN_ACCESS_STEAM_64 = "Steam64";
     public const string COLUMN_ACCESS_TYPE = "AccessType";
+
+    public const string COLUMN_HOTKEY_PLAYER = "Steam64";
+    public const string COLUMN_HOTKEY_SLOT = "Slot";
     private static readonly Schema[] SCHEMAS =
     {
         new Schema(TABLE_MAIN, new Schema.Column[]
@@ -2387,7 +2766,23 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             new Schema.Column(COLUMN_ACCESS_TYPE, SqlTypes.Enum<KitAccessType>()),
         }, false, null),
         F.GetForeignKeyListSchema(TABLE_REQUEST_SIGNS, COLUMN_EXT_PK, COLUMN_REQUEST_SIGN, TABLE_MAIN, COLUMN_PK, StructureSaver.TABLE_MAIN, StructureSaver.COLUMN_PK, deleteBehavior: ConstraintBehavior.Cascade, updateBehavior: ConstraintBehavior.Cascade),
-        F.GetListSchema<ulong>(TABLE_FAVORITES, COLUMN_EXT_PK, COLUMN_FAVORITE_PLAYER, TABLE_MAIN, COLUMN_PK)
+        F.GetListSchema<ulong>(TABLE_FAVORITES, COLUMN_EXT_PK, COLUMN_FAVORITE_PLAYER, TABLE_MAIN, COLUMN_PK),
+        new Schema(TABLE_HOTKEYS, new Schema.Column[]
+        {
+            new Schema.Column(COLUMN_HOTKEY_PLAYER, SqlTypes.STEAM_64),
+            new Schema.Column(COLUMN_EXT_PK, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyTable = TABLE_MAIN,
+                ForeignKeyColumn = COLUMN_PK
+            },
+            new Schema.Column(COLUMN_HOTKEY_SLOT, SqlTypes.BYTE),
+            new Schema.Column(COLUMN_ITEM_PAGE, SqlTypes.Enum<Page>()),
+            new Schema.Column(COLUMN_ITEM_X, SqlTypes.BYTE),
+            new Schema.Column(COLUMN_ITEM_Y, SqlTypes.BYTE),
+            new Schema.Column(COLUMN_ITEM_GUID, SqlTypes.GUID_STRING) { Nullable = true },
+            new Schema.Column(COLUMN_ITEM_REDIRECT, SqlTypes.Enum<RedirectType>()) { Nullable = true },
+        }, false, typeof(HotkeyBinding))
     };
     // ReSharper restore InconsistentNaming
     [Obsolete]
@@ -3830,6 +4225,16 @@ public static class KitEx
             context.Acknowledge(StandardErrorCode.ModuleNotLoaded);
         }
     }
+
+    public static bool ValidSlot(byte slot) => slot == 0 || slot > PlayerInventory.SLOTS && slot <= 10;
+    public static byte GetHotkeyIndex(byte slot)
+    {
+        if (!ValidSlot(slot)) return byte.MaxValue;
+        // 0 should be counted as slot 10, nelson removes the first two from hotkeys because slots.
+        return slot == 0 ? (byte)(9 - PlayerInventory.SLOTS) : (byte)(slot - PlayerInventory.SLOTS - 1);
+    }
+
+    public static bool CanBindHotkeyTo(ItemAsset asset, Page page) => (byte)page >= PlayerInventory.SLOTS && asset.canPlayerEquip && asset.slot.canEquipInPage((byte)page);
 }
 public enum KitAccessType : byte
 {

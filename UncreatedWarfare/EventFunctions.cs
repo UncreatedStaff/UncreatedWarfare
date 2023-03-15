@@ -46,9 +46,9 @@ namespace Uncreated.Warfare;
 public static class EventFunctions
 {
     public const float EnemyNearbyRespawnDistance = 100;
-    internal static Dictionary<Item, PlayerInventory> ItemsTempBuffer = new Dictionary<Item, PlayerInventory>();
-    internal static Dictionary<ulong, List<uint>> DroppedItems = new Dictionary<ulong, List<uint>>();
-    internal static Dictionary<uint, ulong> DroppedItemsOwners = new Dictionary<uint, ulong>();
+    internal static Dictionary<Item, PlayerInventory> ItemsTempBuffer = new Dictionary<Item, PlayerInventory>(256);
+    internal static Dictionary<ulong, List<uint>> DroppedItems = new Dictionary<ulong, List<uint>>(96);
+    internal static Dictionary<uint, ulong> DroppedItemsOwners = new Dictionary<uint, ulong>(256);
     internal static void OnItemRemoved(ItemData item)
     {
         ItemsTempBuffer.Remove(item.item);
@@ -57,6 +57,18 @@ public static class EventFunctions
             DroppedItemsOwners.Remove(item.instanceID);
             if (DroppedItems.TryGetValue(pl, out List<uint> items))
                 items.Remove(item.item.id);
+        }
+    }
+    internal static void OnClearAllItems()
+    {
+        ItemsTempBuffer.Clear();
+        DroppedItemsOwners.Clear();
+        foreach (KeyValuePair<ulong, List<uint>> kvp in DroppedItems.ToList())
+        {
+            if (UCPlayer.FromID(kvp.Key) is not { IsOnline: true })
+                DroppedItems.Remove(kvp.Key);
+            else
+                kvp.Value.Clear();
         }
     }
     internal static void OnDropItemTry(PlayerInventory inv, Item item, ref bool allow)
@@ -528,23 +540,20 @@ public static class EventFunctions
             // reset the player to spawn if they have joined in a different game as they last played in.
             UCPlayer ucplayer = e.Player;
             ucplayer.Loading = true;
-            //ucplayer.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
             UCPlayer.LoadingUI.SendToPlayer(ucplayer.Connection, T.LoadingOnJoin.Translate(ucplayer));
             bool isNewPlayer = e.IsNewPlayer;
-            if (TeamManager.LobbyZone.IsInside(ucplayer.Position) || Data.Gamemode == null || ucplayer.Save.LastGame != Data.Gamemode.GameID || Data.Gamemode.State is not State.Active and not State.Staging)
+            if (Data.Gamemode.LeaderboardUp(out ILeaderboard lb))
+            {
+                L.LogDebug("Joining leaderboard...");
+                lb.OnPlayerJoined(ucplayer);
+                ucplayer.Player.quests.leaveGroup(true);
+                TeamManager.TeleportToMain(ucplayer, 0);
+            }
+            else if (TeamManager.LobbyZone.IsInside(ucplayer.Position) || Data.Gamemode == null || ucplayer.Save.LastGame != Data.Gamemode.GameID || Data.Gamemode.State is not State.Active and not State.Staging)
             {
                 L.LogDebug("Player " + ucplayer + " did not play this game, leaving group.");
                 if (Data.Gamemode is ITeams teams && teams.UseTeamSelector && teams.TeamSelector is { IsLoaded: true })
-                {
-                    if (Data.Gamemode.State is not State.Active and not State.Staging && Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> impl) && impl.IsScreenUp && impl.Leaderboard != null)
-                    {
-                        L.LogDebug("Joining leaderboard...");
-                        impl.Leaderboard.OnPlayerJoined(ucplayer);
-                        ucplayer.Player.quests.leaveGroup(true);
-                        TeamManager.TeleportToMain(ucplayer, 0);
-                    }
-                    else teams.TeamSelector.JoinSelectionMenu(ucplayer);
-                }
+                    teams.TeamSelector.JoinSelectionMenu(ucplayer);
                 else
                     ucplayer.Player.quests.leaveGroup(true);
             }

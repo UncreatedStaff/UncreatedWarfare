@@ -95,7 +95,7 @@ internal class DebugComponent : MonoBehaviour
         _avgFrameRate = (_avgFrameRate * Updates + Time.deltaTime) / ++Updates;
         _lastDt = Time.deltaTime;
 #if DEBUG
-        if (_lastDt > _maxUpdateSpeed && Level.isLoaded)
+        if (_lastDt > _maxUpdateSpeed && Level.isLoaded && UCWarfare.I is not null && UCWarfare.I.FullyLoaded)
             L.LogWarning("Update took " + _lastDt.ToString("F6", Data.AdminLocale) + " seconds, higher than the max: " + _maxUpdateSpeed.ToString("F3", Data.AdminLocale) + "!!", ConsoleColor.Yellow);
 #endif
     }
@@ -104,7 +104,7 @@ internal class DebugComponent : MonoBehaviour
     {
         float t = Time.realtimeSinceStartup;
 #if DEBUG
-        if (t - _lastFixed > _maxFixedUpdateSpeed && Level.isLoaded)
+        if (t - _lastFixed > _maxFixedUpdateSpeed && Level.isLoaded && UCWarfare.I is not null && UCWarfare.I.FullyLoaded)
             L.LogWarning("FixedUpdate took " + (t - _lastFixed).ToString("F6", Data.AdminLocale) + " seconds, higher than the max: " + _maxFixedUpdateSpeed.ToString("F3", Data.AdminLocale) + "!!", ConsoleColor.Yellow);
 #endif
         _lastFixed = t;

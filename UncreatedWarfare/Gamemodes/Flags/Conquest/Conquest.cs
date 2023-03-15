@@ -66,7 +66,8 @@ public sealed partial class Conquest :
     public StructureSaver StructureSaver => _structureSaver;
     public TraitManager TraitManager => _traitManager;
     public ActionManager ActionManager => _actionManager;
-    Leaderboard<ConquestStats, ConquestStatTracker>? IImplementsLeaderboard<ConquestStats, ConquestStatTracker>.Leaderboard => _endScreen;
+    public ILeaderboard<ConquestStats, ConquestStatTracker>? Leaderboard => _endScreen;
+    ILeaderboard? IImplementsLeaderboard.Leaderboard => _endScreen;
     ConquestStatTracker IImplementsLeaderboard<ConquestStats, ConquestStatTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     public bool IsScreenUp => _isScreenUp;
     IStatTracker IGameStats.GameStats => _gameStats;
@@ -110,7 +111,7 @@ public sealed partial class Conquest :
         Commands.ClearCommand.ClearItems();
 
         _endScreen = gameObject.AddComponent<ConquestLeaderboard>();
-        _endScreen.OnLeaderboardExpired = OnShouldStartNewGame;
+        _endScreen.OnLeaderboardExpired += OnShouldStartNewGame;
         _endScreen.SetShutdownConfig(ShouldShutdownAfterGame, ShutdownMessage);
         _isScreenUp = true;
         _endScreen.StartLeaderboard(winner, _gameStats);
@@ -122,7 +123,7 @@ public sealed partial class Conquest :
 #endif
         if (_endScreen != null)
         {
-            _endScreen.OnLeaderboardExpired = null;
+            _endScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
             Destroy(_endScreen);
             _endScreen = null;
         }

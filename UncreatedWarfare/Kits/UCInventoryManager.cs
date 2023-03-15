@@ -238,6 +238,21 @@ public static class UCInventoryManager
                 }
             });
     }
+    public static ItemJar? GetHeldItem(this UCPlayer player, out byte page)
+    {
+        if (player.IsOnline)
+        {
+            PlayerEquipment eq = player.Player.equipment;
+            if (eq.asset != null)
+            {
+                page = eq.equippedPage;
+                return eq.player.inventory.getItem(page, eq.player.inventory.getIndex(page, eq.equipped_x, eq.equipped_y)); ;
+            }
+        }
+
+        page = byte.MaxValue;
+        return null;
+    }
     public static bool IsOverlapping(IItemJar jar1, IItemJar jar2, ItemAsset asset1, ItemAsset asset2) =>
         jar1.Page == jar2.Page &&
         (jar1.Page is Page.Primary or Page.Secondary || 

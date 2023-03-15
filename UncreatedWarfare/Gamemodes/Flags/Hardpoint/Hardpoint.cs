@@ -66,7 +66,8 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     public bool IsScreenUp => _isScreenUp;
     public HardpointTracker WarstatsTracker => _gameStats;
     HardpointTracker IImplementsLeaderboard<HardpointPlayerStats, HardpointTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
-    Leaderboard<HardpointPlayerStats, HardpointTracker>? IImplementsLeaderboard<HardpointPlayerStats, HardpointTracker>.Leaderboard => _endScreen;
+    public ILeaderboard<HardpointPlayerStats, HardpointTracker>? Leaderboard => _endScreen;
+    ILeaderboard? IImplementsLeaderboard.Leaderboard => _endScreen;
     IStatTracker IGameStats.GameStats => _gameStats;
     /// <summary>0 = clear, 1 = t1, 2 = t2, 3 = contested</summary>
     public ulong ObjectiveState => _objectiveOwner;
@@ -258,7 +259,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         Commands.ClearCommand.ClearItems();
 
         _endScreen = gameObject.AddComponent<HardpointLeaderboard>();
-        _endScreen.OnLeaderboardExpired = OnShouldStartNewGame;
+        _endScreen.OnLeaderboardExpired += OnShouldStartNewGame;
         _endScreen.SetShutdownConfig(ShouldShutdownAfterGame, ShutdownMessage);
         _isScreenUp = true;
         _endScreen.StartLeaderboard(winner, _gameStats);
@@ -270,7 +271,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
 #endif
         if (_endScreen != null)
         {
-            _endScreen.OnLeaderboardExpired = null;
+            _endScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
             Destroy(_endScreen);
             _endScreen = null!;
         }

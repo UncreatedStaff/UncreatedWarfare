@@ -1183,7 +1183,7 @@ public interface IClothingJar
 }
 public interface IKitItem : ICloneable, IComparable, IVersionableReadWrite
 {
-    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state);
+    public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state);
 }
 public interface IItemJar
 {
@@ -1231,8 +1231,8 @@ public class AssetRedirectItem : IItemJar, IAssetRedirect, IKitItem
         Page = copy.Page;
     }
     public object Clone() => new AssetRedirectItem(this);
-    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
-        TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
+    public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
+        TeamManager.GetRedirectInfo(RedirectType, kit?.Faction, targetTeam, out state, out amount);
 
     public int CompareTo(object obj)
     {
@@ -1308,8 +1308,8 @@ public class AssetRedirectClothing : IClothingJar, IAssetRedirect, IKitItem
         Type = copy.Type;
     }
     public object Clone() => new AssetRedirectClothing(this);
-    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
-        TeamManager.GetRedirectInfo(RedirectType, kit.Faction, targetTeam, out state, out amount);
+    public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state) =>
+        TeamManager.GetRedirectInfo(RedirectType, kit?.Faction, targetTeam, out state, out amount);
     public int CompareTo(object obj)
     {
         if (obj is IKitItem kitItem)
@@ -1495,11 +1495,11 @@ public class PageItem : IItemJar, IItem, IKitItem
         return new Schema(tableName, columns, false, typeof(PageItem));
     }
 
-    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
+    public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
 #if DEBUG
         if (_isLegacyRedirect)
-            return TeamManager.GetRedirectInfo(_legacyRedirect, kit.Faction, targetTeam, out state, out amount);
+            return TeamManager.GetRedirectInfo(_legacyRedirect, kit?.Faction, targetTeam, out state, out amount);
 #endif
         if (Assets.find(Item) is ItemAsset item)
         {
@@ -1622,12 +1622,12 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
     public ClothingItem() { }
 
     public object Clone() => new ClothingItem(this);
-    public ItemAsset? GetItem(Kit kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
+    public ItemAsset? GetItem(Kit? kit, FactionInfo? targetTeam, out byte amount, out byte[] state)
     {
         amount = 1;
 #if DEBUG
         if (_isLegacyRedirect)
-            return TeamManager.GetRedirectInfo(_legacyRedirect, kit.Faction, targetTeam, out state, out amount);
+            return TeamManager.GetRedirectInfo(_legacyRedirect, kit?.Faction, targetTeam, out state, out amount);
 #endif
         if (Assets.find(Item) is ItemAsset item)
         {
@@ -1695,6 +1695,64 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
         {
             writer.WriteBlock(State);
         }
+    }
+}
+
+public struct HotkeyBinding
+{
+    public PrimaryKey Kit { get; set; }
+    public byte Slot { get; set; }
+    public IItemJar Item { get; set; }
+    public HotkeyBinding(PrimaryKey kit, byte slot, IItemJar item)
+    {
+        Kit = kit;
+        Slot = slot;
+        Item = item;
+    }
+    public ItemAsset? GetAsset(Kit? kit, ulong team)
+    {
+        return Item switch
+        {
+            null => null,
+            IItem item => Assets.find<ItemAsset>(item.Item),
+            IKitItem ki => ki.GetItem(kit, TeamManager.GetFactionSafe(team), out _, out _),
+            _ => null
+        };
+    }
+}
+
+public readonly struct ItemTransformation
+{
+    public readonly Page OldPage;
+    public readonly Page NewPage;
+    public readonly byte OldX;
+    public readonly byte OldY;
+    public readonly byte NewX;
+    public readonly byte NewY;
+    public readonly Item Item;
+    public ItemTransformation(Page oldPage, Page newPage, byte oldX, byte oldY, byte newX, byte newY, Item item)
+    {
+        OldPage = oldPage;
+        NewPage = newPage;
+        OldX = oldX;
+        OldY = oldY;
+        NewX = newX;
+        NewY = newY;
+        Item = item;
+    }
+}
+public readonly struct ItemDropTransformation
+{
+    public readonly Page OldPage;
+    public readonly byte OldX;
+    public readonly byte OldY;
+    public readonly Item Item;
+    public ItemDropTransformation(Page oldPage, byte oldX, byte oldY, Item item)
+    {
+        OldPage = oldPage;
+        OldX = oldX;
+        OldY = oldY;
+        Item = item;
     }
 }
 

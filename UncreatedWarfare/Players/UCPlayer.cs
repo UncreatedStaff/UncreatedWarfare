@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -79,16 +80,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public string NickName;
     public SqlItem<Kit>? ActiveKit;
     public string? MuteReason;
-    public Class KitClass
-    {
-        get
-        {
-            if (ActiveKit?.Item is { } kit)
-                return kit.Class;
-            else
-                return Class.None;
-        }
-    }
     public Branch Branch;
     public EMuteType MuteType;
     public EChatMode LastChatMode = EChatMode.GLOBAL;
@@ -96,11 +87,15 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public Squad? Squad;
     public TeamSelectorData? TeamSelectorData;
     public Coroutine? StorageCoroutine;
-    public Ranks.RankStatus[]? RankData;
+    public RankStatus[]? RankData;
     public List<SqlItem<Kit>>? AccessibleKits;
+    public List<HotkeyBinding>? HotkeyBindings;
     public IBuff?[] ActiveBuffs = new IBuff?[BuffUI.MaxBuffs];
     public List<Trait> ActiveTraits = new List<Trait>(8);
     internal Action<byte, ItemJar> SendItemRemove;
+    // used to trace items back to their original position in the kit
+    internal List<ItemTransformation> ItemTransformations = new List<ItemTransformation>(16);
+    internal List<ItemDropTransformation> ItemDropTransformations = new List<ItemDropTransformation>(16);
     internal List<Guid>? CompletedQuests;
     internal bool ModalNeeded;
     // [xp sent][credits sent][xp vis][credits vis][credits][branch][level][xp]
@@ -196,6 +191,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool IsInVehicle => CurrentVehicle != null;
     public bool IsDriver => CurrentVehicle != null && CurrentVehicle.passengers.Length > 0 && CurrentVehicle.passengers[0].player != null && CurrentVehicle.passengers[0].player.playerID.steamID.m_SteamID == Steam64;
     public bool HasKit => ActiveKit?.Item is not null;
+    public Class KitClass => ActiveKit?.Item is { } kit ? kit.Class : Class.None;
     bool IEquatable<UCPlayer>.Equals(UCPlayer other) => other == this || other.Steam64 == Steam64; 
     public SteamPlayer SteamPlayer => Player.channel.owner;
     public PlayerSave Save { get; }
@@ -548,6 +544,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     /// <remarks>Thread Safe</remarks>
     public void ChangeKit(SqlItem<Kit>? kit)
     {
+        ItemTransformations.Clear();
+        ItemDropTransformations.Clear();
         if (kit?.Item == null)
         {
             ActiveKit = null;
@@ -627,10 +625,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     /// <remarks>Thread Safe</remarks>
     public void Apply()
     {
-        if (UCWarfare.IsMainThread)
-            ApplyIntl();
-        else
-            UCWarfare.RunOnMainThread(ApplyIntl);
+        UCWarfare.RunOnMainThread(ApplyIntl);
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ApplyIntl() => PlayerManager.ApplyTo(this);
@@ -647,6 +642,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             UCWarfare.SpinWaitUntil(DownloadKitsSpinWaitCheck, 2500);
             return;
         }
+        List<HotkeyBinding>? toDelete = null;
         IsDownloadingKits = true;
         if (@lock)
             await PurchaseSync.WaitAsync(token).ConfigureAwait(false);
@@ -656,12 +652,71 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             if (singleton == null)
                 throw new SingletonUnloadedException(typeof(KitManager));
             List<int> kits = new List<int>();
+            List<HotkeyBinding>? bindings = null;
+
+            object[] s64Obj = { Steam64 };
             await Data.AdminSql.QueryAsync("SELECT `" + KitManager.COLUMN_EXT_PK + "` FROM `" + KitManager.TABLE_ACCESS +
                                            "` WHERE `" + KitManager.COLUMN_ACCESS_STEAM_64 + "` = @0;",
-                new object[] { Steam64 },
+                s64Obj,
                 reader =>
                 {
                     kits.Add(reader.GetInt32(0));
+                }, token).ConfigureAwait(false);
+            await Data.AdminSql.QueryAsync(
+                F.BuildSelectWhere(KitManager.TABLE_HOTKEYS, KitManager.COLUMN_HOTKEY_PLAYER, 0,
+                    KitManager.COLUMN_EXT_PK, KitManager.COLUMN_HOTKEY_SLOT,
+                    KitManager.COLUMN_ITEM_PAGE, KitManager.COLUMN_ITEM_X, KitManager.COLUMN_ITEM_Y,
+                    KitManager.COLUMN_ITEM_GUID, KitManager.COLUMN_ITEM_REDIRECT),
+                s64Obj,
+                reader =>
+                {
+                    PrimaryKey kit = reader.GetInt32(0);
+                    bool del = false;
+                    if (!kit.IsValid)
+                    {
+                        L.LogWarning("Invalid kit primary key (" + kit + ") in player " + this + "'s hotkeys.");
+                        del = true;
+                    }
+                    byte slot = reader.GetByte(1);
+                    if (!KitEx.ValidSlot(slot))
+                    {
+                        L.LogWarning("Invalid kit slot (" + slot + ") in player " + this + "'s hotkeys.");
+                        del = true;
+                    }
+                    IItemJar jar;
+                    byte x = reader.GetByte(3), y = reader.GetByte(4);
+                    Page? page = reader.ReadStringEnum<Page>(2);
+                    if (!page.HasValue)
+                    {
+                        L.LogWarning("Failed to read page from player " + this + "'s hotkeys.");
+                        del = true;
+                    }
+                    Guid? guid = reader.IsDBNull(5) ? null : reader.ReadGuidString(5);
+                    if (guid.HasValue)
+                    {
+                        jar = new PageItem(guid.Value, x, y, 0, Array.Empty<byte>(), 1, page ?? (Page)byte.MaxValue);
+                    }
+                    else
+                    {
+                        RedirectType? redir = reader.IsDBNull(6) ? null : reader.ReadStringEnum<RedirectType>(6);
+                        if (!redir.HasValue)
+                        {
+                            L.LogWarning("Failed to read redirect type and GUID from player " + this + "'s hotkeys.");
+                            del = true;
+                            jar = new AssetRedirectItem(RedirectType.None, x, y, 0, (Page)byte.MaxValue);
+                        }
+                        else
+                        {
+                            jar = new AssetRedirectItem(redir.Value, x, y, 0, page ?? (Page)byte.MaxValue);
+                        }
+                    }
+
+                    HotkeyBinding b = new HotkeyBinding(kit, slot, jar);
+
+                    if (!del)
+                        (bindings ??= new List<HotkeyBinding>(32)).Add(b);
+                    else
+                        (toDelete ??= new List<HotkeyBinding>()).Add(b);
                 }, token).ConfigureAwait(false);
             AccessibleKits = new List<SqlItem<Kit>>(kits.Count);
             await singleton.WaitAsync(token).ConfigureAwait(false);
@@ -673,11 +728,43 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                     if (proxy is not null)
                         AccessibleKits.Add(proxy);
                 }
+                if (bindings is { Count: > 0 })
+                {
+                    for (int i = 0; i < bindings.Count; ++i)
+                    {
+                        HotkeyBinding b = bindings[i];
+                        SqlItem<Kit>? proxy = singleton.FindProxyNoLock(b.Kit);
+                        if (proxy?.Item is null)
+                        {
+                            L.LogWarning("Player hotkey for kit " + b.Kit + " not found.");
+                            goto del;
+                        }
+
+                        // find matching item
+                        IKitItem? item = proxy.Item.Items?.FirstOrDefault(x =>
+                            x is IItemJar jar && jar.Page == b.Item.Page && jar.X == b.Item.X && jar.Y == b.Item.Y &&
+                            (jar is IItem i1 && b.Item is IItem i2 && i1.Item == i2.Item || jar is IAssetRedirect r1 &&
+                                b.Item is IAssetRedirect r2 && r1.RedirectType == r2.RedirectType));
+                        if (item == null)
+                        {
+                            L.LogWarning("Player hotkey for kit " + b.Kit + " has an invalid item position: " + b.Item + ".");
+                            goto del;
+                        }
+
+                        continue;
+                        del:
+                        (toDelete ??= new List<HotkeyBinding>()).Add(b);
+                        bindings.RemoveAt(i);
+                        --i;
+                    }
+                }
             }
             finally
             {
                 singleton.Release();
             }
+
+            HotkeyBindings = bindings;
         }
         finally
         {
@@ -687,10 +774,30 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                 PurchaseSync.Release();
         }
 
+        if (toDelete is { Count: > 0 })
+        {
+            StringBuilder sb = new StringBuilder(toDelete.Count * 32);
+            const int len = 2;
+            object[] args = new object[1 + toDelete.Count * len];
+            args[0] = Steam64;
+            for (int i = 0; i < toDelete.Count; ++i)
+            {
+                HotkeyBinding b = toDelete[i];
+                int st = 1 + i * len;
+                args[st] = b.Slot;
+                args[st + 1] = b.Kit.Key;
+                sb.Append($"DELETE FROM `{KitManager.TABLE_HOTKEYS}` " +
+                          $"WHERE `{KitManager.COLUMN_HOTKEY_PLAYER}`=@0 " +
+                          $"AND `{KitManager.COLUMN_HOTKEY_SLOT}`=@{st} " +
+                          $"AND `{KitManager.COLUMN_EXT_PK}`=@{st + 1}; ");
+            }
+
+            UCWarfare.RunTask(Data.AdminSql.NonQueryAsync, sb.ToString(), args, token, ctx: "Delete invalid hotkeys for " + this + ".");
+        }
+
         await UCWarfare.ToUpdate(token);
         Signs.UpdateKitSigns(this, null);
     }
-
     public void SetCosmeticStates(bool state)
     {
         ThreadUtil.assertIsGameThread();

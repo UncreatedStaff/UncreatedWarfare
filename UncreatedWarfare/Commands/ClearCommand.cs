@@ -144,7 +144,7 @@ public class ClearCommand : Command
     }
     public static void ClearItems()
     {
-        EventFunctions.ItemsTempBuffer.Clear();
         ItemManager.askClearAllItems();
+        EventFunctions.OnClearAllItems();
     }
 }

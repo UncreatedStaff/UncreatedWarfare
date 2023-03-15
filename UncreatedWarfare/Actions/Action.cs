@@ -64,12 +64,12 @@ public class Action
             L.LogWarning("Action could not start: Effect asset not found: " + CallerEffect.Guid);
 
         ActionComponent[] existing = Caller.Player.transform.gameObject.GetComponents<ActionComponent>();
-        L.Log("Existing actions: " + existing.Length);
+        L.LogDebug("Existing actions: " + existing.Length);
         foreach (ActionComponent component in existing)
         {
             if (component.Action != null && Type == component.Action.Type)
             {
-                L.Log("     Attempting to cancel action action...");
+                L.LogDebug("     Attempting to cancel action action...");
                 component.Action.Cancel();
             }
         }
@@ -78,26 +78,19 @@ public class Action
     }
     public void Start()
     {
-        L.Log("BREAKPOINT 0");
-
         if (_component == null)
             return;
 
         if (Origin != EActionOrigin.FOLLOW_CALLER && InitialPosition == null)
             return;
-
-        L.Log("BREAKPOINT 1");
-
+        
         if (CheckValid != null && !CheckValid())
             return;
-
-        L.Log("BREAKPOINT 2");
-
+        
         _component.Initialize(this);
 
         if (!CooldownManager.HasCooldown(Caller, CooldownType.AnnounceAction, out _, ViewerEffect.Guid))
         {
-            L.Log("BREAKPOINT 3");
             Announce();
             CooldownManager.StartCooldown(Caller, CooldownType.AnnounceAction, 5, ViewerEffect.Guid);
         }
@@ -193,7 +186,7 @@ public class Action
             if (_action.Finished != null)
                 _action.Finished();
             Destroy(this);
-            L.Log("DESTROYED ACTION");
+            L.LogDebug("DESTROYED ACTION");
         }
 
         private IEnumerator<WaitForSeconds> Loop()

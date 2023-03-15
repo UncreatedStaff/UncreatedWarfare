@@ -18,6 +18,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -45,7 +46,11 @@ public static class EventDispatcher
     public static event EventDelegate<DamageStructureRequested> DamageStructureRequested;
 
     public static event EventDelegate<ItemDropRequested> ItemDropRequested;
+    public static event EventDelegate<ItemDropped> ItemDropped;
+    public static event EventDelegate<ItemPickedUp> ItemPickedUp;
     public static event EventDelegate<CraftRequested> CraftRequested;
+    public static event EventDelegate<ItemMoveRequested> ItemMoveRequested;
+    public static event EventDelegate<ItemMoved> ItemMoved;
 
     public static event EventDelegate<ThrowableSpawned> ThrowableSpawned;
     public static event EventDelegate<ThrowableSpawned> ThrowableDespawning;
@@ -64,6 +69,7 @@ public static class EventDispatcher
     public static event EventDelegate<PlayerInjured> PlayerInjuring;
     public static event EventDelegate<PlayerEvent> PlayerInjured;
     public static event EventDelegate<PlayerEvent> UIRefreshRequested;
+
     internal static void SubscribeToAll()
     {
         EventPatches.TryPatchAll();
@@ -793,6 +799,136 @@ public static class EventDispatcher
         {
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(SignTextChanged));
+        }
+    }
+    internal static bool OnDraggingOrSwappingItem(PlayerInventory playerInv, byte pageFrom, ref byte pageTo, byte xFrom, ref byte xTo, byte yFrom, ref byte yTo, ref byte rotTo, bool swap)
+    {
+        if (ItemMoveRequested != null && UCPlayer.FromPlayer(playerInv.player) is { IsOnline: true } pl)
+        {
+            if (pageTo < PlayerInventory.SLOTS)
+                rotTo = 0;
+            ItemJar? jar = playerInv.getItem(pageFrom, playerInv.getIndex(pageFrom, xFrom, yFrom));
+            ItemJar? swapping = !swap ? null : playerInv.getItem(pageTo, playerInv.getIndex(pageTo, xTo, yTo));
+            ItemMoveRequested args = new ItemMoveRequested(pl, (Page)pageFrom, (Page)pageTo, xFrom, xTo, yFrom, yTo, rotTo, swap, jar, swapping);
+            foreach (EventDelegate<ItemMoveRequested> inv in ItemMoveRequested.GetInvocationList().Cast<EventDelegate<ItemMoveRequested>>())
+            {
+                if (!args.CanContinue) break;
+                TryInvoke(inv, args, nameof(ItemMoveRequested));
+            }
+
+            if (!args.CanContinue)
+                return false;
+            pageTo = (byte)args.NewPage;
+            xTo = args.NewX;
+            yTo = args.NewY;
+            rotTo = args.NewRotation;
+        }
+
+        return true;
+    }
+    internal static void OnDraggedOrSwappedItem(PlayerInventory playerInv, byte pageFrom, byte pageTo, byte xFrom, byte xTo, byte yFrom, byte yTo, byte rotFrom, byte rotTo, bool swap)
+    {
+        if (ItemMoved != null && UCPlayer.FromPlayer(playerInv.player) is { IsOnline: true } pl)
+        {
+            ItemJar? jar = playerInv.getItem(pageTo, playerInv.getIndex(pageTo, xTo, yTo));
+            if (!swap) rotFrom = byte.MaxValue;
+            ItemJar? swapped = playerInv.getItem(pageFrom, playerInv.getIndex(pageFrom, xFrom, yFrom));
+            ItemMoved args = new ItemMoved(pl, (Page)pageFrom, (Page)pageTo, xFrom, xTo, yFrom, yTo, rotFrom, rotTo, swap, jar, swapped);
+            foreach (EventDelegate<ItemMoved> inv in ItemMoved.GetInvocationList().Cast<EventDelegate<ItemMoved>>())
+            {
+                if (!args.CanContinue) break;
+                TryInvoke(inv, args, nameof(ItemMoved));
+            }
+        }
+    }
+
+    internal static void OnPickedUpItem(Player player, byte regionX, byte regionY, uint instanceId, byte toX, byte toY, byte toRot, byte toPage, ItemData? data)
+    {
+        if (ItemPickedUp != null && UCPlayer.FromPlayer(player) is { IsOnline: true } pl)
+        {
+            PlayerInventory playerInv = player.inventory;
+            ItemRegion? region = null;
+            ItemJar? jar = null;
+            if (ItemManager.regions != null && Regions.checkSafe(regionX, regionY))
+                region = ItemManager.regions[regionX, regionY];
+            if (data != null)
+            {
+                if (toPage != byte.MaxValue)
+                    jar = playerInv.getItem(toPage, playerInv.getIndex(toPage, toX, toY));
+                if (jar == null || jar.item != data.item)
+                {
+                    for (int page = 0; page < PlayerInventory.AREA; ++page)
+                    {
+                        SDG.Unturned.Items p = playerInv.items[page];
+                        for (int index = 0; index < p.items.Count; ++index)
+                        {
+                            if (p.items[index].item == data.item)
+                            {
+                                jar = p.items[index];
+                                toX = jar.x;
+                                toY = jar.y;
+                                toPage = (byte)page;
+                                toRot = jar.rot;
+                                goto d;
+                            }
+                        }
+                    }
+                }
+            }
+            d:
+
+            ItemPickedUp args = new ItemPickedUp(pl, (Page)toPage, toX, toY, toRot, regionX, regionY, instanceId, region, data, jar, data?.item);
+            foreach (EventDelegate<ItemPickedUp> inv in ItemPickedUp.GetInvocationList().Cast<EventDelegate<ItemPickedUp>>())
+            {
+                if (!args.CanContinue) break;
+                TryInvoke(inv, args, nameof(ItemPickedUp));
+            }
+        }
+    }
+    internal static void OnDroppedItem(PlayerInventory playerInv, byte page, byte x, byte y, byte rot, Item? item)
+    {
+        if (ItemDropped != null && UCPlayer.FromPlayer(playerInv.player) is { IsOnline: true } pl)
+        {
+            ItemData? data = null;
+            if (ItemManager.regions != null && item != null)
+            {
+                if (Regions.tryGetCoordinate(playerInv.player.transform.position, out byte x2, out byte y2))
+                {
+                    ItemRegion r = ItemManager.regions[x2, y2];
+                    for (int i = 0; i < r.items.Count; ++i)
+                    {
+                        if (r.items[i].item == item)
+                        {
+                            data = r.items[i];
+                            break;
+                        }
+                    }
+                }
+                if (data == null)
+                {
+                    for (x2 = 0; x2 < Regions.WORLD_SIZE; ++x2)
+                    {
+                        for (y2 = 0; y2 < Regions.WORLD_SIZE; ++y2)
+                        {
+                            ItemRegion r = ItemManager.regions[x2, y2];
+                            for (int i = 0; i < r.items.Count; ++i)
+                            {
+                                if (r.items[i].item == item)
+                                {
+                                    data = r.items[i];
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ItemDropped args = new ItemDropped(pl, item, data, (Page)page, x, y, rot);
+            foreach (EventDelegate<ItemDropped> inv in ItemDropped.GetInvocationList().Cast<EventDelegate<ItemDropped>>())
+            {
+                if (!args.CanContinue) break;
+                TryInvoke(inv, args, nameof(ItemDropped));
+            }
         }
     }
 }

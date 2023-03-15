@@ -23,7 +23,7 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
     protected StatValue[] PlayerStatOverrides { get; set; } = Array.Empty<StatValue>();
     public override void UpdateLeaderboardTimer()
     {
-        int sl = Mathf.RoundToInt(secondsLeft);
+        int sl = Mathf.RoundToInt(SecondsLeft);
         foreach (LanguageSet set in LanguageSet.All())
             LeaderboardUI.UpdateTime(set, sl);
     }
@@ -129,10 +129,10 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
         string[] values = new string[len];
         int secondsLeft = Mathf.RoundToInt(Gamemode.Config.GeneralLeaderboardTime);
 
-        values[0] = T.WinnerTitle.Translate(lang, TeamManager.GetFactionSafe(_winner)!);
-        values[1] = !shuttingDown || shuttingDownMessage is null ?
+        values[0] = T.WinnerTitle.Translate(lang, TeamManager.GetFactionSafe(Winner)!);
+        values[1] = !ShuttingDown || ShuttingDownMessage is null ?
             T.StartingSoon.Translate(lang) :
-            T.NextGameShutdown.Translate(lang, shuttingDownMessage);
+            T.NextGameShutdown.Translate(lang, ShuttingDownMessage);
 
         values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("mm\\:ss", locale);
         values[3] = new string(Gamemode.Config.UICircleFontCharacters[0], 1);
@@ -171,27 +171,27 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
         values[45] = LeaderboardOverrides[4].Translate(lang);
         values[46] = LeaderboardOverrides[5].Translate(lang);
 
-        if (tracker is not null)
+        if (Tracker is not null)
         {
-            values[29] = WarStatOverrides[0].GetValue(tracker, null, locale);
-            values[30] = WarStatOverrides[1].GetValue(tracker, null, locale);
-            values[31] = WarStatOverrides[2].GetValue(tracker, null, locale);
-            values[32] = WarStatOverrides[3].GetValue(tracker, null, locale);
-            values[33] = WarStatOverrides[4].GetValue(tracker, null, locale);
-            values[34] = WarStatOverrides[5].GetValue(tracker, null, locale);
-            values[35] = WarStatOverrides[6].GetValue(tracker, null, locale);
-            values[36] = WarStatOverrides[7].GetValue(tracker, null, locale);
-            values[37] = WarStatOverrides[8].GetValue(tracker, null, locale);
-            values[38] = WarStatOverrides[9].GetValue(tracker, null, locale);
-            values[39] = WarStatOverrides[10].GetValue(tracker, null, locale);
+            values[29] = WarStatOverrides[0].GetValue(Tracker, null, locale);
+            values[30] = WarStatOverrides[1].GetValue(Tracker, null, locale);
+            values[31] = WarStatOverrides[2].GetValue(Tracker, null, locale);
+            values[32] = WarStatOverrides[3].GetValue(Tracker, null, locale);
+            values[33] = WarStatOverrides[4].GetValue(Tracker, null, locale);
+            values[34] = WarStatOverrides[5].GetValue(Tracker, null, locale);
+            values[35] = WarStatOverrides[6].GetValue(Tracker, null, locale);
+            values[36] = WarStatOverrides[7].GetValue(Tracker, null, locale);
+            values[37] = WarStatOverrides[8].GetValue(Tracker, null, locale);
+            values[38] = WarStatOverrides[9].GetValue(Tracker, null, locale);
+            values[39] = WarStatOverrides[10].GetValue(Tracker, null, locale);
             if (WarStatOverrides.Length > 11)
             {
-                values[40] = WarStatOverrides[11].GetValue(tracker, null, locale);
+                values[40] = WarStatOverrides[11].GetValue(Tracker, null, locale);
             }
             else
             {
                 // longest shot
-                values[40] = tracker is not ILongestShotTracker { LongestShot.IsValue: true } ls ? LeaderboardEx.EmptyFieldPlaceholder :
+                values[40] = Tracker is not ILongestShotTracker { LongestShot.IsValue: true } ls ? LeaderboardEx.EmptyFieldPlaceholder :
                     T.LongestShot.Translate(lang, ls.LongestShot.Distance,
                         Assets.find<ItemAsset>(ls.LongestShot.Gun), ls.LongestShot.Name);
             }
@@ -293,7 +293,7 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
 
             if (stats is not null)
             {
-                LeaderboardUI.PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, tracker is not null ? tracker.GetPresence(stats) : 0f));
+                LeaderboardUI.PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, Tracker is not null ? Tracker.GetPresence(stats) : 0f));
                 LeaderboardUI.PersonalStats0.SetText(c, PlayerStatOverrides[0].GetValue(null, stats, locale));
                 LeaderboardUI.PersonalStats1.SetText(c, PlayerStatOverrides[1].GetValue(null, stats, locale));
                 LeaderboardUI.PersonalStats2.SetText(c, PlayerStatOverrides[2].GetValue(null, stats, locale));
