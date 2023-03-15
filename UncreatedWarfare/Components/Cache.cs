@@ -21,7 +21,6 @@ public class Cache : IFOB, IObjective, IDeployable
     private string _name;
     private readonly GridLocation _gc;
     private readonly string _cl;
-    public ulong LastDamager;
     public int Number;
     public bool IsDiscovered;
     public GridLocation GridLocation => _gc;
@@ -210,8 +209,6 @@ public class Cache : IFOB, IObjective, IDeployable
             _cache._component = null;
 
             Destroy(gameObject);
-
-            L.Log("CACHED COMPONENT DESTROYED");
         }
         private void OnPlayerDisconnect(PlayerEvent e)
         {
