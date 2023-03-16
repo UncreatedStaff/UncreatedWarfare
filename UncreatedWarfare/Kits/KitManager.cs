@@ -2368,6 +2368,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                     origY = d.OldY;
                     origPage = d.OldPage;
                     pl.ItemTransformations.Add(new ItemTransformation(d.OldPage, e.Page, d.OldX, d.OldY, e.X, e.Y, e.Jar.item));
+                    pl.ItemDropTransformations.RemoveAtFast(i);
                     break;
                 }
             }
