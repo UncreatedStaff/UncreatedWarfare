@@ -52,6 +52,7 @@ public class TeleportCommand : Command
                         },
                         new CommandParameter("WP")
                         {
+                            Aliases = new string[] { "waypoint", "marker" },
                             Description = "Teleport another player to your waypoint.",
                         }
                     }
@@ -81,6 +82,7 @@ public class TeleportCommand : Command
                 },
                 new CommandParameter("WP")
                 {
+                    Aliases = new string[] { "waypoint", "marker" },
                     Description = "Teleport yourself to your waypoint.",
                 },
                 new CommandParameter("Jump")
@@ -135,7 +137,7 @@ public class TeleportCommand : Command
             case 1: // tp <player|location>
                 ctx.AssertRanByPlayer();
 
-                if (ctx.MatchParameter(0, "wp", "wayport", "marker"))
+                if (ctx.MatchParameter(0, "wp", "waypoint", "marker"))
                 {
                     if (!ctx.Caller.Player.quests.isMarkerPlaced)
                         throw ctx.Reply(T.TeleportWaypointNotFound);

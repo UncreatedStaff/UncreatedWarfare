@@ -21,6 +21,7 @@ public class WhitelistCommand : Command
             {
                 new CommandParameter("Add")
                 {
+                    Aliases = new string[] { "whitelist", "create" },
                     Description = "Add an item to the global whitelist.",
                     ChainDisplayCount = 3,
                     Parameters = new CommandParameter[]
@@ -39,6 +40,7 @@ public class WhitelistCommand : Command
                 },
                 new CommandParameter("Remove")
                 {
+                    Aliases = new string[] { "delete", "rem" },
                     Description = "Remove an item from the global whitelist.",
                     ChainDisplayCount = 2,
                     Parameters = new CommandParameter[]
@@ -57,6 +59,7 @@ public class WhitelistCommand : Command
                     {
                         new CommandParameter("Amount")
                         {
+                            Aliases = new string[] { "maxamount", "amt" },
                             IsRemainder = true,
                             Parameters = new CommandParameter[]
                             {

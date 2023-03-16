@@ -26,6 +26,7 @@ public class ReportCommand : AsyncCommand
             {
                 new CommandParameter("Reasons")
                 {
+                    Aliases = new string[] { "reports", "types" },
                     Description = "Lists the various report types."
                 },
                 new CommandParameter("Player", typeof(IPlayer))

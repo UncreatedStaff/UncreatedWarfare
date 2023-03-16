@@ -25,6 +25,7 @@ public class AttachCommand : Command
                 },
                 new CommandParameter("Remove")
                 {
+                    Aliases = new string[] { "delete", "clear" },
                     Description = "Remove an item from your gun.",
                     ChainDisplayCount = 2,
                     Parameters = new CommandParameter[]
@@ -34,6 +35,7 @@ public class AttachCommand : Command
                 },
                 new CommandParameter("Ammo")
                 {
+                    Aliases = new string[] { "ammoct", "setammo" },
                     Description = "Set the amount of ammo in your gun (up to 255).",
                     ChainDisplayCount = 2,
                     Parameters = new CommandParameter[]
@@ -43,6 +45,7 @@ public class AttachCommand : Command
                 },
                 new CommandParameter("Firemode")
                 {
+                    Aliases = new string[] { "firerate", "mode" },
                     Description = "Change the firemode of your gun.",
                     ChainDisplayCount = 2,
                     Parameters = new CommandParameter[]

@@ -32,13 +32,19 @@ public class ReloadCommand : AsyncCommand
             Description = Help,
             Parameters = new CommandParameter[]
             {
-                new CommandParameter("Translations"),
+                new CommandParameter("Translations")
+                {
+                    Aliases = new string[] { "lang" },
+                },
                 new CommandParameter("Flags"),
                 new CommandParameter("Permissions"),
                 new CommandParameter("Colors"),
                 new CommandParameter("TCP"),
                 new CommandParameter("SQL"),
-                new CommandParameter("Teams"),
+                new CommandParameter("Teams")
+                {
+                    Aliases = new string[] { "factions" },
+                },
                 new CommandParameter("Module", typeof(string))
                 {
                     Description = "Reload a module with a reload key."

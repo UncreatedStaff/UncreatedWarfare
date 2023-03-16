@@ -20,14 +20,15 @@ public class RallyCommand : Command
             {
                 new CommandParameter("Cancel")
                 {
+                    Aliases = new string[] { "c", "abort" },
                     Description = "Cancels pending deployment to a rallypoint for your squadmembers.",
                     IsOptional = true
                 },
-                new CommandParameter("Deny")
+                /*new CommandParameter("Deny")
                 {
                     Description = "Cancels pending deployment to a rallypoint for just you.",
                     IsOptional = true
-                }
+                }*/
             }
         };
     }
@@ -53,7 +54,7 @@ public class RallyCommand : Command
         if (ctx.Caller.Squad is null)
             throw ctx.Reply(T.RallyNotSquadleader);
 
-        var rallypoint = ctx.Caller.Squad.RallyPoint;
+        RallyPoint? rallypoint = ctx.Caller.Squad.RallyPoint;
 
         if (rallypoint == null || !rallypoint.IsActive)
             throw ctx.Reply(T.RallyNotActiveSL);

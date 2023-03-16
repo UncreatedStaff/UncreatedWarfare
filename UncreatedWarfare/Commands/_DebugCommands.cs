@@ -1437,7 +1437,6 @@ public class DebugCommand : AsyncCommand
         });
     }
 #endif
-
     private void translate(CommandInteraction ctx)
     {
         if (ctx.TryGet(0, out string name))
@@ -1481,7 +1480,6 @@ public class DebugCommand : AsyncCommand
         }
         else ctx.SendCorrectUsage("/test unnerd <player>");
     }
-
     private void findassets(CommandInteraction ctx)
     {
         ctx.AssertRanByConsole();
@@ -1506,13 +1504,14 @@ public class DebugCommand : AsyncCommand
                 str1 = str1.Substring(ind1 + 1);
         } 
 
-        MemberInfo? field = (MemberInfo?)type.GetProperty(str1) ?? type.GetField(str1);
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy;
+        MemberInfo? field = (MemberInfo?)type.GetProperty(str1, flags) ?? type.GetField(str1, flags);
         if (field == null || field is PropertyInfo p && p.GetMethod == null)
-            throw ctx.ReplyString("<#ff8c69>Field or property not found: <#fff>" + type.Name + "</color>.<#fff>" + str1 + "</color>.");
+            throw ctx.ReplyString("<#ff8c69>Field or property not found: <#fff>" + type.Name + "</color>.<#fff>" + str1 + "</color>.", ConsoleColor.DarkYellow);
         Type fldType = field is FieldInfo f ? f.FieldType : ((PropertyInfo)field).PropertyType;
 
         if (!Util.TryParseAny(str2, fldType, out object val))
-            throw ctx.ReplyString("<#ff8c69>Failed to parse <#fff>" + str2 + "</color> as <#fff>" + fldType.Name + "</color>.");
+            throw ctx.ReplyString("<#ff8c69>Failed to parse <#fff>" + str2 + "</color> as <#fff>" + fldType.Name + "</color>.", ConsoleColor.DarkYellow);
         MethodInfo? assetsFind = typeof(Assets).GetMethods(BindingFlags.Static | BindingFlags.Public)
                                                         .FirstOrDefault(x => x.Name.Equals("find", StringComparison.Ordinal) &&
                                                         x.IsGenericMethod &&
@@ -1521,10 +1520,14 @@ public class DebugCommand : AsyncCommand
         IList allassets = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(type));
         assetsFind!.Invoke(null, new object[] { allassets });
 
+        int c = 0;
         foreach (Asset asset in allassets.Cast<Asset>().Where(val is null ? x => GetValue(x) == null : x => val.Equals(GetValue(x))))
         {
-            L.Log(ActionLog.AsAsset(asset));
+            L.Log(ActionLog.AsAsset(asset), ConsoleColor.DarkCyan);
+            ++c;
         }
+
+        ctx.ReplyString("Found " + c + " assets.", ConsoleColor.DarkCyan);
 
         object GetValue(Asset asset)
         {

@@ -23,6 +23,7 @@ public class ClearCommand : Command
             {
                 new CommandParameter("inventory")
                 {
+                    Aliases = new string[] { "inv" },
                     Description = "Clear you or another player's inventory.",
                     ChainDisplayCount = 1,
                     Parameters = new CommandParameter[]
@@ -36,6 +37,7 @@ public class ClearCommand : Command
                 },
                 new CommandParameter("items")
                 {
+                    Aliases = new string[] { "item", "i" },
                     Description = "Clear all dropped items.",
                     Parameters = new CommandParameter[]
                     {
@@ -48,10 +50,12 @@ public class ClearCommand : Command
                 },
                 new CommandParameter("vehicles")
                 {
+                    Aliases = new string[] { "vehicle", "v" },
                     Description = "Clear all spawned vehicles.",
                 },
                 new CommandParameter("structures")
                 {
+                    Aliases = new string[] { "structure", "struct", "s", "barricades", "barricade", "b" },
                     Description = "Clear all barricades and structures.",
                 }
             }
