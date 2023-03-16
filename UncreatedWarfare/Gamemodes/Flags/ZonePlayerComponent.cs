@@ -14,6 +14,17 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes.Flags;
 internal class ZonePlayerComponent : MonoBehaviour
 {
+    internal static readonly string[] EditCommands =
+    {
+        "existing", "open", "current", "maxheight", "maxy", "max-y", "minheight", "miny", "min-y", "type", "shape",
+        "mode", "finalize", "complete", "confirm", "save", "cancel", "discard", "exit", "addpt", "addpoint", "newpt",
+        "delpoint", "delpt", "deletepoint", "removepoint", "deletept", "removept", "clearpoints", "clearpts", "clrpts",
+        "clrpoints", "setpoint", "movepoint", "setpt", "movept", "orderpoint", "orderpt", "setindex", "ptindex",
+        "radius", "addgobj", "addgridobj", "addobject", "delgobj", "delgridobj", "delobject", "sizex", "width",
+        "length", "size", "sizez", "height", "depth", "center", "position", "origin", "spawn", "spawnpoint", "respawn",
+        "name", "title", "longname", "use", "use-case", "usecase", "shortname", "short", "short name", "abbreviation",
+        "abbr", "undo", "redo", "seeadj", "adjacencies", "addadj", "addadjacency", "adj", "deladj", "remadj"
+    };
     private const float NearbyPointDistanceSqr = 5f * 5f;
     private const int PointRows = 30;
     private const int HelpRows = 11;
@@ -1216,7 +1227,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 else
                     ctx.Reply(T.ZoneEditRedoEmpty);
             }
-            else if (ctx.MatchParameter(0, "seeadj", "adj", "adjacencies"))
+            else if (ctx.MatchParameter(0, "seeadj", "adjacencies"))
             {
                 StringBuilder sb = new StringBuilder(127);
                 List<KeyValuePair<Zone, float>> adjacencies = new List<KeyValuePair<Zone, float>>(8);

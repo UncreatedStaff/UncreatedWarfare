@@ -21,6 +21,7 @@ public sealed class OptionsCommand : Command
             {
                 new CommandParameter("IMGUI")
                 {
+                    Aliases = new string[] { "legacyui", "oldui" },
                     Description = "Enables chat support for the <nobr><b>-Glazier IMGUI</b></nobr> launch option. Allows support for some special characters.",
                     Parameters = new CommandParameter[]
                     {

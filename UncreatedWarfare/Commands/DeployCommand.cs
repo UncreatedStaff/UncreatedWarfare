@@ -25,6 +25,9 @@ public class DeployCommand : Command
             {
                 new CommandParameter("Location", typeof(IDeployable), "Lobby", "Main"),
                 new CommandParameter("Cancel")
+                {
+                    Aliases = new string[] { "stop" }
+                }
             }
         };
     }
@@ -38,7 +41,7 @@ public class DeployCommand : Command
 
         ctx.AssertArgs(1, Syntax + " - " + Help);
 
-        if (ctx.MatchParameter(0, "cancel") && ctx.Caller.Player.TryGetPlayerData(out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
+        if (ctx.MatchParameter(0, "cancel", "stop") && ctx.Caller.Player.TryGetPlayerData(out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
         {
             comp.CancelDeployment();
             throw ctx.Reply(T.DeployCancelled);

@@ -12,7 +12,7 @@ public sealed class CommandStructure
     private const string DefaultValueTypeColor = "bfbfbf";
     private const string DefaultClassTypeColor = "ecc6d9";
     private const string QuoteColor = "d69d85";
-
+    public IExecutableCommand Command { get; internal set; }
     private static readonly KeyValuePair<Type, string>[] TypeColors =
     {
         new KeyValuePair<Type, string>(typeof(object), DefaultValueTypeColor),
@@ -157,12 +157,23 @@ public sealed class CommandStructure
                 {
                     for (int i = 0; i < paramters.Length; ++i)
                     {
-                        if (paramters[i].Values
-                            .Any(x => x is string str &&
-                                      str.Equals(val, StringComparison.InvariantCultureIgnoreCase)))
+                        if (paramters[i].Aliases.Any(x => x.Equals(val, StringComparison.InvariantCultureIgnoreCase)))
                         {
                             p = paramters[i];
                             break;
+                        }
+                    }
+                    if (p == null)
+                    {
+                        for (int i = 0; i < paramters.Length; ++i)
+                        {
+                            if (paramters[i].Values
+                                .Any(x => x is string str &&
+                                          str.Equals(val, StringComparison.InvariantCultureIgnoreCase)))
+                            {
+                                p = paramters[i];
+                                break;
+                            }
                         }
                     }
                 }
@@ -306,6 +317,7 @@ public sealed class CommandParameter
     public string? FlagName { get; set; }
     public string? Description { get; set; }
     public EAdminType? Permission { get; set; }
+    public string[] Aliases { get; set; } = Array.Empty<string>();
     public TranslationList? DescriptionTranslations { get; set; }
     public CommandParameter[] Parameters { get; set; } = Array.Empty<CommandParameter>();
     public CommandParameter(string name, object value)

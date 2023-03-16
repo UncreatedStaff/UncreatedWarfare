@@ -32,16 +32,19 @@ public class StructureCommand : AsyncCommand
                 },
                 new CommandParameter("Remove")
                 {
+                    Aliases = new string[] { "delete" },
                     Description = "Removes a barricade or structure from being saved between games.",
                     Permission = EAdminType.HELPER
                 },
                 new CommandParameter("Pop")
                 {
+                    Aliases = new string[] { "destroy" },
                     Description = "Destroy a barricade or structure.",
                     Permission = EAdminType.HELPER
                 },
                 new CommandParameter("Set")
                 {
+                    Aliases = new string[] { "s" },
                     Description = "Set the owner or group of any barricade or structure.",
                     Permission = EAdminType.MODERATOR,
                     Parameters = new CommandParameter[]
@@ -66,6 +69,7 @@ public class StructureCommand : AsyncCommand
                 },
                 new CommandParameter("Examine")
                 {
+                    Aliases = new string[] { "exam", "wtf" },
                     Description = "Get the owner and team of any barricade or structure."
                 }
             }
@@ -320,7 +324,7 @@ public class StructureCommand : AsyncCommand
                 {
                     FactionInfo? info = TeamManager.GetFactionSafe(s64);
                     if (info != null)
-                        str64 = info.GetName(ctx.Caller.Language).ColorizeTMPro(info.HexColor);
+                        str64 = ctx.IMGUI ? info.GetName(ctx.Caller.Language).Colorize(info.HexColor) : info.GetName(ctx.Caller.Language).ColorizeTMPro(info.HexColor);
                 }
                 ctx.Reply(T.StructureSaveSetProperty!, grp ? "Group" : "Owner", asset, str64);
             }

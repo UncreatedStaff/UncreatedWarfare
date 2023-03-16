@@ -25,8 +25,9 @@ public class BanCommand : AsyncCommand
                 {
                     Parameters = new CommandParameter[]
                     {
-                        new CommandParameter("duration", typeof(TimeSpan), "permanent")
+                        new CommandParameter("Duration", typeof(TimeSpan), "Permanent")
                         {
+                            Aliases = new string[] { "perm" },
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("Reason", typeof(string))

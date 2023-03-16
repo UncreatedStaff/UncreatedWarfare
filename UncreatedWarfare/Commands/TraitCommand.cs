@@ -21,6 +21,7 @@ public class TraitCommand : Command
             {
                 new CommandParameter("Give")
                 {
+                    Aliases = new string[] { "get" },
                     Description = "Give the caller a trait.",
                     Parameters = new CommandParameter[]
                     {
@@ -29,6 +30,7 @@ public class TraitCommand : Command
                 },
                 new CommandParameter("Take")
                 {
+                    Aliases = new string[] { "revoke", "remove" },
                     Description = "Remove a trait from the caller.",
                     Parameters = new CommandParameter[]
                     {

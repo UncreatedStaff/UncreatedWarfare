@@ -20,6 +20,7 @@ public class PermissionCommand : Command
             {
                 new CommandParameter("Grant")
                 {
+                    Aliases = new string[] { "give", "add" },
                     Description = "Set a player's permission level.",
                     IsOptional = true,
                     Permission = EAdminType.VANILLA_ADMIN,
@@ -37,6 +38,7 @@ public class PermissionCommand : Command
                 },
                 new CommandParameter("Revoke")
                 {
+                    Aliases = new string[] { "remove", "leave" },
                     Description = "Set a player's permission level to member (remove their permissions).",
                     IsOptional = true,
                     Permission = EAdminType.VANILLA_ADMIN,
@@ -48,6 +50,7 @@ public class PermissionCommand : Command
                 },
                 new CommandParameter("Reload")
                 {
+                    Aliases = new string[] { "refresh" },
                     Description = "Reload cached values from the permission file.",
                     Permission = EAdminType.VANILLA_ADMIN,
                     IsOptional = true

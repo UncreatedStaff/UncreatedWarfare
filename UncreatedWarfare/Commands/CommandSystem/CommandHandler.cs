@@ -120,6 +120,9 @@ public static class CommandHandler
     }
     public static void RegisterCommand(IExecutableCommand cmd)
     {
+        if (cmd.Structure != null)
+            cmd.Structure.Command = cmd;
+        
         int priority = cmd.Priority;
         string name = cmd.CommandName;
         for (int i = 0; i < Commands.Count; ++i)

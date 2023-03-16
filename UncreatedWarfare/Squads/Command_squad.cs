@@ -22,10 +22,12 @@ public class SquadCommand : Command
             {
                 new CommandParameter("Create")
                 {
+                    Aliases = new string[] { "new", "start" },
                     Description = "Create a new squad with the next available name."
                 },
                 new CommandParameter("Join")
                 {
+                    Aliases = new string[] { "jion" },
                     Description = "Join an existing squad.",
                     Parameters = new CommandParameter[]
                     {
@@ -53,10 +55,12 @@ public class SquadCommand : Command
                 },
                 new CommandParameter("Leave")
                 {
+                    Aliases = new string[] { "remove", "disconnect" },
                     Description = "Leave your current squad. If you are the leader, a new one will be chosen."
                 },
                 new CommandParameter("Disband")
                 {
+                    Aliases = new string[] { "delete" },
                     Description = "Leave your current squad and delete it."
                 },
                 new CommandParameter("Lock")
@@ -91,7 +95,7 @@ public class SquadCommand : Command
         if (team is not 1 and not 2)
             throw ctx.Reply(T.NotOnCaptureTeam);
 
-        if (ctx.MatchParameter(0, "create"))
+        if (ctx.MatchParameter(0, "create", "new", "start"))
         {
             ctx.AssertHelpCheck(1, "/squad create (custom names for squads have been removed)");
             if (ctx.Caller.Squad is not null)
@@ -102,7 +106,7 @@ public class SquadCommand : Command
             Squad squad = SquadManager.CreateSquad(ctx.Caller, team);
             ctx.Reply(T.SquadCreated, squad);
         }
-        else if (ctx.MatchParameter(0, "join"))
+        else if (ctx.MatchParameter(0, "join", "jion"))
         {
             ctx.AssertHelpCheck(1, "/squad join <name> - Join a squad, you can also just put the first letter of the squad name.");
 
@@ -124,7 +128,7 @@ public class SquadCommand : Command
             SquadManager.JoinSquad(ctx.Caller, squad);
             ctx.Defer();
         }
-        else if (ctx.MatchParameter(0, "promote"))
+        else if (ctx.MatchParameter(0, "promote", "leader"))
         {
             ctx.AssertHelpCheck(1, "/squad promote <member> - Gives the provided player squad leader.");
 
@@ -157,7 +161,7 @@ public class SquadCommand : Command
             SquadManager.KickPlayerFromSquad(member, ctx.Caller.Squad);
             ctx.Defer();
         }
-        else if (ctx.MatchParameter(0, "leave"))
+        else if (ctx.MatchParameter(0, "leave", "remove", "disconnect"))
         {
             ctx.AssertHelpCheck(1, "/squad leave - Leave your current squad.");
 
@@ -167,7 +171,7 @@ public class SquadCommand : Command
             SquadManager.LeaveSquad(ctx.Caller, ctx.Caller.Squad);
             ctx.Defer();
         }
-        else if (ctx.MatchParameter(0, "disband"))
+        else if (ctx.MatchParameter(0, "disband", "delete"))
         {
             ctx.AssertHelpCheck(1, "/squad disband - Kicks everyone from your squad and deletes it.");
 

@@ -27,23 +27,28 @@ public class VehicleBayCommand : AsyncCommand
             {
                 new CommandParameter("Add")
                 {
+                    Aliases = new string[] { "a", "create" },
                     Description = "Adds the vehicle you're looking at to the vehicle bay."
                 },
                 new CommandParameter("Remove")
                 {
+                    Aliases = new string[] { "delete", "r" },
                     Description = "Removes the vehicle you're looking at from the vehicle bay."
                 },
                 new CommandParameter("SaveMeta")
                 {
+                    Aliases = new string[] { "savemetadata", "metadata" },
                     Description = "Saves the barricades that are placed on the current vehicle to the vehicle bay."
                 },
                 new CommandParameter("Set")
                 {
+                    Aliases = new string[] { "s" },
                     Description = "Sets the trunk items to your current inventory or any other property to the given value.",
                     Parameters = new CommandParameter[]
                     {
                         new CommandParameter("Items")
                         {
+                            Aliases = new string[] { "item", "inventory" },
                             Description = "Sets the trunk items to your current inventory."
                         },
                         new CommandParameter("Property", typeof(string))
@@ -58,11 +63,13 @@ public class VehicleBayCommand : AsyncCommand
                 },
                 new CommandParameter("Delay")
                 {
+                    Aliases = new string[] { "delays" },
                     Description = "Modify request delays of your target vehicle.",
                     Parameters = new CommandParameter[]
                     {
                         new CommandParameter("Add")
                         {
+                            Aliases = new string[] { "a", "new" },
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("Type", "Time", "Flag", "Percent", "Staging", "None")
@@ -87,10 +94,12 @@ public class VehicleBayCommand : AsyncCommand
                         },
                         new CommandParameter("Remove")
                         {
+                            Aliases = new string[] { "r", "delete" },
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("All")
                                 {
+                                    Aliases = new string[] { "clear" },
                                     Description = "Clears all delays.",
                                     Parameters = new CommandParameter[]
                                     {
@@ -131,11 +140,13 @@ public class VehicleBayCommand : AsyncCommand
                 },
                 new CommandParameter("CrewSeats")
                 {
+                    Aliases = new string[] { "seats", "crew" },
                     Description = "Specify which seats must be manned by crew kits (pilots, crewmen, etc).",
                     Parameters = new CommandParameter[]
                     {
                         new CommandParameter("Add")
                         {
+                            Aliases = new string[] { "a", "create" },
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("Seat", typeof(byte))
@@ -146,6 +157,7 @@ public class VehicleBayCommand : AsyncCommand
                         },
                         new CommandParameter("Remove")
                         {
+                            Aliases = new string[] { "r", "delete" },
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("Seat", typeof(byte))
@@ -158,6 +170,7 @@ public class VehicleBayCommand : AsyncCommand
                 },
                 new CommandParameter("Register")
                 {
+                    Aliases = new string[] { "reg" },
                     Description = "Link a vehicle spawn to a vehicle and save it.",
                     Parameters = new CommandParameter[]
                     {
@@ -166,10 +179,12 @@ public class VehicleBayCommand : AsyncCommand
                 },
                 new CommandParameter("Deregister")
                 {
+                    Aliases = new string[] { "dereg" },
                     Description = "Unlink a vehicle spawn and unsave it."
                 },
                 new CommandParameter("Force")
                 {
+                    Aliases = new string[] { "respawn" },
                     Description = "Force a vehicle spawn to despawn it's active vehicle and respawn it."
                 },
                 new CommandParameter("Link")
@@ -182,6 +197,7 @@ public class VehicleBayCommand : AsyncCommand
                 },
                 new CommandParameter("Check")
                 {
+                    Aliases = new string[] { "id", "wtf" },
                     Description = "Get which vehicle is linked to the targetted spawner."
                 }
             }
@@ -220,7 +236,7 @@ public class VehicleBayCommand : AsyncCommand
                     bool adding;
                     if (ctx.MatchParameter(1, "add", "a", "new"))
                         adding = true;
-                    else if (ctx.MatchParameter(1, "remove", "r", "rem"))
+                    else if (ctx.MatchParameter(1, "remove", "r", "delete"))
                         adding = false;
                     else
                     {

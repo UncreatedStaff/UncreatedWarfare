@@ -32,6 +32,7 @@ public class ShutdownCommand : Command
                 },
                 new CommandParameter("Instant")
                 {
+                    Aliases = new string[] { "inst" },
                     IsOptional = true,
                     Description = "Shut down the server immediately.",
                     Parameters = new CommandParameter[]
@@ -44,6 +45,7 @@ public class ShutdownCommand : Command
                 },
                 new CommandParameter("After")
                 {
+                    Aliases = new string[] { "aftergame", "game" },
                     IsOptional = true,
                     Description = "Shut down the server after the current game.",
                     Parameters = new CommandParameter[]
@@ -53,6 +55,7 @@ public class ShutdownCommand : Command
                 },
                 new CommandParameter("Cancel")
                 {
+                    Aliases = new string[] { "abort" },
                     IsOptional = true
                 }
             }

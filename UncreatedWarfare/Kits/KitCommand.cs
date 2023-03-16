@@ -29,11 +29,14 @@ public sealed class KitCommand : AsyncCommand
             {
                 new CommandParameter("Keybind")
                 {
+                    Aliases = new string[] { "hotkey", "bind" },
                     Description = "Add or remove default keybinds for this kit.",
                     Parameters = new CommandParameter[]
                     {
                         new CommandParameter("Add")
                         {
+                            IsOptional = true,
+                            Aliases = new string[] { "create", "new" },
                             Description = "Add held item as a default keybind at [slot].",
                             Parameters = new CommandParameter[]
                             {
@@ -42,16 +45,20 @@ public sealed class KitCommand : AsyncCommand
                         },
                         new CommandParameter("Remove")
                         {
+                            IsOptional = true,
+                            Aliases = new string[] { "delete", "cancel" },
                             Description = "Remove held item as a default keybind at [slot].",
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("Slot", typeof(byte))
                             }
-                        }
+                        },
+                        new CommandParameter("Slot", typeof(byte))
                     }
                 },
                 new CommandParameter("Search")
                 {
+                    Aliases = new string[] { "find" },
                     Permission = EAdminType.STAFF,
                     Description = "Finds a kit Id from a localized name.",
                     Parameters = new CommandParameter[]
@@ -64,6 +71,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("Create")
                 {
+                    Aliases = new string[] { "c", "override" },
                     Permission = EAdminType.STAFF,
                     Description = "Creates or overwrites a kit. Class is not required to overwrite a kit.",
                     Parameters = new CommandParameter[]
@@ -95,6 +103,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("Delete")
                 {
+                    Aliases = new string[] { "d", "remove" },
                     Permission = EAdminType.STAFF,
                     Description = "Delete a kit.",
                     Parameters = new CommandParameter[]
@@ -104,6 +113,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("Give")
                 {
+                    Aliases = new string[] { "g" },
                     Permission = EAdminType.STAFF,
                     Description = "Gives the caller a kit.",
                     Parameters = new CommandParameter[]
@@ -113,12 +123,14 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("Set")
                 {
+                    Aliases = new string[] { "s" },
                     Permission = EAdminType.STAFF,
                     Description = "Sets a property of a kit.",
                     Parameters = new CommandParameter[]
                     {
                         new CommandParameter("Sign")
                         {
+                            Aliases = new string[] { "text" },
                             Description = "Sets the sign text of a kit for a language. Default language is " + L.Default + ".",
                             Parameters = new CommandParameter[]
                             {
@@ -142,6 +154,7 @@ public sealed class KitCommand : AsyncCommand
                         },
                         new CommandParameter("Property", typeof(string))
                         {
+                            Aliases = new string[] { "level", "lvl", "faction", "team", "group" },
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("Kit", typeof(Kit))
@@ -160,6 +173,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("GiveAccess")
                 {
+                    Aliases = new string[] { "givea", "ga" },
                     Permission = EAdminType.STAFF,
                     Description = "Give a player access to a non-public kit.",
                     Parameters = new CommandParameter[]
@@ -185,6 +199,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("RemoveAccess")
                 {
+                    Aliases = new string[] { "remvoea", "ra" },
                     Permission = EAdminType.STAFF,
                     Description = "Remove a player's access to a non-public kit.",
                     Parameters = new CommandParameter[]
@@ -201,6 +216,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("CopyFrom")
                 {
+                    Aliases = new string[] { "cf", "copy" },
                     Permission = EAdminType.STAFF,
                     Description = "Create a copy of a kit with a different id.",
                     Parameters = new CommandParameter[]
@@ -216,6 +232,7 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("CreateLoadout")
                 {
+                    Aliases = new string[] { "cloadout", "cl" },
                     Permission = EAdminType.STAFF,
                     Description = "Create a loadout with some default parameters.",
                     Parameters = new CommandParameter[]
@@ -248,12 +265,14 @@ public sealed class KitCommand : AsyncCommand
                 },
                 new CommandParameter("Skills")
                 {
+                    Aliases = new string[] { "skillset", "skillsets" },
                     Permission = EAdminType.STAFF,
                     Description = "Modify the skillset overrides on a kit.",
                     Parameters = new CommandParameter[]
                     {
                         new CommandParameter("Add")
                         {
+                            Aliases = new string[] { "set" },
                             ChainDisplayCount = 3,
                             Parameters = new CommandParameter[]
                             {
@@ -268,6 +287,7 @@ public sealed class KitCommand : AsyncCommand
                         },
                         new CommandParameter("Remove")
                         {
+                            Aliases = new string[] { "delete", "clear" },
                             ChainDisplayCount = 2,
                             Parameters = new CommandParameter[]
                             {
@@ -298,8 +318,8 @@ public sealed class KitCommand : AsyncCommand
         {
             ctx.AssertRanByPlayer();
 
-            bool add = ctx.MatchParameter(1, "add", "create", "new");
-            if ((add || ctx.MatchParameter(1, "remove", "delete", "cancel")) && ctx.TryGet(2, out byte slot) && KitEx.ValidSlot(slot))
+            bool add = ctx.MatchParameter(1, "add", "create", "new") || ctx.HasArgsExact(2);
+            if ((add || ctx.MatchParameter(1, "remove", "delete", "cancel")) && ctx.TryGet(ctx.ArgumentCount - 1, out byte slot) && KitEx.ValidSlot(slot))
             {
                 await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
                 try
@@ -334,18 +354,29 @@ public sealed class KitCommand : AsyncCommand
                             if (!KitEx.CanBindHotkeyTo(asset, item.Page))
                                 throw ctx.Reply(T.KitHotkeyNotHoldingValidItem, asset);
 
-                            bool added = await KitManager.AddHotkey(proxy!.LastPrimaryKey, ctx.CallerID, slot, item, token).ConfigureAwait(false);
+                            bool added = await KitManager.AddHotkey(proxy.LastPrimaryKey, ctx.CallerID, slot, item, token).ConfigureAwait(false);
                             await UCWarfare.ToUpdate(token);
                             if (!added)
                                 throw ctx.SendUnknownError();
+                            if (ctx.Caller.HotkeyBindings != null)
+                            {
+                                // remove duplicates / conflicts
+                                ctx.Caller.HotkeyBindings.RemoveAll(x =>
+                                    x.Kit.Key == proxy.LastPrimaryKey.Key && (x.Slot == slot ||
+                                                                              x.Item.X == item.X &&
+                                                                              x.Item.Y == item.Y &&
+                                                                              x.Item.Page == item.Page));
+                            }
                             (ctx.Caller.HotkeyBindings ??= new List<HotkeyBinding>(32)).Add(new HotkeyBinding(proxy.LastPrimaryKey, slot, item));
 
                             byte index = KitEx.GetHotkeyIndex(slot);
 
                             if (KitEx.CanBindHotkeyTo(asset, (Page)equipment.equippedPage))
+                            {
                                 equipment.ServerBindItemHotkey(index, asset,
                                     equipment.equippedPage, equipment.equipped_x,
-                                    equipment.equipped_x);
+                                    equipment.equipped_y);
+                            }
                             throw ctx.Reply(T.KitHotkeyBinded, asset, slot, kit);
                         }
                         finally
@@ -391,7 +422,7 @@ public sealed class KitCommand : AsyncCommand
                     ctx.Caller.PurchaseSync.Release();
                 }
             }
-            throw ctx.SendCorrectUsage("/kit keybind <add|remove> <key (3-9 or 0)>");
+            throw ctx.SendCorrectUsage("/kit keybind [add (default)|remove] <key (3-9 or 0)>");
         }
 
         ctx.AssertPermissions(EAdminType.STAFF);
@@ -786,7 +817,7 @@ public sealed class KitCommand : AsyncCommand
             else
                 ctx.SendCorrectUsage("/kit <removeaccess|removea|ra> <player> <kitname>");
         }
-        else if (ctx.MatchParameter(0, "copyfrom", "cf"))
+        else if (ctx.MatchParameter(0, "copyfrom", "copy", "cf"))
         {
             ctx.AssertHelpCheck(1, "/kit <copyfrom|cf> <source kit id> <new kit id> - Creates an exact copy of the source kit renamed to the new kit id.");
 

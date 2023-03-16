@@ -82,17 +82,24 @@ public sealed class UCPlayerEvents : IDisposable
     {
         this.Player = player;
         Player.Player.inventory.onDropItemRequested += OnDropItemRequested;
+        Player.Player.inventory.onInventoryRemoved += OnItemRemoved;
     }
     public void Dispose()
     {
         if (Player.Player != null)
         {
+            Player.Player.inventory.onInventoryRemoved -= OnItemRemoved;
             Player.Player.inventory.onDropItemRequested -= OnDropItemRequested;
         }
 
         Player = null!;
     }
     private void OnDropItemRequested(PlayerInventory inventory, Item item, ref bool shouldAllow) => EventDispatcher.InvokeOnDropItemRequested(Player ?? UCPlayer.FromPlayer(inventory.player)!, inventory, item, ref shouldAllow);
+    private void OnItemRemoved(byte page, byte index, ItemJar jar)
+    {
+        if (Player is { IsOnline: true })
+            EventDispatcher.InvokeOnItemRemoved(Player, page, index, jar);
+    }
 }
 public sealed class UCPlayerKeys : IDisposable
 {

@@ -34,6 +34,7 @@ public class LoadCommand : AsyncCommand
                         },
                         new CommandParameter("Half")
                         {
+                            Aliases = new string[] { "1/2" },
                             IsOptional = true,
                             Description = "Loads half of the empty space in your vehicle's trunk."
                         }

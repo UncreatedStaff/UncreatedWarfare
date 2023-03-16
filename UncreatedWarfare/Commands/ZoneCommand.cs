@@ -1,12 +1,9 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
-using System;
 using System.Collections.Generic;
 using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Locations;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -26,6 +23,7 @@ public class ZeCommand : Command
             {
                 new CommandParameter("Parameter", typeof(string))
                 {
+                    Aliases = ZonePlayerComponent.EditCommands,
                     ChainDisplayCount = 2,
                     Parameters = new CommandParameter[]
                     {
@@ -90,6 +88,25 @@ public class ZoneCommand : Command
                     Parameters = new CommandParameter[]
                     {
                         new CommandParameter("Zone", typeof(Zone))
+                    }
+                },
+                new CommandParameter("Edit")
+                {
+                    Description = "Modify a zone.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Parameter", typeof(string))
+                        {
+                            Aliases = ZonePlayerComponent.EditCommands,
+                            ChainDisplayCount = 2,
+                            Parameters = new CommandParameter[]
+                            {
+                                new CommandParameter("Value", typeof(object))
+                                {
+                                    IsRemainder = true
+                                }
+                            }
+                        }
                     }
                 },
                 new CommandParameter("Create")

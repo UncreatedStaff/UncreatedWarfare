@@ -47,6 +47,7 @@ public static class EventDispatcher
 
     public static event EventDelegate<ItemDropRequested> ItemDropRequested;
     public static event EventDelegate<ItemDropped> ItemDropped;
+    public static event EventDelegate<InventoryItemRemoved> InventoryItemRemoved;
     public static event EventDelegate<ItemPickedUp> ItemPickedUp;
     public static event EventDelegate<CraftRequested> CraftRequested;
     public static event EventDelegate<ItemMoveRequested> ItemMoveRequested;
@@ -929,6 +930,18 @@ public static class EventDispatcher
                 if (!args.CanContinue) break;
                 TryInvoke(inv, args, nameof(ItemDropped));
             }
+        }
+    }
+
+    public static void InvokeOnItemRemoved(UCPlayer player, byte page, byte index, ItemJar jar)
+    {
+        if (InventoryItemRemoved == null) return;
+
+        InventoryItemRemoved args = new InventoryItemRemoved(player, (Page)page, jar.x, jar.y, index, jar);
+        foreach (EventDelegate<InventoryItemRemoved> inv in InventoryItemRemoved.GetInvocationList().Cast<EventDelegate<InventoryItemRemoved>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(InventoryItemRemoved));
         }
     }
 }
