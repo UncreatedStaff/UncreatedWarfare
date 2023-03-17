@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -311,6 +312,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
         {
             if (this is ITickets tickets)
                 tickets.TicketManager.ShowUI(player);
+            if (!UCWarfare.Config.DisableDailyQuests)
+                DailyQuests.TrackDailyQuest(player);
             InitUI(player);
         }
 

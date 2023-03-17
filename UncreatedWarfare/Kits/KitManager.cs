@@ -725,7 +725,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                         };
                     if (inv != null)
                     {
-                        inv.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), asset.GUID, 100, state, !hasPlayedEffect);
+                        inv.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), asset.GUID, 100, state, !hasPlayedEffect);
                         hasPlayedEffect = true;
                     }
                 }
@@ -749,7 +749,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                         ClothingType.Mask => Data.SendWearMask,
                         ClothingType.Glasses => Data.SendWearGlasses,
                         _ => null
-                    })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 }
             }
             Items[] p = player.Player.inventory.items;
@@ -888,6 +888,12 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 }
             }
         }
+
+        // equip primary or secondary
+        if (player.Player.inventory.items[(int)Page.Primary].getItemCount() > 0)
+            player.Player.equipment.equip((byte)Page.Primary, 0, 0);
+        else if (player.Player.inventory.items[(int)Page.Secondary].getItemCount() > 0)
+            player.Player.equipment.equip((byte)Page.Secondary, 0, 0);
     }
     private static void ReportItemError(Kit kit, IKitItem item, ItemAsset? asset)
     {

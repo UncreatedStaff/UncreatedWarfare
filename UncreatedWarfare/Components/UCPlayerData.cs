@@ -75,19 +75,21 @@ public class UCPlayerData : MonoBehaviour
     #region TOASTS
     public struct ToastMessageInfo
     {
-        public static readonly ToastMessageInfo Nil = new ToastMessageInfo(0, Guid.Empty, 0, 0f);
+        public static readonly ToastMessageInfo Nil = new ToastMessageInfo(0, Guid.Empty, 0, 0f, null);
         public byte Channel;
         public ushort Id;
         public ToastMessageSeverity Type;
         public Guid Guid;
         public float Time;
-        public ToastMessageInfo(ToastMessageSeverity type, Guid guid, byte channel, float time)
+        public string? TextContainerName;
+        public ToastMessageInfo(ToastMessageSeverity type, Guid guid, byte channel, float time, string? text1container = null)
         {
             this.Type = type;
             this.Channel = channel;
             this.Guid = guid;
             this.Time = time;
             this.Id = 0;
+            TextContainerName = text1container;
             ReloadAsset();
         }
         public void ReloadAsset()
@@ -119,14 +121,14 @@ public class UCPlayerData : MonoBehaviour
     }
     public static readonly ToastMessageInfo[] Toasts =
     {
-        new ToastMessageInfo(ToastMessageSeverity.Info,        Gamemode.Config.UIToastInfo.ValidReference(out Guid guid) ? guid : Guid.Empty, 0, 12f), // info
-        new ToastMessageInfo(ToastMessageSeverity.Warning,     Gamemode.Config.UIToastWarning.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),   // warning
-        new ToastMessageInfo(ToastMessageSeverity.Severe,      Gamemode.Config.UIToastSevere.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),    // error
-        new ToastMessageInfo(ToastMessageSeverity.Mini,        Gamemode.Config.UIToastXP.ValidReference(out guid) ? guid : Guid.Empty, 1, 1.58f),      // xp
-        new ToastMessageInfo(ToastMessageSeverity.Medium,      Gamemode.Config.UIToastMedium.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),   // medium
-        new ToastMessageInfo(ToastMessageSeverity.Big,         Gamemode.Config.UIToastLarge.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),    // big
-        new ToastMessageInfo(ToastMessageSeverity.Progress,    Gamemode.Config.UIToastProgress.ValidReference(out guid) ? guid : Guid.Empty, 4, 1.6f), // progress
-        new ToastMessageInfo(ToastMessageSeverity.Tip,         Gamemode.Config.UIToastTip.ValidReference(out guid) ? guid : Guid.Empty, 1, 4f),        // tip
+        new ToastMessageInfo(ToastMessageSeverity.Info,        Gamemode.Config.UIToastInfo.ValidReference(out Guid guid) ? guid : Guid.Empty, 0, 12f),  // info
+        new ToastMessageInfo(ToastMessageSeverity.Warning,     Gamemode.Config.UIToastWarning.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),    // warning
+        new ToastMessageInfo(ToastMessageSeverity.Severe,      Gamemode.Config.UIToastSevere.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),     // error
+        new ToastMessageInfo(ToastMessageSeverity.Mini,        Gamemode.Config.UIToastXP.ValidReference(out guid) ? guid : Guid.Empty, 1, 1.58f),       // xp
+        new ToastMessageInfo(ToastMessageSeverity.Medium,      Gamemode.Config.UIToastMedium.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),    // medium
+        new ToastMessageInfo(ToastMessageSeverity.Big,         Gamemode.Config.UIToastLarge.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),     // big
+        new ToastMessageInfo(ToastMessageSeverity.Progress,    Gamemode.Config.UIToastProgress.ValidReference(out guid) ? guid : Guid.Empty, 4, 1.6f),  // progress
+        new ToastMessageInfo(ToastMessageSeverity.Tip,         Gamemode.Config.UIToastTip.ValidReference(out guid) ? guid : Guid.Empty, 1, 4f, "Text"),  // tip
     };
     public struct ToastChannel
     {
@@ -202,6 +204,11 @@ public class UCPlayerData : MonoBehaviour
     private void SendToastMessage(ToastMessage message, ToastMessageInfo info)
     {
         EffectManager.sendUIEffect(info.Id, unchecked((short)info.Id), Player.channel.owner.transportConnection, true, message.Message1 ?? "", message.Message2 ?? "", message.Message3 ?? "");
+
+        if (message.ResendText && !string.IsNullOrEmpty(info.TextContainerName))
+        {
+            EffectManager.sendUIEffectText(unchecked((short)info.Id), Player.channel.owner.transportConnection, true, info.TextContainerName, message.Message1 ?? message.Message2 ?? message.Message3);
+        }
         Channels[info.Channel].SetMessage(info, message);
         for (int i = _pendingToastMessages.Count - 1; i >= 0; i--)
         {

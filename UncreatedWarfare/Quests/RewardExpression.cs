@@ -37,7 +37,15 @@ public class RewardExpression
         rtnType = (Attribute.GetCustomAttribute(rtnType, typeof(QuestRewardAttribute)) as QuestRewardAttribute)?.ReturnType!;
 
         if (rtnType == null || !rtnType.IsPrimitive || rtnType == typeof(char) || rtnType == typeof(bool))
+        {
+            if (rtnType == typeof(string))
+            {
+                _method = _ => _expression;
+                _expression2 = _expression;
+                return;
+            }
             throw new ArgumentException((rtnType?.Name ?? "<unknown-type>") + " is not a valid return type for RewardExpressions");
+        }
 
         if (!QuestManager.QuestTypes.TryGetValue(questType, out Type? questStateType))
             throw new ArgumentException("Invalid quest type: \"" + type + "\"");

@@ -7,7 +7,6 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Insurgency;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
@@ -21,7 +20,7 @@ public static class IconManager
     }
     public static void OnLevelLoaded()
     {
-        foreach (BarricadeDrop barricade in UCBarricadeManager.AllBarricades)
+        foreach (BarricadeDrop barricade in UCBarricadeManager.NonPlantedBarricades)
             OnBarricadePlaced(barricade);
     }
     public static void OnBarricadePlaced(BarricadeDrop drop, bool isFOBRadio = false)
@@ -98,9 +97,12 @@ public static class IconManager
         IconRenderer icon = transform.gameObject.AddComponent<IconRenderer>();
         icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team);
 
-        icon.SpawnNewIcon(
-            (icon.Team == 0 ? PlayerManager.OnlinePlayers : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
-            .Select(x => x.Connection));
+        PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(
+            (icon.Team == 0
+                ? PlayerManager.OnlinePlayers
+                : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
+            .Select(x => x.Connection), Provider.clients.Count);
+        icon.SpawnNewIcon(list);
 
         Icons.Add(icon);
     }
@@ -124,9 +126,12 @@ public static class IconManager
         {
             if (icon.EffectGUID == effectGUID)
             {
-                icon.SpawnNewIcon(
-                    (icon.Team == 0 ? PlayerManager.OnlinePlayers : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
-                    .Select(x => x.Connection));
+                PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(
+                    (icon.Team == 0
+                        ? PlayerManager.OnlinePlayers
+                        : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
+                    .Select(x => x.Connection), Provider.clients.Count);
+                icon.SpawnNewIcon(list);
             }
         }
     }
@@ -165,7 +170,7 @@ public class IconRenderer : MonoBehaviour
             return;
         F.TriggerEffectReliable(Effect, player, Point);
     }
-    public void SpawnNewIcon(IEnumerable<ITransportConnection> players)
+    public void SpawnNewIcon(PooledTransportConnectionList players)
     {
         if (Effect == null)
             return;

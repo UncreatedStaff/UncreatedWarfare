@@ -276,12 +276,16 @@ public class VehicleComponent : MonoBehaviour
     private int _flaresLeft;
     public void ReloadCountermeasures()
     {
-        if (Data.Item.Type == VehicleType.AttackHeli)
-            _flaresLeft = STARTING_FLARES_ATTACKHELI;
-        else if (Data.Item.Type == VehicleType.TransportAir)
-            _flaresLeft = STARTING_FLARES_TRANSHELI;
-        else if (Data.Item.Type == VehicleType.Jet)
-            _flaresLeft = STARTING_FLARES_JET;
+        if (Data?.Item is { Type: var type })
+        {
+            _flaresLeft = type switch
+            {
+                VehicleType.AttackHeli => STARTING_FLARES_ATTACKHELI,
+                VehicleType.TransportAir => STARTING_FLARES_TRANSHELI,
+                VehicleType.Jet => STARTING_FLARES_JET,
+                _ => _flaresLeft
+            };
+        }
 
         UpdateHUDFlares();
     }

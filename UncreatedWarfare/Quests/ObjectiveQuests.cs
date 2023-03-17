@@ -25,6 +25,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
     }
     public struct State : IQuestState<Tracker, CaptureObjectivesQuest>
     {
+        [RewardField("a")]
         public IDynamicValue<int>.IChoice ObjectiveCount;
         public IDynamicValue<int>.IChoice FlagValue => ObjectiveCount;
         public bool IsEligable(UCPlayer player) => true;
@@ -114,8 +115,10 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
     }
     public struct State : IQuestState<Tracker, XPInGamemodeQuest>
     {
+        [RewardField("xp")]
         public IDynamicValue<int>.IChoice XPCount;
         internal DynamicEnumValue<GamemodeType>.Choice Gamemode;
+        [RewardField("games")]
         public IDynamicValue<int>.IChoice GameCount;
         public IDynamicValue<int>.IChoice FlagValue => GameCount;
         public bool IsEligable(UCPlayer player) => true;
@@ -228,6 +231,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
     }
     public struct State : IQuestState<Tracker, RallyUseQuest>
     {
+        [RewardField("a")]
         public IDynamicValue<int>.IChoice UseCount;
         public IDynamicValue<int>.IChoice FlagValue => UseCount;
         public void Init(RallyUseQuest data)

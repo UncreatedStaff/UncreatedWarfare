@@ -91,6 +91,9 @@ internal static class EventPatches
 
         if (!PatchUtil.PatchMethod(typeof(InteractablePower).GetMethod("CalculateIsConnectedToPower", BindingFlags.NonPublic | BindingFlags.Instance), prefix: PatchUtil.GetMethodInfo(OnCalculatingPower)))
             Data.UseElectricalGrid = false;
+
+        PatchUtil.PatchMethod(typeof(ObjectManager).GetMethod(nameof(ObjectManager.ReceiveToggleObjectBinaryStateRequest), BindingFlags.Public | BindingFlags.Static), ref _fail,
+            prefix: PatchUtil.GetMethodInfo(OnReceiveToggleObjectBinaryStateRequest));
     }
     [OperationTest("Event Patches")]
     [Conditional("DEBUG")]
@@ -265,7 +268,7 @@ internal static class EventPatches
 
                     Data.ServerSpawnLegacyImpact?
                         .Invoke(__instance.transform.position + Vector3.up, Vector3.down, "Flesh", null,
-                            Provider.EnumerateClients_WithinSphere(__instance.transform.position, EffectManager.SMALL));
+                            Provider.GatherRemoteClientConnectionsWithinSphere(__instance.transform.position, EffectManager.SMALL));
 
                     BarricadeManager.damage(barricade.model, 5f, 1f, false, triggerer.CSteamID, EDamageOrigin.Trap_Wear_And_Tear);
                     if (data != null)
@@ -287,7 +290,7 @@ internal static class EventPatches
 
                 Data.ServerSpawnLegacyImpact?
                     .Invoke(__instance.transform.position + Vector3.up, Vector3.down, zombie.isRadioactive ? "Alien" : "Flesh", null,
-                        Provider.EnumerateClients_WithinSphere(__instance.transform.position, EffectManager.SMALL));
+                        Provider.GatherRemoteClientConnectionsWithinSphere(__instance.transform.position, EffectManager.SMALL));
 
                 BarricadeManager.damage(barricade.model, zombie.isHyper ? 10f : 5f, 1f, false, CSteamID.Nil, EDamageOrigin.Trap_Wear_And_Tear);
             }
@@ -301,7 +304,7 @@ internal static class EventPatches
 
                 Data.ServerSpawnLegacyImpact?
                     .Invoke(__instance.transform.position + Vector3.up, Vector3.down, "Flesh", null,
-                        Provider.EnumerateClients_WithinSphere(__instance.transform.position, EffectManager.SMALL));
+                        Provider.GatherRemoteClientConnectionsWithinSphere(__instance.transform.position, EffectManager.SMALL));
 
                 BarricadeManager.damage(barricade.model, 5f, 1f, false, CSteamID.Nil, EDamageOrigin.Trap_Wear_And_Tear);
             }
@@ -425,7 +428,7 @@ internal static class EventPatches
         EffectAsset effect = __instance.asset.FindExplosionEffectAsset();
         if (effect != null)
         {
-            F.TriggerEffectReliable(effect, Provider.EnumerateClients_Remote(), __instance.transform.position);
+            F.TriggerEffectReliable(effect, Provider.GatherRemoteClientConnections(), __instance.transform.position);
         }
         if (data != null)
             data.ExplodingVehicle = null;
@@ -510,6 +513,7 @@ internal static class EventPatches
             __result = false;
             return true;
         }
+        L.LogDebug("[GRID] Caluclating power for: " + __instance.name + ". mode: " + fg.ElectricalGridBehavior + ".");
         if (fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.AllEnabled)
         {
             __result = true;
@@ -518,17 +522,30 @@ internal static class EventPatches
         if (__instance is InteractableObject obj)
         {
             __result = fg.IsPowerObjectEnabled(obj);
+            L.LogDebug(" Result (obj): " + __result);
             return false;
         }
 
-        BarricadeDrop? drop = BarricadeManager.FindBarricadeByRootTransform(__instance.transform);
-        if (drop != null)
-        {
-            __result = fg.IsBarricadeObjectEnabled(drop);
-            return false;
-        }
+        __result = fg.IsInteractableEnabled(__instance);
+        L.LogDebug(" Result (interactable): " + __result);
+        return false;
 
         return true;
+    }
+    private static bool OnReceiveToggleObjectBinaryStateRequest(in ServerInvocationContext context, byte x, byte y, ushort index, bool isUsed)
+    {
+        if (!Regions.checkSafe(x, y) || LevelObjects.objects == null)
+            return false;
+        Player player = context.GetPlayer();
+        List<LevelObject> levelObjects = LevelObjects.objects[x, y];
+        if (player == null || player.life.isDead || index >= levelObjects.Count)
+            return false;
+        LevelObject obj = levelObjects[index];
+        L.LogDebug($"Received request from {player} for obj {obj.asset.FriendlyName} @ {obj.transform.position} to state: {isUsed}.");
+        if (Data.Gamemode is not FlagGamemode fg || fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.Disabled)
+            return true;
+
+        return obj.interactable != null && fg.IsPowerObjectEnabled(obj.interactable);
     }
     private static readonly MethodInfo? MthdRemoveItem = typeof(PlayerInventory).GetMethod(nameof(PlayerInventory.removeItem));
     private static readonly MethodInfo? MthdAddItem = typeof(SDG.Unturned.Items).GetMethod(nameof(SDG.Unturned.Items.addItem));

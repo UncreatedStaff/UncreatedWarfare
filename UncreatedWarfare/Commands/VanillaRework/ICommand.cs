@@ -105,7 +105,7 @@ public class ICommand : Command
             itemName = ctx.Get(0)!;
             asset = UCAssetManager.FindItemAsset(itemName, out similarNamesCount, true);
             if (asset == null)
-                throw ctx.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
+                throw ctx.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'", "8f9494");
         }
         else // there are at least 2 arguments
         {
@@ -163,7 +163,7 @@ public class ICommand : Command
                 }
                 asset = UCAssetManager.FindItemAsset(itemName, out similarNamesCount, true);
                 if (asset == null)
-                    throw ctx.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
+                    throw ctx.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'", "8f9494");
             }
             else
             {
@@ -182,12 +182,14 @@ public class ICommand : Command
                 }
                 asset = UCAssetManager.FindItemAsset(itemName.Trim(), out similarNamesCount, true);
                 if (asset == null)
-                    throw ctx.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
+                    throw ctx.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'", "8f9494");
             }
         }
+        if (asset == null)
+            throw ctx.ReplyString($"No item found.", "8f9494");
 
         foundItem:
-        Item itemFromID = new Item(asset.id, itemAmt is <= 0 or > byte.MaxValue ? asset.amount : (byte)itemAmt, 100, itemSt ?? asset.getState(true));
+        Item itemFromID = new Item(asset!.id, itemAmt is <= 0 or > byte.MaxValue ? asset.amount : (byte)itemAmt, 100, itemSt ?? asset.getState(true));
         for (int i = 0; i < amount; i++)
         {
             if (!ctx.Caller.Player.inventory.tryAddItem(itemFromID, true))

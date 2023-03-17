@@ -22,7 +22,9 @@ public sealed class KitsCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
+#if !DEBUG
         throw ctx.SendNotImplemented();
+#endif
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         
         KitManager.MenuUI.OpenUI(ctx.Caller);

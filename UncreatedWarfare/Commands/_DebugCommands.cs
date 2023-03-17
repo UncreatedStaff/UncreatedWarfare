@@ -1464,8 +1464,16 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.STAFF);
         if (ctx.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer))
         {
+            if (s64 == 76561198267927009ul)
+            {
+                s64 = ctx.CallerID;
+                onlinePlayer = ctx.Caller;
+            }
             if (!UCWarfare.Config.Nerds.Contains(s64))
+            {
                 UCWarfare.Config.Nerds.Add(s64);
+                UCWarfare.SaveSystemConfig();
+            }
             ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} is now a nerd.");
         }
         else ctx.SendCorrectUsage("/test nerd <player>");
@@ -1475,8 +1483,12 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.STAFF);
         if (ctx.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer))
         {
-            UCWarfare.Config.Nerds.RemoveAll(x => x == s64);
-            ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} is not a nerd.");
+            if (UCWarfare.Config.Nerds.RemoveAll(x => x == s64) > 0)
+            {
+                UCWarfare.SaveSystemConfig();
+                ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} is not a nerd.");
+            }
+            else ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} was not a nerd.");
         }
         else ctx.SendCorrectUsage("/test unnerd <player>");
     }

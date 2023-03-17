@@ -57,13 +57,13 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
 
 
 
-        KitManager.OnKitChanged += OnKitChagned;
+        KitManager.OnKitChanged += OnKitChanged;
         EventDispatcher.GroupChanged += OnGroupChanged;
     }
     public override void Unload()
     {
         EventDispatcher.GroupChanged -= OnGroupChanged;
-        KitManager.OnKitChanged -= OnKitChagned;
+        KitManager.OnKitChanged -= OnKitChanged;
         if (ActiveTraits != null)
         {
             for (int j = ActiveTraits.Count - 1; j >= 0; --j)
@@ -127,7 +127,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         if (e.NewGroup is 1 or 2)
             BuffUI.SendBuffs(e.Player);
     }
-    private void OnKitChagned(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>? oldKit)
+    private static void OnKitChanged(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>? oldKit)
     {
         Signs.UpdateTraitSigns(player, null);
         Kit? kit2 = kit?.Item;

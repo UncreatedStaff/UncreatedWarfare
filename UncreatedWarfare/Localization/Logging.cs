@@ -11,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
@@ -28,7 +27,6 @@ public static class L
     private const char ConsoleEscapeCharacter = '\u001B';
     private static readonly byte[] NewLineBytes = System.Text.Encoding.UTF8.GetBytes(Environment.NewLine);
     private static bool _init;
-    private static bool _bufferBadLogs;
     private static int _indention;
     private static FileStream _log;
     private static readonly List<LogMessage> BadLogBuffer = new List<LogMessage>(0);

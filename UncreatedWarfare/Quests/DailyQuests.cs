@@ -171,6 +171,12 @@ public static class DailyQuests
             Chat.Broadcast(T.DailyQuestsOneHourRemaining);
         }
     }
+    public static void TrackDailyQuest(UCPlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (Assets.find(_quests[_index].Guid) is QuestAsset qa)
+            player.ServerTrackQuest(qa);
+    }
     public static void CreateNewModContent()
     {
         if (QuestManager.Quests.Count <= DailyQuest.DAILY_QUEST_CONDITION_LENGTH)
@@ -275,8 +281,7 @@ public static class DailyQuests
     }
     private static void OnPlayerJoinedTeam(UCPlayer player)
     {
-        if (Assets.find(_quests[_index].Guid) is QuestAsset qa)
-            player.ServerTrackQuest(qa);
+        TrackDailyQuest(player);
     }
     /// <summary>Should run on player connected.</summary>
     public static void RegisterDailyTrackers(UCPlayer player)

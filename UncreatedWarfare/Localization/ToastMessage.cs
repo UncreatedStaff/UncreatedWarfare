@@ -16,24 +16,26 @@ public readonly struct ToastMessage
     public const float BigToastTime = 5.5f;
     public readonly uint InstanceID;
     private static uint _lastInstId;
+    public readonly bool ResendText = false;
     public static bool operator ==(ToastMessage left, ToastMessage right) => left.InstanceID == right.InstanceID;
     public static bool operator !=(ToastMessage left, ToastMessage right) => !(left == right);
     public override int GetHashCode() => _time.GetHashCode() / 2 + Message1.GetHashCode() / 2;
     public override bool Equals(object obj) => obj is ToastMessage msg && this == msg;
-    public ToastMessage(string message1, ToastMessageSeverity severity)
+    public ToastMessage(string message1, ToastMessageSeverity severity, bool resend = false)
     {
         this._time = DateTime.UtcNow.Ticks;
         this.Message1 = message1;
         this.Message2 = null;
         this.Message3 = null;
         this.Severity = severity;
+        ResendText = resend;
         InstanceID = ++_lastInstId;
     }
-    public ToastMessage(string message1, string message2, ToastMessageSeverity severity) : this(message1, severity)
+    public ToastMessage(string message1, string message2, ToastMessageSeverity severity, bool resend = false) : this(message1, severity, resend)
     {
         this.Message2 = message2;
     }
-    public ToastMessage(string message1, string message2, string message3, ToastMessageSeverity severity) : this(message1, message2, severity)
+    public ToastMessage(string message1, string message2, string message3, ToastMessageSeverity severity, bool resend = false) : this(message1, message2, severity, resend)
     {
         this.Message3 = message3;
     }
