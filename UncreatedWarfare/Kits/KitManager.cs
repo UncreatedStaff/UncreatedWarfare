@@ -2264,10 +2264,8 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
     {
         UCPlayer pl = e.Player;
         if (e.Item != null)
-        {
-            // L.LogDebug($"Added drop transformation: {e.OldPage}, ({e.OldX}, {e.OldY}).");
             pl.ItemDropTransformations.Add(new ItemDropTransformation(e.OldPage, e.OldX, e.OldY, e.Item));
-        }
+        
         if (e.Player.HotkeyBindings is not { Count: > 0 })
             return;
         CancellationToken tkn = UCWarfare.UnloadCancel;
@@ -2276,6 +2274,8 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         tkn.CombineIfNeeded(e.Player.DisconnectToken);
         if (e.Item == null)
             return;
+
+        // move hotkey to a different item of the same type
         UCWarfare.RunTask(async token =>
         {
             IItemJar? jar2 = await GetItemFromKit(e.Player, e.OldX, e.OldY, e.Item, e.OldPage, token).ConfigureAwait(false);
@@ -2306,7 +2306,6 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                             return;
                         int hotkeyIndex = KitEx.GetHotkeyIndex(b.Slot);
                         if (hotkeyIndex < 0) return;
-                        L.LogDebug($"Found old hotkey for removed item: {b.Item.Page}, ({b.Item.X}, {b.Item.Y})");
                         PlayerInventory inv = e.Player.Player.inventory;
                         // find new item to bind the item to
                         for (int p = PlayerInventory.SLOTS; p < PlayerInventory.STORAGE; ++p)
@@ -2321,7 +2320,6 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                                 if (jar.GetAsset() is { } asset2 && asset2.GUID == asset.GUID && KitEx.CanBindHotkeyTo(asset2, (Page)p))
                                 {
                                     e.Player.Player.equipment.ServerBindItemHotkey((byte)hotkeyIndex, asset, (byte)p, jar.x, jar.y);
-                                    L.LogDebug($"Found new hotkey to new item: {(Page)p}, ({jar.x}, {jar.y})");
                                     return;
                                 }
                             }
@@ -2355,7 +2353,6 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                         if (t.Item == e.Jar.item)
                         {
                             pl.ItemTransformations[j] = new ItemTransformation(t.OldPage, e.Page, t.OldX, t.OldY, e.X, e.Y, t.Item);
-                            // L.LogDebug($"Existing transformation updated (picked up): {t.OldPage} -> {e.Page}, ({t.OldX} -> {e.X}, {t.OldY} -> {e.Y}).");
                             origX = t.OldX;
                             origY = t.OldY;
                             origPage = t.OldPage;
@@ -2363,7 +2360,6 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                         }
                     }
 
-                    // L.LogDebug($"Added new transformation (picked up): {d.OldPage} -> {e.Page}, ({d.OldX} -> {e.X}, {d.OldY} -> {e.Y}).");
                     origX = d.OldX;
                     origY = d.OldY;
                     origPage = d.OldPage;
@@ -2449,15 +2445,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 if (t.Item == e.Jar.item)
                 {
                     pl.ItemTransformations[i] = new ItemTransformation(t.OldPage, e.NewPage, t.OldX, t.OldY, e.NewX, e.NewY, t.Item);
-                    // L.LogDebug($"Existing transformation updated: {t.OldPage} -> {e.NewPage}, (  {t.OldX} -> {e.NewX}, {t.OldY} -> {e.NewY}).");
                     origX = t.OldX;
                     origY = t.OldY;
                     origPage = t.OldPage;
                     goto swap;
                 }
             }
-
-            // L.LogDebug($"Added new transformation: {e.OldPage} -> {e.NewPage}, ({e.OldX} -> {e.NewX}, {e.OldY} -> {e.NewY}).");
+            
             pl.ItemTransformations.Add(new ItemTransformation(e.OldPage, e.NewPage, e.OldX, e.OldY, e.NewX, e.NewY, e.Jar.item));
             origX = e.OldX;
             origY = e.OldY;
@@ -2473,15 +2467,13 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 if (t.Item == e.SwappedJar.item)
                 {
                     pl.ItemTransformations[i] = new ItemTransformation(t.OldPage, e.OldPage, t.OldX, t.OldY, e.OldX, e.OldY, t.Item);
-                    // L.LogDebug($"Existing swap transformation updated: {t.OldPage} -> {e.OldPage}, ({t.OldX} -> {e.OldX}, {t.OldY} -> {e.OldY}).");
                     swapOrigX = t.OldX;
                     swapOrigY = t.OldY;
                     swapOrigPage = t.OldPage;
                     goto rebind;
                 }
             }
-
-            // L.LogDebug($"Added new swap transformation: {e.NewPage} -> {e.OldPage}, ({e.NewX} -> {e.OldX}, {e.NewY} -> {e.OldY}).");
+            
             pl.ItemTransformations.Add(new ItemTransformation(e.NewPage, e.OldPage, e.NewX, e.NewY, e.OldX, e.OldY, e.SwappedJar.item));
             swapOrigX = e.NewX;
             swapOrigY = e.NewY;
