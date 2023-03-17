@@ -565,7 +565,7 @@ public sealed class KitCommand : AsyncCommand
                 if (proxy?.Item != null)
                 {
                     Class @class = proxy.Item.Class;
-                    await manager.GiveKit(ctx.Caller, proxy, token).ConfigureAwait(false);
+                    await manager.GiveKit(ctx.Caller, proxy, true, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
                     ctx.LogAction(ActionLogType.GiveKit, kitName);
                     ctx.Reply(T.RequestSignGiven, @class);

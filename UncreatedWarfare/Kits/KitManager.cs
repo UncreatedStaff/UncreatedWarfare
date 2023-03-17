@@ -23,6 +23,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
@@ -255,7 +256,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             return;
         }
 
-        await GiveKit(player, kit, token).ConfigureAwait(false);
+        await GiveKit(player, kit, true, token).ConfigureAwait(false);
     }
     public async Task<SqlItem<Kit>?> TryGiveUnarmedKit(UCPlayer player, CancellationToken token = default)
     {
@@ -265,12 +266,12 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         SqlItem<Kit>? kit = await GetDefaultKit(player.GetTeam(), token).ConfigureAwait(false);
         if (kit?.Item != null)
         {
-            await GiveKit(player, kit, token).ConfigureAwait(false);
+            await GiveKit(player, kit, true, token).ConfigureAwait(false);
             return kit;
         }
         return null;
     }
-    public async Task<SqlItem<Kit>?> TryGiveRiflemanKit(UCPlayer player, CancellationToken token = default)
+    public async Task<SqlItem<Kit>?> TryGiveRiflemanKit(UCPlayer player, bool tip = true, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -302,7 +303,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         {
             rifleman = await GetDefaultKit(t2, token).ConfigureAwait(false);
         }
-        await GiveKit(player, rifleman, token).ConfigureAwait(false);
+        await GiveKit(player, rifleman, tip, token).ConfigureAwait(false);
         return rifleman?.Item == null ? null : rifleman;
     }
     private async Task<SqlItem<Kit>?> GetDefaultKit(ulong team, CancellationToken token = default)
@@ -312,6 +313,27 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         if (kit?.Item == null)
             kit = await FindKit(TeamManager.DefaultKit, token).ConfigureAwait(false);
         return kit;
+    }
+    public async Task<SqlItem<Kit>?> GetRecommendedSquadleaderKit(ulong team, CancellationToken token = default)
+    {
+        await WriteWaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            for (int i = 0; i < Items.Count; ++i)
+            {
+                if (Items[i].Item is { } kit)
+                {
+                    if (kit.Class == Class.Squadleader && kit.IsPublicKit && kit.IsRequestable(team))
+                        return Items[i];
+                }
+            }
+        }
+        finally
+        {
+            WriteRelease();
+        }
+
+        return null;
     }
     public static Branch GetDefaultBranch(Class @class)
         => @class switch
@@ -418,7 +440,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         }
     }
     /// <remarks>Thread Safe</remarks>
-    public async Task GiveKit(UCPlayer player, SqlItem<Kit>? kit, CancellationToken token = default)
+    public async Task GiveKit(UCPlayer player, SqlItem<Kit>? kit, bool tip = true, CancellationToken token = default)
     {
         if (player == null) throw new ArgumentNullException(nameof(player));
         SqlItem<Kit>? oldKit = null;
@@ -458,7 +480,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 {
                     if (player.HasKit)
                         oldKit = player.ActiveKit;
-                    GrantKit(player, kit);
+                    GrantKit(player, kit, tip);
                     if (oldKit?.Item != null)
                         UpdateSigns(oldKit);
                 }
@@ -479,7 +501,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         if (OnKitChanged != null)
             UCWarfare.RunOnMainThread(() => OnKitChanged?.Invoke(player, kit, oldKit), default);
     }
-    internal async Task GiveKitNoLock(UCPlayer player, SqlItem<Kit>? kit, CancellationToken token = default, bool psLock = true)
+    internal async Task GiveKitNoLock(UCPlayer player, SqlItem<Kit>? kit, bool tip = true, CancellationToken token = default, bool psLock = true)
     {
         if (player == null) throw new ArgumentNullException(nameof(player));
         SqlItem<Kit>? oldKit = null;
@@ -513,7 +535,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             {
                 if (player.HasKit)
                     oldKit = player.ActiveKit;
-                GrantKit(player, kit);
+                GrantKit(player, kit, tip);
                 if (oldKit?.Item != null)
                     UpdateSigns(oldKit);
             }
@@ -545,7 +567,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             WriteWait();
             try
             {
-                GrantKit(player, null);
+                GrantKit(player, null, false);
                 if (oldKit?.Item != null)
                     UpdateSigns(oldKit);
             }
@@ -562,7 +584,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 player.PurchaseSync.Release();
         }
     }
-    private static void GrantKit(UCPlayer player, SqlItem<Kit>? kit)
+    private static void GrantKit(UCPlayer player, SqlItem<Kit>? kit, bool tip = true)
     {
         ThreadUtil.assertIsGameThread();
 #if DEBUG
@@ -575,7 +597,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         if (k != null)
         {
             UpdateSigns(k);
-            GiveKitToPlayerInventory(player, k, true, false);
+            GiveKitToPlayerInventory(player, k, true, false, tip);
             if (player.HotkeyBindings != null)
             {
                 foreach (HotkeyBinding binding in player.HotkeyBindings)
@@ -677,7 +699,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             kit.Release();
         }
     }
-    private static void GiveKitToPlayerInventory(UCPlayer player, Kit? kit, bool clear, bool ignoreAmmobags)
+    private static void GiveKitToPlayerInventory(UCPlayer player, Kit? kit, bool clear, bool ignoreAmmobags, bool tip = true)
     {
         if (player == null) throw new ArgumentNullException(nameof(player));
 #if DEBUG
@@ -889,6 +911,14 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             }
         }
 
+        if (kit.Class != Class.Unarmed && tip)
+        {
+            if (player.IsSquadLeader())
+                Tips.TryGiveTip(player, 1200, T.TipActionMenuSl);
+            else
+                Tips.TryGiveTip(player, 3600, T.TipActionMenu);
+        }
+
         // equip primary or secondary
         if (player.Player.inventory.items[(int)Page.Primary].getItemCount() > 0)
             player.Player.equipment.equip((byte)Page.Primary, 0, 0);
@@ -1076,11 +1106,11 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
             {
                 ulong team = pl.GetTeam();
                 if (team == 1 && (t1def ??= await GetDefaultKit(1ul, token))?.Item != null)
-                    await GiveKit(pl, t1def == kit ? null : t1def, token);
+                    await GiveKit(pl, t1def == kit ? null : t1def, false, token);
                 else if (team == 2 && (t2def ??= await GetDefaultKit(2ul, token))?.Item != null)
-                    await GiveKit(pl, t2def == kit ? null : t2def, token);
+                    await GiveKit(pl, t2def == kit ? null : t2def, false, token);
                 else
-                    await GiveKit(pl, null, token);
+                    await GiveKit(pl, null, false, token);
             }
         }
     }
@@ -1090,9 +1120,9 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         ulong team = player.GetTeam();
         SqlItem<Kit>? dkit = await GetDefaultKit(team, token);
         if (dkit?.Item != null)
-            await GiveKit(player, dkit, token);
+            await GiveKit(player, dkit, true, token);
         else
-            await GiveKit(player, null, token);
+            await GiveKit(player, null, false, token);
     }
     /// <remarks>Thread Safe</remarks>
     public Task DequipKit(UCPlayer player, Kit kit, CancellationToken token = default)
@@ -1955,7 +1985,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         ulong team = player.GetTeam();
         Kit? kit = player.ActiveKit?.Item;
         if (kit == null || !kit.Requestable || (kit.Type != KitType.Loadout && kit.IsLimited(out _, out _, team)) || (kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out _, team)))
-            await TryGiveRiflemanKit(player, token).ConfigureAwait(false);
+            await TryGiveRiflemanKit(player, false, token).ConfigureAwait(false);
         else if (UCWarfare.Config.ModifySkillLevels)
             player.EnsureSkillsets(kit.Skillsets ?? Array.Empty<Skillset>());
     }
@@ -2148,7 +2178,7 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 }
                 if (state == 0 && pl.ActiveKit is { Item.RequiresNitro: true })
                 {
-                    UCWarfare.RunTask(TryGiveRiflemanKit, pl, Data.Gamemode.UnloadToken,
+                    UCWarfare.RunTask(TryGiveRiflemanKit, pl, true, Data.Gamemode.UnloadToken,
                         ctx: "Giving rifleman kit to " + player + " after losing nitro boost.");
                 }
             }

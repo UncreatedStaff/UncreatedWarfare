@@ -1111,15 +1111,15 @@ public static class EventFunctions
             ucplayer?.SendChat(T.MarkerNotInSquad);
             return;
         }
-        if (!isBeingPlaced)
-        {
-            ClearPlayerMarkerForSquad(ucplayer);
-            return;
-        }
-        if (ucplayer.Squad != null)
-            overrideText = ucplayer.Squad.Name.ToUpper();
-        Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
-        PlaceMarker(ucplayer, effectposition, true, false);
+        //if (!isBeingPlaced)
+        //{
+        //    ClearPlayerMarkerForSquad(ucplayer);
+        //    return;
+        //}
+        //if (ucplayer.Squad != null)
+        //    overrideText = ucplayer.Squad.Name.ToUpper();
+        //Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
+        //PlaceMarker(ucplayer, effectposition, true, false);
     }
     internal static void OnPlayerGestureRequested(Player player, EPlayerGesture gesture, ref bool allow)
     {

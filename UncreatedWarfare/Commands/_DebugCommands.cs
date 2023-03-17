@@ -1095,11 +1095,11 @@ public class DebugCommand : AsyncCommand
         ulong team = ctx.Caller.GetTeam();
         if (manager != null)
         {
-            SqlItem<Kit>? sql = await manager.FindKit(team == 1 ? "ussql1" : "mesql1", token).ConfigureAwait(false);
+            SqlItem<Kit>? sql = await manager.GetRecommendedSquadleaderKit(team, token).ConfigureAwait(false);
             if (sql?.Item == null)
                 ctx.SendUnknownError();
             else
-                await manager.GiveKit(ctx.Caller, sql, token).ConfigureAwait(false);
+                await manager.GiveKit(ctx.Caller, sql, false, token).ConfigureAwait(false);
         }
 
         if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader != ctx.Caller)

@@ -179,6 +179,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 #endif
         if (e.Transform.TryGetComponent(out BuiltBuildableComponent comp))
             UnityEngine.Object.Destroy(comp);
+
+        UCPlayer? killer = null;
+        if (e.Barricade.model.TryGetComponent(out BarricadeComponent b))
+            killer = UCPlayer.FromID(b.LastDamager);
+
         if (Gamemode.Config.BarricadeFOBBunker.ValidReference(out Guid guid) && guid == e.ServersideData.barricade.asset.GUID)
         {
             FOB.GetNearestFOB(e.ServersideData.point, EfobRadius.SHORT, e.ServersideData.group.GetTeam())?.UpdateBunker(null);
@@ -208,7 +213,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         }
         else if (e.Transform.TryGetComponent(out Cache.CacheComponent c))
         {
-            DeleteCache(c);
+            DeleteCache(c, killer);
         }
     }
     public FOB RegisterNewFOB(BarricadeDrop drop)
@@ -468,7 +473,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         SendFOBListToTeam(team);
     }
 
-    public static void DeleteCache(Cache.CacheComponent cacheComponent)
+    public static void DeleteCache(Cache.CacheComponent cacheComponent, UCPlayer? killer)
     {
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
@@ -476,10 +481,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.Is(out Insurgency ins)) return;
-
-        UCPlayer? killer = UCPlayer.FromID(cacheComponent.Cache.LastDamager);
-
-        killer = UCPlayer.FromID(cacheComponent.Cache.LastDamager);
 
         _singleton.Caches.Remove(cacheComponent.Cache);
 
@@ -575,6 +576,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             int cacheOffset = -1, index = -1;
             for (int b = 0; b < _singleton.Caches.Count; b++)
             {
+
                 Cache cache2 = _singleton.Caches[b];
                 if ((object)cache2 == cache)
                 {

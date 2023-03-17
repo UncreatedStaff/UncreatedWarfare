@@ -50,11 +50,25 @@ public abstract class TeamGamemode : Gamemode, ITeams
         ThreadUtil.assertIsGameThread();
         if (UseTeamSelector)
         {
+            L.Log("Joining players into menu...");
+            TeamSelector.JoinTeamBehavior behaviour;
+            if (TeamSelector.ShuffleTeamsNextGame)
+            {
+                L.Log("Teams are to be SHUFFLED.");
+                behaviour = TeamSelector.JoinTeamBehavior.Shuffle;
+            }
+            else
+                behaviour = TeamSelector.JoinTeamBehavior.KeepTeam;
+
+            TeamSelector.ShuffleTeamsNextGame = false;
+
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
                 if (PlayerManager.OnlinePlayers[i].TeamSelectorData is not { IsSelecting: true })
-                    TeamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
+                    TeamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i], behaviour);
             }
+
+            TeamSelector.ShuffleTeamsNextGame = false;
         }
         Task task = base.PostInit(token);
         if (!task.IsCompleted)

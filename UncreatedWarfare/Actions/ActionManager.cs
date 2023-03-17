@@ -622,7 +622,12 @@ public class ActionManager : BaseSingleton
                 Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
                 return false;
             }
-            return !F.IsInMain(caller);
+            if (F.IsInMain(caller.Player.quests.markerPosition))
+            {
+                Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                return false;
+            }
+            return true;
         };
         
         action.Start();
@@ -643,7 +648,12 @@ public class ActionManager : BaseSingleton
                 Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
                 return false;
             }
-            return !F.IsInMain(caller);
+            if (F.IsInMain(caller.Player.quests.markerPosition))
+            {
+                Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                return false;
+            }
+            return true;
         };
         action.Start();
         CloseUI(caller);
@@ -663,7 +673,12 @@ public class ActionManager : BaseSingleton
                 Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
                 return false;
             }
-            return !F.IsInMain(caller);
+            if (F.IsInMain(caller.Player.quests.markerPosition))
+            {
+                Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                return false;
+            }
+            return true;
         };
         action.Start();
         CloseUI(caller);
@@ -683,7 +698,12 @@ public class ActionManager : BaseSingleton
                 Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
                 return false;
             }
-            return !F.IsInMain(caller);
+            if (F.IsInMain(caller.Player.quests.markerPosition))
+            {
+                Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                return false;
+            }
+            return true;
         };
         action.Start();
         CloseUI(caller);

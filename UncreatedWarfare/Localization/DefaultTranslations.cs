@@ -1644,6 +1644,9 @@ internal static class T
     public static readonly Translation TipUnloadSupplies = new Translation("<#d9c69a>DROP SUPPLIES</color> onto the FOB.", TranslationFlags.UnityUI);
     public static readonly Translation<IPlayer> TipHelpBuild = new Translation<IPlayer>("<#d9c69a>{0} needs help building!", TranslationFlags.UnityUI, UCPlayer.COLOR_NICK_NAME_FORMAT);
     public static readonly Translation<VehicleType> TipLogisticsVehicleResupplied = new Translation<VehicleType>("Your <#009933>{0}</color> has been auto resupplied.", TranslationFlags.UnityUI, FormatUppercase);
+    public static readonly Translation TipActionMenu = new Translation("Press <#a5c3d9><plugin_1/></color> for field actions", TranslationFlags.UnityUI);
+    public static readonly Translation TipActionMenuSl = new Translation("Press <#a5c3d9><plugin_1/></color> for <#85c996>squad actions</color>", TranslationFlags.UnityUI);
+    public static readonly Translation TipCallMedic = new Translation("You are injured. Press <#d9a5bb><plugin_1/></color> to call for a medic.", TranslationFlags.UnityUI);
     #endregion
 
     #region Zone Command
@@ -1826,9 +1829,10 @@ internal static class T
     public static readonly Translation TeamsUIClickToJoin = new Translation("CLICK TO JOIN", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIJoined = new Translation("JOINED", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIFull = new Translation("<#bf6363>FULL", TranslationFlags.UnityUI);
-    public static readonly Translation TeamsUIConfirm = new Translation("<#888888>CONFIRM", TranslationFlags.UnityUI);
+    public static readonly Translation TeamsUIConfirm = new Translation("CONFIRM", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIBack = new Translation("BACK", TranslationFlags.UnityUI);
     public static readonly Translation TeamsUIJoining = new Translation("<#999999>JOINING...", TranslationFlags.UnityUI);
+    public static readonly Translation TeamsShuffleQueued = new Translation("Teams will be SHUFFLED next game.");
     #endregion
 
     #region Spotting

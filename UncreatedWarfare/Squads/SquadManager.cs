@@ -11,6 +11,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads.Commander;
 using Uncreated.Warfare.Squads.UI;
