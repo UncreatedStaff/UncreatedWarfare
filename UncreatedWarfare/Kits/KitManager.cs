@@ -23,6 +23,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
@@ -1105,6 +1106,11 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         if (pl != null && kit.Item != null && pl.ActiveKit == kit)
         {
             UCWarfare.RunTask(DequipKit, pl, kit.Item, ctx: "Dequiping " + kit.Item?.Id + " from " + player + ".");
+
+            if (pl.IsSquadLeader())
+                Tips.TryGiveTip(pl, 1200, T.TipActionMenuSl);
+            else
+                Tips.TryGiveTip(pl, 3600, T.TipActionMenu);
         }
     }
     private void OnKitDeleted(SqlItem<Kit> proxy, Kit kit)

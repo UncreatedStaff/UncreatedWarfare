@@ -576,6 +576,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             int cacheOffset = -1, index = -1;
             for (int b = 0; b < _singleton.Caches.Count; b++)
             {
+
                 Cache cache2 = _singleton.Caches[b];
                 if ((object)cache2 == cache)
                 {
