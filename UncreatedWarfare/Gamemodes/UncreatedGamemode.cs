@@ -132,6 +132,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     protected virtual void OnAdvanceDelays(float seconds) { }
     public override async Task LoadAsync(CancellationToken token)
     {
+        L.LogDebug("LoadAsync Top");
         _tokenSrc = new CancellationTokenSource();
         token.CombineIfNeeded(UnloadToken);
         await UCWarfare.ToUpdate(token);
@@ -150,17 +151,24 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         _hasOnReadyRan = false;
         _wasLevelLoadedOnStart = Level.isLoaded;
         _isPreLoading = true;
+        L.LogDebug("PreInitIntl:");
         InternalPreInit();
+        L.LogDebug("PreInit:");
         await PreInit(token).ConfigureAwait(false);
 
         _isPreLoading = false;
+        L.LogDebug("Load Singletons:");
         await Data.Singletons.LoadSingletonsInOrderAsync(_singletons, token).ConfigureAwait(false);
+        L.LogDebug("Done.");
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
 
+        L.LogDebug("Event Subscriptions:");
         InternalSubscribe();
         Subscribe();
+        L.LogDebug("PostInitIntl:");
         InternalPostInit();
+        L.LogDebug("PostInit:");
         Task task = PostInit(token);
         if (!task.IsCompleted)
         {
@@ -168,6 +176,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await UCWarfare.ToUpdate(token);
             ThreadUtil.assertIsGameThread();
         }
+        L.LogDebug("Set tracker:");
         Type[] interfaces = this.GetType().GetInterfaces();
         for (int i = 0; i < interfaces.Length; i++)
         {
@@ -182,12 +191,15 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
         if (_wasLevelLoadedOnStart)
         {
+            L.LogDebug("OnLevelStart:");
             await InvokeSingletonEvent<ILevelStartListener, ILevelStartListenerAsync>
                 (x => x.OnLevelReady(), x => x.OnLevelReady(token), token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
             ThreadUtil.assertIsGameThread();
+            L.LogDebug("OnReadyIntl:");
             await InternalOnReady(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
+            L.LogDebug("OnReady:");
             task = OnReady(token);
             if (!task.IsCompleted)
             {
@@ -195,6 +207,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 await UCWarfare.ToUpdate(token);
                 ThreadUtil.assertIsGameThread();
             }
+            L.LogDebug("PostOnReady:");
             await PostOnReady(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
             _hasOnReadyRan = true;
@@ -217,6 +230,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         IDisposable profiler1 = ProfilingUtils.StartTracking(Name + " Unsubscribe");
 #endif
+        L.LogDebug("Unsub:");
         Unsubscribe();
         InternalUnsubscribe();
 #if DEBUG
@@ -225,6 +239,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         IDisposable profiler2 = ProfilingUtils.StartTracking(Name + " Pre Dispose");
 #endif
+        L.LogDebug("PreDispose:");
         Task task = PreDispose(token);
         if (!task.IsCompleted)
         {
@@ -239,6 +254,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         IDisposable profiler3 = ProfilingUtils.StartTracking(Name + " Dispose");
 #endif
+        L.LogDebug("Unload singletons:");
         await Data.Singletons.UnloadSingletonsInOrderAsync(_singletons, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
@@ -248,7 +264,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         IDisposable profiler4 = ProfilingUtils.StartTracking(Name + " Post Dispose");
 #endif
+        L.LogDebug("PostDsposeIntl:");
         InternalPostDispose();
+        L.LogDebug("PostDspose:");
         task = PostDispose(token);
         if (!task.IsCompleted)
         {
@@ -263,8 +281,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         UCWarfare.I.ProcessTasks = false;
         try
         {
+            L.LogDebug("Let Tasks Unload:");
             await UCWarfare.I.LetTasksUnload(token);
             _tokenSrc.Cancel();
+            L.LogDebug("Done:");
         }
         finally
         {
@@ -429,7 +449,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (Data.Singletons.TryGetSingleton(out ZoneList list))
         {
             await list.DownloadAll(token).ConfigureAwait(false);
-            await UCWarfare.ToUpdate(token);
         }
     }
     private Task PostOnReady(CancellationToken token) => StartNextGame(token, true);
@@ -1212,6 +1231,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
     protected void InvokeSingletonEvent<T>(Action<T> action, EventState? e = null)
     {
+        if (typeof(T) != typeof(IGameTickListener))
+            L.LogDebug("Invoke sync singleton event " + typeof(T).Name);
         ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils
@@ -1266,6 +1287,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     protected async Task InvokeSingletonEvent<TSync, TAsync>(Action<TSync> action1, Func<TAsync, Task> action2, CancellationToken token = default, EventState? args = null, UCPlayer? onlineCheck = null)
     {
+        L.LogDebug("Invoke async singleton event " + typeof(TSync).Name + "/" + typeof(TAsync).Name);
         if (!UCWarfare.IsMainThread)
             await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();

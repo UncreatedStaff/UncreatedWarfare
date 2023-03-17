@@ -242,10 +242,11 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (ActiveCaches.Count > 0 && !ActiveCaches.First().IsDiscovered)
+        List<CacheData> activeCaches = ActiveCaches;
+        if (activeCaches.Count > 0 && !activeCaches[0].IsDiscovered)
         {
             IntelligencePoints = 0;
-            OnCacheDiscovered(ActiveCaches.First().Cache, null);
+            OnCacheDiscovered(activeCaches[0].Cache, null);
         }
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
@@ -927,9 +928,10 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     public override void Tick()
     {
         if (Data.Gamemode == null || !Data.Gamemode.EveryXSeconds(20f) || !Data.Is(out Insurgency ins)) return;
-        for (int i = 0; i < ins.ActiveCaches.Count; i++)
+        List<Insurgency.CacheData> caches = ins.ActiveCaches;
+        for (int i = 0; i < caches.Count; i++)
         {
-            Insurgency.CacheData cache = ins.ActiveCaches[i];
+            Insurgency.CacheData cache = caches[i];
             if (cache.IsActive && !cache.IsDestroyed)
             {
                 for (int j = 0; j < cache.Cache.NearbyDefenders.Count; j++)
