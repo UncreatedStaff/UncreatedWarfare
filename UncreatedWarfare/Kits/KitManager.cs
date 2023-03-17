@@ -889,6 +889,14 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
                 }
             }
         }
+
+        if (kit.Class != Class.Unarmed)
+        {
+            if (player.IsSquadLeader())
+                Tips.TryGiveTip(player, 1200, T.TipActionMenuSl);
+            else
+                Tips.TryGiveTip(player, 3600, T.TipActionMenu);
+        }
     }
     private static void ReportItemError(Kit kit, IKitItem item, ItemAsset? asset)
     {
@@ -1106,11 +1114,6 @@ public class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IP
         if (pl != null && kit.Item != null && pl.ActiveKit == kit)
         {
             UCWarfare.RunTask(DequipKit, pl, kit.Item, ctx: "Dequiping " + kit.Item?.Id + " from " + player + ".");
-
-            if (pl.IsSquadLeader())
-                Tips.TryGiveTip(pl, 1200, T.TipActionMenuSl);
-            else
-                Tips.TryGiveTip(pl, 3600, T.TipActionMenu);
         }
     }
     private void OnKitDeleted(SqlItem<Kit> proxy, Kit kit)

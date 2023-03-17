@@ -813,7 +813,7 @@ public static class TeamManager
             {
                 if (ts.IsSelecting(player))
                     return false;
-                ts.JoinSelectionMenu(player);
+                ts.JoinSelectionMenu(player, TeamSelector.JoinTeamBehavior.KeepTeam);
             }
             else
             {

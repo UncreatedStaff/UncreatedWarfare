@@ -3,12 +3,13 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Teams;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 public class TeamsCommand : Command
 {
-    private const string SYNTAX = "/teams";
+    private const string SYNTAX = "/teams ";
     private const string HELP = "Switch teams without rejoining the server.";
 
     public TeamsCommand() : base("teams", EAdminType.MEMBER)
@@ -35,6 +36,16 @@ public class TeamsCommand : Command
         if (!teamgm.UseTeamSelector || teamgm.TeamSelector is null)
             throw ctx.SendGamemodeError();
 
+        if (ctx.MatchParameter(0, "shuffle", "sh"))
+        {
+            if (!ctx.Caller.OnDuty())
+                throw ctx.Reply(T.NotOnDuty);
+
+            TeamSelector.ShuffleTeamsNextGame = true;
+            ctx.Reply(T.TeamsShuffleQueued);
+            return;
+        }
+
         if (!ctx.Caller.OnDuty() && CooldownManager.HasCooldown(ctx.Caller, CooldownType.ChangeTeams, out Cooldown cooldown))
         {
             ctx.Reply(T.TeamsCooldown, cooldown);
@@ -46,7 +57,7 @@ public class TeamsCommand : Command
             ctx.Reply(T.NotInMain);
             return;
         }
-        teamgm.TeamSelector!.JoinSelectionMenu(ctx.Caller);
+        teamgm.TeamSelector!.JoinSelectionMenu(ctx.Caller, TeamSelector.JoinTeamBehavior.KeepTeam);
         ctx.Defer();
     }
 }
