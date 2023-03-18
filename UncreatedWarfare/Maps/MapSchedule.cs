@@ -36,7 +36,7 @@ internal class MapScheduler : MonoBehaviour
         new MapData("Goose Bay",        new ulong[] { 2301006771 }),
         new MapData("Nuijamaa",         new ulong[] { 2557112412 }),
         new MapData("Gulf of Aqaba",    new ulong[] { 2726964335 }),
-        new MapData("S3_Uncreated",     new ulong[] { 2943688379, 2407740920 }),
+        new MapData("Changbai Shan",     new ulong[] { 2943688379, 2407740920 }),
     };
 
     /* MAP NAMES */
@@ -44,12 +44,12 @@ internal class MapScheduler : MonoBehaviour
     public static readonly string GooseBay      = MapRotation[1].Name;
     public static readonly string Nuijamaa      = MapRotation[2].Name;
     public static readonly string GulfOfAqaba   = MapRotation[3].Name;
-    public static readonly string S3Map         = MapRotation[4].Name;
+    public static readonly string ChangbaiShan         = MapRotation[4].Name;
 
     public static string GetMapName(int index) => MapRotation[index].Name;
 
     // Map to load if rotation is undefined
-    private static readonly string DefaultMap = S3Map;
+    private static readonly string DefaultMap = ChangbaiShan;
 
     private static List<ulong> _originalMods;
     private static List<ulong> _originalIgnoreChildren;

@@ -2278,7 +2278,7 @@ public class TeamConfigData : JSONConfigData
             { MapScheduler.Nuijamaa,    FactionInfo.USA },
             { MapScheduler.GooseBay,    FactionInfo.USA },
             { MapScheduler.GulfOfAqaba, FactionInfo.USA },
-            { MapScheduler.S3Map,       FactionInfo.Germany },
+            { MapScheduler.ChangbaiShan,       FactionInfo.Germany },
         });
         Team2FactionId = new RotatableConfig<string>(FactionInfo.Russia, new RotatableDefaults<string>
         {
@@ -2286,7 +2286,7 @@ public class TeamConfigData : JSONConfigData
             { MapScheduler.Nuijamaa,    FactionInfo.Russia },
             { MapScheduler.GooseBay,    FactionInfo.Russia },
             { MapScheduler.GulfOfAqaba, FactionInfo.MEC },
-            { MapScheduler.S3Map,       FactionInfo.China },
+            { MapScheduler.ChangbaiShan,       FactionInfo.China },
         });
         AdminFactionId = FactionInfo.Admins;
         DefaultKit = "default";
@@ -2296,7 +2296,7 @@ public class TeamConfigData : JSONConfigData
             { MapScheduler.Nuijamaa,    0f },
             { MapScheduler.GooseBay,    0f },
             { MapScheduler.GulfOfAqaba, 90f },
-            { MapScheduler.S3Map,       0f },
+            { MapScheduler.ChangbaiShan,       0f },
         });
         Team2SpawnYaw = new RotatableConfig<float>(0f, new RotatableDefaults<float>
         {
@@ -2304,7 +2304,7 @@ public class TeamConfigData : JSONConfigData
             { MapScheduler.Nuijamaa,    0f },
             { MapScheduler.GooseBay,    0f },
             { MapScheduler.GulfOfAqaba, 90f },
-            { MapScheduler.S3Map,       0f },
+            { MapScheduler.ChangbaiShan,       0f },
         });
         LobbySpawnpointYaw = new RotatableConfig<float>(0f, new RotatableDefaults<float>
         {
@@ -2312,7 +2312,7 @@ public class TeamConfigData : JSONConfigData
             { MapScheduler.Nuijamaa,    0f },
             { MapScheduler.GooseBay,    0f },
             { MapScheduler.GulfOfAqaba, 90f },
-            { MapScheduler.S3Map,       0f },
+            { MapScheduler.ChangbaiShan,       0f },
         });
         TeamSwitchCooldown = 1200;
         BalanceTeams = true;
