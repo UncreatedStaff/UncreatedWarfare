@@ -1,9 +1,10 @@
 ﻿using SDG.Unturned;
 using Steamworks;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Uncreated.Players;
+using Uncreated.Framework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
@@ -14,9 +15,10 @@ using Uncreated.Warfare.Singletons;
 namespace Uncreated.Warfare.Deaths;
 public class DeathTracker : BaseReloadSingleton
 {
-    public const EDeathCause MAIN_CAMP_OFFSET = (EDeathCause)100;
-    public const EDeathCause MAIN_DEATH = (EDeathCause)37;
+    public const EDeathCause MainCampDeathCauseOffset = (EDeathCause)100;
+    public const EDeathCause InEnemyMainDeathCause = (EDeathCause)37;
     private static DeathTracker Singleton;
+    private static readonly object[] PVPDeathInvocationArray = { true };
     private static readonly Dictionary<ulong, InjuredDeathCache> _injuredPlayers = new Dictionary<ulong, InjuredDeathCache>(Provider.maxPlayers);
     public static bool Loaded => Singleton.IsLoaded();
     public DeathTracker() : base("deaths") { }
@@ -24,6 +26,15 @@ public class DeathTracker : BaseReloadSingleton
     {
         Singleton = this;
         PlayerLife.onPlayerDied += OnPlayerDied;
+        EDeathCause[] causes = Enum.GetValues(typeof(EDeathCause)).Cast<EDeathCause>().ToArray();
+        if (causes.Contains(InEnemyMainDeathCause))
+            L.LogWarning("Death cause " + InEnemyMainDeathCause + " is already in use to be used as InEnemyMainDeathCause (#" + (int)InEnemyMainDeathCause + ").");
+        foreach (EDeathCause cause in causes)
+        {
+            if (cause >= MainCampDeathCauseOffset)
+                L.LogWarning("Death cause " + cause + " is already in use to be used as MainCampDeathCause offset (#" + (int)cause + ") for "
+                             + (EDeathCause)((int)cause - (int)MainCampDeathCauseOffset) + ".");
+        }
     }
     public override void Reload()
     {
@@ -34,8 +45,9 @@ public class DeathTracker : BaseReloadSingleton
         PlayerLife.onPlayerDied -= OnPlayerDied;
         Singleton = null!;
     }
-    private static readonly FieldInfo PVPDeathField = typeof(PlayerLife).GetField("<wasPvPDeath>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
-    private static readonly FieldInfo SentryTargetPlayerField = typeof(InteractableSentry).GetField("targetPlayer", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly MethodInfo? PVPDeathField = typeof(PlayerLife).GetProperty("wasPvPDeath", BindingFlags.Instance | BindingFlags.NonPublic)?.GetSetMethod(true);
+    private static readonly InstanceGetter<InteractableSentry, Player>? SentryTargetPlayerField =
+        Util.GenerateInstanceGetter<InteractableSentry, Player>("targetPlayer", BindingFlags.NonPublic);
     private void OnPlayerDied(PlayerLife sender, EDeathCause cause, ELimb limb, CSteamID instigator)
     {
         UCPlayer? dead = UCPlayer.FromPlayer(sender.player);
@@ -115,7 +127,7 @@ public class DeathTracker : BaseReloadSingleton
         switch (cause)
         {
             // death causes only possible through PvE:
-            case MAIN_DEATH:
+            case InEnemyMainDeathCause:
                 args.SpecialKey = "maindeath";
                 goto case EDeathCause.ZOMBIE;
             case EDeathCause.ACID:
@@ -133,10 +145,10 @@ public class DeathTracker : BaseReloadSingleton
             case EDeathCause.WATER:
             case EDeathCause.ZOMBIE:
                 return;
-            case >= MAIN_CAMP_OFFSET:
+            case >= MainCampDeathCauseOffset:
                 args.SpecialKey = "maincamp";
-                args.DeathCause = (EDeathCause)((int)cause - (int)MAIN_CAMP_OFFSET);
-                PVPDeathField.SetValue(dead.Player.life, true);
+                args.DeathCause = (EDeathCause)((int)cause - (int)MainCampDeathCauseOffset);
+                PVPDeathField?.Invoke(dead.Player.life, PVPDeathInvocationArray);
                 break;
         }
         UCPlayer? killer = UCPlayer.FromCSteamID(instigator);
@@ -292,13 +304,15 @@ public class DeathTracker : BaseReloadSingleton
                                     args.Item2Guid = veh.asset.GUID;
                                     args.Item2Name = veh.asset.vehicleName;
                                     args.Flags |= DeathFlags.Item2;
-                                    SteamPlayer sp;
-                                    if (veh.passengers.Length > 0 && (sp = veh.passengers[0].player) is not null && sp.player != null)
+                                    if (veh.passengers.Length > 0 && veh.passengers[0].player is { } sp && sp.player != null)
                                     {
                                         e.DriverAssist = UCPlayer.FromSteamPlayer(sp);
-                                        args.Player3Name = e.DriverAssist?.Name.CharacterName ?? sp.playerID.characterName;
-                                        args.Player3Team = sp.GetTeam();
-                                        args.Flags |= DeathFlags.Player3;
+                                        if (sp.playerID.steamID.m_SteamID != killer.Steam64)
+                                        {
+                                            args.Player3Name = e.DriverAssist?.Name.CharacterName ?? sp.playerID.characterName;
+                                            args.Player3Team = sp.GetTeam();
+                                            args.Flags |= DeathFlags.Player3;
+                                        }
                                     }
                                     break;
                                 }
@@ -363,7 +377,9 @@ public class DeathTracker : BaseReloadSingleton
                             if (veh.passengers.Length > 0 && veh.passengers[0].player is not null && veh.passengers[0].player.player != null)
                             {
                                 if (killer.Steam64 == veh.passengers[0].player.playerID.steamID.m_SteamID)
-                                    args.Flags |= DeathFlags.NoDistance;
+                                {
+                                    args.Flags = (args.Flags | DeathFlags.NoDistance) & ~DeathFlags.Player3;
+                                }
                             }
                         }
                     }
@@ -466,8 +482,9 @@ public class DeathTracker : BaseReloadSingleton
                 {
                     List<BarricadeDrop> drops = UCBarricadeManager.GetBarricadesWhere(x =>
                         x.GetServersideData().owner == instigator.m_SteamID &&
-                        x.interactable is InteractableSentry &&
-                        SentryTargetPlayerField.GetValue(x.interactable) is Player target &&
+                        x.interactable is InteractableSentry sentry &&
+                        SentryTargetPlayerField != null &&
+                        SentryTargetPlayerField(sentry) is { } target &&
                         target != null && target.channel.owner.playerID.steamID.m_SteamID ==
                         dead.Steam64
                     );
@@ -490,7 +507,7 @@ public class DeathTracker : BaseReloadSingleton
                     }
                 }
                 break;
-            case >= MAIN_CAMP_OFFSET:
+            case >= MainCampDeathCauseOffset:
                 EDeathCause mainCampCause = args.DeathCause;
                 GetItems(mainCampCause, instigator.m_SteamID, killer?.Player, killerData, deadData, dead, out Asset? item1, out Asset? item2);
                 if (item1 != null)
@@ -526,7 +543,7 @@ public class DeathTracker : BaseReloadSingleton
         {
             // death causes that dont have a related item:
             default:
-            case MAIN_DEATH:
+            case InEnemyMainDeathCause:
             case EDeathCause.BONES:
             case EDeathCause.FREEZING:
             case EDeathCause.BURNING:
@@ -546,9 +563,9 @@ public class DeathTracker : BaseReloadSingleton
             case EDeathCause.SPARK:
                 item1 = null;
                 return;
-            case >= MAIN_CAMP_OFFSET:
-                cause = (EDeathCause)((int)cause - (int)MAIN_CAMP_OFFSET);
-                if (cause >= MAIN_CAMP_OFFSET || killer == null)
+            case >= MainCampDeathCauseOffset:
+                cause = (EDeathCause)((int)cause - (int)MainCampDeathCauseOffset);
+                if (cause >= MainCampDeathCauseOffset || killer == null)
                 {
                     item1 = null;
                     return;
@@ -644,7 +661,8 @@ public class DeathTracker : BaseReloadSingleton
                     List<BarricadeDrop> drops = UCBarricadeManager.GetBarricadesWhere(x =>
                         x.GetServersideData().owner == killerId &&
                         x.interactable is InteractableSentry sentry &&
-                        SentryTargetPlayerField.GetValue(x.interactable) is Player target &&
+                        SentryTargetPlayerField != null &&
+                        SentryTargetPlayerField(sentry) is { } target &&
                         target != null && target.channel.owner.playerID.steamID.m_SteamID ==
                         dead.channel.owner.playerID.steamID.m_SteamID
                     );

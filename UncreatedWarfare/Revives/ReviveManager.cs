@@ -53,7 +53,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
               !parameters.player.life.isDead &&
                parameters.damage > parameters.player.life.health &&
                parameters.cause != EDeathCause.LANDMINE &&
-               parameters.cause < DeathTracker.MAIN_CAMP_OFFSET && // main campers can't get downed, makes death messages easier
+               parameters.cause < DeathTracker.MainCampDeathCauseOffset && // main campers can't get downed, makes death messages easier
                parameters.damage < 300;
     }
     public override void Load()
@@ -704,7 +704,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 victim.TryUpdateAttackers(killerid.m_SteamID);
             }
 
-            if (player.life.health < 50 && UCPlayer.FromPlayer(player) is { } pl)
+            if (player.life.health < 50 && !player.life.isDead && UCPlayer.FromPlayer(player) is { } pl)
                 Tips.TryGiveTip(pl, 3600, T.TipCallMedic);
         }
         public void TellProneDelayed(float time = 0.5f)

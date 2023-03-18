@@ -943,7 +943,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         #endregion
 
         #region Hardpoint
-        HardpointFlagTickSeconds = 4f;
+        HardpointFlagTickSeconds = 2f;
         HardpointFlagAmount = 6;
         HardpointFlagTolerance = 1;
         HardpointObjectiveChangeTime = 450;

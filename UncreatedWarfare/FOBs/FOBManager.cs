@@ -834,7 +834,6 @@ public class SpecialFOB : IFOB, IDeployable
 
 public class FOBConfigData : JSONConfigData
 {
-    public JsonAssetReference<VehicleAsset> MortarBase;
     public float FOBMaxHeightAboveTerrain;
     public bool RestrictFOBPlacement;
     public ushort FOBID;
@@ -891,8 +890,6 @@ public class FOBConfigData : JSONConfigData
         T2RadioState = "8yh8NQEAEAEAAAAAAAAAACIAAACmlQFkAAQAAKyVAWQAAAIArpUBZAADCADAlQFkAAYIAMCVAWQABwIA1pUBZAAKAgDWlQFkAAcDANaVAWQACgMA1pUBZAAHBADWlQFkAAoEANaVAWQACQUA2JUBZAAJBwDYlQFkAAkJANiVAWQAAAsAzpUBZAAADADOlQFkAAANAM6VAWQAAwsAzpUBZAAHAACslQFkAAoAANaVAWQACgEA1pUBZAADDADOlQFkAAMNAM6VAWQABg0A0JUBZAAEAgDalQFkAAkLANCVAWQACQwA0JUBZAAJDQDQlQFkAAYLAM6VAWQABgwAzpUBZAAACAC6ZQFkAAAFANVlAWQAAwUAvmUBZAAGBQC+ZQFkAA==";
 
         AmmoBagMaxUses = 3;
-
-        MortarBase = "6ff4826eaeb14c7cac1cf25a55d24bd3";
 
         Buildables = new List<BuildableData>()
         {

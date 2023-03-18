@@ -1244,6 +1244,12 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out ulong steam64, out UCPlayer? onlinePlayer, bool remainder = false)
     {
+        if (!IsConsole && MatchParameter(parameter, "me"))
+        {
+            onlinePlayer = Caller;
+            steam64 = CallerID;
+            return true;
+        }
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
@@ -1272,8 +1278,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         onlinePlayer = null;
         return false;
     }
-    public bool TryGet(int parameter, out ulong steam64, out UCPlayer onlinePlayer, IEnumerable<UCPlayer> selection)
+    public bool TryGet(int parameter, out ulong steam64, out UCPlayer onlinePlayer, IEnumerable<UCPlayer> selection, bool remainder = false)
     {
+        if (!IsConsole && MatchParameter(parameter, "me"))
+        {
+            onlinePlayer = Caller;
+            steam64 = CallerID;
+            return selection.Contains(Caller);
+        }
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
@@ -1282,7 +1294,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             return false;
         }
 
-        string s = GetParamForParse(parameter);
+        string? s = remainder ? GetRange(parameter - _offset) : GetParamForParse(parameter);
         if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && Util.IsValidSteam64Id(steam64))
         {
             foreach (UCPlayer player in selection)

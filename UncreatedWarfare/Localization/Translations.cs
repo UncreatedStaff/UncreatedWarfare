@@ -802,6 +802,8 @@ public class Translation
                 return otherWords + (isPCaps ? "Axes" : "axes");
             if (str.Equals("ammo", StringComparison.OrdinalIgnoreCase))
                 return otherWords + (isPCaps ? "Ammo" : "ammo");
+            if (str.Equals("radio", StringComparison.OrdinalIgnoreCase))
+                return otherWords + (isPCaps ? "Radio" : "radio");
 
             if (str.EndsWith("man", StringComparison.OrdinalIgnoreCase))
                 return str.Substring(0, str.Length - 2) + (char.IsUpper(str[str.Length - 2]) ? "E" : "e") + str[str.Length - 1];

@@ -354,6 +354,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     protected virtual void OnObjectiveChangedPowerHandler(Flag? oldObj, Flag? newObj)
     {
+        if (!Data.UseElectricalGrid) return;
         if (ElectricalGridBehavior != ElectricalGridBehaivor.EnabledWhenObjective)
             return;
 #if DEBUG
@@ -362,13 +363,11 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         GridObject[]? arr = oldObj?.ZoneData?.Item?.Data.GridObjects;
         if (arr is { Length: > 0 })
         {
-            L.LogDebug("[GRID] Disabling all in " + oldObj!.Name + ".");
             SetPowerForAllInGrid(arr, false);
         }
         arr = newObj?.ZoneData?.Item?.Data.GridObjects;
         if (arr is { Length: > 0 })
         {
-            L.LogDebug("[GRID] Enabling all in " + newObj!.Name + ".");
             SetPowerForAllInGrid(arr, true);
         }
 
@@ -376,12 +375,12 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     protected virtual void OnRotationUpdated()
     {
+        if (!Data.UseElectricalGrid) return;
         if (ElectricalGridBehavior != ElectricalGridBehaivor.EnabledWhenInRotation)
             return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        L.LogDebug("[GRID] Disabling all then re-enabling rotation.");
         SetPowerForAllInGrid(OutOfRotationGridObjects, false);
         SetPowerForAllInGrid(RotationGridObjects, true);
 
@@ -414,9 +413,11 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     protected static void SetPowerForAllInGrid(IEnumerable<GridObject> arr, bool state)
     {
+        if (!Data.UseElectricalGrid) return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (!Data.UseElectricalGrid) return;
         foreach (GridObject obj in arr)
         {
             if (obj.Object is { interactable: { } inx } && inx != null && inx.objectAsset.interactability == EObjectInteractability.BINARY_STATE)
@@ -424,7 +425,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
                 if (inx.objectAsset.interactabilityHint is EObjectInteractabilityHint.SWITCH or EObjectInteractabilityHint.FIRE
                     or EObjectInteractabilityHint.GENERATOR)
                 {
-                    L.LogDebug("[GRID] Setting binary state for " + obj.Object.asset.objectName + ": " + state + ".");
                     ObjectManager.forceObjectBinaryState(inx.transform, state);
                 }
 
@@ -434,6 +434,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     public void OnZoneElectricalGridObjectsUpdated(Zone zone, List<GridObject> added, List<GridObject> removed)
     {
+        if (!Data.UseElectricalGrid) return;
         if (ElectricalGridBehavior is ElectricalGridBehaivor.EnabledWhenInRotation or ElectricalGridBehaivor.AllEnabled)
         {
             RemoveDuplicatesFromRemoving(RotationGridObjects);

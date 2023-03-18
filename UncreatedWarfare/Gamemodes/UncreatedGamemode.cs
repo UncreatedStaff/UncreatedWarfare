@@ -132,7 +132,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     protected virtual void OnAdvanceDelays(float seconds) { }
     public override async Task LoadAsync(CancellationToken token)
     {
-        L.LogDebug("LoadAsync Top");
         _tokenSrc = new CancellationTokenSource();
         token.CombineIfNeeded(UnloadToken);
         await UCWarfare.ToUpdate(token);
@@ -151,24 +150,17 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         _hasOnReadyRan = false;
         _wasLevelLoadedOnStart = Level.isLoaded;
         _isPreLoading = true;
-        L.LogDebug("PreInitIntl:");
         InternalPreInit();
-        L.LogDebug("PreInit:");
         await PreInit(token).ConfigureAwait(false);
 
         _isPreLoading = false;
-        L.LogDebug("Load Singletons:");
         await Data.Singletons.LoadSingletonsInOrderAsync(_singletons, token).ConfigureAwait(false);
-        L.LogDebug("Done.");
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
 
-        L.LogDebug("Event Subscriptions:");
         InternalSubscribe();
         Subscribe();
-        L.LogDebug("PostInitIntl:");
         InternalPostInit();
-        L.LogDebug("PostInit:");
         Task task = PostInit(token);
         if (!task.IsCompleted)
         {
@@ -176,7 +168,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await UCWarfare.ToUpdate(token);
             ThreadUtil.assertIsGameThread();
         }
-        L.LogDebug("Set tracker:");
         Type[] interfaces = this.GetType().GetInterfaces();
         for (int i = 0; i < interfaces.Length; i++)
         {
@@ -191,15 +182,12 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
         if (_wasLevelLoadedOnStart)
         {
-            L.LogDebug("OnLevelStart:");
             await InvokeSingletonEvent<ILevelStartListener, ILevelStartListenerAsync>
                 (x => x.OnLevelReady(), x => x.OnLevelReady(token), token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
             ThreadUtil.assertIsGameThread();
-            L.LogDebug("OnReadyIntl:");
             await InternalOnReady(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
-            L.LogDebug("OnReady:");
             task = OnReady(token);
             if (!task.IsCompleted)
             {
@@ -207,7 +195,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 await UCWarfare.ToUpdate(token);
                 ThreadUtil.assertIsGameThread();
             }
-            L.LogDebug("PostOnReady:");
             await PostOnReady(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
             _hasOnReadyRan = true;
@@ -377,14 +364,14 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (!wasAlreadyOnline)
         {
             Task t2 = Points.UpdatePointsAsync(player, false, token);
-            Task t3 = player.DownloadKits(false, token);
+            Task t3 = KitManager.DownloadPlayerKitData(player, false, token);
             Task t4 = OffenseManager.ApplyMuteSettings(player, token);
             await Data.DatabaseManager.RegisterLogin(player.Player, token).ConfigureAwait(false);
             await t2.ConfigureAwait(false);
             await t3.ConfigureAwait(false);
             await t4.ConfigureAwait(false);
         }
-        else await player.DownloadKits(false, token).ConfigureAwait(false);
+        else await KitManager.DownloadPlayerKitData(player, false, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
@@ -423,6 +410,11 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     private async Task InternalOnReady(CancellationToken token = default)
     {
         ThreadUtil.assertIsGameThread();
+        if (Data.Singletons.TryGetSingleton(out ZoneList list))
+        {
+            await list.DownloadAll(token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
+        }
         if (this is IFOBs)
             RepairManager.LoadRepairStations();
 
@@ -445,10 +437,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             }
 
             EventLoopCoroutine = StartCoroutine(EventLoop());
-        }
-        if (Data.Singletons.TryGetSingleton(out ZoneList list))
-        {
-            await list.DownloadAll(token).ConfigureAwait(false);
         }
     }
     private Task PostOnReady(CancellationToken token) => StartNextGame(token, true);
@@ -1053,53 +1041,72 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             //bool isStruct = this is IStructureSaving;
             int fails = 0;
             StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-            for (byte x = 0; x < Regions.WORLD_SIZE; x++)
+            List<(object Drop, byte X, byte Y)> toDestroy = new List<(object, byte, byte)>(16);
+            saver?.WriteWait();
+            try
             {
-                for (byte y = 0; y < Regions.WORLD_SIZE; y++)
+                for (byte x = 0; x < Regions.WORLD_SIZE; x++)
                 {
-                    try
+                    for (byte y = 0; y < Regions.WORLD_SIZE; y++)
                     {
-                        if (BarricadeManager.regions is not null)
+                        try
                         {
-                            BarricadeRegion barricadeRegion = BarricadeManager.regions[x, y];
-                            for (int i = barricadeRegion.drops.Count - 1; i >= 0; --i)
+                            if (BarricadeManager.regions is not null)
                             {
-                                BarricadeDrop drop = barricadeRegion.drops[i];
-                                if (!(saver != null && saver.IsLoaded && saver.TryGetSaveNoLock(drop, out SavedStructure _)))
+                                BarricadeRegion barricadeRegion = BarricadeManager.regions[x, y];
+                                for (int i = barricadeRegion.drops.Count - 1; i >= 0; --i)
                                 {
-                                    if (drop.model.TryGetComponent(out FOBComponent fob))
+                                    BarricadeDrop drop = barricadeRegion.drops[i];
+                                    if (!(saver is { IsLoaded: true } && saver.TryGetSaveNoWriteLock(drop, out SavedStructure _)))
                                     {
-                                        fob.Parent.IsWipedByAuthority = true;
+                                        toDestroy.Add((drop, x, y));
                                     }
-                                    if (drop.interactable is InteractableStorage storage)
-                                        storage.despawnWhenDestroyed = true;
-                                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
                                 }
                             }
-                        }
 
-                        if (StructureManager.regions is not null)
-                        {
-                            StructureRegion structureRegion = StructureManager.regions[x, y];
-                            for (int i = structureRegion.drops.Count - 1; i >= 0; --i)
+                            if (StructureManager.regions is not null)
                             {
-                                StructureDrop drop = structureRegion.drops[i];
-                                if (!(saver != null && saver.IsLoaded && saver.TryGetSaveNoLock(drop, out SavedStructure _)))
+                                StructureRegion structureRegion = StructureManager.regions[x, y];
+                                for (int i = structureRegion.drops.Count - 1; i >= 0; --i)
                                 {
-                                    StructureManager.destroyStructure(drop, x, y, Vector3.zero);
+                                    StructureDrop drop = structureRegion.drops[i];
+                                    if (!(saver is { IsLoaded: true } && saver.TryGetSaveNoWriteLock(drop, out SavedStructure _)))
+                                    {
+                                        toDestroy.Add((drop, x, y));
+                                    }
                                 }
                             }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        L.LogError($"Failed to clear barricades/structures of region ({x}, {y}):");
-                        L.LogError(ex);
-                        ++fails;
-                        if (fails > 5)
-                            throw new SingletonLoadException(SingletonLoadType.Load, this, ex);
+                        catch (Exception ex)
+                        {
+                            L.LogError($"Failed to clear barricades/structures of region ({x}, {y}):");
+                            L.LogError(ex);
+                            ++fails;
+                            if (fails > 5)
+                                throw new SingletonLoadException(SingletonLoadType.Load, this, ex);
+                        }
                     }
                 }
+            }
+            finally
+            {
+                saver?.WriteRelease();
+            }
+            for (int i = 0; i < toDestroy.Count; ++i)
+            {
+                (object drop, byte x, byte y) = toDestroy[i];
+                if (drop is BarricadeDrop bdrop)
+                {
+                    if (bdrop.model.TryGetComponent(out FOBComponent fob))
+                    {
+                        fob.Parent.IsWipedByAuthority = true;
+                    }
+                    if (bdrop.interactable is InteractableStorage storage)
+                        storage.despawnWhenDestroyed = true;
+                    BarricadeManager.destroyBarricade(bdrop, x, y, ushort.MaxValue);
+                }
+                else if (drop is StructureDrop sdrop)
+                    StructureManager.destroyStructure(sdrop, x, y, Vector3.zero);
             }
             IconManager.OnLevelLoaded();
         }
@@ -1231,8 +1238,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
     protected void InvokeSingletonEvent<T>(Action<T> action, EventState? e = null)
     {
+        /*
         if (typeof(T) != typeof(IGameTickListener))
             L.LogDebug("Invoke sync singleton event " + typeof(T).Name);
+        */
         ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils
@@ -1287,7 +1296,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     protected async Task InvokeSingletonEvent<TSync, TAsync>(Action<TSync> action1, Func<TAsync, Task> action2, CancellationToken token = default, EventState? args = null, UCPlayer? onlineCheck = null)
     {
-        L.LogDebug("Invoke async singleton event " + typeof(TSync).Name + "/" + typeof(TAsync).Name);
+        // L.LogDebug("Invoke async singleton event " + typeof(TSync).Name + "/" + typeof(TAsync).Name);
         if (!UCWarfare.IsMainThread)
             await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();

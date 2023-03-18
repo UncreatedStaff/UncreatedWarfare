@@ -863,6 +863,7 @@ public class DebugCommand : AsyncCommand
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
                 ctx.Caller.Player.quests.ServerAddQuest(asset);
+                QuestManager.CheckNeedsToUntrack(ctx.Caller);
                 ctx.ReplyString("<#9fa1a6>Added quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
             else ctx.ReplyString("<#ff8c69>Quest not found.");
@@ -1014,6 +1015,7 @@ public class DebugCommand : AsyncCommand
             L.Log($"{cooldown.type}: {cooldown.Timeleft:hh\\:mm\\:ss}, {(cooldown.data is null || cooldown.data.Length == 0 ? "NO DATA" : string.Join(";", cooldown.data))}");
         }
     }
+#if DEBUG
     private void giveuav(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1032,7 +1034,6 @@ public class DebugCommand : AsyncCommand
         UAV.RequestUAV(ctx.Caller);
         ctx.Defer();
     }
-#if DEBUG
     private async Task testfield(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertRanByPlayer();

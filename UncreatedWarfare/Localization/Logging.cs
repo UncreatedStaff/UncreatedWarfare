@@ -1,4 +1,4 @@
-﻿#define FUNCTION_LOG
+﻿// #define FUNCTION_LOG
 
 using HarmonyLib;
 using JetBrains.Annotations;
@@ -51,26 +51,48 @@ public static class L
         {
             if (BadLogBuffer is not { Count: > 0 })
                 return;
-            LogWarning("Errors:");
+
+            bool loggedError = false;
+            bool loggedWarning = false;
             using (IndentLog(1))
             {
                 foreach (LogMessage msg in BadLogBuffer.Where(x => x.Error))
                 {
+                    if (!loggedError)
+                    {
+                        using (IndentLog(-1))
+                        {
+                            Log("Errors:", ConsoleColor.Red);
+                        }
+                        loggedError = true;
+                    }
                     AddLine(msg.Message, msg.Color);
                 }
             }
-
+            
             Log(string.Empty);
-            LogWarning("Warnings:");
             using (IndentLog(1))
             {
                 foreach (LogMessage msg in BadLogBuffer.Where(x => !x.Error))
                 {
+                    if (!loggedWarning)
+                    {
+                        using (IndentLog(-1))
+                        {
+                            if (loggedError)
+                                Log(string.Empty, ConsoleColor.Red);
+                            LogWarning("Warnings:");
+                        }
+                        loggedWarning = true;
+                    }
+
                     AddLine(msg.Message, msg.Color);
                 }
             }
-
-            Log(string.Empty);
+            if (loggedWarning)
+                Log(string.Empty, ConsoleColor.Yellow);
+            else if (loggedError)
+                Log(string.Empty, ConsoleColor.Red);
 
             BadLogBuffer.Clear();
         }
@@ -250,21 +272,23 @@ public static class L
 
     /// <summary>Indents the log by <paramref name="amount"/> spaces until the returned <see cref="IDisposable"/> is disposed of. Doesn't apply to <see cref="LogError(string,ConsoleColor,string)"/></summary>
     /// <remarks><code>using LogIndent log = IndentLog(2);</code></remarks>
-    public static IDisposable IndentLog(uint amount) => new LogIndent(amount);
+    public static IDisposable IndentLog(int amount) => new LogIndent(amount);
     private readonly struct LogIndent : IDisposable
     {
-        public readonly uint Indent;
-        public LogIndent(uint amount)
+        public readonly int Indent;
+        public LogIndent(int amount)
         {
             Indent = amount;
-            _indention += (int)amount;
+            if (_indention + amount < 0)
+                _indention = 0;
+            else _indention += amount;
         }
         public void Dispose()
         {
             if (_indention < Indent)
                 _indention = 0;
             else
-                _indention -= (int)Indent;
+                _indention -= Indent;
         }
     }
     private static void AddLine(string text, ConsoleColor color)

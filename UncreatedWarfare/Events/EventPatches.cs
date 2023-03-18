@@ -153,7 +153,7 @@ internal static class EventPatches
     }
     // SDG.Unturned.InteractableTrap.OnTriggerEnter
     /// <summary>
-    /// Prefix of <see cref="InteractableTrap.OnTriggerEnter(Collider)"/> to call OnVehicleSpawned
+    /// Prefix of <see cref="InteractableTrap.OnTriggerEnter(Collider)"/> to change explosion behavior.
     /// </summary>
     private static bool TrapOnTriggerEnter(Collider other, InteractableTrap __instance, float ___lastActive, float ___setupDelay, ref float ___lastTriggered,
         float ___cooldown, bool ___isExplosive, float ___playerDamage, float ___zombieDamage, float ___animalDamage, float ___barricadeDamage,
@@ -508,12 +508,12 @@ internal static class EventPatches
 
     private static bool OnCalculatingPower(InteractablePower __instance, ref bool __result)
     {
+        if (!Data.UseElectricalGrid) return true;
         if (Data.Gamemode is not FlagGamemode fg || fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.Disabled)
         {
             __result = false;
             return true;
         }
-        L.LogDebug("[GRID] Caluclating power for: " + __instance.name + ". mode: " + fg.ElectricalGridBehavior + ".");
         if (fg.ElectricalGridBehavior == FlagGamemode.ElectricalGridBehaivor.AllEnabled)
         {
             __result = true;
@@ -522,18 +522,17 @@ internal static class EventPatches
         if (__instance is InteractableObject obj)
         {
             __result = fg.IsPowerObjectEnabled(obj);
-            L.LogDebug(" Result (obj): " + __result);
             return false;
         }
 
         __result = fg.IsInteractableEnabled(__instance);
-        L.LogDebug(" Result (interactable): " + __result);
         return false;
 
         return true;
     }
     private static bool OnReceiveToggleObjectBinaryStateRequest(in ServerInvocationContext context, byte x, byte y, ushort index, bool isUsed)
     {
+        if (!Data.UseElectricalGrid) return true;
         if (!Regions.checkSafe(x, y) || LevelObjects.objects == null)
             return false;
         Player player = context.GetPlayer();

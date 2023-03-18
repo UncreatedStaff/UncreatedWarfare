@@ -468,7 +468,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
             }
         }
         protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _built, Amount,
-            BuildableType.Behavior == ChoiceBehavior.Inclusive && BuildableType.ValueType == DynamicValueType.Wildcard ? "buildable" : BuildableType.ToString());
+            BuildableType.Behavior == ChoiceBehavior.Inclusive && BuildableType.ValueType == DynamicValueType.Wildcard ? "buildables" : BuildableType.ToString());
         public override void ManualComplete()
         {
             _built = Amount;

@@ -1109,6 +1109,7 @@ public class QuestUnlockRequirement : UnlockRequirement
         if (Assets.find(QuestID) is QuestAsset asset)
         {
             ctx.Caller.Player.quests.ServerAddQuest(asset);
+            QuestManager.CheckNeedsToUntrack(ctx.Caller);
             return ctx.Reply(T.RequestKitQuestIncomplete, asset);
         }
         return ctx.Reply(T.RequestKitQuestIncomplete, null!);
@@ -1118,6 +1119,7 @@ public class QuestUnlockRequirement : UnlockRequirement
         if (Assets.find(QuestID) is QuestAsset asset)
         {
             ctx.Caller.Player.quests.ServerAddQuest(asset);
+            QuestManager.CheckNeedsToUntrack(ctx.Caller);
             return ctx.Reply(T.RequestVehicleQuestIncomplete, asset);
         }
         return ctx.Reply(T.RequestVehicleQuestIncomplete, null!);
@@ -1127,6 +1129,7 @@ public class QuestUnlockRequirement : UnlockRequirement
         if (Assets.find(QuestID) is QuestAsset asset)
         {
             ctx.Caller.Player.quests.ServerAddQuest(asset);
+            QuestManager.CheckNeedsToUntrack(ctx.Caller);
             return ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
         }
         return ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);
@@ -1741,6 +1744,28 @@ public readonly struct ItemTransformation
         Item = item;
     }
 }
+public readonly struct LayoutTransformation
+{
+    public readonly PrimaryKey Kit;
+    public readonly Page OldPage;
+    public readonly Page NewPage;
+    public readonly byte OldX;
+    public readonly byte OldY;
+    public readonly byte NewX;
+    public readonly byte NewY;
+    public readonly byte NewRotation;
+    public LayoutTransformation(Page oldPage, Page newPage, byte oldX, byte oldY, byte newX, byte newY, byte newRotation, PrimaryKey kit)
+    {
+        OldPage = oldPage;
+        NewPage = newPage;
+        OldX = oldX;
+        OldY = oldY;
+        NewX = newX;
+        NewY = newY;
+        Kit = kit;
+        NewRotation = newRotation;
+    }
+}
 public readonly struct ItemDropTransformation
 {
     public readonly Page OldPage;
@@ -1800,6 +1825,15 @@ public enum KitType : byte
     Elite,
     Special,
     Loadout
+}
+
+public enum KitAccessType : byte
+{
+    Unknown,
+    Credits,
+    Event,
+    Purchase,
+    QuestReward
 }
 
 [Translatable]

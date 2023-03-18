@@ -13,6 +13,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -24,7 +25,11 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
     public const int MaxShortNameLength = 24;
     public override MySqlDatabase Sql => Data.AdminSql;
     public override bool AwaitLoad => true;
-    public ZoneList() : base("zones", Schemas) { }
+    public ZoneList() : base("zones", Schemas)
+    {
+        OnItemDownloaded += OnItemDownloadedIntl;
+        OnItemsRefreshed += OnItemsDownloadedIntl;
+    }
 #if MIGRATE
     public override async Task PostLoad(CancellationToken token)
     {
@@ -164,6 +169,17 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
         if (fl != null)
             return fl.ZoneData;
         return null;
+    }
+    private void OnItemDownloadedIntl(SqlItem<Zone> obj)
+    {
+        if (obj.Item is { Data.UseCase: ZoneUseCase.Team1Main or ZoneUseCase.Team2Main or ZoneUseCase.Team1MainCampZone or ZoneUseCase.Team2MainCampZone })
+        {
+            TeamManager.ResetLocations();
+        }
+    }
+    private static void OnItemsDownloadedIntl()
+    {
+        TeamManager.ResetLocations();
     }
     #region Sql
     // ReSharper disable InconsistentNaming

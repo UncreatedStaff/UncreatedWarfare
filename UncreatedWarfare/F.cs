@@ -1460,6 +1460,25 @@ public static class F
         }
         builder.Append(')');
     }
+    internal static void AppendPropertyList(StringBuilder builder, int startIndex, int length, int i, int clampLen)
+    {
+        if (i != 0)
+            builder.Append(',');
+        builder.Append('(');
+        for (int j = 0; j < clampLen; ++j)
+        {
+            if (j != 0)
+                builder.Append(',');
+            builder.Append('@').Append(j);
+        }
+        for (int j = startIndex; j < startIndex + length; ++j)
+        {
+            if (clampLen != 0 || j != startIndex)
+                builder.Append(',');
+            builder.Append('@').Append(j);
+        }
+        builder.Append(')');
+    }
     public static bool NullOrEmpty<T>(this ICollection<T>? collection)
     {
         return collection == null || collection.Count == 0;
@@ -1657,10 +1676,28 @@ public static class F
         if (player is not { IsOnline: true })
             return false;
         QuestAsset current = player.Player.quests.GetTrackedQuest();
+        if (current != null && quest != null)
+        {
+            if (current.GUID == quest.GUID && !player.Save.TrackQuests)
+                player.Player.quests.ServerAddQuest(quest);
+
+            return false;
+        }
+        if (player.Save.TrackQuests)
+            player.Player.quests.ServerAddQuest(quest);
+        return true;
+    }
+    public static bool ServerUntrackQuest(this UCPlayer player, QuestAsset quest)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (player is not { IsOnline: true })
+            return false;
+        QuestAsset current = player.Player.quests.GetTrackedQuest();
         if (current == quest)
             return false;
 
-        player.Player.quests.ServerAddQuest(quest);
+        if (player.Player.quests.GetTrackedQuest() == quest)
+            player.Player.quests.TrackQuest(null);
         return true;
     }
     public static void CombineIfNeeded(this ref CancellationToken token, CancellationToken other)
