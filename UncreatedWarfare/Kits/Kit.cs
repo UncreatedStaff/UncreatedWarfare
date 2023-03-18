@@ -454,9 +454,10 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
     public static readonly Skillset[] DefaultSkillsets =
     {
         new Skillset(EPlayerOffense.SHARPSHOOTER, 7),
-        new Skillset(EPlayerOffense.PARKOUR, 2),
-        new Skillset(EPlayerOffense.EXERCISE, 1),
+        new Skillset(EPlayerOffense.PARKOUR, 1),
+        new Skillset(EPlayerOffense.EXERCISE, 0),
         new Skillset(EPlayerOffense.CARDIO, 5),
+        new Skillset(EPlayerOffense.DIVING, 0),
         new Skillset(EPlayerDefense.VITALITY, 5),
     };
 
