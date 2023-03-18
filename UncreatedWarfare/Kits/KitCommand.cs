@@ -56,6 +56,26 @@ public sealed class KitCommand : AsyncCommand
                         new CommandParameter("Slot", typeof(byte))
                     }
                 },
+                new CommandParameter("Layout")
+                {
+                    Aliases = new string[] { "loadout", "customize" },
+                    Description = "Set how you want your items organized when you receive your kit.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Save")
+                        {
+                            IsOptional = true,
+                            Aliases = new string[] { "confirm", "keep" },
+                            Description = "Saves your current inventory as your layout for this kit."
+                        },
+                        new CommandParameter("Reset")
+                        {
+                            IsOptional = true,
+                            Aliases = new string[] { "delete", "cancel" },
+                            Description = "Resets your layout for this kit."
+                        }
+                    }
+                },
                 new CommandParameter("Search")
                 {
                     Aliases = new string[] { "find" },
@@ -310,9 +330,12 @@ public sealed class KitCommand : AsyncCommand
         if (manager == null)
             throw ctx.SendGamemodeError();
 
-        ctx.AssertOnDuty();
-
-        ctx.AssertArgs(1, Syntax + " - " + Help);
+        ctx.AssertArgs(1, ctx.HasPermission(EAdminType.MEMBER, PermissionComparison.AtMost)
+                ? "/kit <bind|layout> - Customize your experience with kits."
+                : (Syntax + " - " + Help));
+        ctx.AssertHelpCheck(0, ctx.HasPermission(EAdminType.MEMBER, PermissionComparison.AtMost)
+                ? "/kit <bind|layout> - Customize your experience with kits."
+                : (Syntax + " - " + Help));
 
         if (ctx.MatchParameter(0, "hotkey", "keybind", "bind"))
         {
@@ -424,7 +447,63 @@ public sealed class KitCommand : AsyncCommand
             }
             throw ctx.SendCorrectUsage("/kit keybind [add (default)|remove] <key (3-9 or 0)>");
         }
+        if (ctx.MatchParameter(0, "layout", "loadout", "customize"))
+        {
+            ctx.AssertRanByPlayer();
 
+            ctx.AssertHelpCheck(1, "/kit layout <save|reset> - Cutomize your kit's item layout.");
+            if (ctx.MatchParameter(1, "save", "confirm", "keep"))
+            {
+                await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    SqlItem<Kit>? proxy = ctx.Caller.ActiveKit;
+                    if (proxy?.Item is not { } kit)
+                    {
+                        throw ctx.Reply(T.AmmoNoKit);
+                    }
+                    if (!KitManager.ShouldAllowLayouts(kit))
+                        throw ctx.Reply(T.KitLayoutsNotSupported, kit);
+                    await KitManager.SaveLayout(ctx.Caller, proxy, false, true, token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
+                    throw ctx.Reply(T.KitLayoutSaved, kit);
+                }
+                finally
+                {
+                    ctx.Caller.PurchaseSync.Release();
+                }
+            }
+
+            if (ctx.MatchParameter(1, "reset", "delete", "cancel"))
+            {
+                await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    SqlItem<Kit>? proxy = ctx.Caller.ActiveKit;
+                    if (proxy?.Item is not { } kit)
+                    {
+                        throw ctx.Reply(T.AmmoNoKit);
+                    }
+                    if (!KitManager.ShouldAllowLayouts(kit))
+                        throw ctx.Reply(T.KitLayoutsNotSupported, kit);
+                    if (kit.Items != null)
+                    {
+                        await UCWarfare.ToUpdate(token);
+                        KitManager.TryReverseLayoutTransformations(ctx.Caller, kit.Items, kit.PrimaryKey);
+                    }
+                    await KitManager.ResetLayout(ctx.Caller, kit.PrimaryKey, false, token);
+                    await UCWarfare.ToUpdate(token);
+                    throw ctx.Reply(T.KitLayoutReset, kit);
+                }
+                finally
+                {
+                    ctx.Caller.PurchaseSync.Release();
+                }
+            }
+            throw ctx.SendCorrectUsage("/kit layout <save|reset>");
+        }
+
+        ctx.AssertOnDuty();
         ctx.AssertPermissions(EAdminType.STAFF);
 
         if (ctx.MatchParameter(0, "search", "find"))
@@ -467,11 +546,13 @@ public sealed class KitCommand : AsyncCommand
                         kit = proxy.Item;
                         if (kit == null)
                             goto @new;
+                        IKitItem[] oldItems = kit.Items;
                         kit.Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true);
                         kit.ItemListCache = null;
                         kit.UpdateLastEdited(ctx.CallerID);
                         ctx.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + kit.Id + ".");
                         await proxy.SaveItem(token).ConfigureAwait(false);
+                        UCWarfare.RunTask(KitManager.OnItemsChangedLayoutHandler, oldItems, kit, token, ctx: "Update layouts after changing items.");
                         await UCWarfare.ToUpdate();
                         KitManager.UpdateSigns(kit);
                         ctx.Reply(T.KitOverwrote, kit);
@@ -565,7 +646,7 @@ public sealed class KitCommand : AsyncCommand
                 if (proxy?.Item != null)
                 {
                     Class @class = proxy.Item.Class;
-                    await manager.GiveKit(ctx.Caller, proxy, token).ConfigureAwait(false);
+                    await manager.GiveKit(ctx.Caller, proxy, true, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate(token);
                     ctx.LogAction(ActionLogType.GiveKit, kitName);
                     ctx.Reply(T.RequestSignGiven, @class);

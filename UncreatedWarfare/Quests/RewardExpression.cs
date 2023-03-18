@@ -1,4 +1,4 @@
-﻿//#define LOG_OP_CODES
+﻿// #define LOG_OP_CODES
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -6,16 +6,16 @@ using System.Globalization;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Quests;
 
 public class RewardExpression
 {
-    private static readonly char[] TokenSplits = { '*', '/', '+', '-', '%', '(', ')', '[', ']', '{', '}', ',' };
+    private static readonly char[] TokenSplits = { '*', '/', '+', '-', '%', '(', ')', '[', ']', '{', '}', ',', '^' };
     private readonly string _expression;
     private readonly string _expression2;
     private readonly EvaluateDelegate _method;
+    private static MethodInfo[]? _mathMethods;
     public QuestType QuestType { get; internal set; }
     public QuestRewardType RewardType { get; }
 
@@ -37,7 +37,15 @@ public class RewardExpression
         rtnType = (Attribute.GetCustomAttribute(rtnType, typeof(QuestRewardAttribute)) as QuestRewardAttribute)?.ReturnType!;
 
         if (rtnType == null || !rtnType.IsPrimitive || rtnType == typeof(char) || rtnType == typeof(bool))
+        {
+            if (rtnType == typeof(string))
+            {
+                _method = _ => _expression;
+                _expression2 = _expression;
+                return;
+            }
             throw new ArgumentException((rtnType?.Name ?? "<unknown-type>") + " is not a valid return type for RewardExpressions");
+        }
 
         if (!QuestManager.QuestTypes.TryGetValue(questType, out Type? questStateType))
             throw new ArgumentException("Invalid quest type: \"" + type + "\"");
@@ -85,7 +93,7 @@ public class RewardExpression
         int pLvl = 0;
         for (int i = 0; i < tokens.Count; ++i)
         {
-            if (tokens[i][0] is '*' or '/')
+            if (tokens[i][0] is '*' or '/' or '^')
             {
                 int spanSt = i - 1;
                 int spanEnd = i + 1;
@@ -179,11 +187,14 @@ public class RewardExpression
         _expression2 = string.Join(string.Empty, tokens);
 
         Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>> vars = new Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>>(tokens.Count);
-        FieldInfo[] fields = questStateType!.GetFields(BindingFlags.Public | BindingFlags.Instance);
+        FieldInfo[] fields = questStateType.GetFields(BindingFlags.Public | BindingFlags.Instance);
         DynamicMethod method = new DynamicMethod("EvaluateReward", typeof(object), new Type[] { typeof(IQuestState) }, typeof(QuestRewards), true);
         method.DefineParameter(0, ParameterAttributes.None, "state");
 
 #if LOG_OP_CODES
+        LogOpCode();
+        L.Log("// " + expression, ConsoleColor.Green);
+        L.Log("// " + _expression2, ConsoleColor.Green);
         L.Log("object QuestRewards.EvaluateReward(IQuestState state)");
         L.Log("{");
 #endif
@@ -222,9 +233,7 @@ public class RewardExpression
                             goto error;
                         }
                         il.DeclareLocal(typeof(double));
-                        Console.ForegroundColor = ConsoleColor.DarkGreen;
                         LogOpCode("// Variable #" + (lcl + 1) + " " + field.Name, ConsoleColor.Green);
-                        Console.ResetColor();
                         vars.Add(i, new KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>(new KeyValuePair<FieldInfo, MethodInfo>(field, m2), lcl));
                         LogOpCode("ldarg.0");
                         il.Emit(OpCodes.Ldarg_0);
@@ -242,9 +251,18 @@ public class RewardExpression
                             LogOpCode("conv.r8");
                             il.Emit(OpCodes.Conv_R8);
                         }
-                        LogOpCode("stloc " + lcl);
-                        LogOpCode();
-                        il.Emit(OpCodes.Stloc, lcl);
+                        if (lcl < byte.MaxValue)
+                        {
+                            LogOpCode("stloc.s " + lcl);
+                            LogOpCode();
+                            il.Emit(OpCodes.Stloc_S, (byte)lcl);
+                        }
+                        else
+                        {
+                            LogOpCode("stloc " + lcl);
+                            LogOpCode();
+                            il.Emit(OpCodes.Stloc, lcl);
+                        }
                         ++lcl;
                     }
                     skip:;
@@ -375,6 +393,14 @@ public class RewardExpression
                         else return true;
                         emitted = true;
                         continue;
+                    case '^':
+                        if (!last)
+                        {
+                            if (!PowerTwoCall(il, tokens, vars, ref i, ref stackSize)) return false;
+                        }
+                        else return true;
+                        emitted = true;
+                        continue;
                     case '%':
                         if (!last)
                         {
@@ -386,7 +412,13 @@ public class RewardExpression
                 }
             }
             if (!Load(ref i, il, tokens, vars, ref stackSize))
-                if (tokens.Count < i + 2 && tokens[i + 1][0] != '(' || !LoadMethod(ref i, il, tokens, vars, ref stackSize)) return false;
+            {
+                if (tokens.Count < i + 2 && tokens[i + 1][0] != '(' || !LoadMethod(ref i, il, tokens, vars, ref stackSize))
+                {
+                    L.LogWarning("Unknown token: '" + tokens[i] + "'.");
+                    return false;
+                }
+            }
             emitted = true;
         }
         return emitted;
@@ -411,6 +443,39 @@ public class RewardExpression
             i = l;
             il.Emit(code);
             LogOpCode(code.Name);
+            LogOpCode();
+            --stackSize;
+            return true;
+        }
+
+        return false;
+    }
+    private bool PowerTwoCall(ILGenerator il, List<string> tokens, Dictionary<int, KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int>> vars, ref int i, ref int stackSize)
+    {
+        if (stackSize < 1)
+            return false;
+        int l = i + 1;
+        MethodInfo? pow = GetMethod("Pow", 2, _mathMethods ??= typeof(Math).GetMethods(BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public));
+        if (pow == null)
+        {
+            L.LogError("Unable to find Math.Pow method!");
+            return false;
+        }
+        if (Load(ref l, il, tokens, vars, ref stackSize))
+        {
+            i = l;
+            il.Emit(OpCodes.Call, pow);
+            LogOpCode("call Pow");
+            LogOpCode();
+            --stackSize;
+            return true;
+        }
+        else if (tokens.Count > i + 3 && tokens[i + 2][0] is '(' or '[' or '{')
+        {
+            LoadMethod(ref l, il, tokens, vars, ref stackSize);
+            i = l;
+            il.Emit(OpCodes.Call, pow);
+            LogOpCode("call Pow");
             LogOpCode();
             --stackSize;
             return true;
@@ -459,8 +524,16 @@ public class RewardExpression
             return false;
         if (vars.TryGetValue(index, out KeyValuePair<KeyValuePair<FieldInfo, MethodInfo>, int> mi))
         {
-            LogOpCode("ldloc " + mi.Value);
-            il.Emit(OpCodes.Ldloc, mi.Value);
+            if (mi.Value < byte.MaxValue)
+            {
+                LogOpCode("ldloc.s " + mi.Value);
+                il.Emit(OpCodes.Ldloc_S, (byte)mi.Value);
+            }
+            else
+            {
+                LogOpCode("ldloc " + mi.Value);
+                il.Emit(OpCodes.Ldloc, mi.Value);
+            }
             if (mi.Key.Value.ReturnType != typeof(void))
                 ++stackSize;
             return true;
@@ -468,7 +541,8 @@ public class RewardExpression
         else
         {
             string tkn = tokens[index];
-            FieldInfo? fi = typeof(Mathf).GetField(tkn, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Static);
+            FieldInfo? fi = typeof(Math).GetField(tkn, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Static) ??
+                typeof(Math).GetField(tkn, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Static);
             if (fi != null)
             {
                 if (fi.IsLiteral)
@@ -547,9 +621,9 @@ public class RewardExpression
 
         if (ind2 + 1 != ind1)
             ++pCt;
-
-        MethodInfo? f = //GetMethod(tkn, pCt, typeof(Mathf).GetMethods(BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public)) ?? 
-                        GetMethod(tkn, pCt, typeof(Math).GetMethods(BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public));
+        if (tkn.Equals("ceil", StringComparison.OrdinalIgnoreCase))
+            tkn = "Ceiling";
+        MethodInfo? f = GetMethod(tkn, pCt, _mathMethods ??= typeof(Math).GetMethods(BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public));
 
         if (f != null)
         {

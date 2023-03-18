@@ -393,8 +393,8 @@ public static class F
             TriggerEffectReliable(effect, EffectManager.MEDIUM, position);
     }
     public static void TriggerEffectReliable(EffectAsset asset, float range, Vector3 position)
-        => TriggerEffectReliable(asset, Provider.EnumerateClients_RemoteWithinSphere(position, range), position);
-    public static void TriggerEffectReliable(EffectAsset asset, IEnumerable<ITransportConnection> connection, Vector3 position)
+        => TriggerEffectReliable(asset, Provider.GatherRemoteClientConnectionsWithinSphere(position, range), position);
+    public static void TriggerEffectReliable(EffectAsset asset, PooledTransportConnectionList connection, Vector3 position)
     {
         ThreadUtil.assertIsGameThread();
         TriggerEffectParameters p = new TriggerEffectParameters(asset)
@@ -1050,7 +1050,7 @@ public static class F
                     state = new byte[sizeof(ulong) * 2];
                 Buffer.BlockCopy(oldSt, 0, state, 0, sizeof(ulong) * 2);
                 Data.SendUpdateBarricadeState.Invoke(drop.GetNetId(), ENetReliability.Reliable,
-                    BarricadeManager.EnumerateClients_Remote(x, y, plant), state);
+                    BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
             }
         }
         else if (drop.interactable is InteractableSign sign)
@@ -1460,6 +1460,25 @@ public static class F
         }
         builder.Append(')');
     }
+    internal static void AppendPropertyList(StringBuilder builder, int startIndex, int length, int i, int clampLen)
+    {
+        if (i != 0)
+            builder.Append(',');
+        builder.Append('(');
+        for (int j = 0; j < clampLen; ++j)
+        {
+            if (j != 0)
+                builder.Append(',');
+            builder.Append('@').Append(j);
+        }
+        for (int j = startIndex; j < startIndex + length; ++j)
+        {
+            if (clampLen != 0 || j != startIndex)
+                builder.Append(',');
+            builder.Append('@').Append(j);
+        }
+        builder.Append(')');
+    }
     public static bool NullOrEmpty<T>(this ICollection<T>? collection)
     {
         return collection == null || collection.Count == 0;
@@ -1657,10 +1676,28 @@ public static class F
         if (player is not { IsOnline: true })
             return false;
         QuestAsset current = player.Player.quests.GetTrackedQuest();
+        if (current != null && quest != null)
+        {
+            if (current.GUID == quest.GUID && !player.Save.TrackQuests)
+                player.Player.quests.ServerAddQuest(quest);
+
+            return false;
+        }
+        if (player.Save.TrackQuests)
+            player.Player.quests.ServerAddQuest(quest);
+        return true;
+    }
+    public static bool ServerUntrackQuest(this UCPlayer player, QuestAsset quest)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (player is not { IsOnline: true })
+            return false;
+        QuestAsset current = player.Player.quests.GetTrackedQuest();
         if (current == quest)
             return false;
 
-        player.Player.quests.ServerAddQuest(quest);
+        if (player.Player.quests.GetTrackedQuest() == quest)
+            player.Player.quests.TrackQuest(null);
         return true;
     }
     public static void CombineIfNeeded(this ref CancellationToken token, CancellationToken other)

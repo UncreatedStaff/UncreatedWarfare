@@ -57,6 +57,11 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         }
         LoadRotation();
         OnRotationUpdated();
+        if (ElectricalGridBehavior != ElectricalGridBehaivor.EnabledWhenInRotation)
+        {
+            SetPowerForAllInGrid((TeamManager.Team2Main.Data.GridObjects ?? Array.Empty<GridObject>())
+                .Concat(TeamManager.Team2Main.Data.GridObjects ?? Array.Empty<GridObject>()), true);
+        }
         if (this is IFlagObjectiveGamemode gm3)
         {
             if (gm3.Objective != obj1)
@@ -241,12 +246,14 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 
         return winner == 0;
     }
-    internal virtual bool IsBarricadeObjectEnabled(BarricadeDrop drop)
+    internal virtual bool IsInteractableEnabled(Interactable interactable)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Vector3 pos = drop.model.position;
+        Vector3 pos = interactable.transform.position;
+        if (TeamManager.IsInAnyMainOrAMCOrLobby(pos))
+            return true;
         switch (ElectricalGridBehavior)
         {
             case ElectricalGridBehaivor.AllEnabled: return true;
@@ -286,6 +293,11 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (CheckFlag(TeamManager.Team1Main.Data.GridObjects) ||
+            CheckFlag(TeamManager.Team2Main.Data.GridObjects) ||
+            CheckFlag(TeamManager.Team1AMC.Data.GridObjects) ||
+            CheckFlag(TeamManager.Team2AMC.Data.GridObjects))
+            return true;
         switch (ElectricalGridBehavior)
         {
             case ElectricalGridBehaivor.AllEnabled:
@@ -327,6 +339,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         return false;
         bool CheckFlag(GridObject[] grid)
         {
+            if (grid == null) return false;
             GameObject go = obj.gameObject;
             for (int g = 0; g < grid.Length; ++g)
             {
@@ -341,6 +354,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     protected virtual void OnObjectiveChangedPowerHandler(Flag? oldObj, Flag? newObj)
     {
+        if (!Data.UseElectricalGrid) return;
         if (ElectricalGridBehavior != ElectricalGridBehaivor.EnabledWhenObjective)
             return;
 #if DEBUG
@@ -356,32 +370,141 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         {
             SetPowerForAllInGrid(arr, true);
         }
+
+        CheckPowerForAllBarricades();
     }
     protected virtual void OnRotationUpdated()
     {
+        if (!Data.UseElectricalGrid) return;
         if (ElectricalGridBehavior != ElectricalGridBehaivor.EnabledWhenInRotation)
             return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SetPowerForAllInGrid(AllFlags.Where(x => !Rotation.Contains(x)).SelectMany(x => x?.ZoneData?.Item?.Data.GridObjects ?? Array.Empty<GridObject>()), false);
-        SetPowerForAllInGrid(Rotation.SelectMany(x => x?.ZoneData?.Item?.Data.GridObjects ?? Array.Empty<GridObject>()), true);
+        SetPowerForAllInGrid(OutOfRotationGridObjects, false);
+        SetPowerForAllInGrid(RotationGridObjects, true);
+
+        CheckPowerForAllBarricades();
     }
-    private static void SetPowerForAllInGrid(IEnumerable<GridObject> arr, bool state)
+
+    protected IEnumerable<GridObject> RotationGridObjects
     {
+        get => Rotation
+            .SelectMany(x => x?.ZoneData?.Item?.Data.GridObjects ?? Array.Empty<GridObject>())
+            .Concat(TeamManager.Team1Main.Data.GridObjects ?? Array.Empty<GridObject>())
+            .Concat(TeamManager.Team2Main.Data.GridObjects ?? Array.Empty<GridObject>());
+    }
+    protected IEnumerable<GridObject> OutOfRotationGridObjects
+    {
+        get => AllFlags
+            .Where(x => !Rotation.Contains(x))
+            .SelectMany(x => x?.ZoneData?.Item?.Data.GridObjects ?? Array.Empty<GridObject>());
+    }
+    protected static void CheckPowerForAllBarricades()
+    {
+        if (Data.RefreshIsConnectedToPower != null)
+        {
+            foreach (BarricadeDrop drop in UCBarricadeManager.AllBarricades)
+            {
+                if (drop.interactable is InteractablePower power)
+                    Data.RefreshIsConnectedToPower(power);
+            }
+        }
+    }
+    protected static void SetPowerForAllInGrid(IEnumerable<GridObject> arr, bool state)
+    {
+        if (!Data.UseElectricalGrid) return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (!Data.UseElectricalGrid) return;
         foreach (GridObject obj in arr)
         {
-            if (obj.Object is { interactable: { } inx } && inx != null)
+            if (obj.Object is { interactable: { } inx } && inx != null && inx.objectAsset.interactability == EObjectInteractability.BINARY_STATE)
             {
-                if (inx.objectAsset.interactability == EObjectInteractability.BINARY_STATE &&
-                    inx.objectAsset.interactabilityHint is EObjectInteractabilityHint.SWITCH or EObjectInteractabilityHint.FIRE or EObjectInteractabilityHint.GENERATOR)
+                if (inx.objectAsset.interactabilityHint is EObjectInteractabilityHint.SWITCH or EObjectInteractabilityHint.FIRE
+                    or EObjectInteractabilityHint.GENERATOR)
                 {
                     ObjectManager.forceObjectBinaryState(inx.transform, state);
                 }
-                inx.updateWired(false);
+
+                Data.RefreshIsConnectedToPower?.Invoke(inx);
+            }
+        }
+    }
+    public void OnZoneElectricalGridObjectsUpdated(Zone zone, List<GridObject> added, List<GridObject> removed)
+    {
+        if (!Data.UseElectricalGrid) return;
+        if (ElectricalGridBehavior is ElectricalGridBehaivor.EnabledWhenInRotation or ElectricalGridBehaivor.AllEnabled)
+        {
+            RemoveDuplicatesFromRemoving(RotationGridObjects);
+            if (ElectricalGridBehavior == ElectricalGridBehaivor.AllEnabled)
+            {
+                RemoveDuplicatesFromRemoving(OutOfRotationGridObjects);
+            }
+        }
+        else if (ElectricalGridBehavior == ElectricalGridBehaivor.EnabledWhenObjective)
+        {
+            if (this is IFlagObjectiveGamemode obj1)
+            {
+                GridObject[]? grid = obj1.Objective?.ZoneData?.Item?.Data.GridObjects;
+                if (grid is { Length: > 0 })
+                    RemoveDuplicatesFromRemoving(grid);
+            }
+            else if (this is IFlagTeamObjectiveGamemode obj2)
+            {
+                GridObject[]? grid = obj2.ObjectiveTeam1?.ZoneData?.Item?.Data.GridObjects;
+                if (grid is { Length: > 0 })
+                    RemoveDuplicatesFromRemoving(grid);
+                grid = obj2.ObjectiveTeam2?.ZoneData?.Item?.Data.GridObjects;
+                if (grid is { Length: > 0 })
+                    RemoveDuplicatesFromRemoving(grid);
+            }
+        }
+
+        void RemoveDuplicatesFromRemoving(IEnumerable<GridObject> grid)
+        {
+            foreach (GridObject obj in grid)
+            {
+                int ind = removed.FindIndex(x => x.ObjectInstanceId == obj.ObjectInstanceId);
+                if (ind != -1)
+                    removed.RemoveAtFast(ind);
+            }
+        }
+        if (zone.Data.UseCase is ZoneUseCase.Team1Main or ZoneUseCase.Team2Main or ZoneUseCase.Team1MainCampZone or ZoneUseCase.Team2MainCampZone)
+        {
+            SetPowerForAllInGrid(added, true);
+            SetPowerForAllInGrid(removed, false);
+            return;
+        }
+        if (ElectricalGridBehavior == ElectricalGridBehaivor.Disabled)
+            return;
+        Flag? flag = AllFlags.FirstOrDefault(x => x.ZoneData is not null && x.ZoneData.LastPrimaryKey == zone.PrimaryKey);
+
+        if (flag != null)
+        {
+            switch (ElectricalGridBehavior)
+            {
+                case ElectricalGridBehaivor.AllEnabled:
+                    SetPowerForAllInGrid(added, true);
+                    SetPowerForAllInGrid(removed, false);
+                    break;
+                case ElectricalGridBehaivor.EnabledWhenInRotation:
+                    if (Rotation.Contains(flag))
+                    {
+                        SetPowerForAllInGrid(added, true);
+                        SetPowerForAllInGrid(removed, false);
+                    }
+
+                    break;
+                case ElectricalGridBehaivor.EnabledWhenObjective:
+                    if (flag.IsAnObj)
+                    {
+                        SetPowerForAllInGrid(added, true);
+                        SetPowerForAllInGrid(removed, false);
+                    }
+
+                    break;
             }
         }
     }

@@ -1040,7 +1040,7 @@ public static class EventFunctions
             shouldAllow = false;
             return;
         }
-        if (parameters.cause < DeathTracker.MAIN_CAMP_OFFSET && Data.Gamemode is TeamGamemode gm && gm.EnableAMC && OffenseManager.IsValidSteam64Id(parameters.killer) && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
+        if (parameters.cause < DeathTracker.MainCampDeathCauseOffset && Data.Gamemode is TeamGamemode gm && gm.EnableAMC && OffenseManager.IsValidSteam64Id(parameters.killer) && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
         {
             Player killer = PlayerTool.getPlayer(parameters.killer);
             if (killer != null)
@@ -1055,7 +1055,7 @@ public static class EventFunctions
                         goto next;
                     shouldAllow = false;
                     byte newdamage = (byte)Math.Min(byte.MaxValue, Mathf.RoundToInt(parameters.damage * parameters.times * UCWarfare.Config.AMCDamageMultiplier));
-                    killer.life.askDamage(newdamage, parameters.direction * newdamage, (EDeathCause)((int)DeathTracker.MAIN_CAMP_OFFSET + (int)parameters.cause),
+                    killer.life.askDamage(newdamage, parameters.direction * newdamage, (EDeathCause)((int)DeathTracker.MainCampDeathCauseOffset + (int)parameters.cause),
                     parameters.limb, parameters.player.channel.owner.playerID.steamID, out _, true, ERagdollEffect.NONE, false, true);
                     if (!LastSentMessages.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out long lasttime) || new TimeSpan(DateTime.Now.Ticks - lasttime).TotalSeconds > 5)
                     {

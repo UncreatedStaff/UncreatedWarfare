@@ -150,6 +150,17 @@ public static class QuestManager
         OnQuestStarted(tracker);
         RegisteredTrackers.Add(tracker);
     }
+    internal static void CheckNeedsToUntrack(UCPlayer? player)
+    {
+        if (player != null && !player.Save.TrackQuests)
+            UntrackQuest(player);
+    }
+    public static void UntrackQuest(UCPlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (player.Player.quests.GetTrackedQuest() is { } qa)
+            player.Player.quests.ServerAddQuest(qa);
+    }
     /// <summary>Run on disconnect.</summary>
     public static void DeregisterOwnedTrackers(UCPlayer player)
     {
@@ -298,6 +309,11 @@ public static class QuestManager
             L.LogDebug(tracker.Player!.Name.PlayerName + " updated a quest: " + tracker.GetDisplayString());
         }
         ActionLog.Add(ActionLogType.MakeQuestProgress, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
+        if (tracker.Flag != 0 && !skipFlagUpdate)
+        {
+            tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
+            L.LogDebug("Flag quest updated: " + tracker.FlagValue);
+        }
         if (tracker.IsDailyQuest)
         {
             if (!UCWarfare.Config.DisableDailyQuests)
@@ -307,11 +323,6 @@ public static class QuestManager
         {
             if (tracker.Preset != null)
                 SaveProgress(tracker, tracker.Preset.Team);
-            if (tracker.Flag != 0 && !skipFlagUpdate)
-            {
-                tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
-                L.LogDebug("Flag quest updated: " + tracker.FlagValue);
-            }
         }
         L.LogDebug("Quest updated: " + tracker.GetDisplayString());
     }

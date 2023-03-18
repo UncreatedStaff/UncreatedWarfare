@@ -17,7 +17,7 @@ public static class ListSync
     {
         Type[] types = Assembly.GetExecutingAssembly().GetTypes();
         L.Log("[LIST SYNC] Searching for sync types:");
-        using IDisposable indent = L.IndentLog(1u);
+        using IDisposable indent = L.IndentLog(1);
         for (int i = 0; i < types.Length; ++i)
         {
             Type type = types[i];

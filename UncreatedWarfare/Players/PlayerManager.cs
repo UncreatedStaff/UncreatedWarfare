@@ -2,6 +2,7 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -35,6 +36,13 @@ public static class PlayerManager
         EventDispatcher.GroupChanged += OnGroupChagned;
         Provider.onRejectingPlayer += OnRejectingPlayer;
         EventDispatcher.PlayerPending += OnPlayerPending;
+    }
+    internal static List<UCSemaphore> GetAllSemaphores()
+    {
+        lock (_semaphores)
+        {
+            return _semaphores.Values.ToList();
+        }
     }
     internal static void DeregisterPlayerSemaphore(ulong player)
     {

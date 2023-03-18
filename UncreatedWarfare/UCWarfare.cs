@@ -68,6 +68,14 @@ public class UCWarfare : MonoBehaviour
         I = this;
         FullyLoaded = false;
     }
+
+    public static void SaveSystemConfig()
+    {
+        if (!IsLoaded)
+            throw new SingletonUnloadedException(typeof(UCWarfare));
+        I._config.Save();
+    }
+
     [UsedImplicitly]
     private void Start() => _earlyLoadTask = Task.Run( async () =>
     {
@@ -124,6 +132,9 @@ public class UCWarfare : MonoBehaviour
         await ItemIconProvider.DownloadConfig(token).ConfigureAwait(false);
         await TeamManager.ReloadFactions(token).ConfigureAwait(false);
         await ToUpdate(token);
+        _ = TeamManager.Team1Faction;
+        _ = TeamManager.Team2Faction;
+        _ = TeamManager.AdminFaction;
 
         /* LOAD LOCALIZATION ASSETS */
         L.Log("Loading Localization and Color Data...", ConsoleColor.Magenta);
@@ -231,7 +242,7 @@ public class UCWarfare : MonoBehaviour
         F.CheckDir(Data.Paths.StructureStorage, out _, true);
         F.CheckDir(Data.Paths.VehicleStorage, out _, true);
         ZonePlayerComponent.UIInit();
-
+            
         Solver = gameObject.AddComponent<Projectiles.ProjectileSolver>();
 
         Announcer = await Data.Singletons.LoadSingletonAsync<UCAnnouncer>(token: token);
@@ -271,6 +282,7 @@ public class UCWarfare : MonoBehaviour
             L.LogWarning("Level does not have global electricity enabled, electrical grid effects will not work!");
             Data.UseElectricalGrid = false;
         }
+        else Data.UseElectricalGrid = true;
 
         UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
         FullyLoaded = true;
@@ -628,20 +640,22 @@ public class UCWarfare : MonoBehaviour
         }
     }
     public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
-    public static void RunOnMainThread(System.Action action) => RunOnMainThread(action, false, default);
-    public static void RunOnMainThread(System.Action action, CancellationToken token) => RunOnMainThread(action, false, token);
+    public static bool RunOnMainThread(System.Action action) => RunOnMainThread(action, false, default);
+    public static bool RunOnMainThread(System.Action action, CancellationToken token) => RunOnMainThread(action, false, token);
     /// <param name="action">Method to be ran on the main thread in an update dequeue loop.</param>
     /// <param name="skipFrame">If this is called on the main thread it will queue it to be called next update or at the end of the current frame.</param>
-    public static void RunOnMainThread(System.Action action, bool skipFrame, CancellationToken token = default)
+    public static bool RunOnMainThread(System.Action action, bool skipFrame, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
         if (IsMainThread)
-            action();
-        else
         {
-            MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask(skipFrame, token));
-            res.OnCompleted(action);
+            action();
+            return false;
         }
+
+        MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask(skipFrame, token));
+        res.OnCompleted(action);
+        return true;
     }
     /// <summary>Continues to run main thread operations in between spins so that calls to <see cref="ToUpdate"/> are not blocked.</summary>
     public static bool SpinWaitUntil(Func<bool> condition, int millisecondsTimeout = -1, CancellationToken token = default)

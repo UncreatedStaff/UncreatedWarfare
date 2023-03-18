@@ -41,7 +41,7 @@ public static class RepairManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         stations.Clear();
-        foreach (BarricadeDrop barricade in UCBarricadeManager.AllBarricades)
+        foreach (BarricadeDrop barricade in UCBarricadeManager.NonPlantedBarricades)
         {
             if (Gamemode.Config.BarricadeRepairStation.MatchGuid(barricade.asset.GUID) && !barricade.model.TryGetComponent(out RepairStationComponent _))
             {

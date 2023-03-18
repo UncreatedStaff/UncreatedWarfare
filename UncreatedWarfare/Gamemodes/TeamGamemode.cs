@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -139,7 +140,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
             yield break;
         player.Player.movement.forceRemoveFromVehicle();
         yield return null;
-        player.Player.life.askDamage(byte.MaxValue, Vector3.up / 8f, DeathTracker.MAIN_DEATH, ELimb.SPINE, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
+        player.Player.life.askDamage(byte.MaxValue, Vector3.up / 8f, DeathTracker.InEnemyMainDeathCause, ELimb.SPINE, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
         ActionLog.Add(ActionLogType.MainCampAttempt, $"Player team: {TeamManager.TranslateName(team, 0, false)}, " +
                                                            $"Team: {TeamManager.TranslateName(TeamManager.Other(team), 0, false)}, " +
                                                            $"Location: {player.Position.ToString("0.#", Data.AdminLocale)}", player);
@@ -325,6 +326,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
         {
             if (this is ITickets tickets)
                 tickets.TicketManager.ShowUI(player);
+            if (!UCWarfare.Config.DisableDailyQuests)
+                DailyQuests.TrackDailyQuest(player);
             InitUI(player);
         }
 

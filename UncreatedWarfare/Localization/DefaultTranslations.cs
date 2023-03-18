@@ -749,6 +749,9 @@ internal static class T
     public static readonly Translation<ItemAsset, byte, Kit> KitHotkeyBinded   = new Translation<ItemAsset, byte, Kit>("<#a0ad8e>Binded <#e8e2d1>{0}</color> to slot <#e8e2d1>{1}</color> for <#fff>{2}</color>.", arg2Fmt: Kit.DisplayNameFormat);
     public static readonly Translation<byte, Kit> KitHotkeyUnbinded            = new Translation<byte, Kit>("<#a0ad8e>Unbinded slot <#e8e2d1>{0}</color> for <#fff>{1}</color>.", arg1Fmt: Kit.DisplayNameFormat);
     public static readonly Translation<byte, Kit> KitHotkeyNotFound            = new Translation<byte, Kit>("<#ff8c69>Slot <#e8e2d1>{0}</color> for <#fff>{1}</color> was not binded.", arg1Fmt: Kit.DisplayNameFormat);
+    public static readonly Translation<Kit> KitLayoutsNotSupported             = new Translation<Kit>("<#ff8c69>A custom layout is not allowed for <#fff>{0}</color>.", Kit.DisplayNameFormat);
+    public static readonly Translation<Kit> KitLayoutSaved                     = new Translation<Kit>("<#a0ad8e>Custom layout for <#fff>{0}</color> saved.", Kit.DisplayNameFormat);
+    public static readonly Translation<Kit> KitLayoutReset                     = new Translation<Kit>("<#a0ad8e>Custom layout for <#fff>{0}</color> reset.", Kit.DisplayNameFormat);
     public static readonly Translation<string, Kit, string> KitPropertySet     = new Translation<string, Kit, string>("<#a0ad8e>Set <#aaa>{0}</color> on kit <#fff>{1}</color> to <#aaa><uppercase>{2}</uppercase></color>.", arg1Fmt: Kit.IdFormat);
     public static readonly Translation<string> KitNameTaken                    = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> already exists.");
     public static readonly Translation<string> KitNotFound                     = new Translation<string>("<#ff8c69>A kit named <#fff>{0}</color> doesn't exist.");

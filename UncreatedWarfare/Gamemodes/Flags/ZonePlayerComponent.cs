@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using SDG.Framework.Debug;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
@@ -555,12 +556,44 @@ internal class ZonePlayerComponent : MonoBehaviour
 
                     if (_currentBuilder.ZoneType == ZoneType.Polygon && _currentPoints != null)
                         _currentBuilder.Points = _currentPoints.ToArray();
+                    GridObject[]? oldGObjs = _currentBuilder.GridObjects;
                     if (_currentGridObjects is { Count: > 0 })
                     {
                         GridObject[] objs = new GridObject[_currentGridObjects.Count];
                         for (int i = 0; i < _currentGridObjects.Count; ++i)
                             objs[i] = _currentGridObjects[i].Value;
                         _currentBuilder.GridObjects = objs;
+                    }
+                    List<GridObject>? added = null;
+                    List<GridObject>? removed = null;
+                    if (Data.Is<FlagGamemode>() && oldGObjs is { Length: > 0 } || _currentGridObjects is { Count: > 0 })
+                    {
+                        if (_currentGridObjects is { Count: > 0 })
+                        {
+                            if (oldGObjs is { Length: > 0 })
+                            {
+                                for (int i = 0; i < oldGObjs.Length; ++i)
+                                {
+                                    GridObject old = oldGObjs[i];
+                                    if (!_currentGridObjects.Exists(x => x.Value.ObjectInstanceId == old.ObjectInstanceId))
+                                        (removed ??= new List<GridObject>()).Add(old);
+                                }
+                                for (int i = 0; i < _currentGridObjects.Count; ++i)
+                                {
+                                    GridObject n = _currentGridObjects[i].Value;
+                                    if (oldGObjs.All(x => x.ObjectInstanceId != n.ObjectInstanceId))
+                                        (added ??= new List<GridObject>()).Add(n);
+                                }
+                            }
+                            else
+                            {
+                                (added ??= new List<GridObject>()).AddRange(_currentGridObjects.Select(x => x.Value));
+                            }
+                        }
+                        else if (oldGObjs is { Length: > 0 })
+                        {
+                            (removed ??= new List<GridObject>()).AddRange(oldGObjs!);
+                        }
                     }
                     if (_currentAdj is { Count: > 0 })
                     {
@@ -596,6 +629,10 @@ internal class ZonePlayerComponent : MonoBehaviour
                             @new = id < 0;
                             await UCWarfare.ToUpdate();
                             ctx.Reply(@new ? T.ZoneEditFinalizeSuccess : T.ZoneEditFinalizeOverwrote, zone);
+                            if (Data.Is(out FlagGamemode flags) && (added != null || removed != null))
+                            {
+                                flags.OnZoneElectricalGridObjectsUpdated(zone, added, removed);
+                            }
                         }
                         finally
                         {

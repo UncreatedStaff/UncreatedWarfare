@@ -354,10 +354,15 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             {
                 WriteRelease();
             }
+
             if (toSave != null)
             {
                 L.LogDebug("Resaving " + toSave.Count + " item(s)...");
                 await AddOrUpdateNoLock(toSave, token).ConfigureAwait(false);
+            }
+            else
+            {
+                L.LogDebug("Found no invalid structures items to resave.");
             }
         }
         finally
@@ -780,6 +785,22 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             WriteRelease();
         }
     }
+    public bool TryGetSaveNoWriteLock(StructureDrop structure, out SavedStructure value)
+    {
+        uint id = structure.instanceID;
+        for (int i = 0; i < Items.Count; ++i)
+        {
+            SavedStructure? item = Items[i].Item;
+            if (item != null && item.InstanceID == id && item.Buildable is UCStructure)
+            {
+                value = item;
+                return true;
+            }
+        }
+
+        value = null!;
+        return false;
+    }
     public bool TryGetSaveNoLock(BarricadeDrop barricade, out SavedStructure value)
     {
         WriteWait();
@@ -804,6 +825,22 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             WriteRelease();
         }
     }
+    internal bool TryGetSaveNoWriteLock(BarricadeDrop barricade, out SavedStructure value)
+    {
+        uint id = barricade.instanceID;
+        for (int i = 0; i < Items.Count; ++i)
+        {
+            SavedStructure? item = Items[i].Item;
+            if (item != null && item.InstanceID == id && item.Buildable is UCBarricade)
+            {
+                value = item;
+                return true;
+            }
+        }
+
+        value = null!;
+        return false;
+    }
     public bool TryGetSaveNoLock(uint id, StructType type, out SavedStructure value)
     {
         WriteWait();
@@ -826,6 +863,21 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         {
             WriteRelease();
         }
+    }
+    internal bool TryGetSaveNoWriteLock(uint id, StructType type, out SavedStructure value)
+    {
+        for (int i = 0; i < Items.Count; ++i)
+        {
+            SavedStructure? item = Items[i].Item;
+            if (item != null && item.InstanceID == id && item.Buildable != null && item.Buildable.Type == type)
+            {
+                value = item;
+                return true;
+            }
+        }
+
+        value = null!;
+        return false;
     }
     public bool TryGetSaveNoLock(StructureDrop structure, out SqlItem<SavedStructure> value)
     {
@@ -851,6 +903,22 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             WriteRelease();
         }
     }
+    internal bool TryGetSaveNoWriteLock(StructureDrop structure, out SqlItem<SavedStructure> value)
+    {
+        uint id = structure.instanceID;
+        for (int i = 0; i < Items.Count; ++i)
+        {
+            SavedStructure? item = Items[i].Item;
+            if (item != null && item.InstanceID == id && item.Buildable is UCStructure)
+            {
+                value = Items[i];
+                return true;
+            }
+        }
+
+        value = null!;
+        return false;
+    }
     public bool TryGetSaveNoLock(BarricadeDrop barricade, out SqlItem<SavedStructure> value)
     {
         WriteWait();
@@ -875,6 +943,22 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             WriteRelease();
         }
     }
+    internal bool TryGetSaveNoWriteLock(BarricadeDrop barricade, out SqlItem<SavedStructure> value)
+    {
+        uint id = barricade.instanceID;
+        for (int i = 0; i < Items.Count; ++i)
+        {
+            SavedStructure? item = Items[i].Item;
+            if (item != null && item.InstanceID == id && item.Buildable is UCBarricade)
+            {
+                value = Items[i];
+                return true;
+            }
+        }
+
+        value = null!;
+        return false;
+    }
     public bool TryGetSaveNoLock(uint id, StructType type, out SqlItem<SavedStructure> value)
     {
         WriteWait();
@@ -897,6 +981,21 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         {
             WriteRelease();
         }
+    }
+    internal bool TryGetSaveNoWriteLock(uint id, StructType type, out SqlItem<SavedStructure> value)
+    {
+        for (int i = 0; i < Items.Count; ++i)
+        {
+            SavedStructure? item = Items[i].Item;
+            if (item != null && item.InstanceID == id && item.Buildable != null && item.Buildable.Type == type)
+            {
+                value = Items[i];
+                return true;
+            }
+        }
+
+        value = null!;
+        return false;
     }
     public async Task<SavedStructure?> GetSave(StructureDrop structure, CancellationToken token = default)
     {

@@ -53,7 +53,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
               !parameters.player.life.isDead &&
                parameters.damage > parameters.player.life.health &&
                parameters.cause != EDeathCause.LANDMINE &&
-               parameters.cause < DeathTracker.MAIN_CAMP_OFFSET && // main campers can't get downed, makes death messages easier
+               parameters.cause < DeathTracker.MainCampDeathCauseOffset && // main campers can't get downed, makes death messages easier
                parameters.damage < 300;
     }
     public override void Load()
@@ -457,13 +457,15 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         if (Squads.SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset effect))
         {
             double sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
-            F.TriggerEffectReliable(effect, Medics.Where(x =>
-            {
-                if (x.GetTeam() != team)
-                    return false;
-                float sqr = (x.Position - position).sqrMagnitude;
-                return sqr > 1 && sqr <= sqrmLimit;
-            }).Select(x => x.Player.channel.owner.transportConnection), position);
+            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(
+                Medics.Where(x =>
+                {
+                    if (x.GetTeam() != team)
+                        return false;
+                    float sqr = (x.Position - position).sqrMagnitude;
+                    return sqr > 1 && sqr <= sqrmLimit;
+                }).Select(x => x.Player.channel.owner.transportConnection), Provider.clients.Count);
+            F.TriggerEffectReliable(effect, list, position);
         }
     }
     public void SpawnInjuredMarkers(IEnumerable<UCPlayer> players, IEnumerable<Vector3> positions, bool dispose, bool clearAll)
@@ -702,7 +704,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 victim.TryUpdateAttackers(killerid.m_SteamID);
             }
 
-            if (player.life.health < 50 && UCPlayer.FromPlayer(player) is { } pl)
+            if (player.life.health < 50 && !player.life.isDead && UCPlayer.FromPlayer(player) is { } pl)
                 Tips.TryGiveTip(pl, 3600, T.TipCallMedic);
         }
         public void TellProneDelayed(float time = 0.5f)

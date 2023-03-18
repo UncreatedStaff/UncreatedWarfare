@@ -24,6 +24,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
@@ -1240,7 +1241,11 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         if (!pk.IsValid)
             throw new ArgumentException("Primary key is not valid.", nameof(pk));
         int pk2 = pk;
-        await Sql.QueryAsync(F.BuildSelectWhereLimit1(TABLE_MAIN, COLUMN_PK, 0, COLUMN_PK, COLUMN_VEHICLE, COLUMN_STRUCTURE, COLUMN_SIGN), new object[] { pk2 },
+        await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_PK, COLUMN_VEHICLE, COLUMN_STRUCTURE, COLUMN_SIGN) +
+                             $" FROM `{TABLE_MAIN}` AS `a` WHERE `{COLUMN_PK}`=@0 AND " +
+                             $"(SELECT `b`.`{StructureSaver.COLUMN_MAP}` " +
+                                $"FROM `{StructureSaver.TABLE_MAIN}` AS `b` " +
+                                $"WHERE `b`.`{StructureSaver.COLUMN_PK}`=`a`.`{COLUMN_STRUCTURE}` LIMIT 1) = @1 LIMIT 1;", new object[] { pk2, MapScheduler.Current },
             reader =>
             {
                 obj = new VehicleSpawn(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.IsDBNull(3) ? PrimaryKey.NotAssigned : reader.GetInt32(3));
@@ -1252,7 +1257,11 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     protected override async Task<VehicleSpawn[]> DownloadAllItems(CancellationToken token = default)
     {
         List<VehicleSpawn> spawns = new List<VehicleSpawn>(32);
-        await Sql.QueryAsync(F.BuildSelect(TABLE_MAIN, COLUMN_PK, COLUMN_VEHICLE, COLUMN_STRUCTURE, COLUMN_SIGN), null,
+        await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_PK, COLUMN_VEHICLE, COLUMN_STRUCTURE, COLUMN_SIGN) +
+                             $" FROM `{TABLE_MAIN}` AS `a` WHERE " +
+                             $"(SELECT `b`.`{StructureSaver.COLUMN_MAP}` " +
+                             $"FROM `{StructureSaver.TABLE_MAIN}` AS `b` " +
+                             $"WHERE `b`.`{StructureSaver.COLUMN_PK}`=`a`.`{COLUMN_STRUCTURE}` LIMIT 1) = @0;", new object[] { MapScheduler.Current },
             reader =>
             {
                 spawns.Add(new VehicleSpawn(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.IsDBNull(3) ? PrimaryKey.NotAssigned : reader.GetInt32(3)));

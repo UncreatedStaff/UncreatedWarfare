@@ -51,6 +51,8 @@ public enum QuestType : byte
     KillEnemiesWithBranch,
     /// <summary><see cref="KillEnemiesQuestTurret"/></summary>
     KillEnemiesWithTurret,
+    /// <summary><see cref="KillEnemiesQuestEmplacement"/></summary>
+    KillEnemiesWithEmplacement,
     /// <summary><see cref="KillEnemiesQuestSquad"/></summary>
     KillEnemiesInSquad,
     /// <summary><see cref="KillEnemiesQuestFullSquad"/></summary>
@@ -2629,20 +2631,27 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
                 return _value.ToString();
             if (_type == DynamicValueType.Range)
-                return (_behavior == ChoiceBehavior.Selective ? "$" : "#") + "(" + _minVal.ToString() +
-                       ":" + _maxVal.ToString() + ")";
+            {
+                if (_behavior == ChoiceBehavior.Selective)
+                {
+                    return "(" + _minVal + ":" + _maxVal + ")";
+                }
+                return _minVal.ToString().ToLower() + " to " + _maxVal.ToString().ToLower();
+            }
             if (_type == DynamicValueType.Wildcard)
-                return _behavior == ChoiceBehavior.Selective ? "$*" : "#*";
+                return _behavior == ChoiceBehavior.Selective ? "$*" : ("any " + Localization.TranslateEnumName(typeof(TEnum), 0).ToLower());
             if (_type == DynamicValueType.Set)
             {
-                StringBuilder sb = new StringBuilder(_behavior == ChoiceBehavior.Selective ? "$" : "#");
-                sb.Append('[');
+                StringBuilder sb = new StringBuilder(20);
+                if (_behavior == ChoiceBehavior.Selective)
+                    sb.Append("$[");
                 for (int i = 0; i < _values!.Length; i++)
                 {
-                    if (i != 0) sb.Append(',');
+                    if (i != 0) sb.Append(", ");
                     sb.Append(_values[i].ToString());
                 }
-                sb.Append(']');
+                if (_behavior == ChoiceBehavior.Selective)
+                    sb.Append(']');
                 return sb.ToString();
             }
             return _value.ToString();

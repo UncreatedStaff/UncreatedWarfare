@@ -863,6 +863,7 @@ public class DebugCommand : AsyncCommand
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
                 ctx.Caller.Player.quests.ServerAddQuest(asset);
+                QuestManager.CheckNeedsToUntrack(ctx.Caller);
                 ctx.ReplyString("<#9fa1a6>Added quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
             else ctx.ReplyString("<#ff8c69>Quest not found.");
@@ -1014,6 +1015,7 @@ public class DebugCommand : AsyncCommand
             L.Log($"{cooldown.type}: {cooldown.Timeleft:hh\\:mm\\:ss}, {(cooldown.data is null || cooldown.data.Length == 0 ? "NO DATA" : string.Join(";", cooldown.data))}");
         }
     }
+#if DEBUG
     private void giveuav(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1032,7 +1034,6 @@ public class DebugCommand : AsyncCommand
         UAV.RequestUAV(ctx.Caller);
         ctx.Defer();
     }
-#if DEBUG
     private async Task testfield(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertRanByPlayer();
@@ -1095,11 +1096,11 @@ public class DebugCommand : AsyncCommand
         ulong team = ctx.Caller.GetTeam();
         if (manager != null)
         {
-            SqlItem<Kit>? sql = await manager.FindKit(team == 1 ? "ussql1" : "mesql1", token).ConfigureAwait(false);
+            SqlItem<Kit>? sql = await manager.GetRecommendedSquadleaderKit(team, token).ConfigureAwait(false);
             if (sql?.Item == null)
                 ctx.SendUnknownError();
             else
-                await manager.GiveKit(ctx.Caller, sql, token).ConfigureAwait(false);
+                await manager.GiveKit(ctx.Caller, sql, false, token).ConfigureAwait(false);
         }
 
         if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader != ctx.Caller)
@@ -1464,8 +1465,16 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.STAFF);
         if (ctx.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer))
         {
+            if (s64 == 76561198267927009ul)
+            {
+                s64 = ctx.CallerID;
+                onlinePlayer = ctx.Caller;
+            }
             if (!UCWarfare.Config.Nerds.Contains(s64))
+            {
                 UCWarfare.Config.Nerds.Add(s64);
+                UCWarfare.SaveSystemConfig();
+            }
             ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} is now a nerd.");
         }
         else ctx.SendCorrectUsage("/test nerd <player>");
@@ -1475,8 +1484,12 @@ public class DebugCommand : AsyncCommand
         ctx.AssertPermissions(EAdminType.STAFF);
         if (ctx.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer))
         {
-            UCWarfare.Config.Nerds.RemoveAll(x => x == s64);
-            ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} is not a nerd.");
+            if (UCWarfare.Config.Nerds.RemoveAll(x => x == s64) > 0)
+            {
+                UCWarfare.SaveSystemConfig();
+                ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} is not a nerd.");
+            }
+            else ctx.ReplyString($"{onlinePlayer?.ToString() ?? s64.ToString()} was not a nerd.");
         }
         else ctx.SendCorrectUsage("/test unnerd <player>");
     }

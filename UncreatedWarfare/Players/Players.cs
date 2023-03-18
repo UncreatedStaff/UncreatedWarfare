@@ -170,7 +170,7 @@ public sealed class UCPlayerKeys : IDisposable
     private static void CheckKey(PlayerKey key)
     {
 #pragma warning disable CS0618
-        if (key == PlayerKey.Reserved || (int)key < 0 || (int)key >= KeyCount)
+        if (key is PlayerKey.Primary or PlayerKey.Secondary or PlayerKey.Reserved || (int)key < 0 || (int)key >= KeyCount)
             throw new ArgumentOutOfRangeException(nameof(key), key.ToString() + " doesn't match a valid key.");
 #pragma warning restore CS0618
     }
@@ -247,7 +247,9 @@ public delegate void KeyUp(UCPlayer player, float timeDown, ref bool handled);
 public enum PlayerKey
 {
     Jump = 0,
+    [Obsolete("Replaced with PlayerInput.pendingPrimaryAttackInput.")]
     Primary = 1,
+    [Obsolete("Replaced with PlayerInput.pendingSecondaryAttackInput.")]
     Secondary = 2,
     Crouch = 3,
     Prone = 4,

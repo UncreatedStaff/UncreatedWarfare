@@ -2,13 +2,16 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using HarmonyLib;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
@@ -450,227 +453,143 @@ public static class TeamManager
     public static string DefaultKit => _data.Data.DefaultKit;
     public static Zone Team1Main
     {
+        [MethodImpl(MethodImplOptions.NoInlining)]
         get
         {
-            if (_t1Main is not { Item: { } item })
+            if (Level.isLoaded)
             {
-                ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
-                if (singleton != null)
+                Zone? zone = TryGetTeamZone(1ul, false);
+                if (zone is not null)
+                    return zone;
+
+                L.LogWarning("There is no defined Team 1 main base. Using default instead.");
+                for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
                 {
-                    singleton.WriteWait();
-                    try
+                    if (JSONMethods.DefaultZones[i].UseCase == ZoneUseCase.Team1Main)
                     {
-                        for (int i = 0; i < singleton.Items.Count; ++i)
-                        {
-                            if (singleton.Items[i] is { Item.Data.UseCase: ZoneUseCase.Team1Main })
-                            {
-                                _t1Main = singleton.Items[i];
-                                break;
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        singleton.WriteRelease();
+                        return JSONMethods.DefaultZones[i].GetZone();
                     }
                 }
-                if (_t1Main is not { Item: { } })
-                {
-                    L.LogWarning("There is no defined Team 1 main base. Using default instead.");
-                    for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
-                    {
-                        if (JSONMethods.DefaultZones[i].UseCase == ZoneUseCase.Team1Main)
-                        {
-                            return JSONMethods.DefaultZones[i].GetZone();
-                        }
-                    }
-
-                    return null!;
-                }
-
-                item = _t1Main.Item;
             }
-            return item!;
+            else
+            {
+                L.LogWarning(new StackFrame(1).GetMethod()?.FullDescription() + " trying to get Team1Main before level load.");
+            }
+
+            return null!;
         }
     }
     public static Zone Team2Main
     {
+        [MethodImpl(MethodImplOptions.NoInlining)]
         get
         {
-            if (_t2Main is not { Item: { } item })
+            if (Level.isLoaded)
             {
-                ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
-                if (singleton != null)
+                Zone? zone = TryGetTeamZone(2ul, false);
+                if (zone is not null)
+                    return zone;
+
+                L.LogWarning("There is no defined Team 2 main base. Using default instead.");
+                for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
                 {
-                    singleton.WriteWait();
-                    try
+                    if (JSONMethods.DefaultZones[i].UseCase == ZoneUseCase.Team2Main)
                     {
-                        for (int i = 0; i < singleton.Items.Count; ++i)
-                        {
-                            if (singleton.Items[i] is { Item.Data.UseCase: ZoneUseCase.Team2Main })
-                            {
-                                _t2Main = singleton.Items[i];
-                                break;
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        singleton.WriteRelease();
+                        return JSONMethods.DefaultZones[i].GetZone();
                     }
                 }
-                if (_t2Main is not { Item: { } })
-                {
-                    L.LogWarning("There is no defined Team 2 main base. Using default instead.");
-                    for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
-                    {
-                        if (JSONMethods.DefaultZones[i].UseCase == ZoneUseCase.Team2Main)
-                        {
-                            return JSONMethods.DefaultZones[i].GetZone();
-                        }
-                    }
-
-                    return null!;
-                }
-
-                item = _t2Main.Item;
             }
-            return item!;
+            else
+            {
+                L.LogWarning(new StackFrame(1).GetMethod()?.FullDescription() + " trying to get Team2Main before level load.");
+            }
+
+            return null!;
         }
     }
     public static Zone Team1AMC
     {
+        [MethodImpl(MethodImplOptions.NoInlining)]
         get
         {
-            if (_t1AMC is not { Item: { } item })
+            if (Level.isLoaded)
             {
-                ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
-                if (singleton != null)
+                Zone? zone = TryGetTeamZone(1ul, true);
+                if (zone is not null)
+                    return zone;
+
+                L.LogWarning("There is no defined Team 1 AMC. Using default instead.");
+                for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
                 {
-                    singleton.WriteWait();
-                    try
+                    if (JSONMethods.DefaultZones[i].UseCase == ZoneUseCase.Team1Main)
                     {
-                        for (int i = 0; i < singleton.Items.Count; ++i)
-                        {
-                            if (singleton.Items[i] is { Item.Data.UseCase: ZoneUseCase.Team1MainCampZone })
-                            {
-                                _t1AMC = singleton.Items[i];
-                                break;
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        singleton.WriteRelease();
+                        return JSONMethods.DefaultZones[i].GetZone();
                     }
                 }
-                if (_t1AMC is not { Item: { } })
-                {
-                    L.LogWarning("There is no defined Team 1 AMC. Using default instead.");
-                    for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
-                    {
-                        if (JSONMethods.DefaultZones[i].UseCase == ZoneUseCase.Team1MainCampZone)
-                        {
-                            return JSONMethods.DefaultZones[i].GetZone();
-                        }
-                    }
-
-                    return null!;
-                }
-
-                item = _t1AMC.Item;
             }
-            return item!;
+            else
+            {
+                L.LogWarning(new StackFrame(1).GetMethod()?.FullDescription() + " trying to get Team1AMC before level load.");
+            }
+
+            return null!;
         }
     }
     public static Zone Team2AMC
     {
+        [MethodImpl(MethodImplOptions.NoInlining)]
         get
         {
-            if (_t2AMC is not { Item: { } item })
+            if (Level.isLoaded)
             {
-                ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
-                if (singleton != null)
+                Zone? zone = TryGetTeamZone(2ul, true);
+                if (zone is not null)
+                    return zone;
+
+                L.LogWarning("There is no defined Team 2 AMC. Using default instead.");
+                for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
                 {
-                    singleton.WriteWait();
-                    try
+                    if (JSONMethods.DefaultZones[i].UseCase == ZoneUseCase.Team2Main)
                     {
-                        for (int i = 0; i < singleton.Items.Count; ++i)
-                        {
-                            if (singleton.Items[i] is { Item.Data.UseCase: ZoneUseCase.Team2MainCampZone } )
-                            {
-                                _t2AMC = singleton.Items[i];
-                                break;
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        singleton.WriteRelease();
+                        return JSONMethods.DefaultZones[i].GetZone();
                     }
                 }
-                if (_t2AMC is not { Item: { } })
-                {
-                    L.LogWarning("There is no defined Team 2 AMC. Using default instead.");
-                    for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
-                    {
-                        if (JSONMethods.DefaultZones[i].UseCase == ZoneUseCase.Team2MainCampZone)
-                        {
-                            return JSONMethods.DefaultZones[i].GetZone();
-                        }
-                    }
-
-                    return null!;
-                }
-
-                item = _t2AMC.Item;
             }
-            return item!;
+            else
+            {
+                L.LogWarning(new StackFrame(1).GetMethod()?.FullDescription() + " trying to get Team2AMC before level load.");
+            }
+
+
+            return null!;
         }
     }
     public static Zone LobbyZone
     {
+        [MethodImpl(MethodImplOptions.NoInlining)]
         get
         {
-            if (_lobbyZone is not { Item: { } item })
+            if (Level.isLoaded)
             {
-                ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
-                if (singleton != null)
+                Zone? zone = TryGetLobbyZone();
+                if (zone is not null)
+                    return zone;
+
+                L.LogWarning("There is no defined Lobby zone. Using default instead.");
+                for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
                 {
-                    singleton.WriteWait();
-                    try
+                    if (JSONMethods.DefaultZones[i].UseCase == ZoneUseCase.Lobby)
                     {
-                        for (int i = 0; i < singleton.Items.Count; ++i)
-                        {
-                            if (singleton.Items[i] is { Item.Data.UseCase: ZoneUseCase.Lobby })
-                            {
-                                _lobbyZone = singleton.Items[i];
-                                break;
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        singleton.WriteRelease();
+                        return JSONMethods.DefaultZones[i].GetZone();
                     }
                 }
-                if (_lobbyZone is not { Item: { } })
-                {
-                    L.LogWarning("There is no defined lobby zone. Using default instead.");
-                    for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
-                    {
-                        if (JSONMethods.DefaultZones[i].UseCase == ZoneUseCase.Lobby)
-                        {
-                            return JSONMethods.DefaultZones[i].GetZone();
-                        }
-                    }
-
-                    return null!;
-                }
-
-                item = _lobbyZone.Item;
             }
-            return item!;
+            else
+            {
+                L.LogWarning(new StackFrame(1).GetMethod()?.FullDescription() + " trying to get LobbyZone before level load.");
+            }
+
+            return null!;
         }
     }
     public static Vector3 LobbySpawn
@@ -738,6 +657,94 @@ public static class TeamManager
         if (index != -1) return _factions[index];
         index = F.StringIndexOf(_factions, x => x.ShortName, search);
         return index != -1 ? _factions[index] : null;
+    }
+    public static Zone? TryGetLobbyZone()
+    {
+        SqlItem<Zone>? lobby = _lobbyZone;
+        ZoneUseCase uc = ZoneUseCase.Lobby;
+        Zone? item = null;
+        if (lobby is not { Item: { } item3 })
+        {
+            ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
+            if (singleton != null)
+            {
+                singleton.WriteWait();
+                try
+                {
+                    for (int i = 0; i < singleton.Items.Count; ++i)
+                    {
+                        SqlItem<Zone> s = singleton.Items[i];
+                        if (s is { Item: { } item2 } && item2.Data.UseCase == uc)
+                        {
+                            _lobbyZone = s;
+                            item = item2;
+                            break;
+                        }
+                    }
+                }
+                finally
+                {
+                    singleton.WriteRelease();
+                }
+            }
+        }
+        else item = item3;
+        return item;
+    }
+    public static Zone? TryGetTeamZone(ulong team, bool amc = false)
+    {
+        if (team is not 1ul and not 2ul)
+            return null;
+
+        SqlItem<Zone>? main = amc
+            ? (team == 1ul ? _t1AMC : _t2AMC)
+            : (team == 1ul ? _t1Main : _t2Main);
+        ZoneUseCase uc = amc
+            ? (team == 1ul ? ZoneUseCase.Team1MainCampZone : ZoneUseCase.Team2MainCampZone)
+            : (team == 1ul ? ZoneUseCase.Team1Main : ZoneUseCase.Team2Main);
+        Zone? item = null;
+        if (main is not { Item: { } item3 })
+        {
+            ZoneList? singleton = Data.Singletons.GetSingleton<ZoneList>();
+            if (singleton != null)
+            {
+                singleton.WriteWait();
+                try
+                {
+                    for (int i = 0; i < singleton.Items.Count; ++i)
+                    {
+                        SqlItem<Zone> s = singleton.Items[i];
+                        if (s is { Item: { } item2 } && item2.Data.UseCase == uc)
+                        {
+                            if (amc)
+                            {
+                                if (team == 1ul)
+                                    _t1AMC = s;
+                                else
+                                    _t2AMC = s;
+                            }
+                            else
+                            {
+                                if (team == 1ul)
+                                    _t1Main = s;
+                                else
+                                    _t2Main = s;
+                            }
+
+                            item = item2;
+                            break;
+                        }
+                    }
+                }
+                finally
+                {
+                    singleton.WriteRelease();
+                }
+            }
+        }
+        else item = item3;
+        return item;
+
     }
     internal static void ResetLocations()
     {

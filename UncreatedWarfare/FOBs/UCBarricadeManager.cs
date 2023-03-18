@@ -206,12 +206,43 @@ public static class UCBarricadeManager
 
         return list;
     }
-    /// <summary>Only non-planted barricades.</summary>
+    public static IEnumerable<BarricadeDrop> NonPlantedBarricades
+    {
+        get
+        {
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    foreach (BarricadeDrop barricade in region.drops)
+                        yield return barricade;
+                }
+            }
+        }
+    }
+    public static IEnumerable<BarricadeDrop> PlantedBarricades
+    {
+        get
+        {
+            for (int v = 0; v < BarricadeManager.vehicleRegions.Count; ++v)
+            {
+                VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[v];
+                for (int i = 0; i < region.drops.Count; ++i)
+                    yield return region.drops[i];
+            }
+        }
+    }
     public static IEnumerable<BarricadeDrop> AllBarricades
     {
         get
         {
-            //List<BarricadeDrop> list = new List<BarricadeDrop>();
+            for (int v = 0; v < BarricadeManager.vehicleRegions.Count; ++v)
+            {
+                VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[v];
+                for (int i = 0; i < region.drops.Count; ++i)
+                    yield return region.drops[i];
+            }
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -701,6 +732,58 @@ public static class UCBarricadeManager
 
         return null;
     }
+    public static BarricadeDrop? FindBarricadeDrop(Interactable interactable)
+    {
+        if (BarricadeManager.regions == null)
+            throw new InvalidOperationException("Barricade manager has not yet been initialized.");
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        Vector3 expectedPosition = interactable.transform.position;
+        bool f = false;
+        if (Regions.tryGetCoordinate(expectedPosition, out byte x1, out byte y1))
+        {
+            f = true;
+            BarricadeDrop? drop = ScanBarricadeRegion(interactable, x1, y1);
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(interactable, (byte)(x1 - 1), y1);
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(interactable, (byte)(x1 + 1), y1);
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(interactable, x1, (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(interactable, x1, (byte)(y1 + 1));
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(interactable, (byte)(x1 - 1), (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(interactable, (byte)(x1 - 1), (byte)(y1 + 1));
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(interactable, (byte)(x1 + 1), (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(interactable, (byte)(x1 + 1), (byte)(y1 + 1));
+            if (drop != null) return drop;
+        }
+        for (int x = 0; x < Regions.WORLD_SIZE; ++x)
+        {
+            for (int y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                if (f && (x - x1) is -1 or 0 or 1 && (y - y1) is -1 or 0 or 1)
+                    continue;
+                BarricadeRegion region = BarricadeManager.regions[x, y];
+                foreach (BarricadeDrop drop in region.drops)
+                    if (drop.interactable == interactable)
+                        return drop;
+            }
+        }
+        for (int vr = 0; vr < BarricadeManager.vehicleRegions.Count; ++vr)
+        {
+            VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[vr];
+            for (int i = 0; i < region.drops.Count; ++i)
+                if (region.drops[i].interactable == interactable)
+                    return region.drops[i];
+        }
+        return default;
+    }
     public static BarricadeDrop? FindBarricade(uint instanceID)
     {
 #if DEBUG
@@ -1032,6 +1115,20 @@ public static class UCBarricadeManager
         return null;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static BarricadeDrop? ScanBarricadeRegion(Interactable interactable, byte x, byte y)
+    {
+        if (x > Regions.WORLD_SIZE || y > Regions.WORLD_SIZE)
+            return null;
+        BarricadeRegion region = BarricadeManager.regions[x, y];
+        for (int i = 0; i < region.drops.Count; i++)
+        {
+            if (region.drops[i].interactable == interactable)
+                return region.drops[i];
+        }
+
+        return null;
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static BarricadeDrop? ScanBarricadeRegion(uint instanceID, byte x, byte y)
     {
         if (x > Regions.WORLD_SIZE || y > Regions.WORLD_SIZE)
@@ -1098,7 +1195,7 @@ public static class UCBarricadeManager
     {
         ThreadUtil.assertIsGameThread();
         Data.SendDestroyItem.Invoke(SDG.NetTransport.ENetReliability.Reliable,
-            Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instanceId, shouldPlayEffect);
+            Regions.GatherRemoteClientConnections(x, y, ItemManager.ITEM_REGIONS), x, y, instanceId, shouldPlayEffect);
     }
     public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius, List<RegionCoordinate> search)
     {

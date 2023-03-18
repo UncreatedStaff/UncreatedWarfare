@@ -1,11 +1,11 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
-using SDG.Unturned;
+using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
@@ -242,13 +242,36 @@ public static class KitSync
     }
     public static class NetCalls
     {
-        private static SemaphoreSlim _semaphore;
+        private static UCSemaphore _semaphore;
         public static readonly NetCall<int> MulticastKitUpdated = new NetCall<int>(OnForeignKitUpdated);
         public static readonly NetCall<int> MulticastKitDeleted = new NetCall<int>(OnForeignKitDeleted);
         public static readonly NetCall<ulong> MulticastKitAccessChanged = new NetCall<ulong>(OnForeignAccessUpdated);
-        private static SemaphoreSlim Semaphore => _semaphore ??= new SemaphoreSlim(1, 1);
+        private static UCSemaphore Semaphore
+        {
+            get
+            {
+                if (_semaphore != null)
+                    return _semaphore;
+                _semaphore = new UCSemaphore();
+#if DEBUG
+                _semaphore.WaitCallback += SemaphoreWaitCallback;
+                _semaphore.ReleaseCallback += SemaphoreReleaseCallback;
+#endif
+                return _semaphore;
+            }
+        }
+#if DEBUG
+        private static void SemaphoreWaitCallback()
+        {
+            L.LogDebug("Waiting in KitSync semaphore.");
+        }
+        private static void SemaphoreReleaseCallback(int ct)
+        {
+            L.LogDebug("Released " + ct.ToString(Data.AdminLocale) + " in KitSync semaphore.");
+        }
+#endif
 
-        [NetCall(ENetCall.FROM_SERVER, 3001)]
+        [NetCall(ENetCall.FROM_SERVER, 3008)]
         private static async Task OnForeignKitUpdated(MessageContext ctx, int pk)
         {
             try
@@ -313,7 +336,7 @@ public static class KitSync
                 UCPlayer? player = UCPlayer.FromID(steamId);
                 if (player == null)
                     return;
-                await player.DownloadKits(true);
+                await KitManager.DownloadPlayerKitData(player, true);
                 L.Log("Received access update notification for player: \"" + player.Name.PlayerName + "\" and redownloaded their kits.", ConsoleColor.DarkGray);
                 ctx.Acknowledge();
             }

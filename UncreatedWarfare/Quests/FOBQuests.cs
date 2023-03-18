@@ -25,6 +25,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
     }
     public struct State : IQuestState<Tracker, BuildFOBsQuest>
     {
+        [RewardField("a")]
         public IDynamicValue<int>.IChoice BuildCount;
         public IDynamicValue<int>.IChoice FlagValue => BuildCount;
         public void Init(BuildFOBsQuest data)
@@ -104,7 +105,9 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
     }
     public struct State : IQuestState<Tracker, BuildFOBsNearObjQuest>
     {
+        [RewardField("a")]
         public IDynamicValue<int>.IChoice BuildCount;
+        [RewardField("d")]
         public IDynamicValue<float>.IChoice BuildRange;
         public IDynamicValue<int>.IChoice FlagValue => BuildCount;
         public void Init(BuildFOBsNearObjQuest data)
@@ -212,6 +215,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
     }
     public struct State : IQuestState<Tracker, BuildFOBsOnObjQuest>
     {
+        [RewardField("a")]
         public IDynamicValue<int>.IChoice BuildCount;
         public IDynamicValue<int>.IChoice FlagValue => BuildCount;
         public void Init(BuildFOBsOnObjQuest data)
@@ -312,6 +316,7 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
     }
     public struct State : IQuestState<Tracker, DeliverSuppliesQuest>
     {
+        [RewardField("a")]
         public IDynamicValue<int>.IChoice SupplyCount;
         public IDynamicValue<int>.IChoice FlagValue => SupplyCount;
         public void Init(DeliverSuppliesQuest data)
@@ -397,6 +402,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
     }
     public struct State : IQuestState<Tracker, HelpBuildQuest>
     {
+        [RewardField("a")]
         public IDynamicValue<int>.IChoice Amount;
         public DynamicAssetValue<ItemBarricadeAsset>.Choice BaseIDs;
         public IDynamicValue<BuildableType>.IChoice BuildableType;
@@ -433,7 +439,6 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         protected override bool CompletedCheck => _built >= Amount;
         public override short FlagValue => (short)_built;
         public override void ResetToDefaults() => _built = 0;
-        public override int Reward => Amount * 10;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             Amount = questState.Amount.InsistValue();
@@ -462,7 +467,8 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _built, Amount, BaseIDs.GetCommaList(), BuildableType);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _built, Amount,
+            BuildableType.Behavior == ChoiceBehavior.Inclusive && BuildableType.ValueType == DynamicValueType.Wildcard ? "buildables" : BuildableType.ToString());
         public override void ManualComplete()
         {
             _built = Amount;
@@ -486,6 +492,7 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
     }
     public struct State : IQuestState<Tracker, FOBUseQuest>
     {
+        [RewardField("a")]
         public IDynamicValue<int>.IChoice UseCount;
         public IDynamicValue<int>.IChoice FlagValue => UseCount;
         public void Init(FOBUseQuest data)
@@ -510,7 +517,6 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
         private int _fobUses;
         protected override bool CompletedCheck => _fobUses >= UseCount;
         public override short FlagValue => (short)_fobUses;
-        public override int Reward => UseCount * 10;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             UseCount = questState.UseCount.InsistValue();

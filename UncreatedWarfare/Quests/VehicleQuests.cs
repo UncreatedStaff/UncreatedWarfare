@@ -7,7 +7,7 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Quests.Types;
 
-[QuestData(Quests.QuestType.DestroyVehicles)]
+[QuestData(QuestType.DestroyVehicles)]
 public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, DestroyVehiclesQuest.State, DestroyVehiclesQuest>
 {
     public DynamicIntegerValue VehicleCount;
@@ -35,6 +35,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
     }
     public struct State : IQuestState<Tracker, DestroyVehiclesQuest>
     {
+        [RewardField("a")]
         public IDynamicValue<int>.IChoice VehicleCount;
         internal DynamicEnumValue<VehicleType>.Choice VehicleType;
         public DynamicAssetValue<VehicleAsset>.Choice VehicleIDs;
@@ -168,6 +169,7 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
     }
     public struct State : IQuestState<Tracker, DriveDistanceQuest>
     {
+        [RewardField("d")]
         public IDynamicValue<int>.IChoice Amount;
         internal DynamicEnumValue<VehicleType>.Choice VehicleTypes;
         public DynamicAssetValue<VehicleAsset>.Choice Vehicles;
@@ -291,6 +293,7 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
     }
     public struct State : IQuestState<Tracker, TransportPlayersQuest>
     {
+        [RewardField("a")]
         public IDynamicValue<int>.IChoice Amount;
         public DynamicAssetValue<VehicleAsset>.Choice Vehicles;
         public IDynamicValue<VehicleType>.IChoice VehicleTypes;

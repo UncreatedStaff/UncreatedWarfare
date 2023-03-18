@@ -62,7 +62,7 @@ public class DevCommand : AsyncCommand
                 !Gamemode.Config.BarricadeInsurgencyCache.Value.Exists)
                 throw ctx.ReplyString("Cache GUID is not set correctly.");
             Guid g = Gamemode.Config.BarricadeInsurgencyCache.Value.Guid;
-            IEnumerable<BarricadeDrop> caches = UCBarricadeManager.AllBarricades.Where(b => b.asset.GUID == g);
+            IEnumerable<BarricadeDrop> caches = UCBarricadeManager.NonPlantedBarricades.Where(b => b.asset.GUID == g);
 
             FileStream writer = File.Create("C" + Path.VolumeSeparatorChar + Path.DirectorySeparatorChar + Path.Combine("Users", "USER", "Desktop", "cachespanws.json"));
 

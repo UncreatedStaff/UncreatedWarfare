@@ -6,6 +6,7 @@ using Uncreated.Json;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Quests.Types;
@@ -62,7 +63,6 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
         private int _kills;
         protected override bool CompletedCheck => _kills >= _killThreshold;
         public override short FlagValue => (short)_kills;
-        public override int Reward => _killThreshold * 10;
         // loads a tracker from a state instead of randomly picking values each time.
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
@@ -1045,6 +1045,114 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
                     if (passenger != null && passenger.player != null && passenger.player.playerID.steamID.m_SteamID == _player.Steam64 &&
                         passenger.turret != null && _weapon.IsMatch(passenger.turret.itemID))
                     {
+                        if (VehicleBay.GetSingletonQuick() is { } manager)
+                        {
+                            if (manager.GetDataSync(veh.asset.GUID) is { } data && VehicleData.IsEmplacement(data.Type))
+                                return;
+                        }
+                        _kills++;
+                        if (_kills >= _killThreshold)
+                            TellCompleted();
+                        else
+                            TellUpdated();
+                        return;
+                    }
+                }
+            }
+        }
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _translationCache1);
+        public override void ManualComplete()
+        {
+            _kills = _killThreshold;
+            base.ManualComplete();
+        }
+    }
+}
+[QuestData(QuestType.KillEnemiesWithEmplacement)]
+public class KillEnemiesQuestEmplacement : BaseQuestData<KillEnemiesQuestEmplacement.Tracker, KillEnemiesQuestEmplacement.State, KillEnemiesQuestEmplacement>
+{
+    public DynamicIntegerValue KillCount;
+    public DynamicAssetValue<ItemGunAsset> Turrets;
+    public override int TickFrequencySeconds => 0;
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
+    public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
+    {
+        if (propertyname.Equals("kills", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadIntegralValue(out KillCount))
+                KillCount = new DynamicIntegerValue(20);
+        }
+        else if (propertyname.Equals("turret", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadAssetValue(out Turrets))
+            {
+                L.LogWarning("Invalid turret GUID(s) in quest " + QuestType);
+            }
+        }
+    }
+    public struct State : IQuestState<Tracker, KillEnemiesQuestEmplacement>
+    {
+        [RewardField("k")]
+        public IDynamicValue<int>.IChoice KillThreshold;
+        public DynamicAssetValue<ItemGunAsset>.Choice Weapon;
+        public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
+        public bool IsEligable(UCPlayer player) => true;
+        public void Init(KillEnemiesQuestEmplacement data)
+        {
+            this.KillThreshold = data.KillCount.GetValue();
+            this.Weapon = data.Turrets.GetValue();
+        }
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
+        {
+            if (prop.Equals("kills", StringComparison.Ordinal))
+                KillThreshold = DynamicIntegerValue.ReadChoice(ref reader);
+            else if (prop.Equals("turret", StringComparison.Ordinal))
+                Weapon = DynamicAssetValue<ItemGunAsset>.ReadChoice(ref reader);
+        }
+        public void WriteQuestState(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", KillThreshold);
+            writer.WriteProperty("turret", Weapon.ToString());
+        }
+    }
+    public class Tracker : BaseQuestTracker, INotifyOnKill
+    {
+        private readonly int _killThreshold;
+        private readonly DynamicAssetValue<ItemGunAsset>.Choice _weapon;
+        private int _kills;
+        protected override bool CompletedCheck => _kills >= _killThreshold;
+        public override short FlagValue => (short)_kills;
+        private readonly string _translationCache1;
+        public override void ResetToDefaults() => _kills = 0;
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
+        {
+            _killThreshold = questState.KillThreshold.InsistValue();
+            _weapon = questState.Weapon;
+            _translationCache1 = _weapon.GetCommaList();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
+        }
+        public void OnKill(PlayerDied e)
+        {
+            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
+            {
+                InteractableVehicle? veh = e.Killer.Player.movement.getVehicle();
+                if (veh == null) return;
+                for (int i = 0; i < veh.turrets.Length; i++)
+                {
+                    Passenger passenger = veh.turrets[i];
+                    if (passenger != null && passenger.player != null && passenger.player.playerID.steamID.m_SteamID == _player.Steam64 &&
+                        passenger.turret != null && _weapon.IsMatch(passenger.turret.itemID))
+                    {
+                        if (VehicleBay.GetSingletonQuick() is not { } manager || manager.GetDataSync(veh.asset.GUID) is not { } data || !VehicleData.IsEmplacement(data.Type))
+                            return;
                         _kills++;
                         if (_kills >= _killThreshold)
                             TellCompleted();

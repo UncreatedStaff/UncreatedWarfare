@@ -117,6 +117,8 @@ public static class UCInventoryManager
     public static void ClearInventory(UCPlayer player, bool clothes = true)
     {
         ThreadUtil.assertIsGameThread();
+        player.ItemTransformations.Clear();
+        player.ItemDropTransformations.Clear();
         if (Data.UseFastKits)
         {
             // clears the inventory quickly
@@ -151,19 +153,19 @@ public static class UCInventoryManager
                 byte[] blank = Array.Empty<byte>();
                 id = player.Player.clothing.GetNetId();
                 if (player.Player.clothing.shirt != 0)
-                    Data.SendWearShirt!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearShirt!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.pants != 0)
-                    Data.SendWearPants!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearPants!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.hat != 0)
-                    Data.SendWearHat!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearHat!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.backpack != 0)
-                    Data.SendWearBackpack!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearBackpack!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.vest != 0)
-                    Data.SendWearVest!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearVest!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.mask != 0)
-                    Data.SendWearMask!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearMask!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.glasses != 0)
-                    Data.SendWearGlasses!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearGlasses!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.GatherRemoteClientConnections(), Guid.Empty, 100, blank, false);
             }
         }
         else
@@ -275,6 +277,18 @@ public static class UCInventoryManager
         }
 
         return false;
+    }
+
+    public static bool IsOutOfBounds(Items page, ItemJar jar) => IsOutOfBounds(page.width, page.height, jar.x, jar.y, jar.size_x, jar.size_y, jar.rot);
+    public static bool IsOutOfBounds(Items page, byte posX, byte posY, byte sizeX, byte sizeY, byte rotation) =>
+        IsOutOfBounds(page.width, page.height, posX, posY, sizeX, sizeY, rotation);
+
+    public static bool IsOutOfBounds(byte pageSizeX, byte pageSizeY, byte posX, byte posY, byte sizeX, byte sizeY, byte rotation)
+    {
+        if ((rotation % 2) == 1)
+            (sizeX, sizeY) = (sizeY, sizeX);
+
+        return posX + sizeX > pageSizeX || posY + sizeY > pageSizeY;
     }
     public static void RemoveNumberOfItemsFromStorage(InteractableStorage storage, ushort itemID, int amount)
     {

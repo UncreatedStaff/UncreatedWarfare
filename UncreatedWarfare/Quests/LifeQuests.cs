@@ -22,6 +22,7 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
     public struct State : IQuestState<Tracker, RevivePlayersQuest>
     {
         public bool IsEligable(UCPlayer player) => true;
+        [RewardField("a")]
         public IDynamicValue<int>.IChoice ReviveCount;
         public IDynamicValue<int>.IChoice FlagValue => ReviveCount;
         public void Init(RevivePlayersQuest data)

@@ -106,7 +106,17 @@ public static class DailyQuests
     private static void OnAbandonedQuest(PlayerQuests __instance, Guid assetGuid)
     {
         if (Assets.find(assetGuid) is QuestAsset qa)
+        {
             __instance.ServerAddQuest(qa);
+            QuestManager.CheckNeedsToUntrack(UCPlayer.FromPlayer(__instance.player));
+        }
+    }
+    internal static void CheckTrackQuestsOption(UCPlayer player)
+    {
+        if (player.Save.TrackQuests)
+            TrackDailyQuest(player);
+        else
+            QuestManager.UntrackQuest(player);
     }
     public static void Tick()
     {
@@ -170,6 +180,12 @@ public static class DailyQuests
             _sendHrNotif = true;
             Chat.Broadcast(T.DailyQuestsOneHourRemaining);
         }
+    }
+    public static void TrackDailyQuest(UCPlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (player.Save.TrackQuests && Assets.find(_quests[_index].Guid) is QuestAsset qa)
+            player.ServerTrackQuest(qa);
     }
     public static void CreateNewModContent()
     {
@@ -263,6 +279,7 @@ public static class DailyQuests
                 pset.IsValid = true;
                 pset.PresetObj = preset;
                 pset.Type = data.QuestType;
+                cond.FlagId = preset.Flag;
                 cond.FlagValue = checked((short)val);
                 cond.Translation = tempTracker.GetDisplayString(true);
                 cond.Key = preset.Key;
@@ -275,8 +292,7 @@ public static class DailyQuests
     }
     private static void OnPlayerJoinedTeam(UCPlayer player)
     {
-        if (Assets.find(_quests[_index].Guid) is QuestAsset qa)
-            player.ServerTrackQuest(qa);
+        TrackDailyQuest(player);
     }
     /// <summary>Should run on player connected.</summary>
     public static void RegisterDailyTrackers(UCPlayer player)
@@ -303,9 +319,16 @@ public static class DailyQuests
 
         DailyQuestTracker tr = new DailyQuestTracker(player, trackers);
         ref DailyQuestSave save = ref _quests[_index];
+        for (int i = 0; i < _index; ++i)
+        {
+            ref DailyQuestSave save2 = ref _quests[i];
+            if (Assets.find(save2.Guid) is QuestAsset quest2)
+                player.Player.quests.ServerRemoveQuest(quest2);
+        }
         if (Assets.find(save.Guid) is QuestAsset quest)
         {
             player.Player.quests.ServerAddQuest(quest);
+            QuestManager.CheckNeedsToUntrack(player);
             L.LogDebug("Sent quest " + quest.name + " / " + quest.id.ToString(Data.AdminLocale) + " to " + player.CharacterName);
         }
         else
@@ -370,8 +393,6 @@ public static class DailyQuests
         }
         else
             L.LogWarning("Player " + tracker.Player.Steam64 + " is missing their entry in DailyTrackers dictionary!");
-        if (tracker.Flag != 0)
-            tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
         tracker.Player.SendString("<#e4a399>Daily Quest updated: <#cdcec0>" + tracker.GetDisplayString());
     }
     /// <summary>Runs every day, creates the daily quests for the day.</summary>

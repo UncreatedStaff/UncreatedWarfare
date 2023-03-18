@@ -357,7 +357,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         _presets = presets.ToArray();
         presets.Clear();
     }
-    public override sealed IQuestPreset CreateRandomPreset(ushort flag = 0)
+    public sealed override IQuestPreset CreateRandomPreset(ushort flag = 0)
     {
         return new Preset(Guid.NewGuid(), GetNewState(), null, 0, flag);
     }
@@ -377,7 +377,6 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     public bool IsDailyQuest = false;
     public ushort Flag = 0;
     protected abstract bool CompletedCheck { get; }
-    public virtual int Reward => 0;
     public UCPlayer? Player => _player;
     public bool IsTemporary => _player == null;
     public bool IsCompleted { get => CompletedCheck; }
