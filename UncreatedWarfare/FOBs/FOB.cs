@@ -383,9 +383,11 @@ public class FOB : IResourceFOB, IDeployable
                                     component.Quota += 0.33F;
                                 }
 
-                                Points.AwardXP(player, XPReward.UnloadSupplies, xp);
-
-                                player.SuppliesUnloaded = 0;
+                                if (Build + Ammo <= FOB_RESOURCES_REWARD_LIMIT)
+                                {
+                                    Points.AwardXP(player, XPReward.UnloadSupplies, xp);
+                                    player.SuppliesUnloaded = 0;
+                                }
                             }
                         }
                     }
@@ -421,6 +423,7 @@ public class FOB : IResourceFOB, IDeployable
                 UpdateAmmoUI(player);
         }
     }
+    const int FOB_RESOURCES_REWARD_LIMIT = 60;
     public void ReduceAmmo(int amount)
     {
         Ammo -= amount;
