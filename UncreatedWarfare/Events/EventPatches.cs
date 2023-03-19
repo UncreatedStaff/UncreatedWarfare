@@ -290,7 +290,7 @@ internal static class EventPatches
 
                     Data.ServerSpawnLegacyImpact?
                         .Invoke(__instance.transform.position + Vector3.up, Vector3.down, "Flesh", null,
-                            Provider.GatherRemoteClientConnectionsWithinSphere(__instance.transform.position, EffectManager.SMALL));
+                            Provider.EnumerateClients_RemoteWithinSphere(__instance.transform.position, EffectManager.SMALL));
 
                     BarricadeManager.damage(barricade.model, 5f, 1f, false, triggerer.CSteamID, EDamageOrigin.Trap_Wear_And_Tear);
                     if (data != null)
@@ -312,7 +312,7 @@ internal static class EventPatches
 
                 Data.ServerSpawnLegacyImpact?
                     .Invoke(__instance.transform.position + Vector3.up, Vector3.down, zombie.isRadioactive ? "Alien" : "Flesh", null,
-                        Provider.GatherRemoteClientConnectionsWithinSphere(__instance.transform.position, EffectManager.SMALL));
+                        Provider.EnumerateClients_RemoteWithinSphere(__instance.transform.position, EffectManager.SMALL));
 
                 BarricadeManager.damage(barricade.model, zombie.isHyper ? 10f : 5f, 1f, false, CSteamID.Nil, EDamageOrigin.Trap_Wear_And_Tear);
             }
@@ -326,7 +326,7 @@ internal static class EventPatches
 
                 Data.ServerSpawnLegacyImpact?
                     .Invoke(__instance.transform.position + Vector3.up, Vector3.down, "Flesh", null,
-                        Provider.GatherRemoteClientConnectionsWithinSphere(__instance.transform.position, EffectManager.SMALL));
+                        Provider.EnumerateClients_RemoteWithinSphere(__instance.transform.position, EffectManager.SMALL));
 
                 BarricadeManager.damage(barricade.model, 5f, 1f, false, CSteamID.Nil, EDamageOrigin.Trap_Wear_And_Tear);
             }
@@ -450,7 +450,7 @@ internal static class EventPatches
         EffectAsset effect = __instance.asset.FindExplosionEffectAsset();
         if (effect != null)
         {
-            F.TriggerEffectReliable(effect, Provider.GatherRemoteClientConnections(), __instance.transform.position);
+            F.TriggerEffectReliable(effect, Provider.EnumerateClients_Remote(), __instance.transform.position);
         }
         if (data != null)
             data.ExplodingVehicle = null;

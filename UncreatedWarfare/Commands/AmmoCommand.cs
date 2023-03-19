@@ -228,7 +228,7 @@ public class AmmoCommand : AsyncCommand
                             ItemData it = ItemManager.regions[x, y].items[index];
                             if (it.item.id == build1 || it.item.id == build2 || it.item.id == ammo1 || it.item.id == ammo2) continue;
 
-                            Data.SendDestroyItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.GatherRemoteClientConnections(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i], false);
+                            Data.SendDestroyItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients_Remote(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i], false);
                             ItemManager.regions[x, y].items.RemoveAt(index);
                             EventFunctions.OnItemRemoved(it);
                         }

@@ -393,8 +393,8 @@ public static class F
             TriggerEffectReliable(effect, EffectManager.MEDIUM, position);
     }
     public static void TriggerEffectReliable(EffectAsset asset, float range, Vector3 position)
-        => TriggerEffectReliable(asset, Provider.GatherRemoteClientConnectionsWithinSphere(position, range), position);
-    public static void TriggerEffectReliable(EffectAsset asset, PooledTransportConnectionList connection, Vector3 position)
+        => TriggerEffectReliable(asset, Provider.EnumerateClients_RemoteWithinSphere(position, range), position);
+    public static void TriggerEffectReliable(EffectAsset asset, IEnumerable<ITransportConnection> connection, Vector3 position)
     {
         ThreadUtil.assertIsGameThread();
         TriggerEffectParameters p = new TriggerEffectParameters(asset)
@@ -1050,7 +1050,7 @@ public static class F
                     state = new byte[sizeof(ulong) * 2];
                 Buffer.BlockCopy(oldSt, 0, state, 0, sizeof(ulong) * 2);
                 Data.SendUpdateBarricadeState.Invoke(drop.GetNetId(), ENetReliability.Reliable,
-                    BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
+                    BarricadeManager.EnumerateClients_Remote(x, y, plant), state);
             }
         }
         else if (drop.interactable is InteractableSign sign)

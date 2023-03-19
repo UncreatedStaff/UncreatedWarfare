@@ -96,13 +96,11 @@ public static class IconManager
 #endif
         IconRenderer icon = transform.gameObject.AddComponent<IconRenderer>();
         icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team);
-
-        PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(
-            (icon.Team == 0
+        
+        icon.SpawnNewIcon((icon.Team == 0
                 ? PlayerManager.OnlinePlayers
                 : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
-            .Select(x => x.Connection), Provider.clients.Count);
-        icon.SpawnNewIcon(list);
+            .Select(x => x.Connection));
 
         Icons.Add(icon);
     }
@@ -126,12 +124,10 @@ public static class IconManager
         {
             if (icon.EffectGUID == effectGUID)
             {
-                PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(
-                    (icon.Team == 0
+                icon.SpawnNewIcon((icon.Team == 0
                         ? PlayerManager.OnlinePlayers
                         : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
-                    .Select(x => x.Connection), Provider.clients.Count);
-                icon.SpawnNewIcon(list);
+                    .Select(x => x.Connection));
             }
         }
     }
@@ -170,7 +166,7 @@ public class IconRenderer : MonoBehaviour
             return;
         F.TriggerEffectReliable(Effect, player, Point);
     }
-    public void SpawnNewIcon(PooledTransportConnectionList players)
+    public void SpawnNewIcon(IEnumerable<ITransportConnection> players)
     {
         if (Effect == null)
             return;
