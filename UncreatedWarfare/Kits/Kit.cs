@@ -1592,12 +1592,6 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
             if (_legacyRedirect == RedirectType.None)
                 _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, true);
             _isLegacyRedirect = _legacyRedirect != RedirectType.None;
-#else
-            if (_isLegacyRedirect)
-            {
-                _legacyRedirect = RedirectType.None;
-                _isLegacyRedirect = false;
-            }
 #endif
         }
     }
@@ -1661,6 +1655,8 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
         return -1;
     }
     public override bool Equals(object obj) => obj is ClothingItem c && c.Item == Item && c.Type == Type && c.State.CompareBytes(State);
+
+#if DEBUG
     public override int GetHashCode()
     {
         // ReSharper disable NonReadonlyMemberInGetHashCode
@@ -1675,6 +1671,20 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
         }
         // ReSharper restore NonReadonlyMemberInGetHashCode
     }
+#else
+    public override int GetHashCode()
+    {
+        // ReSharper disable NonReadonlyMemberInGetHashCode
+        unchecked
+        {
+            int hashCode = _item.GetHashCode();
+            hashCode = (hashCode * 397) ^ (int)Type;
+            hashCode = (hashCode * 397) ^ State.GetHashCode();
+            return hashCode;
+        }
+        // ReSharper restore NonReadonlyMemberInGetHashCode
+    }
+#endif
 
     public override string ToString() => $"ClothingItem:          {_item:N}, Type: {Type}, State: byte[{State?.Length ?? 0}]";
 
