@@ -1286,7 +1286,7 @@ public class PointsConfig : JSONConfigData
             { XPReward.BunkerBuilt, new XPRewardData(100, DefaultCreditPercentage * 1.5f) },
             { XPReward.Resupply, new XPRewardData(20, DefaultCreditPercentage) },
             { XPReward.RepairVehicle, new XPRewardData(3, DefaultCreditPercentage) },
-            { XPReward.UnloadSupplies, new XPRewardData(20, DefaultCreditPercentage) },
+            { XPReward.UnloadSupplies, new XPRewardData(10, DefaultCreditPercentage) },
             { XPReward.FriendlyFortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
             { XPReward.FortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
             { XPReward.FriendlyBuildableDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
