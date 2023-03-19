@@ -1634,6 +1634,10 @@ partial class KitManager
                     faction = TeamManager.FindFactionInfo(FactionInfo.Mozambique);
             }
 
+            SqlItem<Kit>? existing = await FindProxy(kit.PrimaryKey, token).ConfigureAwait(false);
+            if (existing?.Item is { } newKit2 && !newKit2.Id.Equals(kit.Name))
+                kit.PrimaryKey = PrimaryKey.NotAssigned;
+
             Kit newKit = new Kit(kit.Name!, kit.Class == Class.None ? Class.Unarmed : kit.Class, kit.Branch == Branch.Default ? GetDefaultBranch(kit.Class) : kit.Branch,
                 kit.IsPremium
                     ? (kit.PremiumCost < 0
@@ -1658,11 +1662,7 @@ partial class KitManager
             {
                 if (newKit.Type == KitType.Public)
                 {
-                    newKit.FactionFilter = new PrimaryKey[]
-                    {
-                        faction.PrimaryKey
-                    };
-                    newKit.FactionFilterIsWhitelist = true;
+                    newKit.FactionFilterIsWhitelist = false;
                 }
                 else if (faction.FactionId.Equals(FactionInfo.USA, StringComparison.OrdinalIgnoreCase) ||
                          faction.FactionId.Equals(FactionInfo.Canada, StringComparison.OrdinalIgnoreCase) ||

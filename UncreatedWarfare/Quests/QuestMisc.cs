@@ -21,15 +21,23 @@ namespace Uncreated.Warfare.Quests;
 public enum WeaponClass : byte
 {
     Unknown,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "突击步枪")]
     AssaultRifle,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "战斗步枪")]
     BattleRifle,
     MarksmanRifle,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "狙击步枪")]
     SniperRifle,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "机枪")]
     MachineGun,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "手枪")]
     Pistol,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "霰弹枪")]
     Shotgun,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "火箭筒")]
     [Translatable("Rocket Launcher")]
     Rocket,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "冲锋枪")]
     [Translatable("SMG")]
     SMG
 }
@@ -193,6 +201,7 @@ public static class QuestJsonEx
 
         return WeaponClass.Unknown;
     }
+    // todo rewrite
     public static unsafe bool TryReadIntegralValue(this ref Utf8JsonReader reader, out DynamicIntegerValue value)
     {
 #if DEBUG
@@ -219,6 +228,7 @@ public static class QuestJsonEx
                 return true;
             }
 
+            L.LogDebug(str);
             bool isInclusive = str[0] == '#';
 
             if (isInclusive || str[0] == '$')
@@ -228,61 +238,27 @@ public static class QuestJsonEx
                 int stRndInd = endInd + 1;
                 if (str[1] == '(' && endInd != -1) // read range
                 {
-                    int sep = str.IndexOf(':', 3);
+                    int sep = str.IndexOf(':', 2);
                     if (sep != -1)
                     {
-                        bool m1 = sep == 2, m2 = str.Length <= sep + 1 || str[sep + 1] == ')';
-                        int v1 = 0;
-                        int v2 = 0;
+                        bool m1 = sep == 2, m2 = sep + 1 == endInd;
+                        int v1;
+                        int v2;
                         if (m1)
                         {
                             v1 = int.MinValue;
                         }
-                        else
+                        else if (!int.TryParse(str.Substring(2, sep - 2), NumberStyles.Number, Data.AdminLocale, out v1))
                         {
-                            fixed (char* p = str)
-                            {
-                                int m = 1;
-                                for (int i = sep - 1; i > 1; i--)
-                                {
-                                    char c = *(p + i);
-                                    if (c >= '0' && c <= '9')
-                                    {
-                                        v1 += (c - 48) * m;
-                                        m *= 10;
-                                    }
-                                    else if (c == '-')
-                                    {
-                                        v1 = -v1;
-                                        break;
-                                    }
-                                }
-                            }
+                            v1 = int.MinValue;
                         }
                         if (m2)
                         {
                             v2 = int.MaxValue;
                         }
-                        else
+                        else if (!int.TryParse(str.Substring(sep + 1, endInd - sep - 1), NumberStyles.Number, Data.AdminLocale, out v2))
                         {
-                            fixed (char* p = str)
-                            {
-                                int m = 1;
-                                for (int i = endInd; i > sep; i--)
-                                {
-                                    char c = *(p + i);
-                                    if (c >= '0' && c <= '9')
-                                    {
-                                        v1 += (c - 48) * m;
-                                        m *= 10;
-                                    }
-                                    else if (c == '-')
-                                    {
-                                        v1 = -v1;
-                                        break;
-                                    }
-                                }
-                            }
+                            v2 = int.MaxValue;
                         }
 
                         if (!m1 && !m2 && v1 > v2)
@@ -292,10 +268,9 @@ public static class QuestJsonEx
 
                         int round = 0;
                         if (hasRnd)
-                        {
-                            int.TryParse(str.Substring(stRndInd + 1, str.Length - 1 - stRndInd),
-                                NumberStyles.Number, Data.AdminLocale, out round);
-                        }
+                            round = int.Parse(str.Substring(stRndInd + 1, str.Length - stRndInd - 2), NumberStyles.Number, Data.AdminLocale);
+                        
+                        L.LogDebug($"({v1}:{v2})" + (hasRnd ? $"{{{round}}}" : string.Empty));
                         value = new DynamicIntegerValue(new IntegralRange(v1, v2, round, m1, m2), isInclusive ? ChoiceBehavior.Inclusive : ChoiceBehavior.Selective);
                         return true;
                     }
@@ -306,40 +281,23 @@ public static class QuestJsonEx
 
                 if (str[1] == '[' && str[str.Length - 1] == ']')
                 {
-                    int len = str.Length;
                     int arrLen = 1;
-                    int[] res;
-                    fixed (char* p = str)
+                    for (int i = 0; i < str.Length; i++)
+                        if (str[i] == ',')
+                            arrLen++;
+                    int[] res = new int[arrLen];
+                    int index = -1;
+                    int lastInd = 1;
+                    for (int i = 0; i < str.Length; i++)
                     {
-                        for (int i = 0; i < len; i++)
-                            if (str[i] == ',')
-                                arrLen++;
-                        res = new int[arrLen];
-                        int ptrpos = str.Length - 1;
-                        int index = arrLen;
-                        int num = 0;
-                        int m = 1;
-                        while (ptrpos > 1)
+                        if (str[i] is ']' or ',')
                         {
-                            ptrpos--;
-                            char c = *(p + ptrpos);
-                            if (c is >= '0' and <= '9')
-                            {
-                                num += (c - 48) * m;
-                                m *= 10;
-                            }
-                            else if (c == '-')
-                            {
-                                num = -num;
-                            }
-                            else if (c == ',' || c == ']')
-                            {
-                                index--;
-                                res[index] = num;
-                            }
+                            res[++index] = int.Parse(str.Substring(lastInd + 1, i - lastInd - 1));
+                            lastInd = i;
                         }
                     }
 
+                    L.LogDebug($"[{string.Join(",", res)}]");
                     value = new DynamicIntegerValue(new IntegralSet(res), isInclusive ? ChoiceBehavior.Inclusive : ChoiceBehavior.Selective);
                     return true;
 
@@ -387,6 +345,7 @@ public static class QuestJsonEx
                 }
                 return true;
             }
+            L.LogDebug(str);
 
             bool isInclusive = str[0] == '#';
 
@@ -397,89 +356,43 @@ public static class QuestJsonEx
                 int stRndInd = endInd + 1;
                 if (str[1] == '(' && endInd != -1) // read range
                 {
-                    int sep = str.IndexOf(':');
+                    int sep = str.IndexOf(':', 2);
                     if (sep != -1)
                     {
-                        bool m1 = sep == 2, m2 = str.Length <= sep + 1 || str[sep + 1] == ')';
-                        int v1 = 0;
-                        int v2 = 0;
-                        float v1F, v2F;
+                        bool m1 = sep == 2, m2 = sep + 1 == endInd;
+                        float v1;
+                        float v2;
                         if (m1)
                         {
-                            v1F = float.MinValue;
+                            v1 = float.MinValue;
                         }
-                        else
+                        else if (!float.TryParse(str.Substring(2, sep - 2), NumberStyles.Number, Data.AdminLocale, out v1))
                         {
-                            fixed (char* p = str)
-                            {
-                                int m = 1;
-                                int decPlace = 1;
-                                for (int i = sep - 1; i > 1; i--)
-                                {
-                                    char c = *(p + i);
-                                    if (c >= '0' && c <= '9')
-                                    {
-                                        v1 += (c - 48) * m;
-                                        m *= 10;
-                                    }
-                                    else if (c == '-')
-                                    {
-                                        v1 = -v1;
-                                        break;
-                                    }
-                                    else if (c == '.')
-                                    {
-                                        decPlace = m;
-                                    }
-                                }
-                                v1F = v1 / (float)decPlace;
-                            }
-                        }
-                        if (m2)
-                        {
-                            v2F = float.MaxValue;
-                        }
-                        else
-                        {
-                            fixed (char* p = str)
-                            {
-                                int m = 1;
-                                int decPlace = 1;
-                                for (int i = endInd; i > sep; i--)
-                                {
-                                    char c = *(p + i);
-                                    if (c >= '0' && c <= '9')
-                                    {
-                                        v2 += (c - 48) * m;
-                                        m *= 10;
-                                    }
-                                    else if (c == '-')
-                                    {
-                                        v2 = -v2;
-                                        break;
-                                    }
-                                    else if (c == '.')
-                                    {
-                                        decPlace = m;
-                                    }
-                                }
-                                v2F = v2 / (float)decPlace;
-                            }
+                            v1 = float.MinValue;
                         }
 
-                        if (!m1 && !m2 && v1F > v2F)
+                        if (m2)
                         {
-                            (v2F, v1F) = (v1F, v2F);
+                            v2 = float.MaxValue;
+                        }
+                        else if (!float.TryParse(str.Substring(sep + 1, endInd - sep - 1), NumberStyles.Number,
+                                     Data.AdminLocale, out v2))
+                        {
+                            v2 = float.MaxValue;
+                        }
+
+                        if (!m1 && !m2 && v1 > v2)
+                        {
+                            (v2, v1) = (v1, v2);
                         }
 
                         int round = 0;
                         if (hasRnd)
-                        {
-                            int.TryParse(str.Substring(stRndInd + 1, str.Length - 1 - stRndInd),
-                                NumberStyles.Number, Data.AdminLocale, out round);
-                        }
+                            round = int.Parse(str.Substring(stRndInd + 1, str.Length - stRndInd - 2), NumberStyles.Number, Data.AdminLocale);
+                        
 
-                        value = new DynamicFloatValue(new FloatRange(v1F, v2F, round, m1, m2),
+                        L.LogDebug($"({v1}f:{v2}f)" + (hasRnd ? $"{{{round}}}" : string.Empty));
+                        value = new DynamicFloatValue(new FloatRange(v1, v2, round, m1, m2),
                             isInclusive ? ChoiceBehavior.Inclusive : ChoiceBehavior.Selective);
                         return true;
                     }
@@ -488,47 +401,26 @@ public static class QuestJsonEx
                     return false;
                 }
 
+
                 if (str[1] == '[' && str[str.Length - 1] == ']')
                 {
-                    int len = str.Length;
                     int arrLen = 1;
-                    float[] res;
-                    fixed (char* p = str)
+                    for (int i = 0; i < str.Length; i++)
+                        if (str[i] == ',')
+                            arrLen++;
+                    float[] res = new float[arrLen];
+                    int index = -1;
+                    int lastInd = 1;
+                    for (int i = 0; i < str.Length; i++)
                     {
-                        for (int i = 0; i < len; i++)
-                            if (str[i] == ',')
-                                arrLen++;
-                        res = new float[arrLen];
-                        int ptrpos = str.Length - 1;
-                        int index = arrLen;
-                        int num = 0;
-                        int m = 1;
-                        int decPlace = 1;
-                        bool neg = false;
-                        while (ptrpos > 1)
+                        if (str[i] is ']' or ',')
                         {
-                            ptrpos--;
-                            char c = *(p + ptrpos);
-                            if (c >= '0' && c <= '9')
-                            {
-                                num += (c - 48) * m;
-                                m *= 10;
-                            }
-                            else if (c == '-')
-                            {
-                                neg = true;
-                            }
-                            else if (c == '.')
-                            {
-                                decPlace = m;
-                            }
-                            else if (c == ',' || c == '[')
-                            {
-                                index--;
-                                res[index] = (float)num / decPlace * (neg ? -1f : 1f);
-                            }
+                            res[++index] = float.Parse(str.Substring(lastInd + 1, i - lastInd - 1));
+                            lastInd = i;
                         }
                     }
+
+                    L.LogDebug($"[{string.Join("f,", res)}f]");
                     value = new DynamicFloatValue(new FloatSet(res), isInclusive ? ChoiceBehavior.Inclusive : ChoiceBehavior.Selective);
                     return true;
 
@@ -1903,7 +1795,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
         {
             if (player == 0 || !Data.Languages.TryGetValue(player, out string language))
                 language = L.Default;
-            return kit.GetDisplayName(language);
+            return kit.GetDisplayName(language).Replace('\n', ' ').Replace("\t", string.Empty);
         }
     }
 }
@@ -2544,9 +2436,9 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
         public TEnum InsistValue() => _value;
         public readonly bool IsMatch(TEnum value)
         {
-            if (_type == DynamicValueType.Wildcard) return true;
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
                 return _value.Equals(value);
+            if (_type == DynamicValueType.Wildcard) return true;
             if (_type == DynamicValueType.Range)
             {
                 int r = (int)(object)value;
@@ -3037,7 +2929,7 @@ public interface INotifyBuildableBuilt : INotifyTracker
 }
 public interface INotifyVehicleDestroyed : INotifyTracker
 {
-    public void OnVehicleDestroyed(VehicleDestroyed e);
+    public void OnVehicleDestroyed(VehicleDestroyed e, UCPlayer instigator);
 }
 public interface INotifyVehicleDistanceUpdates : INotifyTracker
 {

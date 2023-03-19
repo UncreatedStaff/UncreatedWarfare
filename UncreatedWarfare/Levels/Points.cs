@@ -1018,7 +1018,8 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 ActionLog.Add(ActionLogType.OwnedVehicleDied, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
                                                                  $" - Destroyed by {e.Instigator.Steam64.ToString(Data.AdminLocale)}", e.OwnerId);
 
-                QuestManager.OnVehicleDestroyed(e);
+                if (e.Instigator != null)
+                    QuestManager.OnVehicleDestroyed(e, e.Instigator);
 
                 float resMax = 0f;
                 UCPlayer? resMaxPl = null;
@@ -1062,7 +1063,9 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 Array.Sort(assists, (a, b) => b.Value.CompareTo(a.Value));
                 e.Assists = assists.ToArray();
                 if (resMaxPl != null && resMax > 0.4f && e.InstigatorId != resMaxPl.Steam64)
-                    QuestManager.OnVehicleDestroyed(e);
+                {
+                    QuestManager.OnVehicleDestroyed(e, resMaxPl);
+                }
 
                 if (e.InstigatorId != 0)
                     Stats.StatsManager.ModifyStats(e.InstigatorId, s => s.VehiclesDestroyed++, false);

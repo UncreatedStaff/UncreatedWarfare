@@ -317,6 +317,7 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
     public const string NORWEGIAN = "nb-no";
     public const string ROMANIAN = "ro-ro";
     public const string DUTCH = "nl-nl";
+    public const string SWEEDISH = "sv-se";
     public const string CHINESE_SIMPLIFIED = "zh-cn";
     public const string CHINESE_TRADITIONAL = "zh-tw";
     public static readonly CultureInfo ENGLISH_C = new CultureInfo("en-US");
@@ -332,6 +333,7 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
     public static readonly CultureInfo ROMANIAN_C = new CultureInfo("ro-RO");
     public static readonly CultureInfo DUTCH_C = new CultureInfo("nl-NL");
     public static readonly CultureInfo CHINESE_C = new CultureInfo("zh-CN");
+    public static readonly CultureInfo SWEEDISH_C = new CultureInfo("sv-SE");
 
     public static CultureInfo GetCultureInfo(string? language)
     {
@@ -359,6 +361,8 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
                 return ROMANIAN_C;
             if (language.Equals(DUTCH, StringComparison.Ordinal))
                 return DUTCH_C;
+            if (language.Equals(SWEEDISH, StringComparison.Ordinal))
+                return SWEEDISH_C;
             if (language.Equals(CHINESE_SIMPLIFIED, StringComparison.Ordinal) ||
                 language.Equals(CHINESE_TRADITIONAL, StringComparison.Ordinal))
                 return CHINESE_C;
@@ -427,8 +431,8 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
     {
         writer.WriteProperty(nameof(key), key);
         writer.WriteProperty(nameof(display_name), display_name);
-        writer.WritePropertyName(nameof(values));
         writer.WriteProperty("imgui", RequiresIMGUI);
+        writer.WritePropertyName(nameof(values));
         writer.WriteStartArray();
         for (int i = 0; i < values.Length; i++)
         {

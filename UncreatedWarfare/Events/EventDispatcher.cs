@@ -52,6 +52,7 @@ public static class EventDispatcher
     public static event EventDelegate<CraftRequested> CraftRequested;
     public static event EventDelegate<ItemMoveRequested> ItemMoveRequested;
     public static event EventDelegate<ItemMoved> ItemMoved;
+    public static event EventDelegate<SwapClothingRequested> SwapClothingRequested;
 
     public static event EventDelegate<ThrowableSpawned> ThrowableSpawned;
     public static event EventDelegate<ThrowableSpawned> ThrowableDespawning;
@@ -943,6 +944,20 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(InventoryItemRemoved));
         }
+    }
+
+    internal static bool InvokeSwapClothingRequest(ClothingType type, UCPlayer player, byte page, byte x, byte y)
+    {
+        if (SwapClothingRequested == null) return true;
+        ItemJar? jar = page < player.Player.inventory.items.Length ? player.Player.inventory.items[page].getItem(player.Player.inventory.items[page].getIndex(x, y)) : null;
+        SwapClothingRequested args = new SwapClothingRequested(player, type, jar, (Page)page, x, y);
+        foreach (EventDelegate<SwapClothingRequested> inv in SwapClothingRequested.GetInvocationList().Cast<EventDelegate<SwapClothingRequested>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(SwapClothingRequested));
+        }
+
+        return args.CanContinue;
     }
 }
 public delegate void EventDelegate<in TState>(TState e) where TState : EventState;

@@ -362,9 +362,12 @@ public static class CTFUI
 public enum EFlagStatus
 {
     [Translatable("CAPTURING")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "占领中")]
     CAPTURING,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "失去中")]
     [Translatable("LOSING")]
     LOSING,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "保护")]
     [Translatable("SECURED")]
     SECURED,
     [Translatable("NEUTRALIZED")]
@@ -373,14 +376,17 @@ public enum EFlagStatus
     LOST,
     [Translatable("CONTESTED")]
     CONTESTED,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "不是目标点")]
     [Translatable("INEFFECTIVE")]
     INEFFECTIVE,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "清理中")]
     [Translatable("CLEARING")]
     CLEARING,
     [Translatable("")]
     BLANK,
     [Translatable("")]
     DONT_DISPLAY,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "在载具中")]
     [Translatable("IN VEHICLE")]
     IN_VEHICLE,
     [Translatable("LOCKED")]

@@ -491,41 +491,41 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             new Schema.Column(COLUMN_VEHICLE_GUID, SqlTypes.GUID_STRING),
             new Schema.Column(COLUMN_RESPAWN_TIME, SqlTypes.FLOAT)
             {
-                Default = "600"
+                Default = "'600'"
             },
             new Schema.Column(COLUMN_TICKET_COST, SqlTypes.INT)
             {
-                Default = "0"
+                Default = "'0'"
             },
             new Schema.Column(COLUMN_CREDIT_COST, SqlTypes.INT)
             {
-                Default = "0"
+                Default = "'0'"
             },
             new Schema.Column(COLUMN_REARM_COST, SqlTypes.INT)
             {
-                Default = "3"
+                Default = "'3'"
             },
             new Schema.Column(COLUMN_COOLDOWN, SqlTypes.FLOAT)
             {
-                Default = "0"
+                Default = "'0'"
             },
             new Schema.Column(COLUMN_VEHICLE_TYPE, SqlTypes.Enum<VehicleType>())
             {
-                Default = nameof(VehicleType.None)
+                Default = "'" + nameof(VehicleType.None) + "'"
             },
             new Schema.Column(COLUMN_BRANCH, SqlTypes.Enum<Branch>())
             {
-                Default = nameof(Branch.Default)
+                Default = "'" + nameof(Branch.Default) + "'"
             },
             new Schema.Column(COLUMN_REQUIRED_CLASS, SqlTypes.Enum<Class>())
             {
-                Default = nameof(Class.None)
+                Default = "'" + nameof(Class.None) + "'"
             },
             new Schema.Column(COLUMN_REQUIRES_SQUADLEADER, SqlTypes.BOOLEAN),
             new Schema.Column(COLUMN_ABANDON_BLACKLISTED, SqlTypes.BOOLEAN),
             new Schema.Column(COLUMN_ABANDON_VALUE_LOSS_SPEED, SqlTypes.FLOAT)
             {
-                Default = "0.125"
+                Default = "'0.125'"
             },
         }, true, typeof(VehicleData));
         SCHEMAS[1] = UnlockRequirement.GetDefaultSchema(TABLE_UNLOCK_REQUIREMENTS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK);

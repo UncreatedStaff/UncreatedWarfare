@@ -1163,7 +1163,16 @@ public class KillEnemiesQuestEmplacement : BaseQuestData<KillEnemiesQuestEmplace
                 }
             }
         }
-        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _kills, _killThreshold, _translationCache1);
+        protected override string Translate(bool forAsset)
+        {
+            if (_weapon.Behavior == ChoiceBehavior.Inclusive && _weapon.ValueType == DynamicValueType.Wildcard)
+            {
+                return QuestData.Translate(forAsset, _player, _kills, _killThreshold, "any emplacement");
+            }
+
+            return QuestData.Translate(forAsset, _player, _kills, _killThreshold, _translationCache1);
+        }
+
         public override void ManualComplete()
         {
             _kills = _killThreshold;
@@ -1736,7 +1745,7 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
         }
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED && !e.WasTeamkill)
             {
                 _streakProgress++;
                 if (_streakProgress >= _streakLength)
@@ -1758,7 +1767,7 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
                 TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _streakProgress, _streakLength, _streakCount);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _streakProgress, _streakCount, _streakLength);
         public override void ManualComplete()
         {
             _streakProgress = 0;

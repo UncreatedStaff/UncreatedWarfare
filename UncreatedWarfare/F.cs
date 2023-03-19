@@ -216,7 +216,7 @@ public static class F
         SteamPlayer pl = PlayerTool.getSteamPlayer(s64);
         return pl == null ? PlayerManager.HasSave(s64, out PlayerSave save) ? save.Team : 0ul : pl.GetTeam();
     }
-    public static ulong GetTeam(this UCPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
+    public static ulong GetTeam(this UCPlayer player) => player.IsOnline ? GetTeam(player.Player.quests.groupID.m_SteamID) : 0;
     public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this Player player) => GetTeam(player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this IPlayer player) => player is UCPlayer ucp ? ucp.GetTeam() : GetTeamFromPlayerSteam64ID(player.Steam64);

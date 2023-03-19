@@ -91,11 +91,11 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
             writer.WriteProperty("vehicles_destroyed", _vehDest);
         }
         public override void ResetToDefaults() => _vehDest = 0;
-        public void OnVehicleDestroyed(VehicleDestroyed e)
+        public void OnVehicleDestroyed(VehicleDestroyed e, UCPlayer instigator)
         {
             if (e.VehicleData != null && e.Team != _player.GetTeam() && VehicleType.IsMatch(e.VehicleData.Type) && VehicleIDs.IsMatch(e.Vehicle.asset))
             {
-                if (e.Instigator != null && e.Instigator.Steam64 == _player.Steam64)
+                if (instigator != null && instigator.Steam64 == _player.Steam64)
                 {
                     _vehDest++;
                     if (_vehDest >= VehicleCount)
@@ -129,9 +129,13 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
         protected override string Translate(bool forAsset)
         {
             if (VehicleIDs.Behavior == ChoiceBehavior.Inclusive && VehicleIDs.ValueType == DynamicValueType.Wildcard)
+            {
+                if (VehicleType.Behavior == ChoiceBehavior.Inclusive && VehicleType.ValueType == DynamicValueType.Wildcard)
+                    return QuestData!.Translate(forAsset, _player, _vehDest, VehicleCount, "vehicles");
                 return QuestData!.Translate(forAsset, _player, _vehDest, VehicleCount, translationCache1);
-            else
-                return QuestData!.Translate(forAsset, _player, _vehDest, VehicleCount, translationCache2);
+            }
+
+            return QuestData!.Translate(forAsset, _player, _vehDest, VehicleCount, translationCache2);
         }
         public override void ManualComplete()
         {
@@ -254,9 +258,13 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
         protected override string Translate(bool forAsset)
         {
             if (Vehicles.Behavior == ChoiceBehavior.Inclusive && Vehicles.ValueType == DynamicValueType.Wildcard)
+            {
+                if (VehicleType.Behavior == ChoiceBehavior.Inclusive && VehicleType.ValueType == DynamicValueType.Wildcard)
+                    return QuestData!.Translate(forAsset, _player, _travelled, Distance, "any vehicle");
                 return QuestData!.Translate(forAsset, _player, _travelled, Distance, translationCache1);
-            else
-                return QuestData!.Translate(forAsset, _player, _travelled, Distance, translationCache2);
+            }
+            
+            return QuestData!.Translate(forAsset, _player, _travelled, Distance, translationCache2);
         }
         public override void ManualComplete()
         {

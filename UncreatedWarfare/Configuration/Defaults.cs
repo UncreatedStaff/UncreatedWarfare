@@ -455,6 +455,7 @@ partial class JSONMethods
         new LanguageAliasSet(LanguageAliasSet.FILIPINO, "Filipino", new string[] { "pilipino", "fil", "pil", "tagalog", "filipino", "tl", "tl-ph", "fil-ph", "pil-ph" }),
         new LanguageAliasSet(LanguageAliasSet.NORWEGIAN, "Norwegian", new string[] { "norwegian", "norway", "bokmål", "bokmal", "norsk", "nb-no", "nb", "no", "nbno" }),
         new LanguageAliasSet(LanguageAliasSet.DUTCH, "Dutch", new string[] { "dutch", "nederlands", "nl-nl", "nl", "dutch", "nlnl" }),
+        new LanguageAliasSet(LanguageAliasSet.SWEEDISH, "Swedish", new string[] { "swedish", "sw", "sweedish", "se", "svenska", "svensk" }),
         new LanguageAliasSet(LanguageAliasSet.ROMANIAN, "Romanian", new string[] { "română", "romanian", "ro", "roro", "ro-ro", "romania" })
     };
 }

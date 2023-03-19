@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -246,6 +247,7 @@ public static class DailyQuests
         save.Presets = new DailyQuestSave.Preset[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
         save.StartDate = day == 0 ? now : now.AddDays(day);
         int[] ints = new int[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
+        int xp = 0, cred = 0;
         for (int i = 0; i < DailyQuest.DAILY_QUEST_CONDITION_LENGTH; i++)
         {
             int rndPick;
@@ -283,12 +285,19 @@ public static class DailyQuests
                 cond.FlagValue = checked((short)val);
                 cond.Translation = tempTracker.GetDisplayString(true);
                 cond.Key = preset.Key;
+                foreach (XPReward reward in tempTracker.Rewards.OfType<XPReward>())
+                    xp += reward.XP;
+                foreach (CreditsReward reward in tempTracker.Rewards.OfType<CreditsReward>())
+                    cred += reward.Credits;
             }
             else
             {
                 L.LogWarning("Failed to get daily tracker for " + data.QuestType);
             }
         }
+
+        dq.XPReward = xp;
+        dq.CreditsReward = cred;
     }
     private static void OnPlayerJoinedTeam(UCPlayer player)
     {

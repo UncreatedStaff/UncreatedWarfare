@@ -127,6 +127,14 @@ public class UCWarfare : MonoBehaviour
 
         StartCoroutine(RestartIn(seconds));
 
+        if (Config.EnableSync)
+            gameObject.AddComponent<ConfigSync>();
+
+        if (Config.EnableSync)
+            ConfigSync.Reflect();
+
+        Data.RegisterInitialSyncs();
+
         new PermissionSaver();
         await Data.LoadSQL(token).ConfigureAwait(false);
         await ItemIconProvider.DownloadConfig(token).ConfigureAwait(false);
@@ -161,17 +169,9 @@ public class UCWarfare : MonoBehaviour
         }
 
         UCInventoryManager.OnLoad();
-
-        if (Config.EnableSync)
-            gameObject.AddComponent<ConfigSync>();
         gameObject.AddComponent<ActionLog>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
-
-        if (Config.EnableSync)
-            ConfigSync.Reflect();
-
-        Data.RegisterInitialSyncs();
 
         InitNetClient();
 

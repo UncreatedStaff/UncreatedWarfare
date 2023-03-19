@@ -120,7 +120,7 @@ public static class OffenseManager
                     R => id = R.GetUInt32(0));
                 StringBuilder sbq = new StringBuilder(64);
                 StringBuilder sbq2 = new StringBuilder(64);
-                int c = 1;
+                int c = 2;
                 for (int i = 0; i < update.Length; ++i)
                 {
                     if (update[i] < 1 && bytes[i] is not null && bytes[i].Length == 20 && i < 8)
@@ -128,33 +128,36 @@ public static class OffenseManager
                 }
                 object[] objs = new object[c];
                 objs[0] = s64;
-                c = 0;
+                objs[1] = DateTime.UtcNow;
+                c = 1;
                 int d = 0;
                 object[] o2 = new object[update.Length];
                 for (int i = 0; i < update.Length; ++i)
                 {
                     if (update[i] > 0)
                     {
-                        sbq2.Append("UPDATE `hwids` SET `LoginCount` = `LoginCount` + 1, `LastLogin` = NOW() WHERE `Id` = @" + i + ";");
+                        sbq2.Append($"UPDATE `{WarfareSQL.TableHWIDs}` SET `{WarfareSQL.ColumnHWIDsLoginCount}` = `{WarfareSQL.ColumnHWIDsLoginCount}` + 1," +
+                                    $" `{WarfareSQL.ColumnHWIDsLastLogin}` = NOW() WHERE `{WarfareSQL.ColumnHWIDsPrimaryKey}` = @" + i + ";");
                         ++d;
                         o2[i] = update[i];
                         continue;
                     }
                     if (bytes[i] is not null && bytes[i].Length == 20 && i < 8)
                     {
-                        if (c != 0)
+                        if (c != 1)
                             sbq.Append(',');
-                        sbq.Append('(').Append("@0, @").Append(c * 2 + 1).Append(", @").Append(c * 2 + 2).Append(')');
-                        objs[c * 2 + 1] = i;
-                        objs[c * 2 + 2] = bytes[i];
+                        sbq.Append("(@0, @1, @").Append(c * 2).Append(", @").Append(c * 2 + 1).Append(')');
+                        objs[c * 2] = i;
+                        objs[c * 2 + 1] = bytes[i];
                         ++c;
                     }
 
                     o2[i] = 0;
                 }
-                if (c > 0)
+                if (c > 1)
                 {
-                    sbq.Insert(0, "INSERT INTO `hwids` (`Steam64`, `Index`, `HWID`) VALUES ");
+                    sbq.Insert(0, $"INSERT INTO `{WarfareSQL.TableHWIDs}` (`{WarfareSQL.ColumnHWIDsSteam64}`, `{WarfareSQL.ColumnHWIDsFirstLogin}`, " +
+                                  $"`{WarfareSQL.ColumnHWIDsIndex}`, `{WarfareSQL.ColumnHWIDsHWID}`) VALUES ");
                     sbq.Append(';');
                     string query = sbq.ToString();
 
@@ -166,12 +169,16 @@ public static class OffenseManager
                 }
                 if (id.HasValue)
                     await Data.DatabaseManager.NonQueryAsync(
-                        "UPDATE `ip_addresses` SET `LoginCount` = `LoginCount` + 1, `LastLogin` = NOW() WHERE `Id` = @0 LIMIT 1;",
+                        $"UPDATE `{WarfareSQL.TableIPAddresses}` SET " +
+                        $"`{WarfareSQL.ColumnIPAddressesLoginCount}` = `{WarfareSQL.ColumnIPAddressesLoginCount}` + 1, `{WarfareSQL.ColumnIPAddressesLastLogin}` = " +
+                        $"NOW() WHERE `{WarfareSQL.ColumnIPAddressesPrimaryKey}` = @0 LIMIT 1;",
                         new object[] { id.Value });
                 else
                     await Data.DatabaseManager.NonQueryAsync(
-                        "INSERT INTO `ip_addresses` (`Steam64`, `Packed`, `Unpacked`) VALUES (@0, @1, @2);",
-                        new object[] { s64, packed, Parser.getIPFromUInt32(packed) });
+                        $"INSERT INTO `{WarfareSQL.TableIPAddresses}` (`{WarfareSQL.ColumnIPAddressesSteam64}`, " +
+                        $"`{WarfareSQL.ColumnIPAddressesPackedIP}`, `{WarfareSQL.ColumnIPAddressesUnpackedIP}`, " +
+                        $"`{WarfareSQL.ColumnIPAddressesFirstLogin}`) VALUES (@0, @1, @2, @3);",
+                        new object[] { s64, packed, Parser.getIPFromUInt32(packed), DateTime.UtcNow });
             }
             catch (Exception ex)
             {

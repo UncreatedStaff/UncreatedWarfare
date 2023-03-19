@@ -5,20 +5,15 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -719,10 +714,10 @@ public static class QuestManager
         foreach (INotifyBunkerSpawn tracker in RegisteredTrackers.OfType<INotifyBunkerSpawn>())
             tracker.OnPlayerSpawnedAtBunker(bunker, fob, spawner);
     }
-    public static void OnVehicleDestroyed(VehicleDestroyed e)
+    public static void OnVehicleDestroyed(VehicleDestroyed e, UCPlayer instigator)
     {
         foreach (INotifyVehicleDestroyed tracker in RegisteredTrackers.OfType<INotifyVehicleDestroyed>())
-            tracker.OnVehicleDestroyed(e);
+            tracker.OnVehicleDestroyed(e, instigator);
     }
     public static void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, Components.VehicleComponent vehicle)
     {

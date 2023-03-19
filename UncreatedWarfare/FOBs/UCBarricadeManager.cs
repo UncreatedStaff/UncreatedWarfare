@@ -98,7 +98,7 @@ public static class UCBarricadeManager
         }
         return @object.transform.position;
     }
-    public static LevelObject? GetObjectFromPosition(Guid guid, Vector3 pos, float tolerance = 0.05f)
+    public static LevelObject? GetObjectFromPosition(Guid guid, Vector3 pos, float tolerance = 0.15f)
     {
         if (!float.IsNaN(pos.x) && !float.IsNaN(pos.y) && !float.IsNaN(pos.z) && Regions.tryGetCoordinate(pos, out byte x, out byte y))
         {

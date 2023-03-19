@@ -6,6 +6,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Json;
 using Uncreated.Framework;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -64,7 +65,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
         {
             writer.WriteProperty("fobs_built", _fobsBuilt);
         }
-        public void OnFOBBuilt(UCPlayer constructor, Components.FOB fob)
+        public void OnFOBBuilt(UCPlayer constructor, FOB fob)
         {
             if (constructor.Steam64 == _player.Steam64)
             {
@@ -157,20 +158,23 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
             if (constructor.Steam64 == _player.Steam64)
             {
                 ulong team = _player.GetTeam();
-                if (Data.Is(out Gamemodes.Flags.TeamCTF.TeamCTF ctf))
+                if (Data.Is(out IFlagTeamObjectiveGamemode ctf))
                 {
-                    if ((team == 1 && ctf.ObjectiveTeam1 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam1.Position) <= SqrBuildRange) ||
-                        (team == 2 && ctf.ObjectiveTeam2 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam2.Position) <= SqrBuildRange))
+                    if (Data.Is(out IAttackDefense inv))
                     {
-                        goto add;
+                        if ((inv.AttackingTeam == 1 && ctf.ObjectiveTeam1 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam1.Position) <= SqrBuildRange) ||
+                            (inv.AttackingTeam == 2 && ctf.ObjectiveTeam2 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam2.Position) <= SqrBuildRange))
+                        {
+                            goto add;
+                        }
                     }
-                }
-                else if (Data.Is(out Gamemodes.Flags.Invasion.Invasion inv))
-                {
-                    if ((inv.AttackingTeam == 1 && inv.ObjectiveTeam1 != null && Util.SqrDistance2D(fob.Position, inv.ObjectiveTeam1.Position) <= SqrBuildRange) ||
-                        (inv.AttackingTeam == 2 && inv.ObjectiveTeam2 != null && Util.SqrDistance2D(fob.Position, inv.ObjectiveTeam2.Position) <= SqrBuildRange))
+                    else
                     {
-                        goto add;
+                        if ((team == 1 && ctf.ObjectiveTeam1 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam1.Position) <= SqrBuildRange) ||
+                            (team == 2 && ctf.ObjectiveTeam2 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam2.Position) <= SqrBuildRange))
+                        {
+                            goto add;
+                        }
                     }
                 }
                 else if (Data.Is(out Gamemodes.Insurgency.Insurgency ins))
@@ -258,20 +262,23 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
             if (constructor.Steam64 == _player.Steam64)
             {
                 ulong team = _player.GetTeam();
-                if (Data.Is(out Gamemodes.Flags.TeamCTF.TeamCTF ctf))
+                if (Data.Is(out IFlagTeamObjectiveGamemode ctf))
                 {
-                    if ((team == 1 && ctf.ObjectiveTeam1 != null && ctf.ObjectiveTeam1.PlayerInRange(fob.Position)) ||
-                        (team == 2 && ctf.ObjectiveTeam2 != null && ctf.ObjectiveTeam2.PlayerInRange(fob.Position)))
+                    if (Data.Is(out IAttackDefense inv))
                     {
-                        goto add;
+                        if ((inv.AttackingTeam == 1 && ctf.ObjectiveTeam1 != null && ctf.ObjectiveTeam1.PlayerInRange(fob.Position)) ||
+                            (inv.AttackingTeam == 2 && ctf.ObjectiveTeam2 != null && ctf.ObjectiveTeam2.PlayerInRange(fob.Position)))
+                        {
+                            goto add;
+                        }
                     }
-                }
-                else if (Data.Is(out Gamemodes.Flags.Invasion.Invasion inv))
-                {
-                    if ((inv.AttackingTeam == 1 && ctf.ObjectiveTeam1 != null && ctf.ObjectiveTeam1.PlayerInRange(fob.Position)) ||
-                        (inv.AttackingTeam == 2 && ctf.ObjectiveTeam2 != null && ctf.ObjectiveTeam2.PlayerInRange(fob.Position)))
+                    else
                     {
-                        goto add;
+                        if ((team == 1 && ctf.ObjectiveTeam1 != null && ctf.ObjectiveTeam1.PlayerInRange(fob.Position)) ||
+                            (team == 2 && ctf.ObjectiveTeam2 != null && ctf.ObjectiveTeam2.PlayerInRange(fob.Position)))
+                        {
+                            goto add;
+                        }
                     }
                 }
                 else if (Data.Is(out Gamemodes.Insurgency.Insurgency ins))
@@ -405,13 +412,13 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         [RewardField("a")]
         public IDynamicValue<int>.IChoice Amount;
         public DynamicAssetValue<ItemBarricadeAsset>.Choice BaseIDs;
-        public IDynamicValue<BuildableType>.IChoice BuildableType;
+        internal DynamicEnumValue<BuildableType>.Choice BuildableType;
         public IDynamicValue<int>.IChoice FlagValue => Amount;
         public void Init(HelpBuildQuest data)
         {
             this.Amount = data.Amount.GetValue();
             this.BaseIDs = data.BaseIDs.GetValue();
-            this.BuildableType = data.BuildableType.GetValue();
+            this.BuildableType = data.BuildableType.GetValueIntl();
         }
         public bool IsEligable(UCPlayer player) => true;
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
@@ -419,7 +426,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
             if (prop.Equals("buildables_required", StringComparison.Ordinal))
                 Amount = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("buildable_type", StringComparison.Ordinal))
-                BuildableType = DynamicEnumValue<BuildableType>.ReadChoice(ref reader);
+                BuildableType = DynamicEnumValue<BuildableType>.ReadChoiceIntl(ref reader);
             else if (prop.Equals("base_ids", StringComparison.Ordinal))
                 BaseIDs = DynamicAssetValue<ItemBarricadeAsset>.ReadChoice(ref reader);
         }
@@ -434,8 +441,10 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
     {
         private readonly int Amount = 0;
         private readonly DynamicAssetValue<ItemBarricadeAsset>.Choice BaseIDs;
-        private readonly IDynamicValue<BuildableType>.IChoice BuildableType;
+        private readonly DynamicEnumValue<BuildableType>.Choice BuildableType;
         private int _built;
+        private readonly string translationCache1;
+        private readonly string translationCache2;
         protected override bool CompletedCheck => _built >= Amount;
         public override short FlagValue => (short)_built;
         public override void ResetToDefaults() => _built = 0;
@@ -444,6 +453,8 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
             Amount = questState.Amount.InsistValue();
             BaseIDs = questState.BaseIDs;
             BuildableType = questState.BuildableType;
+            translationCache1 = BuildableType.GetCommaList(_player == null ? 0 : _player.Steam64);
+            translationCache2 = BaseIDs.GetCommaList();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -467,8 +478,19 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _built, Amount,
-            BuildableType.Behavior == ChoiceBehavior.Inclusive && BuildableType.ValueType == DynamicValueType.Wildcard ? "buildables" : BuildableType.ToString());
+        protected override string Translate(bool forAsset)
+        {
+            if (BaseIDs.Behavior == ChoiceBehavior.Inclusive && BaseIDs.ValueType == DynamicValueType.Wildcard)
+            {
+                if (BuildableType.Behavior == ChoiceBehavior.Inclusive && BuildableType.ValueType == DynamicValueType.Wildcard)
+                    return QuestData.Translate(forAsset, _player, _built, Amount, "buildables");
+
+                return QuestData.Translate(forAsset, _player, _built, Amount, translationCache1);
+            }
+
+            return QuestData!.Translate(forAsset, _player, _built, Amount, translationCache2);
+        }
+
         public override void ManualComplete()
         {
             _built = Amount;

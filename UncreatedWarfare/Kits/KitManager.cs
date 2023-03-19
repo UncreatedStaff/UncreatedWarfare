@@ -3,7 +3,6 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -55,6 +54,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         EventDispatcher.ItemMoved += OnItemMoved;
         EventDispatcher.ItemDropped += OnItemDropped;
         EventDispatcher.ItemPickedUp += OnItemPickedUp;
+        EventDispatcher.SwapClothingRequested += OnSwapClothingRequested;
         OnItemsRefreshed += OnItemsRefreshedIntl;
         //await MigrateOldKits(token).ConfigureAwait(false);
         List<SqlItem<Kit>>? dirty = null;
@@ -87,6 +87,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     public override async Task PreUnload(CancellationToken token)
     {
         //EventDispatcher.InventoryItemRemoved -= OnInventoryItemRemoved;
+        EventDispatcher.SwapClothingRequested -= OnSwapClothingRequested;
         EventDispatcher.ItemPickedUp -= OnItemPickedUp;
         EventDispatcher.ItemDropped -= OnItemDropped;
         EventDispatcher.ItemMoved -= OnItemMoved;
@@ -808,6 +809,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                         giveY = l.NewY;
                         giveRot = l.NewRotation;
                         L.LogDebug("Found layout for item " + item + " (to: " + givePage + ", (" + giveX + ", " + giveY + ") rot: " + giveRot + ".)");
+                        break;
                     }
                 }
 
@@ -819,8 +821,8 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     {
                         L.LogWarning("Duplicate " + givePage.ToString().ToLowerInvariant() + " defined for " + kit.Id + ", " + item + ".");
                         L.Log("Removing " + (page.items[0].GetAsset().itemName) + " in place of duplicate.");
-                        page.removeItem(0);
                         (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((page.items[0].item, jar));
+                        page.removeItem(0);
                     }
 
                     // checks for overlapping items and retries overlapping layout-affected items
@@ -2613,6 +2615,16 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 }
 
             }, tkn, ctx: "Checking for new binding of moved item.");
+        }
+    }
+    private static void OnSwapClothingRequested(SwapClothingRequested e)
+    {
+        if (e.Player.OnDuty()) return;
+
+        if (e.Player.HasKit && e.Type is ClothingType.Backpack or ClothingType.Pants or ClothingType.Shirt or ClothingType.Vest)
+        {
+            e.Player.SendChat(T.NoRemovingClothing);
+            e.Break();
         }
     }
     private static void VerifyKitIntegrity(Kit kit)
