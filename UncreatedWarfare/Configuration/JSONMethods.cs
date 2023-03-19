@@ -333,7 +333,7 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
     public static readonly CultureInfo ROMANIAN_C = new CultureInfo("ro-RO");
     public static readonly CultureInfo DUTCH_C = new CultureInfo("nl-NL");
     public static readonly CultureInfo CHINESE_C = new CultureInfo("zh-CN");
-    public static readonly CultureInfo SWEEDISH_C = new CultureInfo("sv-SE");
+    public static readonly CultureInfo SWEDISH_C = new CultureInfo("sv-SE");
 
     public static CultureInfo GetCultureInfo(string? language)
     {
@@ -362,7 +362,7 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
             if (language.Equals(DUTCH, StringComparison.Ordinal))
                 return DUTCH_C;
             if (language.Equals(SWEDISH, StringComparison.Ordinal))
-                return SWEEDISH_C;
+                return SWEDISH_C;
             if (language.Equals(CHINESE_SIMPLIFIED, StringComparison.Ordinal) ||
                 language.Equals(CHINESE_TRADITIONAL, StringComparison.Ordinal))
                 return CHINESE_C;

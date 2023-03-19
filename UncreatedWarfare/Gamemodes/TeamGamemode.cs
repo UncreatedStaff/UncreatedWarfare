@@ -96,6 +96,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
         if (EveryXSeconds(Config.GeneralMainCheckSeconds))
             TeamManager.EvaluateBases();
+
+        // todo improve this a little
         if (State == State.Staging && (_shouldHaveBlockerT1 || _shouldHaveBlockerT2))
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
