@@ -404,7 +404,7 @@ public class WarfareSQL : MySqlDatabase
             {
                 Nullable = true
             },
-            new Schema.Column(ColumnTeamkillsItemName, SqlTypes.String(30))
+            new Schema.Column(ColumnTeamkillsItemName, SqlTypes.String(50))
             {
                 Nullable = true
             },

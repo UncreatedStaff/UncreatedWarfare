@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.Levels;
 
 public sealed class Points : BaseSingletonComponent, IUIListener
 {
-    private const string UpdateAllPointsQuery = "SELECT `Steam64`, `Team`, `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` in (";
+    private static readonly string UpdateAllPointsQuery = "SELECT `Steam64`, `Team`, `Experience`, `Credits` FROM `" + WarfareSQL.TableLevels + "` WHERE `Steam64` in (";
 
     public static readonly XPUI XPUI;
     public static readonly CreditsUI CreditsUI;
@@ -692,7 +692,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     uint t1Cd = 0;
                     uint t2Cd = 0;
                     await Data.DatabaseManager.QueryAsync(
-                        "SELECT `Experience`, `Credits`, `Team` FROM `s2_levels` WHERE `Steam64` = @0 LIMIT 2;",
+                        "SELECT `Experience`, `Credits`, `Team` FROM `" + WarfareSQL.TableLevels + "` WHERE `Steam64` = @0 LIMIT 2;",
                         new object[] { caller.Steam64 },
                         reader =>
                         {
@@ -709,7 +709,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                             }
                         });
                     await Data.RemoteSQL.NonQueryAsync(
-                        "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Experience`, `Credits`) VALUES (@0, 1, @1, @2), (@0, 2, @3, @4) AS vals " +
+                        "INSERT INTO `" + WarfareSQL.TableLevels + "` (`Steam64`, `Team`, `Experience`, `Credits`) VALUES (@0, 1, @1, @2), (@0, 2, @3, @4) AS vals " +
                         "ON DUPLICATE KEY UPDATE `Experience` = vals.Experience, `Credits` = vals.Credits;",
                         new object[] { caller.Steam64, t1Xp, t1Cd, t2Xp, t2Cd }).ConfigureAwait(false);
                 }
@@ -836,7 +836,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 if (Data.RemoteSQL != null && Data.RemoteSQL.Opened)
                 {
                     t2 = Data.RemoteSQL.QueryAsync(
-                        "SELECT `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
+                        "SELECT `Experience`, `Credits` FROM `" + WarfareSQL.TableLevels + "` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
                         new object[] { caller.Steam64, team },
                         reader =>
                         {
@@ -847,7 +847,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 }
 
                 await Data.DatabaseManager.QueryAsync(
-                    "SELECT `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
+                    "SELECT `Experience`, `Credits` FROM `" + WarfareSQL.TableLevels + "` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
                     new object[] { caller.Steam64, team },
                     reader =>
                     {
@@ -889,7 +889,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
 
                     if (target != null && target.Opened)
                         await target.NonQueryAsync(
-                            "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Experience`, `Credits`) VALUES (@0, @1, @2, @3) ON DUPLICATE KEY UPDATE `Experience` = @2, `Credits` = @3;",
+                            "INSERT INTO `" + WarfareSQL.TableLevels + "` (`Steam64`, `Team`, `Experience`, `Credits`) VALUES (@0, @1, @2, @3) ON DUPLICATE KEY UPDATE `Experience` = @2, `Credits` = @3;",
                             new object[] { caller.Steam64, team, xp, cd }, token).ConfigureAwait(false);
                 }
 
