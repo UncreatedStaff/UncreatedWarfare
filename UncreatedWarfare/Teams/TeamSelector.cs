@@ -332,19 +332,34 @@ public class TeamSelector : BaseSingletonComponent
             ulong team2 = sel ? pl.TeamSelectorData!.SelectedTeam : pl.GetTeam();
             if (team2 is not 1 and not 2) continue;
             string text = player.Steam64 == pl.Steam64 ? pl.CharacterName.Colorize(SelfHex) : (sel ? pl.CharacterName.Colorize(SelectedHex) : pl.CharacterName);
+            
             if (team2 is 1)
-                JoinUI.TeamPlayers[0][t1Ct++].SetText(c, text);
+            {
+                if (t1Ct < JoinUI.TeamPlayers[0].Length - 1)
+                    JoinUI.TeamPlayers[0][t1Ct++].SetText(c, text);
+            }
             else
-                JoinUI.TeamPlayers[1][t2Ct++].SetText(c, text);
+            {
+                if (t2Ct < JoinUI.TeamPlayers[1].Length - 1)
+                    JoinUI.TeamPlayers[1][t2Ct++].SetText(c, text);
+            }
+                
         }
-        if (t1Ct > 0)
-            JoinUI.TeamPlayers[0][t1Ct - 1].SetVisibility(c, true);
-        if (t2Ct > 0)
-            JoinUI.TeamPlayers[1][t2Ct - 1].SetVisibility(c, true);
-        if (TeamSelectorUI.PlayerListCount > t1Ct)
-            JoinUI.TeamPlayers[0][t1Ct].SetVisibility(c, false);
-        if (TeamSelectorUI.PlayerListCount > t2Ct)
-            JoinUI.TeamPlayers[1][t2Ct].SetVisibility(c, false);
+
+        if (t1Ct < JoinUI.TeamPlayers[0].Length) // TODO: verify this if statement - maybe it 
+        {
+            if (t1Ct > 0)
+                JoinUI.TeamPlayers[0][t1Ct - 1].SetVisibility(c, true);
+            if (TeamSelectorUI.PlayerListCount > t1Ct)
+                JoinUI.TeamPlayers[0][t1Ct].SetVisibility(c, false);
+        }
+        if (t2Ct < JoinUI.TeamPlayers[1].Length)
+        {
+            if (t2Ct > 0)
+                JoinUI.TeamPlayers[1][t2Ct - 1].SetVisibility(c, true);
+            if (TeamSelectorUI.PlayerListCount > t2Ct)
+                JoinUI.TeamPlayers[1][t2Ct].SetVisibility(c, false);
+        }
 
         SetButtonState(player, 1, team == 1 || CheckTeam(1, team, t1Ct, t2Ct));
         SetButtonState(player, 2, team == 2 || CheckTeam(2, team, t1Ct, t2Ct));
@@ -381,12 +396,24 @@ public class TeamSelector : BaseSingletonComponent
                 continue;
             }
             string text = sel ? pl.CharacterName.ColorizeTMPro(SelectedHex) : pl.CharacterName;
-            UnturnedLabel lbl = team is 1 ? JoinUI.TeamPlayers[0][t1Ct++] : JoinUI.TeamPlayers[1][t2Ct++];
+            UnturnedLabel? lbl = null;
+
+            if (team == 1)
+            {
+                if (t1Ct < JoinUI.TeamPlayers[0].Length - 1)
+                    lbl = JoinUI.TeamPlayers[0][t1Ct++];
+            }
+            else
+            {
+                if (t2Ct < JoinUI.TeamPlayers[1].Length - 1)
+                    lbl = JoinUI.TeamPlayers[1][t2Ct++];
+            }
+
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
-                    lbl.SetText(pl2.Connection, pl.Steam64 == pl2.Steam64 ? pl.CharacterName.Colorize(SelfHex) : text);
+                    lbl?.SetText(pl2.Connection, pl.Steam64 == pl2.Steam64 ? pl.CharacterName.Colorize(SelfHex) : text);
             }
         }
 
@@ -398,27 +425,11 @@ public class TeamSelector : BaseSingletonComponent
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
                 {
-                    try
-                    {
-                        if (t1Ct > 0)
-                            JoinUI.TeamPlayers[0][t1Ct - 1].SetVisibility(pl2.Connection, true);
-                        
-                    }
-                    catch (Exception ex)
-                    {
-                        L.LogWarning($"Could not set TeamPlayer list element {t1Ct - 1} visibility  - there are only {JoinUI.TeamPlayers[0].Length} list elements", ConsoleColor.Yellow, "TeamSelector");
-                    }
+                    if (t1Ct > 0 && t1Ct <= JoinUI.TeamPlayers[0].Length)
+                        JoinUI.TeamPlayers[0][t1Ct - 1].SetVisibility(pl2.Connection, true);
 
-                    try
-                    {
-                        if (t2Ct > 0)
-                            JoinUI.TeamPlayers[1][t2Ct - 1].SetVisibility(pl2.Connection, true);
-
-                    }
-                    catch (Exception ex)
-                    {
-                        L.LogWarning($"Could not set TeamPlayer list element {t1Ct - 1} visibility  - there are only {JoinUI.TeamPlayers[1].Length} list elements", ConsoleColor.Yellow, "TeamSelector");
-                    }
+                    if (t2Ct > 0 && t2Ct <= JoinUI.TeamPlayers[1].Length)
+                        JoinUI.TeamPlayers[1][t2Ct - 1].SetVisibility(pl2.Connection, true);
                 }
             }
         }
@@ -429,15 +440,8 @@ public class TeamSelector : BaseSingletonComponent
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
                 {
-                    try
-                    {
+                    if (t1Ct < JoinUI.TeamPlayers[0].Length)
                         JoinUI.TeamPlayers[0][t1Ct].SetVisibility(pl2.Connection, false);
-
-                    }
-                    catch (Exception ex)
-                    {
-                        L.LogWarning($"Could not set TeamPlayer list element {t1Ct - 1} visibility  - there are only {JoinUI.TeamPlayers[1].Length} list elements", ConsoleColor.Yellow, "TeamSelector");
-                    }
                 }
                     
             }
@@ -449,14 +453,8 @@ public class TeamSelector : BaseSingletonComponent
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
                 {
-                    try
-                    {
+                    if (t2Ct < JoinUI.TeamPlayers[1].Length)
                         JoinUI.TeamPlayers[1][t2Ct].SetVisibility(pl2.Connection, false);
-                    }
-                    catch (Exception ex)
-                    {
-                        L.LogWarning($"Could not set TeamPlayer list element {t1Ct - 1} visibility  - there are only {JoinUI.TeamPlayers[1].Length} list elements", ConsoleColor.Yellow, "TeamSelector");
-                    }
                 }
                     
             }
