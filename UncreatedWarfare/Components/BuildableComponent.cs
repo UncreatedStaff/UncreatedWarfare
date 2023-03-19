@@ -156,7 +156,7 @@ public class BuildableComponent : MonoBehaviour
 
             Buildable.Emplacement.BaseBarricade.ValidReference(out Guid guid);
             Vector3 rotation = Foundation.model.rotation.eulerAngles;
-            InteractableVehicle vehicle = SpawnImplacement(vehicleasset, Foundation.model.transform.position, new Vector3(rotation.x + 90, rotation.y, rotation.z), data.owner, data.group, guid);
+            InteractableVehicle vehicle = SpawnImplacement(vehicleasset, Foundation.model.transform.position, rotation, data.owner, data.group, guid);
             structureName = vehicle.asset.vehicleName;
 
             BuiltBuildableComponent comp = vehicle.transform.gameObject.AddComponent<BuiltBuildableComponent>();
@@ -201,8 +201,9 @@ public class BuildableComponent : MonoBehaviour
     }
     internal static InteractableVehicle SpawnImplacement(VehicleAsset vehicleAsset, Vector3 position, Vector3 rotation, ulong owner, ulong group, Guid baseBarricade = default)
     {
-        Quaternion qrotation = Quaternion.Euler(new Vector3(rotation.x, rotation.y, rotation.z));
-        InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleAsset.id, new Vector3(position.x, position.y + 1, position.z), qrotation);
+        Quaternion vrotation = Quaternion.Euler(new Vector3(rotation.x + 90, rotation.y, rotation.z));
+        Quaternion brotation = Quaternion.Euler(rotation);
+        InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleAsset.id, new Vector3(position.x, position.y + 1, position.z), vrotation);
 
         if (vehicle.asset.canBeLocked)
         {
@@ -216,7 +217,7 @@ public class BuildableComponent : MonoBehaviour
         if (baseBarricade != default && Assets.find(baseBarricade) is ItemBarricadeAsset emplacementBase)
         {
             Barricade barricade = new Barricade(emplacementBase);
-            BarricadeManager.dropNonPlantedBarricade(barricade, position, qrotation, owner, group);
+            BarricadeManager.dropNonPlantedBarricade(barricade, position, brotation, owner, group);
         }
         return vehicle;
     }
