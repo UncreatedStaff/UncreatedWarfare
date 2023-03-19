@@ -627,8 +627,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static void SendFOBList(UCPlayer player)
     {
-        L.Log("FOB UI: sending to player " + player.Name);
-
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
         List<FOB> list;

@@ -146,7 +146,7 @@ public static class TeamManager
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "中东" }
             },
         },
-        new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://imgur.com/91Apxc5.png")
+        new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/91Apxc5.png")
         {
             PrimaryKey = 4,
             Build = "35eabf178e4e4d82aac34fcbf8e690e3",

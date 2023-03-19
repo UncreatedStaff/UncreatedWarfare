@@ -54,6 +54,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     {
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.VehicleDestroyed += OnVehicleDestoryed;
+        EventDispatcher.PlayerPendingAsync += OnPlayerPendingAsync;
         KitManager.OnKitChanged += OnKitChanged;
         EventDispatcher.PlayerLeaving += OnPlayerLeft;
         if (!_first) ReloadConfig();
@@ -63,8 +64,24 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     {
         EventDispatcher.PlayerLeaving -= OnPlayerLeft;
         KitManager.OnKitChanged -= OnKitChanged;
+        EventDispatcher.PlayerPendingAsync -= OnPlayerPendingAsync;
         EventDispatcher.VehicleDestroyed -= OnVehicleDestoryed;
         EventDispatcher.GroupChanged -= OnGroupChanged;
+    }
+    private async Task OnPlayerPendingAsync(PlayerPending e, CancellationToken token)
+    {
+        Task? t1 = null;
+        Task? t2 = null;
+        if (Data.DatabaseManager != null)
+        {
+            t1 = Data.DatabaseManager.TryInsertInitialRow(e.Steam64, token);
+        }
+        if (Data.RemoteSQL != null)
+        {
+            t2 = Data.RemoteSQL.TryInsertInitialRow(e.Steam64, token);
+        }
+        if (t1 != null) await t1.ConfigureAwait(false);
+        if (t2 != null) await t2.ConfigureAwait(false);
     }
     public static void ReloadConfig()
     {
@@ -894,7 +911,10 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 }
 
                 if (!found && !found2)
-                    return;
+                {
+                    xp = 0;
+                    cd = (uint)PointsConfig.StartingCredits;
+                }
                 caller.UpdatePoints(xp, cd);
             }
         }
@@ -1186,6 +1206,7 @@ public class PointsConfig : JSONConfigData
 
     public override void SetDefaults()
     {
+        StartingCredits = 500;
         ProgressBlockCharacter = '█';
         XPData = new Dictionary<XPReward, XPRewardData>(35)
         {
