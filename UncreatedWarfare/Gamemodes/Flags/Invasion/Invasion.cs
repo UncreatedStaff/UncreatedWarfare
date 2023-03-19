@@ -61,10 +61,13 @@ public class Invasion :
             SpawnBlockerOnT1();
         else
             SpawnBlockerOnT2();
-        if (firstFlag != null)
-            _vcp = FOBManager.RegisterNewSpecialFOB(Config.InvasionSpecialFOBName, new Vector3(firstFlag.X,
-                F.GetHeight(firstFlag.Position2D, firstFlag is { ZoneData.Item: { } z } ? z.MinHeight : float.NaN) + 2f, firstFlag.Y),
+        if (firstFlag is { ZoneData.Item: { } zone })
+        {
+            _vcp = FOBManager.RegisterNewSpecialFOB(Config.InvasionSpecialFOBName, new Vector3(firstFlag.ZoneData.Item.Spawn.x,
+                F.GetHeight(firstFlag.ZoneData.Item.Spawn, firstFlag is { ZoneData.Item: { } z } ? z.MinHeight : float.NaN) + 2f, firstFlag.ZoneData.Item.Spawn.y),
                 _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
+
+        }
         StartStagingPhase(Config.InvasionStagingTime);
         return base.PostGameStarting(isOnLoad, token);
     }

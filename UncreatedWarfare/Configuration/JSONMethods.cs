@@ -317,7 +317,7 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
     public const string NORWEGIAN = "nb-no";
     public const string ROMANIAN = "ro-ro";
     public const string DUTCH = "nl-nl";
-    public const string SWEEDISH = "sv-se";
+    public const string SWEDISH = "sv-se";
     public const string CHINESE_SIMPLIFIED = "zh-cn";
     public const string CHINESE_TRADITIONAL = "zh-tw";
     public static readonly CultureInfo ENGLISH_C = new CultureInfo("en-US");
@@ -361,7 +361,7 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
                 return ROMANIAN_C;
             if (language.Equals(DUTCH, StringComparison.Ordinal))
                 return DUTCH_C;
-            if (language.Equals(SWEEDISH, StringComparison.Ordinal))
+            if (language.Equals(SWEDISH, StringComparison.Ordinal))
                 return SWEEDISH_C;
             if (language.Equals(CHINESE_SIMPLIFIED, StringComparison.Ordinal) ||
                 language.Equals(CHINESE_TRADITIONAL, StringComparison.Ordinal))
