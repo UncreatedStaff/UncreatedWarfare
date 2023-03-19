@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Steamworks;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -19,7 +20,9 @@ public abstract class TeamGamemode : Gamemode, ITeams
 {
     protected TeamSelector _teamSelector;
     private Transform? _blockerBarricadeT1;
+    private bool _shouldHaveBlockerT1;
     private Transform? _blockerBarricadeT2;
+    private bool _shouldHaveBlockerT2;
     private readonly List<ulong> _mainCampers = new List<ulong>(24);
     public TeamSelector TeamSelector { get => _teamSelector; }
     public virtual bool UseTeamSelector { get => true; }
@@ -93,6 +96,30 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
         if (EveryXSeconds(Config.GeneralMainCheckSeconds))
             TeamManager.EvaluateBases();
+        if (State == State.Staging && (_shouldHaveBlockerT1 || _shouldHaveBlockerT2))
+        {
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            {
+                UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                ulong team = pl.GetTeam();
+                if (pl.OnDuty() || team is not 1 and not 2) continue;
+
+                if (team == 1 && _shouldHaveBlockerT1 || team == 2 && _shouldHaveBlockerT2)
+                {
+                    if (!TeamManager.IsInMain(pl))
+                    {
+                        InteractableVehicle? veh = pl.CurrentVehicle;
+                        if (veh != null)
+                        {
+                            pl.Player.movement.forceRemoveFromVehicle();
+                            if (veh.gameObject.TryGetComponent(out Rigidbody rb))
+                                rb.velocity = Vector3.zero;
+                        }
+                        TeamManager.TeleportToMain(pl, team);
+                    }
+                }
+            }
+        }
     }
     protected override Task OnReady(CancellationToken token)
     {
@@ -152,18 +179,21 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     public void SpawnBlockerOnT1()
     {
+        _shouldHaveBlockerT1 = true;
         if (Config.BarricadeZoneBlockerTeam1.ValidReference(out ItemBarricadeAsset asset))
             _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset),
                 TeamManager.Team1Main.Center3D + Vector3.up, Quaternion.Euler(BlockerSpawnRotation), 0, 0);
     }
     public void SpawnBlockerOnT2()
     {
+        _shouldHaveBlockerT2 = true;
         if (Config.BarricadeZoneBlockerTeam2.ValidReference(out ItemBarricadeAsset asset))
             _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset),
                 TeamManager.Team2Main.Center3D, Quaternion.Euler(BlockerSpawnRotation), 0, 0);
     }
     public void DestoryBlockerOnT1()
     {
+        _shouldHaveBlockerT1 = false;
         if (_blockerBarricadeT1 != null && Regions.tryGetCoordinate(_blockerBarricadeT1.position, out byte x, out byte y))
         {
             BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT1);
@@ -196,6 +226,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     public void DestoryBlockerOnT2()
     {
+        _shouldHaveBlockerT2 = false;
         if (_blockerBarricadeT2 != null && Regions.tryGetCoordinate(_blockerBarricadeT2.position, out byte x, out byte y))
         {
             BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT2);
@@ -228,6 +259,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     public void DestroyBlockers()
     {
+        _shouldHaveBlockerT1 = false;
+        _shouldHaveBlockerT2 = false;
         try
         {
             bool backup = false;
