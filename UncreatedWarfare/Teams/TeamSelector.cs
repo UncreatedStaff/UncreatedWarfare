@@ -398,10 +398,27 @@ public class TeamSelector : BaseSingletonComponent
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
                 {
-                    if (t1Ct > 0)
-                        JoinUI.TeamPlayers[0][t1Ct - 1].SetVisibility(pl2.Connection, true);
-                    if (t2Ct > 0)
-                        JoinUI.TeamPlayers[1][t2Ct - 1].SetVisibility(pl2.Connection, true);
+                    try
+                    {
+                        if (t1Ct > 0)
+                            JoinUI.TeamPlayers[0][t1Ct - 1].SetVisibility(pl2.Connection, true);
+                        
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogWarning($"Could not set TeamPlayer list element {t1Ct - 1} visibility  - there are only {JoinUI.TeamPlayers[0].Length} list elements", ConsoleColor.Yellow, "TeamSelector");
+                    }
+
+                    try
+                    {
+                        if (t2Ct > 0)
+                            JoinUI.TeamPlayers[1][t2Ct - 1].SetVisibility(pl2.Connection, true);
+
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogWarning($"Could not set TeamPlayer list element {t1Ct - 1} visibility  - there are only {JoinUI.TeamPlayers[1].Length} list elements", ConsoleColor.Yellow, "TeamSelector");
+                    }
                 }
             }
         }
@@ -411,7 +428,18 @@ public class TeamSelector : BaseSingletonComponent
             {
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
-                    JoinUI.TeamPlayers[0][t1Ct].SetVisibility(pl2.Connection, false);
+                {
+                    try
+                    {
+                        JoinUI.TeamPlayers[0][t1Ct].SetVisibility(pl2.Connection, false);
+
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogWarning($"Could not set TeamPlayer list element {t1Ct - 1} visibility  - there are only {JoinUI.TeamPlayers[1].Length} list elements", ConsoleColor.Yellow, "TeamSelector");
+                    }
+                }
+                    
             }
         }
         if (TeamSelectorUI.PlayerListCount > t2Ct)
@@ -420,7 +448,17 @@ public class TeamSelector : BaseSingletonComponent
             {
                 UCPlayer pl2 = PlayerManager.OnlinePlayers[i];
                 if (pl2.TeamSelectorData is { IsSelecting: true })
-                    JoinUI.TeamPlayers[1][t2Ct].SetVisibility(pl2.Connection, false);
+                {
+                    try
+                    {
+                        JoinUI.TeamPlayers[1][t2Ct].SetVisibility(pl2.Connection, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogWarning($"Could not set TeamPlayer list element {t1Ct - 1} visibility  - there are only {JoinUI.TeamPlayers[1].Length} list elements", ConsoleColor.Yellow, "TeamSelector");
+                    }
+                }
+                    
             }
         }
 
