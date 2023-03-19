@@ -208,7 +208,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 }
                 else return;
 
-                SendFOBListToTeam(f.Parent.Team);
+                SendFOBListToTeam(team); // do not reference f here because it will be null since its destroyed
             }
         }
         else if (e.Transform.TryGetComponent(out Cache.CacheComponent c))
