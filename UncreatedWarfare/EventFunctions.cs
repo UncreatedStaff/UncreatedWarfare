@@ -829,67 +829,69 @@ public static class EventFunctions
                 Guid weapon;
                 SteamPlayer? pl = PlayerTool.getSteamPlayer(instigatorSteamID);
                 ulong team = drop.GetServersideData().group.GetTeam();
-                if (team == 0 || pl == null || pl.GetTeam() != team) return;
-                if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+                if (team != 0 && pl != null && pl.GetTeam() != team)
                 {
-                    if (pl.player.TryGetPlayerData(out UCPlayerData c))
+                    if (damageOrigin == EDamageOrigin.Rocket_Explosion)
                     {
-                        weapon = c.LastRocketShot;
+                        if (pl.player.TryGetPlayerData(out UCPlayerData c))
+                        {
+                            weapon = c.LastRocketShot;
+                        }
+                        else if (pl.player.equipment.asset != null)
+                        {
+                            weapon = pl.player.equipment.asset.GUID;
+                        }
+                        else weapon = Guid.Empty;
+                    }
+                    else if (damageOrigin == EDamageOrigin.Useable_Gun)
+                    {
+                        weapon = pl.player.equipment.asset != null ? pl.player.equipment.asset.GUID : Guid.Empty;
+                    }
+                    else if (damageOrigin == EDamageOrigin.Grenade_Explosion)
+                    {
+                        if (pl.player.TryGetPlayerData(out UCPlayerData c))
+                        {
+                            weapon = c.ActiveThrownItems.FirstOrDefault(x => Assets.find<ItemThrowableAsset>(x.Throwable)?.isExplosive ?? false)?.Throwable ?? Guid.Empty;
+                        }
+                        else if (pl.player.equipment.asset != null)
+                        {
+                            weapon = pl.player.equipment.asset.GUID;
+                        }
+                        else weapon = Guid.Empty;
+                    }
+                    else if (damageOrigin == EDamageOrigin.Trap_Explosion)
+                    {
+                        if (pl.player.TryGetPlayerData(out UCPlayerData c) && c.ExplodingLandmine != null)
+                        {
+                            weapon = c.ExplodingLandmine.asset.GUID;
+                        }
+                        else if (pl.player.equipment.asset != null)
+                        {
+                            weapon = pl.player.equipment.asset.GUID;
+                        }
+                        else weapon = Guid.Empty;
                     }
                     else if (pl.player.equipment.asset != null)
                     {
                         weapon = pl.player.equipment.asset.GUID;
                     }
                     else weapon = Guid.Empty;
-                }
-                else if (damageOrigin == EDamageOrigin.Useable_Gun)
-                {
-                    weapon = pl.player.equipment.asset != null ? pl.player.equipment.asset.GUID : Guid.Empty;
-                }
-                else if (damageOrigin == EDamageOrigin.Grenade_Explosion)
-                {
-                    if (pl.player.TryGetPlayerData(out UCPlayerData c))
+                    Data.Reporter?.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
                     {
-                        weapon = c.ActiveThrownItems.FirstOrDefault(x => Assets.find<ItemThrowableAsset>(x.Throwable)?.isExplosive ?? false)?.Throwable ?? Guid.Empty;
-                    }
-                    else if (pl.player.equipment.asset != null)
-                    {
-                        weapon = pl.player.equipment.asset.GUID;
-                    }
-                    else weapon = Guid.Empty;
+                        broke = false,
+                        damage = pendingTotalDamage,
+                        instId = drop.instanceID,
+                        origin = damageOrigin,
+                        structure = drop.asset.GUID,
+                        time = Time.realtimeSinceStartup,
+                        weapon = weapon
+                    });
                 }
-                else if (damageOrigin == EDamageOrigin.Trap_Explosion)
-                {
-                    if (pl.player.TryGetPlayerData(out UCPlayerData c) && c.ExplodingLandmine != null)
-                    {
-                        weapon = c.ExplodingLandmine.asset.GUID;
-                    }
-                    else if (pl.player.equipment.asset != null)
-                    {
-                        weapon = pl.player.equipment.asset.GUID;
-                    }
-                    else weapon = Guid.Empty;
-                }
-                else if (pl.player.equipment.asset != null)
-                {
-                    weapon = pl.player.equipment.asset.GUID;
-                }
-                else weapon = Guid.Empty;
-                Data.Reporter?.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
-                {
-                    broke = false,
-                    damage = pendingTotalDamage,
-                    instId = drop.instanceID,
-                    origin = damageOrigin,
-                    structure = drop.asset.GUID,
-                    time = Time.realtimeSinceStartup,
-                    weapon = weapon
-                });
             }
+
             if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeComponent c2))
             {
                 c2.LastDamager = instigatorSteamID.m_SteamID;
-                L.LogDebug(instigatorSteamID.m_SteamID + " damaged " + drop.asset.FriendlyName);
             }
         }
     }
