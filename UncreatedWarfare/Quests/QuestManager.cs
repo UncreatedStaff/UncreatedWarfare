@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -247,7 +248,7 @@ public static class QuestManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ActionLog.Add(ActionLogType.StartQuest, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
-        if (!tracker.IsDailyQuest && tracker.Flag != 0)
+        if (tracker.Flag != 0)
         {
             tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
             L.LogDebug("Flag quest started: " + (tracker.QuestData?.QuestType.ToString() ?? "null"));

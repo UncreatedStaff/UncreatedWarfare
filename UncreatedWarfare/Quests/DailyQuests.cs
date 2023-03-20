@@ -12,8 +12,6 @@ using Uncreated.Framework;
 using Uncreated.Framework.Quests;
 using Uncreated.Json;
 using Uncreated.Networking;
-using Uncreated.Players;
-using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -317,7 +315,10 @@ public static class DailyQuests
             {
                 QuestManager.RegisterTracker(tracker);
                 tracker.IsDailyQuest = true;
+                tracker.Flag = _quests[_index].Presets[i].PresetObj.Flag;
                 trackers[i] = tracker;
+                if (tracker.IsCompleted)
+                    QuestManager.DeregisterTracker(tracker);
                 L.LogDebug("Registered " + tracker.QuestData.QuestType + " tracker for " + player.CharacterName);
             }
             else
@@ -350,6 +351,7 @@ public static class DailyQuests
             BaseQuestTracker tr3 = tr.Trackers[i];
             if (tr3.Flag != 0)
                 player.Player.quests.sendSetFlag(tr3.Flag, tr3.FlagValue);
+            else L.LogWarning("Invalid flag or quest " + tr3.QuestData.QuestType + ": " + tr3.Flag);
         }
         if (DailyTrackers.TryGetValue(player.Steam64, out DailyQuestTracker tr2))
         {
@@ -402,7 +404,8 @@ public static class DailyQuests
         }
         else
             L.LogWarning("Player " + tracker.Player.Steam64 + " is missing their entry in DailyTrackers dictionary!");
-        tracker.Player.SendString("<#e4a399>Daily Quest updated: <#cdcec0>" + tracker.GetDisplayString());
+        if (tracker.QuestData.QuestType is not QuestType.TransportPlayers or QuestType.DriveDistance or QuestType.XPInGamemode)
+            tracker.Player.SendString("<#e4a399>Daily Quest updated: <#cdcec0>" + tracker.GetDisplayString());
     }
     /// <summary>Runs every day, creates the daily quests for the day.</summary>
     public static void CreateNewDailyQuests()
