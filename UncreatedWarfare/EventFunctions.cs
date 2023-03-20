@@ -892,6 +892,7 @@ public static class EventFunctions
             if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeComponent c2))
             {
                 c2.LastDamager = instigatorSteamID.m_SteamID;
+                c2.LastDamagerTime = Time.realtimeSinceStartup;
             }
         }
     }
@@ -1555,7 +1556,7 @@ public static class EventFunctions
 
         if (Data.Is<ISquads>(out _))
             RallyManager.OnBarricadeDestroyed(e.Barricade);
-        if (e.Transform.TryGetComponent(out BarricadeComponent c))
+        if (e.Transform.TryGetComponent(out BarricadeComponent c) && c.LastDamagerTime + 10f >= Time.realtimeSinceStartup)
         {
             SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
             ActionLog.Add(ActionLogType.DestroyBarricade, $"{e.Barricade.asset.itemName} / {e.Barricade.asset.id} / {e.Barricade.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(e.ServersideData.group.GetTeam(), 0)}, ID: {e.Barricade.instanceID}", c.LastDamager);

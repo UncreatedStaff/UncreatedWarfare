@@ -1810,6 +1810,11 @@ public static class F
         return "SELECT " + SqlTypes.ColumnList(columns) +
                $" FROM `{table}` WHERE `{checkColumnEquals}`=@" + parameter.ToString(Data.AdminLocale) + ";";
     }
+    /// <summary>SELECT <paramref name="columns"/> FROM `<paramref name="table"/>` WHERE `<paramref name="checkColumnEquals"/>` IN (</summary>
+    public static string BuildSelectWhereIn(string table, string checkColumnEquals, params string[] columns)
+    {
+        return "SELECT " + SqlTypes.ColumnList(columns) + $" FROM `{table}` WHERE `{checkColumnEquals}` IN (";
+    }
     /// <summary>SELECT <paramref name="columns"/> FROM `<paramref name="table"/>` WHERE `<paramref name="checkColumnEquals"/>`=@<paramref name="parameter"/> LIMIT 1;</summary>
     public static string BuildSelectWhereLimit1(string table, string checkColumnEquals, int parameter, params string[] columns)
     {
@@ -1828,4 +1833,32 @@ public static class F
         return data.NonQueryAsync($"DELETE FROM `{tableMain}` WHERE `{columnPk}`=@0;", new object[] { pk.Key }, token);
     }
     public static bool IsDefault(this string str) => str.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
+    public static T[] ToArrayFast<T>(this IEnumerable<T> enumerable, bool copy = false)
+    {
+        if (enumerable == null)
+            return Array.Empty<T>();
+        if (enumerable is T[] arr1)
+        {
+            if (copy)
+            {
+                T[] arr2 = new T[arr1.Length];
+                Array.Copy(arr1, 0, arr2, 0, arr1.Length);
+                return arr2;
+            }
+
+            return arr1;
+        }
+        if (enumerable is List<T> list1)
+            return list1.Count == 0 ? Array.Empty<T>() : list1.ToArray();
+        if (enumerable is ICollection<T> col1 && col1.Count == 0)
+            return Array.Empty<T>();
+
+        return enumerable.ToArray();
+    }
+    public static List<T> ToListFast<T>(this IEnumerable<T> enumerable, bool copy = false)
+    {
+        if (!copy && enumerable is List<T> list)
+            return list;
+        return new List<T>(enumerable);
+    }
 }

@@ -568,8 +568,8 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 values[++index] = stats.deaths.ToString(locale);
                 values[++index] = stats.XPGained.ToString(locale);
                 values[++index] = stats.Credits.ToString(locale);
-                values[++index] = stats.KDR.ToString(locale);
-                values[++index] = stats.DamageDone.ToString(locale);
+                values[++index] = stats.KDR.ToString(StatFormatPrecisionFloat, locale);
+                values[++index] = stats.DamageDone.ToString(StatFormatPrecisionFloat, locale);
             }
         }
 
@@ -588,8 +588,8 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 values[++index] = stats.deaths.ToString(locale);
                 values[++index] = stats.XPGained.ToString(locale);
                 values[++index] = stats.Credits.ToString(locale);
-                values[++index] = stats.KDR.ToString(locale);
-                values[++index] = stats.DamageDone.ToString(locale);
+                values[++index] = stats.KDR.ToString(StatFormatPrecisionFloat, locale);
+                values[++index] = stats.DamageDone.ToString(StatFormatFloat, locale);
             }
         }
 

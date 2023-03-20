@@ -371,7 +371,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await t3.ConfigureAwait(false);
             await t4.ConfigureAwait(false);
         }
-        else await KitManager.DownloadPlayerKitData(player, false, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
@@ -824,6 +823,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             }
             ThreadUtil.assertIsGameThread();
             await Points.UpdateAllPointsAsync(token).ConfigureAwait(false);
+            await KitManager.DownloadPlayersKitData(PlayerManager.OnlinePlayers, true, token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
             foreach (UCPlayer pl in PlayerManager.OnlinePlayers.ToList())
             {

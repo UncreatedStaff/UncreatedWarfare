@@ -237,13 +237,17 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
 
         return true;
     }
-    public string GetDisplayName(string language = L.Default)
+    public string GetDisplayName(string language = L.Default, bool removeNewLine = true)
     {
         if (SignText is null) return Id;
+        string rtn;
         if (SignText.TryGetValue(language, out string val))
-            return val ?? Id;
-        if (SignText.Count > 0)
-            return SignText.FirstOrDefault().Value ?? Id;
+            rtn = val ?? Id;
+        else if (SignText.Count > 0)
+            rtn = SignText.FirstOrDefault().Value ?? Id;
+        else rtn = Id;
+        if (removeNewLine)
+            rtn = rtn.Replace('\n', ' ').Replace("\r", string.Empty);
         return Id;
     }
     public void Write(ByteWriter writer)

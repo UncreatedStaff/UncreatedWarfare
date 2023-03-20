@@ -13,4 +13,5 @@ public class BarricadeComponent : MonoBehaviour
     public Player? Player;
     public Guid BarricadeGUID;
     public ulong LastDamager;
+    public float LastDamagerTime;
 }

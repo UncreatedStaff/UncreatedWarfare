@@ -1116,6 +1116,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         public SpawnEnumerator(PrimaryKey data, VehicleSpawner spawner)
         {
             _data = data;
+            _index = -1;
             _spawner = spawner;
         }
         public void Dispose()
@@ -1135,7 +1136,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                 _spawner.WriteWait();
                 _ran = true;
             }
-            for (int i = _index; i < _spawner.Items.Count; ++i)
+            for (int i = _index + 1; i < _spawner.Items.Count; ++i)
             {
                 if (_spawner.Items[i].Item is { } v && v.VehicleKey.Key == _data.Key)
                 {
@@ -1143,17 +1144,15 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                     return true;
                 }
             }
-            if (!_disposed)
-            {
-                _spawner.WriteRelease();
-                --_uses;
-                _disposed = true;
-            }
+            
+            Dispose();
             return false;
         }
         public void Reset()
         {
             _index = 0;
+            _disposed = false;
+            _ran = false;
         }
 
         public IEnumerator<SqlItem<VehicleSpawn>> GetEnumerator() => ++_uses == 1 ? this : (SpawnEnumerator)this.Clone();

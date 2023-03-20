@@ -224,15 +224,15 @@ public class VehicleBayCommand : AsyncCommand
             ctx.AssertPermissions(EAdminType.MODERATOR);
 
             ctx.AssertHelpCheck(1, "/vehiclebay delay <add|remove> <all|time|flag|percent|staging|none> [value] [!][gamemode] - Modify request delays of vehicle.");
-
+            
             SqlItem<VehicleData>? data = await GetVehicleTarget(ctx, bay, spawner, token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
             if (data?.Item is not null)
             {
                 await data.Enter(token).ConfigureAwait(false);
-                await UCWarfare.ToUpdate(token);
                 try
                 {
+                    await UCWarfare.ToUpdate(token);
                     bool adding;
                     if (ctx.MatchParameter(1, "add", "a", "new"))
                         adding = true;
@@ -299,7 +299,7 @@ public class VehicleBayCommand : AsyncCommand
                     }
                     else if (ctx.ArgumentCount > 4)
                         gamemode = ctx.Get(4)!;
-
+                    
                     if (string.IsNullOrEmpty(gamemode) && type == DelayType.None)
                     {
                         gamemode = "<";
@@ -350,7 +350,7 @@ public class VehicleBayCommand : AsyncCommand
                         ctx.SendCorrectUsage("/vehiclebay delay " + (adding ? "add" : "remove") + " " + ctx.Get(2)! + " <value (float)>" + (string.IsNullOrEmpty(gamemode) ? string.Empty : " [!]" + gamemode));
                         return;
                     }
-
+                    
                     if (adding)
                     {
                         ctx.LogAction(ActionLogType.SetVehicleDataProperty, "ADDED DELAY " + type + " VALUE: " + val.ToString(Data.AdminLocale)

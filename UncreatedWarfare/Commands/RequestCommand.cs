@@ -99,6 +99,7 @@ public class RequestCommand : AsyncCommand
             {
                 if (vbsign.Item != null && vbsign.Item.HasLinkedVehicle(out InteractableVehicle vehicle))
                 {
+                    await UCWarfare.ToUpdate();
                     VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
                     if (bay != null && bay.IsLoaded)
                     {
@@ -127,6 +128,7 @@ public class RequestCommand : AsyncCommand
         }
         else if (ctx.TryGetTarget(out InteractableVehicle vehicle))
         {
+            await UCWarfare.ToUpdate();
             VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
             if (bay != null && bay.IsLoaded)
             {

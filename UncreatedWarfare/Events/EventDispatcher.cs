@@ -18,6 +18,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
@@ -283,8 +284,12 @@ public static class EventDispatcher
     }
     internal static void InvokeOnBarricadeDestroyed(BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant)
     {
-        if (BarricadeDestroyed == null) return;
-        UCPlayer? instigator = barricade.model.TryGetComponent(out BarricadeComponent component) ? UCPlayer.FromID(component.LastDamager) : null;
+        if (BarricadeDestroyed == null || Data.Gamemode is not { State: State.Active or State.Staging }) return;
+        UCPlayer? instigator = null;
+        if (barricade.model.TryGetComponent(out BarricadeComponent component) && component.LastDamagerTime + 10f >= Time.realtimeSinceStartup)
+        {
+            instigator = UCPlayer.FromID(component.LastDamager);
+        }
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? barricadeSave = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
 
