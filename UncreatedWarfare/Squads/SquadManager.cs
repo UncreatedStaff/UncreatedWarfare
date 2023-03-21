@@ -782,8 +782,8 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     }
 
     public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();
-
-    public bool IsFull() => Members.Count >= 6;
+    public const int SQUAD_MAX_MEMBERS = 6;
+    public bool IsFull() => Members.Count >= SQUAD_MAX_MEMBERS;
     public bool IsNotSolo() => Members.Count > 1;
     public bool ContainsMember(IPlayer player)
     {
