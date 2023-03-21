@@ -606,8 +606,9 @@ public class FOB : IResourceFOB, IDeployable
         {
             if (Regions.tryGetCoordinate(Bunker.model.position, out byte x, out byte y))
             {
+                L.LogDebug("Destroying linked barricade: " + Bunker.asset.itemName);
                 BarricadeManager.destroyBarricade(Bunker, x, y, ushort.MaxValue);
-                L.LogDebug("Destroyed linked barricade: " + Bunker.asset.itemName);
+                
             }
         }
 
@@ -616,16 +617,16 @@ public class FOB : IResourceFOB, IDeployable
         {
             if (Regions.tryGetCoordinate(rp.model.position, out byte x, out byte y))
             {
+                L.LogDebug("Destroying linked barricade: " + rp.asset.itemName);
                 BarricadeManager.destroyBarricade(rp, x, y, ushort.MaxValue);
-                L.LogDebug("Destroyed linked barricade: " + rp.asset.itemName);
             }
         }
         foreach (BarricadeDrop ammoCrate in AmmoCrates.ToList())
         {
             if (Regions.tryGetCoordinate(ammoCrate.model.position, out byte x, out byte y))
             {
+                L.LogDebug("Destroying linked barricade: " + ammoCrate.asset.itemName);
                 BarricadeManager.destroyBarricade(ammoCrate, x, y, ushort.MaxValue);
-                L.LogDebug("Destroyed linked barricade: " + ammoCrate.asset.itemName);
             }
         }
         foreach (BarricadeDrop drop in UCBarricadeManager.GetBarricadesWhere(Radius, Position, x =>
@@ -638,8 +639,8 @@ public class FOB : IResourceFOB, IDeployable
         {
             if (Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
             {
+                L.LogDebug("Destroying linked barricade: " + drop.asset.itemName);
                 BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
-                L.LogDebug("Destroyed linked barricade: " + drop.asset.itemName);
             }
         }
 
