@@ -608,7 +608,6 @@ public class FOB : IResourceFOB, IDeployable
             {
                 L.LogDebug("Destroying linked barricade: " + Bunker.asset.itemName);
                 BarricadeManager.destroyBarricade(Bunker, x, y, ushort.MaxValue);
-
             }
         }
 
