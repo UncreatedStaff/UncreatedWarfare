@@ -20,15 +20,10 @@ public class RallyCommand : Command
             {
                 new CommandParameter("Cancel")
                 {
-                    Aliases = new string[] { "c", "abort" },
+                    Aliases = new string[] { "c", "abort", "deny" },
                     Description = "Cancels pending deployment to a rallypoint for your squadmembers.",
                     IsOptional = true
                 },
-                /*new CommandParameter("Deny")
-                {
-                    Description = "Cancels pending deployment to a rallypoint for just you.",
-                    IsOptional = true
-                }*/
             }
         };
     }
@@ -59,7 +54,7 @@ public class RallyCommand : Command
         if (rallypoint == null || !rallypoint.IsActive)
             throw ctx.Reply(T.RallyNotActiveSL);
 
-        if (ctx.MatchParameter(0, "cancel", "c", "abort"))
+        if (ctx.MatchParameter(0, "cancel", "c", "abort", "deny"))
         {
             if (rallypoint.IsDeploying)
             {
