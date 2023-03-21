@@ -1113,8 +1113,7 @@ public class QuestUnlockRequirement : UnlockRequirement
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {
-            ctx.Caller.Player.quests.ServerAddQuest(asset);
-            QuestManager.CheckNeedsToUntrack(ctx.Caller);
+            QuestManager.TryAddQuest(ctx.Caller, asset);
             return ctx.Reply(T.RequestKitQuestIncomplete, asset);
         }
         return ctx.Reply(T.RequestKitQuestIncomplete, null!);
@@ -1123,8 +1122,7 @@ public class QuestUnlockRequirement : UnlockRequirement
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {
-            ctx.Caller.Player.quests.ServerAddQuest(asset);
-            QuestManager.CheckNeedsToUntrack(ctx.Caller);
+            QuestManager.TryAddQuest(ctx.Caller, asset);
             return ctx.Reply(T.RequestVehicleQuestIncomplete, asset);
         }
         return ctx.Reply(T.RequestVehicleQuestIncomplete, null!);
@@ -1133,8 +1131,7 @@ public class QuestUnlockRequirement : UnlockRequirement
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {
-            ctx.Caller.Player.quests.ServerAddQuest(asset);
-            QuestManager.CheckNeedsToUntrack(ctx.Caller);
+            QuestManager.TryAddQuest(ctx.Caller, asset);
             return ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
         }
         return ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);

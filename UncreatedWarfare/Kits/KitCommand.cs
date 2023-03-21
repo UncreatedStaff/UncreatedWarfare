@@ -35,7 +35,6 @@ public sealed class KitCommand : AsyncCommand
                     {
                         new CommandParameter("Add")
                         {
-                            IsOptional = true,
                             Aliases = new string[] { "create", "new" },
                             Description = "Add held item as a default keybind at [slot].",
                             Parameters = new CommandParameter[]
@@ -45,7 +44,6 @@ public sealed class KitCommand : AsyncCommand
                         },
                         new CommandParameter("Remove")
                         {
-                            IsOptional = true,
                             Aliases = new string[] { "delete", "cancel" },
                             Description = "Remove held item as a default keybind at [slot].",
                             Parameters = new CommandParameter[]
@@ -758,7 +756,8 @@ public sealed class KitCommand : AsyncCommand
                             KitType prevType = kit.Type;
                             Class oldclass = kit.Class;
                             Branch oldbranch = kit.Branch;
-                            bool isDefLim = Mathf.Abs(kit.TeamLimit - KitManager.GetDefaultTeamLimit(oldclass)) < 0.005f;
+                            float oldReqCooldown = kit.RequestCooldown;
+                            float oldTeamLimit = kit.TeamLimit;
                             (SetPropertyResult result, MemberInfo? info) = await manager.SetProperty(proxy, property, newValue, false, token).ConfigureAwait(false);
                             if (info != null)
                                 property = info.Name;
@@ -780,8 +779,15 @@ public sealed class KitCommand : AsyncCommand
                                     ctx.Reply(T.KitNotFound, kitName);
                                     return;
                                 case SetPropertyResult.Success:
-                                    if (kit.Class != oldclass && isDefLim)
-                                        kit.TeamLimit = KitManager.GetDefaultTeamLimit(kit.Class);
+                                    if (kit.Class != oldclass)
+                                    {
+                                        if (Mathf.Abs(KitManager.GetDefaultTeamLimit(oldclass) - oldTeamLimit) < 0.005f)
+                                            kit.TeamLimit = KitManager.GetDefaultTeamLimit(kit.Class);
+                                        if (KitManager.GetDefaultBranch(oldclass) == oldbranch)
+                                            kit.Branch = KitManager.GetDefaultBranch(kit.Class);
+                                        if (Mathf.Abs(KitManager.GetDefaultRequestCooldown(oldclass) - oldReqCooldown) < 0.25f)
+                                            kit.RequestCooldown = KitManager.GetDefaultRequestCooldown(kit.Class);
+                                    }
                                     proxy.Item.UpdateLastEdited(ctx.CallerID);
                                     await proxy.SaveItem(token).ConfigureAwait(false);
                                     await UCWarfare.ToUpdate(token);
