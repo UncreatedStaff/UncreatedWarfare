@@ -703,6 +703,10 @@ public class Insurgency :
         public bool CheckDeployableTick(UCPlayer player, bool chat) => ((IDeployable)Cache).CheckDeployableTick(player, chat);
         public void OnDeploy(UCPlayer player, bool chat) => ((IDeployable)Cache).OnDeploy(player, chat);
         float IDeployable.GetDelay() => ((IDeployable)Cache).GetDelay();
+        public void Destroy(bool authority)
+        {
+            FOBManager.CleanupFOB(this);
+        }
     }
 #region DEFAULT CACHE SPAWNS
     private static readonly KeyValuePair<string, SerializableTransform[]>[] DefaultCacheSpawns =

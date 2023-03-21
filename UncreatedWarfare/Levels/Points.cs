@@ -555,21 +555,24 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             if (player is { IsOnline: true })
             {
                 player.PointsDirtyMask |= 0b00000001;
-                if (player.Level.Level > oldLevel.Level)
+                if (!player.HasUIHidden && !Data.Gamemode.LeaderboardUp())
                 {
-                    ToastMessage.QueueMessage(player,
-                        new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Level.Name.ToUpper(),
-                            ToastMessageSeverity.Big));
-                    player.PointsDirtyMask |= 0b00000010;
-                    Signs.UpdateAllSigns(player);
-                }
-                else if (player.Level.Level < oldLevel.Level)
-                {
-                    ToastMessage.QueueMessage(player,
-                        new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Level.Name.ToUpper(),
-                            ToastMessageSeverity.Big));
-                    player.PointsDirtyMask |= 0b00000010;
-                    Signs.UpdateAllSigns(player);
+                    if (player.Level.Level > oldLevel.Level)
+                    {
+                        ToastMessage.QueueMessage(player,
+                            new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Level.Name.ToUpper(),
+                                ToastMessageSeverity.Big));
+                        player.PointsDirtyMask |= 0b00000010;
+                        Signs.UpdateAllSigns(player);
+                    }
+                    else if (player.Level.Level < oldLevel.Level)
+                    {
+                        ToastMessage.QueueMessage(player,
+                            new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Level.Name.ToUpper(),
+                                ToastMessageSeverity.Big));
+                        player.PointsDirtyMask |= 0b00000010;
+                        Signs.UpdateAllSigns(player);
+                    }
                 }
 
                 XPUI.Update(player, false);

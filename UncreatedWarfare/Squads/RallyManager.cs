@@ -150,10 +150,7 @@ public class RallyPoint : MonoBehaviour
         IsDeploying = false;
         NearestLocation = F.GetClosestLocationName(transform.position);
         SecondsLeft = 0;
-
-        foreach (UCPlayer member in Squad.Members)
-            member.SendChat(T.RallyActiveSL);
-
+        Squad.Leader?.SendChat(T.RallyActiveSL);
         ShowUIForSquad();
     }
 

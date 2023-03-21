@@ -73,7 +73,8 @@ internal class RepairableComponent : MonoBehaviour
                 {
                     if (teamkilled)
                     {
-                        Points.AwardXP(player, XPReward.FriendlyBunkerDestroyed);
+                        // TODO: find out why random barricade teamkills are still happening, if they are at all
+                        //Points.AwardXP(player, XPReward.FriendlyBunkerDestroyed);
                     }
                     else
                     {
@@ -88,7 +89,8 @@ internal class RepairableComponent : MonoBehaviour
 
                     if (teamkilled)
                     {
-                        Points.AwardXP(player, XPReward.FriendlyFortificationDestroyed, "FRIENDLY " + message, -amount);
+                        // TODO: find out why random barricade teamkills are still happening, if they are at all
+                        //Points.AwardXP(player, XPReward.FriendlyBuildableDestroyed, "FRIENDLY " + message, -amount);
                     }
                     else
                     {

@@ -150,7 +150,13 @@ public class Cache : IFOB, IObjective, IDeployable
     {
         return $"{Name} - T{Team} - Discovered: {IsDiscovered} - Destroyed: {IsDestroyed}";
     }
+    public void Destroy(bool authority)
+    {
+        if (_component != null)
+            _component.Destroy();
 
+        FOBManager.CleanupFOB(this);
+    }
     public class CacheComponent : MonoBehaviour
     {
         private Cache _cache;

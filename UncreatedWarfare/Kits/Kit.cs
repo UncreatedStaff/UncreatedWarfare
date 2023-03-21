@@ -248,7 +248,7 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
         else rtn = Id;
         if (removeNewLine)
             rtn = rtn.Replace('\n', ' ').Replace("\r", string.Empty);
-        return Id;
+        return rtn;
     }
     public void Write(ByteWriter writer)
     {

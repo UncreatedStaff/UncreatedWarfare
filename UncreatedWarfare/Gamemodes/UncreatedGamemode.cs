@@ -803,6 +803,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
             ThreadUtil.assertIsGameThread();
             CooldownManager.OnGameStarting();
+            IconManager.OnGamemodeReloaded();
             L.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
             State = State.Active;
             GameID = DateTime.UtcNow.Ticks;

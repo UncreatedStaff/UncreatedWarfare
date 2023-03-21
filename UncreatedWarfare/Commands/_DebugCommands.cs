@@ -1073,7 +1073,7 @@ public class DebugCommand : AsyncCommand
                 VehicleData veh = data[UnityEngine.Random.Range(0, data.Length)];
                 if (VehicleData.IsEmplacement(veh.Type) && Assets.find(veh.VehicleID) is VehicleAsset asset)
                 {
-                    BuildableComponent.SpawnImplacement(asset, pos, Vector3.zero, 0ul, other, Guid.Empty);
+                    BuildableComponent.SpawnEmplacement(asset, pos, Vector3.zero, 0ul, other, Guid.Empty);
                 }
                 else
                 {

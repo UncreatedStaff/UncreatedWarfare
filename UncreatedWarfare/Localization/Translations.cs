@@ -782,7 +782,7 @@ public class Translation
                 return word;
             if (hOthWrds)
                 otherWords = string.Join(" ", words, 0, words.Length - 1);
-            bool isPCaps = char.IsUpper(word[0]);
+            bool isPCaps = char.IsUpper(str[0]);
 
             if (str.Equals("child", StringComparison.OrdinalIgnoreCase))
                 return word + "ren";
@@ -803,7 +803,9 @@ public class Translation
             if (str.Equals("ammo", StringComparison.OrdinalIgnoreCase))
                 return otherWords + (isPCaps ? "Ammo" : "ammo");
             if (str.Equals("radio", StringComparison.OrdinalIgnoreCase))
-                return otherWords + (isPCaps ? "Radio" : "radio");
+                return otherWords + (isPCaps ? "Radios" : "radios");
+            if (str.Equals("mortar", StringComparison.OrdinalIgnoreCase))
+                return otherWords + (isPCaps ? "Mortars" : "mortars");
 
             if (str.EndsWith("man", StringComparison.OrdinalIgnoreCase))
                 return str.Substring(0, str.Length - 2) + (char.IsUpper(str[str.Length - 2]) ? "E" : "e") + str[str.Length - 1];

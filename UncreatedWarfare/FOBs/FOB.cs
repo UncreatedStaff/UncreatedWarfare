@@ -28,7 +28,8 @@ public class FOBComponent : MonoBehaviour
     public void Initialize(FOB parent)
     {
         this.Parent = parent;
-        Data.Gamemode.OnGameTick += OnTick;
+        if (Data.Gamemode != null)
+            Data.Gamemode.OnGameTick += OnTick;
         Restock();
     }
     public void Restock()
@@ -124,7 +125,8 @@ public class FOBComponent : MonoBehaviour
 
     public void Destroy()
     {
-        Data.Gamemode.OnGameTick -= OnTick;
+        if (Data.Gamemode != null)
+            Data.Gamemode.OnGameTick -= OnTick;
         this.Parent = null!;
         Destroy(this);
     }
@@ -183,7 +185,7 @@ public class FOB : IResourceFOB, IDeployable
     public BarricadeDrop? RepairStation
     {
         get => Gamemode.Config.BarricadeRepairStation.ValidReference(out Guid guid)
-            ? UCBarricadeManager.GetNearbyBarricades(guid, Radius, Position, Team, false).FirstOrDefault()
+            ? UCBarricadeManager.GetNearbyBarricades(guid, Radius, Position, Team, true).FirstOrDefault()
             : null;
     }
     public IEnumerable<BarricadeDrop> AmmoCrates
@@ -386,8 +388,9 @@ public class FOB : IResourceFOB, IDeployable
                                 if (Build + Ammo <= FOB_RESOURCES_REWARD_LIMIT)
                                 {
                                     Points.AwardXP(player, XPReward.UnloadSupplies, xp);
-                                    player.SuppliesUnloaded = 0;
                                 }
+
+                                player.SuppliesUnloaded = 0;
                             }
                         }
                     }
@@ -581,7 +584,7 @@ public class FOB : IResourceFOB, IDeployable
     }
     public bool IsWipedByAuthority;
     public bool IsDestroyed { get; private set; }
-    public void Destroy()
+    public void Destroy(bool authority)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -602,23 +605,47 @@ public class FOB : IResourceFOB, IDeployable
         if (!(Bunker == null || Bunker.GetServersideData().barricade.isDead))
         {
             if (Regions.tryGetCoordinate(Bunker.model.position, out byte x, out byte y))
+            {
                 BarricadeManager.destroyBarricade(Bunker, x, y, ushort.MaxValue);
+                L.LogDebug("Destroyed linked barricade: " + Bunker.asset.itemName);
+            }
         }
 
         BarricadeDrop? rp = RepairStation; // loops each access
         if (rp != null)
         {
             if (Regions.tryGetCoordinate(rp.model.position, out byte x, out byte y))
+            {
                 BarricadeManager.destroyBarricade(rp, x, y, ushort.MaxValue);
+                L.LogDebug("Destroyed linked barricade: " + rp.asset.itemName);
+            }
         }
-        foreach (BarricadeDrop ammoCrate in AmmoCrates)
+        foreach (BarricadeDrop ammoCrate in AmmoCrates.ToList())
         {
             if (Regions.tryGetCoordinate(ammoCrate.model.position, out byte x, out byte y))
+            {
                 BarricadeManager.destroyBarricade(ammoCrate, x, y, ushort.MaxValue);
+                L.LogDebug("Destroyed linked barricade: " + ammoCrate.asset.itemName);
+            }
+        }
+        foreach (BarricadeDrop drop in UCBarricadeManager.GetBarricadesWhere(Radius, Position, x =>
+         {
+             BuildableData? data = FOBManager.Config.Buildables.Find(y => y.BuildableBarricade.MatchGuid(x.asset.GUID)) ??
+                                   FOBManager.Config.Buildables.Find(y => y.Emplacement != null && y.Emplacement.BaseBarricade.MatchGuid(x.asset.GUID)) ??
+                                   FOBManager.Config.Buildables.Find(y => y.Foundation.MatchGuid(x.asset.GUID));
+             return data is { Type: not BuildableType.RepairStation and not BuildableType.AmmoCrate };
+         }).ToList())
+        {
+            if (Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
+            {
+                BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                L.LogDebug("Destroyed linked barricade: " + drop.asset.itemName);
+            }
         }
 
         IsDestroyed = true;
 
+        FOBManager.CleanupFOB(this);
         FOBManager.DeleteFOB(this);
     }
     public static List<FOB> GetFoBs(ulong team)
@@ -641,7 +668,7 @@ public class FOB : IResourceFOB, IDeployable
 
         return fobs;
     }
-    public static List<FOB> GetNearbyFoBs(Vector3 point, ulong team = 0, EfobRadius radius = EfobRadius.FULL)
+    public static List<FOB> GetNearbyFoBs(Vector3 point, ulong team = 0, EFobRadius radius = EFobRadius.FULL)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -654,7 +681,7 @@ public class FOB : IResourceFOB, IDeployable
                 if (!b.model.TryGetComponent(out FOBComponent f)) return false;
 
                 if (team != 0 && data.group != team) return false;
-                if (radius == EfobRadius.FULL_WITH_BUNKER_CHECK)
+                if (radius == EFobRadius.FULL_WITH_BUNKER_CHECK)
                 {
                     if ((data.point - point).sqrMagnitude <= 30 * 30)
                         return true;
@@ -677,7 +704,7 @@ public class FOB : IResourceFOB, IDeployable
 
         return fobs;
     }
-    public static FOB? GetNearestFOB(Vector3 point, EfobRadius radius = EfobRadius.FULL, ulong team = 0)
+    public static FOB? GetNearestFOB(Vector3 point, EFobRadius radius = EFobRadius.FULL, ulong team = 0)
     {
         return GetNearbyFoBs(point, team, radius).FirstOrDefault();
     }
@@ -687,15 +714,15 @@ public class FOB : IResourceFOB, IDeployable
         return fob != null;
     }
     /// <returns>Numeric radius corresponding to the value of <paramref name="radius"/>.
-    /// <para><see cref="EfobRadius.ENEMY_BUNKER_CLAIM"/> will return the radius with a bunker,
+    /// <para><see cref="EFobRadius.ENEMY_BUNKER_CLAIM"/> will return the radius with a bunker,
     /// additional checks should be done if this is the case.</para></returns>
-    public static float GetRadius(EfobRadius radius) => radius switch
+    public static float GetRadius(EFobRadius radius) => radius switch
     {
-        EfobRadius.SHORT => 30 * 30,
-        EfobRadius.FULL_WITH_BUNKER_CHECK or EfobRadius.FULL =>
+        EFobRadius.SHORT => 30 * 30,
+        EFobRadius.FULL_WITH_BUNKER_CHECK or EFobRadius.FULL =>
             FOBManager.Config.FOBBuildPickupRadius * FOBManager.Config.FOBBuildPickupRadius,
-        EfobRadius.FOB_PLACEMENT => Mathf.Pow(FOBManager.Config.FOBBuildPickupRadius * 2, 2),
-        EfobRadius.ENEMY_BUNKER_CLAIM => 5 * 5,
+        EFobRadius.FOB_PLACEMENT => Mathf.Pow(FOBManager.Config.FOBBuildPickupRadius * 2, 2),
+        EFobRadius.ENEMY_BUNKER_CLAIM => 5 * 5,
         _ => 0
     };
 
@@ -782,19 +809,20 @@ public class FOB : IResourceFOB, IDeployable
     float IDeployable.GetDelay() => FOBManager.Config.DeployFOBDelay;
 }
 
-public interface IFOB : ITranslationArgument
+public interface IFOB : IDeployable
 {
     Vector3 Position { get; }
     string Name { get; }
     string ClosestLocation { get; }
     GridLocation GridLocation { get; }
+    void Destroy(bool authority);
 }
 public interface IResourceFOB : IFOB
 {
     string UIResourceString { get; }
 }
 
-public enum EfobRadius : byte
+public enum EFobRadius : byte
 {
     SHORT,
     FULL,

@@ -18,6 +18,16 @@ public static class IconManager
     {
         EventDispatcher.GroupChanged += OnGroupChanged;
     }
+    public static void OnGamemodeReloaded()
+    {
+        for (int i = Icons.Count - 1; i >= 0; i--)
+        {
+            IconRenderer iconRenderer = Icons[i];
+            DeleteIcon(iconRenderer);
+        }
+
+        OnLevelLoaded();
+    }
     public static void OnLevelLoaded()
     {
         foreach (BarricadeDrop barricade in UCBarricadeManager.NonPlantedBarricades)
@@ -104,14 +114,15 @@ public static class IconManager
 
         Icons.Add(icon);
     }
-    public static void DeleteIcon(IconRenderer icon)
+    public static void DeleteIcon(IconRenderer icon, bool destroy = true)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         EffectManager.ClearEffectByGuid_AllPlayers(icon.EffectGUID);
         Icons.Remove(icon);
-        icon.Destroy();
+        if (destroy)
+            icon.Destroy();
 
         SpawnNewIconsOfType(icon.EffectGUID);
     }
@@ -155,7 +166,10 @@ public class IconRenderer : MonoBehaviour
         else
             L.LogWarning("IconSpawner could not start: Effect asset not found: " + effectGUID);
     }
-
+    void OnDestroy()
+    {
+        IconManager.DeleteIcon(this, false);
+    }
     public void Destroy()
     {
         Destroy(this);
