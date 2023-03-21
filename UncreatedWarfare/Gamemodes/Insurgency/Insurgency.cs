@@ -937,7 +937,10 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
     {
         if (Data.Is(out Insurgency ins) && ins.DefendingTeam == team)
-            throw new InvalidOperationException("Tried to change tickets of defending team during Insurgency.");
+        {
+            L.LogWarning("Tried to change tickets of defending team during Insurgency.");
+            return;
+        }
         if (oldValue > 0 && newValue <= 0)
             UCWarfare.RunTask(Data.Gamemode.DeclareWin, TeamManager.Other(team), default, ctx: "Lose game, attacker's tickets reached 0.");
     }
