@@ -188,12 +188,24 @@ public class UCWarfare : MonoBehaviour
     {
         if (NetClient != null)
         {
-            Destroy(NetClient);
-            NetClient = null;
+            try
+            {
+                DestroyImmediate(NetClient);
+                L.Log("Destroyed net client...", ConsoleColor.Magenta);
+            }
+            catch (Exception ex)
+            {
+                L.LogWarning("Error destroying net client.");
+                L.LogError(ex);
+                Destroy(NetClient);
+            }
+            finally
+            {
+                NetClient = null;
+            }
         }
         if (Config.TCPSettings.EnableTCPServer)
         {
-            L.Log("Attempting connection with Homebase...", ConsoleColor.Magenta);
             NetClient = gameObject.AddComponent<HomebaseClientComponent>();
             NetClient.OnClientVerified += Data.OnClientConnected;
             NetClient.OnClientDisconnected += Data.OnClientDisconnected;
@@ -202,6 +214,7 @@ public class UCWarfare : MonoBehaviour
             NetClient.ModifyVerifyPacketCallback += OnVerifyPacketMade;
             NetClient.OnServerConfigRequested += Data.GetServerConfig;
             NetClient.Init(Config.TCPSettings.TCPServerIP, Config.TCPSettings.TCPServerPort, Config.TCPSettings.TCPServerIdentity);
+            L.Log("Attempting connection with Homebase...", ConsoleColor.Magenta);
         }
     }
     private void OnVerifyPacketMade(ref VerifyPacket packet)

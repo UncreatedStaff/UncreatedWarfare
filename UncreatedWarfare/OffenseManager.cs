@@ -41,6 +41,10 @@ public static class OffenseManager
         EventDispatcher.PlayerDied += OnPlayerDied;
         EventDispatcher.PlayerJoined += OnPlayerJoined;
         EventDispatcher.PlayerPendingAsync += OnPlayerPending;
+        Reload();
+    }
+    private static void Reload()
+    {
         Load<Ban>(0);
         Load<Unban>(1);
         Load<Kick>(2);
@@ -355,7 +359,7 @@ public static class OffenseManager
         try
         {
             ITimestampOffense[] stamps = GetOffenses();
-
+            Reload();
             if (stamps.Length == 0)
             {
                 L.Log("No queued past offenses.", ConsoleColor.Magenta);
@@ -467,7 +471,7 @@ public static class OffenseManager
                                     teamkill.ItemName, teamkill.Timestamp, 10000)).Responded)
                             {
                                 RemoveFromSave(teamkill, 6);
-                                Save<BattlEyeKick>(6);
+                                Save<Teamkill>(6);
                             }
                             else
                             {

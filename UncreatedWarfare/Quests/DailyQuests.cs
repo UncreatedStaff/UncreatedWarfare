@@ -331,7 +331,7 @@ public static class DailyQuests
         for (int i = 0; i < _index; ++i)
         {
             ref DailyQuestSave save2 = ref _quests[i];
-            if (Assets.find(save2.Guid) is QuestAsset quest2 && player.Player.quests.questsList.Exists(x => x.asset.GUID == quest2.GUID))
+            if (Assets.find(save2.Guid) is QuestAsset quest2)
                 player.Player.quests.ServerRemoveQuest(quest2);
         }
         if (Assets.find(save.Guid) is QuestAsset quest)
