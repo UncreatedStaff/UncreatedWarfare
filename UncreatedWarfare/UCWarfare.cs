@@ -118,14 +118,18 @@ public class UCWarfare : MonoBehaviour
         CommandHandler.LoadCommands();
 
         DateTime loadTime = DateTime.Now;
-        if (loadTime.TimeOfDay > RestartTime - TimeSpan.FromHours(2)) // don't restart if the restart would be in less than 2 hours
-            _nextRestartTime = loadTime.Date + RestartTime + TimeSpan.FromDays(1);
-        else
-            _nextRestartTime = loadTime.Date + RestartTime;
-        L.Log("Restart scheduled at " + _nextRestartTime.ToString("g"), ConsoleColor.Magenta);
-        float seconds = (float)(_nextRestartTime - DateTime.Now).TotalSeconds;
+        if (!Config.DisableDailyRestart)
+        {
+            if (loadTime.TimeOfDay > RestartTime - TimeSpan.FromHours(2)) // don't restart if the restart would be in less than 2 hours
+                _nextRestartTime = loadTime.Date + RestartTime + TimeSpan.FromDays(1);
+            else
+                _nextRestartTime = loadTime.Date + RestartTime;
+            L.Log("Restart scheduled at " + _nextRestartTime.ToString("g"), ConsoleColor.Magenta);
 
-        StartCoroutine(RestartIn(seconds));
+            float seconds = (float)(_nextRestartTime - DateTime.Now).TotalSeconds;
+            StartCoroutine(RestartIn(seconds));
+        }
+        else _nextRestartTime = DateTime.MaxValue;
 
         if (Config.EnableSync)
             gameObject.AddComponent<ConfigSync>();
@@ -299,7 +303,8 @@ public class UCWarfare : MonoBehaviour
     private IEnumerator<WaitForSecondsRealtime> RestartIn(float seconds)
     {
         yield return new WaitForSecondsRealtime(seconds);
-        ShutdownCommand.ShutdownAfterGameDaily();
+        if (!Config.DisableDailyRestart)
+            ShutdownCommand.ShutdownAfterGameDaily();
     }
     private void SubscribeToEvents()
     {
@@ -1214,6 +1219,7 @@ public class UCWarfareNexus : IModuleNexus
             {
                 UnityEngine.Object.Destroy(UCWarfare.I.gameObject);
             }
+
             UCWarfare.I = null!;
         }
         catch (Exception ex)
@@ -1224,16 +1230,19 @@ public class UCWarfareNexus : IModuleNexus
             else
                 throw new SingletonLoadException(SingletonLoadType.Unload, null, ex);
         }
-        if (shutdown)
+        finally
         {
-            Provider.shutdown(0);
+            if (shutdown)
+            {
+                Provider.shutdown(0);
+            }
         }
     }
     void IModuleNexus.shutdown()
     {
         Level.onPostLevelLoaded -= OnLevelLoaded;
         if (!UCWarfare.IsLoaded) return;
-        Unload(false).Wait();
+        Unload(false).Wait(10000);
     }
 }
 
