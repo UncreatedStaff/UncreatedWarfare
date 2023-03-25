@@ -10,7 +10,9 @@ using System.Text.RegularExpressions;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 // ReSharper disable InconsistentNaming

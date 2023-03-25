@@ -140,8 +140,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                             {
                                 if (Assets.find(req.QuestID) is QuestAsset quest)
                                 {
-                                    player.Player.quests.ServerAddQuest(quest);
-                                    QuestManager.CheckNeedsToUntrack(player);
+                                    QuestManager.TryAddQuest(player, quest);
                                 }
                                 else
                                 {

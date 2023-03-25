@@ -105,11 +105,9 @@ public static class DailyQuests
     }
     private static void OnAbandonedQuest(PlayerQuests __instance, Guid assetGuid)
     {
-        if (Assets.find(assetGuid) is QuestAsset qa)
-        {
-            __instance.ServerAddQuest(qa);
-            QuestManager.CheckNeedsToUntrack(UCPlayer.FromPlayer(__instance.player));
-        }
+        UCPlayer? player = UCPlayer.FromPlayer(__instance.player);
+        if (player != null)
+            QuestManager.TryAddQuest(player, assetGuid);
     }
     internal static void CheckTrackQuestsOption(UCPlayer player)
     {
@@ -333,13 +331,12 @@ public static class DailyQuests
         for (int i = 0; i < _index; ++i)
         {
             ref DailyQuestSave save2 = ref _quests[i];
-            if (Assets.find(save2.Guid) is QuestAsset quest2 && player.Player.quests.questsList.Exists(x => x.asset.GUID == quest2.GUID))
+            if (Assets.find(save2.Guid) is QuestAsset quest2)
                 player.Player.quests.ServerRemoveQuest(quest2);
         }
         if (Assets.find(save.Guid) is QuestAsset quest)
         {
-            player.Player.quests.ServerAddQuest(quest);
-            QuestManager.CheckNeedsToUntrack(player);
+            QuestManager.TryAddQuest(player, quest);
             L.LogDebug("Sent quest " + quest.name + " / " + quest.id.ToString(Data.AdminLocale) + " to " + player.CharacterName);
         }
         else

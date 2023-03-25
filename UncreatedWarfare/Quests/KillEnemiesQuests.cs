@@ -79,7 +79,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
         }
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= _killThreshold)
@@ -171,7 +171,7 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
         public void OnKill(PlayerDied e)
         {
             if (e.Killer!.Steam64 == _player.Steam64 &&
-                e.KillDistance >= _range &&
+                e.KillDistance >= _range && e.WasEffectiveKill &&
                 e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
@@ -262,7 +262,7 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.PrimaryAsset != default && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.PrimaryAsset != default && e.WasEffectiveKill && e.Cause != EDeathCause.SHRED)
             {
                 if (_weapon.IsMatch(e.PrimaryAsset))
                 {
@@ -369,7 +369,7 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.PrimaryAsset != default && e.KillDistance >= _range
+            if (e.Killer!.Steam64 == _player.Steam64 && e.PrimaryAsset != default && e.WasEffectiveKill && e.KillDistance >= _range
                 && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH && e.Cause != EDeathCause.SHRED)
             {
                 if (_weapon.IsMatch(e.PrimaryAsset))
@@ -461,7 +461,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.Killer.HasKit && _kit.IsMatch(e.Killer.ActiveKit!.Item!.Id) && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.Killer.HasKit && e.WasEffectiveKill && _kit.IsMatch(e.Killer.ActiveKit!.Item!.Id) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= _killThreshold)
@@ -563,7 +563,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= _range
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && e.KillDistance >= _range
                 && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH
                 && e.Killer.HasKit && _kit.IsMatch(e.Killer.ActiveKit!.Item!.Id) && e.Cause != EDeathCause.SHRED)
             {
@@ -656,7 +656,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && _class.IsMatch(_player.KitClass))
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && _class.IsMatch(_player.KitClass))
             {
                 _kills++;
                 if (_kills >= _killThreshold)
@@ -761,7 +761,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= _range
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && e.KillDistance >= _range
                 && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.SPLASH &&
                 _class.IsMatch(e.Killer.KitClass))
             {
@@ -854,7 +854,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
         }
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && !e.PrimaryAssetIsVehicle && _class.IsMatch(e.PrimaryAsset.GetWeaponClass()) && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && !e.PrimaryAssetIsVehicle && _class.IsMatch(e.PrimaryAsset.GetWeaponClass()) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= _killThreshold)
@@ -945,7 +945,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
         }
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && _branch.IsMatch(_player.Branch) && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && _branch.IsMatch(_player.Branch) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= _killThreshold)
@@ -1035,7 +1035,7 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
         }
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && e.Cause != EDeathCause.SHRED)
             {
                 InteractableVehicle? veh = e.Killer.Player.movement.getVehicle();
                 if (veh == null) return;
@@ -1141,7 +1141,7 @@ public class KillEnemiesQuestEmplacement : BaseQuestData<KillEnemiesQuestEmplace
         }
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && e.Cause != EDeathCause.SHRED)
             {
                 InteractableVehicle? veh = e.Killer.Player.movement.getVehicle();
                 if (veh == null) return;
@@ -1309,7 +1309,7 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
         }
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && _player.Squad != null && _player.Squad.IsFull() && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && _player.Squad != null && _player.Squad.IsFull() && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= _killThreshold)
@@ -1383,7 +1383,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
         public void OnKill(PlayerDied e)
         {
             ulong team = e.KillerTeam;
-            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && e.Cause != EDeathCause.SHRED)
             {
                 if (Data.Is(out Gamemodes.Interfaces.IFlagTeamObjectiveGamemode fr))
                 {
@@ -1501,7 +1501,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
         public void OnKill(PlayerDied e)
         {
             ulong team = e.KillerTeam;
-            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && e.Cause != EDeathCause.SHRED)
             {
                 Vector3 deadPos = e.Player.Position;
                 Vector3 killerPos = e.Killer.Position;
@@ -1622,7 +1622,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
         public void OnKill(PlayerDied e)
         {
             ulong team = e.Killer!.GetTeam();
-            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && e.Cause != EDeathCause.SHRED)
             {
                 int maxXp = 0;
                 int ind = -1;
@@ -1745,7 +1745,7 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
         }
         public void OnKill(PlayerDied e)
         {
-            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED && !e.WasTeamkill)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.WasEffectiveKill && e.Cause != EDeathCause.SHRED && !e.WasTeamkill)
             {
                 _streakProgress++;
                 if (_streakProgress >= _streakLength)

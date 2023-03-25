@@ -1195,8 +1195,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                             {
                                 if (Assets.find(req.QuestID) is QuestAsset quest)
                                 {
-                                    player.Player.quests.ServerAddQuest(quest);
-                                    QuestManager.CheckNeedsToUntrack(player);
+                                    QuestManager.TryAddQuest(player, quest);
                                 }
                                 else
                                 {

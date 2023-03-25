@@ -145,7 +145,7 @@ public class FOB : IResourceFOB, IDeployable
     public ulong Team => Radio.GetServersideData().group.GetTeam();
     public ulong Owner => Radio.GetServersideData().owner;
     public BarricadeDrop? Bunker { get; private set; }
-    public Vector3 Position => Radio.model.position;
+    public Vector3 Position => Radio == null || Radio.GetServersideData().barricade.isDead ? _startPos : Radio.model.position;
     Vector3 IDeployable.Position => Bunker == null ? Position : Bunker.model.position;
     public float Yaw => Bunker == null || Bunker.model == null ? 0 : (Bunker.model.rotation.eulerAngles.y + 90f);
     public float Radius { get; private set; }
@@ -210,6 +210,7 @@ public class FOB : IResourceFOB, IDeployable
 
     private readonly ushort _shortBuildID;
     private readonly ushort _shortAmmoID;
+    private readonly Vector3 _startPos;
 
     public FOB(BarricadeDrop radio)
     {
@@ -217,6 +218,7 @@ public class FOB : IResourceFOB, IDeployable
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Radio = radio;
+        _startPos = radio.model.position;
 
         if (Radio.interactable is InteractableStorage storage)
             storage.despawnWhenDestroyed = true;

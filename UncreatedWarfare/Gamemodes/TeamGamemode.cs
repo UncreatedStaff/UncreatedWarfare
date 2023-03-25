@@ -97,6 +97,16 @@ public abstract class TeamGamemode : Gamemode, ITeams
         if (EveryXSeconds(Config.GeneralMainCheckSeconds))
             TeamManager.EvaluateBases();
 
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
+            if (player.Player.life.oxygen < 100 && player.GetTeam() == 0 && player.TeamSelectorData is { IsSelecting: true, IsOptionsOnly: false })
+            {
+                player.Player.life.serverModifyHealth(100);
+                player.Player.life.simulatedModifyOxygen(100);
+            }
+        }
+
         // todo improve this a little
         if (State == State.Staging && (_shouldHaveBlockerT1 || _shouldHaveBlockerT2))
         {

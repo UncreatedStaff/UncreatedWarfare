@@ -862,8 +862,7 @@ public class DebugCommand : AsyncCommand
         {
             if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
             {
-                ctx.Caller.Player.quests.ServerAddQuest(asset);
-                QuestManager.CheckNeedsToUntrack(ctx.Caller);
+                QuestManager.TryAddQuest(ctx.Caller, asset);
                 ctx.ReplyString("<#9fa1a6>Added quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
             }
             else ctx.ReplyString("<#ff8c69>Quest not found.");

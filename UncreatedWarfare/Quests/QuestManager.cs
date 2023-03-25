@@ -151,6 +151,32 @@ public static class QuestManager
         if (player != null && !player.Save.TrackQuests)
             UntrackQuest(player);
     }
+
+    public static void TryAddQuest(UCPlayer player, Guid guid)
+    {
+        if (player == null)
+            return;
+        if (Assets.find(guid) is QuestAsset qa)
+            TryAddQuest(player, qa);
+    }
+    public static void TryAddQuest(UCPlayer player, QuestAsset qa)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (player == null)
+            return;
+        PlayerQuests pq = player.Player.quests;
+        for (int i = 0; i < pq.questsList.Count; ++i)
+        {
+            if (pq.questsList[i].asset is { } qa2 && qa.GUID == qa2.GUID)
+            {
+                CheckNeedsToUntrack(player);
+                return;
+            }
+        }
+
+        pq.ServerAddQuest(qa);
+        CheckNeedsToUntrack(player);
+    }
     public static void UntrackQuest(UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();
