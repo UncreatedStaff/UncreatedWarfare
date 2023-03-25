@@ -135,6 +135,7 @@ public class FOB : IResourceFOB, IDeployable
 {
     public BarricadeDrop Radio;
     private FOBComponent _component;
+    public FOBComponent Component => _component;
     public int Number;
     private readonly string _cl;
     private readonly GridLocation _gc;
@@ -496,6 +497,8 @@ public class FOB : IResourceFOB, IDeployable
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        _component.Destroy();
+
         if (!(Radio == null || Radio.GetServersideData().barricade.isDead))
         {
             if (Regions.tryGetCoordinate(Radio.model.position, out byte x, out byte y))
@@ -503,8 +506,6 @@ public class FOB : IResourceFOB, IDeployable
                 BarricadeManager.destroyBarricade(Radio, x, y, ushort.MaxValue);
             }
         }
-
-        _component.Destroy();
 
         Radio = newDrop;
         _component = newDrop.model.gameObject.AddComponent<FOBComponent>();

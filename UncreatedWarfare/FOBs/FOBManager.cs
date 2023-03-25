@@ -25,6 +25,7 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Cache = Uncreated.Warfare.Components.Cache;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using Object = UnityEngine.Object;
@@ -127,6 +128,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 f.OnAttackerLeft(player);
         }
     }
+    public bool IsRegistered(FOBComponent fobComponent)
+    {
+        return Team1FOBs.Exists(f => f.Component.GetInstanceID() == fobComponent.GetInstanceID()) ||
+            Team2FOBs.Exists(f => f.Component.GetInstanceID() == fobComponent.GetInstanceID());
+    }
     private void OnBarricadePlaced(BarricadePlaced e)
     {
         L.LogDebug("Placed barricade: " + (e.Owner?.ToString() ?? "null") + ".");
@@ -171,6 +177,35 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                         L.LogDebug("Deleting special fob: " + special.Name, ConsoleColor.Green);
                         DeleteSpecialFOB(special.Name, special.Team);
                     }
+                }
+            }
+        }
+
+        if (Data.Gamemode.EveryXSeconds(20f))
+        {
+            List<GameObject> rootObjectsInScene = new List<GameObject>();
+            Scene scene = SceneManager.GetActiveScene();
+            scene.GetRootGameObjects(rootObjectsInScene);
+
+            List<FOBComponent> fobs = new List<FOBComponent>();
+
+            for (int i = 0; i < rootObjectsInScene.Count; i++)
+            {
+                FOBComponent[] allComponents = rootObjectsInScene[i].GetComponentsInChildren<FOBComponent>(true);
+                for (int j = 0; j < allComponents.Length; j++)
+                {
+                    fobs.Add(allComponents[j]);
+                }
+            }
+
+            
+            L.Log($"[FOB DEBUG] Found {fobs.Count} in seen - there are {(Team1FOBs.Count + Team2FOBs.Count)} registered.", ConsoleColor.DarkGray);
+            foreach (var fobComponent in fobs)
+            {
+                if (!IsRegistered(fobComponent))
+                {
+                    L.LogWarning($"FOB Component {fobComponent.GetInstanceID()} is not registered in the FOBManager - ghost FOB detected at {fobComponent.transform.position}. Attempting to destroy...");
+                    fobComponent.Destroy();
                 }
             }
         }
