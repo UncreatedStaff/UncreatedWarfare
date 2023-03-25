@@ -1556,14 +1556,18 @@ public static class EventFunctions
 
         if (Data.Is<ISquads>(out _))
             RallyManager.OnBarricadeDestroyed(e.Barricade);
-        if (e.Transform.TryGetComponent(out BarricadeComponent c) && c.LastDamagerTime + 10f >= Time.realtimeSinceStartup)
+        if (e.Transform.TryGetComponent(out BarricadeComponent c))
         {
-            SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
-            ActionLog.Add(ActionLogType.DestroyBarricade, $"{e.Barricade.asset.itemName} / {e.Barricade.asset.id} / {e.Barricade.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(e.ServersideData.group.GetTeam(), 0)}, ID: {e.Barricade.instanceID}", c.LastDamager);
-            if (Data.Reporter is not null && damager != null && e.ServersideData.group.GetTeam() == damager.GetTeam())
+            if (c.LastDamagerTime + 10f >= Time.realtimeSinceStartup)
             {
-                Data.Reporter.OnDestroyedStructure(c.LastDamager, e.InstanceID);
+                SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
+                ActionLog.Add(ActionLogType.DestroyBarricade, $"{e.Barricade.asset.itemName} / {e.Barricade.asset.id} / {e.Barricade.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(e.ServersideData.group.GetTeam(), 0)}, ID: {e.Barricade.instanceID}", c.LastDamager);
+                if (Data.Reporter is not null && damager != null && e.ServersideData.group.GetTeam() == damager.GetTeam())
+                {
+                    Data.Reporter.OnDestroyedStructure(c.LastDamager, e.InstanceID);
+                }
             }
+            c.Destroy();
         }
     }
     internal static void OnPostHealedPlayer(Player instigator, Player target)
