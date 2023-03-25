@@ -58,7 +58,10 @@ public class BuildableComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFobRadius.FULL, Foundation.GetServersideData().group.GetTeam());
+        // TODO: check if this makes a difference towards fob bugs
+
+        //FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFobRadius.FULL, Foundation.GetServersideData().group.GetTeam());
+        FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFobRadius.FULL, builder.GetTeam());
         if (fob == null && Buildable.Type != BuildableType.Radio && (builder.KitClass is not Class.CombatEngineer || Buildable.Type is not BuildableType.Fortification))
         {
             builder.SendChat(T.BuildTickNotInRadius);
@@ -71,8 +74,10 @@ public class BuildableComponent : MonoBehaviour
             return;
         }
 
-        if (!ValidatePlacementWithFriendlyFOB(Buildable, fob, builder, Foundation.GetServersideData().point, Foundation))
-            return;
+        // TODO: add back this validation
+
+        //if (!ValidatePlacementWithFriendlyFOB(Buildable, fob, builder, Foundation.GetServersideData().point, Foundation))
+        //    return;
 
         float amount = builder.KitClass == Class.CombatEngineer ? 2f : 1f;
 
