@@ -826,48 +826,54 @@ public struct OfflinePlayer : IPlayer
     private readonly ulong _s64;
     private PlayerNames? _names;
     public ulong Steam64 => _s64;
-    public OfflinePlayer(ulong steam64, bool cacheUsernames = false)
+    public OfflinePlayer(ulong steam64)
     {
         _s64 = steam64;
-        if (cacheUsernames)
-            _names = F.GetPlayerName(steam64);
-        else
-            _names = null;
+        _names = null;
     }
     public OfflinePlayer(in PlayerNames names)
     {
         _s64 = names.Steam64;
         _names = names;
     }
-    public async Task CacheUsernames()
+    public async ValueTask CacheUsernames(CancellationToken token = default)
     {
-        _names = await F.GetPlayerOriginalNamesAsync(_s64).ConfigureAwait(false);
+        _names = await F.GetPlayerOriginalNamesAsync(_s64, token).ConfigureAwait(false);
+    }
+    public bool TryCacheLocal()
+    {
+        UCPlayer? pl = UCPlayer.FromID(Steam64);
+        if (pl != null)
+            _names = pl.Name;
+        return _names.HasValue;
     }
     public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
-        if (format is null) goto end;
+        UCPlayer? pl = UCPlayer.FromID(Steam64);
+        PlayerNames? n = _names ?? pl?.Name;
+        if (format is null || !_names.HasValue) goto end;
+        PlayerNames names = _names.Value;
 
         if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
-            return (_names ??= F.GetPlayerName(_s64)).CharacterName;
+            return names.CharacterName;
         if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal))
-            return (_names ??= F.GetPlayerName(_s64)).NickName;
+            return names.NickName;
         if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal))
-            return (_names ??= F.GetPlayerName(_s64)).PlayerName;
+            return names.PlayerName;
         if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
-            return _s64.ToString(Data.AdminLocale);
-        UCPlayer? pl = UCPlayer.FromID(Steam64);
+            goto end;
         string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (PlayerSave.TryReadSaveFile(_s64, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
         if (format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(hex, (_names ??= F.GetPlayerName(_s64)).CharacterName, flags);
+            return Localization.Colorize(hex, names.CharacterName, flags);
         if (format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(hex, (_names ??= F.GetPlayerName(_s64)).NickName, flags);
+            return Localization.Colorize(hex, names.NickName, flags);
         if (format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(hex, (_names ??= F.GetPlayerName(_s64)).PlayerName, flags);
+            return Localization.Colorize(hex, names.PlayerName, flags);
         if (format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(hex, _s64.ToString(Data.AdminLocale), flags);
+            return Localization.Colorize(hex, _s64.ToString(culture ?? Data.LocalLocale), flags);
         end:
-        return (_names ??= Data.DatabaseManager.GetUsernames(_s64)).CharacterName;
+        return _s64.ToString(culture ?? Data.LocalLocale);
     }
 }
 public class UCPlayerLocale // todo implement

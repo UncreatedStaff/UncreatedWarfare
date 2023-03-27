@@ -170,6 +170,20 @@ public class SquadCommand : Command
             if (playerId == ctx.CallerID)
                 throw ctx.Reply(T.PlayerNotFound);
 
+            if (!member.IsOnline)
+            {
+                if (PlayerSave.TryReadSaveFile(member.Steam64, out PlayerSave save))
+                {
+                    save.SquadName = string.Empty;
+                    save.SquadLeader = 0;
+                    save.SquadWasLocked = false;
+                    PlayerSave.WriteToSaveFile(save);
+                    throw ctx.Reply(T.SquadPlayerKicked, member);
+                }
+
+                throw ctx.Reply(T.PlayerNotFound);
+            }
+
             SquadManager.KickPlayerFromSquad(member, ctx.Caller.Squad);
             ctx.Defer();
         }

@@ -484,26 +484,6 @@ public class WarfareSQL : MySqlDatabase
             },
         }, true, null)
     };
-    public PlayerNames GetUsernames(ulong s64)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        PlayerNames name = default;
-        Query(
-            "SELECT `PlayerName`, `CharacterName`, `NickName` " +
-            "FROM `" + TableUsernames + "` " +
-            "WHERE `Steam64` = @0 LIMIT 1;",
-            new object[] { s64 },
-            reader =>
-            {
-                name = new PlayerNames() { Steam64 = s64, PlayerName = reader.GetString(0), CharacterName = reader.GetString(1), NickName = reader.GetString(2), WasFound = true };
-            });
-        if (name.WasFound)
-            return name;
-        string tname = s64.ToString(Data.AdminLocale);
-        return new PlayerNames { Steam64 = s64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
-    }
     public async Task<PlayerNames> GetUsernamesAsync(ulong s64, CancellationToken token = default)
     {
 #if DEBUG

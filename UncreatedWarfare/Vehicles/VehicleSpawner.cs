@@ -852,8 +852,24 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
 
                         if (!canEnterDriverSeat)
                         {
-                            if (owner is null || owner.Squad is null)
-                                e.Player.SendChat(T.VehicleWaitForOwner, owner ?? new OfflinePlayer(e.Vehicle.lockedOwner.m_SteamID) as IPlayer);
+                            if (owner?.Squad is null)
+                            {
+                                OfflinePlayer pl = new OfflinePlayer(e.Vehicle.lockedOwner.m_SteamID);
+                                if (owner != null || pl.TryCacheLocal())
+                                {
+                                    e.Player.SendChat(T.VehicleWaitForOwner, owner ?? pl as IPlayer);
+                                }
+                                else
+                                {
+                                    UCWarfare.RunTask(async token =>
+                                    {
+                                        OfflinePlayer pl2 = pl;
+                                        await pl2.CacheUsernames(token).ConfigureAwait(false);
+                                        await UCWarfare.ToUpdate(token);
+                                        e.Player.SendChat(T.VehicleWaitForOwner, pl);
+                                    }, UCWarfare.UnloadCancel);
+                                }
+                            }
                             else
                                 e.Player.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
                             e.Break();

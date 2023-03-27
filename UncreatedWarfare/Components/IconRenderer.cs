@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using JetBrains.Annotations;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -107,10 +108,10 @@ public static class IconManager
         IconRenderer icon = transform.gameObject.AddComponent<IconRenderer>();
         icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team);
         
-        icon.SpawnNewIcon((icon.Team == 0
+        icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Team == 0
                 ? PlayerManager.OnlinePlayers
                 : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
-            .Select(x => x.Connection));
+            .Select(x => x.Connection)));
 
         Icons.Add(icon);
     }
@@ -135,10 +136,10 @@ public static class IconManager
         {
             if (icon.EffectGUID == effectGUID)
             {
-                icon.SpawnNewIcon((icon.Team == 0
+                icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Team == 0
                         ? PlayerManager.OnlinePlayers
                         : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
-                    .Select(x => x.Connection));
+                    .Select(x => x.Connection)));
             }
         }
     }
@@ -166,6 +167,8 @@ public class IconRenderer : MonoBehaviour
         else
             L.LogWarning("IconSpawner could not start: Effect asset not found: " + effectGUID);
     }
+
+    [UsedImplicitly]
     void OnDestroy()
     {
         IconManager.DeleteIcon(this, false);
@@ -180,7 +183,7 @@ public class IconRenderer : MonoBehaviour
             return;
         F.TriggerEffectReliable(Effect, player, Point);
     }
-    public void SpawnNewIcon(IEnumerable<ITransportConnection> players)
+    public void SpawnNewIcon(PooledTransportConnectionList players)
     {
         if (Effect == null)
             return;

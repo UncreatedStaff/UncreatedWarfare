@@ -393,8 +393,8 @@ public static class F
             TriggerEffectReliable(effect, EffectManager.MEDIUM, position);
     }
     public static void TriggerEffectReliable(EffectAsset asset, float range, Vector3 position)
-        => TriggerEffectReliable(asset, Provider.EnumerateClients_RemoteWithinSphere(position, range), position);
-    public static void TriggerEffectReliable(EffectAsset asset, IEnumerable<ITransportConnection> connection, Vector3 position)
+        => TriggerEffectReliable(asset, Provider.GatherRemoteClientConnectionsWithinSphere(position, range), position);
+    public static void TriggerEffectReliable(EffectAsset asset, PooledTransportConnectionList connection, Vector3 position)
     {
         ThreadUtil.assertIsGameThread();
         TriggerEffectParameters p = new TriggerEffectParameters(asset)
@@ -524,27 +524,6 @@ public static class F
                 success = false;
                 return null;
             }
-        }
-    }
-    public static PlayerNames GetPlayerName(ulong player)
-    {
-        if (player == 0) return PlayerNames.Console;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        UCPlayer? pl = UCPlayer.FromID(player);
-        if (pl != null)
-            return pl.Name;
-        try
-        {
-            return Data.DatabaseManager.GetUsernames(player);
-        }
-        catch (Exception ex)
-        {
-            if (!ex.Message.Equals("Not connected", StringComparison.Ordinal))
-                throw;
-            string tname = player.ToString(Data.AdminLocale);
-            return new PlayerNames { Steam64 = player, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
         }
     }
     public static ValueTask<PlayerNames> GetPlayerOriginalNamesAsync(ulong player, CancellationToken token = default)
@@ -1050,7 +1029,7 @@ public static class F
                     state = new byte[sizeof(ulong) * 2];
                 Buffer.BlockCopy(oldSt, 0, state, 0, sizeof(ulong) * 2);
                 Data.SendUpdateBarricadeState.Invoke(drop.GetNetId(), ENetReliability.Reliable,
-                    BarricadeManager.EnumerateClients_Remote(x, y, plant), state);
+                    BarricadeManager.GatherRemoteClientConnections(x, y, plant), state);
             }
         }
         else if (drop.interactable is InteractableSign sign)

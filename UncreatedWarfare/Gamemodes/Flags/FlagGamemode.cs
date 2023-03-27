@@ -411,13 +411,12 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
             }
         }
     }
-    protected static void SetPowerForAllInGrid(IEnumerable<GridObject> arr, bool state)
+    protected static void SetPowerForAllInGrid(IEnumerable<GridObject>? arr, bool state)
     {
-        if (!Data.UseElectricalGrid) return;
+        if (!Data.UseElectricalGrid || arr == null) return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!Data.UseElectricalGrid) return;
         foreach (GridObject obj in arr)
         {
             if (obj.Object is { interactable: { } inx } && inx != null && inx.objectAsset.interactability == EObjectInteractability.BINARY_STATE)
@@ -432,7 +431,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
             }
         }
     }
-    public void OnZoneElectricalGridObjectsUpdated(Zone zone, List<GridObject> added, List<GridObject> removed)
+    public void OnZoneElectricalGridObjectsUpdated(Zone zone, List<GridObject>? added, List<GridObject>? removed)
     {
         if (!Data.UseElectricalGrid) return;
         if (ElectricalGridBehavior is ElectricalGridBehaivor.EnabledWhenInRotation or ElectricalGridBehaivor.AllEnabled)
@@ -464,6 +463,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 
         void RemoveDuplicatesFromRemoving(IEnumerable<GridObject> grid)
         {
+            if (removed is not { Count: > 0 }) return;
             foreach (GridObject obj in grid)
             {
                 int ind = removed.FindIndex(x => x.ObjectInstanceId == obj.ObjectInstanceId);

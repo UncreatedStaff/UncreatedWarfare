@@ -338,6 +338,8 @@ public class BuildableComponent : MonoBehaviour
     public static bool TryPlaceBuildable(Barricade foundation, BuildableData buildable, UCPlayer placer, Vector3 point)
     {
         L.LogDebug("Trying to place buildable " + foundation.asset.itemName + ": " + (placer?.ToString() ?? "null") + " placer. at " + point.ToString("F2", Data.AdminLocale));
+        if (placer == null)
+            return false;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -534,6 +536,13 @@ public class BuildableComponent : MonoBehaviour
         }
         else
         {
+            if (fob is null)
+            {
+                L.LogDebug(" not in radius 2.", ConsoleColor.Red);
+                // no fob nearby
+                placer.SendChat(T.BuildNotInRadius);
+                return false;
+            }
             int existing = CountExistingBuildables(buildable, fob, ignore, placer);
             int totalPlaced = UCBarricadeManager.CountBarricadesWhere(b =>
             b.GetServersideData().owner == placer.Steam64 &&

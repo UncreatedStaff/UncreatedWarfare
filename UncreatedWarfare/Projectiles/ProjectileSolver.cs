@@ -3,14 +3,17 @@ using SDG.Framework.Landscapes;
 using SDG.Unturned;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Framework;
 using Uncreated.Warfare.Components;
+#if DEBUG
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Squads;
+#endif
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.SceneManagement;
 
 namespace Uncreated.Warfare.Projectiles;
@@ -59,7 +62,7 @@ internal class ProjectileSolver : MonoBehaviour
         {
             for (int y = 0; y < Regions.WORLD_SIZE; ++y)
             {
-                foreach (LevelObject obj2 in LevelObjects.objects[x, y].Where(o => o.asset != null && o.asset.type != EObjectType.SMALL && !getIsDecal(o)))
+                foreach (LevelObject obj2 in LevelObjects.objects[x, y].Where(o => o.asset != null && o.asset.type != EObjectType.SMALL && !GetIsDecal(o)))
                 {
                     GameObject? orig = obj2.asset.GetOrLoadModel();
                     if (orig != null)
@@ -105,8 +108,18 @@ internal class ProjectileSolver : MonoBehaviour
     }
 
     //private static readonly InstanceGetter<UseableGun, Attachments> getAttachments = Util.GenerateInstanceGetter<UseableGun, Attachments>("thirdAttachments", BindingFlags.NonPublic);
-    private static readonly InstanceGetter<LevelObject, bool> getIsDecal = Util.GenerateInstanceGetter<LevelObject, bool>("isDecal", BindingFlags.NonPublic);
-    private static readonly InstanceGetter<Rocket, bool> getIsExploded = Util.GenerateInstanceGetter<Rocket, bool>("isExploded", BindingFlags.NonPublic);
+    private static readonly InstanceGetter<LevelObject, bool> GetIsDecal = Util.GenerateInstanceGetter<LevelObject, bool>("isDecal", BindingFlags.NonPublic);
+    private static readonly InstanceGetter<Rocket, bool> GetIsExploded = Util.GenerateInstanceGetter<Rocket, bool>("isExploded", BindingFlags.NonPublic);
+
+    [OperationTest(DisplayName = "ProjectileSolver Check")]
+    [Conditional("DEBUG")]
+    [UsedImplicitly]
+    private static void TestServerSpawnLegacyImpact()
+    {
+        Assert.IsNotNull(GetIsDecal);
+        Assert.IsNotNull(GetIsExploded);
+    }
+
     private IEnumerator Simulate()
     {
         ProjectileData data = _current;
@@ -129,10 +142,14 @@ internal class ProjectileSolver : MonoBehaviour
         c.OriginalRocketData = rocket;
 
         int i = 0;
+#if DEBUG
         float lastSent = 0f;
+#endif
         int iter = Mathf.CeilToInt(MAX_TIME / Time.fixedDeltaTime);
         int skip = Mathf.CeilToInt(1f / (Time.fixedDeltaTime * 1.5f));
+#if DEBUG
         float seconds;
+#endif
         for (; !c.IsExploded && i < iter; ++i)
         {
 #if DEBUG
@@ -149,10 +166,13 @@ internal class ProjectileSolver : MonoBehaviour
             if (i % skip == 0)
             {
                 yield return null;
-                if (getIsExploded(rocket))
+                if (GetIsExploded(rocket))
                     yield break;
             }
         }
+#if !DEBUG
+        float
+#endif
         seconds = i * Time.fixedDeltaTime;
 
         Vector3 pos = transform.gameObject.transform.position;

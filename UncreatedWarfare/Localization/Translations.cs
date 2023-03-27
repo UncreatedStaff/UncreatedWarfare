@@ -1078,47 +1078,15 @@ public class Translation
     {
         if (culture == null)
             return;
+        /*
+
         if (culture.TextInfo.IsRightToLeft)
         {
             RightToLeftify(ref output);
         }
+        */
     }
     
-    private static unsafe void RightToLeftify(ref string text)
-    {
-        char* ptr = stackalloc char[text.Length];
-        for (int i = 0; i < text.Length; ++i)
-        {
-            char c = text[text.Length - i - 1];
-            c = c switch
-            {
-                '{' => '}',
-                '}' => '{',
-                '<' => '>',
-                '>' => '<',
-                '(' => ')',
-                ')' => '(',
-                _ => c
-            };
-            ptr[i] = c;
-        }
-        text = new string(ptr, 0, text.Length);
-        return;
-        char[] chars = text.ToCharArray();
-        // treat tags as one character, and swap end and start tags...
-        int index = -1;
-        while (true)
-        {
-            index = text.IndexOf('<', index + 1);
-            if (index == -1 || index >= chars.Length - 2)
-                break;
-            bool endTag = chars[index + 1] == '/';
-            int index2 = text.IndexOf('>', index + 1);
-            if (index2 == -1)
-                break;
-            bool singleTag = !endTag;
-        }
-    }
     private string BaseUnsafeTranslate(Type t, string val, string language, Type[] gens, object[] formatting, UCPlayer? target, ulong targetTeam)
     {
         if (gens.Length > formatting.Length)

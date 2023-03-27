@@ -145,6 +145,7 @@ public static class Data
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
     internal static StaticGetter<uint> GetItemManagerInstanceCount;
     internal static Action<Vector3, Vector3, string, Transform?, IEnumerable<ITransportConnection>>? ServerSpawnLegacyImpact;
+    internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
     [OperationTest(DisplayName = "Fast Kits Check")]
     [Conditional("DEBUG")]
@@ -159,6 +160,13 @@ public static class Data
     private static void TestServerSpawnLegacyImpact()
     {
         Assert.IsNotNull(ServerSpawnLegacyImpact);
+    }
+    [OperationTest(DisplayName = "TransportConnectionListPool.Get Check")]
+    [Conditional("DEBUG")]
+    [UsedImplicitly]
+    private static void TestPullFromTransportConnectionListPool()
+    {
+        Assert.IsNotNull(PullFromTransportConnectionListPool);
     }
     [OperationTest(DisplayName = "InteractablePower.RefreshIsConnectedToPower Check")]
     [Conditional("DEBUG")]
@@ -353,7 +361,27 @@ public static class Data
         {
             L.LogWarning("Couldn't get ServerSpawnLegacyImpact from DamageTool, explosives will not play the flesh sound. (" + ex.Message + ").");
         }
-        
+
+        PullFromTransportConnectionListPool = null;
+        try
+        {
+            MethodInfo? method = typeof(Provider).Assembly
+                .GetType("SDG.Unturned.TransportConnectionListPool", true, false).GetMethod("Get",
+                    BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            if (method != null)
+            {
+                PullFromTransportConnectionListPool = (Func<PooledTransportConnectionList>)method.CreateDelegate(typeof(Func<PooledTransportConnectionList>));
+            }
+            else
+            {
+                L.LogWarning("Couldn't find Get in TransportConnectionListPool, list pooling will not be used.");
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogWarning("Couldn't get Get from TransportConnectionListPool, list pooling will not be used (" + ex.Message + ").");
+        }
+
         indent.Dispose();
 
         /* REGISTER STATS MANAGER */
@@ -367,6 +395,49 @@ public static class Data
         L.Log("Loading first gamemode...", ConsoleColor.Magenta);
         if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF), token))
             throw new SingletonLoadException(SingletonLoadType.Load, null, new Exception("Failed to load gamemode"));
+    }
+    public static PooledTransportConnectionList GetPooledTransportConnectionList(int capacity = -1)
+    {
+        PooledTransportConnectionList? rtn = null;
+        Exception? ex2 = null;
+        if (PullFromTransportConnectionListPool != null)
+        {
+            try
+            {
+                rtn = PullFromTransportConnectionListPool();
+            }
+            catch (Exception ex)
+            {
+                ex2 = ex;
+                L.LogError(ex);
+            }
+        }
+        if (rtn == null)
+        {
+            if (capacity == -1)
+                capacity = Provider.clients.Count;
+            try
+            {
+                rtn = (PooledTransportConnectionList)Activator.CreateInstance(typeof(PooledTransportConnectionList),
+                    BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance, null, new object[] { capacity }, CultureInfo.InvariantCulture, null);
+            }
+            catch (Exception ex)
+            {
+                L.LogError(ex);
+                if (ex2 != null)
+                    throw new AggregateException("Unable to create pooled transport connection!", ex2, ex);
+
+                throw new Exception("Unable to create pooled transport connection!", ex);
+            }
+        }
+
+        return rtn;
+    }
+    public static PooledTransportConnectionList GetPooledTransportConnectionList(IEnumerable<ITransportConnection> selector, int capacity = -1)
+    {
+        PooledTransportConnectionList rtn = GetPooledTransportConnectionList(capacity);
+        rtn.AddRange(selector);
+        return rtn;
     }
     internal static void RegisterInitialSyncs()
     {
