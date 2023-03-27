@@ -24,9 +24,10 @@ public sealed class KitsCommand : Command
     {
 #if !DEBUG
         throw ctx.SendNotImplemented();
-#endif
+#else
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         
         KitManager.MenuUI.OpenUI(ctx.Caller);
+#endif
     }
 }

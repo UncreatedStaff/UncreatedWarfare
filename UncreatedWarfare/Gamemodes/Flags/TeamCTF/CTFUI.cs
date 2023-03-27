@@ -21,9 +21,6 @@ public static class CTFUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-
-        L.Log(flag.LastDeltaPoints + " - FLAG DELTA");
-
         if (inVehicle)
             return new CaptureUIParameters(team, EFlagStatus.IN_VEHICLE, flag);
 

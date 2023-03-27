@@ -819,6 +819,7 @@ internal static class T
     public static readonly Translation<IPlayer> SquadPlayerKicked   = new Translation<IPlayer>("<#b9bdb3>{0} was kicked from your squad.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation SquadsDisabled               = new Translation("<#a89791>Squads are disabled in this gamemode.");
     public static readonly Translation<int> SquadsTooMany           = new Translation<int>("<#a89791>There can not be more than {0} squads on a team at once.");
+    public static readonly Translation<int> SquadsTooManyPlayerCount = new Translation<int>("<#a89791>There are too many squads right now. More squads are unlocked once your team reaches {0} members");
 
     public static readonly Translation<Squad, int, int> SquadsUIHeaderPlayerCount    = new Translation<Squad, int, int>("<#bd6b5b>{0}</color> {1}/{2}", TranslationFlags.UnityUI, Squad.FormatName);
     public static readonly Translation<int, int> SquadsUIPlayerCountList             = new Translation<int, int>("{0}/{1}", TranslationFlags.UnityUI);
@@ -878,8 +879,8 @@ internal static class T
     public static readonly Translation<float> BuildSmallRadius = new Translation<float>("<#ffab87>This can only be placed within {0}m of this FOB Radio right now. Expand this range by building a <#cedcde>FOB BUNKER</color>.", "N0");
     public static readonly Translation BuildLegacyExplanation  = new Translation("<#ffab87>Hit the foundation with your Entrenching Tool to build it.");
     public static readonly Translation<float> BuildNoRadio     = new Translation<float>("<#ffab87>This can only be placed within {0}m of a friendly <#cedcde>FOB RADIO</color>.", "N0");
-    public static readonly Translation<int, BuildableData> BuildLimitReached = new Translation<int, BuildableData>("<#ffab87>This FOB already has {0} {1}.", "F0", FormatPlural);
-    public static readonly Translation<int, BuildableData> RegionalBuildLimitReached = new Translation<int, BuildableData>("<#ffab87>You cannot place more than {0} {1} in this area.", "F0", FormatPlural);
+    public static readonly Translation<int, BuildableData> BuildLimitReached = new Translation<int, BuildableData>("<#ffab87>This FOB already has {0} {1}.", "F0", FormatPlural + "{0}");
+    public static readonly Translation<int, BuildableData> RegionalBuildLimitReached = new Translation<int, BuildableData>("<#ffab87>You cannot place more than {0} {1} in this area.", "F0", FormatPlural + "{0}");
     public static readonly Translation<BuildableData> BuildTickStructureExists = new Translation<BuildableData>("<#ffab87>Too many {0} have already been built on this FOB.", FormatPlural);
     public static readonly Translation BuildEnemy              = new Translation("<#ffab87>You may not build on an enemy FOB.");
     public static readonly Translation<int, int> BuildMissingSupplies = new Translation<int, int>("<#ffab87>You're missing nearby build! <#d1c597>Building Supplies: <#e0d8b8>{0}/{1}</color></color>.");
@@ -971,7 +972,7 @@ internal static class T
         [TranslationData(Section = SectionSigns, SignId = "rules", Description = "Server rules")]
     public static readonly Translation SignRules = new Translation("Rules\nNo suicide vehicles.\netc.", TranslationFlags.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "kitdelay", Description = "Shown on new seasons when elite kits and loadouts are locked.")]
-    public static readonly Translation SignKitDelay = new Translation("<#e6e6e6>All <#3bede1>Elite Kits</color> and <#32a852>Loadouts</color> are locked for the two weeks of the season.\nThey will be available again after <#d8addb>September 1st, 2022</color>.", TranslationFlags.TMProSign);
+    public static readonly Translation SignKitDelay = new Translation("<#e6e6e6>All <#3bede1>Elite Kits</color> and <#32a852>Loadouts</color> are locked for the two weeks of the season.\nThey will be available again after <#d8addb>April 2nd, 2023</color>.", TranslationFlags.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_squadleader")]
     public static readonly Translation SignClassDescriptionSquadleader   = new Translation("\n\n<#cecece>Help your squad by supplying them with <#f0a31c>rally points</color> and placing <#f0a31c>FOB radios</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
         [TranslationData(Section = SectionSigns, SignId = "class_desc_rifleman")]

@@ -607,7 +607,24 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     {
                         byte index = KitEx.GetHotkeyIndex(binding.Slot);
                         if (index != byte.MaxValue)
-                            player.Player.equipment.ServerBindItemHotkey(index, binding.GetAsset(k, player.GetTeam()), (byte)binding.Item.Page, binding.Item.X, binding.Item.Y);
+                        {
+                            byte x = binding.Item.X, y = binding.Item.Y;
+                            Page page = binding.Item.Page;
+                            foreach (ItemTransformation transformation in player.ItemTransformations)
+                            {
+                                if (transformation.OldPage == page && transformation.OldX == x && transformation.OldY == y)
+                                {
+                                    x = transformation.NewX;
+                                    y = transformation.NewY;
+                                    page = transformation.NewPage;
+                                    break;
+                                }
+                            }
+
+                            ItemAsset? asset = binding.GetAsset(k, player.GetTeam());
+                            if (asset != null && KitEx.CanBindHotkeyTo(asset, page))
+                                player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)page, x, y);
+                        }
                     }
                 }
             }
@@ -1178,8 +1195,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                             {
                                 if (Assets.find(req.QuestID) is QuestAsset quest)
                                 {
-                                    player.Player.quests.ServerAddQuest(quest);
-                                    QuestManager.CheckNeedsToUntrack(player);
+                                    QuestManager.TryAddQuest(player, quest);
                                 }
                                 else
                                 {
@@ -2086,7 +2102,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     }
     void IGameTickListener.Tick()
     {
-        if (Data.Gamemode.EveryMinute && Provider.clients.Count > 0)
+        if (Data.Gamemode != null && Data.Gamemode.EveryMinute && Provider.clients.Count > 0)
         {
             UCWarfare.RunTask(SaveAllPlayerFavorites, ctx: "Save all players' favorite kits.");
         }

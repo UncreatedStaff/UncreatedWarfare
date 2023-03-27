@@ -4,6 +4,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Squads;
+using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
@@ -100,8 +101,19 @@ public class SquadCommand : Command
             ctx.AssertHelpCheck(1, "/squad create (custom names for squads have been removed)");
             if (ctx.Caller.Squad is not null)
                 throw ctx.Reply(T.SquadAlreadyInSquad);
-            if (SquadManager.Squads.Count(x => x.Team == team) >= SquadManager.ListUI.Squads.Length)
+
+            int squadsCount = SquadManager.Squads.Count(x => x.Team == team);
+
+            if (squadsCount >= SquadManager.ListUI.Squads.Length)
                 throw ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
+
+            float friendlyCount = PlayerManager.OnlinePlayers.Count(p => p.GetTeam() == team);
+            int maxSquads = Mathf.CeilToInt((friendlyCount + 3) / Squad.SQUAD_MAX_MEMBERS);
+
+            int requiredTeammatesForMoreSquads = Squad.SQUAD_MAX_MEMBERS * maxSquads - 3 + 1;
+
+            if (squadsCount >= maxSquads)
+                throw ctx.Reply(T.SquadsTooManyPlayerCount, requiredTeammatesForMoreSquads);
 
             Squad squad = SquadManager.CreateSquad(ctx.Caller, team);
             ctx.Reply(T.SquadCreated, squad);
@@ -157,6 +169,20 @@ public class SquadCommand : Command
 
             if (playerId == ctx.CallerID)
                 throw ctx.Reply(T.PlayerNotFound);
+
+            if (!member.IsOnline)
+            {
+                if (PlayerSave.TryReadSaveFile(member.Steam64, out PlayerSave save))
+                {
+                    save.SquadName = string.Empty;
+                    save.SquadLeader = 0;
+                    save.SquadWasLocked = false;
+                    PlayerSave.WriteToSaveFile(save);
+                    throw ctx.Reply(T.SquadPlayerKicked, member);
+                }
+
+                throw ctx.Reply(T.PlayerNotFound);
+            }
 
             SquadManager.KickPlayerFromSquad(member, ctx.Caller.Squad);
             ctx.Defer();

@@ -248,7 +248,7 @@ public static class UCInventoryManager
             if (eq.asset != null)
             {
                 page = eq.equippedPage;
-                return eq.player.inventory.getItem(page, eq.player.inventory.getIndex(page, eq.equipped_x, eq.equipped_y)); ;
+                return eq.player.inventory.getItem(page, eq.player.inventory.getIndex(page, eq.equipped_x, eq.equipped_y));
             }
         }
 

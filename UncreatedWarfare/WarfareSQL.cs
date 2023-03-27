@@ -186,47 +186,39 @@ public class WarfareSQL : MySqlDatabase
             new Schema.Column(ColumnReportsTimestamp, SqlTypes.DATETIME),
             new Schema.Column(ColumnReportsMessage, SqlTypes.STRING_255),
         }, true, typeof(Report)),
-        new Schema(TableLevels, new Schema.Column[]
-        {
-            new Schema.Column(ColumnLevelsSteam64, SqlTypes.STEAM_64)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true
-            },
-            new Schema.Column(ColumnLevelsTeam, SqlTypes.ULONG),
-            new Schema.Column(ColumnLevelsExperience, SqlTypes.UINT)
-            {
-                Default = "'0'"
-            },
-            new Schema.Column(ColumnLevelsCredits, SqlTypes.UINT)
-            {
-                Default = "'" + Points.PointsConfig.StartingCredits.ToString(Data.AdminLocale) + "'"
-            }
-        }, true, null),
-        new Schema(TableStats, new Schema.Column[]
-        {
-            new Schema.Column(ColumnStatsSteam64, SqlTypes.STEAM_64)
-            {
-                PrimaryKey = true,
-                AutoIncrement = true
-            },
-            new Schema.Column(ColumnStatsTeam, SqlTypes.BYTE),
-            new Schema.Column(ColumnStatsKills, SqlTypes.UINT)
-            {
-                Nullable = true,
-                Default = "'0'"
-            },
-            new Schema.Column(ColumnStatsDeaths, SqlTypes.UINT)
-            {
-                Nullable = true,
-                Default = "'0'"
-            },
-            new Schema.Column(ColumnStatsTeamkills, SqlTypes.UINT)
-            {
-                Nullable = true,
-                Default = "'0'"
-            }
-        }, true, null),
+        // new Schema(TableLevels, new Schema.Column[]
+        // {
+        //     new Schema.Column(ColumnLevelsSteam64, SqlTypes.STEAM_64),
+        //     new Schema.Column(ColumnLevelsTeam, SqlTypes.ULONG),
+        //     new Schema.Column(ColumnLevelsExperience, SqlTypes.UINT)
+        //     {
+        //         Default = "'0'"
+        //     },
+        //     new Schema.Column(ColumnLevelsCredits, SqlTypes.UINT)
+        //     {
+        //         Default = "'" + Points.PointsConfig.StartingCredits.ToString(Data.AdminLocale) + "'"
+        //     }
+        // }, true, null),
+        // new Schema(TableStats, new Schema.Column[]
+        // {
+        //     new Schema.Column(ColumnStatsSteam64, SqlTypes.STEAM_64),
+        //     new Schema.Column(ColumnStatsTeam, SqlTypes.BYTE),
+        //     new Schema.Column(ColumnStatsKills, SqlTypes.UINT)
+        //     {
+        //         Nullable = true,
+        //         Default = "'0'"
+        //     },
+        //     new Schema.Column(ColumnStatsDeaths, SqlTypes.UINT)
+        //     {
+        //         Nullable = true,
+        //         Default = "'0'"
+        //     },
+        //     new Schema.Column(ColumnStatsTeamkills, SqlTypes.UINT)
+        //     {
+        //         Nullable = true,
+        //         Default = "'0'"
+        //     }
+        // }, true, null),
         new Schema(TableBans, new Schema.Column[]
         {
             new Schema.Column(ColumnBansPrimaryKey, SqlTypes.UINT)
@@ -404,7 +396,7 @@ public class WarfareSQL : MySqlDatabase
             {
                 Nullable = true
             },
-            new Schema.Column(ColumnTeamkillsItemName, SqlTypes.String(30))
+            new Schema.Column(ColumnTeamkillsItemName, SqlTypes.String(50))
             {
                 Nullable = true
             },
@@ -492,26 +484,6 @@ public class WarfareSQL : MySqlDatabase
             },
         }, true, null)
     };
-    public PlayerNames GetUsernames(ulong s64)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        PlayerNames name = default;
-        Query(
-            "SELECT `PlayerName`, `CharacterName`, `NickName` " +
-            "FROM `" + TableUsernames + "` " +
-            "WHERE `Steam64` = @0 LIMIT 1;",
-            new object[] { s64 },
-            reader =>
-            {
-                name = new PlayerNames() { Steam64 = s64, PlayerName = reader.GetString(0), CharacterName = reader.GetString(1), NickName = reader.GetString(2), WasFound = true };
-            });
-        if (name.WasFound)
-            return name;
-        string tname = s64.ToString(Data.AdminLocale);
-        return new PlayerNames { Steam64 = s64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
-    }
     public async Task<PlayerNames> GetUsernamesAsync(ulong s64, CancellationToken token = default)
     {
 #if DEBUG
@@ -595,6 +567,35 @@ public class WarfareSQL : MySqlDatabase
             report.Message ?? string.Empty
         }, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
+    }
+    public async Task TryInsertInitialRow(ulong player, CancellationToken token = default)
+    {
+        bool t1 = false, t2 = false;
+        await QueryAsync("SELECT `Team` FROM `" + TableLevels + "` WHERE `Steam64` = @0;",
+            new object[] { player },
+            reader =>
+            {
+                ulong team = reader.GetUInt64(0);
+                if (team == 1)
+                    t1 = true;
+                else if (team == 2)
+                    t2 = true;
+            }, token).ConfigureAwait(false);
+        if (t1 && t2)
+            return;
+        string q = "INSERT INTO `" + TableLevels + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES ";
+        if (!t1)
+        {
+            q += "(@0, 1, @1, 0)";
+            if (!t2)
+                q += ",";
+        }
+
+        if (!t2)
+            q += "(@0, 2, @1, 0)";
+        q += ";";
+        await NonQueryAsync(q, new object[] { player, Points.PointsConfig.StartingCredits }, token).ConfigureAwait(false);
+        L.Log("Initialized new rows for " + player + ".");
     }
     public async Task<(int, int)> GetCreditsAndXP(ulong player, ulong team, CancellationToken token = default)
     {

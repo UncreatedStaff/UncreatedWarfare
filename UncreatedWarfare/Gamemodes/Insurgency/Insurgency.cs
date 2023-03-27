@@ -585,6 +585,11 @@ public class Insurgency :
                 break;
             }
         }
+        if (AttackingTeam == 1)
+            TicketManager.Team1Tickets += Gamemode.Config.InsurgencyTicketsCache;
+        else if (AttackingTeam == 2)
+            TicketManager.Team2Tickets += Gamemode.Config.InsurgencyTicketsCache;
+
         TicketManager.UpdateUI(1);
         TicketManager.UpdateUI(2);
 
@@ -703,6 +708,10 @@ public class Insurgency :
         public bool CheckDeployableTick(UCPlayer player, bool chat) => ((IDeployable)Cache).CheckDeployableTick(player, chat);
         public void OnDeploy(UCPlayer player, bool chat) => ((IDeployable)Cache).OnDeploy(player, chat);
         float IDeployable.GetDelay() => ((IDeployable)Cache).GetDelay();
+        public void Destroy(bool authority)
+        {
+            FOBManager.CleanupFOB(this);
+        }
     }
 #region DEFAULT CACHE SPAWNS
     private static readonly KeyValuePair<string, SerializableTransform[]>[] DefaultCacheSpawns =
@@ -933,7 +942,10 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
     {
         if (Data.Is(out Insurgency ins) && ins.DefendingTeam == team)
-            throw new InvalidOperationException("Tried to change tickets of defending team during Insurgency.");
+        {
+            L.LogWarning("Tried to change tickets of defending team during Insurgency.");
+            return;
+        }
         if (oldValue > 0 && newValue <= 0)
             UCWarfare.RunTask(Data.Gamemode.DeclareWin, TeamManager.Other(team), default, ctx: "Lose game, attacker's tickets reached 0.");
     }

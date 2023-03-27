@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Quests;
 /// <summary>Stores information about a <see cref="Quests.QuestType"/> of quest. Isn't necessarily constant, some can have varients that are used for daily quests.
@@ -402,8 +404,8 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     {
         try
         {
-            if (_translationCache == null)
-                _translationCache = Translate(forAsset);
+            if (forAsset) return Translate(forAsset);
+            _translationCache ??= Translate(forAsset);
             return _translationCache ?? QuestData.QuestType.ToString();
         }
         catch (Exception ex)
@@ -433,7 +435,13 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     public void TellCompleted()
     {
         TellUpdated();
-        QuestManager.OnQuestCompleted(this);
+        CancellationToken tkn = UCWarfare.UnloadCancel;
+        UCWarfare.RunTask(async token =>
+        {
+            await Task.Delay(500, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
+            QuestManager.OnQuestCompleted(this);
+        }, tkn, ctx: "Compelte quest for " + Player + ".");
     }
     public void TellUpdated(bool skipFlagUpdate = false)
     {

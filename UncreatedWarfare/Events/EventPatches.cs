@@ -549,8 +549,6 @@ internal static class EventPatches
 
         __result = fg.IsInteractableEnabled(__instance);
         return false;
-
-        return true;
     }
     private static bool OnReceiveSwapShirtRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
         UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Shirt, pl, page, x, y);

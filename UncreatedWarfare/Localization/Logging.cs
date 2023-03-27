@@ -340,7 +340,7 @@ public static class L
         }
     }
     [Conditional("DEBUG")]
-    public static void LogDebug(string info, ConsoleColor color = ConsoleColor.DarkGray)
+    public static void LogDebug(string info, ConsoleColor color = ConsoleColor.Gray)
     {
         if (!UCWarfare.IsLoaded)
             LogAsLibrary("[DEBUG] " + info, color);
@@ -351,7 +351,7 @@ public static class L
     internal static void NetLogWarning(string message, ConsoleColor color) => LogWarning(message, color, method: "UncreatedNetworking");
     internal static void NetLogError(string message, ConsoleColor color) => LogError(message, color, method: "UncreatedNetworking");
     internal static void NetLogException(Exception ex) => LogError(ex, method: "UncreatedNetworking");
-    public static void Log(string info, ConsoleColor color = ConsoleColor.Gray)
+    public static void Log(string info, ConsoleColor color = ConsoleColor.White)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -550,42 +550,49 @@ public static class L
         if (!found)
             return orig;
 
-        // regex: \u001B\[[\d;]*m
-
-        int outpInd = 0;
-        char* outp = stackalloc char[l - 3];
-        fixed (char* chars = orig)
+        try
         {
-            int lastCpy = -1;
-            for (int i = 0; i < l - 2; ++i)
-            {
-                if (l > i + 3 && chars[i] == ConsoleEscapeCharacter && chars[i + 1] == '[' && char.IsDigit(chars[i + 2]))
-                {
-                    int st = i;
-                    int c = i + 3;
-                    for (; c < l; ++c)
-                    {
-                        if (chars[c] != ';' && !char.IsDigit(chars[c]))
-                        {
-                            if (chars[c] == 'm')
-                                i = c;
+            // regex: \u001B\[[\d;]*m
 
-                            break;
+            int outpInd = 0;
+            char* outp = stackalloc char[l - 3];
+            fixed (char* chars = orig)
+            {
+                int lastCpy = -1;
+                for (int i = 0; i < l - 2; ++i)
+                {
+                    if (l > i + 3 && chars[i] == ConsoleEscapeCharacter && chars[i + 1] == '[' && char.IsDigit(chars[i + 2]))
+                    {
+                        int st = i;
+                        int c = i + 3;
+                        for (; c < l; ++c)
+                        {
+                            if (chars[c] != ';' && !char.IsDigit(chars[c]))
+                            {
+                                if (chars[c] == 'm')
+                                    i = c;
+
+                                break;
+                            }
+
+                            i = c;
                         }
 
-                        i = c;
+                        Buffer.MemoryCopy(chars + lastCpy + 1, outp + outpInd, (l - outpInd) * sizeof(char), (st - lastCpy - 1) * sizeof(char));
+                        outpInd += st - lastCpy - 1;
+                        lastCpy += st - lastCpy + (c - st);
                     }
-
-                    Buffer.MemoryCopy(chars + lastCpy + 1, outp + outpInd, (l - outpInd) * sizeof(char), (st - lastCpy - 1) * sizeof(char));
-                    outpInd += st - lastCpy - 1;
-                    lastCpy += st - lastCpy + (c - st);
                 }
+                Buffer.MemoryCopy(chars + lastCpy + 1, outp + outpInd, (l - outpInd) * sizeof(char), (l - lastCpy) * sizeof(char));
+                outpInd += l - lastCpy;
             }
-            Buffer.MemoryCopy(chars + lastCpy + 1, outp + outpInd, (l - outpInd) * sizeof(char), (l - lastCpy) * sizeof(char));
-            outpInd += l - lastCpy;
-        }
 
-        return new string(outp, 0, outpInd - 1);
+            return new string(outp, 0, outpInd - 1);
+        }
+        catch
+        {
+            return orig;
+        }
     }
 
     public static class NetCalls

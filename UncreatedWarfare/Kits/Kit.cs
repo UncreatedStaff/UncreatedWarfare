@@ -237,14 +237,18 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
 
         return true;
     }
-    public string GetDisplayName(string language = L.Default)
+    public string GetDisplayName(string language = L.Default, bool removeNewLine = true)
     {
         if (SignText is null) return Id;
+        string rtn;
         if (SignText.TryGetValue(language, out string val))
-            return val ?? Id;
-        if (SignText.Count > 0)
-            return SignText.FirstOrDefault().Value ?? Id;
-        return Id;
+            rtn = val ?? Id;
+        else if (SignText.Count > 0)
+            rtn = SignText.FirstOrDefault().Value ?? Id;
+        else rtn = Id;
+        if (removeNewLine)
+            rtn = rtn.Replace('\n', ' ').Replace("\r", string.Empty);
+        return rtn;
     }
     public void Write(ByteWriter writer)
     {
@@ -1109,8 +1113,7 @@ public class QuestUnlockRequirement : UnlockRequirement
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {
-            ctx.Caller.Player.quests.ServerAddQuest(asset);
-            QuestManager.CheckNeedsToUntrack(ctx.Caller);
+            QuestManager.TryAddQuest(ctx.Caller, asset);
             return ctx.Reply(T.RequestKitQuestIncomplete, asset);
         }
         return ctx.Reply(T.RequestKitQuestIncomplete, null!);
@@ -1119,8 +1122,7 @@ public class QuestUnlockRequirement : UnlockRequirement
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {
-            ctx.Caller.Player.quests.ServerAddQuest(asset);
-            QuestManager.CheckNeedsToUntrack(ctx.Caller);
+            QuestManager.TryAddQuest(ctx.Caller, asset);
             return ctx.Reply(T.RequestVehicleQuestIncomplete, asset);
         }
         return ctx.Reply(T.RequestVehicleQuestIncomplete, null!);
@@ -1129,8 +1131,7 @@ public class QuestUnlockRequirement : UnlockRequirement
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {
-            ctx.Caller.Player.quests.ServerAddQuest(asset);
-            QuestManager.CheckNeedsToUntrack(ctx.Caller);
+            QuestManager.TryAddQuest(ctx.Caller, asset);
             return ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
         }
         return ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);

@@ -144,7 +144,7 @@ public static class Data
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
     internal static StaticGetter<uint> GetItemManagerInstanceCount;
-    internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
+    internal static Action<Vector3, Vector3, string, Transform?, IEnumerable<ITransportConnection>>? ServerSpawnLegacyImpact;
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
     [OperationTest(DisplayName = "Fast Kits Check")]
@@ -353,9 +353,9 @@ public static class Data
         try
         {
             ServerSpawnLegacyImpact = 
-                (Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>?)typeof(DamageTool)
+                (Action<Vector3, Vector3, string, Transform?, IEnumerable<ITransportConnection>>?)typeof(DamageTool)
                     .GetMethod("ServerSpawnLegacyImpact", BindingFlags.Static | BindingFlags.NonPublic)?
-                    .CreateDelegate(typeof(Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>));
+                    .CreateDelegate(typeof(Action<Vector3, Vector3, string, Transform?, IEnumerable<ITransportConnection>>));
         }
         catch (Exception ex)
         {
@@ -381,6 +381,7 @@ public static class Data
         {
             L.LogWarning("Couldn't get Get from TransportConnectionListPool, list pooling will not be used (" + ex.Message + ").");
         }
+
         indent.Dispose();
 
         /* REGISTER STATS MANAGER */
@@ -425,7 +426,7 @@ public static class Data
                 L.LogError(ex);
                 if (ex2 != null)
                     throw new AggregateException("Unable to create pooled transport connection!", ex2, ex);
-                
+
                 throw new Exception("Unable to create pooled transport connection!", ex);
             }
         }
@@ -435,28 +436,7 @@ public static class Data
     public static PooledTransportConnectionList GetPooledTransportConnectionList(IEnumerable<ITransportConnection> selector, int capacity = -1)
     {
         PooledTransportConnectionList rtn = GetPooledTransportConnectionList(capacity);
-        if (selector is IList<ITransportConnection> list)
-        {
-            for (int i = 0; i < list.Count; ++i)
-            {
-                rtn.Add(list[i]);
-            }
-        }
-        else if (selector is ITransportConnection[] array)
-        {
-            for (int i = 0; i < array.Length; ++i)
-            {
-                rtn.Add(array[i]);
-            }
-        }
-        else
-        {
-            foreach (ITransportConnection conn in selector)
-            {
-                rtn.Add(conn);
-            }
-        }
-
+        rtn.AddRange(selector);
         return rtn;
     }
     internal static void RegisterInitialSyncs()

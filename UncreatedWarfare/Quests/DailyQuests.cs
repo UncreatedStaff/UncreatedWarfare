@@ -12,8 +12,6 @@ using Uncreated.Framework;
 using Uncreated.Framework.Quests;
 using Uncreated.Json;
 using Uncreated.Networking;
-using Uncreated.Players;
-using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -68,7 +66,9 @@ public static class DailyQuests
             _needsCreate = false;
         }
         else
+        {
             ReplicateQuestChoices();
+        }
 
         ref DailyQuestSave next = ref _quests[_index + 1];
         _nextRefresh = next.StartDate;
@@ -80,7 +80,6 @@ public static class DailyQuests
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                 RegisterDailyTrackers(PlayerManager.OnlinePlayers[i]);
         }
-        LoadAssets();
 
         Teams.TeamSelector.OnPlayerSelected += OnPlayerJoinedTeam;
     }
@@ -106,11 +105,9 @@ public static class DailyQuests
     }
     private static void OnAbandonedQuest(PlayerQuests __instance, Guid assetGuid)
     {
-        if (Assets.find(assetGuid) is QuestAsset qa)
-        {
-            __instance.ServerAddQuest(qa);
-            QuestManager.CheckNeedsToUntrack(UCPlayer.FromPlayer(__instance.player));
-        }
+        UCPlayer? player = UCPlayer.FromPlayer(__instance.player);
+        if (player != null)
+            QuestManager.TryAddQuest(player, assetGuid);
     }
     internal static void CheckTrackQuestsOption(UCPlayer player)
     {
@@ -283,7 +280,7 @@ public static class DailyQuests
                 pset.Type = data.QuestType;
                 cond.FlagId = preset.Flag;
                 cond.FlagValue = checked((short)val);
-                cond.Translation = tempTracker.GetDisplayString(true);
+                cond.Translation = tempTracker.GetDisplayString(true) ?? string.Empty;
                 cond.Key = preset.Key;
                 foreach (XPReward reward in tempTracker.Rewards.OfType<XPReward>())
                     xp += reward.XP;
@@ -317,7 +314,10 @@ public static class DailyQuests
             {
                 QuestManager.RegisterTracker(tracker);
                 tracker.IsDailyQuest = true;
+                tracker.Flag = _quests[_index].Presets[i].PresetObj.Flag;
                 trackers[i] = tracker;
+                if (tracker.IsCompleted)
+                    QuestManager.DeregisterTracker(tracker);
                 L.LogDebug("Registered " + tracker.QuestData.QuestType + " tracker for " + player.CharacterName);
             }
             else
@@ -336,8 +336,7 @@ public static class DailyQuests
         }
         if (Assets.find(save.Guid) is QuestAsset quest)
         {
-            player.Player.quests.ServerAddQuest(quest);
-            QuestManager.CheckNeedsToUntrack(player);
+            QuestManager.TryAddQuest(player, quest);
             L.LogDebug("Sent quest " + quest.name + " / " + quest.id.ToString(Data.AdminLocale) + " to " + player.CharacterName);
         }
         else
@@ -350,6 +349,7 @@ public static class DailyQuests
             BaseQuestTracker tr3 = tr.Trackers[i];
             if (tr3.Flag != 0)
                 player.Player.quests.sendSetFlag(tr3.Flag, tr3.FlagValue);
+            else L.LogWarning("Invalid flag or quest " + tr3.QuestData.QuestType + ": " + tr3.Flag);
         }
         if (DailyTrackers.TryGetValue(player.Steam64, out DailyQuestTracker tr2))
         {
@@ -402,7 +402,8 @@ public static class DailyQuests
         }
         else
             L.LogWarning("Player " + tracker.Player.Steam64 + " is missing their entry in DailyTrackers dictionary!");
-        tracker.Player.SendString("<#e4a399>Daily Quest updated: <#cdcec0>" + tracker.GetDisplayString());
+        if (tracker.QuestData.QuestType is not QuestType.TransportPlayers or QuestType.DriveDistance or QuestType.XPInGamemode)
+            tracker.Player.SendString("<#e4a399>Daily Quest updated: <#cdcec0>" + tracker.GetDisplayString());
     }
     /// <summary>Runs every day, creates the daily quests for the day.</summary>
     public static void CreateNewDailyQuests()
@@ -433,10 +434,23 @@ public static class DailyQuests
     }
     public static void ReplicateQuestChoices()
     {
-        if (UCWarfare.CanUseNetCall)
-            NetCalls.SendNextQuests.NetInvoke(_sendQuests, _quests[0].StartDate.ToUniversalTime());
-        else
-            L.Log("Scheduled to send " + _sendQuests.Length + " daily quests once the bot connects.", ConsoleColor.Magenta);
+        LoadAssets();
+        bool needsSend = false;
+        for (int i = 0; i < DailyQuest.DAILY_QUEST_LENGTH; ++i)
+        {
+            if (Assets.find(_quests[i].Guid) is not QuestAsset)
+            {
+                needsSend = true;
+                break;
+            }
+        }
+        if (needsSend)
+        {
+            if (UCWarfare.CanUseNetCall)
+                NetCalls.SendNextQuests.NetInvoke(_sendQuests, _quests[0].StartDate.ToUniversalTime());
+            else
+                L.Log("Scheduled to send " + _sendQuests.Length + " daily quests once the bot connects.", ConsoleColor.Magenta);
+        }
     }
     public static void SaveQuests()
     {
@@ -612,7 +626,7 @@ public static class DailyQuests
                                                                                                 if (tempTracker != null)
                                                                                                 {
                                                                                                     cond.FlagValue = checked((short)preset.PresetObj.State.FlagValue.InsistValue());
-                                                                                                    cond.Translation = tempTracker.GetDisplayString(true);
+                                                                                                    cond.Translation = tempTracker.GetDisplayString(true) ?? string.Empty;
                                                                                                     cond.Key = preset.PresetObj.Key;
                                                                                                     cond.FlagId = preset.PresetObj.Flag;
                                                                                                     for (int r = 0; r < tempTracker.Rewards.Length; ++r)

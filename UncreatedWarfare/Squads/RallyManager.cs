@@ -150,10 +150,7 @@ public class RallyPoint : MonoBehaviour
         IsDeploying = false;
         NearestLocation = F.GetClosestLocationName(transform.position);
         SecondsLeft = 0;
-
-        foreach (UCPlayer member in Squad.Members)
-            member.SendChat(T.RallyActiveSL);
-
+        Squad.Leader?.SendChat(T.RallyActiveSL);
         ShowUIForSquad();
     }
 
@@ -168,11 +165,16 @@ public class RallyPoint : MonoBehaviour
         
         foreach (var player in AwaitingPlayers)
         {
+            if (!player.IsOnline)
+                break;
             SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUITimer.Translate(player, secondsLeft >= 0 ? seconds : TimeSpan.Zero, NearestLocation));
         }
     }
     public void ShowUIForPlayer(UCPlayer player)
     {
+        if (!player.IsOnline)
+            return;
+
         SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUI.Translate(player, NearestLocation));
     }
     public void ShowUIForSquad()
@@ -182,6 +184,9 @@ public class RallyPoint : MonoBehaviour
     }
     public void ClearUIForPlayer(UCPlayer player)
     {
+        if (!player.IsOnline)
+            return;
+
         SquadManager.RallyUI.ClearFromPlayer(player.Connection);
     }
     public void ClearUIForSquad ()

@@ -64,7 +64,7 @@ public static class TeamManager
             {
                 { LanguageAliasSet.RUSSIAN, "США" },
                 { LanguageAliasSet.ROMANIAN, "Statele Unite ale Americi" },
-                { LanguageAliasSet.SWEEDISH, "Förenta Staterna" },
+                { LanguageAliasSet.SWEDISH, "Förenta Staterna" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "美利坚合众国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
@@ -96,20 +96,20 @@ public static class TeamManager
             {
                 { LanguageAliasSet.RUSSIAN, "РОССИЯ" },
                 { LanguageAliasSet.ROMANIAN, "Rusia" },
-                { LanguageAliasSet.SWEEDISH, "Ryssland" },
+                { LanguageAliasSet.SWEDISH, "Ryssland" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "俄罗斯联邦" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.RUSSIAN, "РОССИЯ" },
                 { LanguageAliasSet.ROMANIAN, "Rusia" },
-                { LanguageAliasSet.SWEEDISH, "Ryssland" },
+                { LanguageAliasSet.SWEDISH, "Ryssland" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "俄罗斯" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.RUSSIAN, "РФ" },
-                { LanguageAliasSet.SWEEDISH, "RY" },
+                { LanguageAliasSet.SWEDISH, "RY" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "俄国" }
             },
             TMProSpriteIndex = 2,
@@ -132,21 +132,21 @@ public static class TeamManager
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Coalitia Orientului Mijlociu" },
-                { LanguageAliasSet.SWEEDISH, "Mellanöstern Koalition" },
+                { LanguageAliasSet.SWEDISH, "Mellanöstern Koalition" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "中东联盟" },
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "MK" },
+                { LanguageAliasSet.SWEDISH, "MK" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "中东国" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "MK" },
+                { LanguageAliasSet.SWEDISH, "MK" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "中东" }
             },
         },
-        new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/lgrkCdY.png")
+        new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/91Apxc5.png")
         {
             PrimaryKey = 4,
             Build = "35eabf178e4e4d82aac34fcbf8e690e3",
@@ -163,18 +163,18 @@ public static class TeamManager
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Germania" },
-                { LanguageAliasSet.SWEEDISH, "Tyskland" },
+                { LanguageAliasSet.SWEDISH, "Tyskland" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "德意志联邦共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Germania" },
-                { LanguageAliasSet.SWEEDISH, "Tyskland" },
+                { LanguageAliasSet.SWEDISH, "Tyskland" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "德意志国" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "TY" },
+                { LanguageAliasSet.SWEDISH, "TY" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "德国" }
             }
         },
@@ -194,17 +194,17 @@ public static class TeamManager
             Emoji = "🇨🇳",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "Kina" },
+                { LanguageAliasSet.SWEDISH, "Kina" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "中华人民共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "Kina" },
+                { LanguageAliasSet.SWEDISH, "Kina" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "中国" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "KN" },
+                { LanguageAliasSet.SWEDISH, "KN" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "中国" }
             }
         },
@@ -222,17 +222,17 @@ public static class TeamManager
             Emoji = "989069549817171978|989032657834885150",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "US Marinkår" },
+                { LanguageAliasSet.SWEDISH, "US Marinkår" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "美利坚合众国海军陆战队" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "U.S.M." },
+                { LanguageAliasSet.SWEDISH, "U.S.M." },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "海军陆战队" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "USM" },
+                { LanguageAliasSet.SWEDISH, "USM" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "海军陆战队" }
             }
         },
@@ -249,18 +249,18 @@ public static class TeamManager
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Sovietic" },
-                { LanguageAliasSet.SWEEDISH, "Sovjet" },
+                { LanguageAliasSet.SWEDISH, "Sovjet" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "苏维埃社会主义共和国联盟" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Sovietic" },
-                { LanguageAliasSet.SWEEDISH, "Sovjet" },
+                { LanguageAliasSet.SWEDISH, "Sovjet" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "苏联" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "SOV" },
+                { LanguageAliasSet.SWEDISH, "SOV" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "苏联" }
             }
         },
@@ -278,18 +278,18 @@ public static class TeamManager
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Polonia" },
-                { LanguageAliasSet.SWEEDISH, "Polen" },
+                { LanguageAliasSet.SWEDISH, "Polen" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "波兰共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Polonia" },
-                { LanguageAliasSet.SWEEDISH, "Polen" },
+                { LanguageAliasSet.SWEDISH, "Polen" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "波兰" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "PL" },
+                { LanguageAliasSet.SWEDISH, "PL" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "波兰" }
             }
         },
@@ -300,13 +300,13 @@ public static class TeamManager
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Militie" },
-                { LanguageAliasSet.SWEEDISH, "Milis" },
+                { LanguageAliasSet.SWEDISH, "Milis" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "民兵组织" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Militie" },
-                { LanguageAliasSet.SWEEDISH, "Milis" },
+                { LanguageAliasSet.SWEDISH, "Milis" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "民兵" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
@@ -328,18 +328,18 @@ public static class TeamManager
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Forta de aparare a Israelului" },
-                { LanguageAliasSet.SWEEDISH, "Israelsk Försvarsmakt" },
+                { LanguageAliasSet.SWEDISH, "Israelsk Försvarsmakt" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "以色列国防军" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "IDF" },
-                { LanguageAliasSet.SWEEDISH, "IF" },
+                { LanguageAliasSet.SWEDISH, "IF" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "以色列" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "IF" },
+                { LanguageAliasSet.SWEDISH, "IF" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "以色列" }
             }
         },
@@ -356,18 +356,18 @@ public static class TeamManager
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Franta" },
-                { LanguageAliasSet.SWEEDISH, "Frankrike" },
+                { LanguageAliasSet.SWEDISH, "Frankrike" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "法兰西共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Franta" },
-                { LanguageAliasSet.SWEEDISH, "Frankrike" },
+                { LanguageAliasSet.SWEDISH, "Frankrike" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "法兰西" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "FR" },
+                { LanguageAliasSet.SWEDISH, "FR" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "法国" }
             }
         },
@@ -385,18 +385,18 @@ public static class TeamManager
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Forta armata canadiene" },
-                { LanguageAliasSet.SWEEDISH, "Kanadas Försvarsmakt" },
+                { LanguageAliasSet.SWEDISH, "Kanadas Försvarsmakt" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "加拿大军队" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Canada" },
-                { LanguageAliasSet.SWEEDISH, "Kanada" },
+                { LanguageAliasSet.SWEDISH, "Kanada" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "加拿大" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "KF" },
+                { LanguageAliasSet.SWEDISH, "KF" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "加拿大" }
             }
         },
@@ -414,13 +414,13 @@ public static class TeamManager
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Africa de Sud" },
-                { LanguageAliasSet.SWEEDISH, "Sydafrika" },
+                { LanguageAliasSet.SWEDISH, "Sydafrika" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "南非共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "S. Africa" },
-                { LanguageAliasSet.SWEEDISH, "S. Afrika" },
+                { LanguageAliasSet.SWEDISH, "S. Afrika" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "南非" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
@@ -441,18 +441,18 @@ public static class TeamManager
             NameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Mozambic" },
-                { LanguageAliasSet.SWEEDISH, "Mocambique" },
+                { LanguageAliasSet.SWEDISH, "Mocambique" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "莫桑比克共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
                 { LanguageAliasSet.ROMANIAN, "Mozambic" },
-                { LanguageAliasSet.SWEEDISH, "Mocambique" },
+                { LanguageAliasSet.SWEDISH, "Mocambique" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "莫桑比克" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEEDISH, "MC" },
+                { LanguageAliasSet.SWEDISH, "MC" },
                 { LanguageAliasSet.CHINESE_SIMPLIFIED, "莫桑比克" }
             }
         }

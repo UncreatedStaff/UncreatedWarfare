@@ -457,15 +457,13 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         if (Squads.SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset effect))
         {
             double sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
-            PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(
-                Medics.Where(x =>
-                {
-                    if (x.GetTeam() != team)
-                        return false;
-                    float sqr = (x.Position - position).sqrMagnitude;
-                    return sqr > 1 && sqr <= sqrmLimit;
-                }).Select(x => x.Player.channel.owner.transportConnection), Provider.clients.Count);
-            F.TriggerEffectReliable(effect, list, position);
+            F.TriggerEffectReliable(effect, Data.GetPooledTransportConnectionList(Medics.Where(x =>
+            {
+                if (x.GetTeam() != team)
+                    return false;
+                float sqr = (x.Position - position).sqrMagnitude;
+                return sqr > 1 && sqr <= sqrmLimit;
+            }).Select(x => x.Player.channel.owner.transportConnection)), position);
         }
     }
     public void SpawnInjuredMarkers(IEnumerable<UCPlayer> players, IEnumerable<Vector3> positions, bool dispose, bool clearAll)

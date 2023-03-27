@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.Levels;
 
 public sealed class Points : BaseSingletonComponent, IUIListener
 {
-    private const string UpdateAllPointsQuery = "SELECT `Steam64`, `Team`, `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` in (";
+    private static readonly string UpdateAllPointsQuery = "SELECT `Steam64`, `Team`, `Experience`, `Credits` FROM `" + WarfareSQL.TableLevels + "` WHERE `Steam64` in (";
 
     public static readonly XPUI XPUI;
     public static readonly CreditsUI CreditsUI;
@@ -54,6 +54,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     {
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.VehicleDestroyed += OnVehicleDestoryed;
+        EventDispatcher.PlayerPendingAsync += OnPlayerPendingAsync;
         KitManager.OnKitChanged += OnKitChanged;
         EventDispatcher.PlayerLeaving += OnPlayerLeft;
         if (!_first) ReloadConfig();
@@ -63,8 +64,24 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     {
         EventDispatcher.PlayerLeaving -= OnPlayerLeft;
         KitManager.OnKitChanged -= OnKitChanged;
+        EventDispatcher.PlayerPendingAsync -= OnPlayerPendingAsync;
         EventDispatcher.VehicleDestroyed -= OnVehicleDestoryed;
         EventDispatcher.GroupChanged -= OnGroupChanged;
+    }
+    private async Task OnPlayerPendingAsync(PlayerPending e, CancellationToken token)
+    {
+        Task? t1 = null;
+        Task? t2 = null;
+        if (Data.DatabaseManager != null)
+        {
+            t1 = Data.DatabaseManager.TryInsertInitialRow(e.Steam64, token);
+        }
+        if (Data.RemoteSQL != null)
+        {
+            t2 = Data.RemoteSQL.TryInsertInitialRow(e.Steam64, token);
+        }
+        if (t1 != null) await t1.ConfigureAwait(false);
+        if (t2 != null) await t2.ConfigureAwait(false);
     }
     public static void ReloadConfig()
     {
@@ -538,21 +555,24 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             if (player is { IsOnline: true })
             {
                 player.PointsDirtyMask |= 0b00000001;
-                if (player.Level.Level > oldLevel.Level)
+                if (!player.HasUIHidden && !Data.Gamemode.LeaderboardUp())
                 {
-                    ToastMessage.QueueMessage(player,
-                        new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Level.Name.ToUpper(),
-                            ToastMessageSeverity.Big));
-                    player.PointsDirtyMask |= 0b00000010;
-                    Signs.UpdateAllSigns(player);
-                }
-                else if (player.Level.Level < oldLevel.Level)
-                {
-                    ToastMessage.QueueMessage(player,
-                        new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Level.Name.ToUpper(),
-                            ToastMessageSeverity.Big));
-                    player.PointsDirtyMask |= 0b00000010;
-                    Signs.UpdateAllSigns(player);
+                    if (player.Level.Level > oldLevel.Level)
+                    {
+                        ToastMessage.QueueMessage(player,
+                            new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Level.Name.ToUpper(),
+                                ToastMessageSeverity.Big));
+                        player.PointsDirtyMask |= 0b00000010;
+                        Signs.UpdateAllSigns(player);
+                    }
+                    else if (player.Level.Level < oldLevel.Level)
+                    {
+                        ToastMessage.QueueMessage(player,
+                            new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Level.Name.ToUpper(),
+                                ToastMessageSeverity.Big));
+                        player.PointsDirtyMask |= 0b00000010;
+                        Signs.UpdateAllSigns(player);
+                    }
                 }
 
                 XPUI.Update(player, false);
@@ -692,7 +712,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     uint t1Cd = 0;
                     uint t2Cd = 0;
                     await Data.DatabaseManager.QueryAsync(
-                        "SELECT `Experience`, `Credits`, `Team` FROM `s2_levels` WHERE `Steam64` = @0 LIMIT 2;",
+                        "SELECT `Experience`, `Credits`, `Team` FROM `" + WarfareSQL.TableLevels + "` WHERE `Steam64` = @0 LIMIT 2;",
                         new object[] { caller.Steam64 },
                         reader =>
                         {
@@ -709,7 +729,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                             }
                         });
                     await Data.RemoteSQL.NonQueryAsync(
-                        "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Experience`, `Credits`) VALUES (@0, 1, @1, @2), (@0, 2, @3, @4) AS vals " +
+                        "INSERT INTO `" + WarfareSQL.TableLevels + "` (`Steam64`, `Team`, `Experience`, `Credits`) VALUES (@0, 1, @1, @2), (@0, 2, @3, @4) AS vals " +
                         "ON DUPLICATE KEY UPDATE `Experience` = vals.Experience, `Credits` = vals.Credits;",
                         new object[] { caller.Steam64, t1Xp, t1Cd, t2Xp, t2Cd }).ConfigureAwait(false);
                 }
@@ -836,7 +856,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 if (Data.RemoteSQL != null && Data.RemoteSQL.Opened)
                 {
                     t2 = Data.RemoteSQL.QueryAsync(
-                        "SELECT `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
+                        "SELECT `Experience`, `Credits` FROM `" + WarfareSQL.TableLevels + "` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
                         new object[] { caller.Steam64, team },
                         reader =>
                         {
@@ -847,7 +867,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 }
 
                 await Data.DatabaseManager.QueryAsync(
-                    "SELECT `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
+                    "SELECT `Experience`, `Credits` FROM `" + WarfareSQL.TableLevels + "` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
                     new object[] { caller.Steam64, team },
                     reader =>
                     {
@@ -889,12 +909,15 @@ public sealed class Points : BaseSingletonComponent, IUIListener
 
                     if (target != null && target.Opened)
                         await target.NonQueryAsync(
-                            "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Experience`, `Credits`) VALUES (@0, @1, @2, @3) ON DUPLICATE KEY UPDATE `Experience` = @2, `Credits` = @3;",
+                            "INSERT INTO `" + WarfareSQL.TableLevels + "` (`Steam64`, `Team`, `Experience`, `Credits`) VALUES (@0, @1, @2, @3) ON DUPLICATE KEY UPDATE `Experience` = @2, `Credits` = @3;",
                             new object[] { caller.Steam64, team, xp, cd }, token).ConfigureAwait(false);
                 }
 
                 if (!found && !found2)
-                    return;
+                {
+                    xp = 0;
+                    cd = (uint)PointsConfig.StartingCredits;
+                }
                 caller.UpdatePoints(xp, cd);
             }
         }
@@ -1186,6 +1209,7 @@ public class PointsConfig : JSONConfigData
 
     public override void SetDefaults()
     {
+        StartingCredits = 500;
         ProgressBlockCharacter = '█';
         XPData = new Dictionary<XPReward, XPRewardData>(35)
         {
@@ -1265,7 +1289,7 @@ public class PointsConfig : JSONConfigData
             { XPReward.BunkerBuilt, new XPRewardData(100, DefaultCreditPercentage * 1.5f) },
             { XPReward.Resupply, new XPRewardData(20, DefaultCreditPercentage) },
             { XPReward.RepairVehicle, new XPRewardData(3, DefaultCreditPercentage) },
-            { XPReward.UnloadSupplies, new XPRewardData(20, DefaultCreditPercentage) },
+            { XPReward.UnloadSupplies, new XPRewardData(10, DefaultCreditPercentage) },
             { XPReward.FriendlyFortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
             { XPReward.FortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
             { XPReward.FriendlyBuildableDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount

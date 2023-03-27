@@ -10,7 +10,9 @@ using System.Text.RegularExpressions;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 // ReSharper disable InconsistentNaming
@@ -177,20 +179,25 @@ public static partial class Patches
                 int len = 40 - name.Length;
                 if (len > 0)
                     name += new string(' ', len);
+#if DEBUG
+                const ConsoleColor color = ConsoleColor.DarkGray;
+#else
+                const ConsoleColor color = ConsoleColor.Gray;
+#endif
                 switch (mode)
                 {
                     case EChatMode.GLOBAL:
-                        L.Log($"[ALL]  {name} \"{text}\"", ConsoleColor.DarkGray);
+                        L.Log($"[ALL]  {name} \"{text}\"", color);
                         if (ShouldLog(text))
                             ActionLog.Add(ActionLogType.ChatGlobal, text, callingPlayer.playerID.steamID.m_SteamID);
                         break;
                     case EChatMode.LOCAL:
-                        L.Log($"[A/S]  {name} \"{text}\"", ConsoleColor.DarkGray);
+                        L.Log($"[A/S]  {name} \"{text}\"", color);
                         if (ShouldLog(text))
                             ActionLog.Add(ActionLogType.ChatAreaOrSquad, text, callingPlayer.playerID.steamID.m_SteamID);
                         break;
                     case EChatMode.GROUP:
-                        L.Log($"[TEAM] {name} \"{text}\"", ConsoleColor.DarkGray);
+                        L.Log($"[TEAM] {name} \"{text}\"", color);
                         if (ShouldLog(text))
                             ActionLog.Add(ActionLogType.ChatGroup, text, callingPlayer.playerID.steamID.m_SteamID);
                         break;

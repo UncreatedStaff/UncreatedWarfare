@@ -848,12 +848,28 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                             IsOwnerInVehicle(e.Vehicle, owner) ||
                             (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) ||
                             (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
-                            (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(e.Vehicle.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
+                            (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(e.Vehicle.transform.position, EFobRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
 
                         if (!canEnterDriverSeat)
                         {
-                            if (owner is null || owner.Squad is null)
-                                e.Player.SendChat(T.VehicleWaitForOwner, owner ?? new OfflinePlayer(e.Vehicle.lockedOwner.m_SteamID) as IPlayer);
+                            if (owner?.Squad is null)
+                            {
+                                OfflinePlayer pl = new OfflinePlayer(e.Vehicle.lockedOwner.m_SteamID);
+                                if (owner != null || pl.TryCacheLocal())
+                                {
+                                    e.Player.SendChat(T.VehicleWaitForOwner, owner ?? pl as IPlayer);
+                                }
+                                else
+                                {
+                                    UCWarfare.RunTask(async token =>
+                                    {
+                                        OfflinePlayer pl2 = pl;
+                                        await pl2.CacheUsernames(token).ConfigureAwait(false);
+                                        await UCWarfare.ToUpdate(token);
+                                        e.Player.SendChat(T.VehicleWaitForOwner, pl);
+                                    }, UCWarfare.UnloadCancel);
+                                }
+                            }
                             else
                                 e.Player.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
                             e.Break();
@@ -1116,6 +1132,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         public SpawnEnumerator(PrimaryKey data, VehicleSpawner spawner)
         {
             _data = data;
+            _index = -1;
             _spawner = spawner;
         }
         public void Dispose()
@@ -1135,7 +1152,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                 _spawner.WriteWait();
                 _ran = true;
             }
-            for (int i = _index; i < _spawner.Items.Count; ++i)
+            for (int i = _index + 1; i < _spawner.Items.Count; ++i)
             {
                 if (_spawner.Items[i].Item is { } v && v.VehicleKey.Key == _data.Key)
                 {
@@ -1143,17 +1160,15 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                     return true;
                 }
             }
-            if (!_disposed)
-            {
-                _spawner.WriteRelease();
-                --_uses;
-                _disposed = true;
-            }
+            
+            Dispose();
             return false;
         }
         public void Reset()
         {
             _index = 0;
+            _disposed = false;
+            _ran = false;
         }
 
         public IEnumerator<SqlItem<VehicleSpawn>> GetEnumerator() => ++_uses == 1 ? this : (SpawnEnumerator)this.Clone();
