@@ -882,68 +882,80 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             UCPlayer? owner = UCPlayer.FromCSteamID(e.Vehicle.lockedOwner);
             VehicleData? data = c.Data?.Item;
             if (data != null &&
-                data.CrewSeats.ArrayContains(e.FinalSeat) &&
                 data.RequiredClass != Class.None) // vehicle requires crewman or pilot
             {
-                if (e.Player.KitClass == data.RequiredClass || e.Player.OnDuty())
+                if (data.CrewSeats.ArrayContains(e.FinalSeat)) // seat is for crewman only
                 {
-                    if (e.FinalSeat == 0) // if a crewman is trying to enter the driver's seat
+                    if ((e.Player.KitClass == data.RequiredClass) || e.Player.OnDuty())
                     {
-                        bool canEnterDriverSeat = owner == null ||
-                            e.Player == owner ||
-                            e.Player.OnDuty() ||
-                            IsOwnerInVehicle(e.Vehicle, owner) ||
-                            (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) ||
-                            (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
-                            (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(e.Vehicle.transform.position, EFobRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
-
-                        if (!canEnterDriverSeat)
+                        if (e.FinalSeat == 0) // if a crewman is trying to enter the driver's seat
                         {
-                            if (owner?.Squad is null)
+                            bool canEnterDriverSeat = owner == null ||
+                                e.Player == owner ||
+                                e.Player.OnDuty() ||
+                                IsOwnerInVehicle(e.Vehicle, owner) ||
+                                (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) ||
+                                (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
+                                (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(e.Vehicle.transform.position, EFobRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
+
+                            if (!canEnterDriverSeat)
                             {
-                                OfflinePlayer pl = new OfflinePlayer(e.Vehicle.lockedOwner.m_SteamID);
-                                if (owner != null || pl.TryCacheLocal())
+                                if (owner?.Squad is null)
                                 {
-                                    e.Player.SendChat(T.VehicleWaitForOwner, owner ?? pl as IPlayer);
+                                    OfflinePlayer pl = new OfflinePlayer(e.Vehicle.lockedOwner.m_SteamID);
+                                    if (owner != null || pl.TryCacheLocal())
+                                    {
+                                        e.Player.SendChat(T.VehicleWaitForOwner, owner ?? pl as IPlayer);
+                                    }
+                                    else
+                                    {
+                                        UCWarfare.RunTask(async token =>
+                                        {
+                                            OfflinePlayer pl2 = pl;
+                                            await pl2.CacheUsernames(token).ConfigureAwait(false);
+                                            await UCWarfare.ToUpdate(token);
+                                            e.Player.SendChat(T.VehicleWaitForOwner, pl);
+                                        }, UCWarfare.UnloadCancel);
+                                    }
                                 }
                                 else
+                                    e.Player.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
+                                e.Break();
+                            }
+                        }
+                        else // if the player is trying to switch to a gunner's seat
+                        {
+                            if (!(F.IsInMain(e.Vehicle.transform.position) || e.Player.OnDuty())) // if player is trying to switch to a gunner's seat outside of main
+                            {
+                                if (e.Vehicle.passengers.Length == 0 || e.Vehicle.passengers[0].player is null) // if they have no driver
                                 {
-                                    UCWarfare.RunTask(async token =>
-                                    {
-                                        OfflinePlayer pl2 = pl;
-                                        await pl2.CacheUsernames(token).ConfigureAwait(false);
-                                        await UCWarfare.ToUpdate(token);
-                                        e.Player.SendChat(T.VehicleWaitForOwner, pl);
-                                    }, UCWarfare.UnloadCancel);
+                                    e.Player.SendChat(T.VehicleDriverNeeded);
+                                    e.Break();
+                                }
+                                else if (e.Player.Steam64 == e.Vehicle.passengers[0].player.playerID.steamID.m_SteamID) // if they are the driver
+                                {
+                                    e.Player.SendChat(T.VehicleAbandoningDriver);
+                                    e.Break();
                                 }
                             }
-                            else
-                                e.Player.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
-                            e.Break();
                         }
                     }
-                    else // if the player is trying to switch to a gunner's seat
+                    else
                     {
-                        if (!(F.IsInMain(e.Vehicle.transform.position) || e.Player.OnDuty())) // if player is trying to switch to a gunner's seat outside of main
-                        {
-                            if (e.Vehicle.passengers.Length == 0 || e.Vehicle.passengers[0].player is null) // if they have no driver
-                            {
-                                e.Player.SendChat(T.VehicleDriverNeeded);
-                                e.Break();
-                            }
-                            else if (e.Player.Steam64 == e.Vehicle.passengers[0].player.playerID.steamID.m_SteamID) // if they are the driver
-                            {
-                                e.Player.SendChat(T.VehicleAbandoningDriver);
-                                e.Break();
-                            }
-                        }
+                        e.Player.SendChat(T.VehicleMissingKit, data.RequiredClass);
+                        e.Break();
                     }
                 }
-                else
+                if (c.IsAircraft && 
+                    e.InitialSeat == 0 && 
+                    e.FinalSeat != 0 && 
+                    e.Vehicle.transform.position.y - F.GetHeightAt2DPoint(e.Vehicle.transform.position.x, e.Vehicle.transform.position.z) > UCWarfare.Config.MaxVehicleHeightToLeave && 
+                    !e.Player.OnDuty())
                 {
-                    e.Player.SendChat(T.VehicleMissingKit, data.RequiredClass);
+                    e.Player.SendChat(T.VehicleAbandoningPilot);
                     e.Break();
                 }
+                
             }
             else
             {
