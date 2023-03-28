@@ -39,7 +39,7 @@ public static class IconManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (drop.model.TryGetComponent(out IconRenderer _))
+        if (drop.model == null || drop.model.TryGetComponent(out IconRenderer _))
             return;
 
         BarricadeData data = drop.GetServersideData();
@@ -146,7 +146,7 @@ public static class IconManager
 }
 
 
-public class IconRenderer : MonoBehaviour
+public class IconRenderer : MonoBehaviour, IManualOnDestroy
 {
     public Guid EffectGUID { get; private set; }
     public EffectAsset Effect { get; private set; }
@@ -188,5 +188,10 @@ public class IconRenderer : MonoBehaviour
         if (Effect == null)
             return;
         F.TriggerEffectReliable(Effect, players, Point);
+    }
+
+    public void ManualOnDestroy()
+    {
+        Destroy();
     }
 }

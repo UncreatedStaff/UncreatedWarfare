@@ -341,14 +341,12 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
         internal readonly DynamicEnumValue<GamemodeType>.Choice Gamemode;
         public readonly int WinCount;
         private int _wins;
-        private readonly string translationCache;
         protected override bool CompletedCheck => _wins >= WinCount;
         public override short FlagValue => (short)_wins;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             Gamemode = questState.Gamemode;
             WinCount = questState.Wins.InsistValue();
-            translationCache = Gamemode.GetCommaList(_player == null ? 0 : _player.Steam64);
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -364,27 +362,21 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
         public void OnGameOver(ulong winner)
         {
             ulong team = _player.GetTeam();
-            if (winner == team && Gamemode.IsMatch(Data.Gamemode.GamemodeType))
+            if ((winner == 0 || winner == team) && Gamemode.IsMatch(Data.Gamemode.GamemodeType))
             {
-                if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2)
+                if (Data.Is(out IGameStats st) && st.GameStats != null)
                 {
                     bool award = false;
-                    for (int i = 0; i < st2.stats.Count; ++i)
+                    object? stats = st.GameStats.GetPlayerStats(_player.Steam64);
+                    if (winner != 0 && stats is ITeamPresenceStats tps)
                     {
-                        if (st2.stats[i].Steam64 == _player.Steam64)
-                        {
-                            if (st2.stats[i] is ITeamPresenceStats tps)
-                            {
-                                if (st2.GetPresence(tps, winner) > Gamemodes.Gamemode.MatchPresentThreshold)
-                                    award = true;
-                            }
-                            else if (st2.stats[i] is IPresenceStats ps)
-                            {
-                                if (st2.GetPresence(ps) > Gamemodes.Gamemode.MatchPresentThreshold && Data.Gamemode.IsWinner(_player))
-                                    award = true;
-                            }
-                            break;
-                        }
+                        if (st.GameStats.GetPresence(tps, winner) > Gamemodes.Gamemode.MatchPresentThreshold)
+                            award = true;
+                    }
+                    else if (stats is IPresenceStats ps)
+                    {
+                        if (st.GameStats.GetPresence(ps) > Gamemodes.Gamemode.MatchPresentThreshold && Data.Gamemode.IsWinner(_player))
+                            award = true;
                     }
                     if (award)
                     {

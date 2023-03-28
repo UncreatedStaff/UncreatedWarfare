@@ -15,6 +15,7 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
@@ -1548,5 +1549,14 @@ public class DebugCommand : AsyncCommand
 
             return ((PropertyInfo)field).GetMethod.Invoke(asset, Array.Empty<object>());
         }
+    }
+
+    private void hardpointadv(CommandInteraction ctx)
+    {
+        ctx.AssertGamemode(out Hardpoint hardpoint);
+        ctx.AssertOnDuty();
+
+        hardpoint.ForceNextObjective();
+        ctx.Defer();
     }
 }

@@ -35,6 +35,7 @@ public static class EventDispatcher
     public static event EventDelegate<EnterVehicle> EnterVehicle;
     public static event EventDelegate<VehicleSwapSeat> VehicleSwapSeat;
     public static event EventDelegate<VehicleDestroyed> VehicleDestroyed;
+    public static event EventDelegate<VehicleLockChangeRequested> VehicleLockChangeRequested;
 
     public static event EventDelegate<BarricadeDestroyed> BarricadeDestroyed;
     public static event EventDelegate<PlaceBarricadeRequested> BarricadePlaceRequested;
@@ -97,9 +98,11 @@ public static class EventDispatcher
         StructureDrop.OnSalvageRequested_Global += StructureDropOnSalvageRequested;
         StructureManager.onDamageStructureRequested += StructureManagerOnDamageStructureRequested;
         PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
+        VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnOnToggleVehicleLockRequested;
     }
     internal static void UnsubscribeFromAll()
     {
+        VehicleManager.OnToggleVehicleLockRequested -= VehicleManagerOnOnToggleVehicleLockRequested;
         PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
         StructureManager.onDamageStructureRequested -= StructureManagerOnDamageStructureRequested;
         StructureDrop.OnSalvageRequested_Global -= StructureDropOnSalvageRequested;
@@ -272,6 +275,21 @@ public static class EventDispatcher
             TryInvoke(inv, request, nameof(EnterVehicle));
         }
     }
+    private static void VehicleManagerOnOnToggleVehicleLockRequested(InteractableVehicle vehicle, ref bool shouldallow)
+    {
+        if (VehicleLockChangeRequested == null || vehicle == null || !vehicle.isDriven) return;
+        UCPlayer? pl2 = UCPlayer.FromSteamPlayer(vehicle.passengers[0].player);
+        if (pl2 is null) return;
+        VehicleLockChangeRequested request = new VehicleLockChangeRequested(pl2, vehicle, shouldallow);
+        foreach (EventDelegate<VehicleLockChangeRequested> inv in VehicleLockChangeRequested.GetInvocationList().Cast<EventDelegate<VehicleLockChangeRequested>>())
+        {
+            if (!request.CanContinue) break;
+            TryInvoke(inv, request, nameof(VehicleLockChangeRequested));
+        }
+
+        if (!request.CanContinue)
+            shouldallow = false;
+    }
     internal static void InvokeOnVehicleSpawned(InteractableVehicle result)
     {
         if (VehicleSpawned == null) return;
@@ -299,6 +317,8 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(BarricadeDestroyed));
         }
+
+        component.Destroy();
     }
     internal static void InvokeOnPlayerDied(PlayerDied e)
     {

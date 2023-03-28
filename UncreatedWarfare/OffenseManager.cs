@@ -495,7 +495,7 @@ public static class OffenseManager
                             }
                             break;
                         case Unmute unmute:
-                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendUnmuteRequest.RequestAck(
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerUnmuted.RequestAck(
                                     UCWarfare.I.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
                             {
                                 RemoveFromSave(unmute, 8);

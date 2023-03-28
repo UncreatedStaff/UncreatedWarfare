@@ -77,7 +77,7 @@ public class FOBComponent : MonoBehaviour
         }
         Parent.ProxyScore = proxyScore;
 
-        if (Data.Gamemode.EveryXSeconds(1f))
+        if (Data.Gamemode.EveryXSeconds(1f) && Parent != null)
         {
             if (!Parent.IsBleeding)
                 Parent.ConsumeResources();

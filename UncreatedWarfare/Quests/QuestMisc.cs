@@ -2521,29 +2521,21 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
         public readonly override string ToString()
         {
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
-                return _value.ToString();
+                return Localization.TranslateEnum(_value, 0).ToLower();
             if (_type == DynamicValueType.Range)
-            {
-                if (_behavior == ChoiceBehavior.Selective)
-                {
-                    return "(" + _minVal + ":" + _maxVal + ")";
-                }
-                return _minVal.ToString().ToLower() + " to " + _maxVal.ToString().ToLower();
-            }
+                return Localization.TranslateEnum(_minVal, 0).ToLower() + " to " + Localization.TranslateEnum(_maxVal, 0).ToLower();
+            
             if (_type == DynamicValueType.Wildcard)
-                return _behavior == ChoiceBehavior.Selective ? "$*" : ("any " + Localization.TranslateEnumName(typeof(TEnum), 0).ToLower());
+                return "any " + Localization.TranslateEnumName(typeof(TEnum), 0).ToLower();
+
             if (_type == DynamicValueType.Set)
             {
-                StringBuilder sb = new StringBuilder(20);
-                if (_behavior == ChoiceBehavior.Selective)
-                    sb.Append("$[");
-                for (int i = 0; i < _values!.Length; i++)
+                StringBuilder sb = new StringBuilder(_values!.Length * 12);
+                for (int i = 0; i < _values.Length; i++)
                 {
                     if (i != 0) sb.Append(", ");
-                    sb.Append(_values[i].ToString());
+                    sb.Append(Localization.TranslateEnum(_values[i], 0).ToLower());
                 }
-                if (_behavior == ChoiceBehavior.Selective)
-                    sb.Append(']');
                 return sb.ToString();
             }
             return _value.ToString();

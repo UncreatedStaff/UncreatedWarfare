@@ -171,22 +171,25 @@ public class ActionLog : MonoBehaviour
                     return false;
                 L.LogDebug("Sending log " + meta.FirstTimestamp.ToString("s") + "...");
                 const int timeoutMs = 10000;
-                NetTask netTask = context.Connection != null
-                    ? context.ReplyAndRequestAck(NetCalls.SendLog, meta, bytes, timeoutMs)
-                    : NetCalls.SendLog.RequestAck(UCWarfare.I.NetClient!, meta, bytes, timeoutMs);
-
-                RequestResponse response = await netTask;
-                L.LogDebug("  ... Done, " + (response.Responded ? ("Response: " + response.Context) : "No response."));
-                if (response.Responded && response.ErrorCode is (int)StandardErrorCode.Success)
-                {
-                    if (meta != _current)
-                        DeleteLog(meta);
-                    return true;
-                }
+                if (context.Connection != null)
+                    context.Reply(NetCalls.SendLog, meta, bytes);
                 else
                 {
-                    L.LogWarning("UCHB failed to acknoledge SendLog request: " + response.Context + ".");
-                    return false;
+                    NetTask netTask = NetCalls.SendLog.RequestAck(UCWarfare.I.NetClient!, meta, bytes, timeoutMs);
+
+                    RequestResponse response = await netTask;
+                    L.LogDebug("  ... Done, " + (response.Responded ? ("Response: " + response.Context) : "No response."));
+                    if (response.Responded && response.ErrorCode is (int)StandardErrorCode.Success && context.Connection == null)
+                    {
+                        if (meta != _current)
+                            DeleteLog(meta);
+                        return true;
+                    }
+                    else
+                    {
+                        L.LogWarning("UCHB failed to acknoledge SendLog request: " + response.Context + ".");
+                        return false;
+                    }
                 }
             }
         }

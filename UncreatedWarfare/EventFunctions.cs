@@ -1567,7 +1567,6 @@ public static class EventFunctions
                     Data.Reporter.OnDestroyedStructure(c.LastDamager, e.InstanceID);
                 }
             }
-            c.Destroy();
         }
     }
     internal static void OnPostHealedPlayer(Player instigator, Player target)
