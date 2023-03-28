@@ -8,7 +8,14 @@ namespace Uncreated.Warfare.Configuration;
 public class SystemConfig : Config<SystemConfigData>
 {
     public SystemConfig() : base(Warfare.Data.Paths.BaseDirectory, "sys_config.json", "sysconfig") { }
-    protected override void OnReload() { }
+
+    protected override void OnReload()
+    {
+        if (Warfare.Data.DatabaseManager != null)
+            Warfare.Data.DatabaseManager.DebugLogging = Data.Debug;
+        if (Warfare.Data.RemoteSQL != null)
+            Warfare.Data.RemoteSQL.DebugLogging = Data.Debug;
+    }
 }
 
 public class SystemConfigData : JSONConfigData
@@ -95,6 +102,8 @@ public class SystemConfigData : JSONConfigData
     public bool DisableMissingAssetKick;
     [JsonPropertyName("nerds")]
     public List<ulong> Nerds;
+    [JsonPropertyName("disableDailyRestart")]
+    public bool DisableDailyRestart;
 
     public override void SetDefaults()
     {
@@ -139,6 +148,7 @@ public class SystemConfigData : JSONConfigData
         SendActionLogs = true;
         DisableMissingAssetKick = false;
         Nerds = new List<ulong>() { 76561198312948915ul };
+        DisableDailyRestart = false;
     }
     public class ModerationConfig
     {

@@ -81,7 +81,7 @@ public class VehicleComponent : MonoBehaviour
         foreach (var passenger in Vehicle.turrets)
         {
             if (VehicleBay.Config.GroundAAWeapons.HasID(passenger.turret.itemID))
-                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(450, 1000, Gamemode.Config.EffectLockOn1, 2, 15.5f);
+                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(550, 1000, Gamemode.Config.EffectLockOn1, 2, 15.5f);
             if (VehicleBay.Config.AirAAWeapons.HasID(passenger.turret.itemID))
                 passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(600, Gamemode.Config.EffectLockOn2, 1, 11);
         }
@@ -186,7 +186,7 @@ public class VehicleComponent : MonoBehaviour
         if (e.Player.KitClass == Class.Squadleader &&
             (Data?.Item != null && VehicleData.IsLogistics(Data.Item.Type)) &&
             !F.IsInMain(e.Player.Position) &&
-            FOB.GetNearestFOB(e.Player.Position, EfobRadius.FULL_WITH_BUNKER_CHECK, e.Player.GetTeam()) == null
+            FOB.GetNearestFOB(e.Player.Position, EFobRadius.FULL_WITH_BUNKER_CHECK, e.Player.GetTeam()) == null
             )
         {
             Tips.TryGiveTip(e.Player, 300, T.TipPlaceRadio);

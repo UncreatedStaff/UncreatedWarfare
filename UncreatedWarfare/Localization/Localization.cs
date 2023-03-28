@@ -303,7 +303,7 @@ public static class Localization
             bool keepline = false;
             if (!ucplayer.OnDuty())
             {
-                name = kit.GetDisplayName(language);
+                name = kit.GetDisplayName(language, false);
                 for (int i = 0; i < name.Length; i++)
                 {
                     char @char = name[i];
@@ -316,7 +316,7 @@ public static class Localization
             }
             else
             {
-                name = kit.Id + '\n' + "(" + (char)(loadoutId + 47) + ") " + kit.GetDisplayName(language);
+                name = kit.Id + '\n' + "(" + (char)(loadoutId + 47) + ") " + kit.GetDisplayName(language, false);
                 keepline = true;
             }
             name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
@@ -384,7 +384,7 @@ public static class Localization
         string name;
         if (!ucplayer.OnDuty())
         {
-            name = kit.GetDisplayName(language);
+            name = kit.GetDisplayName(language, false);
             for (int i = 0; i < name.Length; i++)
             {
                 char @char = name[i];
@@ -397,7 +397,7 @@ public static class Localization
         }
         else
         {
-            name = kit.Id + "\n" + kit.GetDisplayName(language);
+            name = kit.Id + "\n" + kit.GetDisplayName(language, false);
             keepline = true;
         }
         name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex(kit.SquadLevel == SquadLevel.Commander ? "kit_public_commander_header" : "kit_public_header"), true) + "</b>";

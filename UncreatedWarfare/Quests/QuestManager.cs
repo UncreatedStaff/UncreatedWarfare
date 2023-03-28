@@ -11,14 +11,10 @@ using Uncreated.Json;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -155,6 +151,32 @@ public static class QuestManager
         if (player != null && !player.Save.TrackQuests)
             UntrackQuest(player);
     }
+
+    public static void TryAddQuest(UCPlayer player, Guid guid)
+    {
+        if (player == null)
+            return;
+        if (Assets.find(guid) is QuestAsset qa)
+            TryAddQuest(player, qa);
+    }
+    public static void TryAddQuest(UCPlayer player, QuestAsset qa)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (player == null)
+            return;
+        PlayerQuests pq = player.Player.quests;
+        for (int i = 0; i < pq.questsList.Count; ++i)
+        {
+            if (pq.questsList[i].asset is { } qa2 && qa.GUID == qa2.GUID)
+            {
+                CheckNeedsToUntrack(player);
+                return;
+            }
+        }
+
+        pq.ServerAddQuest(qa);
+        CheckNeedsToUntrack(player);
+    }
     public static void UntrackQuest(UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();
@@ -252,7 +274,7 @@ public static class QuestManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ActionLog.Add(ActionLogType.StartQuest, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
-        if (!tracker.IsDailyQuest && tracker.Flag != 0)
+        if (tracker.Flag != 0)
         {
             tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
             L.LogDebug("Flag quest started: " + (tracker.QuestData?.QuestType.ToString() ?? "null"));
@@ -719,10 +741,10 @@ public static class QuestManager
         foreach (INotifyBunkerSpawn tracker in RegisteredTrackers.OfType<INotifyBunkerSpawn>())
             tracker.OnPlayerSpawnedAtBunker(bunker, fob, spawner);
     }
-    public static void OnVehicleDestroyed(VehicleDestroyed e)
+    public static void OnVehicleDestroyed(VehicleDestroyed e, UCPlayer instigator)
     {
         foreach (INotifyVehicleDestroyed tracker in RegisteredTrackers.OfType<INotifyVehicleDestroyed>())
-            tracker.OnVehicleDestroyed(e);
+            tracker.OnVehicleDestroyed(e, instigator);
     }
     public static void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, Components.VehicleComponent vehicle)
     {

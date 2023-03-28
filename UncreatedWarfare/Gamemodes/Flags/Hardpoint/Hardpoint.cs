@@ -193,12 +193,14 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
                 L.LogError("Failed to path...");
                 throw new InvalidOperationException("Invalid pathing data entered.");
             }
-
-            L.LogWarning("Objective pathing for hardpoint failed to create the correct amount of flags (" +
-                         (Config.HardpointFlagAmount - Config.HardpointFlagTolerance).ToString(Data.AdminLocale) +
-                         " to " +
-                         (Config.HardpointFlagAmount + Config.HardpointFlagTolerance).ToString(Data.AdminLocale) +
-                         ").");
+            if (!(FlagRotation.Count > Config.HardpointFlagAmount + Config.HardpointFlagTolerance && FlagRotation.Count < Config.HardpointFlagAmount - Config.HardpointFlagTolerance))
+            {
+                L.LogWarning("Objective pathing for hardpoint failed to create the correct amount of flags (" +
+                             (Config.HardpointFlagAmount - Config.HardpointFlagTolerance).ToString(Data.AdminLocale) +
+                             " to " +
+                             (Config.HardpointFlagAmount + Config.HardpointFlagTolerance).ToString(Data.AdminLocale) +
+                             ").");
+            }
         }
         while (FlagRotation.Count > Config.HardpointFlagAmount + Config.HardpointFlagTolerance && FlagRotation.Count < Config.HardpointFlagAmount - Config.HardpointFlagTolerance);
     }

@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using JetBrains.Annotations;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -17,6 +18,16 @@ public static class IconManager
     static IconManager()
     {
         EventDispatcher.GroupChanged += OnGroupChanged;
+    }
+    public static void OnGamemodeReloaded()
+    {
+        for (int i = Icons.Count - 1; i >= 0; i--)
+        {
+            IconRenderer iconRenderer = Icons[i];
+            DeleteIcon(iconRenderer);
+        }
+
+        OnLevelLoaded();
     }
     public static void OnLevelLoaded()
     {
@@ -96,24 +107,23 @@ public static class IconManager
 #endif
         IconRenderer icon = transform.gameObject.AddComponent<IconRenderer>();
         icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team);
-
-        PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(
-            (icon.Team == 0
+        
+        icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Team == 0
                 ? PlayerManager.OnlinePlayers
                 : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
-            .Select(x => x.Connection), Provider.clients.Count);
-        icon.SpawnNewIcon(list);
+            .Select(x => x.Connection)));
 
         Icons.Add(icon);
     }
-    public static void DeleteIcon(IconRenderer icon)
+    public static void DeleteIcon(IconRenderer icon, bool destroy = true)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         EffectManager.ClearEffectByGuid_AllPlayers(icon.EffectGUID);
         Icons.Remove(icon);
-        icon.Destroy();
+        if (destroy)
+            icon.Destroy();
 
         SpawnNewIconsOfType(icon.EffectGUID);
     }
@@ -126,12 +136,10 @@ public static class IconManager
         {
             if (icon.EffectGUID == effectGUID)
             {
-                PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(
-                    (icon.Team == 0
+                icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Team == 0
                         ? PlayerManager.OnlinePlayers
                         : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
-                    .Select(x => x.Connection), Provider.clients.Count);
-                icon.SpawnNewIcon(list);
+                    .Select(x => x.Connection)));
             }
         }
     }
@@ -160,6 +168,11 @@ public class IconRenderer : MonoBehaviour
             L.LogWarning("IconSpawner could not start: Effect asset not found: " + effectGUID);
     }
 
+    [UsedImplicitly]
+    void OnDestroy()
+    {
+        IconManager.DeleteIcon(this, false);
+    }
     public void Destroy()
     {
         Destroy(this);

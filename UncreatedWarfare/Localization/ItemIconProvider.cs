@@ -595,7 +595,7 @@ internal static class ItemIconProvider
             Nullable = true
         },
         new Schema.Column(COLUMN_ICON, "char(1)") { Nullable = true },
-        new Schema.Column(COLUMN_COLOR, "char(8)") { Nullable = true, Default = "ffffffff" },
+        new Schema.Column(COLUMN_COLOR, "char(8)") { Nullable = true, Default = "'ffffffff'" },
         new Schema.Column(COLUMN_PARENT, SqlTypes.GUID_STRING) { Nullable = true }
     }, true, typeof(ItemIconData));
     private readonly struct ItemIconData

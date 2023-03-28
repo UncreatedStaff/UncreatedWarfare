@@ -387,9 +387,11 @@ public class StructureCommand : AsyncCommand
             }
             else
             {
+                OfflinePlayer pl = new OfflinePlayer(vehicle.lockedOwner.m_SteamID);
+                await pl.CacheUsernames(token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
                 player.SendChat(T.StructureExamineLastOwnerChat,
-                    vehicle.asset, names,
-                    new OfflinePlayer(vehicle.lockedOwner.m_SteamID), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!);
+                    vehicle.asset, names, pl, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!);
             }
         }
     }
@@ -414,8 +416,11 @@ public class StructureCommand : AsyncCommand
             }
             else
             {
+                OfflinePlayer pl = new OfflinePlayer(data.owner);
+                await pl.CacheUsernames(token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
                 player.SendChat(T.StructureExamineLastOwnerChat, data.barricade.asset, names,
-                    new OfflinePlayer(data.owner), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!);
+                    pl, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!);
             }
         }
         else
@@ -443,8 +448,11 @@ public class StructureCommand : AsyncCommand
             }
             else
             {
+                OfflinePlayer pl = new OfflinePlayer(data.owner);
+                await pl.CacheUsernames(token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
                 player.SendChat(T.StructureExamineLastOwnerChat, data.structure.asset, names,
-                    new OfflinePlayer(data.owner), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!);
+                    pl, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!);
             }
         }
         else

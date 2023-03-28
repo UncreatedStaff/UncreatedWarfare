@@ -12,6 +12,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
+using Uncreated.Warfare.Kits;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Random = UnityEngine.Random;
@@ -94,6 +95,27 @@ internal static class EventPatches
 
         PatchUtil.PatchMethod(typeof(ObjectManager).GetMethod(nameof(ObjectManager.ReceiveToggleObjectBinaryStateRequest), BindingFlags.Public | BindingFlags.Static), ref _fail,
             prefix: PatchUtil.GetMethodInfo(OnReceiveToggleObjectBinaryStateRequest));
+
+        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapShirtRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapShirtRequest));
+
+        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapPantsRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapPantsRequest));
+
+        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapHatRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapHatRequest));
+
+        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapBackpackRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapBackpackRequest));
+
+        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapVestRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapVestRequest));
+
+        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapMaskRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapMaskRequest));
+
+        PatchUtil.PatchMethod(typeof(PlayerClothing).GetMethod(nameof(PlayerClothing.ReceiveSwapGlassesRequest), BindingFlags.Public | BindingFlags.Instance), ref _fail,
+            prefix: PatchUtil.GetMethodInfo(OnReceiveSwapGlassesRequest));
     }
     [OperationTest("Event Patches")]
     [Conditional("DEBUG")]
@@ -527,9 +549,22 @@ internal static class EventPatches
 
         __result = fg.IsInteractableEnabled(__instance);
         return false;
-
-        return true;
     }
+    private static bool OnReceiveSwapShirtRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
+        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Shirt, pl, page, x, y);
+    private static bool OnReceiveSwapPantsRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
+        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Pants, pl, page, x, y);
+    private static bool OnReceiveSwapHatRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
+        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Hat, pl, page, x, y);
+    private static bool OnReceiveSwapBackpackRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
+        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Backpack, pl, page, x, y);
+    private static bool OnReceiveSwapVestRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
+        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Vest, pl, page, x, y);
+    private static bool OnReceiveSwapMaskRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
+        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Mask, pl, page, x, y);
+    private static bool OnReceiveSwapGlassesRequest(PlayerClothing __instance, byte page, byte x, byte y) =>
+        UCPlayer.FromPlayer(__instance.player) is not { } pl || EventDispatcher.InvokeSwapClothingRequest(ClothingType.Glasses, pl, page, x, y);
+
     private static bool OnReceiveToggleObjectBinaryStateRequest(in ServerInvocationContext context, byte x, byte y, ushort index, bool isUsed)
     {
         if (!Data.UseElectricalGrid) return true;

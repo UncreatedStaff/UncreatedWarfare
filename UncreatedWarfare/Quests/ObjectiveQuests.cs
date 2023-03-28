@@ -314,11 +314,11 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
     {
         [RewardField("w")]
         public IDynamicValue<int>.IChoice Wins;
-        public IDynamicValue<GamemodeType>.IChoice Gamemode;
+        internal DynamicEnumValue<GamemodeType>.Choice Gamemode;
         public IDynamicValue<int>.IChoice FlagValue => Wins;
         public void Init(WinGamemodeQuest data)
         {
-            this.Gamemode = data.Gamemode.GetValue();
+            this.Gamemode = data.Gamemode.GetValueIntl();
             this.Wins = data.WinCount.GetValue();
         }
         public bool IsEligable(UCPlayer player) => true;
@@ -326,7 +326,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
             if (prop.Equals("gamemode", StringComparison.Ordinal))
-                Gamemode = DynamicEnumValue<GamemodeType>.ReadChoice(ref reader);
+                Gamemode = DynamicEnumValue<GamemodeType>.ReadChoiceIntl(ref reader);
             else if (prop.Equals("wins", StringComparison.Ordinal))
                 Wins = DynamicIntegerValue.ReadChoice(ref reader);
         }
@@ -338,15 +338,17 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
     }
     public class Tracker : BaseQuestTracker, INotifyGameOver
     {
-        public readonly IDynamicValue<GamemodeType>.IChoice Gamemode;
+        internal readonly DynamicEnumValue<GamemodeType>.Choice Gamemode;
         public readonly int WinCount;
         private int _wins;
+        private readonly string translationCache;
         protected override bool CompletedCheck => _wins >= WinCount;
         public override short FlagValue => (short)_wins;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             Gamemode = questState.Gamemode;
             WinCount = questState.Wins.InsistValue();
+            translationCache = Gamemode.GetCommaList(_player == null ? 0 : _player.Steam64);
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {

@@ -140,8 +140,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                             {
                                 if (Assets.find(req.QuestID) is QuestAsset quest)
                                 {
-                                    player.Player.quests.ServerAddQuest(quest);
-                                    QuestManager.CheckNeedsToUntrack(player);
+                                    QuestManager.TryAddQuest(player, quest);
                                 }
                                 else
                                 {
@@ -463,6 +462,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     public const string COLUMN_REQUIRES_SQUADLEADER = "RequiresSquadleader";
     public const string COLUMN_ABANDON_BLACKLISTED = "AbandonBlacklisted";
     public const string COLUMN_ABANDON_VALUE_LOSS_SPEED = "AbandonValueLossSpeed";
+    public const string COLUMN_UNLOCK_LEVEL = "UnlockLevel";
     public const string COLUMN_ITEM_GUID = "Item";
     public const string COLUMN_CREW_SEATS_SEAT = "Index";
     private static readonly Schema[] SCHEMAS;
@@ -491,41 +491,45 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             new Schema.Column(COLUMN_VEHICLE_GUID, SqlTypes.GUID_STRING),
             new Schema.Column(COLUMN_RESPAWN_TIME, SqlTypes.FLOAT)
             {
-                Default = "600"
+                Default = "'600'"
             },
             new Schema.Column(COLUMN_TICKET_COST, SqlTypes.INT)
             {
-                Default = "0"
+                Default = "'0'"
             },
             new Schema.Column(COLUMN_CREDIT_COST, SqlTypes.INT)
             {
-                Default = "0"
+                Default = "'0'"
             },
             new Schema.Column(COLUMN_REARM_COST, SqlTypes.INT)
             {
-                Default = "3"
+                Default = "'3'"
             },
             new Schema.Column(COLUMN_COOLDOWN, SqlTypes.FLOAT)
             {
-                Default = "0"
+                Default = "'0'"
             },
             new Schema.Column(COLUMN_VEHICLE_TYPE, SqlTypes.Enum<VehicleType>())
             {
-                Default = nameof(VehicleType.None)
+                Default = "'" + nameof(VehicleType.None) + "'"
             },
             new Schema.Column(COLUMN_BRANCH, SqlTypes.Enum<Branch>())
             {
-                Default = nameof(Branch.Default)
+                Default = "'" + nameof(Branch.Default) + "'"
             },
             new Schema.Column(COLUMN_REQUIRED_CLASS, SqlTypes.Enum<Class>())
             {
-                Default = nameof(Class.None)
+                Default = "'" + nameof(Class.None) + "'"
             },
             new Schema.Column(COLUMN_REQUIRES_SQUADLEADER, SqlTypes.BOOLEAN),
             new Schema.Column(COLUMN_ABANDON_BLACKLISTED, SqlTypes.BOOLEAN),
             new Schema.Column(COLUMN_ABANDON_VALUE_LOSS_SPEED, SqlTypes.FLOAT)
             {
-                Default = "0.125"
+                Default = "'0.125'"
+            },
+            new Schema.Column(COLUMN_UNLOCK_LEVEL, SqlTypes.UINT)
+            {
+                Default = "'0'"
             },
         }, true, typeof(VehicleData));
         SCHEMAS[1] = UnlockRequirement.GetDefaultSchema(TABLE_UNLOCK_REQUIREMENTS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK);
@@ -560,7 +564,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         }
         bool hasPk = pk.IsValid;
         int pk2 = PrimaryKey.NotAssigned;
-        object[] objs = new object[hasPk ? 15 : 14];
+        object[] objs = new object[hasPk ? 16 : 15];
         objs[0] = item.Map < 0 ? DBNull.Value : item.Map;
         objs[1] = item.Faction.IsValid && item.Faction.Key != 0 ? item.Faction.Key : DBNull.Value;
         objs[2] = item.VehicleID.ToString("N");
@@ -575,15 +579,17 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         objs[11] = item.RequiresSL;
         objs[12] = item.DisallowAbandons;
         objs[13] = item.AbandonValueLossSpeed;
+        objs[14] = item.UnlockLevel;
         if (hasPk)
-            objs[14] = pk.Key;
+            objs[15] = pk.Key;
+        
         await Sql.QueryAsync(
             F.BuildInitialInsertQuery(TABLE_MAIN, COLUMN_PK, hasPk, COLUMN_EXT_PK,
                 new string[] { TABLE_DELAYS, TABLE_ITEMS, TABLE_CREW_SEATS, TABLE_UNLOCK_REQUIREMENTS, TABLE_BARRICADES },
                 COLUMN_MAP, COLUMN_FACTION, COLUMN_VEHICLE_GUID, COLUMN_RESPAWN_TIME,
                 COLUMN_TICKET_COST, COLUMN_CREDIT_COST, COLUMN_REARM_COST, COLUMN_COOLDOWN,
                 COLUMN_BRANCH, COLUMN_REQUIRED_CLASS, COLUMN_VEHICLE_TYPE, COLUMN_REQUIRES_SQUADLEADER,
-                COLUMN_ABANDON_BLACKLISTED, COLUMN_ABANDON_VALUE_LOSS_SPEED),
+                COLUMN_ABANDON_BLACKLISTED, COLUMN_ABANDON_VALUE_LOSS_SPEED, COLUMN_UNLOCK_LEVEL),
             objs, reader =>
             {
                 pk2 = reader.GetInt32(0);
@@ -850,7 +856,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         await Sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_MAP}`,`{COLUMN_FACTION}`,`{COLUMN_VEHICLE_GUID}`,`{COLUMN_RESPAWN_TIME}`," +
                              $"`{COLUMN_TICKET_COST}`,`{COLUMN_CREDIT_COST}`,`{COLUMN_REARM_COST}`,`{COLUMN_COOLDOWN}`," +
                              $"`{COLUMN_BRANCH}`,`{COLUMN_REQUIRED_CLASS}`,`{COLUMN_VEHICLE_TYPE}`,`{COLUMN_REQUIRES_SQUADLEADER}`," +
-                             $"`{COLUMN_ABANDON_BLACKLISTED}`,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}` FROM `{TABLE_MAIN}` " +
+                             $"`{COLUMN_ABANDON_BLACKLISTED}`,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}`,`{COLUMN_UNLOCK_LEVEL}` FROM `{TABLE_MAIN}` " +
                              $"WHERE (`{COLUMN_FACTION}` IS NULL OR `{COLUMN_FACTION}`=@0 OR `{COLUMN_FACTION}`=@1) AND " +
                              $"(`{COLUMN_MAP}` IS NULL OR `{COLUMN_MAP}`=@2);",
             new object[]
@@ -879,7 +885,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     Type = reader.ReadStringEnum(11, VehicleType.None),
                     RequiresSL = reader.GetBoolean(12),
                     DisallowAbandons = reader.GetBoolean(13),
-                    AbandonValueLossSpeed = reader.GetFloat(14)
+                    AbandonValueLossSpeed = reader.GetFloat(14),
+                    UnlockLevel = reader.GetUInt16(15)
                 };
                 data.Name = Assets.find(data.VehicleID)?.FriendlyName ?? data.VehicleID.ToString("N");
                 list.Add(data);
@@ -1181,7 +1188,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         await Sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_MAP}`,`{COLUMN_FACTION}`,`{COLUMN_VEHICLE_GUID}`,`{COLUMN_RESPAWN_TIME}`," +
                              $"`{COLUMN_TICKET_COST}`,`{COLUMN_CREDIT_COST}`,`{COLUMN_REARM_COST}`,`{COLUMN_COOLDOWN}`," +
                              $"`{COLUMN_BRANCH}`,`{COLUMN_REQUIRED_CLASS}`,`{COLUMN_VEHICLE_TYPE}`,`{COLUMN_REQUIRES_SQUADLEADER}`," +
-                             $"`{COLUMN_ABANDON_BLACKLISTED}`,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}` FROM `{TABLE_MAIN}` " +
+                             $"`{COLUMN_ABANDON_BLACKLISTED}`,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}`,`{COLUMN_UNLOCK_LEVEL}` FROM `{TABLE_MAIN}` " +
                              $"WHERE `{COLUMN_PK}`=@0 LIMIT 1;",
             new object[] { pk2 },
             reader =>
@@ -1206,7 +1213,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     Type = reader.ReadStringEnum(11, VehicleType.None),
                     RequiresSL = reader.GetBoolean(12),
                     DisallowAbandons = reader.GetBoolean(13),
-                    AbandonValueLossSpeed = reader.GetFloat(14)
+                    AbandonValueLossSpeed = reader.GetFloat(14),
+                    UnlockLevel = reader.GetUInt16(15)
                 };
                 return true;
             }, token).ConfigureAwait(false);

@@ -248,7 +248,7 @@ public class UAV : MonoBehaviour, IBuff
             reliable = true,
             relevantDistance = Level.size
         };
-        p.SetRelevantTransportConnections(Provider.GatherRemoteClientConnections());
+        p.SetRelevantTransportConnections(Provider.EnumerateClients_Remote());
         for (int i = 0; i < points.Length; ++i)
         {
             EffectManager.triggerEffect(p with { position = points[i] });

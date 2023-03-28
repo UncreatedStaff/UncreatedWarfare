@@ -3,7 +3,6 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -55,6 +54,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         EventDispatcher.ItemMoved += OnItemMoved;
         EventDispatcher.ItemDropped += OnItemDropped;
         EventDispatcher.ItemPickedUp += OnItemPickedUp;
+        EventDispatcher.SwapClothingRequested += OnSwapClothingRequested;
         OnItemsRefreshed += OnItemsRefreshedIntl;
         //await MigrateOldKits(token).ConfigureAwait(false);
         List<SqlItem<Kit>>? dirty = null;
@@ -87,6 +87,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     public override async Task PreUnload(CancellationToken token)
     {
         //EventDispatcher.InventoryItemRemoved -= OnInventoryItemRemoved;
+        EventDispatcher.SwapClothingRequested -= OnSwapClothingRequested;
         EventDispatcher.ItemPickedUp -= OnItemPickedUp;
         EventDispatcher.ItemDropped -= OnItemDropped;
         EventDispatcher.ItemMoved -= OnItemMoved;
@@ -606,7 +607,24 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     {
                         byte index = KitEx.GetHotkeyIndex(binding.Slot);
                         if (index != byte.MaxValue)
-                            player.Player.equipment.ServerBindItemHotkey(index, binding.GetAsset(k, player.GetTeam()), (byte)binding.Item.Page, binding.Item.X, binding.Item.Y);
+                        {
+                            byte x = binding.Item.X, y = binding.Item.Y;
+                            Page page = binding.Item.Page;
+                            foreach (ItemTransformation transformation in player.ItemTransformations)
+                            {
+                                if (transformation.OldPage == page && transformation.OldX == x && transformation.OldY == y)
+                                {
+                                    x = transformation.NewX;
+                                    y = transformation.NewY;
+                                    page = transformation.NewPage;
+                                    break;
+                                }
+                            }
+
+                            ItemAsset? asset = binding.GetAsset(k, player.GetTeam());
+                            if (asset != null && KitEx.CanBindHotkeyTo(asset, page))
+                                player.Player.equipment.ServerBindItemHotkey(index, asset, (byte)page, x, y);
+                        }
                     }
                 }
             }
@@ -808,6 +826,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                         giveY = l.NewY;
                         giveRot = l.NewRotation;
                         L.LogDebug("Found layout for item " + item + " (to: " + givePage + ", (" + giveX + ", " + giveY + ") rot: " + giveRot + ".)");
+                        break;
                     }
                 }
 
@@ -819,8 +838,8 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     {
                         L.LogWarning("Duplicate " + givePage.ToString().ToLowerInvariant() + " defined for " + kit.Id + ", " + item + ".");
                         L.Log("Removing " + (page.items[0].GetAsset().itemName) + " in place of duplicate.");
-                        page.removeItem(0);
                         (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((page.items[0].item, jar));
+                        page.removeItem(0);
                     }
 
                     // checks for overlapping items and retries overlapping layout-affected items
@@ -1176,8 +1195,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                             {
                                 if (Assets.find(req.QuestID) is QuestAsset quest)
                                 {
-                                    player.Player.quests.ServerAddQuest(quest);
-                                    QuestManager.CheckNeedsToUntrack(player);
+                                    QuestManager.TryAddQuest(player, quest);
                                 }
                                 else
                                 {
@@ -2084,7 +2102,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     }
     void IGameTickListener.Tick()
     {
-        if (Data.Gamemode.EveryMinute && Provider.clients.Count > 0)
+        if (Data.Gamemode != null && Data.Gamemode.EveryMinute && Provider.clients.Count > 0)
         {
             UCWarfare.RunTask(SaveAllPlayerFavorites, ctx: "Save all players' favorite kits.");
         }
@@ -2613,6 +2631,16 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 }
 
             }, tkn, ctx: "Checking for new binding of moved item.");
+        }
+    }
+    private static void OnSwapClothingRequested(SwapClothingRequested e)
+    {
+        if (e.Player.OnDuty()) return;
+
+        if (e.Player.HasKit && e.Type is ClothingType.Backpack or ClothingType.Pants or ClothingType.Shirt or ClothingType.Vest)
+        {
+            e.Player.SendChat(T.NoRemovingClothing);
+            e.Break();
         }
     }
     private static void VerifyKitIntegrity(Kit kit)

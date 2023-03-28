@@ -237,14 +237,18 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
 
         return true;
     }
-    public string GetDisplayName(string language = L.Default)
+    public string GetDisplayName(string language = L.Default, bool removeNewLine = true)
     {
         if (SignText is null) return Id;
+        string rtn;
         if (SignText.TryGetValue(language, out string val))
-            return val ?? Id;
-        if (SignText.Count > 0)
-            return SignText.FirstOrDefault().Value ?? Id;
-        return Id;
+            rtn = val ?? Id;
+        else if (SignText.Count > 0)
+            rtn = SignText.FirstOrDefault().Value ?? Id;
+        else rtn = Id;
+        if (removeNewLine)
+            rtn = rtn.Replace('\n', ' ').Replace("\r", string.Empty);
+        return rtn;
     }
     public void Write(ByteWriter writer)
     {
@@ -1109,8 +1113,7 @@ public class QuestUnlockRequirement : UnlockRequirement
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {
-            ctx.Caller.Player.quests.ServerAddQuest(asset);
-            QuestManager.CheckNeedsToUntrack(ctx.Caller);
+            QuestManager.TryAddQuest(ctx.Caller, asset);
             return ctx.Reply(T.RequestKitQuestIncomplete, asset);
         }
         return ctx.Reply(T.RequestKitQuestIncomplete, null!);
@@ -1119,8 +1122,7 @@ public class QuestUnlockRequirement : UnlockRequirement
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {
-            ctx.Caller.Player.quests.ServerAddQuest(asset);
-            QuestManager.CheckNeedsToUntrack(ctx.Caller);
+            QuestManager.TryAddQuest(ctx.Caller, asset);
             return ctx.Reply(T.RequestVehicleQuestIncomplete, asset);
         }
         return ctx.Reply(T.RequestVehicleQuestIncomplete, null!);
@@ -1129,8 +1131,7 @@ public class QuestUnlockRequirement : UnlockRequirement
     {
         if (Assets.find(QuestID) is QuestAsset asset)
         {
-            ctx.Caller.Player.quests.ServerAddQuest(asset);
-            QuestManager.CheckNeedsToUntrack(ctx.Caller);
+            QuestManager.TryAddQuest(ctx.Caller, asset);
             return ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
         }
         return ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);
@@ -1592,12 +1593,6 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
             if (_legacyRedirect == RedirectType.None)
                 _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, true);
             _isLegacyRedirect = _legacyRedirect != RedirectType.None;
-#else
-            if (_isLegacyRedirect)
-            {
-                _legacyRedirect = RedirectType.None;
-                _isLegacyRedirect = false;
-            }
 #endif
         }
     }
@@ -1661,6 +1656,8 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
         return -1;
     }
     public override bool Equals(object obj) => obj is ClothingItem c && c.Item == Item && c.Type == Type && c.State.CompareBytes(State);
+
+#if DEBUG
     public override int GetHashCode()
     {
         // ReSharper disable NonReadonlyMemberInGetHashCode
@@ -1675,6 +1672,20 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
         }
         // ReSharper restore NonReadonlyMemberInGetHashCode
     }
+#else
+    public override int GetHashCode()
+    {
+        // ReSharper disable NonReadonlyMemberInGetHashCode
+        unchecked
+        {
+            int hashCode = _item.GetHashCode();
+            hashCode = (hashCode * 397) ^ (int)Type;
+            hashCode = (hashCode * 397) ^ State.GetHashCode();
+            return hashCode;
+        }
+        // ReSharper restore NonReadonlyMemberInGetHashCode
+    }
+#endif
 
     public override string ToString() => $"ClothingItem:          {_item:N}, Type: {Type}, State: byte[{State?.Length ?? 0}]";
 
@@ -1797,12 +1808,17 @@ public enum SquadLevel : byte
 public enum Branch : byte
 {
     Default,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "步兵")]
     Infantry,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "装甲")]
     Armor,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "空军")]
     [Translatable("Air Force")]
     Airforce,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "特种部队")]
     [Translatable("Special Ops")]
     SpecOps,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "海军")]
     Navy
 }
 
@@ -1842,38 +1858,55 @@ public enum KitAccessType : byte
 public enum RedirectType : byte
 {
     None = 255,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "上衣")]
     Shirt = 0,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "裤子")]
     Pants,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "背心")]
     Vest,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "帽子")]
     Hat,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "面具")]
     Mask,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "背包")]
     Backpack,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "眼镜")]
     Glasses,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "弹药补给")]
     [Translatable("Ammo Supplies")]
     AmmoSupply,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "建筑材料")]
     [Translatable("Building Supplies")]
     BuildSupply,
     [Translatable("Rally Point")]
     RallyPoint,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "FOB 电台")]
     [Translatable("FOB Radio")]
     Radio,
     ZoneBlocker,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "弹药包")]
     [Translatable("Ammo Bag")]
     AmmoBag,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "弹药箱")]
     [Translatable("Ammo Crate")]
     AmmoCrate,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "维修站")]
     [Translatable("Repair Station")]
     RepairStation,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "FOB 地堡")]
     [Translatable("FOB Bunker")]
     Bunker,
     VehicleBay,
     [Translatable("Entrenching Tool")]
     EntrenchingTool,
     UAV,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "建造维修站")]
     [Translatable("Built Repair Station")]
     RepairStationBuilt,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "建造弹药箱")]
     [Translatable("Built Ammo Crate")]
     AmmoCrateBuilt,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "建造FOB地堡")]
     [Translatable("Built FOB Bunker")]
     BunkerBuilt,
     Cache,
@@ -1915,21 +1948,25 @@ public enum Class : byte
     [Translatable(LanguageAliasSet.ROMANIAN, "Lider de Echipa")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Líder de Esquadrão")]
     [Translatable(LanguageAliasSet.POLISH, "Dowódca Oddziału")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "小队长")]
     Squadleader = 2,
     [Translatable(LanguageAliasSet.RUSSIAN, "Стрелок")]
     [Translatable(LanguageAliasSet.SPANISH, "Fusilero")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Puscas")]
     [Translatable(LanguageAliasSet.POLISH, "Strzelec")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "步枪兵")]
     Rifleman = 3,
     [Translatable(LanguageAliasSet.RUSSIAN, "Медик")]
     [Translatable(LanguageAliasSet.SPANISH, "Médico")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Medic")]
     [Translatable(LanguageAliasSet.POLISH, "Medyk")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "卫生员")]
     Medic = 4,
     [Translatable(LanguageAliasSet.RUSSIAN, "Нарушитель")]
     [Translatable(LanguageAliasSet.SPANISH, "Brechador")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Breacher")]
     [Translatable(LanguageAliasSet.POLISH, "Wyłamywacz")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "突破手")]
     Breacher = 5,
     [Translatable(LanguageAliasSet.RUSSIAN, "Солдат с автоматом")]
     [Translatable(LanguageAliasSet.SPANISH, "Fusilero Automático")]
@@ -1943,9 +1980,11 @@ public enum Class : byte
     [Translatable(LanguageAliasSet.ROMANIAN, "Grenadier")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Granadeiro")]
     [Translatable(LanguageAliasSet.POLISH, "Grenadier")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "掷弹兵")]
     Grenadier = 7,
     [Translatable(LanguageAliasSet.ROMANIAN, "Mitralior")]
     [Translatable(LanguageAliasSet.ENGLISH, "Machine Gunner")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "机枪手")]
     MachineGunner = 8,
     [Translatable("LAT")]
     [Translatable(LanguageAliasSet.RUSSIAN, "Лёгкий противотанк")]
@@ -1953,8 +1992,10 @@ public enum Class : byte
     [Translatable(LanguageAliasSet.ROMANIAN, "Anti-Tanc Usor")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Anti-Tanque Leve")]
     [Translatable(LanguageAliasSet.POLISH, "Lekka Piechota Przeciwpancerna")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "轻型反坦克兵")]
     LAT = 9,
     [Translatable("HAT")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "重型反坦克兵")]
     HAT = 10,
     [Translatable(LanguageAliasSet.RUSSIAN, "Марксман")]
     [Translatable(LanguageAliasSet.SPANISH, "Tirador Designado")]
@@ -1966,6 +2007,7 @@ public enum Class : byte
     [Translatable(LanguageAliasSet.ROMANIAN, "Lunetist")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Franco-Atirador")]
     [Translatable(LanguageAliasSet.POLISH, "Snajper")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "狙击手")]
     Sniper = 12,
     [Translatable("Anti-personnel Rifleman")]
     [Translatable(LanguageAliasSet.RUSSIAN, "Противопехотный")]
@@ -1980,6 +2022,7 @@ public enum Class : byte
     [Translatable(LanguageAliasSet.PORTUGUESE, "Engenheiro")]
     [Translatable(LanguageAliasSet.POLISH, "Inżynier")]
     [Translatable(LanguageAliasSet.ENGLISH, "Combat Engineer")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "战斗工兵")]
     CombatEngineer = 14,
     [Translatable(LanguageAliasSet.RUSSIAN, "Механик-водитель")]
     [Translatable(LanguageAliasSet.SPANISH, "Tripulante")]
@@ -1992,12 +2035,14 @@ public enum Class : byte
     [Translatable(LanguageAliasSet.ROMANIAN, "Pilot")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Piloto")]
     [Translatable(LanguageAliasSet.POLISH, "Pilot")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "飞行员")]
     Pilot = 16,
     [Translatable("Special Ops")]
     [Translatable(LanguageAliasSet.SPANISH, "Op. Esp.")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Trupe Speciale")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Op. Esp.")]
     [Translatable(LanguageAliasSet.POLISH, "Specjalista")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "特种部队")]
     SpecOps = 17,
     // increment ClassConverter.MaxClass if adding another field!
 }

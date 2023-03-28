@@ -99,6 +99,7 @@ public class RequestCommand : AsyncCommand
             {
                 if (vbsign.Item != null && vbsign.Item.HasLinkedVehicle(out InteractableVehicle vehicle))
                 {
+                    await UCWarfare.ToUpdate();
                     VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
                     if (bay != null && bay.IsLoaded)
                     {
@@ -127,6 +128,7 @@ public class RequestCommand : AsyncCommand
         }
         else if (ctx.TryGetTarget(out InteractableVehicle vehicle))
         {
+            await UCWarfare.ToUpdate();
             VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
             if (bay != null && bay.IsLoaded)
             {
@@ -182,6 +184,8 @@ public class RequestCommand : AsyncCommand
                 throw ctx.Reply(T.RequestVehicleNoKit);
 
             Kit kit = proxy.Item;
+            if (ctx.Caller.Level.Level < data.UnlockLevel)
+                throw ctx.Reply(T.RequestVehicleMissingLevels, new LevelData(Points.GetLevelXP(data.UnlockLevel)));
             if (data.RequiredClass != Class.None && kit.Class != data.RequiredClass)
                 throw ctx.Reply(T.RequestVehicleWrongClass, data.RequiredClass);
             if (ctx.Caller.CachedCredits < data.CreditCost)

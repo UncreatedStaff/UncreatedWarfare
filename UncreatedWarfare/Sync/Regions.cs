@@ -16,19 +16,19 @@ public static class ServerRegion
         new Schema.Column("DisplayName", SqlTypes.STRING_255),
         new Schema.Column("Currency", "char(3)")
         {
-            Default = "USD"
+            Default = "'USD'"
         },
         new Schema.Column("DefaultTranslationLanguageCode", "char(5)")
         {
-            Default = LanguageAliasSet.ENGLISH
+            Default = "'" + LanguageAliasSet.ENGLISH + "'"
         },
         new Schema.Column("DefaultCultureCode", "varchar(16)")
         {
-            Default = LanguageAliasSet.ENGLISH_C.ToString()
+            Default = "'" +LanguageAliasSet.ENGLISH_C + "'"
         },
         new Schema.Column("HostCountryCode", "char(2)")
         {
-            Default = "US"
+            Default = "'US'"
         }
     }, true, typeof(RegionData)) : null!;
 }

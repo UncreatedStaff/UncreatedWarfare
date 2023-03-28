@@ -175,8 +175,7 @@ public class Action
             _action.CallerEffect.ValidReference(out EffectAsset? callerEffect);
             if (_action.ViewerEffect.ValidReference(out EffectAsset viewerEffect))
             {
-                PooledTransportConnectionList list = Data.GetPooledTransportConnectionList(_action.Viewers.Select(x => x.Connection), _action.Viewers.Count);
-                F.TriggerEffectReliable(viewerEffect, list, position);
+                F.TriggerEffectReliable(viewerEffect, Data.GetPooledTransportConnectionList(_action.Viewers.Select(x => x.Connection), _action.Viewers.Count), position);
                 if (callerEffect != null)
                     foreach (UCPlayer player in _action.Viewers)
                         F.TriggerEffectReliable(callerEffect, player.Connection, player.Position);

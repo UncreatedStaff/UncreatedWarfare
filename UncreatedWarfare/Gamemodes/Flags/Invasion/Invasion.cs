@@ -61,10 +61,19 @@ public class Invasion :
             SpawnBlockerOnT1();
         else
             SpawnBlockerOnT2();
-        if (firstFlag != null)
-            _vcp = FOBManager.RegisterNewSpecialFOB(Config.InvasionSpecialFOBName, new Vector3(firstFlag.X,
-                F.GetHeight(firstFlag.Position2D, firstFlag is { ZoneData.Item: { } z } ? z.MinHeight : float.NaN) + 2f, firstFlag.Y),
-                _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
+        if (firstFlag is { ZoneData.Item: { } zone })
+        {
+            Vector3 fob = new Vector3(zone.Spawn.x, F.GetHeight(zone.Spawn, zone.MinHeight) + 2f, zone.Spawn.y);
+            if (!Regions.tryGetCoordinate(fob, out _, out _))
+            {
+                L.LogError("Invalid VCP spawn: " + fob.ToString("F2", Data.AdminLocale) + " for flag " + firstFlag + ".");
+            }
+            else
+            {
+                _vcp = FOBManager.RegisterNewSpecialFOB(Config.InvasionSpecialFOBName, fob, _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
+                L.LogDebug("VCP spawned at " + fob.ToString("F2", Data.AdminLocale));
+            }
+        }
         StartStagingPhase(Config.InvasionStagingTime);
         return base.PostGameStarting(isOnLoad, token);
     }

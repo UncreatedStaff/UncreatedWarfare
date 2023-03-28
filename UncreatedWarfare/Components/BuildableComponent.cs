@@ -10,9 +10,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -31,6 +29,8 @@ public class BuildableComponent : MonoBehaviour
 
     public void Initialize(BarricadeDrop foundation, BuildableData buildable)
     {
+        L.LogDebug("Initializing buildable: " + foundation.asset.itemName);
+
         Foundation = foundation;
         Buildable = buildable;
         Hits = 0;
@@ -58,7 +58,10 @@ public class BuildableComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EfobRadius.FULL, Foundation.GetServersideData().group.GetTeam());
+        // TODO: check if this makes a difference towards fob bugs
+
+        //FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFobRadius.FULL, Foundation.GetServersideData().group.GetTeam());
+        FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFobRadius.FULL, builder.GetTeam());
         if (fob == null && Buildable.Type != BuildableType.Radio && (builder.KitClass is not Class.CombatEngineer || Buildable.Type is not BuildableType.Fortification))
         {
             builder.SendChat(T.BuildTickNotInRadius);
@@ -71,13 +74,16 @@ public class BuildableComponent : MonoBehaviour
             return;
         }
 
-        if (!ValidatePlacementWithFriendlyFOB(Buildable, fob, builder, Foundation.GetServersideData().point))
-            return;
+        // TODO: add back this validation
+
+        //if (!ValidatePlacementWithFriendlyFOB(Buildable, fob, builder, Foundation.GetServersideData().point, Foundation))
+        //    return;
 
         float amount = builder.KitClass == Class.CombatEngineer ? 2f : 1f;
 
         amount = Mathf.Max(builder.ShovelSpeedMultiplier, amount);
 
+        L.LogDebug("Incrementing build: " + builder + " (" + Hits + " + " + amount + ").");
         Hits += amount;
 
         //player.SendChat("fob_built");
@@ -103,6 +109,7 @@ public class BuildableComponent : MonoBehaviour
     }
     public void Build()
     {
+        L.LogDebug("Building " + Foundation.asset.itemName);
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -127,7 +134,7 @@ public class BuildableComponent : MonoBehaviour
 
             if (Buildable.Type == BuildableType.Bunker)
             {
-                FOB? fob = FOB.GetNearestFOB(structure.model.position, EfobRadius.SHORT, data.group);
+                FOB? fob = FOB.GetNearestFOB(structure.model.position, EFobRadius.SHORT, data.group);
                 if (fob != null)
                 {
                     transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.Spotted.FOB, data.group.GetTeam());
@@ -156,7 +163,7 @@ public class BuildableComponent : MonoBehaviour
 
             Buildable.Emplacement.BaseBarricade.ValidReference(out Guid guid);
             Vector3 rotation = Foundation.model.rotation.eulerAngles;
-            InteractableVehicle vehicle = SpawnImplacement(vehicleasset, Foundation.model.transform.position, new Vector3(rotation.x + 90, rotation.y, rotation.z), data.owner, data.group, guid);
+            InteractableVehicle vehicle = SpawnEmplacement(vehicleasset, Foundation.model.transform.position, rotation, data.owner, data.group, guid);
             structureName = vehicle.asset.vehicleName;
 
             BuiltBuildableComponent comp = vehicle.transform.gameObject.AddComponent<BuiltBuildableComponent>();
@@ -197,12 +204,14 @@ public class BuildableComponent : MonoBehaviour
         {
             BarricadeManager.destroyBarricade(Foundation, x, y, ushort.MaxValue);
         }
+        L.LogDebug("Done building " + Foundation.asset.itemName);
         Destroy(this);
     }
-    internal static InteractableVehicle SpawnImplacement(VehicleAsset vehicleAsset, Vector3 position, Vector3 rotation, ulong owner, ulong group, Guid baseBarricade = default)
+    internal static InteractableVehicle SpawnEmplacement(VehicleAsset vehicleAsset, Vector3 position, Vector3 rotation, ulong owner, ulong group, Guid baseBarricade = default)
     {
-        Quaternion qrotation = Quaternion.Euler(new Vector3(rotation.x, rotation.y, rotation.z));
-        InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleAsset.id, new Vector3(position.x, position.y + 1, position.z), qrotation);
+        Quaternion vrotation = Quaternion.Euler(new Vector3(rotation.x + 90, rotation.y, rotation.z));
+        Quaternion brotation = Quaternion.Euler(rotation);
+        InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleAsset.id, new Vector3(position.x, position.y + 1, position.z), vrotation);
 
         if (vehicle.asset.canBeLocked)
         {
@@ -216,7 +225,7 @@ public class BuildableComponent : MonoBehaviour
         if (baseBarricade != default && Assets.find(baseBarricade) is ItemBarricadeAsset emplacementBase)
         {
             Barricade barricade = new Barricade(emplacementBase);
-            BarricadeManager.dropNonPlantedBarricade(barricade, position, qrotation, owner, group);
+            BarricadeManager.dropNonPlantedBarricade(barricade, position, brotation, owner, group);
         }
         return vehicle;
     }
@@ -227,7 +236,8 @@ public class BuildableComponent : MonoBehaviour
 #endif
         if (IsSalvaged)
         {
-            FOB? fob = FOB.GetNearestFOB(Foundation.GetServersideData().point, EfobRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
+            L.LogDebug(Foundation.asset.itemName + " destroyed!");
+            FOB? fob = FOB.GetNearestFOB(Foundation.GetServersideData().point, EFobRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
             if (fob is not null)
             {
                 fob.AddBuild(Buildable.RequiredBuild);
@@ -240,6 +250,7 @@ public class BuildableComponent : MonoBehaviour
     private static readonly List<InteractableVehicle> RadioNearbyVehiclesCache = new List<InteractableVehicle>(16);
     public static bool TryPlaceRadio(Barricade radio, UCPlayer? placer, Vector3 point)
     {
+        L.LogDebug("Trying to place radio: " + (placer?.ToString() ?? "null") + " placer. at " + point.ToString("F2", Data.AdminLocale));
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -250,22 +261,26 @@ public class BuildableComponent : MonoBehaviour
         {
             if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
             {
+                L.LogDebug(" Underwater.", ConsoleColor.Red);
                 placer?.SendChat(T.BuildFOBUnderwater);
                 return false;
             }
             if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z) + FOBManager.Config.FOBMaxHeightAboveTerrain)
             {
+                L.LogDebug(" Too high.", ConsoleColor.Red);
                 placer?.SendChat(T.BuildFOBTooHigh, FOBManager.Config.FOBMaxHeightAboveTerrain);
                 return false;
             }
             if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(point))
             {
+                L.LogDebug(" In restricted zone.", ConsoleColor.Red);
                 placer?.SendChat(T.BuildFOBTooCloseToMain);
                 return false;
             }
         }
         if (FOB.GetFoBs(team).Count >= FOBManager.Config.FobLimit)
         {
+            L.LogDebug(" Fob limit reached.");
             // fob limit reached
             placer?.SendChat(T.BuildMaxFOBsHit);
             return false;
@@ -276,6 +291,7 @@ public class BuildableComponent : MonoBehaviour
             if (bay == null || !bay.IsLoaded)
             {
                 placer?.SendChat(T.BuildNoLogisticsVehicle);
+                L.LogDebug(" VB not loaded.", ConsoleColor.Red);
                 return false;
             }
             bool any;
@@ -300,30 +316,36 @@ public class BuildableComponent : MonoBehaviour
             }
             if (!any)
             {
+                L.LogDebug(" No Logis.", ConsoleColor.Red);
                 // no logis nearby
                 placer?.SendChat(T.BuildNoLogisticsVehicle);
                 return false;
             }
         }
 
-        FOB? nearbyFOB = FOB.GetNearestFOB(point, EfobRadius.FOB_PLACEMENT, team);
+        FOB? nearbyFOB = FOB.GetNearestFOB(point, EFobRadius.FOB_PLACEMENT, team);
         if (nearbyFOB != null)
         {
+            L.LogDebug(" FOB too close.", ConsoleColor.Red);
             // another FOB radio is too close
             placer?.SendChat(T.BuildFOBTooClose, nearbyFOB, (nearbyFOB.Position - point).magnitude, radius * 2f);
             return false;
         }
 
+        L.LogDebug(" Placing radio.", ConsoleColor.Green);
         return true;
     }
     public static bool TryPlaceBuildable(Barricade foundation, BuildableData buildable, UCPlayer placer, Vector3 point)
     {
+        L.LogDebug("Trying to place buildable " + foundation.asset.itemName + ": " + (placer?.ToString() ?? "null") + " placer. at " + point.ToString("F2", Data.AdminLocale));
+        if (placer == null)
+            return false;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ulong team = placer.GetTeam();
 
-        FOB? fob = FOB.GetNearestFOB(point, EfobRadius.FULL, team);
+        FOB? fob = FOB.GetNearestFOB(point, EFobRadius.FULL, team);
 
         if (buildable.Type == BuildableType.Bunker)
         {
@@ -331,28 +353,33 @@ public class BuildableComponent : MonoBehaviour
             {
                 if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
                 {
+                    L.LogDebug(" Underwater.", ConsoleColor.Red);
                     placer.SendChat(T.BuildFOBUnderwater);
                     return false;
                 }
                 if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z) + FOBManager.Config.FOBMaxHeightAboveTerrain)
                 {
+                    L.LogDebug(" Too high.", ConsoleColor.Red);
                     placer.SendChat(T.BuildFOBTooHigh, FOBManager.Config.FOBMaxHeightAboveTerrain);
                     return false;
                 }
                 if (Data.Gamemode is ITeams && TeamManager.IsInAnyMainOrAMCOrLobby(point))
                 {
+                    L.LogDebug(" In restricted area.", ConsoleColor.Red);
                     placer.SendChat(T.BuildFOBTooCloseToMain);
                     return false;
                 }
             }
             if (fob == null || (fob.Position - point).sqrMagnitude > Math.Pow(30, 2))
             {
+                L.LogDebug(" No radio.", ConsoleColor.Red);
                 // no radio nearby, radio must be within 30m
                 placer.SendChat(T.BuildNoRadio, 30);
                 return false;
             }
             if (fob.Bunker != null)
             {
+                L.LogDebug(" limit reached (bunker already placed).", ConsoleColor.Red);
                 // this fob already has a bunker
                 placer.SendChat(T.BuildLimitReached, buildable.Limit, buildable);
                 return false;
@@ -363,12 +390,12 @@ public class BuildableComponent : MonoBehaviour
             BarricadeDrop? closeEnemyFOB = Gamemode.Config.BarricadeFOBBunker.ValidReference(out Guid guid)
                 ? UCBarricadeManager.GetNearbyBarricades(guid, 5, point, false).FirstOrDefault()
                 : null;
-
             if (buildable.Type == BuildableType.Emplacement)
             {
                 if (!buildable.Foundation.Value.Exists || buildable.Emplacement is null || !buildable.Emplacement.EmplacementVehicle.Exists)
                 {
                     // invalid GUIDs
+                    L.LogDebug(" invalid asset.", ConsoleColor.Red);
                     placer.SendChat(T.BuildInvalidAsset);
                     return false;
                 }
@@ -377,6 +404,7 @@ public class BuildableComponent : MonoBehaviour
             {
                 if (!buildable.Foundation.Value.Exists || !buildable.BuildableBarricade.Value.Exists)
                 {
+                    L.LogDebug(" invalid asset.", ConsoleColor.Red);
                     // invalid GUIDs
                     placer.SendChat(T.BuildInvalidAsset);
                     return false;
@@ -386,6 +414,7 @@ public class BuildableComponent : MonoBehaviour
 
             if (closeEnemyFOB is not null && closeEnemyFOB.GetServersideData().group != team)
             {
+                L.LogDebug(" enemy fob too close.", ConsoleColor.Red);
                 // buildable too close to enemy bunker
                 placer.SendChat(T.BuildBunkerTooClose, (closeEnemyFOB.model.position - point).magnitude, 5f);
                 return false;
@@ -406,34 +435,98 @@ public class BuildableComponent : MonoBehaviour
 
             fob.ReduceBuild(buildable.RequiredBuild);
         }
+        L.LogDebug(" Placing " + buildable.Type.ToString(), ConsoleColor.Green);
         return true;
     }
-    private static bool ValidatePlacementWithFriendlyFOB(BuildableData buildable, FOB? fob, UCPlayer placer, Vector3 point)
+    public static int CountExistingBuildables(BuildableData buildable, FOB fob, BarricadeDrop? ignoreFoundation = null, UCPlayer? ownerOnly = null)
+    {
+        if (ownerOnly == null)
+        {
+            int existing = 0;
+            if (buildable.Type != BuildableType.Emplacement)
+            {
+                if (buildable.BuildableBarricade.ValidReference(out ItemBarricadeAsset asset))
+                    existing += UCBarricadeManager.CountNearbyBarricades(asset.GUID, fob.Radius, fob.Position, fob.Team);
+            }
+            else if (buildable.Emplacement != null && buildable.Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vehicle))
+            {
+                existing += UCVehicleManager.CountNearbyVehicles(vehicle.GUID, fob.Radius, fob.Position, fob.Team);
+            }
+
+            if (buildable.Foundation.ValidReference(out ItemBarricadeAsset basset))
+            {
+                List<BarricadeDrop> nearbyFoundations = UCBarricadeManager.GetNearbyBarricades(basset.GUID, fob.Radius, fob.Position, fob.Team, false).ToListFast();
+                if (ignoreFoundation != null) nearbyFoundations.RemoveFast(ignoreFoundation);
+                existing += nearbyFoundations.Count;
+            }
+            return existing;
+        }
+        else
+        {
+            int existing = 0;
+            Vector3 pos = ownerOnly.Position;
+            if (buildable.Type != BuildableType.Emplacement)
+            {
+                if (buildable.BuildableBarricade.ValidReference(out ItemBarricadeAsset asset))
+                {
+                    existing = UCBarricadeManager.CountBarricadesWhere(fob.Radius, fob.Position,
+                        x => x.GetServersideData().group.GetTeam() == fob.Team &&
+                             x.GetServersideData().owner == ownerOnly.Steam64 &&
+                             asset.GUID == x.asset.GUID &&
+                             (x.model.position - pos).sqrMagnitude < 50f * 50f);
+                }
+            }
+            else if (buildable.Emplacement != null && buildable.Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vehicle))
+            {
+                for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
+                {
+                    InteractableVehicle veh = VehicleManager.vehicles[i];
+                    if (veh.lockedOwner.m_SteamID == ownerOnly.Steam64 &&
+                        veh.lockedGroup.m_SteamID.GetTeam() == fob.Team &&
+                        veh.asset.GUID == vehicle.GUID &&
+                        (veh.transform.position - pos).sqrMagnitude < 50f * 50f)
+                        ++existing;
+                }
+            }
+
+            if (buildable.Foundation.ValidReference(out ItemBarricadeAsset basset))
+            {
+                List<BarricadeDrop> nearbyFoundations = UCBarricadeManager.GetBarricadesWhere(fob.Radius, fob.Position,
+                        x => x.GetServersideData().group.GetTeam() == fob.Team &&
+                             x.GetServersideData().owner == ownerOnly.Steam64 &&
+                             basset.GUID == x.asset.GUID &&
+                             (x.model.position - pos).sqrMagnitude < 50f * 50f).ToListFast();
+
+                if (ignoreFoundation != null) nearbyFoundations.RemoveFast(ignoreFoundation);
+                existing += nearbyFoundations.Count;
+            }
+            return existing;
+        }
+    }
+    private static bool ValidatePlacementWithFriendlyFOB(BuildableData buildable, FOB? fob, UCPlayer placer, Vector3 point, BarricadeDrop? ignore = null)
     {
         if (!placer.HasKit || !placer.ActiveKit!.Item!.ContainsItem(buildable.Foundation.Value.Guid)) // normal player, buildable is not in their kit
         {
             if (fob is null)
             {
+                L.LogDebug(" not in radius.", ConsoleColor.Red);
                 // no fob nearby
                 placer.SendChat(T.BuildNotInRadius);
                 return false;
             }
             else if ((fob.Position - point).sqrMagnitude > Math.Pow(fob.Radius, 2))
             {
+                L.LogDebug(" radius too big.", ConsoleColor.Red);
                 // radius is constrained because there is no bunker
                 placer.SendChat(T.BuildSmallRadius, fob.Radius);
                 return false;
             }
             else
             {
-                int existing;
-                if (buildable.Type != BuildableType.Emplacement)
-                    existing = UCBarricadeManager.CountNearbyBarricades(buildable.BuildableBarricade.Value, fob.Radius, fob.Position, fob.Team);
-                else
-                    existing = UCVehicleManager.CountNearbyVehicles(buildable.Emplacement!.EmplacementVehicle, fob.Radius, fob.Position, placer.GetTeam());
-
+                int existing = CountExistingBuildables(buildable, fob, ignore);
                 if (existing >= buildable.Limit)
                 {
+                    L.LogDebug(" over buildable limit (" + existing + "/" + buildable.Limit + ").", ConsoleColor.Red);
                     // fob buildable limit reached for this type
                     placer.SendChat(T.BuildLimitReached, buildable.Limit, buildable);
                     return false;
@@ -443,6 +536,14 @@ public class BuildableComponent : MonoBehaviour
         }
         else
         {
+            if (fob is null)
+            {
+                L.LogDebug(" not in radius 2.", ConsoleColor.Red);
+                // no fob nearby
+                placer.SendChat(T.BuildNotInRadius);
+                return false;
+            }
+            int existing = CountExistingBuildables(buildable, fob, ignore, placer);
             int totalPlaced = UCBarricadeManager.CountBarricadesWhere(b =>
             b.GetServersideData().owner == placer.Steam64 &&
                 b.asset.GUID == buildable.BuildableBarricade.Value.Guid &&
@@ -451,6 +552,7 @@ public class BuildableComponent : MonoBehaviour
             int kitCount = placer.ActiveKit!.Item!.CountItems(buildable.Foundation.Value.Guid);
             if (totalPlaced >= kitCount)
             {
+                L.LogDebug(" over buildable limit (kit) (" + totalPlaced + "/" + kitCount + ").", ConsoleColor.Red);
                 // regional buildable limit reached for this player
                 placer.SendChat(T.RegionalBuildLimitReached, kitCount, buildable);
                 return false;

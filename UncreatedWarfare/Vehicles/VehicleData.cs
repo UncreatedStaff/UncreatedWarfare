@@ -348,7 +348,7 @@ public class VBarricade : IListSubItem
         {
             columns[++index] = new Schema.Column(COLUMN_HEALTH, SqlTypes.USHORT)
             {
-                Default = ushort.MaxValue.ToString(Data.AdminLocale)
+                Default = "'" + ushort.MaxValue.ToString(Data.AdminLocale) + "'"
             };
         }
         columns[++index] = new Schema.Column(COLUMN_POS_X, SqlTypes.FLOAT);
@@ -417,20 +417,24 @@ public enum VehicleType
     [Translatable(LanguageAliasSet.ROMANIAN, "Humvee")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Humvee")]
     [Translatable(LanguageAliasSet.POLISH, "Humvee")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "悍马")]
     Humvee,
     [Translatable(LanguageAliasSet.RUSSIAN, "Транспорт")]
     [Translatable(LanguageAliasSet.SPANISH, "Transporte")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Transport")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Transporte")]
     [Translatable(LanguageAliasSet.POLISH, "Humvee")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "运输卡车")]
     [Translatable("Transport Truck")]
     TransportGround,
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "侦查车")]
     ScoutCar,
     [Translatable(LanguageAliasSet.RUSSIAN, "Логистический")]
     [Translatable(LanguageAliasSet.SPANISH, "Logistico")]
     [Translatable(LanguageAliasSet.ROMANIAN, "Camion")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Logística")]
     [Translatable(LanguageAliasSet.POLISH, "Transport Logistyczny")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "补给卡车")]
     [Translatable("Logistics Truck")]
     LogisticsGround,
     [Translatable(LanguageAliasSet.RUSSIAN, "БТР")]
@@ -450,6 +454,7 @@ public enum VehicleType
     [Translatable(LanguageAliasSet.ROMANIAN, "Tanc")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Tanque")]
     [Translatable(LanguageAliasSet.POLISH, "Czołg")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "坦克")]
     [Translatable("Tank")]
     MBT,
     [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
@@ -457,6 +462,7 @@ public enum VehicleType
     [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
     [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "运输直升机")]
     [Translatable("Transport Heli")]
     TransportAir,
     [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
@@ -464,9 +470,11 @@ public enum VehicleType
     [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
     [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "武装直升机")]
     [Translatable("Attack Heli")]
     AttackHeli,
     [Translatable(LanguageAliasSet.RUSSIAN, "реактивный")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "战斗机")]
     [Translatable("Jet")]
     Jet,
     [Translatable(LanguageAliasSet.RUSSIAN, "Размещение")]
@@ -477,9 +485,11 @@ public enum VehicleType
     [Obsolete("Use the individual emplacement types instead.", true)]
     Emplacement,
     [Translatable(LanguageAliasSet.RUSSIAN, "зенитный")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "防空")]
     [Translatable("Anti-Aircraft")]
     AA,
     [Translatable(LanguageAliasSet.RUSSIAN, "Тяжелый пулемет")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "重机枪")]
     [Translatable("Heavy Machine Gun")]
     HMG,
     [Translatable(LanguageAliasSet.RUSSIAN, "противотанковая ракета")]
@@ -487,6 +497,7 @@ public enum VehicleType
     ATGM,
     [Translatable(LanguageAliasSet.RUSSIAN, "Миномет")]
     [Translatable(LanguageAliasSet.SPANISH, "Mortero")]
+    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "迫击炮")]
     [Translatable("Mortar")]
     Mortar
 }

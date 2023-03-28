@@ -73,6 +73,7 @@ public class ActionLog : MonoBehaviour
         if (_instance != null)
             Destroy(_instance);
         _instance = this;
+        F.CheckDir(Data.Paths.ActionLog, out _, true);
     }
     [UsedImplicitly]
     void OnDestroy() => OnApplicationQuit();

@@ -194,212 +194,312 @@ partial class KitManager
             new Schema.Column(COLUMN_LAYOUT_NEW_ROTATION, SqlTypes.BYTE)
         }, false, typeof(ItemTransformation))
     };
-    public static async Task DownloadPlayerKitData(UCPlayer player, bool @lock, CancellationToken token = default)
+
+    public static async Task DownloadPlayersKitData(IEnumerable<UCPlayer> playerList, bool lockPurchaseSync,
+        CancellationToken token = default)
     {
-        if (player.IsDownloadingKitData && !player.HasDownloadedKitData)
-        {
-            L.LogDebug("Spin-waiting for kit data for " + player + "...");
-            UCWarfare.SpinWaitUntil(() => player.HasDownloadedKitData, 2500);
+        UCPlayer[] players = playerList.ToArrayFast(true);
+        if (players.Length == 0)
             return;
+        for (int i = 0; i < players.Length; ++i)
+        {
+            UCPlayer player = players[i];
+            if (player.IsDownloadingKitData && !player.HasDownloadedKitData)
+            {
+                L.LogDebug("Spin-waiting for player kit data for " + player + "...");
+                UCWarfare.SpinWaitUntil(() => player.HasDownloadedKitData, 2500);
+                return;
+            }
+            
+            player.IsDownloadingKitData = true;
         }
-        List<HotkeyBinding>? bindingsToDelete = null;
-        List<LayoutTransformation>? layoutsToDelete = null;
-        player.IsDownloadingKitData = true;
-        if (@lock)
-            await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+
+        List<KeyValuePair<ulong, HotkeyBinding>>? bindingsToDelete = null;
+        List<KeyValuePair<ulong, LayoutTransformation>>? layoutsToDelete = null;
+
+
+        if (lockPurchaseSync)
+        {
+            Task[] tasks = new Task[players.Length];
+            for (int i = 0; i < players.Length; ++i)
+            {
+                UCPlayer pl = players[i];
+                CancellationToken token2 = token;
+                token2.CombineIfNeeded(pl.DisconnectToken);
+                tasks[i] = pl.PurchaseSync.WaitAsync(token2);
+            }
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+        }
+
         try
         {
-            KitManager? singleton = GetSingletonQuick();
-            if (singleton == null)
-                throw new SingletonUnloadedException(typeof(KitManager));
-            List<int> kits = new List<int>();
-            List<HotkeyBinding>? bindings = null;
-            List<LayoutTransformation>? layouts = null;
+            StringBuilder playerInList = new StringBuilder(players.Length * 32);
 
-            object[] s64Obj = { player.Steam64 };
-            await Data.AdminSql.QueryAsync("SELECT `" + COLUMN_EXT_PK + "` FROM `" + TABLE_ACCESS +
-                                           "` WHERE `" + COLUMN_ACCESS_STEAM_64 + "` = @0;",
-                s64Obj,
+            object[] args = new object[players.Length];
+            for (int i = 0; i < players.Length; ++i)
+            {
+                if (i != 0) playerInList.Append(',');
+                playerInList.Append('@').Append(i.ToString(Data.AdminLocale));
+                args[i] = players[i].Steam64;
+            }
+
+            playerInList.Append(");");
+            string inList = playerInList.ToString();
+            List<int>?[] kitOutput = new List<int>[players.Length];
+            List<HotkeyBinding>?[] bindings = new List<HotkeyBinding>[players.Length];
+            List<LayoutTransformation>?[] layouts = new List<LayoutTransformation>[players.Length];
+
+            await Data.AdminSql.QueryAsync("SELECT `" + COLUMN_EXT_PK + "`,`" + COLUMN_ACCESS_STEAM_64 + "` FROM `" +
+                                           TABLE_ACCESS +
+                                           "` WHERE `" + COLUMN_ACCESS_STEAM_64 + "` IN (" + inList, args,
                 reader =>
                 {
-                    kits.Add(reader.GetInt32(0));
+                    ulong s64 = reader.GetUInt64(1);
+                    int k = reader.GetInt32(0);
+                    int index = Array.FindIndex(players, x => x.Steam64 == s64);
+                    if (index != -1 && new PrimaryKey(k).IsValid)
+                    {
+                        ref List<int>? list = ref kitOutput[index];
+                        (list ??= new List<int>(16)).Add(k);
+                    }
                 }, token).ConfigureAwait(false);
-            await Data.AdminSql.QueryAsync(
-                F.BuildSelectWhere(TABLE_HOTKEYS, COLUMN_HOTKEY_PLAYER, 0,
+            await Data.AdminSql.QueryAsync(F.BuildSelectWhereIn(TABLE_HOTKEYS, COLUMN_HOTKEY_PLAYER,
                     COLUMN_EXT_PK, COLUMN_HOTKEY_SLOT,
                     COLUMN_ITEM_PAGE, COLUMN_ITEM_X, COLUMN_ITEM_Y,
-                    COLUMN_ITEM_GUID, COLUMN_ITEM_REDIRECT),
-                s64Obj,
+                    COLUMN_ITEM_GUID, COLUMN_ITEM_REDIRECT, COLUMN_HOTKEY_PLAYER) + inList, args,
                 reader =>
                 {
-                    PrimaryKey kit = reader.GetInt32(0);
-                    bool del = false;
-                    if (!kit.IsValid)
+                    ulong s64 = reader.GetUInt64(7);
+                    int index = Array.FindIndex(players, x => x.Steam64 == s64);
+                    if (index != -1)
                     {
-                        L.LogWarning("Invalid kit primary key (" + kit + ") in player " + player + "'s hotkeys.");
-                        del = true;
-                    }
-                    byte slot = reader.GetByte(1);
-                    if (!KitEx.ValidSlot(slot))
-                    {
-                        L.LogWarning("Invalid kit slot (" + slot + ") in player " + player + "'s hotkeys.");
-                        del = true;
-                    }
-                    IItemJar jar;
-                    byte x = reader.GetByte(3), y = reader.GetByte(4);
-                    Page? page = reader.ReadStringEnum<Page>(2);
-                    if (!page.HasValue)
-                    {
-                        L.LogWarning("Failed to read page from player " + player + "'s hotkeys.");
-                        del = true;
-                    }
-                    Guid? guid = reader.IsDBNull(5) ? null : reader.ReadGuidString(5);
-                    if (guid.HasValue)
-                    {
-                        jar = new PageItem(guid.Value, x, y, 0, Array.Empty<byte>(), 1, page ?? (Page)byte.MaxValue);
-                    }
-                    else
-                    {
-                        RedirectType? redir = reader.IsDBNull(6) ? null : reader.ReadStringEnum<RedirectType>(6);
-                        if (!redir.HasValue)
+                        UCPlayer player = players[index];
+                        ref List<HotkeyBinding>? list = ref bindings[index];
+                        PrimaryKey kit = reader.GetInt32(0);
+                        bool del = false;
+                        if (!kit.IsValid)
                         {
-                            L.LogWarning("Failed to read redirect type and GUID from player " + player + "'s hotkeys.");
+                            L.LogWarning("Invalid kit primary key (" + kit + ") in player " + player + "'s hotkeys.");
                             del = true;
-                            jar = new AssetRedirectItem(RedirectType.None, x, y, 0, (Page)byte.MaxValue);
+                        }
+
+                        byte slot = reader.GetByte(1);
+                        if (!KitEx.ValidSlot(slot))
+                        {
+                            L.LogWarning("Invalid kit slot (" + slot + ") in player " + player + "'s hotkeys.");
+                            del = true;
+                        }
+
+                        IItemJar jar;
+                        byte x = reader.GetByte(3), y = reader.GetByte(4);
+                        Page? page = reader.ReadStringEnum<Page>(2);
+                        if (!page.HasValue)
+                        {
+                            L.LogWarning("Failed to read page from player " + player + "'s hotkeys.");
+                            del = true;
+                        }
+
+                        Guid? guid = reader.IsDBNull(5) ? null : reader.ReadGuidString(5);
+                        if (guid.HasValue)
+                        {
+                            jar = new PageItem(guid.Value, x, y, 0, Array.Empty<byte>(), 1,
+                                page ?? (Page)byte.MaxValue);
                         }
                         else
                         {
-                            jar = new AssetRedirectItem(redir.Value, x, y, 0, page ?? (Page)byte.MaxValue);
+                            RedirectType? redir = reader.IsDBNull(6) ? null : reader.ReadStringEnum<RedirectType>(6);
+                            if (!redir.HasValue)
+                            {
+                                L.LogWarning("Failed to read redirect type and GUID from player " + player +
+                                             "'s hotkeys.");
+                                del = true;
+                                jar = new AssetRedirectItem(RedirectType.None, x, y, 0, (Page)byte.MaxValue);
+                            }
+                            else
+                            {
+                                jar = new AssetRedirectItem(redir.Value, x, y, 0, page ?? (Page)byte.MaxValue);
+                            }
                         }
+
+                        HotkeyBinding b = new HotkeyBinding(kit, slot, jar);
+
+                        if (!del)
+                            (list ??= new List<HotkeyBinding>(4)).Add(b);
+                        else
+                            (bindingsToDelete ??= new List<KeyValuePair<ulong, HotkeyBinding>>()).Add(
+                                new KeyValuePair<ulong, HotkeyBinding>(player.Steam64, b));
                     }
-
-                    HotkeyBinding b = new HotkeyBinding(kit, slot, jar);
-
-                    if (!del)
-                        (bindings ??= new List<HotkeyBinding>(32)).Add(b);
-                    else
-                        (bindingsToDelete ??= new List<HotkeyBinding>()).Add(b);
                 }, token).ConfigureAwait(false);
-            await Data.AdminSql.QueryAsync(
-                F.BuildSelectWhere(TABLE_LAYOUT_TRANSFORMATIONS, COLUMN_LAYOUT_PLAYER, 0,
-                    COLUMN_EXT_PK, COLUMN_LAYOUT_OLD_PAGE,
-                    COLUMN_LAYOUT_NEW_PAGE, COLUMN_LAYOUT_OLD_X, COLUMN_LAYOUT_NEW_X,
-                    COLUMN_LAYOUT_OLD_Y, COLUMN_LAYOUT_NEW_Y, COLUMN_LAYOUT_NEW_ROTATION),
-                s64Obj,
+            await Data.AdminSql.QueryAsync(F.BuildSelectWhereIn(TABLE_LAYOUT_TRANSFORMATIONS, COLUMN_LAYOUT_PLAYER,
+                                               COLUMN_EXT_PK, COLUMN_LAYOUT_OLD_PAGE,
+                                               COLUMN_LAYOUT_NEW_PAGE, COLUMN_LAYOUT_OLD_X, COLUMN_LAYOUT_NEW_X,
+                                               COLUMN_LAYOUT_OLD_Y, COLUMN_LAYOUT_NEW_Y, COLUMN_LAYOUT_NEW_ROTATION,
+                                               COLUMN_LAYOUT_PLAYER) +
+                                           inList, args,
                 reader =>
                 {
-                    PrimaryKey kit = reader.GetInt32(0);
-                    bool del = false;
-                    if (!kit.IsValid)
+                    ulong s64 = reader.GetUInt64(8);
+                    int index = Array.FindIndex(players, x => x.Steam64 == s64);
+                    if (index != -1)
                     {
-                        L.LogWarning("Invalid kit primary key (" + kit + ") in player " + player + "'s hotkeys.");
-                        del = true;
-                    }
-                    Page? oldPage = reader.ReadStringEnum<Page>(1), newPage = reader.ReadStringEnum<Page>(2);
-                    byte oldX = reader.GetByte(3), newX = reader.GetByte(4);
-                    byte oldY = reader.GetByte(5), newY = reader.GetByte(6);
-                    byte newRot = reader.GetByte(7);
-                    if (!oldPage.HasValue || !newPage.HasValue)
-                    {
-                        L.LogWarning("Failed to read old or new page from player " + player + "'s layout data.");
-                        del = true;
-                    }
-                    if (newRot > 3)
-                    {
-                        L.LogWarning("Invalid rotation " + newRot + " in " + player + "'s layout data.");
-                        del = true;
-                    }
+                        UCPlayer player = players[index];
+                        ref List<LayoutTransformation>? list = ref layouts[index];
+                        PrimaryKey kit = reader.GetInt32(0);
+                        bool del = false;
+                        if (!kit.IsValid)
+                        {
+                            L.LogWarning("Invalid kit primary key (" + kit + ") in player " + player + "'s hotkeys.");
+                            del = true;
+                        }
 
-                    LayoutTransformation l = new LayoutTransformation(oldPage ?? (Page)byte.MaxValue, newPage ?? (Page)byte.MaxValue, oldX, oldY, newX, newY, newRot, kit);
+                        Page? oldPage = reader.ReadStringEnum<Page>(1), newPage = reader.ReadStringEnum<Page>(2);
+                        byte oldX = reader.GetByte(3), newX = reader.GetByte(4);
+                        byte oldY = reader.GetByte(5), newY = reader.GetByte(6);
+                        byte newRot = reader.GetByte(7);
+                        if (!oldPage.HasValue || !newPage.HasValue)
+                        {
+                            L.LogWarning("Failed to read old or new page from player " + player + "'s layout data.");
+                            del = true;
+                        }
 
-                    if (!del)
-                        (layouts ??= new List<LayoutTransformation>(32)).Add(l);
-                    else
-                        (layoutsToDelete ??= new List<LayoutTransformation>()).Add(l);
+                        if (newRot > 3)
+                        {
+                            L.LogWarning("Invalid rotation " + newRot + " in " + player + "'s layout data.");
+                            del = true;
+                        }
+
+                        LayoutTransformation l = new LayoutTransformation(oldPage ?? (Page)byte.MaxValue,
+                            newPage ?? (Page)byte.MaxValue, oldX, oldY, newX, newY, newRot, kit);
+
+                        if (!del)
+                            (list ??= new List<LayoutTransformation>(4)).Add(l);
+                        else
+                            (layoutsToDelete ??= new List<KeyValuePair<ulong, LayoutTransformation>>()).Add(
+                                new KeyValuePair<ulong, LayoutTransformation>(player.Steam64, l));
+                    }
                 }, token).ConfigureAwait(false);
-            player.AccessibleKits = new List<SqlItem<Kit>>(kits.Count);
+
+
+
+            KitManager? singleton = GetSingletonQuick();
+            if (singleton == null)
+                throw new SingletonUnloadedException(typeof(KitManager));
+
+            for (int i = 0; i < players.Length; ++i)
+                players[i].AccessibleKits = new List<SqlItem<Kit>>(kitOutput[i] is { } l1 ? l1.Count : 0);
+
             await singleton.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                for (int i = 0; i < kits.Count; ++i)
+                for (int p = 0; p < players.Length; ++p)
                 {
-                    SqlItem<Kit>? proxy = singleton.FindProxyNoLock(kits[i]);
-                    if (proxy is not null)
-                        player.AccessibleKits.Add(proxy);
-                }
-                if (layouts is { Count: > 0 })
-                {
-                    for (int i = 0; i < layouts.Count; ++i)
-                    {
-                        LayoutTransformation l = layouts[i];
-                        SqlItem<Kit>? proxy = singleton.FindProxyNoLock(l.Kit);
-                        Kit? kit = proxy?.Item;
-                        if (kit is null)
-                        {
-                            L.LogWarning("Kit for " + player + "'s layout transformation (" + l.Kit + ") not found.");
-                            goto del;
-                        }
-                        // find matching item
-                        IKitItem? item = kit.Items?.FirstOrDefault(x => x is IItemJar jar && jar.Page == l.OldPage && jar.X == l.OldX && jar.Y == l.OldY);
-                        if (item == null)
-                        {
-                            L.LogWarning(player + "'s layout transformation for kit " + l.Kit + " has an invalid item position: " + l.OldPage + ", (" + l.OldX + ", " + l.OldY + ").");
-                            goto del;
-                        }
-
+                    UCPlayer player = players[p];
+                    if (!player.IsOnline)
                         continue;
-                        del:
-                        (layoutsToDelete ??= new List<LayoutTransformation>()).Add(l);
-                        layouts.RemoveAtFast(i);
-                        --i;
-                    }
-                }
-                if (bindings is { Count: > 0 })
-                {
-                    for (int i = 0; i < bindings.Count; ++i)
+                    List<int>? kits = kitOutput[p];
+                    if (kits != null)
                     {
-                        HotkeyBinding b = bindings[i];
-                        SqlItem<Kit>? proxy = singleton.FindProxyNoLock(b.Kit);
-                        Kit? kit = proxy?.Item;
-                        if (kit is null)
+                        for (int i = 0; i < kits.Count; ++i)
                         {
-                            L.LogWarning("Kit for " + player + "'s hotkey (" + b.Kit + ") not found.");
-                            goto del;
+                            SqlItem<Kit>? proxy = singleton.FindProxyNoLock(kits[i]);
+                            if (proxy is not null)
+                            {
+                                (player.AccessibleKits ??= new List<SqlItem<Kit>>()).Add(proxy);
+                            }
                         }
-
-                        // find matching item
-                        IKitItem? item = kit.Items?.FirstOrDefault(x =>
-                            x is IItemJar jar && jar.Page == b.Item.Page && jar.X == b.Item.X && jar.Y == b.Item.Y &&
-                            (jar is IItem i1 && b.Item is IItem i2 && i1.Item == i2.Item || jar is IAssetRedirect r1 &&
-                                b.Item is IAssetRedirect r2 && r1.RedirectType == r2.RedirectType));
-                        if (item == null)
-                        {
-                            L.LogWarning(player + "'s hotkey for kit " + b.Kit + " has an invalid item position: " + b.Item + ".");
-                            goto del;
-                        }
-
-                        continue;
-                        del:
-                        (bindingsToDelete ??= new List<HotkeyBinding>()).Add(b);
-                        bindings.RemoveAtFast(i);
-                        --i;
                     }
+
+                    List<LayoutTransformation>? layouts2 = layouts[p];
+                    if (layouts2 is { Count: > 0 })
+                    {
+                        for (int i = 0; i < layouts2.Count; ++i)
+                        {
+                            LayoutTransformation l = layouts2[i];
+                            SqlItem<Kit>? proxy = singleton.FindProxyNoLock(l.Kit);
+                            Kit? kit = proxy?.Item;
+                            if (kit is null)
+                            {
+                                L.LogWarning("Kit for " + player + "'s layout transformation (" + l.Kit + ") not found.");
+                                goto del;
+                            }
+
+                            // find matching item
+                            IKitItem? item = kit.Items?.FirstOrDefault(x =>
+                                x is IItemJar jar && jar.Page == l.OldPage && jar.X == l.OldX && jar.Y == l.OldY);
+                            if (item == null)
+                            {
+                                L.LogWarning(player + "'s layout transformation for kit " + l.Kit +
+                                             " has an invalid item position: " + l.OldPage + ", (" + l.OldX + ", " +
+                                             l.OldY + ").");
+                                goto del;
+                            }
+
+                            continue;
+                            del:
+                            (layoutsToDelete ??= new List<KeyValuePair<ulong, LayoutTransformation>>()).Add(
+                                new KeyValuePair<ulong, LayoutTransformation>(player.Steam64, l));
+                            layouts2.RemoveAtFast(i);
+                            --i;
+                        }
+                    }
+
+                    List<HotkeyBinding>? bindings2 = bindings[p];
+                    if (bindings2 is { Count: > 0 })
+                    {
+                        for (int i = 0; i < bindings2.Count; ++i)
+                        {
+                            HotkeyBinding b = bindings2[i];
+                            SqlItem<Kit>? proxy = singleton.FindProxyNoLock(b.Kit);
+                            Kit? kit = proxy?.Item;
+                            if (kit is null)
+                            {
+                                L.LogWarning("Kit for " + player + "'s hotkey (" + b.Kit + ") not found.");
+                                goto del;
+                            }
+
+                            // find matching item
+                            IKitItem? item = kit.Items?.FirstOrDefault(x =>
+                                x is IItemJar jar && jar.Page == b.Item.Page && jar.X == b.Item.X &&
+                                jar.Y == b.Item.Y &&
+                                (jar is IItem i1 && b.Item is IItem i2 && i1.Item == i2.Item ||
+                                 jar is IAssetRedirect r1 &&
+                                 b.Item is IAssetRedirect r2 && r1.RedirectType == r2.RedirectType));
+                            if (item == null)
+                            {
+                                L.LogWarning(player + "'s hotkey for kit " + b.Kit + " has an invalid item position: " +
+                                             b.Item + ".");
+                                goto del;
+                            }
+
+                            continue;
+                            del:
+                            (bindingsToDelete ??= new List<KeyValuePair<ulong, HotkeyBinding>>()).Add(
+                                new KeyValuePair<ulong, HotkeyBinding>(player.Steam64, b));
+                            bindings2.RemoveAtFast(i);
+                            --i;
+                        }
+                    }
+
+                    player.HotkeyBindings = bindings2;
+                    player.LayoutTransformations = layouts2;
                 }
             }
             finally
             {
                 singleton.Release();
             }
-
-            player.HotkeyBindings = bindings;
-            player.LayoutTransformations = layouts;
         }
         finally
         {
-            player.HasDownloadedKitData = true;
-            player.IsDownloadingKitData = false;
-            if (@lock)
-                player.PurchaseSync.Release();
+            for (int i = 0; i < players.Length; ++i)
+            {
+                UCPlayer player = players[i];
+                player.HasDownloadedKitData = true;
+                player.IsDownloadingKitData = false;
+                if (lockPurchaseSync)
+                    player.PurchaseSync.Release();
+            }
         }
 
         if (bindingsToDelete is { Count: > 0 } || layoutsToDelete is { Count: > 0 })
@@ -407,43 +507,52 @@ partial class KitManager
             int bct = bindingsToDelete?.Count ?? 0;
             int lct = layoutsToDelete?.Count ?? 0;
             StringBuilder sb = new StringBuilder((bct + lct) * 32);
-            const int blen = 2;
-            const int llen = 4;
-            object[] args = new object[1 + bct * blen + lct * llen];
-            args[0] = player.Steam64;
+            const int blen = 3;
+            const int llen = 5;
+            object[] args = new object[bct * blen + lct * llen];
             for (int i = 0; i < bct; ++i)
             {
-                HotkeyBinding b = bindingsToDelete![i];
+                KeyValuePair<ulong, HotkeyBinding> b = bindingsToDelete![i];
                 int st = 1 + i * blen;
-                args[st] = b.Slot;
-                args[st + 1] = b.Kit.Key;
+                args[st] = b.Key;
+                HotkeyBinding t = b.Value;
+                args[st + 1] = t.Slot;
+                args[st + 2] = t.Kit.Key;
                 sb.Append($"DELETE FROM `{TABLE_HOTKEYS}` " +
-                          $"WHERE `{COLUMN_HOTKEY_PLAYER}`=@0 " +
-                          $"AND `{COLUMN_HOTKEY_SLOT}`=@{st} " +
-                          $"AND `{COLUMN_EXT_PK}`=@{st + 1}; ");
+                          $"WHERE `{COLUMN_HOTKEY_PLAYER}`={st} " +
+                          $"AND `{COLUMN_HOTKEY_SLOT}`=@{st + 1} " +
+                          $"AND `{COLUMN_EXT_PK}`=@{st + 2}; ");
             }
+
             for (int i = 0; i < lct; ++i)
             {
-                LayoutTransformation l = layoutsToDelete![i];
+                KeyValuePair<ulong, LayoutTransformation> l = layoutsToDelete![i];
                 int st = 1 + bct * blen + i * llen;
-                args[st] = l.OldPage.ToString();
-                args[st + 1] = l.OldX;
-                args[st + 2] = l.OldY;
-                args[st + 3] = l.Kit.Key;
+                args[st] = l.Key;
+                LayoutTransformation t = l.Value;
+                args[st + 1] = t.OldPage.ToString();
+                args[st + 2] = t.OldX;
+                args[st + 3] = t.OldY;
+                args[st + 4] = t.Kit.Key;
                 sb.Append($"DELETE FROM `{TABLE_LAYOUT_TRANSFORMATIONS}` " +
-                          $"WHERE `{COLUMN_LAYOUT_PLAYER}`=@0 " +
-                          $"AND `{COLUMN_LAYOUT_OLD_PAGE}`=@{st} " +
-                          $"AND `{COLUMN_LAYOUT_OLD_X}`=@{st + 1} " +
-                          $"AND `{COLUMN_LAYOUT_OLD_Y}`=@{st + 2} " +
-                          $"AND `{COLUMN_EXT_PK}`=@{st + 3}; ");
+                          $"WHERE `{COLUMN_LAYOUT_PLAYER}`=@{st} " +
+                          $"AND `{COLUMN_LAYOUT_OLD_PAGE}`=@{st + 1} " +
+                          $"AND `{COLUMN_LAYOUT_OLD_X}`=@{st + 2} " +
+                          $"AND `{COLUMN_LAYOUT_OLD_Y}`=@{st + 3} " +
+                          $"AND `{COLUMN_EXT_PK}`=@{st + 4}; ");
             }
-            
-            UCWarfare.RunTask(Data.AdminSql.NonQueryAsync, sb.ToString(), args, token, ctx: "Delete invalid hotkeys and/or layout transformations for " + player + ".");
+
+            UCWarfare.RunTask(Data.AdminSql.NonQueryAsync, sb.ToString(), args, token,
+                ctx: "Delete invalid hotkeys and/or layout transformations for " + players.Length + " player(s).");
         }
 
         await UCWarfare.ToUpdate(token);
-        Signs.UpdateKitSigns(player, null);
+        Signs.UpdateKitSigns(null, null);
     }
+
+    public static Task DownloadPlayerKitData(UCPlayer player, bool lockPurchaseSync, CancellationToken token = default) =>
+        DownloadPlayersKitData(new UCPlayer[] { player }, lockPurchaseSync, token);
+
     private static async Task<bool> AddAccessRow(PrimaryKey kit, ulong player, KitAccessType type, CancellationToken token = default)
     {
         return await Data.AdminSql.NonQueryAsync(
@@ -1634,6 +1743,10 @@ partial class KitManager
                     faction = TeamManager.FindFactionInfo(FactionInfo.Mozambique);
             }
 
+            SqlItem<Kit>? existing = await FindProxy(kit.PrimaryKey, token).ConfigureAwait(false);
+            if (existing?.Item is { } newKit2 && !newKit2.Id.Equals(kit.Name))
+                kit.PrimaryKey = PrimaryKey.NotAssigned;
+
             Kit newKit = new Kit(kit.Name!, kit.Class == Class.None ? Class.Unarmed : kit.Class, kit.Branch == Branch.Default ? GetDefaultBranch(kit.Class) : kit.Branch,
                 kit.IsPremium
                     ? (kit.PremiumCost < 0
@@ -1658,11 +1771,7 @@ partial class KitManager
             {
                 if (newKit.Type == KitType.Public)
                 {
-                    newKit.FactionFilter = new PrimaryKey[]
-                    {
-                        faction.PrimaryKey
-                    };
-                    newKit.FactionFilterIsWhitelist = true;
+                    newKit.FactionFilterIsWhitelist = false;
                 }
                 else if (faction.FactionId.Equals(FactionInfo.USA, StringComparison.OrdinalIgnoreCase) ||
                          faction.FactionId.Equals(FactionInfo.Canada, StringComparison.OrdinalIgnoreCase) ||

@@ -278,7 +278,7 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
                 ForeignKeyColumn = COLUMN_PK,
                 ForeignKeyTable = TABLE_MAIN
             },
-            new Schema.Column(COLUMN_POINT_INDEX, SqlTypes.INT) { Default = "-1" },
+            new Schema.Column(COLUMN_POINT_INDEX, SqlTypes.INT) { Default = "'-1'" },
             new Schema.Column(COLUMN_POINT_POS_X, SqlTypes.FLOAT),
             new Schema.Column(COLUMN_POINT_POS_Z, SqlTypes.FLOAT)
         }, false, typeof(PolygonZone)),

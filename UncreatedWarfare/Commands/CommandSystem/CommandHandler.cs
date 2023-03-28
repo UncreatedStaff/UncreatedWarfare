@@ -1295,6 +1295,12 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
 
         string? s = remainder ? GetRange(parameter - _offset) : GetParamForParse(parameter);
+        if (s == null)
+        {
+            steam64 = default;
+            onlinePlayer = default!;
+            return false;
+        }
         if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && Util.IsValidSteam64Id(steam64))
         {
             foreach (UCPlayer player in selection)

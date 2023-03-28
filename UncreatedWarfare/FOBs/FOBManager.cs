@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
+using Uncreated.Framework.UI;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
@@ -16,21 +17,19 @@ using Uncreated.Warfare.FOBs.UI;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Maps;
-using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Cache = Uncreated.Warfare.Components.Cache;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
-using Uncreated.Warfare.Players;
+using Object = UnityEngine.Object;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
-using static System.Net.Mime.MediaTypeNames;
-using System.Xml.Linq;
-using Uncreated.Framework.UI;
-using System.Net;
 
 namespace Uncreated.Warfare.FOBs;
 [SingletonDependency(typeof(Whitelister))]
@@ -59,14 +58,17 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public override void Unload()
     {
-        _singleton = null!;
         EventDispatcher.GroupChanged -= OnGroupChanged;
         EventDispatcher.BarricadeDestroyed -= OnBarricadeDestroyed;
         EventDispatcher.BarricadePlaced -= OnBarricadePlaced;
+        List<IFOB> fobs = Team1FOBs.Cast<IFOB>().Concat(Team2FOBs).Concat(SpecialFOBs).Concat(Caches).ToList();
         Team1FOBs.Clear();
         Team2FOBs.Clear();
         SpecialFOBs.Clear();
         Caches.Clear();
+        foreach (IFOB fob in fobs)
+            fob.Destroy(true);
+        _singleton = null!;
     }
     void IJoinedTeamListener.OnJoinTeam(UCPlayer player, ulong team) => SendFOBList(player);
     void ILevelStartListener.OnLevelReady()
@@ -101,6 +103,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        L.LogDebug("Removing player from fob lists " + player + ".");
         foreach (FOB f in Team1FOBs)
         {
             if (f.FriendliesOnFOB.Remove(player))
@@ -121,10 +124,15 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 f.OnAttackerLeft(player);
         }
     }
+    public bool IsRegistered(FOBComponent fobComponent)
+    {
+        return Team1FOBs.Exists(f => f.Component.GetInstanceID() == fobComponent.GetInstanceID()) ||
+            Team2FOBs.Exists(f => f.Component.GetInstanceID() == fobComponent.GetInstanceID());
+    }
     private void OnBarricadePlaced(BarricadePlaced e)
     {
+        L.LogDebug("Placed barricade: " + (e.Owner?.ToString() ?? "null") + ".");
         Guid guid = e.ServersideData.barricade.asset.GUID;
-        ulong team = e.GroupID.GetTeam();
         //FactionInfo? info = TeamManager.GetFactionSafe(team);
         //bool isRadio = info != null && info.FOBRadio.MatchGuid(guid);
         bool isRadio = Gamemode.Config.FOBRadios.Value.Any(r => r.MatchGuid(guid));
@@ -162,30 +170,69 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 {
                     if (Provider.clients.Count(p => p.GetTeam() != special.Team && (p.player.transform.position - special.Position).sqrMagnitude < Math.Pow(70, 2)) > 0)
                     {
+                        L.LogDebug("Deleting special fob: " + special.Name, ConsoleColor.Green);
                         DeleteSpecialFOB(special.Name, special.Team);
                     }
+                }
+            }
+        }
+
+        if (Data.Gamemode.EveryXSeconds(20f))
+        {
+            List<GameObject> rootObjectsInScene = new List<GameObject>();
+            Scene scene = SceneManager.GetActiveScene();
+            scene.GetRootGameObjects(rootObjectsInScene);
+
+            List<FOBComponent> fobs = new List<FOBComponent>();
+
+            for (int i = 0; i < rootObjectsInScene.Count; i++)
+            {
+                FOBComponent[] allComponents = rootObjectsInScene[i].GetComponentsInChildren<FOBComponent>(true);
+                for (int j = 0; j < allComponents.Length; j++)
+                {
+                    fobs.Add(allComponents[j]);
+                }
+            }
+
+            
+            L.Log($"[FOB DEBUG] Found {fobs.Count} in seen - there are {(Team1FOBs.Count + Team2FOBs.Count)} registered.", ConsoleColor.DarkGray);
+            foreach (var fobComponent in fobs)
+            {
+                if (!IsRegistered(fobComponent))
+                {
+                    L.LogWarning($"FOB Component {fobComponent.GetInstanceID()} is not registered in the FOBManager - ghost FOB detected at {fobComponent.transform.position}. Attempting to destroy...");
+                    fobComponent.Destroy();
                 }
             }
         }
     }
     private void OnBarricadeDestroyed(BarricadeDestroyed e)
     {
+        L.LogDebug("barricade destroyed fm: " + e.Barricade.asset.itemName + ".");
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (e.Transform.TryGetComponent(out BuiltBuildableComponent comp))
-            UnityEngine.Object.Destroy(comp);
+        {
+            Object.Destroy(comp);
+            L.LogDebug(" destroying built buildable component.", ConsoleColor.DarkCyan);
+        }
 
         UCPlayer? killer = null;
         if (e.Barricade.model.TryGetComponent(out BarricadeComponent b))
+        {
             killer = UCPlayer.FromID(b.LastDamager);
+            L.LogDebug(" found killer: " + (killer?.ToString() ?? "null") + ".", ConsoleColor.DarkCyan);
+        }
 
         if (Gamemode.Config.BarricadeFOBBunker.ValidReference(out Guid guid) && guid == e.ServersideData.barricade.asset.GUID)
         {
-            FOB.GetNearestFOB(e.ServersideData.point, EfobRadius.SHORT, e.ServersideData.group.GetTeam())?.UpdateBunker(null);
+            L.LogDebug(" removing bunker", ConsoleColor.DarkCyan);
+            AllFOBs.FirstOrDefault(x => x.Bunker != null && x.Bunker.instanceID == e.InstanceID)?.UpdateBunker(null);
         }
         if (e.Transform.TryGetComponent(out FOBComponent f) && f.Parent != null)
         {
+            L.LogDebug(" deleting FOB", ConsoleColor.DarkCyan);
             ulong team = e.ServersideData.group.GetTeam();
             FactionInfo? info = TeamManager.GetFactionSafe(team);
             if (info is not null)
@@ -193,28 +240,30 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 if (info.FOBRadio.ValidReference(out guid) && guid == e.ServersideData.barricade.asset.GUID)
                 {
                     if (f.Parent.IsWipedByAuthority)
-                        f.Parent.Destroy();
+                        f.Parent.Destroy(true);
                     else
                         f.Parent.StartBleed();
                 }
                 else if (Gamemode.Config.BarricadeFOBRadioDamaged.ValidReference(out guid) && guid == e.ServersideData.barricade.asset.GUID)
                 {
                     if (f.Parent.IsBleeding)
-                        f.Parent.Destroy();
+                        f.Parent.Destroy(false);
                 }
                 else return;
 
-                SendFOBListToTeam(f.Parent.Team);
+                SendFOBListToTeam(team); // do not reference f here because it will be null since its destroyed
             }
         }
         else if (e.Transform.TryGetComponent(out Cache.CacheComponent c))
         {
+            L.LogDebug(" deleting cache", ConsoleColor.DarkCyan);
             DeleteCache(c, killer);
         }
     }
     public FOB RegisterNewFOB(BarricadeDrop drop)
     {
         ThreadUtil.assertIsGameThread();
+        L.LogDebug("New fob regeistering: " + drop.asset.itemName + ".");
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -294,6 +343,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             QuestManager.OnFOBBuilt(placer, fob);
             Tips.TryGiveTip(placer, 3, T.TipPlaceBunker);
         }
+        L.LogDebug(" Done: " + drop.asset.itemName + ".", ConsoleColor.Green);
         SendFOBListToTeam(fob.Team);
         return fob;
     }
@@ -382,7 +432,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     public static void DeleteFOB(FOB fob)
     {
         ThreadUtil.assertIsGameThread();
-        _singleton.AssertLoaded();
+        if (_singleton is { IsUnloading: false })
+            _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -407,9 +458,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             _singleton.Team2FOBs.RemoveAll(f => f.Radio.instanceID == instanceID);
         }
         else removed = null;
-
-        if (removed != null)
-            Deployment.CancelDeploymentsTo(removed);
 
         if (!fob.IsWipedByAuthority)
         {
@@ -437,7 +485,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
                 if (killer.GetTeam() == team)
                 {
-                    Points.AwardXP(killer, XPReward.FriendlyRadioDestroyed);
+                    // TODO: find out why random barricade teamkills are still happening, if they are at all
+                    //Points.AwardXP(killer, XPReward.FriendlyRadioDestroyed);
                 }
                 else
                 {
@@ -452,10 +501,26 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         }
         SendFOBListToTeam(team);
     }
+    internal static void CleanupFOB(IFOB fob)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        if (_singleton is { IsUnloading: false })
+            _singleton.AssertLoaded();
+
+        Deployment.CancelDeploymentsTo(fob);
+
+        if (fob is MonoBehaviour obj && obj.isActiveAndEnabled)
+        {
+            Object.Destroy(obj);
+        }
+    }
     public static void DeleteSpecialFOB(string name, ulong team)
     {
         ThreadUtil.assertIsGameThread();
-        _singleton.AssertLoaded();
+
+        if (_singleton is { IsUnloading: false })
+            _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -464,15 +529,17 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             return;
         _singleton.SpecialFOBs.Remove(removed);
 
-        Deployment.CancelDeploymentsTo(removed);
-
         SendFOBListToTeam(team);
+
+        CleanupFOB(removed);
     }
 
     public static void DeleteCache(Cache.CacheComponent cacheComponent, UCPlayer? killer)
     {
         ThreadUtil.assertIsGameThread();
-        _singleton.AssertLoaded();
+
+        if (_singleton is { IsUnloading: false })
+            _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -480,7 +547,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         _singleton.Caches.Remove(cacheComponent.Cache);
 
-        Deployment.CancelDeploymentsTo(cacheComponent.Cache);
+        CleanupFOB(cacheComponent.Cache);
 
         cacheComponent.Destroy();
 
@@ -490,7 +557,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static bool TryFindFOB(string name, ulong team, out IDeployable fob)
     {
-        _singleton.AssertLoaded();
+        if (_singleton is { IsUnloading: false })
+            _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -515,7 +583,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     public static void UpdateFOBListForTeam(ulong team, FOB? fob = null)
     {
         ThreadUtil.assertIsGameThread();
-        _singleton.AssertLoaded();
+        if (_singleton is { IsUnloading: false })
+            _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -559,7 +628,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     public static void UpdateFOBListForTeam(ulong team, Cache? cache = null)
     {
         ThreadUtil.assertIsGameThread();
-        _singleton.AssertLoaded();
+        if (_singleton is { IsUnloading: false })
+            _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -623,10 +693,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public static void SendFOBList(UCPlayer player)
     {
-        L.Log("FOB UI: sending to player " + player.Name);
-
         ThreadUtil.assertIsGameThread();
-        _singleton.AssertLoaded();
+        if (_singleton is { IsUnloading: false })
+            _singleton.AssertLoaded();
         List<FOB> list;
         ulong team = player.GetTeam();
         if (team == 1)
@@ -645,7 +714,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     public static void UpdateResourceUIString(FOB fob)
     {
         ThreadUtil.assertIsGameThread();
-        _singleton.AssertLoaded();
+        if (_singleton is { IsUnloading: false })
+            _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -682,7 +752,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     
     private static void UpdateUIList(ulong team, UCPlayer player, List<FOB> fobs)
     {
-        _singleton.AssertLoaded();
+        if (_singleton is { IsUnloading: false })
+            _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -826,6 +897,10 @@ public class SpecialFOB : IFOB, IDeployable
     }
 
     float IDeployable.GetDelay() => FOBManager.Config.DeployFOBDelay;
+    public void Destroy(bool authority)
+    {
+        FOBManager.CleanupFOB(this);
+    }
 }
 
 public class FOBConfigData : JSONConfigData
@@ -1221,7 +1296,7 @@ public class BuildableData : ITranslationArgument
             }
             if (Emplacement.BaseBarricade.ValidReference(out asset))
             {
-                string plural = Translation.Pluralize(language, culture, asset.itemName, flags);
+                string plural = Translation.Pluralize(language, culture, GetItemName(asset.itemName), flags);
                 if (format is not null && format.Equals(T.FormatRarityColor))
                     return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), plural, flags);
                 else
@@ -1229,7 +1304,7 @@ public class BuildableData : ITranslationArgument
             }
             if (Emplacement.Ammo.ValidReference(out ItemAsset iasset))
             {
-                string plural = Translation.Pluralize(language, culture, iasset.itemName, flags);
+                string plural = Translation.Pluralize(language, culture, GetItemName(iasset.itemName), flags);
                 if (format is not null && format.Equals(T.FormatRarityColor))
                     return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), plural, flags);
                 else
@@ -1237,13 +1312,20 @@ public class BuildableData : ITranslationArgument
             }
         }
 
-        if (BuildableBarricade.ValidReference(out asset) || Foundation.ValidReference(out asset))
+        if (Foundation.ValidReference(out asset) || BuildableBarricade.ValidReference(out asset))
         {
-            string plural = Translation.Pluralize(language, culture, asset.itemName, flags);
+            string plural = Translation.Pluralize(language, culture, GetItemName(asset.itemName), flags);
             if (format is not null && format.Equals(T.FormatRarityColor))
                 return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), plural, flags);
             else
                 return plural;
+        }
+        string GetItemName(string itemName)
+        {
+            int ind = itemName.IndexOf(" Built", StringComparison.OrdinalIgnoreCase);
+            if (ind != -1)
+                itemName = itemName.Substring(0, ind);
+            return itemName;
         }
 
         return Localization.TranslateEnum(Type, language);
