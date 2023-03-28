@@ -5,9 +5,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Uncreated.Framework;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -132,7 +134,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
 
         UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
 
-        bool isFOB = barricade.model.TryGetComponent(out Components.FOBComponent f);
+        bool isFOB = barricade.model.TryGetComponent(out FOBComponent f);
 
         if (player == null || player.OnDuty() && isFOB)
         {
@@ -147,7 +149,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 return;
             }
         }
-        if (barricade.model.TryGetComponent(out Components.BuildableComponent b))
+        if (barricade.model.TryGetComponent(out BuildableComponent b))
         {
             b.IsSalvaged = true;
         }
@@ -183,7 +185,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
     internal void OnBarricadePlaceRequested(
         Barricade barricade,
         ItemBarricadeAsset asset,
-        Transform hit,
+        Transform? hit,
         ref Vector3 point,
         ref float angle_x,
         ref float angle_y,
@@ -207,23 +209,44 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 return;
             }
 
+            bool wh = IsWhitelisted(barricade.asset.GUID, out WhitelistItem item);
+            if (wh && (item.Amount >= 255 || item.Amount == -1))
+                return;
+            
+
             Kit? kit = player.ActiveKit?.Item;
-            if (kit != null)
+            if (wh || kit != null)
             {
-                if (IsWhitelisted(barricade.asset.GUID, out _))
-                    return;
-
-                int allowedCount = kit.Items.Count(k => k is IItem i && i.Item == barricade.asset.GUID);
-
+                int allowedCount = wh ? item.Amount : kit!.Items.Count(k => k is IItem i && i.Item == barricade.asset.GUID);
                 if (allowedCount > 0)
                 {
-                    // todo delete old barricades not sure what happened to that system
                     int placedCount = UCBarricadeManager.CountBarricadesWhere(b => b.GetServersideData().owner == player.Steam64 && b.asset.GUID == barricade.asset.GUID, allowedCount);
-
                     if (placedCount >= allowedCount)
                     {
-                        shouldAllow = false;
-                        player.SendChat(T.WhitelistProhibitedPlaceAmt, allowedCount, asset);
+                        StructureSaver? saver = StructureSaver.GetSingletonQuick();
+                        int diff = placedCount - allowedCount + 1;
+                        foreach (BarricadeDrop drop in UCBarricadeManager.NonPlantedBarricades
+                                     .Where(b => b.GetServersideData().owner == player.Steam64 && b.asset.GUID == barricade.asset.GUID)
+                                     .OrderBy(b => b.model.TryGetComponent(out BarricadeComponent comp) ? comp.CreateTime : 0)
+                                     .ToList())
+                        {
+                            if (diff <= 0)
+                                break;
+                            if (Regions.tryGetCoordinate(drop.GetServersideData().point, out byte x, out byte y))
+                            {
+                                if (saver is not { IsLoaded: true } || saver.GetSaveItemSync(drop.instanceID, StructType.Barricade) is null)
+                                {
+                                    --diff;
+                                    if (drop.model.TryGetComponent(out BarricadeComponent comp)) comp.LastDamager = 0;
+                                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                                }
+                            }
+                        }
+                        if (diff > 0)
+                        {
+                            shouldAllow = false;
+                            player.SendChat(T.WhitelistProhibitedPlaceAmt, allowedCount, asset);
+                        }
                     }
 
                     return;

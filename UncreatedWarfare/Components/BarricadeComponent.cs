@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
@@ -14,6 +15,13 @@ public class BarricadeComponent : MonoBehaviour
     public Guid BarricadeGUID;
     public ulong LastDamager;
     public float LastDamagerTime;
+    public float CreateTime;
+
+    [UsedImplicitly]
+    private void Awake()
+    {
+        CreateTime = Time.realtimeSinceStartup;
+    }
     public void Destroy()
     {
         Destroy(this);
