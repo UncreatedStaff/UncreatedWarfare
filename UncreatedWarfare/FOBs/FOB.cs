@@ -75,7 +75,11 @@ public class FOBComponent : MonoBehaviour
                 proxyScore += Parent.GetProxyScore(player);
             }
         }
+        float oldProxyScore = Parent.ProxyScore;
         Parent.ProxyScore = proxyScore;
+
+        if (oldProxyScore < 1 && proxyScore >= 1 || oldProxyScore >= 1 && proxyScore < 1)
+            FOBManager.UpdateFOBListForTeam(Parent.Team, Parent);
 
         if (Data.Gamemode.EveryXSeconds(1f) && Parent != null)
         {
@@ -442,16 +446,6 @@ public class FOB : IResourceFOB, IDeployable
     {
         L.LogDebug("Player left FOB: " + player);
         HideResourceUI(player);
-    }
-    internal void OnEnemyEnteredFOB(UCPlayer player)
-    {
-        L.LogDebug("Enemy entered FOB: " + player);
-        FOBManager.UpdateFOBListForTeam(this.Team, this);
-    }
-    internal void OnEnemyLeftFOB(UCPlayer player)
-    {
-        L.LogDebug("Enemy left FOB: " + player);
-        FOBManager.UpdateFOBListForTeam(this.Team, this);
     }
     public void ShowResourceUI(UCPlayer player)
     {
