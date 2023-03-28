@@ -884,7 +884,15 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             if (data != null &&
                 data.RequiredClass != Class.None) // vehicle requires crewman or pilot
             {
-                if (data.CrewSeats.ArrayContains(e.FinalSeat)) // seat is for crewman only
+                if (c.IsAircraft &&
+                    e.FinalSeat != 0 &&
+                    e.Vehicle.transform.position.y - LevelGround.getHeight(e.Vehicle.transform.position) > 30 &&
+                    !e.Player.OnDuty())
+                {
+                    e.Player.SendChat(T.VehicleAbandoningPilot);
+                    e.Break();
+                }
+                else if (data.CrewSeats.ArrayContains(e.FinalSeat)) // seat is for crewman only
                 {
                     if ((e.Player.KitClass == data.RequiredClass) || e.Player.OnDuty())
                     {
@@ -945,17 +953,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                         e.Player.SendChat(T.VehicleMissingKit, data.RequiredClass);
                         e.Break();
                     }
-                }
-                if (c.IsAircraft && 
-                    e.InitialSeat == 0 && 
-                    e.FinalSeat != 0 && 
-                    e.Vehicle.transform.position.y - F.GetHeightAt2DPoint(e.Vehicle.transform.position.x, e.Vehicle.transform.position.z) > UCWarfare.Config.MaxVehicleHeightToLeave && 
-                    !e.Player.OnDuty())
-                {
-                    e.Player.SendChat(T.VehicleAbandoningPilot);
-                    e.Break();
-                }
-                
+                }                
             }
             else
             {
