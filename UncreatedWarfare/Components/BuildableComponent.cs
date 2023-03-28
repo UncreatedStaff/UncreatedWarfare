@@ -440,6 +440,8 @@ public class BuildableComponent : MonoBehaviour
     }
     public static int CountExistingBuildables(BuildableData buildable, FOB fob, BarricadeDrop? ignoreFoundation = null, UCPlayer? ownerOnly = null)
     {
+        if (buildable == null)
+            return 0;
         if (ownerOnly == null)
         {
             int existing = 0;
@@ -505,6 +507,7 @@ public class BuildableComponent : MonoBehaviour
     }
     private static bool ValidatePlacementWithFriendlyFOB(BuildableData buildable, FOB? fob, UCPlayer placer, Vector3 point, BarricadeDrop? ignore = null)
     {
+        if (buildable == null) return false;
         if (!placer.HasKit || !placer.ActiveKit!.Item!.ContainsItem(buildable.Foundation.Value.Guid)) // normal player, buildable is not in their kit
         {
             if (fob is null)
@@ -543,7 +546,7 @@ public class BuildableComponent : MonoBehaviour
                 placer.SendChat(T.BuildNotInRadius);
                 return false;
             }
-            int existing = CountExistingBuildables(buildable, fob, ignore, placer);
+            // int existing = CountExistingBuildables(buildable, fob, ignore, placer);
             int totalPlaced = UCBarricadeManager.CountBarricadesWhere(b =>
             b.GetServersideData().owner == placer.Steam64 &&
                 b.asset.GUID == buildable.BuildableBarricade.Value.Guid &&

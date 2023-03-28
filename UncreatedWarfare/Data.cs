@@ -144,7 +144,7 @@ public static class Data
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
     internal static StaticGetter<uint> GetItemManagerInstanceCount;
-    internal static Action<Vector3, Vector3, string, Transform?, IEnumerable<ITransportConnection>>? ServerSpawnLegacyImpact;
+    internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
     [OperationTest(DisplayName = "Fast Kits Check")]
@@ -353,9 +353,9 @@ public static class Data
         try
         {
             ServerSpawnLegacyImpact = 
-                (Action<Vector3, Vector3, string, Transform?, IEnumerable<ITransportConnection>>?)typeof(DamageTool)
+                (Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>?)typeof(DamageTool)
                     .GetMethod("ServerSpawnLegacyImpact", BindingFlags.Static | BindingFlags.NonPublic)?
-                    .CreateDelegate(typeof(Action<Vector3, Vector3, string, Transform?, IEnumerable<ITransportConnection>>));
+                    .CreateDelegate(typeof(Action<Vector3, Vector3, string, Transform, List<ITransportConnection>>));
         }
         catch (Exception ex)
         {

@@ -21,14 +21,17 @@ public partial class Conquest
         else
             amt = Config.ConquestPointCountHighPop;
 
+        int origAmt = amt;
+        if (amt % 2 == 0)
+            ++amt;
         if (FlagRotation is null)
             FlagRotation = new List<Flag>(amt);
         else
             FlagRotation.Clear();
 
-        if (amt < 3 || amt % 2 == 0)
+        if (amt < 3)
             throw new InvalidOperationException(
-                "Must have an odd number more than 2 flags for Conquest. Change the \"" +
+                "Must have more than 2 flags for Conquest. Change the \"" +
                 nameof(GamemodeConfigData.ConquestPointCountLowPop) + "\" value in Gamemode Config.");
 
         AdjacentFlagData[] adj1 = TeamManager.Team1Main.Data.Adjacencies;
@@ -60,7 +63,8 @@ public partial class Conquest
         Flag? l2Flag = null;
         if (amt > 1)
         {
-            Flag[] l2 = AllFlags.OrderBy(x => Vector2.Distance(x.Position2D, TeamManager.Team1Main.Center)).Where(x =>
+            // picks 2 flags close to the mains that aren't adjacent to them
+            Flag[] l2 = AllFlags.OrderBy(x => Vector2.SqrMagnitude(x.Position2D - TeamManager.Team1Main.Center)).Where(x =>
             {
                 if (x == flag || x == FlagRotation[0]) return false;
                 for (int i = 0; i < adj1.Length; ++i)
@@ -70,7 +74,7 @@ public partial class Conquest
                         return false;
                 }
                 return true;
-            }).Take(Math.Max(3, AllFlags.Count / 3)).ToArray();
+            }).Take(Math.Max(5, AllFlags.Count / 3)).ToArray();
 
             if (l2.Length > 0)
             {
@@ -78,7 +82,7 @@ public partial class Conquest
                 l2Flag = l2[Random.Range(0, l2.Length)];
                 FlagRotation.Add(l2Flag);
             }
-            l2 = AllFlags.OrderBy(x => Vector2.Distance(x.Position2D, TeamManager.Team2Main.Center)).Where(x =>
+            l2 = AllFlags.OrderBy(x => Vector2.SqrMagnitude(x.Position2D - TeamManager.Team2Main.Center)).Where(x =>
             {
                 if (x == flag || x == l2Flag || x == FlagRotation[0]) return false;
                 for (int i = 0; i < adj2.Length; ++i)
@@ -88,7 +92,7 @@ public partial class Conquest
                         return false;
                 }
                 return true;
-            }).Take(Math.Max(3, AllFlags.Count / 3)).ToArray();
+            }).Take(Math.Max(5, AllFlags.Count / 3)).ToArray();
             if (l2.Length > 0)
             {
                 --amt;
@@ -98,17 +102,17 @@ public partial class Conquest
         }
 
         // gets the flags in the center of the map.
-        Flag?[] f = AllFlags.OrderBy(x => Vector2.Distance(x.Position2D, Vector2.zero)).Take(Math.Max(Math.Max(amt, 5), AllFlags.Count / 2)).ToArray();
+        Flag?[] f = AllFlags.OrderBy(x => Vector2.SqrMagnitude(x.Position2D - Vector2.zero)).Take(Math.Max(Math.Max(amt, 5), AllFlags.Count / 2)).ToArray();
 
         if (f.Length <= amt)
         {
-            L.LogWarning("Unable to get enough flags for the center group, getting " + f.Length + " instead.");
-            amt = f.Length - 1;
+            L.LogWarning("Unable to get enough flags (" + amt + ") for the center group, getting " + f.Length + " instead.");
+            amt = f.Length;
         }
 
         for (int i = 0; i < f.Length; ++i)
         {
-            Flag? fl = f[i];
+            ref Flag? fl = ref f[i];
             if (fl == l2Flag || fl == flag || fl == FlagRotation[0] || (FlagRotation.Count > 1 && fl == FlagRotation[1])) fl = null;
             for (int j = 0; j < FlagRotation.Count; ++j)
                 if (FlagRotation[j] == fl)
@@ -137,12 +141,11 @@ public partial class Conquest
         }
 
         if (l2Flag is not null)
-        {
             FlagRotation.Add(l2Flag);
-        }
+        
         FlagRotation.Add(flag);
 
-        if (FlagRotation.Count % 2 == 0)
+        while (origAmt < FlagRotation.Count)
             FlagRotation.RemoveAt(FlagRotation.Count / 2);
 
         for (int i = 0; i < FlagRotation.Count; ++i)

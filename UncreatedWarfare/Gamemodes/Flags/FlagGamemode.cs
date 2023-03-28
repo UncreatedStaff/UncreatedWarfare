@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using SDG.Framework.Utilities;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
@@ -86,12 +87,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         for (int i = 0; i < FlagRotation.Count; i++)
         {
             Flag f = FlagRotation[i];
-            if (f == null) continue;
-            f.GetUpdatedPlayers(out List<Player> newPlayers, out List<Player> departingPlayers);
-            foreach (Player player in departingPlayers)
-                RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, f);
-            foreach (Player player in newPlayers)
-                AddPlayerOnFlag(player, f);
+            if (f != null) CheckFlagForPlayerChanges(f);
         }
         if (TimeToEvaluatePoints())
         {
@@ -99,6 +95,24 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
             if (EnableAMC)
                 CheckMainCampZones();
             OnEvaluate();
+        }
+    }
+    protected void CheckFlagForPlayerChanges(Flag f)
+    {
+        Flag.PlayerChange change = f.GetUpdatedPlayers();
+
+        List<Player> list = change.DepartingPlayers;
+        for (int j = 0; j < list.Count; j++)
+        {
+            Player player = list[j];
+            RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, f);
+        }
+
+        list = change.NewPlayers;
+        for (int j = 0; j < list.Count; j++)
+        {
+            Player player = list[j];
+            AddPlayerOnFlag(player, f);
         }
     }
     protected void ConvertFlags()

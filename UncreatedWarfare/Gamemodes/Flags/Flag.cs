@@ -3,6 +3,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using SDG.Framework.Utilities;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -225,24 +226,21 @@ public class Flag : IDisposable, IObjective
             }
         }
     }
-    /// <param name="newPlayers">Players that have entered the flag since last check.</param>
-    /// <param name="departedPlayers">Players that have left the flag since last check.</param>
-    public void GetUpdatedPlayers(out List<Player> newPlayers, out List<Player> departedPlayers)
+    public PlayerChange GetUpdatedPlayers()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer[] prevPlayers = PlayersOnFlag.ToArray();
         RecalcCappers();
-        newPlayers = new List<Player>(2);
-        departedPlayers = new List<Player>(2);
+        PlayerChange change = PlayerChange.Claim();
         for (int i = 0; i < PlayersOnFlag.Count; i++)
         {
             UCPlayer player = PlayersOnFlag[i];
             for (int j = 0; j < prevPlayers.Length; j++)
                 if (player.Steam64 == prevPlayers[j].Steam64)
                     goto done;
-            newPlayers.Add(player);
+            change.NewPlayers.Add(player);
             done:;
         }
         for (int i = 0; i < prevPlayers.Length; i++)
@@ -252,10 +250,37 @@ public class Flag : IDisposable, IObjective
                 if (player.Steam64 == PlayersOnFlag[j].Steam64)
                     goto done;
             if (player.IsOnline)
-                departedPlayers.Add(player);
+                change.DepartingPlayers.Add(player);
             done:;
         }
+
+        return change;
     }
+    public readonly ref struct PlayerChange
+    {
+        public readonly List<Player> NewPlayers;
+        public readonly List<Player> DepartingPlayers;
+
+        private PlayerChange(List<Player> newPlayers, List<Player> departingPlayers)
+        {
+            NewPlayers = newPlayers;
+            DepartingPlayers = departingPlayers;
+        }
+
+        public static PlayerChange Claim()
+        {
+            List<Player> newPlayers = ListPool<Player>.claim();
+            List<Player> departedPlayers = ListPool<Player>.claim();
+            return new PlayerChange(newPlayers, departedPlayers);
+        }
+
+        public void Release()
+        {
+            ListPool<Player>.release(NewPlayers);
+            ListPool<Player>.release(DepartingPlayers);
+        }
+    }
+
     public void SetPoints(float value, bool skipEvent = false, bool skipDeltaPoints = false)
     {
 #if DEBUG

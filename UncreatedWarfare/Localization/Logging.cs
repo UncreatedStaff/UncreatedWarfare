@@ -310,7 +310,10 @@ public static class L
                     return;
             }
         }
-
+#if RELEASE
+        if (color == ConsoleColor.DarkGray)
+            color = ConsoleColor.Gray;
+#endif
         string time = "[" + DateTime.UtcNow.ToString(ActionLog.DateLineFormat) + "] ";
         if (_indention == 0)
         {
@@ -340,12 +343,22 @@ public static class L
         }
     }
     [Conditional("DEBUG")]
-    public static void LogDebug(string info, ConsoleColor color = ConsoleColor.Gray)
+    public static void LogDebug(string info, ConsoleColor color = ConsoleColor.DarkGray)
     {
+        if (Environment.OSVersion.Platform == PlatformID.Unix && color == ConsoleColor.DarkGray)
+            color = ConsoleColor.Gray;
         if (!UCWarfare.IsLoaded)
             LogAsLibrary("[DEBUG] " + info, color);
         else if (UCWarfare.Config.Debug)
-            Log(info, color);
+        {
+            AddLine("[DEBUG] " + info, color);
+            if (_outputToConsoleMethod is not null)
+            {
+                _inL = true;
+                UnturnedLog.info($"[DB] {info}");
+                _inL = false;
+            }
+        }
     }
     internal static void NetLogInfo(string message, ConsoleColor color) => LogDebug(message, color);
     internal static void NetLogWarning(string message, ConsoleColor color) => LogWarning(message, color, method: "UncreatedNetworking");

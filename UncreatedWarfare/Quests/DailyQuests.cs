@@ -93,7 +93,7 @@ public static class DailyQuests
             {
                 ref DailyQuestSave save = ref _quests[i];
                 if (Assets.find(save.Guid) is not QuestAsset asset)
-                    L.LogWarning("Cannot find asset for day " + i + "quest.");
+                    L.LogWarning("Cannot find asset for day " + i + "'s quest.");
                 else
                     L.LogDebug("Day " + i + ": " + asset.questName);
             }
@@ -316,8 +316,6 @@ public static class DailyQuests
                 tracker.IsDailyQuest = true;
                 tracker.Flag = _quests[_index].Presets[i].PresetObj.Flag;
                 trackers[i] = tracker;
-                if (tracker.IsCompleted)
-                    QuestManager.DeregisterTracker(tracker);
                 L.LogDebug("Registered " + tracker.QuestData.QuestType + " tracker for " + player.CharacterName);
             }
             else
@@ -332,7 +330,10 @@ public static class DailyQuests
         {
             ref DailyQuestSave save2 = ref _quests[i];
             if (Assets.find(save2.Guid) is QuestAsset quest2)
+            {
                 player.Player.quests.ServerRemoveQuest(quest2);
+                L.LogDebug("Removing quest: " + quest2.name + " from " + player + ".");
+            }
         }
         if (Assets.find(save.Guid) is QuestAsset quest)
         {
@@ -349,7 +350,10 @@ public static class DailyQuests
             BaseQuestTracker tr3 = tr.Trackers[i];
             if (tr3.Flag != 0)
                 player.Player.quests.sendSetFlag(tr3.Flag, tr3.FlagValue);
-            else L.LogWarning("Invalid flag or quest " + tr3.QuestData.QuestType + ": " + tr3.Flag);
+            else
+                L.LogWarning("Invalid flag or quest " + tr3.QuestData.QuestType + ": " + tr3.Flag);
+            if (tr3.IsCompleted)
+                QuestManager.DeregisterTracker(tr3);
         }
         if (DailyTrackers.TryGetValue(player.Steam64, out DailyQuestTracker tr2))
         {

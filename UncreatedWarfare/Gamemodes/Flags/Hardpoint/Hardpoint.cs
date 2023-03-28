@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Flags.UI;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests;
@@ -122,11 +123,13 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     {
         if (State == State.Active && _nextObjectivePickTime < Time.realtimeSinceStartup)
         {
-            PickObjective(false);
+            PickObjective(_objIndex == -1);
             Chat.Broadcast(T.HardpointObjectiveChanged, Objective, _nextObjectivePickTime - Time.realtimeSinceStartup);
         }
         base.EventLoopAction();
     }
+
+    public void ForceNextObjective() => PickObjective(_objIndex == -1);
     private void PickObjective(bool first)
     {
         float oldTime = _nextObjectivePickTime;
@@ -168,12 +171,11 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     }
     private void StopUsingPoint(Flag flag)
     {
-        flag.RecalcCappers();
+        CheckFlagForPlayerChanges(flag);
         for (int i = flag.PlayersOnFlag.Count - 1; i >= 0; --i)
         {
             UCPlayer pl = flag.PlayersOnFlag[i];
             RemovePlayerFromFlag(pl.Steam64, pl.Player, flag);
-            flag.ExitPlayer(pl.Player);
         }
 
         flag.PlayersOnFlag.Clear();
@@ -238,6 +240,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         flag.Discover(2);
         base.InitFlag(flag);
     }
+
     protected override void InitUI(UCPlayer player)
     {
         SendListUI(player);
@@ -281,7 +284,55 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         UCWarfare.RunTask(EndGame, UCWarfare.UnloadCancel, ctx: "Starting next gamemode.");
     }
     private static void EvaluatePointsOverride(Flag flag, bool overrideInactiveCheck) { }
-    protected override void PlayerEnteredFlagRadius(Flag flag, Player player) { }
+
+    private void SendCaptureUI(Player player)
+    {
+        if (Objective != null && Objective.PlayerInRange(player.transform.position))
+        {
+            ulong team = player.GetTeam();
+            EFlagStatus status = team switch
+            {
+                1 => _objectiveOwner switch
+                {
+                    1 => EFlagStatus.SECURED,
+                    2 => EFlagStatus.LOST,
+                    3 => EFlagStatus.CONTESTED,
+                    _ => EFlagStatus.BLANK
+                },
+                2 => _objectiveOwner switch
+                {
+                    1 => EFlagStatus.LOST,
+                    2 => EFlagStatus.SECURED,
+                    3 => EFlagStatus.CONTESTED,
+                    _ => EFlagStatus.BLANK
+                },
+                _ => EFlagStatus.BLANK
+            };
+            CTFUI.CaptureUI.Send(player, new CaptureUI.CaptureUIParameters(team, status, Objective));
+        }
+        else
+        {
+            CTFUI.CaptureUI.ClearFromPlayer(player.channel.owner.transportConnection);
+        }
+    }
+    protected override void ReloadUI(UCPlayer player)
+    {
+        SendCaptureUI(player.Player);
+        SendListUI(player);
+    }
+
+    protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
+    {
+        L.LogDebug(player + " entered " + flag + ".");
+        SendCaptureUI(player);
+    }
+
+    protected override void PlayerLeftFlagRadius(Flag flag, Player player)
+    {
+        L.LogDebug(player + " left " + flag + ".");
+        SendCaptureUI(player);
+    }
+
     protected override Task PostGameStarting(bool isOnLoad, CancellationToken token)
     {
         token.CombineIfNeeded(UnloadToken);
@@ -300,19 +351,17 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         base.EndStagingPhase();
         DestroyBlockers();
     }
-    protected override void PlayerLeftFlagRadius(Flag flag, Player player) { }
     protected override void FlagCheck()
     {
         if (_objIndex < 0 || _objIndex >= FlagRotation.Count || State != State.Active)
             return;
 
         Flag f = this.Objective;
-        f.RecalcCappers();
+        CheckFlagForPlayerChanges(f);
         UpdateObjectiveState();
-        if (EveryXSeconds(Config.HardpointFlagTickSeconds))
+        if (EnableAMC && EveryXSeconds(Config.HardpointFlagTickSeconds))
         {
-            if (EnableAMC)
-                CheckMainCampZones();
+            CheckMainCampZones();
         }
     }
     private void UpdateObjectiveState()
