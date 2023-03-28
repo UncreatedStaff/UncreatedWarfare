@@ -28,7 +28,7 @@ using XPReward = Uncreated.Warfare.Levels.XPReward;
 namespace Uncreated.Warfare.Revives;
 
 [SingletonDependency(typeof(KitManager))]
-public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinListener
+public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinListener, IPlayerDisconnectListener
 {
     private readonly Dictionary<ulong, DownedPlayerData> _injuredPlayers;
     private static ReviveManager _singleton;
@@ -83,7 +83,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         foreach (DownedPlayerData downedPlayer in _injuredPlayers.Values.ToList())
         {
-            if (downedPlayer.Parameters.player.TryGetComponent(out Reviver reviver))
+            if (downedPlayer.Parameters.player != null && downedPlayer.Parameters.player.TryGetComponent(out Reviver reviver))
                 reviver.FinishKillingPlayer();
         }
         _injuredPlayers.Clear();
@@ -126,6 +126,14 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             player.Player.transform.gameObject.AddComponent<Reviver>();
         _injuredPlayers.Remove(player.Steam64);
         DeathTracker.RemovePlayerInfo(player.Steam64);
+    }
+    void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
+    {
+        if (_injuredPlayers.TryGetValue(player.Steam64, out DownedPlayerData data))
+        {
+            player.Save.ShouldRespawnOnJoin = true;
+            PlayerSave.WriteToSaveFile(player.Save);
+        }
     }
     private IEnumerator<WaitForSeconds> UpdatePositions()
     {

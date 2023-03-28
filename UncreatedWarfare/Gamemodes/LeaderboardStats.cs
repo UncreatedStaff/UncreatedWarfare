@@ -160,6 +160,7 @@ public interface IStatTracker
     float GetPresence(ITeamPresenceStats stats, ulong team);
     void ClearAllStats();
     void StartTracking();
+    object? GetPlayerStats(ulong player);
 }
 public abstract class BaseStatTracker<TIndividualStats> : MonoBehaviour, IStatTracker where TIndividualStats : BasePlayerStats
 {
@@ -295,6 +296,18 @@ public abstract class BaseStatTracker<TIndividualStats> : MonoBehaviour, IStatTr
             yield return new WaitForSeconds(10f);
         }
     }
+    public TIndividualStats? GetPlayerStats(ulong player)
+    {
+        if (stats != null)
+        {
+            for (int i = 0; i < stats.Count; ++i)
+            {
+                if (stats[i].Steam64 == player) return stats[i];
+            }
+        }
+        return null;
+    }
+    object? IStatTracker.GetPlayerStats(ulong player) => GetPlayerStats(player);
 }
 
 public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<IndividualStats> where IndividualStats : TeamPlayerStats

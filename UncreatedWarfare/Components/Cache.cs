@@ -89,6 +89,13 @@ public class Cache : IFOB, IObjective, IDeployable
     }
     bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
     {
+        ulong team = player.GetTeam();
+        if (team == 0 || team != Team)
+        {
+            if (ctx is not null)
+                throw ctx.Reply(T.DeployableNotFound, Name);
+            return false;
+        }
         if (NearbyAttackers.Count != 0)
         {
             if (ctx is not null)
@@ -106,6 +113,13 @@ public class Cache : IFOB, IObjective, IDeployable
     }
     bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
     {
+        ulong team = player.GetTeam();
+        if (team == 0 || team != Team)
+        {
+            if (chat)
+                player.SendChat(T.DeployCancelled);
+            return false;
+        }
         if (NearbyAttackers.Count != 0)
         {
             if (chat)

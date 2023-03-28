@@ -110,6 +110,10 @@ internal struct ZoneModel : IListItem
                 throw new ZoneReadException("Rectangle zones are required to define: x (float), z (float).") { Data = this };
             if (IsBadFloat(ZoneData.SizeX) || IsBadFloat(ZoneData.SizeZ) || ZoneData.SizeX <= 0 || ZoneData.SizeZ <= 0)
                 throw new ZoneReadException("Rectangle zones are required to define: size-x (float, > 0), size-z (float, > 0).") { Data = this };
+            if (IsBadFloat(SpawnX))
+                SpawnX = ZoneData.X;
+            if (IsBadFloat(SpawnZ))
+                SpawnZ = ZoneData.Z;
         }
         else if (ZoneType == ZoneType.Circle)
         {
@@ -117,6 +121,10 @@ internal struct ZoneModel : IListItem
                 throw new ZoneReadException("Circle zones are required to define: x (float), z (float).") { Data = this };
             if (IsBadFloat(ZoneData.Radius) || ZoneData.Radius <= 0)
                 throw new ZoneReadException("Circle zones are required to define: radius (float, > 0).") { Data = this };
+            if (IsBadFloat(SpawnX))
+                SpawnX = ZoneData.X;
+            if (IsBadFloat(SpawnZ))
+                SpawnZ = ZoneData.Z;
         }
         else if (ZoneType == ZoneType.Polygon)
         {

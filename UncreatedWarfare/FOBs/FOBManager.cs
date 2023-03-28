@@ -648,13 +648,13 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             {
 
                 Cache cache2 = _singleton.Caches[b];
-                if ((object)cache2 == cache)
+                if (cache2 == cache)
                 {
                     ++cacheOffset;
                     index = b;
                     break;
                 }
-                else if (cache2.Team == team)
+                if (cache2.Team == team)
                     ++cacheOffset;
             }
             int ii = cacheOffset + offset;
@@ -781,7 +781,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 i2++;
             }
         }
-        var ui = (ListUI as UnturnedUI);
         if (Data.Is(out Insurgency ins) && team == ins.DefendingTeam)
         {
             min = Math.Min(_singleton.Caches.Count, ListUI.FOBParents.Length);
@@ -827,7 +826,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
 }
 
-public class SpecialFOB : IFOB, IDeployable
+public class SpecialFOB : IFOB
 {
     private readonly string _name;
     private readonly string _cl;
@@ -879,6 +878,13 @@ public class SpecialFOB : IFOB, IDeployable
     }
     bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
     {
+        ulong team = player.GetTeam();
+        if (team == 0 || team != Team)
+        {
+            if (ctx is not null)
+                throw ctx.Reply(T.DeployableNotFound, Name);
+            return false;
+        }
         if (IsActive)
             return true;
         if (ctx is not null)
@@ -887,6 +893,13 @@ public class SpecialFOB : IFOB, IDeployable
     }
     bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
     {
+        ulong team = player.GetTeam();
+        if (team == 0 || team != Team)
+        {
+            if (chat)
+                player.SendChat(T.DeployCancelled);
+            return false;
+        }
         if (IsActive)
             return true;
         if (chat)

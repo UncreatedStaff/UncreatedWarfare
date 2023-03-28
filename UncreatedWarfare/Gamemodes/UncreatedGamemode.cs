@@ -405,6 +405,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             EndStagingPhase();
             StagingPhaseTimer = null;
         }
+        if (this is IImplementsLeaderboard { Leaderboard: MonoBehaviour { isActiveAndEnabled: true } b } lb)
+        {
+            Destroy(b);
+        }
     }
     private async Task InternalOnReady(CancellationToken token = default)
     {

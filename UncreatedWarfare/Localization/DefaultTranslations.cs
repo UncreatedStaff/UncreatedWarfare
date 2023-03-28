@@ -242,8 +242,11 @@ internal static class T
     [TranslationData(SectionPlayers, "Tells the player that the game detected they have stopped nitro boosting.")]
     public static readonly Translation StoppedNitroBoosting = new Translation("<#9b59b6>Your nitro boost(s) have expired. In-game perks have been deactivated.");
 
-    [TranslationData(SectionPlayers, "Tells the player that the game detected they have stopped nitro boosting.")]
+    [TranslationData(SectionPlayers, "Tells the player that they can't remove clothes which have item storage.")]
     public static readonly Translation NoRemovingClothing = new Translation("<#b3a6a2>You can not remove clothes with storage from your kit.");
+
+    [TranslationData(SectionPlayers, "Tells the player that they can't unlock vehicles from the vehicle bay.")]
+    public static readonly Translation UnlockVehicleNotAllowed = new Translation("<#b3a6a2>You can not unlock a requested vehicle.");
     #endregion
 
     #region Leaderboards

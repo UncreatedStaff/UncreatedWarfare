@@ -52,6 +52,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         EventDispatcher.ExitVehicleRequested += OnVehicleExitRequested;
         EventDispatcher.ExitVehicle += OnVehicleExit;
         EventDispatcher.VehicleSpawned += OnVehicleSpawned;
+        EventDispatcher.VehicleLockChangeRequested += OnChangeLockRequested;
         TeamManager.OnPlayerEnteredMainBase += OnPlayerEnterMain;
         TeamManager.OnPlayerLeftMainBase += OnPlayerLeftMain;
         EventDispatcher.BarricadeDestroyed += OnBarricadeDestroyed;
@@ -70,6 +71,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         EventDispatcher.BarricadeDestroyed -= OnBarricadeDestroyed;
         TeamManager.OnPlayerLeftMainBase -= OnPlayerLeftMain;
         TeamManager.OnPlayerEnteredMainBase -= OnPlayerEnterMain;
+        EventDispatcher.VehicleLockChangeRequested += OnChangeLockRequested;
         EventDispatcher.VehicleSpawned -= OnVehicleSpawned;
         EventDispatcher.ExitVehicle -= OnVehicleExit;
         EventDispatcher.ExitVehicleRequested -= OnVehicleExitRequested;
@@ -123,8 +125,9 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                                                       "." + (seat == 0 ? string.Empty : " Seat: " + seat.ToString(Data.AdminLocale) + "."), player);
         }
     }
-    private void OnPlayerLeftMain(UCPlayer player, ulong team)
+    private static void OnPlayerLeftMain(UCPlayer player, ulong team)
     {
+        EnsureVehicleLocked(player);
         InteractableVehicle? vehicle = player.CurrentVehicle;
         if (vehicle == null)
             return;
@@ -664,6 +667,19 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             }
         }
         vehicle.trunkItems?.clear();
+        for (int i = 0; i < vehicle.passengers.Length; ++i)
+        {
+            SteamPlayer? pl = vehicle.passengers[i].player;
+            if (pl != null)
+            {
+                VehicleManager.forceRemovePlayer(vehicle, pl.playerID.steamID);
+                Vector3 p = pl.player.transform.position;
+                if (F.TryGetHeight(p.x, p.z, out float height, 1f) && Mathf.Abs(p.y - height) > 5f)
+                {
+                    pl.player.teleportToLocationUnsafe(p with { y = height }, pl.player.look.aim.transform.rotation.eulerAngles.y);
+                }
+            }
+        }
     }
     public static bool IsVehicleFull(InteractableVehicle vehicle, bool excludeDriver = false)
     {
@@ -751,6 +767,37 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             }
         }
         return count;
+    }
+    private static void OnChangeLockRequested(VehicleLockChangeRequested e)
+    {
+        if (e.Vehicle == null ||
+            e.IsLocking ||
+            !e.Vehicle.TryGetComponent(out VehicleComponent c) ||
+            c.Data?.Item is not { } ||
+            e.Vehicle.isDead ||
+            TeamManager.IsInAnyMain(e.Vehicle.transform.position) ||
+            e.Player.OnDuty())
+            return;
+        e.Player.SendChat(T.UnlockVehicleNotAllowed);
+        e.Break();
+    }
+    private static void EnsureVehicleLocked(UCPlayer player)
+    {
+        InteractableVehicle? vehicle = player.Player.movement.getVehicle();
+        L.LogDebug("Left main");
+        if (vehicle != null &&
+            !vehicle.isDead &&
+            vehicle.checkDriver(player.CSteamID) &&
+            vehicle.TryGetComponent(out VehicleComponent c) &&
+            c.Data?.Item is { } &&
+            (vehicle.lockedOwner.m_SteamID == 0 ||
+             !vehicle.isLocked ||
+             UCPlayer.FromID(vehicle.lockedOwner.m_SteamID) is not { IsOnline: true } ||
+             vehicle.lockedGroup.m_SteamID is not 1ul and not 2ul
+             ))
+        {
+            VehicleManager.ServerSetVehicleLock(vehicle, player.CSteamID, new CSteamID(TeamManager.GetGroupID(player.GetTeam())), true);
+        }
     }
     private static void OnVehicleSpawned(VehicleSpawned e)
     {
