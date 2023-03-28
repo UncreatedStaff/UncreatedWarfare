@@ -45,6 +45,7 @@ public class FOBComponent : MonoBehaviour
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Vector3 pos = Parent.Position;
+        float proxyScore = 0;
         foreach (UCPlayer player in PlayerManager.OnlinePlayers)
         {
             if (player.GetTeam() == Parent.Team)
@@ -69,33 +70,11 @@ public class FOBComponent : MonoBehaviour
             {
                 if (Parent.FriendliesOnFOB.Remove(player))
                     Parent.OnPlayerLeftFOB(player);
-                if (Parent.Bunker != null)
-                {
-                    // keeps people from being able to block FOBs from the floor above
-                    if (Mathf.Abs(player.Position.y - pos.y) < 4 && Util.SqrDistance2D(player.Position, Parent.Bunker.model.position) < 49)
-                    {
-                        if (!Parent.NearbyEnemies.Contains(player))
-                        {
-                            Parent.NearbyEnemies.Add(player);
-                            Parent.OnEnemyEnteredFOB(player);
-                        }
-                    }
-                    else
-                    {
-                        if (Parent.NearbyEnemies.Remove(player))
-                        {
-                            Parent.OnEnemyLeftFOB(player);
-                        }
-                    }
-                }
-                else if (Parent.NearbyEnemies.Count > 0)
-                {
-                    for (int i = 0; i < Parent.NearbyEnemies.Count; ++i)
-                        Parent.OnEnemyLeftFOB(Parent.NearbyEnemies[i]);
-                    Parent.NearbyEnemies.Clear();
-                }
+
+                proxyScore += Parent.GetProxyScore(player);
             }
         }
+        Parent.ProxyScore = proxyScore;
 
         if (Data.Gamemode.EveryXSeconds(1f))
         {
@@ -158,6 +137,8 @@ public class FOB : IResourceFOB, IDeployable
     public int Ammo { get; private set; }
     public bool IsBleeding { get; private set; }
     public bool IsSpawnable { get => !IsBleeding && Radio != null && Bunker != null && !Radio.GetServersideData().barricade.isDead && !Bunker.GetServersideData().barricade.isDead; }
+    public float ProxyScore;
+    public bool IsProxied { get => ProxyScore >= 1; }
     public string UIColor
     {
         get
@@ -166,7 +147,7 @@ public class FOB : IResourceFOB, IDeployable
                 return UCWarfare.GetColorHex("bleeding_fob_color");
             if (Bunker == null)
                 return UCWarfare.GetColorHex("no_bunker_fob_color");
-            if (NearbyEnemies.Count != 0)
+            if (IsProxied)
                 return UCWarfare.GetColorHex("enemy_nearby_fob_color");
             return UCWarfare.GetColorHex("default_fob_color");
         }
@@ -194,7 +175,6 @@ public class FOB : IResourceFOB, IDeployable
     }
     public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.Config.Buildables.Where(bl => bl.Type == BuildableType.Emplacement).Cast<Guid>(), Radius, Position);
     public List<UCPlayer> FriendliesOnFOB { get; }
-    public List<UCPlayer> NearbyEnemies { get; }
     public ulong Killer { get; private set; }
     public ulong Placer { get; }
     public ulong Creator { get; }
@@ -219,7 +199,6 @@ public class FOB : IResourceFOB, IDeployable
             storage.despawnWhenDestroyed = true;
 
         FriendliesOnFOB = new List<UCPlayer>();
-        NearbyEnemies = new List<UCPlayer>();
 
         Ammo = 0;
         Build = 0;
@@ -588,11 +567,8 @@ public class FOB : IResourceFOB, IDeployable
 
         foreach (UCPlayer player in FriendliesOnFOB)
             OnPlayerLeftFOB(player);
-        foreach (UCPlayer player in NearbyEnemies)
-            OnEnemyLeftFOB(player);
 
         FriendliesOnFOB.Clear();
-        NearbyEnemies.Clear();
 
         _component.Destroy();
 
@@ -695,6 +671,18 @@ public class FOB : IResourceFOB, IDeployable
         EfobRadius.ENEMY_BUNKER_CLAIM => 5 * 5,
         _ => 0
     };
+    public float GetProxyScore(UCPlayer enemy)
+    {
+        if (Bunker == null)
+            return 0;
+
+        float distanceFromBunker = (enemy.Position - Bunker.model.position).magnitude;
+
+        if (distanceFromBunker > 80)
+            return 0;
+
+        return 12.5f / distanceFromBunker;
+    }
 
     [FormatDisplay(typeof(IDeployable), "Colored Name")]
     public const string COLORED_NAME_FORMAT = "cn";
@@ -720,12 +708,6 @@ public class FOB : IResourceFOB, IDeployable
     }
     bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
     {
-        if (NearbyEnemies.Count != 0)
-        {
-            if (ctx is not null)
-                throw ctx.Reply(T.DeployEnemiesNearby, this);
-            return false;
-        }
         if (IsBleeding || !IsSpawnable)
         {
             if (ctx is not null)
@@ -738,17 +720,17 @@ public class FOB : IResourceFOB, IDeployable
                 throw ctx.Reply(T.DeployNoBunker, this);
             return false;
         }
+        if (IsProxied)
+        {
+            if (ctx is not null)
+                throw ctx.Reply(T.DeployEnemiesNearby, this);
+            return false;
+        }
 
         return true;
     }
     bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
     {
-        if (NearbyEnemies.Count != 0)
-        {
-            if (chat)
-                player.SendChat(T.DeployEnemiesNearbyTick, this);
-            return false;
-        }
         if (IsBleeding || !IsSpawnable)
         {
             if (chat)
@@ -759,6 +741,12 @@ public class FOB : IResourceFOB, IDeployable
         {
             if (chat)
                 player.SendChat(T.DeployNoBunker, this);
+            return false;
+        }
+        if (IsProxied)
+        {
+            if (chat)
+                player.SendChat(T.DeployEnemiesNearbyTick, this);
             return false;
         }
 

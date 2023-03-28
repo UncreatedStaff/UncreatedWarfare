@@ -105,16 +105,12 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         {
             if (f.FriendliesOnFOB.Remove(player))
                 f.OnPlayerLeftFOB(player);
-            if (f.NearbyEnemies.Remove(player))
-                f.OnEnemyLeftFOB(player);
         }
 
         foreach (FOB f in Team2FOBs)
         {
             if (f.FriendliesOnFOB.Remove(player))
                 f.OnPlayerLeftFOB(player);
-            if (f.NearbyEnemies.Remove(player))
-                f.OnEnemyLeftFOB(player);
         }
 
         foreach (Cache f in Caches)
