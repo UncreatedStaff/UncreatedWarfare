@@ -1216,7 +1216,11 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     internal virtual string DumpState()
     {
-        return "Mode: " + DisplayName;
+        string m = "Mode: " + DisplayName;
+        if (this is ITickets tickets)
+            m += Environment.NewLine + "Tickets 1: " + tickets.TicketManager.Team1Tickets + ", 2: " + tickets.TicketManager.Team2Tickets + ".";
+
+        return m;
     }
     internal async Task OnQuestCompleted(QuestCompleted e, CancellationToken token)
     {

@@ -329,7 +329,7 @@ public static class EventFunctions
                     return;
                 }
             }
-            if (Data.Gamemode.UseWhitelist && hit != null)
+            if (Data.Gamemode.UseWhitelist)
                 Data.Gamemode.Whitelister.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angleX, ref angleY, ref angleZ, ref owner, ref group, ref shouldAllow);
             if (!(shouldAllow && Data.Gamemode is TeamGamemode)) return;
             

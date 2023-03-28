@@ -237,7 +237,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
                 .Append("\nPoints: ").Append(flag.Points).Append(" State: ").Append(flag.LastDeltaPoints).Append('\n');
         }
 
-        return flags.ToString();
+        return base.ToString() + Environment.NewLine + flags;
     }
     protected static bool ConventionalIsContested(Flag flag, out ulong winner)
     {
