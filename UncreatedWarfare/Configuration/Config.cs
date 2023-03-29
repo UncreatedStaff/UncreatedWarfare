@@ -104,6 +104,8 @@ public class SystemConfigData : JSONConfigData
     public List<ulong> Nerds;
     [JsonPropertyName("disableDailyRestart")]
     public bool DisableDailyRestart;
+    [JsonPropertyName("disableAprilFools")]
+    public bool DisableAprilFools;
 
     public override void SetDefaults()
     {
@@ -149,6 +151,7 @@ public class SystemConfigData : JSONConfigData
         DisableMissingAssetKick = false;
         Nerds = new List<ulong>() { 76561198312948915ul };
         DisableDailyRestart = false;
+        DisableAprilFools = false;
     }
     public class ModerationConfig
     {

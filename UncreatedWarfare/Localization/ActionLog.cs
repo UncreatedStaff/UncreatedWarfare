@@ -36,7 +36,6 @@ public class ActionLog : MonoBehaviour
     private static ByteReader? _metaReader;
     private static char[][]? _types;
     private static char[]? _nl;
-    private volatile int _version;
     public static readonly DateTimeOffset MinDatetime = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero); // jan 1st, 2021
     private static ByteReader MetaReader => _metaReader ??= new ByteReader();
     private static ByteWriter MetaWriter => _metaWriter ??= new ByteWriter(false, ActionLogMeta.Capacity);
@@ -138,12 +137,13 @@ public class ActionLog : MonoBehaviour
     {
         if (!UCWarfare.CanUseNetCall)
             return false;
+        token.ThrowIfCancellationRequested();
         int c = 0;
         while (_sendingLog)
         {
             if (c > 400)
                 return false;
-            await Task.Delay(25, token);
+            await Task.Delay(25, token).ConfigureAwait(false);
             ++c;
         }
         _sendingLog = true;
@@ -155,6 +155,7 @@ public class ActionLog : MonoBehaviour
                 byte[] bytes;
                 if (meta == _current) // switch to main thread if sending current so it's not overwritten by the update loop.
                     await UCWarfare.ToUpdate(token);
+                token.ThrowIfCancellationRequested();
                 using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     int l = (int)Math.Min(stream.Length, int.MaxValue);
@@ -167,6 +168,7 @@ public class ActionLog : MonoBehaviour
                         Buffer.BlockCopy(old, 0, bytes, 0, l);
                     }
                 }
+                token.ThrowIfCancellationRequested();
                 if (!UCWarfare.CanUseNetCall)
                     return false;
                 L.LogDebug("Sending log " + meta.FirstTimestamp.ToString("s") + "...");
@@ -271,128 +273,146 @@ public class ActionLog : MonoBehaviour
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool ValidDateTimeOffset(in DateTimeOffset o) => o <= DateTimeOffset.UtcNow && o >= MinDatetime;
-    internal void OnConnected()
+    internal async Task OnConnected(CancellationToken token = default)
     {
+        token.ThrowIfCancellationRequested();
         if (!UCWarfare.Config.SendActionLogs)
             return;
         F.CheckDir(Data.Paths.ActionLog, out bool success);
         if (!success)
             return;
-        int v = Interlocked.Increment(ref _version);
-        UCWarfare.RunTask(async () =>
+        if (!UCWarfare.CanUseNetCall)
         {
-            if (v != _version || !UCWarfare.CanUseNetCall)
+            L.Log("Cancelled action log sending...", ConsoleColor.Magenta);
+            return;
+        }
+        token.ThrowIfCancellationRequested();
+        string[] files = Directory.GetFiles(Data.Paths.ActionLog, "*.txt");
+        int ttl = files.Length - (_current == null ? 0 : 1);
+        L.Log("Found " + ttl + " log" + ttl.S() + " to send to homebase...", ConsoleColor.Magenta);
+        foreach (string file in files)
+        {
+            string logName = Path.GetFileNameWithoutExtension(file);
+            string? c = _activeFileName;
+            if (c != null && logName.Equals(c, StringComparison.OrdinalIgnoreCase))
+                continue; // active log, skip
+            try
             {
-                L.Log("Cancelled action log sending...", ConsoleColor.Magenta);
-                return;
-            }
-            string[] files = Directory.GetFiles(Data.Paths.ActionLog, "*.txt");
-            int ttl = files.Length - (_current == null ? 0 : 1);
-            L.Log("Found " + ttl + " log" + ttl.S() + " to send to homebase...", ConsoleColor.Magenta);
-            foreach (string file in files)
-            {
-                string logName = Path.GetFileNameWithoutExtension(file);
-                string? c = _activeFileName;
-                if (c != null && logName.Equals(c, StringComparison.OrdinalIgnoreCase))
-                    continue; // active log, skip
-                try
+                if (!File.Exists(file))
                 {
-                    if (!File.Exists(file))
+#if DEBUG
+                    L.LogWarning("[ACT LOG] File not found: \"" + file + "\".");
+#endif
+                    continue;
+                }
+
+                string metaPath = Path.Combine(Path.GetDirectoryName(file)!, logName + ".meta");
+                bool genMeta = false;
+                ActionLogMeta meta = null!;
+                if (!File.Exists(metaPath))
+                {
+                    genMeta = true;
+                }
+                else
+                {
+                    meta = ActionLogMeta.FromMetaFile(metaPath);
+                    if (!ValidDateTimeOffset(in meta.FirstTimestamp) || !ValidDateTimeOffset(in meta.LastTimestamp))
+                    {
+                        L.LogWarning("[ACT LOG] Invalid data detected in meta file \"" + logName + "\".");
+                        genMeta = true;
+                    }
+                }
+
+                if (genMeta) // meta file missing or invalid, generate one
+                {
+                    if ((meta = ActionLogMeta.FromLogFile(file)!) is null)
                     {
 #if DEBUG
-                        L.LogWarning("[ACT LOG] File not found: \"" + file + "\".");
+                        L.LogWarning(
+                            "[ACT LOG] Log file is does not contain any valid logs, meta file will not be generated \"" +
+                            logName + "\".");
 #endif
                         continue;
                     }
-                    string metaPath = Path.Combine(Path.GetDirectoryName(file)!, logName + ".meta");
-                    bool genMeta = false;
-                    ActionLogMeta meta = null!;
-                    if (!File.Exists(metaPath))
-                    {
-                        genMeta = true;
-                    }
-                    else
-                    {
-                        meta = ActionLogMeta.FromMetaFile(metaPath);
-                        if (!ValidDateTimeOffset(in meta.FirstTimestamp) || !ValidDateTimeOffset(in meta.LastTimestamp))
-                        {
-                            L.LogWarning("[ACT LOG] Invalid data detected in meta file \"" + logName + "\".");
-                            genMeta = true;
-                        }
-                    }
-                    if (genMeta) // meta file missing or invalid, generate one
-                    {
-                        if ((meta = ActionLogMeta.FromLogFile(file)!) is null)
-                        {
-#if DEBUG
-                            L.LogWarning("[ACT LOG] Log file is does not contain any valid logs, meta file will not be generated \"" + logName + "\".");
-#endif
-                            continue;
-                        }
 
-                        try
-                        {
-                            SaveMeta(meta);
-                        }
-                        catch (Exception ex)
-                        {
-                            L.LogError("[ACT LOG] Error saving meta file \"" + logName + "\".");
-                            L.LogError(ex);
-                        }
-                    }
-                    if (_current != null && meta.FirstTimestamp == _current.FirstTimestamp)
-                        continue; // log in progress.
-
-                    CancellationTokenSource src = new CancellationTokenSource();
-                    Task t = SendLogAsync(meta, MessageContext.Nil, src.Token);
                     try
                     {
-                        await Task.WhenAny(t, new Func<Task>( // while send is not complete and version is the same and can use net call and < 20 seconds since start
-                            async () => { int counter = 0; while (!t.IsCompleted && v == _version && UCWarfare.CanUseNetCall && ++counter < 801) { await Task.Delay(25, src.Token); } })());
-                        src.Cancel();
+                        SaveMeta(meta);
                     }
-                    catch (OperationCanceledException) when (src.IsCancellationRequested) { }
-                    if (v != _version || !UCWarfare.CanUseNetCall)
+                    catch (Exception ex)
                     {
-                        L.Log("Cancelled action log sending...", ConsoleColor.Magenta);
-                        return;
+                        L.LogError("[ACT LOG] Error saving meta file \"" + logName + "\".");
+                        L.LogError(ex);
+                    }
+                }
+
+                if (_current != null && meta.FirstTimestamp == _current.FirstTimestamp)
+                    continue; // log in progress.
+
+                CancellationTokenSource src = new CancellationTokenSource();
+                CancellationToken tk2 = token;
+                tk2.CombineIfNeeded(src.Token);
+                Task t = SendLogAsync(meta, MessageContext.Nil, tk2);
+                try
+                {
+                    await Task.WhenAny(t,
+                        new
+                            Func<Task>( // while send is not complete and  and can use net call and < 20 seconds since start
+                                async () =>
+                                {
+                                    int counter = 0;
+                                    while (!t.IsCompleted && UCWarfare.CanUseNetCall && ++counter < 801)
+                                    {
+                                        await Task.Delay(25, tk2);
+                                    }
+                                })());
+                    src.Cancel();
+                }
+                catch (OperationCanceledException) when (src.IsCancellationRequested)
+                {
+                }
+
+                if (!UCWarfare.CanUseNetCall)
+                {
+                    L.Log("Cancelled action log sending...", ConsoleColor.Magenta);
+                    return;
+                }
+
+                if (t.IsCompleted)
+                {
+                    try
+                    {
+                        File.Delete(file);
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogError("Error deleting log file \"" + file + "\".");
+                        L.LogError(ex);
                     }
 
-                    if (t.IsCompleted)
+                    try
                     {
-                        try
-                        {
-                            File.Delete(file);
-                        }
-                        catch (Exception ex)
-                        {
-                            L.LogError("Error deleting log file \"" + file + "\".");
-                            L.LogError(ex);
-                        }
-                        try
-                        {
-                            File.Delete(metaPath);
-                        }
-                        catch (Exception ex)
-                        {
-                            L.LogError("Error deleting meta file \"" + metaPath + "\".");
-                            L.LogError(ex);
-                        }
+                        File.Delete(metaPath);
                     }
+                    catch (Exception ex)
+                    {
+                        L.LogError("Error deleting meta file \"" + metaPath + "\".");
+                        L.LogError(ex);
+                    }
+                }
 #if DEBUG
-                    else
-                    {
-                        L.LogWarning("[ACT LOG] Send task timed out on log \"" + logName + "\".");
-                    }
-#endif
-                }
-                catch (Exception ex)
+                else
                 {
-                    L.LogError("[ACT LOG] Error reading meta file of action log \"" + logName + "\".");
-                    L.LogError(ex);
+                    L.LogWarning("[ACT LOG] Send task timed out on log \"" + logName + "\".");
                 }
+#endif
             }
-        }, timeout: 1200000);
+            catch (Exception ex)
+            {
+                L.LogError("[ACT LOG] Error reading meta file of action log \"" + logName + "\".");
+                L.LogError(ex);
+            }
+        }
     }
     // ReSharper disable once StructCanBeMadeReadOnly
     public record struct ActionLogItem(ulong Player, ActionLogType Type, string? Data, DateTimeOffset Timestamp)

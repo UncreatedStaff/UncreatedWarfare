@@ -1559,4 +1559,31 @@ public class DebugCommand : AsyncCommand
         hardpoint.ForceNextObjective();
         ctx.Defer();
     }
+    private void setholiday(CommandInteraction ctx)
+    {
+        ctx.AssertRanByConsole();
+        
+        if (ctx.TryGet(0, out ENPCHoliday holiday))
+        {
+            FieldInfo? field = typeof(HolidayUtil).GetField("holidayOverride", BindingFlags.Static | BindingFlags.NonPublic);
+            if (field != null)
+            {
+                field.SetValue(null, holiday);
+                ctx.ReplyString("Set active holiday to " + Localization.TranslateEnum(holiday, ctx.Language));
+                field = typeof(Provider).GetField("authorityHoliday", BindingFlags.Static | BindingFlags.NonPublic);
+                if (holiday == ENPCHoliday.NONE)
+                {
+                    MethodInfo? method = typeof(HolidayUtil).GetMethod("BackendGetActiveHoliday", BindingFlags.Static | BindingFlags.NonPublic);
+                    if (method != null)
+                        holiday = (ENPCHoliday)method.Invoke(null, Array.Empty<object>());
+                }
+                
+                field?.SetValue(null, holiday);
+                return;
+            }
+
+            throw ctx.ReplyString("Unable to find 'HolidayUtil.holidayOverride' field.");
+        }
+        throw ctx.ReplyString("Invalid holiday: " + SqlTypes.Enum<ENPCHoliday>());
+    }
 }

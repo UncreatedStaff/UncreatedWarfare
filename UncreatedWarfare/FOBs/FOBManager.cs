@@ -195,7 +195,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             }
 
             
-            L.Log($"[FOB DEBUG] Found {fobs.Count} in seen - there are {(Team1FOBs.Count + Team2FOBs.Count)} registered.", ConsoleColor.DarkGray);
+            L.LogDebug($"[FOB DEBUG] Found {fobs.Count} in seen - there are {(Team1FOBs.Count + Team2FOBs.Count)} registered.", ConsoleColor.DarkGray);
             foreach (var fobComponent in fobs)
             {
                 if (!IsRegistered(fobComponent))

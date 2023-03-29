@@ -34,7 +34,6 @@ public static class OffenseManager
     private static readonly List<Teamkill> PendingTeamkills = new List<Teamkill>(8);
     private static readonly List<VehicleTeamkill> PendingVehicleTeamkills = new List<VehicleTeamkill>(8);
     private static readonly List<Unmute> PendingUnmutes = new List<Unmute>(9);
-    private static volatile int _version = 0;
     // calls the type initializer
     internal static void Init()
     {
@@ -355,7 +354,7 @@ public static class OffenseManager
     }
     internal static async Task OnConnected(CancellationToken token)
     {
-        int v = Interlocked.Increment(ref _version);
+        token.ThrowIfCancellationRequested();
         try
         {
             ITimestampOffense[] stamps = GetOffenses();
@@ -367,25 +366,23 @@ public static class OffenseManager
             }
 
             L.Log("Sending past offenses, " + stamps.Length.ToString(Data.AdminLocale) + " queued.", ConsoleColor.Magenta);
-            int ct = Math.Max(1, stamps.Length / 10);
+            int ct = Math.Min(15, Math.Max(1, stamps.Length / 10));
             try
             {
                 for (int i = 0; i < stamps.Length; ++i)
                 {
-                    if (_version != v)
-                    {
-                        L.LogWarning("Cancelling active send job.");
-                        return;
-                    }
+                    token.ThrowIfCancellationRequested();
                     await UCWarfare.ToUpdate();
                     bool brk = false;
                     switch (stamps[i])
                     {
                         case Ban ban:
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerBanned.RequestAck(
-                                    UCWarfare.I.NetClient!, ban.Violator, ban.Admin, ban.Reason, ban.Duration, ban.Timestamp,
+                                    UCWarfare.I.NetClient!, ban.Violator, ban.Admin, ban.Reason, ban.Duration,
+                                    ban.Timestamp,
                                     10000)).Responded)
                             {
+                                token.ThrowIfCancellationRequested();
                                 RemoveFromSave(ban, 0);
                                 Save<Ban>(0);
                             }
@@ -394,11 +391,14 @@ public static class OffenseManager
                                 L.LogWarning("  Failed to send ban #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
+
                             break;
                         case Unban unban:
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerUnbanned.RequestAck(
-                                    UCWarfare.I.NetClient!, unban.Violator, unban.Admin, unban.Timestamp, 10000)).Responded)
+                                    UCWarfare.I.NetClient!, unban.Violator, unban.Admin, unban.Timestamp, 10000))
+                                .Responded)
                             {
+                                token.ThrowIfCancellationRequested();
                                 RemoveFromSave(unban, 1);
                                 Save<Unban>(1);
                             }
@@ -407,12 +407,15 @@ public static class OffenseManager
                                 L.LogWarning("  Failed to send unban #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
+
                             break;
                         case Kick kick:
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerKicked.RequestAck(
-                                    UCWarfare.I.NetClient!, kick.Violator, kick.Admin, kick.Reason, kick.Timestamp, 10000))
+                                    UCWarfare.I.NetClient!, kick.Violator, kick.Admin, kick.Reason, kick.Timestamp,
+                                    10000))
                                 .Responded)
                             {
+                                token.ThrowIfCancellationRequested();
                                 RemoveFromSave(kick, 2);
                                 Save<Kick>(2);
                             }
@@ -421,12 +424,15 @@ public static class OffenseManager
                                 L.LogWarning("  Failed to send kick #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
+
                             break;
                         case Warn warn:
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerWarned.RequestAck(
-                                    UCWarfare.I.NetClient!, warn.Violator, warn.Admin, warn.Reason, warn.Timestamp, 10000))
+                                    UCWarfare.I.NetClient!, warn.Violator, warn.Admin, warn.Reason, warn.Timestamp,
+                                    10000))
                                 .Responded)
                             {
+                                token.ThrowIfCancellationRequested();
                                 RemoveFromSave(warn, 3);
                                 Save<Warn>(3);
                             }
@@ -435,12 +441,15 @@ public static class OffenseManager
                                 L.LogWarning("  Failed to send warn #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
+
                             break;
                         case Mute mute:
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerMuted.RequestAck(
-                                    UCWarfare.I.NetClient!, mute.Violator, mute.Admin, mute.MuteType, mute.Duration, mute.Reason,
+                                    UCWarfare.I.NetClient!, mute.Violator, mute.Admin, mute.MuteType, mute.Duration,
+                                    mute.Reason,
                                     mute.Timestamp, 10000)).Responded)
                             {
+                                token.ThrowIfCancellationRequested();
                                 RemoveFromSave(mute, 4);
                                 Save<Mute>(4);
                             }
@@ -449,6 +458,7 @@ public static class OffenseManager
                                 L.LogWarning("  Failed to send mute #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
+
                             break;
                         case BattlEyeKick bekick:
                             if (UCWarfare.CanUseNetCall &&
@@ -456,6 +466,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, bekick.Violator, bekick.Reason, bekick.Timestamp,
                                     10000)).Responded)
                             {
+                                token.ThrowIfCancellationRequested();
                                 RemoveFromSave(bekick, 5);
                                 Save<BattlEyeKick>(5);
                             }
@@ -464,12 +475,14 @@ public static class OffenseManager
                                 L.LogWarning("  Failed to send battleye kick #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
+
                             break;
                         case Teamkill teamkill:
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendTeamkill.RequestAck(
                                     UCWarfare.I.NetClient!, teamkill.Violator, teamkill.Dead, teamkill.DeathCause,
                                     teamkill.ItemName, teamkill.Timestamp, 10000)).Responded)
                             {
+                                token.ThrowIfCancellationRequested();
                                 RemoveFromSave(teamkill, 6);
                                 Save<Teamkill>(6);
                             }
@@ -478,26 +491,33 @@ public static class OffenseManager
                                 L.LogWarning("  Failed to send teamkill #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
+
                             break;
                         case VehicleTeamkill vehicleTeamkill:
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendVehicleTeamkilled.RequestAck(
                                     UCWarfare.I.NetClient!, vehicleTeamkill.Violator,
-                                    vehicleTeamkill.VehicleID, vehicleTeamkill.VehicleName, vehicleTeamkill.Timestamp, 10000))
+                                    vehicleTeamkill.VehicleID, vehicleTeamkill.VehicleName, vehicleTeamkill.Timestamp,
+                                    10000))
                                 .Responded)
                             {
+                                token.ThrowIfCancellationRequested();
                                 RemoveFromSave(vehicleTeamkill, 7);
                                 Save<VehicleTeamkill>(7);
                             }
                             else
                             {
-                                L.LogWarning("  Failed to send vehicle teamkill #" + i.ToString(Data.AdminLocale) + "!");
+                                L.LogWarning("  Failed to send vehicle teamkill #" + i.ToString(Data.AdminLocale) +
+                                             "!");
                                 brk = true;
                             }
+
                             break;
                         case Unmute unmute:
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerUnmuted.RequestAck(
-                                    UCWarfare.I.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
+                                    UCWarfare.I.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000))
+                                .Responded)
                             {
+                                token.ThrowIfCancellationRequested();
                                 RemoveFromSave(unmute, 8);
                                 Save<Unmute>(8);
                             }
@@ -506,8 +526,10 @@ public static class OffenseManager
                                 L.LogWarning("  Failed to send unmute #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
+
                             break;
                     }
+
                     if (brk)
                         break;
                     if (i % ct == 0)
@@ -515,11 +537,19 @@ public static class OffenseManager
                               stamps.Length.ToString(Data.AdminLocale), ConsoleColor.Magenta);
                 }
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // ignored
+            }
             catch (Exception ex)
             {
                 L.LogError("Error sending past offenses.");
                 L.LogError(ex);
             }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            // ignored
         }
         catch (Exception ex)
         {

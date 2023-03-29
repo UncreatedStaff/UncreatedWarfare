@@ -374,7 +374,6 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     public readonly IQuestPreset? Preset;
     public readonly Guid PresetKey;
     public IQuestReward[] Rewards;
-    private string? _translationCache;
     protected bool isDisposed;
     public bool IsDailyQuest = false;
     public ushort Flag = 0;
@@ -404,13 +403,11 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     {
         try
         {
-            if (forAsset) return Translate(forAsset);
-            _translationCache ??= Translate(forAsset);
-            return _translationCache ?? QuestData.QuestType.ToString();
+            if (forAsset) return Translate(true);
+            return Translate(false) ?? QuestData.QuestType.ToString();
         }
         catch (Exception ex)
         {
-            _translationCache = null;
             L.LogError("Error getting translation for quest " + QuestData.QuestType);
             L.LogError(ex);
             return QuestData.QuestType.ToString();
@@ -445,7 +442,6 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     }
     public void TellUpdated(bool skipFlagUpdate = false)
     {
-        _translationCache = null;
         QuestManager.OnQuestUpdated(this, skipFlagUpdate);
     }
     public void Dispose()

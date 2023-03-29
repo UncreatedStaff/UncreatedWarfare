@@ -504,25 +504,41 @@ public static class Data
     {
         L.Log("Disconnected from HomeBase.", ConsoleColor.DarkYellow);
     }
+    
+    private static CancellationTokenSource? _netClientSource;
     internal static void OnClientConnected(IConnection connection)
     {
         L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
-        PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
-        if (ActionLog.Instance != null)
-            ActionLog.Instance.OnConnected();
-        if (!UCWarfare.Config.DisableDailyQuests)
-            Quests.DailyQuests.OnConnectedToServer();
-        if (Gamemode != null && Gamemode.ShouldShutdownAfterGame)
-            ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.ShutdownPlayer, Gamemode.ShutdownMessage);
-        UCWarfare.RunTask(OffenseManager.OnConnected, ctx: "Offense syncing (may take a while if it's been a long time since the bot was connected).");
-        ConfigSync.OnConnected(connection);
-        IUncreatedSingleton[] singletons = Singletons.GetSingletons();
-        for (int i = 0; i < singletons.Length; ++i)
+        CancellationTokenSource src = new CancellationTokenSource();
+        CancellationTokenSource? old = Interlocked.Exchange(ref _netClientSource, src);
+        old?.Cancel();
+        CancellationToken tkn = src.Token;
+        tkn.CombineIfNeeded(UCWarfare.UnloadCancel);
+        UCWarfare.RunTask(async token =>
         {
-            if (singletons[i] is ITCPConnectedListener l)
-                l.OnConnected();
-        }
-
+            await UCWarfare.ToUpdate(token);
+            tkn.ThrowIfCancellationRequested();
+            PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
+            if (!UCWarfare.Config.DisableDailyQuests)
+                Quests.DailyQuests.OnConnectedToServer();
+            if (Gamemode != null && Gamemode.ShouldShutdownAfterGame)
+                ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.ShutdownPlayer, Gamemode.ShutdownMessage);
+            ConfigSync.OnConnected(connection);
+            tkn.ThrowIfCancellationRequested();
+            IUncreatedSingleton[] singletons = Singletons.GetSingletons();
+            for (int i = 0; i < singletons.Length; ++i)
+            {
+                if (singletons[i] is ITCPConnectedListener l)
+                {
+                    await l.OnConnected(token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate(token);
+                }
+            }
+            await OffenseManager.OnConnected(token).ConfigureAwait(false);
+            tkn.ThrowIfCancellationRequested();
+            if (ActionLog.Instance != null)
+                await ActionLog.Instance.OnConnected(token).ConfigureAwait(false);
+        }, tkn, ctx: "Execute on client connected events.", timeout: 120000);
     }
     public static void HideAllUI(UCPlayer player)
     {

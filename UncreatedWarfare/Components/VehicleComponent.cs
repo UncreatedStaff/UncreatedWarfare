@@ -485,7 +485,7 @@ public class VehicleComponent : MonoBehaviour
     const int STARTING_FLARES_ATTACKHELI = 20;
     const int STARTING_FLARES_TRANSHELI = 26;
     const int STARTING_FLARES_JET = 16;
-    const int FLARE_BURST_COUNT = 2;
+    const int FLARE_BURST_COUNT = 6;
     private void FixedUpdate()
     {
         if (_flaresLeft > 0 && Time.time - _timeLastFlare > 0.15f)
