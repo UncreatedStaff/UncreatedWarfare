@@ -61,7 +61,7 @@ public interface IGameTickListener
 }
 public interface ITCPConnectedListener
 {
-    void OnConnected();
+    Task OnConnected(CancellationToken token);
 }
 public interface IDeclareWinListener
 {

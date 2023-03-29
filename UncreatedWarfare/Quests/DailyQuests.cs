@@ -25,13 +25,12 @@ public static class DailyQuests
     private static DailyQuest[] _sendQuests = new DailyQuest[DailyQuest.DAILY_QUEST_LENGTH];
     private static DateTime _nextRefresh;
     private static int _index;
-    private static volatile bool _sentCurrent;
     private static bool _sendHrNotif;
     private static bool _hasRead;
     public static TimeSpan TimeLeftForQuests => DateTime.Now - _nextRefresh;
     public static void OnConnectedToServer()
     {
-        if (_hasRead && !_needsCreate && !_sentCurrent)
+        if (_hasRead)
             ReplicateQuestChoices();
     }
 
@@ -85,18 +84,15 @@ public static class DailyQuests
     }
     private static void PrintQuests()
     {
-        if (_sentCurrent)
+        L.LogDebug("Daily Quests (current: " + _index + "):");
+        using IDisposable indent = L.IndentLog(1);
+        for (int i = 0; i < _quests.Length; i++)
         {
-            L.LogDebug("Daily Quests (current: " + _index + "):");
-            using IDisposable indent = L.IndentLog(1);
-            for (int i = 0; i < _quests.Length; i++)
-            {
-                ref DailyQuestSave save = ref _quests[i];
-                if (Assets.find(save.Guid) is not QuestAsset asset)
-                    L.LogWarning("Cannot find asset for day " + i + "'s quest.");
-                else
-                    L.LogDebug("Day " + i + ": " + asset.questName);
-            }
+            ref DailyQuestSave save = ref _quests[i];
+            if (Assets.find(save.Guid) is not QuestAsset asset)
+                L.LogWarning("Cannot find asset for day " + i + "'s quest.");
+            else
+                L.LogDebug("Day " + i + ": " + asset.questName);
         }
     }
     private static void OnRegisteredWorkshopID()
@@ -463,8 +459,6 @@ public static class DailyQuests
         writer.WriteStartObject();
         writer.WritePropertyName("index");
         writer.WriteNumberValue(_index);
-        writer.WritePropertyName("sent_quests");
-        writer.WriteBooleanValue(_sentCurrent);
         writer.WritePropertyName("quest_schedule");
         writer.WriteStartArray();
         for (int i = 0; i < _quests.Length; ++i)
@@ -548,9 +542,6 @@ public static class DailyQuests
                                 reader.TryGetInt32(out _index);
                             }
                             break;
-                        case "sent_quests":
-                            _sentCurrent = reader.TokenType == JsonTokenType.True;
-                            break;
                         case "quest_schedule":
                             if (reader.TokenType == JsonTokenType.StartArray)
                             {
@@ -624,27 +615,25 @@ public static class DailyQuests
                                                                                         {
                                                                                             preset.PresetObj = data.ReadPreset(ref reader);
                                                                                             preset.IsValid = true;
-                                                                                            if (!_sentCurrent)
+                                                                                            BaseQuestTracker? tempTracker = data.GetTracker(null, preset.PresetObj);
+                                                                                            if (tempTracker != null)
                                                                                             {
-                                                                                                BaseQuestTracker? tempTracker = data.GetTracker(null, preset.PresetObj);
-                                                                                                if (tempTracker != null)
+                                                                                                cond.FlagValue = checked((short)preset.PresetObj.State.FlagValue.InsistValue());
+                                                                                                cond.Translation = tempTracker.GetDisplayString(true) ?? string.Empty;
+                                                                                                cond.Key = preset.PresetObj.Key;
+                                                                                                cond.FlagId = preset.PresetObj.Flag;
+                                                                                                L.LogDebug($"SendQuest filled: {cond.FlagValue}, {cond.Translation}, {cond.Key}, {cond.FlagId}");
+                                                                                                for (int r = 0; r < tempTracker.Rewards.Length; ++r)
                                                                                                 {
-                                                                                                    cond.FlagValue = checked((short)preset.PresetObj.State.FlagValue.InsistValue());
-                                                                                                    cond.Translation = tempTracker.GetDisplayString(true) ?? string.Empty;
-                                                                                                    cond.Key = preset.PresetObj.Key;
-                                                                                                    cond.FlagId = preset.PresetObj.Flag;
-                                                                                                    for (int r = 0; r < tempTracker.Rewards.Length; ++r)
-                                                                                                    {
-                                                                                                        if (tempTracker.Rewards[r] is XPReward xpr)
-                                                                                                            xp += xpr.XP;
-                                                                                                        else if (tempTracker.Rewards[r] is CreditsReward cr)
-                                                                                                            cred += cr.Credits;
-                                                                                                    }
+                                                                                                    if (tempTracker.Rewards[r] is XPReward xpr)
+                                                                                                        xp += xpr.XP;
+                                                                                                    else if (tempTracker.Rewards[r] is CreditsReward cr)
+                                                                                                        cred += cr.Credits;
                                                                                                 }
-                                                                                                else
-                                                                                                {
-                                                                                                    L.LogWarning("Unable to create tracker for " + preset.PresetObj.State.FlagValue + " (" + type.ToString() + ")");
-                                                                                                }
+                                                                                            }
+                                                                                            else
+                                                                                            {
+                                                                                                L.LogWarning("Unable to create tracker for " + preset.PresetObj.State.FlagValue + " (" + type.ToString() + ")");
                                                                                             }
                                                                                         }
                                                                                         else
@@ -818,7 +807,6 @@ public static class DailyQuests
                 folder.WriteToDisk(p);
                 await UCWarfare.ToUpdate();
                 LoadAssets();
-                _sentCurrent = true;
                 PrintQuests();
                 SaveQuests();
             }

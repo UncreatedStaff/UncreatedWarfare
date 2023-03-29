@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
@@ -806,7 +807,21 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 if (item is not IItemJar jar)
                     continue;
                 ItemAsset? asset = item.GetItem(kit, faction, out byte amt, out byte[] state);
-
+                if (item is not IAssetRedirect && asset is ItemGunAsset && !UCWarfare.Config.DisableAprilFools && HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS))
+                {
+                                           // Dootpressor
+                    if (Assets.find(new Guid("c3d3123823334847a9fd294e5d764889")) is ItemBarrelAsset barrel)
+                    {
+                        unsafe
+                        {
+                            fixed (byte* ptr = state)
+                            {
+                                UnsafeBitConverter.GetBytes(ptr, barrel.id, (int)AttachmentType.Barrel);
+                                ptr[(int)AttachmentType.Barrel / 2 + 13] = 100;
+                            }
+                        }
+                    }
+                }
                 // ignore ammo bag if enabled
                 if (asset != null && ignoreAmmobags && Gamemode.Config.BarricadeAmmoBag.MatchGuid(asset.GUID))
                     continue;
@@ -2236,38 +2251,34 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         ActionLog.Add(ActionLogType.NitroBoostStateUpdated, "State: \"" + stateStr + "\".", player);
         L.Log("Player {" + player + "} nitro boost status updated: \"" + stateStr + "\".", ConsoleColor.Magenta);
     }
-    void ITCPConnectedListener.OnConnected()
+    async Task ITCPConnectedListener.OnConnected(CancellationToken token)
     {
         int v = _v;
         if (PlayerManager.OnlinePlayers.Count < 1)
             return;
-        UCWarfare.RunTask(async () =>
+        CheckLoaded();
+
+        await UCWarfare.ToUpdate();
+        CheckLoaded();
+
+        ulong[] players = new ulong[PlayerManager.OnlinePlayers.Count];
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            players[i] = PlayerManager.OnlinePlayers[i].Steam64;
+        RequestResponse response = await KitEx.NetCalls.RequestIsNitroBoosting.Request(KitEx.NetCalls.RespondIsNitroBoosting,
+            UCWarfare.I.NetClient!, players, 8192);
+        CheckLoaded();
+        if (response.Responded && response.TryGetParameter(0, out byte[] bytes))
         {
-            CheckLoaded();
+            int len = Math.Min(bytes.Length, players.Length);
+            for (int i = 0; i < len; ++i)
+                OnNitroBoostingUpdated(players[i], bytes[i]);
+        }
 
-            await UCWarfare.ToUpdate();
-            CheckLoaded();
-
-            ulong[] players = new ulong[PlayerManager.OnlinePlayers.Count];
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                players[i] = PlayerManager.OnlinePlayers[i].Steam64;
-            RequestResponse response = await KitEx.NetCalls.RequestIsNitroBoosting.Request(KitEx.NetCalls.RespondIsNitroBoosting,
-                UCWarfare.I.NetClient!, players, 8192);
-            CheckLoaded();
-            if (response.Responded && response.TryGetParameter(0, out byte[] bytes))
-            {
-                int len = Math.Min(bytes.Length, players.Length);
-                for (int i = 0; i < len; ++i)
-                    OnNitroBoostingUpdated(players[i], bytes[i]);
-            }
-
-            void CheckLoaded()
-            {
-                if (v != _v || !IsLoaded || !UCWarfare.CanUseNetCall)
-                    throw new OperationCanceledException();
-            }
-
-        }, ctx: "On Connected for KitManager.");
+        void CheckLoaded()
+        {
+            if (v != _v || !IsLoaded || !UCWarfare.CanUseNetCall)
+                throw new OperationCanceledException();
+        }
     }
 
     public Task<IItemJar?> GetHeldItemFromKit(UCPlayer player, CancellationToken token = default)

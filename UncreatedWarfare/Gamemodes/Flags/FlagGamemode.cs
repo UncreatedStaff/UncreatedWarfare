@@ -114,6 +114,8 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
             Player player = list[j];
             AddPlayerOnFlag(player, f);
         }
+
+        change.Release();
     }
     protected void ConvertFlags()
     {

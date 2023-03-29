@@ -11,9 +11,11 @@ using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.SQL;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
@@ -775,7 +777,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             !e.Vehicle.TryGetComponent(out VehicleComponent c) ||
             c.Data?.Item is not { } ||
             e.Vehicle.isDead ||
-            TeamManager.IsInAnyMain(e.Vehicle.transform.position) ||
+            (TeamManager.IsInAnyMain(e.Vehicle.transform.position) && e.Vehicle.lockedOwner.m_SteamID == e.Steam64) ||
             e.Player.OnDuty())
             return;
         e.Player.SendChat(T.UnlockVehicleNotAllowed);
@@ -1013,6 +1015,28 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         InteractableVehicle vehicle;
         try
         {
+            byte[][] turrets = new byte[asset.turrets.Length][];
+            for (int i = 0; i < asset.turrets.Length; ++i)
+            {
+                if (Assets.find(EAssetType.ITEM, asset.turrets[i].itemID) is ItemGunAsset turret)
+                {
+                    turrets[i] = turret.getState(EItemOrigin.ADMIN);
+                    if (!UCWarfare.Config.DisableAprilFools &&
+                        HolidayUtil.isHolidayActive(ENPCHoliday.APRIL_FOOLS) &&
+                        Assets.find(new Guid("c3d3123823334847a9fd294e5d764889")) is ItemBarrelAsset barrel)
+                    {
+                        unsafe
+                        {
+                            fixed (byte* ptr = turrets[i])
+                            {
+                                UnsafeBitConverter.GetBytes(ptr, barrel.id, (int)AttachmentType.Barrel);
+                                ptr[(int)AttachmentType.Barrel / 2 + 13] = 100;
+                            }
+                        }
+                    }
+                }
+            }
+
             vehicle = VehicleManager.SpawnVehicleV3(asset, 0, 0, 0f, position, rotation, false, false, false, false, asset.fuel,
                 asset.health, MaxBatteryCharge, new CSteamID(owner), new CSteamID(groupOwner), true, null, byte.MaxValue);
             if (vehicle == null)
