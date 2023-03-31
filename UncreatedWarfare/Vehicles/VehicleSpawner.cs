@@ -886,6 +886,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                 data.RequiredClass != Class.None) // vehicle requires crewman or pilot
             {
                 if (c.IsAircraft &&
+                    e.InitialSeat == 0 &&
                     e.FinalSeat != 0 &&
                     e.Vehicle.transform.position.y - LevelGround.getHeight(e.Vehicle.transform.position) > 30 &&
                     !e.Player.OnDuty())

@@ -59,7 +59,6 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
         _t1Tickets = 0;
         _t2Tickets = 0;
         Provider.Load();
-        EventDispatcher.PlayerDied += OnPlayerDeath;
         EventDispatcher.GroupChanged += OnGroupChanged;
     }
     public override void Unload()
@@ -71,7 +70,6 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
         Team1Tickets = 0;
         Team2Tickets = 0;
         EventDispatcher.GroupChanged -= OnGroupChanged;
-        EventDispatcher.PlayerDied -= OnPlayerDeath;
     }
     void IGameTickListener.Tick()
     {
@@ -118,11 +116,6 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
     {
         if (Provider is IFlagNeutralizedListener cl)
             cl.OnFlagNeutralized(flag, capturedTeam, lostTeam);
-    }
-    private void OnPlayerDeath(PlayerDied e)
-    {
-        if (Provider is IPlayerDeathListener pd)
-            pd.OnPlayerDeath(e);
     }
     private void OnGroupChanged(GroupChanged e)
     {
