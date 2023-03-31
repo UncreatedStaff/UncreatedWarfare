@@ -175,6 +175,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         new ClothingItem(new Guid("c3adf16156004b40a839ed1b80583c32"), ClothingType.Shirt, Array.Empty<byte>()),
         new ClothingItem(new Guid("67a6ec52e4b24ffd89f75ceee0eb5179"), ClothingType.Pants, Array.Empty<byte>())
     };
+
     private async Task<SqlItem<Kit>> CreateDefaultKit(FactionInfo? faction, string name, CancellationToken token = default)
     {
         List<IKitItem> items = new List<IKitItem>(DefaultKitItems.Length + 6);
@@ -824,10 +825,24 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 }
                 // ignore ammo bag if enabled
                 if (asset != null && ignoreAmmobags && Gamemode.Config.BarricadeAmmoBag.MatchGuid(asset.GUID))
+                {
+                    L.LogDebug("[GIVE KIT] Skipping ammo bag: " + jar + ".");
                     continue;
-                Page givePage = jar.Page;
-                byte giveX = jar.X, giveY = jar.Y, giveRot = jar.Rotation;
-                bool layoutAffected = false;
+                }
+                Page givePage;
+                byte giveX, giveY, giveRot;
+                bool layoutAffected;
+
+                void ResetToOriginal()
+                {
+                    layoutAffected = false;
+                    giveX = jar.X;
+                    giveY = jar.Y;
+                    giveRot = jar.Rotation;
+                    givePage = jar.Page;
+                }
+
+                ResetToOriginal();
 
                 // find layout override
                 for (int j = 0; j < layout.Length; ++j)
@@ -840,25 +855,46 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                         giveX = l.NewX;
                         giveY = l.NewY;
                         giveRot = l.NewRotation;
-                        L.LogDebug("Found layout for item " + item + " (to: " + givePage + ", (" + giveX + ", " + giveY + ") rot: " + giveRot + ".)");
+                        L.LogDebug("[GIVE KIT] Found layout for item " + item + " (to: " + givePage + ", (" + giveX + ", " + giveY + ") rot: " + giveRot + ".)");
                         break;
                     }
                 }
 
+                // checks for overlapping items and retries overlapping layout-affected items
+                retry:
                 if ((int)givePage < PlayerInventory.PAGES - 2 && asset != null)
                 {
                     Items page = p[(int)givePage];
+                    Item itm = new Item(asset.id, amt, 100, state);
                     // ensures multiple items are not put in the slots (causing the ghost gun issue)
-                    if (givePage is Page.Primary or Page.Secondary && page.getItemCount() > 0)
+                    if (givePage is Page.Primary or Page.Secondary)
                     {
-                        L.LogWarning("Duplicate " + givePage.ToString().ToLowerInvariant() + " defined for " + kit.Id + ", " + item + ".");
-                        L.Log("Removing " + (page.items[0].GetAsset().itemName) + " in place of duplicate.");
-                        (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((page.items[0].item, jar));
-                        page.removeItem(0);
+                        if (page.getItemCount() > 0)
+                        {
+                            L.LogWarning("[GIVE KIT] Duplicate " + givePage.ToString().ToLowerInvariant() + " defined for " + kit.Id + ", " + item + ".");
+                            L.Log("[GIVE KIT] Removing " + (page.items[0].GetAsset().itemName) + " in place of duplicate.");
+                            (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((page.items[0].item, jar));
+                            page.removeItem(0);
+                        }
+
+                        giveX = 0;
+                        giveY = 0;
+                        giveRot = 0;
+                    }
+                    else if (UCInventoryManager.IsOutOfBounds(page, giveX, giveY, asset.size_x, asset.size_y, giveRot))
+                    {
+                        // if an item is out of range of it's container with a layout override, remove it and try again
+                        if (layoutAffected)
+                        {
+                            L.LogDebug("[GIVE KIT] Out of bounds layout item in " + givePage + " defined for " + kit.Id + ", " + item + ".");
+                            L.LogDebug("[GIVE KIT] Retrying at original position.");
+                            ResetToOriginal();
+                            goto retry;
+                        }
+                        L.LogWarning("[GIVE KIT] Out of bounds item in " + givePage + " defined for " + kit.Id + ", " + item + ".");
+                        (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((itm, jar));
                     }
 
-                    // checks for overlapping items and retries overlapping layout-affected items
-                    retry:
                     int ic2 = page.getItemCount();
                     for (int j = 0; j < ic2; ++j)
                     {
@@ -868,26 +904,26 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                             // if an overlap is detected with a layout override, remove it and try again
                             if (layoutAffected)
                             {
-                                layoutAffected = false;
-                                L.LogDebug("Overlapping layout item in " + givePage + " defined for " + kit.Id + ", " + item + ".");
-                                L.LogDebug("Retrying at original position.");
+                                L.LogDebug("[GIVE KIT] Overlapping layout item in " + givePage + " defined for " + kit.Id + ", " + item + ".");
+                                L.LogDebug("[GIVE KIT] Retrying at original position.");
+                                ResetToOriginal();
                                 goto retry;
                             }
-                            L.LogWarning("Overlapping item in " + givePage + " defined for " + kit.Id + ", " + item + ".");
-                            L.Log("Removing " + (jar2.GetAsset().itemName) + " (" + jar2.x + ", " + jar2.y + " @ " + jar2.rot + "), in place of duplicate.");
+                            L.LogWarning("[GIVE KIT] Overlapping item in " + givePage + " defined for " + kit.Id + ", " + item + ".");
+                            L.Log("[GIVE KIT] Removing " + (jar2.GetAsset().itemName) + " (" + jar2.x + ", " + jar2.y + " @ " + jar2.rot + "), in place of duplicate.");
                             page.removeItem((byte)j--);
                             (toAddLater ??= new List<(Item, IItemJar)>(2)).Add((jar2.item, jar));
                         }
                     }
 
-                    Item itm = new Item(asset.id, amt, 100, state);
                     if (layoutAffected)
                     {
                         player.ItemTransformations.Add(new ItemTransformation(jar.Page, givePage, jar.X, jar.Y, giveX, giveY, itm));
                     }
                     page.addItem(giveX, giveY, giveRot, itm);
                 }
-                else
+                // if a clothing item asset redirect is missing it's likely a kit being requested on a faction without those clothes.
+                else if (item is not (IAssetRedirect and IClothingJar))
                     ReportItemError(kit, item, asset);
             }
 
@@ -1730,7 +1766,102 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         });
         return let;
     }
-    public async Task<(SqlItem<Kit>, StandardErrorCode)> CreateLoadout(ulong fromPlayer, ulong player, ulong team, Class @class, string displayName, CancellationToken token = default)
+
+    public async Task<(SqlItem<Kit>?, StandardErrorCode)> UpgradeLoadout(ulong fromPlayer, ulong player, Class @class, string loadoutName, CancellationToken token = default)
+    {
+        Kit dequipKit;
+        SqlItem<Kit>? existing;
+        await WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            existing = FindKitNoLock(loadoutName, true);
+            if (existing?.Item is not { } kit)
+                return (existing, StandardErrorCode.NotFound);
+
+            if (kit.Season >= UCWarfare.Season)
+                return (existing, StandardErrorCode.InvalidData);
+
+            await RemoveAccess(existing, player, token).ConfigureAwait(false);
+            ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + " DENIED ACCESS TO " + loadoutName, fromPlayer);
+            Class oldClass = kit.Class;
+            kit.FactionFilterIsWhitelist = false;
+            kit.FactionFilter = Array.Empty<PrimaryKey>();
+            kit.Class = @class;
+            kit.Faction = null;
+            kit.UpdateLastEdited(fromPlayer);
+            kit.Items = KitEx.GetDefaultLoadoutItems(@class);
+            kit.RequiresNitro = false;
+            kit.WeaponText = KitEx.PendingKitWeaponText;
+            kit.Disabled = true;
+            kit.Season = UCWarfare.Season;
+            kit.ClothingSetCache = null;
+            kit.ItemListCache = null;
+            kit.MapFilterIsWhitelist = false;
+            kit.MapFilter = Array.Empty<PrimaryKey>();
+            kit.Branch = GetDefaultBranch(@class);
+            kit.TeamLimit = GetDefaultTeamLimit(@class);
+            kit.RequestCooldown = GetDefaultRequestCooldown(@class);
+            kit.SquadLevel = SquadLevel.Member;
+            kit.CreditCost = 0;
+            kit.Type = KitType.Loadout;
+            kit.UnlockRequirements = Array.Empty<UnlockRequirement>();
+            kit.PremiumCost = 0m;
+
+            await existing.SaveItem(token).ConfigureAwait(false);
+            ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {loadoutName} (#{kit.PrimaryKey.Key}). Class: {oldClass} -> {@class}. Old Faction: {kit.FactionKey}", fromPlayer);
+
+            await GiveAccess(kit, player, KitAccessType.Purchase, token).ConfigureAwait(false);
+            ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, fromPlayer);
+            dequipKit = kit;
+        }
+        finally
+        {
+            Release();
+        }
+
+        await UCWarfare.ToUpdate(token);
+        if (UCPlayer.FromID(player) is { } pl)
+            Signs.UpdateLoadoutSigns(pl);
+
+        await DequipKit(dequipKit, token).ConfigureAwait(false);
+
+        return (existing, StandardErrorCode.Success);
+    }
+    public async Task<(SqlItem<Kit>?, StandardErrorCode)> UnlockLoadout(ulong fromPlayer, ulong player, string loadoutName, CancellationToken token = default)
+    {
+        Kit dequipKit;
+        SqlItem<Kit>? existing;
+        await WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            existing = FindKitNoLock(loadoutName, true);
+            if (existing?.Item is not { } kit)
+                return (existing, StandardErrorCode.NotFound);
+            
+            ActionLog.Add(ActionLogType.UnlockLoadout, loadoutName, fromPlayer);
+            
+            kit.UpdateLastEdited(fromPlayer);
+            kit.Disabled = false;
+            kit.ClothingSetCache = null;
+            kit.ItemListCache = null;
+            if (kit.WeaponText == null || kit.WeaponText.Equals(KitEx.PendingKitWeaponText, StringComparison.Ordinal))
+                kit.WeaponText = DetectWeaponText(kit);
+            dequipKit = kit;
+        }
+        finally
+        {
+            Release();
+        }
+
+        await UCWarfare.ToUpdate(token);
+        if (UCPlayer.FromID(player) is { } pl)
+            Signs.UpdateLoadoutSigns(pl);
+
+        await DequipKit(dequipKit, token).ConfigureAwait(false);
+
+        return (existing, StandardErrorCode.Success);
+    }
+    public async Task<(SqlItem<Kit>, StandardErrorCode)> CreateLoadout(ulong fromPlayer, ulong player, Class @class, string displayName, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1740,27 +1871,41 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         SqlItem<Kit>? existing = await FindKit(loadoutName, token, true).ConfigureAwait(false);
         if (existing?.Item != null)
             return (existing, StandardErrorCode.GenericError);
-        SqlItem<Kit>? kit = await GetDefaultKit(team, token).ConfigureAwait(false);
-        IKitItem[] items;
-        if (kit?.Item != null)
-        {
-            items = new IKitItem[kit.Item.Items.Length];
-            Array.Copy(kit.Item.Items, items, items.Length);
-        }
-        else
-            items = Array.Empty<IKitItem>();
 
-        Kit loadout = new Kit(loadoutName, @class, GetDefaultBranch(@class), KitType.Loadout, SquadLevel.Member, TeamManager.GetFactionSafe(team))
+        IKitItem[] items = KitEx.GetDefaultLoadoutItems(@class);
+        Kit loadout = new Kit(loadoutName, @class, GetDefaultBranch(@class), KitType.Loadout, SquadLevel.Member, null)
         {
-            Items = items.ToArray(),
-            Creator = fromPlayer
+            Items = items,
+            Creator = fromPlayer,
+            WeaponText = KitEx.PendingKitWeaponText,
+            Disabled = true
         };
         SetTextNoLock(fromPlayer, loadout, displayName);
-        kit = await AddOrUpdate(loadout, token).ConfigureAwait(false);
-
+        SqlItem<Kit> kit = await AddOrUpdate(loadout, token).ConfigureAwait(false);
         ActionLog.Add(ActionLogType.CreateKit, loadoutName, fromPlayer);
-
+        
+        await GiveAccess(kit, player, KitAccessType.Purchase, token).ConfigureAwait(false);
+        ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, fromPlayer);
+        await UCWarfare.ToUpdate(token);
+        if (UCPlayer.FromID(player) is { } pl)
+            Signs.UpdateLoadoutSigns(pl);
         return (kit, StandardErrorCode.Success);
+    }
+    public static string DetectWeaponText(Kit kit)
+    {
+        IKitItem[] items = kit.Items;
+        List<KeyValuePair<IItemJar, ItemGunAsset>> guns = new List<KeyValuePair<IItemJar, ItemGunAsset>>(2);
+        for (int i = 0; i < items.Length; ++i)
+        {
+            if (items[i] is IItem item and IItemJar jar && Assets.find(item.Item) is ItemGunAsset asset)
+                guns.Add(new KeyValuePair<IItemJar, ItemGunAsset>(jar, asset));
+        }
+
+        if (guns.Count == 0)
+            return string.Empty;
+
+        guns.Sort((a, b) => a.Key.Page.CompareTo(b.Key.Page));
+        return string.Join(", ", guns.Select(x => x.Value.itemName.ToUpperInvariant()));
     }
     internal void InvokeAfterMajorKitUpdate(SqlItem<Kit> proxy)
     {

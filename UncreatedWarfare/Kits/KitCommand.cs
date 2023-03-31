@@ -257,23 +257,17 @@ public sealed class KitCommand : AsyncCommand
                     {
                         new CommandParameter("Player", typeof(IPlayer))
                         {
-                            ChainDisplayCount = 4,
+                            ChainDisplayCount = 3,
                             Parameters = new CommandParameter[]
                             {
-                                new CommandParameter("Faction", typeof(FactionInfo))
+                                new CommandParameter("Class", typeof(Class))
                                 {
                                     Parameters = new CommandParameter[]
                                     {
-                                        new CommandParameter("Class", typeof(Class))
+                                        new CommandParameter("SignText", typeof(string))
                                         {
-                                            Parameters = new CommandParameter[]
-                                            {
-                                                new CommandParameter("SignText", typeof(string))
-                                                {
-                                                    IsOptional = false,
-                                                    IsRemainder = true
-                                                }
-                                            }
+                                            IsOptional = false,
+                                            IsRemainder = true
                                         }
                                     }
                                 }
@@ -547,6 +541,8 @@ public sealed class KitCommand : AsyncCommand
                         IKitItem[] oldItems = kit.Items;
                         kit.Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true);
                         kit.ItemListCache = null;
+                        kit.ClothingSetCache = null;
+                        kit.WeaponText = KitManager.DetectWeaponText(kit);
                         kit.UpdateLastEdited(ctx.CallerID);
                         ctx.LogAction(ActionLogType.EditKit, "OVERRIDE ITEMS " + kit.Id + ".");
                         await proxy.SaveItem(token).ConfigureAwait(false);
@@ -589,9 +585,10 @@ public sealed class KitCommand : AsyncCommand
                 if (@class == Class.None) @class = Class.Unarmed;
                 kit = new Kit(kitName, @class, KitManager.GetDefaultBranch(@class), type, SquadLevel.Member, faction)
                 {
-                    Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true),
+                    Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true)
                 };
                 kit.Creator = kit.LastEditor = ctx.CallerID;
+                kit.WeaponText = KitManager.DetectWeaponText(kit);
                 await manager.AddOrUpdate(kit, token).ConfigureAwait(false);
                 ctx.LogAction(ActionLogType.CreateKit, kitName);
                 await UCWarfare.ToUpdate(token);
@@ -945,23 +942,20 @@ public sealed class KitCommand : AsyncCommand
         }
         else if (ctx.MatchParameter(0, "createloadout", "cloadout", "cl"))
         {
-            ctx.AssertHelpCheck(1, "/kit <createloadout|cloadout|cl> <player> <faction> <class> [sign text...] - Creates and prepares a loadout for the provided player with optional sign text.");
+            ctx.AssertHelpCheck(1, "/kit <createloadout|cloadout|cl> <player> <class> [sign text...] - Creates and prepares a loadout for the provided player with optional sign text.");
 
             ctx.AssertRanByPlayer();
-            if (ctx.TryGet(3, out Class @class) && ctx.TryGet(2, out string factionStr) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
+            if (ctx.TryGet(2, out Class @class) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
                 if (onlinePlayer is null && !PlayerSave.HasPlayerSave(playerId))
                     throw ctx.Reply(T.PlayerNotFound);
-                FactionInfo? faction = TeamManager.FindFactionInfo(factionStr);
-                if (faction == null)
-                    throw ctx.Reply(T.FactionNotFoundCreateKit, factionStr);
 
                 PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
                 char let = await KitManager.GetLoadoutCharacter(playerId);
-                if (!ctx.TryGetRange(4, out string? signText) || string.IsNullOrWhiteSpace(signText))
+                if (!ctx.TryGetRange(3, out string? signText) || string.IsNullOrWhiteSpace(signText))
                     signText = null;
                 await UCWarfare.ToUpdate(token);
-                Kit loadout = new Kit(playerId, let, @class, signText, faction)
+                Kit loadout = new Kit(playerId, let, @class, signText, null)
                 {
                     Items = UCInventoryManager.ItemsFromInventory(ctx.Caller, findAssetRedirects: true),
                     Creator = ctx.CallerID,
@@ -985,7 +979,7 @@ public sealed class KitCommand : AsyncCommand
                 }
             }
             else
-                throw ctx.SendCorrectUsage("/kit <createloadout|cloadout|cl> <player> <faction> <class> [sign text...]");
+                throw ctx.SendCorrectUsage("/kit <createloadout|cloadout|cl> <player> <class> [sign text...]");
         }
         else if (ctx.MatchParameter(0, "skills", "skillset", "skillsets"))
         {

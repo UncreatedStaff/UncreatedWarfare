@@ -7,6 +7,8 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using SDG.NetTransport;
+using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
@@ -115,6 +117,8 @@ public class DebugCommand : AsyncCommand
             }
             catch (Exception ex)
             {
+                if (ex is BaseCommandInteraction b2)
+                    throw b2;
                 if (ex.InnerException is BaseCommandInteraction b)
                     throw b;
                 L.LogError(ex.InnerException ?? ex);
@@ -1550,7 +1554,6 @@ public class DebugCommand : AsyncCommand
             return ((PropertyInfo)field).GetMethod.Invoke(asset, Array.Empty<object>());
         }
     }
-
     private void hardpointadv(CommandInteraction ctx)
     {
         ctx.AssertGamemode(out Hardpoint hardpoint);
@@ -1585,5 +1588,21 @@ public class DebugCommand : AsyncCommand
             throw ctx.ReplyString("Unable to find 'HolidayUtil.holidayOverride' field.");
         }
         throw ctx.ReplyString("Invalid holiday: " + SqlTypes.Enum<ENPCHoliday>());
+    }
+    private void startloadout(CommandInteraction ctx)
+    {
+        ctx.AssertRanByPlayer();
+
+        ctx.AssertOnDuty();
+        
+        if (!ctx.TryGet(0, out Class @class))
+            throw ctx.SendCorrectUsage("/test startloadout <class>");
+
+        IKitItem[] items = KitEx.GetDefaultLoadoutItems(@class);
+        L.LogDebug("Found " + items.Length + " item" + items.Length.S() + ".");
+        
+        UCInventoryManager.GiveItems(ctx.Caller, items, true);
+
+        ctx.ReplyString("Given " + items.Length + " default item" + items.Length.S() + " for a " + Localization.TranslateEnum(@class, ctx.CallerID) + " loadout.");
     }
 }

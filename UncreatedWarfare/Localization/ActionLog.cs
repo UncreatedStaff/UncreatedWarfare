@@ -892,8 +892,12 @@ public enum ActionLogType : byte
     RemoveSkillset,
     [Translatable("NITRO_BOOST_STATE_UPDATED")]
     NitroBoostStateUpdated,
+    [Translatable("UPGRADE_LOADOUT")]
+    UpgradeLoadout,
+    [Translatable("UNLOCK_LOADOUT")]
+    UnlockLoadout,
 
     [Obsolete("Don't use this.")]
-    Max = NitroBoostStateUpdated
+    Max = UnlockLoadout
 }
 // ReSharper restore InconsistentNaming

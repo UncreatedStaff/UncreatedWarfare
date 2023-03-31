@@ -281,7 +281,10 @@ public class RallyPoint : MonoBehaviour
             if (enemies.Count > 0)
             {
                 foreach (UCPlayer member in Squad.Members)
-                    member.SendChat(T.RallyEnemiesNearbyTp);
+                {
+                    if (member is { IsOnline: true }) // was throwing an error for some reason
+                        member.SendChat(T.RallyEnemiesNearbyTp);
+                }
 
                 Destroy();
             }
