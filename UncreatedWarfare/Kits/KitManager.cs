@@ -2308,6 +2308,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     }
     public static bool IsNitroBoostingQuick(ulong player)
     {
+        ThreadUtil.assertIsGameThread();
         return PlayerSave.TryReadSaveFile(player, out PlayerSave save) && save.WasNitroBoosting;
     }
     /// <exception cref="TimeoutException"/>
@@ -2328,6 +2329,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         if (response.TryGetParameter(0, out byte[] state))
         {
             int len = Math.Min(state.Length, rtn.Length);
+            await UCWarfare.ToUpdate(token);
             for (int i = 0; i < len; ++i)
             {
                 byte b = state[i];
@@ -2356,6 +2358,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        ThreadUtil.assertIsGameThread();
         if (state is 0 or 1)
         {
             if (!PlayerSave.TryReadSaveFile(player, out PlayerSave save))
@@ -2414,6 +2417,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         CheckLoaded();
         if (response.Responded && response.TryGetParameter(0, out byte[] bytes))
         {
+            await UCWarfare.ToUpdate(token);
             int len = Math.Min(bytes.Length, players.Length);
             for (int i = 0; i < len; ++i)
                 OnNitroBoostingUpdated(players[i], bytes[i]);

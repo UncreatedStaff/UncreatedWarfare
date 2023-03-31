@@ -956,6 +956,7 @@ public class PlayerSave
         "PlayerSave.dat");
     public static void WriteToSaveFile(PlayerSave save)
     {
+        ThreadUtil.assertIsGameThread();
         Block block = new Block();
         block.writeUInt32(DataVersion);
         block.writeByte((byte)save.Team);
@@ -978,6 +979,7 @@ public class PlayerSave
     }
     public static bool TryReadSaveFile(ulong player, out PlayerSave save)
     {
+        ThreadUtil.assertIsGameThread();
         UCPlayer? pl = PlayerManager.FromID(player);
         string path = GetPath(player);
         if (pl?.Save != null)
@@ -992,7 +994,6 @@ public class PlayerSave
             save = null!;
             return false;
         }
-        ThreadUtil.assertIsGameThread();
         Block block = ServerSavedata.readBlock(path, 0);
         uint dv = block.readUInt32();
         save = new PlayerSave(player);

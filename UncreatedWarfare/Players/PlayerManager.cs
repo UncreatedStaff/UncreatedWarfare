@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.Permissions;
@@ -278,8 +279,9 @@ public static class PlayerManager
         public static readonly NetCall<ulong, EAdminType> SendPermissions = new NetCall<ulong, EAdminType>(1034);
 
         [NetCall(ENetCall.FROM_SERVER, 1024)]
-        internal static void ReceiveSetQueueSkip(MessageContext context, ulong player, bool status)
+        internal static async Task ReceiveSetQueueSkip(MessageContext context, ulong player, bool status)
         {
+            await UCWarfare.ToUpdate();
             if (PlayerSave.TryReadSaveFile(player, out PlayerSave save))
             {
                 save.HasQueueSkip = status;
