@@ -473,7 +473,7 @@ public static partial class Patches
                 {
                     UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);
 
-                    if (builder != null && builder.GetTeam() == drop.GetServersideData().group)
+                    if (builder != null && builder.GetTeam() == drop.GetServersideData().group.GetTeam())
                     {
                         if (Gamemode.Config.ItemEntrenchingTool.MatchGuid(__instance.equippedMeleeAsset.GUID))
                         {
