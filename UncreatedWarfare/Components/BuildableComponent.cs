@@ -508,7 +508,7 @@ public class BuildableComponent : MonoBehaviour
     private static bool ValidatePlacementWithFriendlyFOB(BuildableData buildable, FOB? fob, UCPlayer placer, Vector3 point, BarricadeDrop? ignore = null)
     {
         if (buildable == null) return false;
-        if (!placer.HasKit || !placer.ActiveKit!.Item!.ContainsItem(buildable.Foundation.Value.Guid)) // normal player, buildable is not in their kit
+        if (!placer.HasKit || !placer.ActiveKit!.Item!.ContainsItem(buildable.Foundation.Value.Guid, placer.GetTeam())) // normal player, buildable is not in their kit
         {
             if (fob is null)
             {

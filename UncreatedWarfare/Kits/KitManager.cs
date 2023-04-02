@@ -671,7 +671,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     ItemJar jar = player.Player.inventory.items[page].getItem(i);
                     ItemAsset? asset = jar.item.GetAsset();
                     if (asset is null) continue;
-                    if (k == null || !k.ContainsItem(asset.GUID))
+                    if (k == null || !k.ContainsItem(asset.GUID, player.GetTeam()))
                     {
                         WhitelistItem? item = null;
                         if (!Whitelister.Loaded || Whitelister.IsWhitelisted(asset.GUID, out item))
@@ -1306,7 +1306,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                     if (Assets.find(EAssetType.ITEM, jar.item.id) is not ItemAsset asset) continue;
                     float percentage = (float)jar.item.amount / asset.amount;
 
-                    bool notInKit = !active.ContainsItem(asset.GUID) && Whitelister.IsWhitelisted(asset.GUID, out _);
+                    bool notInKit = !active.ContainsItem(asset.GUID, player == null ? 0 : player.GetTeam()) && Whitelister.IsWhitelisted(asset.GUID, out _);
                     if (notInKit || (percentage < 0.3 && asset.type != EItemType.GUN))
                     {
                         if (notInKit)

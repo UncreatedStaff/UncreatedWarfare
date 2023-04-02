@@ -36,18 +36,26 @@ public static class KitEx
             kit.LastEditedTimestamp = DateTimeOffset.UtcNow;
         }
     }
-    public static bool ContainsItem(this Kit kit, Guid guid, bool checkClothes = false)
+    public static bool ContainsItem(this Kit kit, Guid guid, ulong team, bool checkClothes = false)
     {
+        FactionInfo? faction = TeamManager.GetFactionSafe(team);
         for (int i = 0; i < kit.Items.Length; ++i)
         {
-            if (kit.Items[i] is IItem item)
+            IKitItem itm = kit.Items[i];
+            if (itm is IItem item)
             {
                 if (item.Item == guid)
                     return true;
             }
-            else if (checkClothes && kit.Items[i] is IBaseItem clothing)
+            else if (checkClothes && itm is IBaseItem clothing)
             {
                 if (clothing.Item == guid)
+                    return true;
+            }
+            else if (itm is IAssetRedirect && (checkClothes || itm is not IClothingJar))
+            {
+                ItemAsset? asset = itm.GetItem(kit, faction, out _, out _);
+                if (asset != null && asset.GUID == guid)
                     return true;
             }
         }
@@ -718,7 +726,7 @@ public static class KitEx
             if (manager == null)
             {
                 for (int i = 0; i < successes.Length; ++i)
-                    successes[i] = (int)StandardErrorCode.Success;
+                    successes[i] = (int)StandardErrorCode.ModuleNotLoaded;
                 context.Reply(SendAckSetKitsAccess, successes);
                 return;
             }
@@ -739,6 +747,7 @@ public static class KitEx
                         UCPlayer? onlinePlayer = UCPlayer.FromID(player);
                         if (onlinePlayer != null && onlinePlayer.IsOnline)
                             KitManager.UpdateSigns(proxy.Item, onlinePlayer);
+                        successes[i] = (int)StandardErrorCode.Success;
                         continue;
                     }
 
