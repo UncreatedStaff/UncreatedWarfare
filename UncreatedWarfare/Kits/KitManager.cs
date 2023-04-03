@@ -85,6 +85,13 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             }
         }
     }
+
+    public override async Task PostReload(CancellationToken token)
+    {
+        await UCWarfare.ToUpdate(token);
+        await DownloadPlayersKitData(PlayerManager.OnlinePlayers, true, token).ConfigureAwait(false);
+    }
+
     public override async Task PreUnload(CancellationToken token)
     {
         //EventDispatcher.InventoryItemRemoved -= OnInventoryItemRemoved;

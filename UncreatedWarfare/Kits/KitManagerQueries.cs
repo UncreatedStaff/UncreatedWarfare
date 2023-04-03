@@ -1102,7 +1102,7 @@ partial class KitManager
             await Sql.NonQueryAsync($"DELETE FROM `{TABLE_SKILLSETS}` WHERE `{COLUMN_EXT_PK}` = @0;", new object[] { pk2 }, token).ConfigureAwait(false);
         }
 
-        if (item.FactionFilter is { Length: > 0 })
+        if (item.FactionFilter is { Length: > 0 } && item.FactionFilter.Any(x => x.IsValid))
         {
             builder.Append($"DELETE FROM `{TABLE_FACTION_FILTER}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_FACTION_FILTER}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_FILTER_FACTION)}) VALUES ");
@@ -1122,7 +1122,7 @@ partial class KitManager
         {
             await Sql.NonQueryAsync($"DELETE FROM `{TABLE_FACTION_FILTER}` WHERE `{COLUMN_EXT_PK}` = @0;", new object[] { pk2 }, token).ConfigureAwait(false);
         }
-        if (item.MapFilter is { Length: > 0 })
+        if (item.MapFilter is { Length: > 0 } && item.MapFilter.Any(x => x.IsValid))
         {
             builder.Append($"DELETE FROM `{TABLE_MAP_FILTER}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_MAP_FILTER}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_FILTER_MAP)}) VALUES ");
@@ -1142,10 +1142,11 @@ partial class KitManager
         {
             await Sql.NonQueryAsync($"DELETE FROM `{TABLE_MAP_FILTER}` WHERE `{COLUMN_EXT_PK}` = @0;", new object[] { pk2 }, token).ConfigureAwait(false);
         }
-        if (item.RequestSigns is { Length: > 0 })
+        if (item.RequestSigns is { Length: > 0 } && item.RequestSigns.Any(x => x.IsValid))
         {
             builder.Append($"DELETE FROM `{TABLE_REQUEST_SIGNS}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_REQUEST_SIGNS}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_REQUEST_SIGN)}) VALUES ");
+            bool any = false;
             for (int i = 0; i < item.RequestSigns.Length; ++i)
             {
                 PrimaryKey f = item.RequestSigns[i];
