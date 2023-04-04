@@ -338,6 +338,15 @@ public sealed class KitCommand : AsyncCommand
                     {
                         new CommandParameter("Kit", typeof(Kit))
                     }
+                },
+                new CommandParameter("Lock")
+                {
+                    Permission = EAdminType.STAFF,
+                    Description = "Lock a setup loadout.",
+                    Parameters = new CommandParameter[]
+                    {
+                        new CommandParameter("Kit", typeof(Kit))
+                    }
                 }
             }
         };
