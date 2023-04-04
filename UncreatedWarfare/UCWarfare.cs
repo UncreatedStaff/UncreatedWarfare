@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -1043,15 +1044,17 @@ public class UCWarfare : MonoBehaviour
     {
         if (Data.Colors == null) return Color.white;
         if (Data.Colors.TryGetValue(key, out Color color)) return color;
-        else if (Data.Colors.TryGetValue("default", out color)) return color;
-        else return Color.white;
+        if (JSONMethods.DefaultColors.TryGetValue(key, out string color2)) return color2.Hex();
+        if (Data.Colors.TryGetValue("default", out color)) return color;
+        return Color.white;
     }
     public static string GetColorHex(string key)
     {
-        if (Data.ColorsHex == null) return @"ffffff";
+        if (Data.ColorsHex == null) return "ffffff";
         if (Data.ColorsHex.TryGetValue(key, out string color)) return color;
-        else if (Data.ColorsHex.TryGetValue("default", out color)) return color;
-        else return @"ffffff";
+        if (JSONMethods.DefaultColors.TryGetValue(key, out color)) return color;
+        if (Data.ColorsHex.TryGetValue("default", out color)) return color;
+        return "ffffff";
     }
     public static void ShutdownIn(string reason, ulong instigator, int seconds)
     {

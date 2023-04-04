@@ -676,7 +676,10 @@ partial class KitManager
         sb.Append(");");
 
         if (args.Length <= 1)
+        {
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_FAVORITES}` WHERE `{COLUMN_FAVORITE_PLAYER}`=@0;", args, token).ConfigureAwait(false);
             return;
+        }
         await Sql.NonQueryAsync($"DELETE FROM `{TABLE_FAVORITES}` WHERE `{COLUMN_FAVORITE_PLAYER}`=@0;" +
                                 F.StartBuildOtherInsertQueryNoUpdate(TABLE_FAVORITES,
                                     COLUMN_FAVORITE_PLAYER, COLUMN_EXT_PK) + sb, args, token).ConfigureAwait(false);

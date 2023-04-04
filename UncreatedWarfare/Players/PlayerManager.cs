@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.Networking.Async;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
@@ -264,11 +265,24 @@ public static class PlayerManager
         float sqrRange = range * range;
         return !player.Player.life.isDead && (player.Position - point).sqrMagnitude < sqrRange;
     }
+    internal static async Task<bool?> IsUserInDiscordServer(ulong discordId)
+    {
+        if (!UCWarfare.CanUseNetCall)
+            return null;
+        RequestResponse response = await NetCalls.CheckUserInDiscordServerRequest.RequestAck(UCWarfare.I.NetClient!, discordId);
+        if (response.Responded)
+            return response.ErrorCode.HasValue && (StandardErrorCode)response.ErrorCode.Value == StandardErrorCode.Success;
+        return null;
+    }
     public static class NetCalls
     {
         public static readonly NetCall<ulong, bool> SendSetQueueSkip = new NetCall<ulong, bool>(ReceiveSetQueueSkip);
         public static readonly NetCall<ulong> GetPermissionsRequest = new NetCall<ulong>(ReceivePermissionRequest);
         public static readonly NetCall<ulong> CheckPlayerOnlineStatusRequest = new NetCall<ulong>(ReceivePlayerOnlineCheckRequest);
+        /// <summary>Ack: Success = yes, other = no.</summary>
+        public static readonly NetCall<ulong> CheckUserInDiscordServerRequest = new NetCall<ulong>(1022);
+
+        public static readonly NetCall<ulong, ulong, TicketType, string> RequestOpenTicket = new NetCall<ulong, ulong, TicketType, string>(1037);
 
         public static readonly NetCallRaw<PlayerListEntry[]> SendPlayerList = new NetCallRaw<PlayerListEntry[]>(1000, PlayerListEntry.ReadArray, PlayerListEntry.WriteArray);
         public static readonly NetCallRaw<PlayerListEntry> SendPlayerJoined = new NetCallRaw<PlayerListEntry>(1016, PlayerListEntry.Read, PlayerListEntry.Write);

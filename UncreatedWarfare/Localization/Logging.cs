@@ -34,6 +34,7 @@ public static class L
     private static FileStream _flog;
 #endif
     private static bool _inL;
+    private static bool _notWindows;
     private static ICommandInputOutput? _defaultIOHandler;
     private delegate void OutputToConsole(string value, ConsoleColor color);
     private static OutputToConsole? _outputToConsoleMethod;
@@ -114,6 +115,7 @@ public static class L
     {
         try
         {
+            _notWindows = Application.platform is not RuntimePlatform.WindowsEditor and not RuntimePlatform.WindowsPlayer;
             if (_init) return;
             _init = true;
             F.CheckDir(Data.Paths.Logs, out _, true);
@@ -345,7 +347,7 @@ public static class L
     [Conditional("DEBUG")]
     public static void LogDebug(string info, ConsoleColor color = ConsoleColor.DarkGray)
     {
-        if (Environment.OSVersion.Platform == PlatformID.Unix && color == ConsoleColor.DarkGray)
+        if (color == ConsoleColor.DarkGray && _notWindows)
             color = ConsoleColor.Gray;
         if (!UCWarfare.IsLoaded)
             LogAsLibrary("[DEBUG] " + info, color);

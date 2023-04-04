@@ -34,24 +34,32 @@ public static class Chat
     public static void SendString(this UCPlayer player, string message, Color color) => SendString(player.SteamPlayer, message, color);
     public static void SendString(this SteamPlayer player, string message, Color color)
     {
+        if (player?.player == null)
+            return;
         SendSingleMessage(message, color, EChatMode.SAY, null, true, player);
     }
     public static void SendString(this Player player, string message, string hex) => SendString(player.channel.owner, message, hex);
     public static void SendString(this UCPlayer player, string message, string hex) => SendString(player.SteamPlayer, message, hex);
     public static void SendString(this SteamPlayer player, string message, string hex)
     {
+        if (player?.player == null)
+            return;
         SendSingleMessage(message, hex.Hex(), EChatMode.SAY, null, true, player);
     }
     public static void SendString(this Player player, string message) => SendString(player.channel.owner, message);
     public static void SendString(this UCPlayer player, string message) => SendString(player.SteamPlayer, message);
     public static void SendString(this SteamPlayer player, string message)
     {
+        if (player?.player == null)
+            return;
         SendSingleMessage(message, Palette.AMBIENT, EChatMode.SAY, null, true, player);
     }
     public static void SendChat(this Player player, Translation translation) => SendChat(UCPlayer.FromPlayer(player)!, translation);
     public static void SendChat(this SteamPlayer player, Translation translation) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation);
     public static void SendChat(this UCPlayer player, Translation translation)
     {
+        if (player is not { IsOnline: true })
+            return;
         GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
         CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
@@ -60,6 +68,8 @@ public static class Chat
     public static void SendChat<T>(this SteamPlayer player, Translation<T> translation, T arg) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg);
     public static void SendChat<T>(this UCPlayer player, Translation<T> translation, T arg)
     {
+        if (player is not { IsOnline: true })
+            return;
         GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
@@ -69,6 +79,8 @@ public static class Chat
     public static void SendChat<T1, T2>(this SteamPlayer player, Translation<T1, T2> translation, T1 arg1, T2 arg2) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2);
     public static void SendChat<T1, T2>(this UCPlayer player, Translation<T1, T2> translation, T1 arg1, T2 arg2)
     {
+        if (player is not { IsOnline: true })
+            return;
         GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
@@ -78,6 +90,8 @@ public static class Chat
     public static void SendChat<T1, T2, T3>(this SteamPlayer player, Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3);
     public static void SendChat<T1, T2, T3>(this UCPlayer player, Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
     {
+        if (player is not { IsOnline: true })
+            return;
         GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
@@ -87,6 +101,8 @@ public static class Chat
     public static void SendChat<T1, T2, T3, T4>(this SteamPlayer player, Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4);
     public static void SendChat<T1, T2, T3, T4>(this UCPlayer player, Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
+        if (player is not { IsOnline: true })
+            return;
         GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
@@ -96,6 +112,8 @@ public static class Chat
     public static void SendChat<T1, T2, T3, T4, T5>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5);
     public static void SendChat<T1, T2, T3, T4, T5>(this UCPlayer player, Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
+        if (player is not { IsOnline: true })
+            return;
         GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
@@ -105,6 +123,8 @@ public static class Chat
     public static void SendChat<T1, T2, T3, T4, T5, T6>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6);
     public static void SendChat<T1, T2, T3, T4, T5, T6>(this UCPlayer player, Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
+        if (player is not { IsOnline: true })
+            return;
         GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
@@ -114,6 +134,8 @@ public static class Chat
     public static void SendChat<T1, T2, T3, T4, T5, T6, T7>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     public static void SendChat<T1, T2, T3, T4, T5, T6, T7>(this UCPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
+        if (player is not { IsOnline: true })
+            return;
         GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
@@ -123,6 +145,8 @@ public static class Chat
     public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8>(this UCPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
+        if (player is not { IsOnline: true })
+            return;
         GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
@@ -132,6 +156,8 @@ public static class Chat
     public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this UCPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
+        if (player is not { IsOnline: true })
+            return;
         GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
@@ -141,6 +167,8 @@ public static class Chat
     public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
     public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this UCPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
     {
+        if (player is not { IsOnline: true })
+            return;
         GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);

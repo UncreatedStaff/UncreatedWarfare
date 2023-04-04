@@ -4,6 +4,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Networking;
+using Uncreated.Networking.Async;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.FOBs;
@@ -28,7 +30,16 @@ public class RequestCommand : AsyncCommand
         AddAlias("req");
         Structure = new CommandStructure
         {
-            Description = "Request a kit or a vehicle by looking at their respective signs (or the actual vehicle)."
+            Description = "Request a kit or a vehicle by looking at their respective signs (or the actual vehicle).",
+            Parameters = new CommandParameter[]
+            {
+                new CommandParameter("Upgrade")
+                {
+                    Description = "Use to upgrade old loadouts.",
+                    Aliases = new string[] { "update" },
+                    IsOptional = true
+                }
+            }
         };
     }
 
@@ -40,7 +51,7 @@ public class RequestCommand : AsyncCommand
         ctx.AssertRanByPlayer();
 
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
-        
+        BarricadeDrop drop;
         if (ctx.HasArg(0))
         {
             if (ctx.MatchParameter(0, "save"))
@@ -53,9 +64,105 @@ public class RequestCommand : AsyncCommand
                 ctx.AssertPermissions(EAdminType.STAFF);
                 throw ctx.ReplyString("Removing request signs should now be done using the structure command.");
             }
+            if (ctx.MatchParameter(0, "upgrade", "update"))
+            {
+                if (ctx.TryGetTarget(out drop))
+                {
+                    StructureSaver? saver = StructureSaver.GetSingletonQuick();
+                    InteractableSign? sign = drop.interactable as InteractableSign;
+                    if (saver != null && await saver.GetSave(drop, token).ConfigureAwait(false) == null)
+                    {
+                        await UCWarfare.ToUpdate(token);
+                        throw ctx.Reply(T.RequestKitNotRegistered);
+                    }
+
+                    ulong discordId = await Data.AdminSql.GetDiscordID(ctx.CallerID, token).ConfigureAwait(false);
+                    if (discordId == 0)
+                    {
+                        await UCWarfare.ToUpdate(token);
+                        ctx.Reply(T.DiscordNotLinked);
+                        throw ctx.Reply(T.DiscordNotLinked2, ctx.Caller);
+                    }
+
+                    bool? inDiscordServer = await PlayerManager.IsUserInDiscordServer(discordId).ConfigureAwait(false);
+                    if (inDiscordServer.HasValue)
+                    {
+                        if (!inDiscordServer.Value)
+                        {
+                            await UCWarfare.ToUpdate(token);
+                            throw ctx.Reply(T.RequestUpgradeNotInDiscordServer);
+                        }
+                    }
+                    else
+                    {
+                        await UCWarfare.ToUpdate(token);
+                        throw ctx.Reply(T.RequestUpgradeNotConnected);
+                    }
+
+                    await UCWarfare.ToUpdate(token);
+                    if (sign != null)
+                    {
+                        SqlItem<Kit>? proxy = Signs.GetKitFromSign(drop, out int loadoutId);
+                        if (proxy?.Item != null || loadoutId > 0)
+                        {
+                            KitManager? manager = KitManager.GetSingletonQuick();
+                            if (manager == null)
+                                throw ctx.SendGamemodeError();
+
+                            if (loadoutId > 0)
+                            {
+                                Kit? kit = KitManager.GetLoadoutQuick(ctx.Caller, loadoutId)?.Item;
+                                if (kit is not { Id: { } kitId })
+                                    throw ctx.Reply(T.KitNotFound, KitEx.GetLoadoutName(ctx.CallerID, loadoutId));
+
+                                int id = KitEx.ParseStandardLoadoutId(kitId);
+                                if (id < 1)
+                                    throw ctx.Reply(T.KitNotFound, kitId);
+
+                                if (UCWarfare.CanUseNetCall)
+                                {
+                                    RequestResponse response = await KitEx.NetCalls.RequestIsModifyLoadoutTicketOpen.RequestAck(UCWarfare.I.NetClient!, discordId, id, 7500);
+                                    if (!response.Responded)
+                                    {
+                                        await UCWarfare.ToUpdate(token);
+                                        throw ctx.Reply(T.RequestUpgradeNotConnected);
+                                    }
+                                    if (response.ErrorCode is not (int)StandardErrorCode.NotFound)
+                                    {
+                                        await UCWarfare.ToUpdate(token);
+                                        throw ctx.Reply(T.RequestUpgradeAlreadyOpen, kit);
+                                    }
+                                }
+                                else
+                                {
+                                    await UCWarfare.ToUpdate(token);
+                                    throw ctx.Reply(T.RequestUpgradeNotConnected);
+                                }
+                                if (!kit.NeedsUpgrade)
+                                {
+                                    await UCWarfare.ToUpdate(token);
+                                    throw ctx.Reply(T.DoesNotNeedUpgrade, kit);
+                                }
+
+                                bool success = await KitEx.OpenUpgradeTicket(kit.GetDisplayName(), kit.Class, loadoutId, ctx.CallerID, discordId, token).ConfigureAwait(false);
+                                await UCWarfare.ToUpdate(token);
+                                if (!success)
+                                    throw ctx.Reply(T.RequestUpgradeNotConnected);
+
+                                throw ctx.Reply(T.TicketOpened, kit);
+                            }
+
+                            throw ctx.Reply(T.RequestUpgradeOnKit, proxy?.Item!);
+                        }
+                    }
+                }
+
+                throw ctx.Reply(T.RequestNoTarget);
+            }
+
             throw ctx.SendCorrectUsage(Syntax + " - " + Help);
         }
-        if (ctx.TryGetTarget(out BarricadeDrop drop))
+        if (ctx.TryGetTarget(out drop))
         {
             StructureSaver? saver = StructureSaver.GetSingletonQuick();
             InteractableSign? sign = drop.interactable as InteractableSign;

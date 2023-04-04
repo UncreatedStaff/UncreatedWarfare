@@ -2,9 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.Networking.Async;
 using Uncreated.SQL;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -17,7 +19,6 @@ public delegate void KitChanged(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>
 
 public static class KitEx
 {
-    public const string PendingKitWeaponText = "PENDING STAFF SETUP";
     public const int BranchMaxCharLimit = 16;
     public const int ClothingMaxCharLimit = 16;
     public const int ClassMaxCharLimit = 20;
@@ -79,7 +80,60 @@ public static class KitEx
         }
         return count;
     }
+    public static int ParseStandardLoadoutId(string kitId)
+    {
+        if (kitId.Length > 18)
+        {
+            return GetLoadoutId(kitId, 18);
+        }
 
+        return -1;
+    }
+    /// <summary>Indexed from 1.</summary>
+    /// <returns>-1 if operation results in an overflow or invalid characters are found, otherwise, the id of the loadout.</returns>
+    public static int GetLoadoutId(string chars, int start = 0, int len = -1)
+    {
+        if (len == -1)
+            len = chars.Length - start;
+        if (len > 9) // overflow
+            return -1;
+        int id = 0;
+        for (int i = len - 1; i >= 0; --i)
+        {
+            int c = chars[start + i];
+            if (c is > 96 and < 123)
+                id += (c - 96) * (int)Math.Pow(26, len - i - 1);
+            else if (c is > 64 and < 91)
+                id += (c - 64) * (int)Math.Pow(26, len - i - 1);
+            else return -1;
+        }
+
+        if (id < 0) // overflow
+            return -1;
+
+        return id;
+    }
+
+    public static string GetLoadoutName(ulong player, int id) => player.ToString("D17", Data.AdminLocale) + "_" + GetLoadoutLetter(id);
+    /// <summary>Indexed from 1.</summary>
+    public static unsafe string GetLoadoutLetter(int id)
+    {
+        if (id <= 0) id = 1;
+        int len = (int)Math.Ceiling(Math.Log(id == 1 ? 2 : id, 26));
+        char* ptr = stackalloc char[len];
+        ptr += len - 1;
+        while (true)
+        {
+            *ptr = (char)(((id - 1) % 26) + 97);
+            int rem = (id - 1) / 26;
+            if (rem <= 0)
+                break;
+
+            --ptr;
+            id = rem;
+        }
+        return new string(ptr, 0, len);
+    }
     public static byte GetKitItemTypeId(IKitItem item)
     {
         if (item is PageItem)
@@ -657,6 +711,18 @@ public static class KitEx
         }
         return items.ToArray();
     }
+
+    public static async Task<bool> OpenUpgradeTicket(string displayName, Class @class, int id, ulong player, ulong discordId, CancellationToken token = default)
+    {
+        token.ThrowIfCancellationRequested();
+        if (UCWarfare.CanUseNetCall)
+        {
+            RequestResponse response = await PlayerManager.NetCalls.RequestOpenTicket.RequestAck(UCWarfare.I.NetClient!, player, discordId, TicketType.ModifyLoadout, id.ToString(Data.AdminLocale) + "_" + @class + "_" + displayName, 10000);
+            return response.Responded && response.ErrorCode.HasValue && (StandardErrorCode)response.ErrorCode.Value == StandardErrorCode.Success;
+        }
+
+        return false;
+    }
     public static class NetCalls
     {
         public const int PlayerHasAccessCode = -4;
@@ -674,6 +740,7 @@ public static class KitEx
         public static readonly NetCall<string, ulong> RequestKitAccess = new NetCall<string, ulong>(ReceiveKitAccessRequest);
         public static readonly NetCall<string[], ulong> RequestKitsAccess = new NetCall<string[], ulong>(ReceiveKitsAccessRequest);
         public static readonly NetCall<ulong[]> RequestIsNitroBoosting = new NetCall<ulong[]>(1138, capacity: sizeof(ulong) * 48 + sizeof(ushort));
+        public static readonly NetCall<ulong, int> RequestIsModifyLoadoutTicketOpen = new NetCall<ulong, int>(1038);
 
         public static readonly NetCall<string, Class, string> SendKitClass = new NetCall<string, Class, string>(1114);
         public static readonly NetCallRaw<Kit?> SendKit = new NetCallRaw<Kit?>(1117, Util.ReadIReadWriteObjectNullable<Kit>, Util.WriteIReadWriteObjectNullable);
@@ -897,16 +964,16 @@ public static class KitEx
             }
             else
             {
-                context.Reply(SendAckCreateLoadout, string.Empty, (int)StandardErrorCode.GenericError);
+                context.Reply(SendAckCreateLoadout, string.Empty, (int)StandardErrorCode.ModuleNotLoaded);
             }
         }
         [NetCall(ENetCall.FROM_SERVER, 1141)]
-        private static async Task ReceiveUpgradeLoadoutRequest(MessageContext context, ulong fromPlayer, ulong player, Class @class, string displayName)
+        private static async Task ReceiveUpgradeLoadoutRequest(MessageContext context, ulong fromPlayer, ulong player, Class @class, string loadoutId)
         {
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {
-                (_, StandardErrorCode code) = await manager.UpgradeLoadout(fromPlayer, player, @class, displayName).ConfigureAwait(false);
+                (_, StandardErrorCode code) = await manager.UpgradeLoadout(fromPlayer, player, @class, loadoutId).ConfigureAwait(false);
 
                 context.Acknowledge(code);
             }
@@ -921,7 +988,7 @@ public static class KitEx
             KitManager? manager = KitManager.GetSingletonQuick();
             if (manager != null)
             {
-                (_, StandardErrorCode code) = await manager.UnlockLoadout(fromPlayer, player, displayName).ConfigureAwait(false);
+                (_, StandardErrorCode code) = await manager.UnlockLoadout(fromPlayer, displayName).ConfigureAwait(false);
 
                 context.Acknowledge(code);
             }
