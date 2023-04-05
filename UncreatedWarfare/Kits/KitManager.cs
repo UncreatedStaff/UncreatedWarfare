@@ -1896,13 +1896,14 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     public async Task<(SqlItem<Kit>?, StandardErrorCode)> UnlockLoadout(ulong fromPlayer, string loadoutName, CancellationToken token = default)
     {
         Kit dequipKit;
-        SqlItem<Kit>? existing;
+        SqlItem<Kit>? existing = await FindKit(loadoutName, token, true).ConfigureAwait(false);
+        if (existing is null)
+            return (existing, StandardErrorCode.NotFound);
         ulong player = 0;
-        await WaitAsync(token).ConfigureAwait(false);
+        await existing.Enter(token).ConfigureAwait(false);
         try
         {
-            existing = FindKitNoLock(loadoutName, true);
-            if (existing?.Item is not { } kit)
+            if (existing.Item is not { } kit)
                 return (existing, StandardErrorCode.NotFound);
             
             ActionLog.Add(ActionLogType.UnlockLoadout, loadoutName, fromPlayer);
@@ -1917,10 +1918,12 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 
             if (kit.Id.Length >= 17)
                 ulong.TryParse(kit.Id.Substring(0, 17), NumberStyles.Number, Data.AdminLocale, out player);
+
+            await existing.SaveItem(token).ConfigureAwait(false);
         }
         finally
         {
-            Release();
+            existing.Release();
         }
 
         await UCWarfare.ToUpdate(token);

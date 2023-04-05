@@ -674,7 +674,7 @@ public static class DailyQuests
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        L.Log("Saving trackers for " + tracker.Player.CharacterName);
+        L.LogDebug("Saving trackers for " + tracker.Player.CharacterName);
         string path = GetDailySavePath(tracker.Player.Steam64);
         if (!Directory.Exists(path))
             Directory.CreateDirectory(path);

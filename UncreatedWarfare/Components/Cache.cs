@@ -56,8 +56,6 @@ public class Cache : IFOB, IObjective, IDeployable
     {
         get
         {
-            L.Log("CACHE: getting UI color...");
-
             if (NearbyAttackers.Count != 0)
                 return UCWarfare.GetColorHex("enemy_nearby_fob_color");
             else if (!IsDiscovered)

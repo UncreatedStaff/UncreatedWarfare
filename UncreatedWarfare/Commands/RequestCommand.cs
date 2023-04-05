@@ -130,7 +130,17 @@ public class RequestCommand : AsyncCommand
                                     if (response.ErrorCode is not (int)StandardErrorCode.NotFound)
                                     {
                                         await UCWarfare.ToUpdate(token);
-                                        throw ctx.Reply(T.RequestUpgradeAlreadyOpen, kit);
+                                        if (response.ErrorCode is (int)StandardErrorCode.Success)
+                                        {
+                                            throw ctx.Reply(T.RequestUpgradeAlreadyOpen, kit);
+                                        }
+
+                                        if (response.ErrorCode is (int)StandardErrorCode.NotSupported)
+                                        {
+                                            throw ctx.Reply(T.RequestUpgradeTooManyTicketsOpen);
+                                        }
+
+                                        throw ctx.Reply(T.RequestUpgradeError, response.ErrorCode.HasValue ? ((StandardErrorCode)response.ErrorCode.Value).ToString() : "NULL");
                                     }
                                 }
                                 else
