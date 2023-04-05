@@ -513,7 +513,7 @@ partial class KitManager
             for (int i = 0; i < bct; ++i)
             {
                 KeyValuePair<ulong, HotkeyBinding> b = bindingsToDelete![i];
-                int st = 1 + i * blen;
+                int st = i * blen;
                 args[st] = b.Key;
                 HotkeyBinding t = b.Value;
                 args[st + 1] = t.Slot;
@@ -527,7 +527,7 @@ partial class KitManager
             for (int i = 0; i < lct; ++i)
             {
                 KeyValuePair<ulong, LayoutTransformation> l = layoutsToDelete![i];
-                int st = 1 + bct * blen + i * llen;
+                int st = bct * blen + i * llen;
                 args[st] = l.Key;
                 LayoutTransformation t = l.Value;
                 args[st + 1] = t.OldPage.ToString();
