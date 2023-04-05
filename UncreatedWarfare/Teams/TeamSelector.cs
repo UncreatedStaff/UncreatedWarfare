@@ -120,7 +120,7 @@ public class TeamSelector : BaseSingletonComponent
         GetTeamCounts(out int t1, out int t2);
         if (CheckTeam(team, player.TeamSelectorData.SelectedTeam, t1, t2))
         {
-            if (player.TeamSelectorData.SelectedTeam != 0 && player.TeamSelectorData.SelectedTeam != team)
+            if (player.TeamSelectorData.SelectedTeam is 1 or 2 && player.TeamSelectorData.SelectedTeam != team)
             {
                 ulong other = player.TeamSelectorData.SelectedTeam;
                 if (other == 1)

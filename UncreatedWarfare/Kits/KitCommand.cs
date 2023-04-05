@@ -559,7 +559,7 @@ public sealed class KitCommand : AsyncCommand
             if (proxy?.Item is not { } kit)
             {
                 await UCWarfare.ToUpdate(token);
-                throw ctx.Reply(T.KitNotFound, kitName);
+                throw ctx.Reply(T.KitNotFound, kitName.Replace(Signs.Prefix, string.Empty));
             }
             await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try

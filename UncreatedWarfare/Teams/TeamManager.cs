@@ -1405,6 +1405,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultShirt.ValidReference(out ItemShirtAsset sasset);
+                    if (sasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultShirt.ValidReference(out sasset);
                     rtn = sasset;
                 }
                 break;
@@ -1414,6 +1416,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultPants.ValidReference(out ItemPantsAsset passet);
+                    if (passet == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultPants.ValidReference(out passet);
                     rtn = passet;
                 }
                 break;
@@ -1423,6 +1427,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultVest.ValidReference(out ItemVestAsset vasset);
+                    if (vasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultVest.ValidReference(out vasset);
                     rtn = vasset;
                 }
                 break;
@@ -1432,6 +1438,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultBackpack.ValidReference(out ItemBackpackAsset bkasset);
+                    if (bkasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultBackpack.ValidReference(out bkasset);
                     rtn = bkasset;
                 }
                 break;
@@ -1441,6 +1449,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultGlasses.ValidReference(out ItemGlassesAsset gasset);
+                    if (gasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultGlasses.ValidReference(out gasset);
                     rtn = gasset;
                 }
                 break;
@@ -1450,6 +1460,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultMask.ValidReference(out ItemMaskAsset masset);
+                    if (masset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultMask.ValidReference(out masset);
                     rtn = masset;
                 }
                 break;
@@ -1459,6 +1471,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultHat.ValidReference(out ItemHatAsset hasset);
+                    if (hasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultHat.ValidReference(out hasset);
                     rtn = hasset;
                 }
                 break;
@@ -1566,7 +1580,15 @@ public static class TeamManager
 
         return rtn;
     }
-    internal static RedirectType GetClothingRedirect(Guid input) => GetRedirectInfo(input, out _, true);
+    internal static RedirectType GetClothingRedirect(Guid input, FactionInfo faction)
+    {
+        RedirectType type = GetRedirectInfo(input, out FactionInfo? foundFaction, true);
+        if (type == RedirectType.None || foundFaction != faction)
+            return RedirectType.None;
+
+        return type;
+    }
+
     internal static RedirectType GetItemRedirect(Guid input) => GetRedirectInfo(input, out _, false);
 #if DEBUG
     [Obsolete]

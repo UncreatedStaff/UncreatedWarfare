@@ -60,52 +60,53 @@ public static class UCInventoryManager
         }
         if (addClothes)
         {
+            FactionInfo? playerFaction = TeamManager.GetFactionSafe(player.GetTeam());
             PlayerClothing playerClothes = player.Player.clothing;
             if (playerClothes.shirtAsset != null)
             {
-                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.shirtAsset.GUID)) != RedirectType.None)
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.shirtAsset.GUID, playerFaction)) != RedirectType.None)
                     items.Add(new AssetRedirectClothing(type, ClothingType.Shirt));
                 else
                     items.Add(new ClothingItem(playerClothes.shirtAsset.GUID, ClothingType.Shirt, playerClothes.shirtState));
             }
             if (playerClothes.pantsAsset != null)
             {
-                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.pantsAsset.GUID)) != RedirectType.None)
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.pantsAsset.GUID, playerFaction)) != RedirectType.None)
                     items.Add(new AssetRedirectClothing(type, ClothingType.Pants));
                 else
                     items.Add(new ClothingItem(playerClothes.pantsAsset.GUID, ClothingType.Pants, playerClothes.pantsState));
             }
             if (playerClothes.vestAsset != null)
             {
-                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.vestAsset.GUID)) != RedirectType.None)
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.vestAsset.GUID, playerFaction)) != RedirectType.None)
                     items.Add(new AssetRedirectClothing(type, ClothingType.Vest));
                 else
                     items.Add(new ClothingItem(playerClothes.vestAsset.GUID, ClothingType.Vest, playerClothes.vestState));
             }
             if (playerClothes.hatAsset != null)
             {
-                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.hatAsset.GUID)) != RedirectType.None)
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.hatAsset.GUID, playerFaction)) != RedirectType.None)
                     items.Add(new AssetRedirectClothing(type, ClothingType.Hat));
                 else
                     items.Add(new ClothingItem(playerClothes.hatAsset.GUID, ClothingType.Hat, playerClothes.hatState));
             }
             if (playerClothes.maskAsset != null)
             {
-                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.maskAsset.GUID)) != RedirectType.None)
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.maskAsset.GUID, playerFaction)) != RedirectType.None)
                     items.Add(new AssetRedirectClothing(type, ClothingType.Mask));
                 else
                     items.Add(new ClothingItem(playerClothes.maskAsset.GUID, ClothingType.Mask, playerClothes.maskState));
             }
             if (playerClothes.backpackAsset != null)
             {
-                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.backpackAsset.GUID)) != RedirectType.None)
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.backpackAsset.GUID, playerFaction)) != RedirectType.None)
                     items.Add(new AssetRedirectClothing(type, ClothingType.Backpack));
                 else
                     items.Add(new ClothingItem(playerClothes.backpackAsset.GUID, ClothingType.Backpack, playerClothes.backpackState));
             }
             if (playerClothes.glassesAsset != null)
             {
-                if (findAssetRedirects && (type = TeamManager.GetClothingRedirect(playerClothes.glassesAsset.GUID)) != RedirectType.None)
+                if (findAssetRedirects && playerFaction != null && (type = TeamManager.GetClothingRedirect(playerClothes.glassesAsset.GUID, playerFaction)) != RedirectType.None)
                     items.Add(new AssetRedirectClothing(type, ClothingType.Glasses));
                 else
                     items.Add(new ClothingItem(playerClothes.glassesAsset.GUID, ClothingType.Glasses, playerClothes.glassesState));
