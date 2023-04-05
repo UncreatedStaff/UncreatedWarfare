@@ -1841,7 +1841,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         await existing.Enter(token).ConfigureAwait(false);
         try
         {
-            if (existing?.Item is not { } kit)
+            if (existing.Item is not { } kit)
                 return (existing, StandardErrorCode.NotFound);
 
             if (kit.Season >= UCWarfare.Season)
@@ -1882,7 +1882,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         }
         finally
         {
-            Release();
+            existing.Release();
         }
 
         await UCWarfare.ToUpdate(token);

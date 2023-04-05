@@ -268,7 +268,11 @@ public class RequestCommand : AsyncCommand
             }
             else throw ctx.SendGamemodeError();
         }
-        else throw ctx.Reply(T.RequestNoTarget);
+        else
+        {
+            await UCWarfare.ToUpdate(token);
+            throw ctx.Reply(T.RequestNoTarget);
+        }
     }
     /// <remarks>Thread Safe</remarks>
     internal Task RequestVehicle(CommandInteraction ctx, InteractableVehicle vehicle, VehicleData data, CancellationToken token = default) => RequestVehicle(ctx, vehicle, data, ctx.Caller.GetTeam(), token);
