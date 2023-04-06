@@ -26,7 +26,7 @@ public static class KitEx
     public const int RedirectTypeCharLimit = 20;
     public const int SquadLevelMaxCharLimit = 16;
     public const int KitNameMaxCharLimit = 25;
-    public const int WeaponTextMaxCharLimit = 50;
+    public const int WeaponTextMaxCharLimit = 75;
     public const int SignTextMaxCharLimit = 50;
     public const int MaxStateArrayLimit = 18;
     public static void UpdateLastEdited(this Kit kit, ulong player)
