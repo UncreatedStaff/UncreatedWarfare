@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -46,6 +47,57 @@ public static class Localization
                 ((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
                 ? (UnityRichTextColorBaseStart + hex + RichTextColorEnd + inner + RichTextColorClosingTag)
                 : (TMProRichTextColorBase + hex + RichTextColorEnd + inner + RichTextColorClosingTag));
+    }
+    public static string Translate(this ITranslationArgument translatable, string language, ulong team, string? fmt = null, bool imgui = false)
+    {
+        TranslationFlags flags = TranslationFlags.ForChat;
+        if (imgui)
+            flags |= TranslationFlags.UseUnityRichText;
+        switch (team)
+        {
+            case 1:
+                flags |= TranslationFlags.Team1;
+                break;
+            case 2:
+                flags |= TranslationFlags.Team2;
+                break;
+        }
+        return translatable.Translate(language, fmt, null, GetLocale(language) as CultureInfo, ref flags);
+    }
+    public static string Translate(this ITranslationArgument translatable, UCPlayer player, string? fmt = null)
+    {
+        TranslationFlags flags = TranslationFlags.ForChat;
+        if (player.Save.IMGUI)
+            flags |= TranslationFlags.UseUnityRichText;
+        switch (player.GetTeam())
+        {
+            case 1:
+                flags |= TranslationFlags.Team1;
+                break;
+            case 2:
+                flags |= TranslationFlags.Team2;
+                break;
+        }
+        return translatable.Translate(player.Language, fmt, player, player.Culture, ref flags);
+    }
+    public static string Translate(this ITranslationArgument translatable, CommandInteraction ctx, string? fmt = null)
+    {
+        TranslationFlags flags = TranslationFlags.ForChat;
+        if (ctx.IMGUI)
+            flags |= TranslationFlags.UseUnityRichText;
+        if (!ctx.IsConsole)
+        {
+            switch (ctx.Caller.GetTeam())
+            {
+                case 1:
+                    flags |= TranslationFlags.Team1;
+                    break;
+                case 2:
+                    flags |= TranslationFlags.Team2;
+                    break;
+            }
+        }
+        return translatable.Translate(ctx.Language, fmt, ctx.Caller, ctx.GetLocale() as CultureInfo, ref flags);
     }
     public static string Translate(Translation translation, UCPlayer? player) =>
         Translate(translation, player is null ? 0 : player.Steam64);
@@ -264,6 +316,7 @@ public static class Localization
     public static string GetTimeFromMinutes(this int minutes, string language) => GetTimeFromSeconds(minutes * 60, language);
     public static string TranslateLoadoutSign(byte loadoutId, string language, UCPlayer ucplayer)
     {
+        UCPlayer.TryApplyViewLens(ref ucplayer);
         ulong team = ucplayer.GetTeam();
         if (loadoutId <= 0)
         {
@@ -356,6 +409,7 @@ public static class Localization
     {
         KitManager? manager = KitManager.GetSingletonQuick();
         bool keepline = false;
+        UCPlayer.TryApplyViewLens(ref ucplayer);
         ulong team = ucplayer.GetTeam();
         string name;
         if (!ucplayer.OnDuty())

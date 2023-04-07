@@ -1605,4 +1605,37 @@ public class DebugCommand : AsyncCommand
 
         ctx.ReplyString("Given " + items.Length + " default item" + items.Length.S() + " for a " + Localization.TranslateEnum(@class, ctx.CallerID) + " loadout.");
     }
+
+    private async Task viewlens(CommandInteraction ctx, CancellationToken token)
+    {
+        ctx.AssertRanByPlayer();
+
+        ctx.AssertOnDuty();
+
+        if (ctx.MatchParameter(0, "clear", "none", "me"))
+        {
+            ctx.Caller.ViewLens = null;
+            ctx.ReplyString("Removed view lens.");
+        }
+        if (ctx.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer, remainder: true))
+        {
+            ctx.Caller.ViewLens = s64 == ctx.CallerID ? null : s64;
+            if (s64 == ctx.CallerID)
+            {
+                ctx.ReplyString("Removed view lens.");
+            }
+            else if (onlinePlayer != null)
+            {
+                ctx.ReplyString("Set view lens to " + onlinePlayer.Translate(ctx, UCPlayer.COLOR_PLAYER_NAME_FORMAT) +
+                                " (" + onlinePlayer.Translate(ctx, UCPlayer.COLOR_STEAM_64_FORMAT) + ")'s perspective. Clear with <#fff>/test viewlens clear</fff>.");
+            }
+            else
+            {
+                PlayerNames names = await F.GetPlayerOriginalNamesAsync(s64, token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate(token);
+                ctx.ReplyString("Set view lens to " + names.PlayerName + " (" + s64.ToString(ctx.GetLocale()) + ")'s perspective. Clear with <#fff>/test viewlens clear</fff>.");
+            }
+        }
+        else ctx.SendCorrectUsage("/test viewlens <player ...> - Simulates UI from another player's perspective.");
+    }
 }

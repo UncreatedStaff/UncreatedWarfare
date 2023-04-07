@@ -201,6 +201,7 @@ public class VehicleData : ITranslationArgument, IListItem
     }
     public string GetCostLine(UCPlayer ucplayer)
     {
+        UCPlayer.TryApplyViewLens(ref ucplayer);
         if (UnlockRequirements == null || UnlockRequirements.Length == 0)
             return string.Empty;
         else
