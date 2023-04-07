@@ -1873,16 +1873,17 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 
             await existing.SaveItem(token).ConfigureAwait(false);
             ActionLog.Add(ActionLogType.UpgradeLoadout, $"ID: {loadoutName} (#{kit.PrimaryKey.Key}). Class: {oldClass} -> {@class}. Old Faction: {kit.FactionKey}", fromPlayer);
-            if (!(await HasAccessQuick(kit, player, token)))
-            {
-                await GiveAccess(kit, player, KitAccessType.Purchase, token).ConfigureAwait(false);
-                ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, fromPlayer);
-            }
             dequipKit = kit;
         }
         finally
         {
             existing.Release();
+        }
+
+        if (!(await HasAccess(dequipKit, player, token)))
+        {
+            await GiveAccess(dequipKit, player, KitAccessType.Purchase, token).ConfigureAwait(false);
+            ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, fromPlayer);
         }
 
         await UCWarfare.ToUpdate(token);
