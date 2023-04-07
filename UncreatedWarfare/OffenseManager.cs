@@ -1004,8 +1004,8 @@ public static class OffenseManager
         if (names.WasFound)
         {
             int rows = await Data.DatabaseManager.NonQueryAsync(
-                    "UPDATE `muted` SET `Deactivated` = 1 WHERE `Steam64` = @0 AND " + 
-                    "`Deactivated` = 0 AND (`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60 < `Duration`)", new object[] { targetId })
+                    "UPDATE `muted` SET `Deactivated` = 1 WHERE `Steam64` = @0 AND " +
+                    "`Deactivated` = 0 AND (`Duration` = -1 OR TIMESTAMPDIFF(SECOND, `Timestamp`, UTC_TIMESTAMP()) < `Duration`)", new object[] { targetId })
                 .ConfigureAwait(false);
 
             await UCWarfare.ToUpdate();

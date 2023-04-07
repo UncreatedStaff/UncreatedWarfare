@@ -2006,6 +2006,12 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             Signs.UpdateLoadoutSigns(pl);
         return (kit, StandardErrorCode.Success);
     }
+    public static readonly Guid[] BlacklistedWeaponsTextItems =
+    {
+        new Guid("3879d9014aca4a17b3ed749cf7a9283e"), // Laser Designator
+        new Guid("010de9d7d1fd49d897dc41249a22d436")  // Laser Rangefinder
+    };
+
     public static string DetectWeaponText(Kit kit)
     {
         IKitItem[] items = kit.Items;
@@ -2013,7 +2019,16 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         for (int i = 0; i < items.Length; ++i)
         {
             if (items[i] is IItem item and IItemJar jar && Assets.find(item.Item) is ItemGunAsset asset)
+            {
+                for (int b = 0; b < BlacklistedWeaponsTextItems.Length; ++b)
+                {
+                    if (BlacklistedWeaponsTextItems[b] == asset.GUID)
+                        goto skip;
+                }
+
                 guns.Add(new KeyValuePair<IItemJar, ItemGunAsset>(jar, asset));
+                skip: ;
+            }
         }
 
         if (guns.Count == 0)
