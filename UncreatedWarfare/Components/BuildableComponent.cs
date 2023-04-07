@@ -76,8 +76,8 @@ public class BuildableComponent : MonoBehaviour
 
         // TODO: add back this validation
 
-        if (!ValidatePlacementWithFriendlyFOB(Buildable, fob, builder, Foundation.GetServersideData().point, Foundation))
-            return;
+        //if (!ValidatePlacementWithFriendlyFOB(Buildable, fob, builder, Foundation.GetServersideData().point, Foundation))
+        //    return;
 
         float amount = builder.KitClass == Class.CombatEngineer ? 2f : 1f;
 
@@ -526,14 +526,14 @@ public class BuildableComponent : MonoBehaviour
             }
             else
             {
-                //int existing = CountExistingBuildables(buildable, fob, ignore);
-                //if (existing >= buildable.Limit)
-                //{
-                //    L.LogDebug(" over buildable limit (" + existing + "/" + buildable.Limit + ").", ConsoleColor.Red);
-                //    // fob buildable limit reached for this type
-                //    placer.SendChat(T.BuildLimitReached, buildable.Limit, buildable);
-                //    return false;
-                //}
+                int existing = CountExistingBuildables(buildable, fob, ignore);
+                if (existing >= buildable.Limit)
+                {
+                    L.LogDebug(" over buildable limit (" + existing + "/" + buildable.Limit + ").", ConsoleColor.Red);
+                    // fob buildable limit reached for this type
+                    placer.SendChat(T.BuildLimitReached, buildable.Limit, buildable);
+                    return false;
+                }
 
             }
         }
@@ -546,20 +546,20 @@ public class BuildableComponent : MonoBehaviour
                 placer.SendChat(T.BuildNotInRadius);
                 return false;
             }
-            //int totalPlaced = CountExistingBuildables(buildable, fob, ignore, placer);
-            ////int totalPlaced = UCBarricadeManager.CountBarricadesWhere(b =>
-            ////b.GetServersideData().owner == placer.Steam64 &&
-            ////    b.asset.GUID == buildable.BuildableBarricade.Value.Guid &&
-            ////    (b.GetServersideData().point - placer.Position).sqrMagnitude < Mathf.Pow(50, 2)); // TODO: check will not work for emplacements - fix?
-            //
-            //int kitCount = placer.ActiveKit!.Item!.CountItems(buildable.Foundation.Value.Guid);
-            //if (totalPlaced >= kitCount)
-            //{
-            //    L.LogDebug(" over buildable limit (kit) (" + totalPlaced + "/" + kitCount + ").", ConsoleColor.Red);
-            //    // regional buildable limit reached for this player
-            //    placer.SendChat(T.RegionalBuildLimitReached, kitCount, buildable);
-            //    return false;
-            //}
+            int totalPlaced = CountExistingBuildables(buildable, fob, ignore, placer);
+            //int totalPlaced = UCBarricadeManager.CountBarricadesWhere(b =>
+            //b.GetServersideData().owner == placer.Steam64 &&
+            //    b.asset.GUID == buildable.BuildableBarricade.Value.Guid &&
+            //    (b.GetServersideData().point - placer.Position).sqrMagnitude < Mathf.Pow(50, 2)); // TODO: check will not work for emplacements - fix?
+
+            int kitCount = placer.ActiveKit!.Item!.CountItems(buildable.Foundation.Value.Guid);
+            if (totalPlaced >= kitCount)
+            {
+                L.LogDebug(" over buildable limit (kit) (" + totalPlaced + "/" + kitCount + ").", ConsoleColor.Red);
+                // regional buildable limit reached for this player
+                placer.SendChat(T.RegionalBuildLimitReached, kitCount, buildable);
+                return false;
+            }
         }
 
         return true;
