@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -88,6 +89,15 @@ public static class KitEx
         }
 
         return -1;
+    }
+    public static int ParseStandardLoadoutId(string kitId, out ulong player)
+    {
+        int ld = ParseStandardLoadoutId(kitId);
+        player = 0;
+        if (kitId.Length <= 17 || !ulong.TryParse(kitId.Substring(0, 17), NumberStyles.Number, Data.AdminLocale, out player))
+            return -1;
+
+        return ld;
     }
     /// <summary>Indexed from 1.</summary>
     /// <returns>-1 if operation results in an overflow or invalid characters are found, otherwise, the id of the loadout.</returns>

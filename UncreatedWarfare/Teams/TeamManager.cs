@@ -185,6 +185,7 @@ public static class TeamManager
             Ammo = "2f3cfa9c6bb645fbab8f49ce556d1a1a",
             FOBRadio = "7bde55f70c494418bdd81926fb7d6359",
             RallyPoint = "7720ced42dba4c1eac16d14453cd8bc4",
+            DefaultHat = "4dbefaaad6fd4e728912bd929c16c2c6",
             DefaultShirt = "2c1a9c62b30a49e7bda2ef6a2727eb8c",
             DefaultBackpack = "5ac771b71bb7496bb2042d3e8cc2015c",
             DefaultVest = "b74265e7af1c4d52866907e489206f86",
@@ -945,7 +946,7 @@ public static class TeamManager
                 if (teleport)
                     TeleportToMain(player, team);
 
-                if (announce)
+                if (announce && UCWarfare.Config.EnablePlayerJoinLeaveTeamMessages)
                 {
                     ulong id = player.Steam64;
                     Chat.Broadcast(LanguageSet.Where(x => x.GetTeam() == team && x.Steam64 != id), T.TeamJoinAnnounce, GetFactionSafe(team)!, player);

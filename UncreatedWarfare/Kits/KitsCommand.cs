@@ -21,25 +21,30 @@ public sealed class KitsCommand : AsyncCommand
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
+        ctx.AssertRanByPlayer();
+
         if (UCWarfare.Config.DisableKitMenu)
             throw ctx.SendNotImplemented();
 
-        int c;
-        await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-        try
+        if (!ctx.Caller.OnDuty() && ctx.CallerID is not 76561198839009178ul)
         {
-            if (ctx.Caller.AccessibleKits != null)
-                c = ctx.Caller.AccessibleKits.Count(x => x.Item is { } k && k.Type == KitType.Loadout);
-            else
-                c = 0;
-        }
-        finally
-        {
-            ctx.Caller.PurchaseSync.Release();
-        }
+            int c;
+            await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                if (ctx.Caller.AccessibleKits != null)
+                    c = ctx.Caller.AccessibleKits.Count(x => x.Item is { } k && k.Type == KitType.Loadout);
+                else
+                    c = 0;
+            }
+            finally
+            {
+                ctx.Caller.PurchaseSync.Release();
+            }
 
-        if (c < 13)
-            throw ctx.SendNotImplemented();
+            if (c < 13)
+                throw ctx.SendNotImplemented();
+        }
 
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         

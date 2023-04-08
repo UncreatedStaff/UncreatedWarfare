@@ -1616,8 +1616,10 @@ public class DebugCommand : AsyncCommand
         {
             ctx.Caller.ViewLens = null;
             ctx.ReplyString("Removed view lens.");
+
+            UCWarfare.I.UpdateLangs(ctx.Caller, false);
         }
-        if (ctx.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer, remainder: true))
+        else if (ctx.TryGet(0, out ulong s64, out UCPlayer? onlinePlayer, remainder: true))
         {
             ctx.Caller.ViewLens = s64 == ctx.CallerID ? null : s64;
             if (s64 == ctx.CallerID)
