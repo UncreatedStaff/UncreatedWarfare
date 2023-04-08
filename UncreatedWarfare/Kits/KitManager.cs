@@ -2111,6 +2111,9 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 await UCWarfare.ToUpdate(token);
                 throw ctx.SendUnknownError();
             }
+
+            if (kit.Class == Class.Squadleader)
+                TryCreateKitOnRequestSquadleaderKit(ctx);
         }
         finally
         {
@@ -2227,21 +2230,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             // recheck limits to make sure people can't request at the same time to avoid limits.
             if (kit.IsLimited(out _, out allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
                 throw ctx.Reply(T.RequestKitLimited, allowedPlayers);
-            if (kit.Class == Class.Squadleader)
-            {
-                if (ctx.Caller.Squad is not null && !ctx.Caller.IsSquadLeader())
-                    throw ctx.Reply(T.RequestKitNotSquadleader);
-                if (ctx.Caller.Squad is null)
-                {
-                    if (SquadManager.Squads.Count(x => x.Team == team) < 8)
-                    {
-                        // create a squad automatically if someone requests a squad leader kit.
-                        Squad squad = SquadManager.CreateSquad(ctx.Caller, team);
-                        ctx.Reply(T.SquadCreated, squad);
-                    }
-                    else throw ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
-                }
-            }
+            
             ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
 
             if (!await GrantKitRequest(ctx, proxy, token).ConfigureAwait(false))
@@ -2249,10 +2238,29 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 await UCWarfare.ToUpdate(token);
                 throw ctx.SendUnknownError();
             }
+
+            if (kit.Class == Class.Squadleader)
+                TryCreateKitOnRequestSquadleaderKit(ctx);
         }
         finally
         {
             proxy.Release();
+        }
+    }
+    private static void TryCreateKitOnRequestSquadleaderKit(CommandInteraction ctx)
+    {
+        if (ctx.Caller.Squad is not null && !ctx.Caller.IsSquadLeader())
+            throw ctx.Reply(T.RequestKitNotSquadleader);
+        if (ctx.Caller.Squad is null)
+        {
+            ulong team = ctx.Caller.GetTeam();
+            if (SquadManager.Squads.Count(x => x.Team == team) < 8)
+            {
+                // create a squad automatically if someone requests a squad leader kit.
+                Squad squad = SquadManager.CreateSquad(ctx.Caller, team);
+                ctx.Reply(T.SquadCreated, squad);
+            }
+            else throw ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
         }
     }
     /// <exception cref="BaseCommandInteraction"/>
