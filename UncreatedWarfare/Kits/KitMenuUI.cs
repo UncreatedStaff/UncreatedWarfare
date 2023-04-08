@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -12,7 +11,6 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Kits;
 public class KitMenuUI : UnturnedUI
@@ -306,7 +304,7 @@ public class KitMenuUI : UnturnedUI
             else
                 SetCachedValuesToOther(c, player.Language);
             LogicSetTabs[0].SetVisibility(c, true);
-            SwitchToTab(player, 0);
+            SwitchToTab(player, 2);
         }
         else
         {
