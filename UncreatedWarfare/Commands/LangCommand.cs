@@ -60,6 +60,12 @@ public class LangCommand : Command
             }
             ctx.Reply(T.LanguageList, sb.ToString());
         }
+        else if (ctx.MatchParameter(0, "refersh", "reload", "update"))
+        {
+            UCWarfare.I.UpdateLangs(ctx.Caller, false);
+
+            ctx.Reply(T.LanguageRefreshed);
+        }
         else if (ctx.MatchParameter(0, "current"))
         {
             ctx.AssertRanByPlayer();

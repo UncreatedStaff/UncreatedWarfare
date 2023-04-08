@@ -1627,14 +1627,16 @@ public class DebugCommand : AsyncCommand
             else if (onlinePlayer != null)
             {
                 ctx.ReplyString("Set view lens to " + onlinePlayer.Translate(ctx, UCPlayer.COLOR_PLAYER_NAME_FORMAT) +
-                                " (" + onlinePlayer.Translate(ctx, UCPlayer.COLOR_STEAM_64_FORMAT) + ")'s perspective. Clear with <#fff>/test viewlens clear</fff>.");
+                                " (" + onlinePlayer.Translate(ctx, UCPlayer.COLOR_STEAM_64_FORMAT) + ")'s perspective. Clear with <#fff>/test viewlens clear</color>.");
             }
             else
             {
                 PlayerNames names = await F.GetPlayerOriginalNamesAsync(s64, token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate(token);
-                ctx.ReplyString("Set view lens to " + names.PlayerName + " (" + s64.ToString(ctx.GetLocale()) + ")'s perspective. Clear with <#fff>/test viewlens clear</fff>.");
+                ctx.ReplyString("Set view lens to " + names.PlayerName + " (" + s64.ToString(ctx.GetLocale()) + ")'s perspective. Clear with <#fff>/test viewlens clear</color>.");
             }
+
+            UCWarfare.I.UpdateLangs(ctx.Caller, false);
         }
         else ctx.SendCorrectUsage("/test viewlens <player ...> - Simulates UI from another player's perspective.");
     }

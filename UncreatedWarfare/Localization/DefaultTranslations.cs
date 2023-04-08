@@ -686,6 +686,9 @@ internal static class T
     [TranslationData(SectionLanguages, "Fallback usage output from /lang, explains /lang reset.")]
     public static readonly Translation ResetLanguageHow                  = new Translation("<#f53b3b>Do <#e6e3d5>/lang reset</color> to reset back to default language.");
     
+    [TranslationData(SectionLanguages, "Result from using /lang refresh, reloads ui with updated text.")]
+    public static readonly Translation LanguageRefreshed                 = new Translation("<#f53b3b>Refreshed all signs and UI.");
+    
     [TranslationData(SectionLanguages, "Output from /lang current, tells the player their selected language.", "Current Language")]
     public static readonly Translation<LanguageAliasSet> LanguageCurrent = new Translation<LanguageAliasSet>("<#f53b3b>Current language: <#e6e3d5>{0}</color>.", LanguageAliasSet.FormatDisplayName);
     

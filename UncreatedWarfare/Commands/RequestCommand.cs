@@ -111,14 +111,16 @@ public class RequestCommand : AsyncCommand
 
                             if (loadoutId > 0)
                             {
-                                Kit? kit = KitManager.GetLoadoutQuick(ctx.Caller, loadoutId)?.Item;
+                                UCPlayer pl = ctx.Caller;
+                                UCPlayer.TryApplyViewLens(ref pl);
+                                Kit? kit = KitManager.GetLoadoutQuick(pl, loadoutId)?.Item;
                                 if (kit is not { Id: { } kitId })
-                                    throw ctx.Reply(T.KitNotFound, KitEx.GetLoadoutName(ctx.CallerID, loadoutId));
+                                    throw ctx.Reply(T.KitNotFound, "#" + loadoutId.ToString(ctx.GetLocale()));
 
                                 int id = KitEx.ParseStandardLoadoutId(kitId);
                                 if (id < 1)
                                     throw ctx.Reply(T.KitNotFound, kitId);
-
+                                
                                 if (UCWarfare.CanUseNetCall)
                                 {
                                     RequestResponse response = await KitEx.NetCalls.RequestIsModifyLoadoutTicketOpen.RequestAck(UCWarfare.I.NetClient!, discordId, id, 7500);
@@ -154,7 +156,7 @@ public class RequestCommand : AsyncCommand
                                     throw ctx.Reply(T.DoesNotNeedUpgrade, kit);
                                 }
 
-                                bool success = await KitEx.OpenUpgradeTicket(kit.GetDisplayName(), kit.Class, loadoutId, ctx.CallerID, discordId, token).ConfigureAwait(false);
+                                bool success = await KitEx.OpenUpgradeTicket(kit.GetDisplayName(), kit.Class, id, pl.Steam64, discordId, token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
                                 if (!success)
                                     throw ctx.Reply(T.RequestUpgradeNotConnected);

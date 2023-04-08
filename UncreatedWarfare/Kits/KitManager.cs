@@ -548,6 +548,18 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         if (OnKitChanged != null)
             UCWarfare.RunOnMainThread(() => OnKitChanged?.Invoke(player, kit, oldKit), default);
     }
+    public async Task<SqlItem<Kit>?> GetKitFromSign(BarricadeDrop drop, UCPlayer looker, CancellationToken token = default)
+    {
+        await UCWarfare.ToUpdate(token);
+        SqlItem<Kit>? kit = Signs.GetKitFromSign(drop, out int loadoutId);
+        if (kit is null && loadoutId > 0)
+        {
+            kit = await GetLoadout(looker, loadoutId, token).ConfigureAwait(false);
+            return kit;
+        }
+
+        return kit;
+    }
     internal async Task GiveKitNoLock(UCPlayer player, SqlItem<Kit>? kit, bool tip = true, CancellationToken token = default, bool psLock = true)
     {
         if (player == null) throw new ArgumentNullException(nameof(player));

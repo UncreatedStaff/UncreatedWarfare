@@ -540,8 +540,10 @@ public sealed class KitCommand : AsyncCommand
         {
             ctx.AssertRanByPlayer();
             
-            ctx.AssertHelpCheck(1, "/kit favorite (look at kit sign <b>or</b> [kit id]) - Favorite your kit or loadout.");
+            ctx.AssertHelpCheck(1, "/kit <fav|unfav> (look at kit sign <b>or</b> [kit id]) - Favorite or unfavorite your kit or loadout.");
             SqlItem<Kit>? proxy;
+            UCPlayer player = ctx.Caller;
+            UCPlayer.TryApplyViewLens(ref player);
             if (ctx.TryGetRange(1, out string kitName))
             {
                 proxy = await manager.FindKit(kitName, token).ConfigureAwait(false);
@@ -551,7 +553,7 @@ public sealed class KitCommand : AsyncCommand
                 kitName = drop.interactable is InteractableSign sign ? sign.text : null!;
                 proxy = Signs.GetKitFromSign(drop, out int loadoutId);
                 if (loadoutId > 0)
-                    proxy = await KitManager.GetLoadout(ctx.Caller, loadoutId, token).ConfigureAwait(false);
+                    proxy = await KitManager.GetLoadout(player, loadoutId, token).ConfigureAwait(false);
             }
             else
                 throw ctx.SendCorrectUsage("/kit favorite (look at kit sign <b>or</b> [kit id]) - Favorite your kit or loadout.");
@@ -561,15 +563,15 @@ public sealed class KitCommand : AsyncCommand
                 await UCWarfare.ToUpdate(token);
                 throw ctx.Reply(T.KitNotFound, kitName.Replace(Signs.Prefix, string.Empty));
             }
-            await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                if (fav && KitManager.IsFavoritedQuick(kit.PrimaryKey, ctx.Caller))
+                if (fav && KitManager.IsFavoritedQuick(kit.PrimaryKey, player))
                 {
                     await UCWarfare.ToUpdate(token);
                     throw ctx.Reply(T.KitFavoriteAlreadyFavorited, kit);
                 }
-                else if (!fav && !KitManager.IsFavoritedQuick(kit.PrimaryKey, ctx.Caller))
+                else if (!fav && !KitManager.IsFavoritedQuick(kit.PrimaryKey, player))
                 {
                     await UCWarfare.ToUpdate(token);
                     throw ctx.Reply(T.KitFavoriteAlreadyUnfavorited, kit);
@@ -577,12 +579,12 @@ public sealed class KitCommand : AsyncCommand
                 else
                 {
                     if (fav)
-                        (ctx.Caller.KitMenuData.FavoriteKits ??= new List<PrimaryKey>(8)).Add(kit.PrimaryKey);
-                    else if (ctx.Caller.KitMenuData.FavoriteKits != null)
-                        ctx.Caller.KitMenuData.FavoriteKits.RemoveAll(x => x.Key == kit.PrimaryKey.Key);
-                    ctx.Caller.KitMenuData.FavoritesDirty = true;
-                    if (ctx.Caller.KitMenuData.FavoriteKits != null)
-                        await manager.SaveFavorites(ctx.Caller, ctx.Caller.KitMenuData.FavoriteKits, token).ConfigureAwait(false);
+                        (player.KitMenuData.FavoriteKits ??= new List<PrimaryKey>(8)).Add(kit.PrimaryKey);
+                    else if (player.KitMenuData.FavoriteKits != null)
+                        player.KitMenuData.FavoriteKits.RemoveAll(x => x.Key == kit.PrimaryKey.Key);
+                    player.KitMenuData.FavoritesDirty = true;
+                    if (player.KitMenuData.FavoriteKits != null)
+                        await manager.SaveFavorites(player, player.KitMenuData.FavoriteKits, token).ConfigureAwait(false);
                 }
                 await UCWarfare.ToUpdate(token);
 
@@ -590,12 +592,12 @@ public sealed class KitCommand : AsyncCommand
             }
             finally
             {
-                ctx.Caller.PurchaseSync.Release();
+                player.PurchaseSync.Release();
             }
 
 
             await UCWarfare.ToUpdate(token);
-            Signs.UpdateKitSigns(ctx.Caller, null);
+            Signs.UpdateKitSigns(player, null);
             return;
         }
         ctx.AssertOnDuty();
@@ -857,7 +859,11 @@ public sealed class KitCommand : AsyncCommand
                 {
                     proxy = Signs.GetKitFromSign(drop, out int loadout);
                     if (loadout > 0)
-                        proxy = await KitManager.GetLoadout(ctx.Caller, loadout, token).ConfigureAwait(false);
+                    {
+                        UCPlayer pl = ctx.Caller;
+                        UCPlayer.TryApplyViewLens(ref pl);
+                        proxy = await KitManager.GetLoadout(pl, loadout, token).ConfigureAwait(false);
+                    }
                 }
                 
                 if (proxy?.Item != null)
