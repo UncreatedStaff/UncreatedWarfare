@@ -1692,8 +1692,6 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         bool access;
         try
         {
-            if (player.AccessibleKits != null && player.AccessibleKits.Contains(kit))
-                return true;
             access = await RemoveAccessRow(kit.PrimaryKey, player.Steam64, token).ConfigureAwait(false);
             if (access)
             {
