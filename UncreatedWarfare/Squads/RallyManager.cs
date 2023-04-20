@@ -107,28 +107,33 @@ public static class RallyManager
 
     public static void WipeAllRallies()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        SquadManager.RallyUI.ClearFromAllPlayers();
-
-        IEnumerator<BarricadeDrop> barricades = GetRallyPointBarricades().GetEnumerator();
-        while (barricades.MoveNext())
+        try
         {
-            if (Regions.tryGetCoordinate(barricades.Current.model.position, out byte x, out byte y))
-                BarricadeManager.destroyBarricade(barricades.Current, x, y, ushort.MaxValue);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            SquadManager.RallyUI.ClearFromAllPlayers();
+
+            foreach (BarricadeDrop drop in GetRallyPointBarricades().ToList())
+            {
+                if (Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
+                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+            }
         }
-        barricades.Dispose();
+        catch (Exception ex)
+        {
+            L.LogError("Error wiping rally points.");
+            L.LogError(ex);
+        }
     }
     public static IEnumerable<BarricadeDrop> GetRallyPointBarricades()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (BarricadeManager.regions is null) return new BarricadeDrop[0];
-        IEnumerable<BarricadeDrop> barricadeDrops = BarricadeManager.regions.Cast<BarricadeRegion>().SelectMany(brd => brd.drops);
-
-        return barricadeDrops.Where(b => IsRally(b.asset));
+        if (BarricadeManager.regions is null)
+            return Array.Empty<BarricadeDrop>();
+        return UCBarricadeManager.NonPlantedBarricades.Where(b => IsRally(b.asset));
     }
     public static bool IsRally(ItemBarricadeAsset asset) => Gamemode.Config.RallyPoints.Value.Any(r => r.MatchGuid(asset.GUID));
 }

@@ -290,10 +290,11 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         SqlItem<Kit>? rifleman;
+        ulong t2;
         await WaitAsync(token).ConfigureAwait(false);
-        ulong t2 = player.GetTeam();
         try
         {
+            t2 = player.GetTeam();
             FactionInfo? t = player.Faction;
             rifleman = Items.FirstOrDefault(k =>
                 k.Item != null &&
@@ -1281,14 +1282,14 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         await WaitAsync(token).ConfigureAwait(false);
-        PlayerEquipment equipment = player.Player.equipment;
-        for (int i = 0; i < 8; ++i)
-            equipment.ServerClearItemHotkey((byte)i);
         try
         {
             await UCWarfare.ToUpdate(token);
             if (!player.IsOnline)
                 return;
+            PlayerEquipment equipment = player.Player.equipment;
+            for (int i = 0; i < 8; ++i)
+                equipment.ServerClearItemHotkey((byte)i);
             WriteWait();
             try
             {

@@ -797,7 +797,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     {
                         UCPlayer pl = set.Next;
                         pl.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-                        UCPlayer.LoadingUI.SendToPlayer(pl.Connection, val);
+                        if (UCPlayer.LoadingUI.IsValid)
+                            UCPlayer.LoadingUI.SendToPlayer(pl.Connection, val);
                     }
                 }
             }
@@ -857,7 +858,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             {
                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                     PlayerManager.OnlinePlayers[i].Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-                UCPlayer.LoadingUI.ClearFromAllPlayers();
+                if (UCPlayer.LoadingUI.IsValid)
+                    UCPlayer.LoadingUI.ClearFromAllPlayers();
             }
             await PostPlayerInit(onLoad, token).ConfigureAwait(false);
         }
@@ -884,7 +886,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         await UCWarfare.ToUpdate(token);
         if (player.IsOnline)
         {
-            UCPlayer.LoadingUI.ClearFromPlayer(player.Connection);
+            if (UCPlayer.LoadingUI.IsValid)
+                UCPlayer.LoadingUI.ClearFromPlayer(player.Connection);
             if (!player.ModalNeeded)
                 player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
         }

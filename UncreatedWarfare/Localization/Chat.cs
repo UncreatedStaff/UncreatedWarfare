@@ -36,7 +36,9 @@ public static class Chat
     {
         if (player?.player == null)
             return;
-        SendSingleMessage(message, color, EChatMode.SAY, null, true, player);
+        if (UCWarfare.IsMainThread)
+            SendSingleMessage(message, color, EChatMode.SAY, null, true, player);
+        else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, color, EChatMode.SAY, null, true, player));
     }
     public static void SendString(this Player player, string message, string hex) => SendString(player.channel.owner, message, hex);
     public static void SendString(this UCPlayer player, string message, string hex) => SendString(player.SteamPlayer, message, hex);
@@ -44,7 +46,9 @@ public static class Chat
     {
         if (player?.player == null)
             return;
-        SendSingleMessage(message, hex.Hex(), EChatMode.SAY, null, true, player);
+        if (UCWarfare.IsMainThread)
+            SendSingleMessage(message, hex.Hex(), EChatMode.SAY, null, true, player);
+        else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, hex.Hex(), EChatMode.SAY, null, true, player));
     }
     public static void SendString(this Player player, string message) => SendString(player.channel.owner, message);
     public static void SendString(this UCPlayer player, string message) => SendString(player.SteamPlayer, message);
@@ -52,7 +56,9 @@ public static class Chat
     {
         if (player?.player == null)
             return;
-        SendSingleMessage(message, Palette.AMBIENT, EChatMode.SAY, null, true, player);
+        if (UCWarfare.IsMainThread)
+            SendSingleMessage(message, Palette.AMBIENT, EChatMode.SAY, null, true, player);
+        else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, Palette.AMBIENT, EChatMode.SAY, null, true, player));
     }
     public static void SendChat(this Player player, Translation translation) => SendChat(UCPlayer.FromPlayer(player)!, translation);
     public static void SendChat(this SteamPlayer player, Translation translation) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation);
@@ -532,7 +538,10 @@ public static class Chat
     }
     private static void SendTranslationChat(string value, Translation translation, Color textColor, UCPlayer player)
     {
-        SendSingleMessage(value, textColor, EChatMode.SAY, null, (translation.Flags & TranslationFlags.NoRichText) == 0, player.SteamPlayer);
+        if (UCWarfare.IsMainThread)
+            SendSingleMessage(value, textColor, EChatMode.SAY, null, (translation.Flags & TranslationFlags.NoRichText) == 0, player.SteamPlayer);
+        else
+            UCWarfare.RunOnMainThread(() => SendSingleMessage(value, textColor, EChatMode.SAY, null, (translation.Flags & TranslationFlags.NoRichText) == 0, player.SteamPlayer));
     }
     private static void CheckTranslationLength(string lang, ref string value, Translation translation, ref Color textColor, bool imgui)
     {

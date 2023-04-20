@@ -18,6 +18,15 @@ public class DeployCommand : Command
     public DeployCommand() : base("deploy", EAdminType.MEMBER)
     {
         AddAlias("dep");
+        AddAlias("warp");
+        AddAlias("warps");
+        AddAlias("tpa");
+        AddAlias("go");
+        AddAlias("goto");
+        AddAlias("fob");
+        AddAlias("deployfob");
+        AddAlias("df");
+        AddAlias("dp");
         Structure = new CommandStructure
         {
             Description = "Deploy to a point of interest such as a main base, FOB, VCP, or cache.",

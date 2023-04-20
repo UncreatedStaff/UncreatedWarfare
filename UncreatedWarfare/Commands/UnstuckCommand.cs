@@ -31,6 +31,7 @@ public class UnstuckCommand : Command
         if (TeamManager.LobbyZone.IsInside(ctx.Caller.Position))
         {
             t.TeamSelector?.ResetState(ctx.Caller);
+            ctx.ReplyString("Reset lobby state.");
         }
         else throw ctx.SendUnknownError();
 

@@ -155,6 +155,10 @@ public sealed class QuestRewardAttribute : Attribute
 
 public static class QuestJsonEx
 {
+    public static bool IsWildcardInclusive<TChoice, TVal>(this TChoice choice) where TChoice : IDynamicValue<TVal>.IChoice =>
+        choice.ValueType == DynamicValueType.Wildcard && choice.Behavior == ChoiceBehavior.Inclusive;
+    public static bool IsWildcardInclusive<TAsset>(this DynamicAssetValue<TAsset>.Choice choice) where TAsset : Asset =>
+        choice.ValueType == DynamicValueType.Wildcard && choice.Behavior == ChoiceBehavior.Inclusive;
     public static WeaponClass GetWeaponClass(this Guid item)
     {
         if (Assets.find(item) is ItemGunAsset weapon)

@@ -761,6 +761,8 @@ public class UCWarfare : MonoBehaviour
                 try
                 {
                     res = _threadActionRequests.Dequeue();
+                    if (res == null)
+                        continue;
                     res.Task.Token.ThrowIfCancellationRequested();
                     res.Continuation();
                 }
@@ -784,6 +786,8 @@ public class UCWarfare : MonoBehaviour
                 try
                 {
                     res = _levelLoadRequests.Dequeue();
+                    if (res == null)
+                        continue;
                     res.Task.Token.ThrowIfCancellationRequested();
                     res.continuation();
                 }

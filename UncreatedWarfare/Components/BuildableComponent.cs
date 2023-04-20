@@ -483,7 +483,8 @@ public class BuildableComponent : MonoBehaviour
                 for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
                 {
                     InteractableVehicle veh = VehicleManager.vehicles[i];
-                    if (veh.lockedOwner.m_SteamID == ownerOnly.Steam64 &&
+                    if (!veh.isDead &&
+                        veh.lockedOwner.m_SteamID == ownerOnly.Steam64 &&
                         veh.lockedGroup.m_SteamID.GetTeam() == fob.Team &&
                         veh.asset.GUID == vehicle.GUID &&
                         (veh.transform.position - pos).sqrMagnitude < 50f * 50f)

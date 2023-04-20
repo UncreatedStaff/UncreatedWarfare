@@ -785,29 +785,47 @@ public sealed class KitCommand : AsyncCommand
             if (ctx.TryGet(1, out string kitName))
             {
                 SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                if (proxy is { Item: { } kit })
+                if (proxy is null)
+                    throw ctx.Reply(T.KitNotFound);
+                await proxy.Enter(token).ConfigureAwait(false);
+                try
                 {
-                    if (!kit.NeedsSetup)
+                    if (proxy is { Item: { } kit })
                     {
-                        if (kit.Disabled)
+                        if (!kit.NeedsSetup)
                         {
-                            kit.Disabled = false;
-                            await proxy.SaveItem(token).ConfigureAwait(false);
+                            if (kit.Disabled)
+                            {
+                                kit.Disabled = false;
+                                await proxy.SaveItem(token).ConfigureAwait(false);
+                                await UCWarfare.ToUpdate(token);
+                                throw ctx.Reply(T.KitUnlocked, kit);
+                            }
                             await UCWarfare.ToUpdate(token);
-                            throw ctx.Reply(T.KitUnlocked, kit);
+                            throw ctx.Reply(T.DoesNotNeedUnlock, kit);
                         }
-                        await UCWarfare.ToUpdate(token);
-                        throw ctx.Reply(T.DoesNotNeedUnlock, kit);
                     }
-
-                    (_, StandardErrorCode err) = await manager.UnlockLoadout(ctx.CallerID, kitName, token).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate();
-                    if (err != StandardErrorCode.Success)
-                        throw ctx.SendUnknownError();
-                    ctx.Reply(T.KitUnlocked, kit);
+                    else
+                        throw ctx.Reply(T.KitNotFound, kitName);
                 }
-                else
-                    ctx.Reply(T.KitNotFound, kitName);
+                finally
+                {
+                    proxy.Release();
+                }
+
+                (_, StandardErrorCode err) = await manager.UnlockLoadout(ctx.CallerID, kitName, token).ConfigureAwait(false);
+                if (err != StandardErrorCode.Success)
+                    throw ctx.SendUnknownError();
+                await proxy.Enter(token).ConfigureAwait(false);
+                try
+                {
+                    if (proxy is { Item: { } kit })
+                        ctx.Reply(T.KitUnlocked, kit);
+                }
+                finally
+                {
+                    proxy.Release();
+                }
             }
             else
                 ctx.SendCorrectUsage("/kit <unlock|unl> <id>");
@@ -819,29 +837,47 @@ public sealed class KitCommand : AsyncCommand
             if (ctx.TryGet(1, out string kitName))
             {
                 SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
-                if (proxy is { Item: { } kit })
+                if (proxy is null)
+                    throw ctx.Reply(T.KitNotFound);
+                await proxy.Enter(token).ConfigureAwait(false);
+                try
                 {
-                    if (kit.Type != KitType.Loadout && !kit.Disabled)
+                    if (proxy is { Item: { } kit })
                     {
-                        if (!kit.Disabled)
+                        if (kit.Type != KitType.Loadout && !kit.Disabled)
                         {
-                            kit.Disabled = true;
-                            await proxy.SaveItem(token).ConfigureAwait(false);
+                            if (!kit.Disabled)
+                            {
+                                kit.Disabled = true;
+                                await proxy.SaveItem(token).ConfigureAwait(false);
+                                await UCWarfare.ToUpdate(token);
+                                throw ctx.Reply(T.KitLocked, kit);
+                            }
                             await UCWarfare.ToUpdate(token);
-                            throw ctx.Reply(T.KitLocked, kit);
+                            throw ctx.Reply(T.DoesNotNeedUnlock, kit);
                         }
-                        await UCWarfare.ToUpdate(token);
-                        throw ctx.Reply(T.DoesNotNeedUnlock, kit);
                     }
-
-                    (_, StandardErrorCode err) = await manager.LockLoadout(ctx.CallerID, kitName, token).ConfigureAwait(false);
-                    await UCWarfare.ToUpdate();
-                    if (err != StandardErrorCode.Success)
-                        throw ctx.SendUnknownError();
-                    ctx.Reply(T.KitLocked, kit);
+                    else
+                        throw ctx.Reply(T.KitNotFound, kitName);
                 }
-                else
-                    ctx.Reply(T.KitNotFound, kitName);
+                finally
+                {
+                    proxy.Release();
+                }
+
+                (_, StandardErrorCode err) = await manager.LockLoadout(ctx.CallerID, kitName, token).ConfigureAwait(false);
+                await UCWarfare.ToUpdate();
+                if (err != StandardErrorCode.Success)
+                    throw ctx.SendUnknownError();
+                try
+                {
+                    if (proxy is { Item: { } kit })
+                        ctx.Reply(T.KitLocked, kit);
+                }
+                finally
+                {
+                    proxy.Release();
+                }
             }
             else
                 ctx.SendCorrectUsage("/kit <unlock|unl> <id>");
@@ -1045,37 +1081,39 @@ public sealed class KitCommand : AsyncCommand
                 SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
                 if (proxy?.Item != null)
                 {
+                    Kit? item;
                     await proxy.Enter(token).ConfigureAwait(false);
                     try
                     {
-                        if (proxy.Item == null)
-                            throw ctx.Reply(T.KitNotFound, kitName);
-                        
-                        if (!ctx.TryGet(3, out KitAccessType type) || type == KitAccessType.Unknown)
-                            type = KitAccessType.Purchase;
-
-                        bool hasAccess = await KitManager.HasAccess(proxy.Item, playerId, token).ConfigureAwait(false);
-                        PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
-                        if (hasAccess)
-                        {
-                            await UCWarfare.ToUpdate(token);
-                            ctx.Reply(T.KitAlreadyHasAccess, onlinePlayer as IPlayer ?? names, proxy.Item);
-                            return;
-                        }
-                        await KitManager.GiveAccess(proxy, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
-                        ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + kitName + ", REASON: " + type);
-
-                        await UCWarfare.ToUpdate();
-                        ctx.Reply(T.KitAccessGiven, onlinePlayer as IPlayer ?? names, playerId, proxy.Item);
-                        if (onlinePlayer is not null)
-                        {
-                            onlinePlayer.SendChat(T.KitAccessGivenDm, proxy.Item);
-                            KitManager.UpdateSigns(proxy.Item, onlinePlayer);
-                        }
+                        item = proxy.Item;
                     }
                     finally
                     {
                         proxy.Release();
+                    }
+                    if (item == null)
+                        throw ctx.Reply(T.KitNotFound, kitName);
+                    
+                    if (!ctx.TryGet(3, out KitAccessType type) || type == KitAccessType.Unknown)
+                        type = KitAccessType.Purchase;
+
+                    bool hasAccess = await KitManager.HasAccess(item, playerId, token).ConfigureAwait(false);
+                    PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
+                    if (hasAccess)
+                    {
+                        await UCWarfare.ToUpdate(token);
+                        ctx.Reply(T.KitAlreadyHasAccess, onlinePlayer as IPlayer ?? names, item);
+                        return;
+                    }
+                    await KitManager.GiveAccess(proxy, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
+                    ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + kitName + ", REASON: " + type);
+
+                    await UCWarfare.ToUpdate();
+                    ctx.Reply(T.KitAccessGiven, onlinePlayer as IPlayer ?? names, playerId, item);
+                    if (onlinePlayer is not null)
+                    {
+                        onlinePlayer.SendChat(T.KitAccessGivenDm, item);
+                        KitManager.UpdateSigns(item, onlinePlayer);
                     }
                 }
                 else
@@ -1093,34 +1131,35 @@ public sealed class KitCommand : AsyncCommand
                 SqlItem<Kit>? proxy = await manager.FindKit(kitName, token, true);
                 if (proxy?.Item != null)
                 {
+                    Kit? item;
                     await proxy.Enter(token).ConfigureAwait(false);
                     try
                     {
-                        if (proxy.Item == null)
-                            throw ctx.Reply(T.KitNotFound, kitName);
-
-                        bool hasAccess = await KitManager.HasAccess(proxy.Item, playerId, token).ConfigureAwait(false);
-                        PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
-                        if (!hasAccess)
-                        {
-                            await UCWarfare.ToUpdate(token);
-                            ctx.Reply(T.KitAlreadyMissingAccess, onlinePlayer as IPlayer ?? names, proxy.Item);
-                            return;
-                        }
-                        await KitManager.RemoveAccess(proxy, playerId, token).ConfigureAwait(false);
-                        ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " DENIED ACCESS TO " + kitName);
-
-                        await UCWarfare.ToUpdate();
-                        ctx.Reply(T.KitAccessRevoked, onlinePlayer as IPlayer ?? names, playerId, proxy.Item);
-                        if (onlinePlayer is not null)
-                        {
-                            onlinePlayer.SendChat(T.KitAccessRevokedDm, proxy.Item);
-                            KitManager.UpdateSigns(proxy.Item, onlinePlayer);
-                        }
+                        item = proxy.Item;
                     }
                     finally
                     {
                         proxy.Release();
+                    }
+                    if (item == null)
+                        throw ctx.Reply(T.KitNotFound, kitName);
+                    bool hasAccess = await KitManager.HasAccess(item, playerId, token).ConfigureAwait(false);
+                    PlayerNames names = await F.GetPlayerOriginalNamesAsync(playerId, token).ConfigureAwait(false);
+                    if (!hasAccess)
+                    {
+                        await UCWarfare.ToUpdate(token);
+                        ctx.Reply(T.KitAlreadyMissingAccess, onlinePlayer as IPlayer ?? names, item);
+                        return;
+                    }
+                    await KitManager.RemoveAccess(proxy, playerId, token).ConfigureAwait(false);
+                    ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " DENIED ACCESS TO " + kitName);
+
+                    await UCWarfare.ToUpdate();
+                    ctx.Reply(T.KitAccessRevoked, onlinePlayer as IPlayer ?? names, playerId, item);
+                    if (onlinePlayer is not null)
+                    {
+                        onlinePlayer.SendChat(T.KitAccessRevokedDm, item);
+                        KitManager.UpdateSigns(item, onlinePlayer);
                     }
                 }
                 else

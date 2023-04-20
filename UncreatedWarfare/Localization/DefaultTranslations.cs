@@ -197,6 +197,15 @@ internal static class T
     [TranslationData(SectionPlayers, "Gets sent to a player when their message gets blocked by the chat filter.", "Amount of alphanumeric characters in succession.")]
     public static readonly Translation<int> NameFilterKickMessage = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.", TranslationFlags.NoColorOptimization);
     
+    [TranslationData(SectionPlayers, "Gets sent to a player when their nick name gets blocked by the chat filter.", "Violating text.")]
+    public static readonly Translation<string> NameProfanityNickNameKickMessage = new Translation<string>("Your nickname is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationFlags.NoColorOptimization);
+    
+    [TranslationData(SectionPlayers, "Gets sent to a player when their character name gets blocked by the chat filter.", "Violating text.")]
+    public static readonly Translation<string> NameProfanityCharacterNameKickMessage = new Translation<string>("Your character name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationFlags.NoColorOptimization);
+    
+    [TranslationData(SectionPlayers, "Gets sent to a player when their player name gets blocked by the chat filter.", "Violating text.")]
+    public static readonly Translation<string> NameProfanityPlayerNameKickMessage = new Translation<string>("Your Steam name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationFlags.NoColorOptimization);
+    
     [TranslationData(SectionPlayers, "Gets sent to a player who is attempting to main camp the other team.")]
     public static readonly Translation AntiMainCampWarning = new Translation("<#fa9e9e>Stop <b><#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you.");
     

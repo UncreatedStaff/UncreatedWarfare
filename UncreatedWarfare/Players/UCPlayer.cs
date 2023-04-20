@@ -80,7 +80,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public string NickName;
     public SqlItem<Kit>? ActiveKit;
     public string? MuteReason;
-    public Branch Branch;
     public EMuteType MuteType;
     public EChatMode LastChatMode = EChatMode.GLOBAL;
     public DateTime TimeUnmuted;
@@ -193,6 +192,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool IsDriver => CurrentVehicle != null && CurrentVehicle.passengers.Length > 0 && CurrentVehicle.passengers[0].player != null && CurrentVehicle.passengers[0].player.playerID.steamID.m_SteamID == Steam64;
     public bool HasKit => ActiveKit?.Item is not null;
     public Class KitClass => ActiveKit?.Item is { } kit ? kit.Class : Class.None;
+    public Branch Branch => ActiveKit?.Item is { } kit ? kit.Branch : Branch.Default;
     bool IEquatable<UCPlayer>.Equals(UCPlayer other) => other == this || other.Steam64 == Steam64; 
     public SteamPlayer SteamPlayer => Player.channel.owner;
     public PlayerSave Save { get; }
