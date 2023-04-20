@@ -1541,7 +1541,7 @@ public static class EventFunctions
             L.LogError($"Error accepting {player.playerID.playerName} in OnPrePlayerConnect:");
             L.LogError(ex);
             isValid = false;
-            explanation = "Uncreated Network was unable to connect you to, try again later or contact a Director if this keeps happening (discord.gg/" + UCWarfare.Config.DiscordInviteCode + ").";
+            explanation = "Uncreated Network was unable to connect you to to the server, try again later or contact a Director if this keeps happening (discord.gg/" + UCWarfare.Config.DiscordInviteCode + ").";
         }
     }
     internal static void OnStructureDestroyed(StructureDestroyed e)
