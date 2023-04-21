@@ -12,6 +12,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using HarmonyLib;
+using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
@@ -1069,6 +1070,15 @@ public static class TeamManager
         {
             return Team2Main.IsInside(player.transform.position);
         }
+        return false;
+    }
+    public static bool IsInMain(ulong team, Vector3 position)
+    {
+        if (team == 1)
+            return Team1Main.IsInsideBounds(position);
+        if (team == 2)
+            return Team2Main.IsInsideBounds(position);
+
         return false;
     }
     public static bool IsInMainOrLobby(Player player)

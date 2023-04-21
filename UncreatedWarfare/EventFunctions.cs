@@ -1076,6 +1076,25 @@ public static class EventFunctions
         next:
         if (!shouldAllow) return;
 
+        // prevent damage to crew members
+        if (parameters.cause == EDeathCause.GUN)
+        {
+            InteractableVehicle veh = parameters.player.movement.getVehicle();
+            if (veh != null)
+            {
+                VehicleBay? bay = VehicleBay.GetSingletonQuick();
+                VehicleData? data = bay?.GetDataSync(veh.asset.GUID);
+                if (data != null)
+                {
+                    if (data.PassengersInvincible || data.CrewInvincible && Array.IndexOf(data.CrewSeats, parameters.player.movement.getSeat()) != -1)
+                    {
+                        shouldAllow = false;
+                        return;
+                    }
+                }
+            }
+        }
+
         StrengthInNumbers.OnPlayerDamageRequested(ref parameters);
 
         if (Data.Is(out IRevives rev))
