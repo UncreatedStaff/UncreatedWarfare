@@ -502,8 +502,18 @@ public static class L
             {
                 if (cleanStack)
                 {
-                    string str = Cleaner.GetString(ex);
-                    AddLine2(str, ConsoleColor.DarkGray);
+                    try
+                    {
+                        string str = Cleaner.GetString(ex);
+                        AddLine2(str, ConsoleColor.DarkGray);
+                    }
+                    catch (Exception ex3)
+                    {
+                        LogError(ex3, false, "CLEAN STACK");
+                        AddLine2(indent != 0
+                            ? string.Join(Environment.NewLine, ex.StackTrace.Split(SplitChars).Select(x => ind + x.Trim(TrimChars)))
+                            : ex.StackTrace, ConsoleColor.DarkGray);
+                    }
                 }
                 else
                 {

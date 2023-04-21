@@ -524,18 +524,22 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
                 WriteWait();
+                Kit? old = null;
                 try
                 {
                     if (player.HasKit)
+                    {
                         oldKit = player.ActiveKit;
+                        old = oldKit?.Item;
+                    }
                     GrantKit(player, kit, tip);
-                    if (oldKit?.Item != null)
-                        UpdateSigns(oldKit);
                 }
                 finally
                 {
                     WriteRelease();
                 }
+                if (old != null)
+                    UpdateSigns(old);
             }
             finally
             {

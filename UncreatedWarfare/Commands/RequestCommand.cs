@@ -332,104 +332,91 @@ public class RequestCommand : AsyncCommand
             throw ctx.Reply(T.RequestVehicleNotSquadLeader);
 
         SqlItem<Kit>? proxy = ctx.Caller.ActiveKit;
-        if (proxy?.Item == null)
+        Kit? kit = proxy?.Item;
+        if (kit == null)
             throw ctx.Reply(T.RequestVehicleNoKit);
 
-        await proxy.Enter(token).ConfigureAwait(false);
-        await UCWarfare.ToUpdate(token);
-        try
+        if (ctx.Caller.Level.Level < data.UnlockLevel)
+            throw ctx.Reply(T.RequestVehicleMissingLevels, new LevelData(Points.GetLevelXP(data.UnlockLevel)));
+        if (data.RequiredClass != Class.None && kit.Class != data.RequiredClass)
+            throw ctx.Reply(T.RequestVehicleWrongClass, data.RequiredClass);
+        if (ctx.Caller.CachedCredits < data.CreditCost)
+            throw ctx.Reply(T.RequestVehicleCantAfford, ctx.Caller.CachedCredits, data.CreditCost);
+        if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.RequestVehicle, out Cooldown cooldown, vehicle.id))
+            throw ctx.Reply(T.RequestVehicleCooldown, cooldown);
+        // check if an owned vehicle is nearby
+        if (Data.Is(out IVehicles vgm))
         {
-            if (proxy.Item == null)
-                throw ctx.Reply(T.RequestVehicleNoKit);
-
-            Kit kit = proxy.Item;
-            if (ctx.Caller.Level.Level < data.UnlockLevel)
-                throw ctx.Reply(T.RequestVehicleMissingLevels, new LevelData(Points.GetLevelXP(data.UnlockLevel)));
-            if (data.RequiredClass != Class.None && kit.Class != data.RequiredClass)
-                throw ctx.Reply(T.RequestVehicleWrongClass, data.RequiredClass);
-            if (ctx.Caller.CachedCredits < data.CreditCost)
-                throw ctx.Reply(T.RequestVehicleCantAfford, ctx.Caller.CachedCredits, data.CreditCost);
-            if (CooldownManager.HasCooldown(ctx.Caller, CooldownType.RequestVehicle, out Cooldown cooldown, vehicle.id))
-                throw ctx.Reply(T.RequestVehicleCooldown, cooldown);
-
-            // check if an owned vehicle is nearby
-            if (Data.Is(out IVehicles vgm))
+            vgm.VehicleSpawner.WriteWait();
+            try
             {
-                vgm.VehicleSpawner.WriteWait();
+                for (int i = 0; i < vgm.VehicleSpawner.Items.Count; ++i)
+                {
+                    if (vgm.VehicleSpawner.Items[i]?.Item is { } item && item.HasLinkedVehicle(out InteractableVehicle veh))
+                    {
+                        if (veh == null || veh.isDead || veh.isExploded)
+                            continue;
+                        if (veh.lockedOwner.m_SteamID == ctx.CallerID && (veh.transform.position - vehicle.transform.position).sqrMagnitude <
+                            UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
+                            throw ctx.Reply(T.RequestVehicleAlreadyOwned, data);
+                    }
+                }
+            }
+            finally
+            {
+                vgm.VehicleSpawner.WriteRelease();
+            }
+        }
+        if (data.IsDelayed(out Delay delay) && delay.Type != DelayType.None)
+        {
+            Localization.SendDelayRequestText(in delay, ctx.Caller, team, Localization.DelayTarget.VehicleBay);
+            ctx.Defer();
+            return;
+        }
+
+        for (int i = 0; i < data.UnlockRequirements.Length; i++)
+        {
+            UnlockRequirement req = data.UnlockRequirements[i];
+            if (req.CanAccess(ctx.Caller))
+                continue;
+            throw req.RequestVehicleFailureToMeet(ctx, data);
+        }
+
+        if (vehicle.asset.canBeLocked)
+        {
+            if (data.CreditCost > 0)
+            {
+                await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    for (int i = 0; i < vgm.VehicleSpawner.Items.Count; ++i)
+                    await Points.UpdatePointsAsync(ctx.Caller, false, token).ConfigureAwait(false);
+                    if (ctx.Caller.CachedCredits >= data.CreditCost)
                     {
-                        if (vgm.VehicleSpawner.Items[i]?.Item is { } item && item.HasLinkedVehicle(out InteractableVehicle veh))
-                        {
-                            if (veh == null || veh.isDead || veh.isExploded)
-                                continue;
-                            if (veh.lockedOwner.m_SteamID == ctx.CallerID && (veh.transform.position - vehicle.transform.position).sqrMagnitude <
-                                UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
-                                throw ctx.Reply(T.RequestVehicleAlreadyOwned, data);
-                        }
+                        await Points.AwardCreditsAsync(ctx.Caller, -data.CreditCost, isPurchase: true, @lock: false, token: token).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await UCWarfare.ToUpdate(token);
+                        ctx.Caller.SendChat(T.RequestVehicleCantAfford, ctx.Caller.CachedCredits, data.CreditCost);
+                        return;
                     }
                 }
                 finally
                 {
-                    vgm.VehicleSpawner.WriteRelease();
+                    ctx.Caller.PurchaseSync.Release();
                 }
             }
-            if (data.IsDelayed(out Delay delay) && delay.Type != DelayType.None)
-            {
-                Localization.SendDelayRequestText(in delay, ctx.Caller, team, Localization.DelayTarget.VehicleBay);
-                ctx.Defer();
-                return;
-            }
 
-            for (int i = 0; i < data.UnlockRequirements.Length; i++)
-            {
-                UnlockRequirement req = data.UnlockRequirements[i];
-                if (req.CanAccess(ctx.Caller))
-                    continue;
-                throw req.RequestVehicleFailureToMeet(ctx, data);
-            }
-
-            if (vehicle.asset.canBeLocked)
-            {
-                if (data.CreditCost > 0)
-                {
-                    await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
-                    try
-                    {
-                        await Points.UpdatePointsAsync(ctx.Caller, false, token).ConfigureAwait(false);
-                        if (ctx.Caller.CachedCredits >= data.CreditCost)
-                        {
-                            await Points.AwardCreditsAsync(ctx.Caller, -data.CreditCost, isPurchase: true, @lock: false, token: token).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            await UCWarfare.ToUpdate(token);
-                            ctx.Caller.SendChat(T.RequestVehicleCantAfford, ctx.Caller.CachedCredits, data.CreditCost);
-                            return;
-                        }
-                    }
-                    finally
-                    {
-                        ctx.Caller.PurchaseSync.Release();
-                    }
-                }
-
-                await UCWarfare.ToUpdate(token);
-                GiveVehicle(ctx.Caller, vehicle, data);
-                Stats.StatsManager.ModifyStats(ctx.Caller.Steam64, x => x.VehiclesRequested++, false);
-                Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
-                Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
-                CooldownManager.StartCooldown(ctx.Caller, CooldownType.RequestVehicle, CooldownManager.Config.RequestVehicleCooldown, vehicle.id);
-            }
-            else
-            {
-                ctx.Caller.SendChat(T.RequestVehicleAlreadyRequested);
-            }
+            await UCWarfare.ToUpdate(token);
+            GiveVehicle(ctx.Caller, vehicle, data);
+            Stats.StatsManager.ModifyStats(ctx.Caller.Steam64, x => x.VehiclesRequested++, false);
+            Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
+            Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
+            CooldownManager.StartCooldown(ctx.Caller, CooldownType.RequestVehicle, CooldownManager.Config.RequestVehicleCooldown, vehicle.id);
         }
-        finally
+        else
         {
-            proxy.Release();
+            ctx.Caller.SendChat(T.RequestVehicleAlreadyRequested);
         }
     }
 
