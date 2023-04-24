@@ -1251,13 +1251,13 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out ulong steam64, out UCPlayer? onlinePlayer, bool remainder = false)
     {
+        parameter += _offset;
         if (!IsConsole && MatchParameter(parameter, "me"))
         {
             onlinePlayer = Caller;
             steam64 = CallerID;
             return true;
         }
-        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             steam64 = 0;
@@ -1287,13 +1287,13 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out ulong steam64, out UCPlayer onlinePlayer, IEnumerable<UCPlayer> selection, bool remainder = false)
     {
+        parameter += _offset;
         if (!IsConsole && MatchParameter(parameter, "me"))
         {
             onlinePlayer = Caller;
             steam64 = CallerID;
             return selection.Contains(Caller);
         }
-        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             steam64 = 0;
