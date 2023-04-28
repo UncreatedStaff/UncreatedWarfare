@@ -285,8 +285,7 @@ public static class CommandHandler
                         }
                     }
                     cmdStart = i;
-                c:
-                    continue;
+                    c: ;
                 }
 
                 if (cmdEnd == -1)
