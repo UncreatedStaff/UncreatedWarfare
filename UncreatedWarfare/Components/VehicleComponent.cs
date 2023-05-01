@@ -397,7 +397,8 @@ public class VehicleComponent : MonoBehaviour
                 else if (ammo is not null && trunk[i].Item == ammo.GUID) asset = ammo;
                 else asset = Assets.find(trunk[i].Item) as ItemAsset;
 
-                if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].X, trunk[i].Y, asset.size_x, asset.size_y, trunk[i].Rotation))
+                if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].X, trunk[i].Y, asset.size_x, asset.size_y, trunk[i].Rotation) &&
+                    TeamManager.IsInMain(Vehicle.lockedGroup.m_SteamID.GetTeam(), Vehicle.transform.position))
                 {
                     Item item = new Item(asset.id, trunk[i].Amount, 100, Util.CloneBytes(trunk[i].State));
                     Vehicle.trunkItems.addItem(trunk[i].X, trunk[i].Y, trunk[i].Rotation, item);

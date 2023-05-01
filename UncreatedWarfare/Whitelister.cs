@@ -175,10 +175,10 @@ public class Whitelister : ListSingleton<WhitelistItem>
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer? player = UCPlayer.FromCSteamID(steamID);
-        if (player != null && !player.OnDuty())
+        if (player == null || !player.OnDuty())
         {
             shouldAllow = false;
-            player.SendChat(T.ProhibitedSignEditing);
+            player?.SendChat(T.ProhibitedSignEditing);
         }
     }
     // ReSharper disable InconsistentNaming

@@ -962,14 +962,14 @@ public static class OffenseManager
         {
             if (duration == -1)
             {
-                foreach (LanguageSet set in LanguageSet.AllBut(target, admin))
+                foreach (LanguageSet set in LanguageSet.AllBut(target))
                     Chat.Broadcast(set, T.MutePermanentSuccessBroadcast, names, names, type, names2);
 
                 L.Log($"{names.PlayerName} ({target}) was permanently {type} muted for {reason} by {names2.PlayerName} ({admin}).", ConsoleColor.Cyan);
             }
             else
             {
-                foreach (LanguageSet set in LanguageSet.AllBut(target, admin))
+                foreach (LanguageSet set in LanguageSet.AllBut(target))
                     Chat.Broadcast(set, T.MuteSuccessBroadcast, names, names, dur, type, names2);
 
                 L.Log($"{names.PlayerName} ({target}) was {type} muted for {reason} by {names2.PlayerName} ({admin}). Duration: {dur}.", ConsoleColor.Cyan);
@@ -1004,8 +1004,8 @@ public static class OffenseManager
         if (names.WasFound)
         {
             int rows = await Data.DatabaseManager.NonQueryAsync(
-                    "UPDATE `muted` SET `Deactivated` = 1 WHERE `Steam64` = @0 AND " + 
-                    "`Deactivated` = 0 AND (`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60 < `Duration`)", new object[] { targetId })
+                    "UPDATE `muted` SET `Deactivated` = 1 WHERE `Steam64` = @0 AND " +
+                    "`Deactivated` = 0 AND (`Duration` = -1 OR TIMESTAMPDIFF(SECOND, `Timestamp`, UTC_TIMESTAMP()) < `Duration`)", new object[] { targetId })
                 .ConfigureAwait(false);
 
             await UCWarfare.ToUpdate();

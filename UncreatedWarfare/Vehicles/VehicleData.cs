@@ -51,6 +51,10 @@ public class VehicleData : ITranslationArgument, IListItem
     [CommandSettable]
     public bool DisallowAbandons;
     [CommandSettable]
+    public bool CrewInvincible;
+    [CommandSettable]
+    public bool PassengersInvincible;
+    [CommandSettable]
     public float AbandonValueLossSpeed = 0.125f;
     [CommandSettable]
     public int Map = -1;
@@ -201,6 +205,7 @@ public class VehicleData : ITranslationArgument, IListItem
     }
     public string GetCostLine(UCPlayer ucplayer)
     {
+        UCPlayer.TryApplyViewLens(ref ucplayer);
         if (UnlockRequirements == null || UnlockRequirements.Length == 0)
             return string.Empty;
         else

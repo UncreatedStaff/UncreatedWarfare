@@ -500,11 +500,12 @@ public class HardpointTicketProvider : BaseTicketProvider
             {
                 for (int i = 0; i < hp.WarstatsTracker.stats.Count; ++i)
                 {
-                    UCPlayer pl = hp.WarstatsTracker.stats[i].Player;
+                    HardpointPlayerStats stats = hp.WarstatsTracker.stats[i];
+                    UCPlayer pl = stats.Player;
                     if (pl is not { IsOnline: true }) continue;
                     if (obj.PlayerInRange(pl.Player))
                     {
-                        ++hp.WarstatsTracker.stats[i].Hardpoints;
+                        ++stats.Hardpoints;
                     }
                 }
             }

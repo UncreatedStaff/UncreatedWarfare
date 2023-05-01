@@ -67,7 +67,7 @@ public static class Deployment
         {
             int ticks = Mathf.CeilToInt(delay / DeployTickSpeed);
             Vector3 position = cancelOnMove ? player.Position : default;
-            float health = player.Player.life.health;
+            float health = cancelOnDamage ? player.Player.life.health : default;
             for (; ticks >= 0; --ticks)
             {
                 yield return new WaitForSeconds(DeployTickSpeed);
@@ -92,6 +92,8 @@ public static class Deployment
                         data.PendingDeploy = null;
                         yield break;
                     }
+
+                    health = player.Player.life.health;
                 }
                 if (!location.CheckDeployableTick(player, chat))
                 {

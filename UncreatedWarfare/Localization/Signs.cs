@@ -410,6 +410,12 @@ public class Signs : BaseSingleton, ILevelStartListener
                 Regions.tryGetCoordinate(drop.model.position, out byte x2, out byte y2) &&
                 !Regions.checkArea(x2, y2, player.Player.movement.region_x, player.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
                 return;
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            {
+                UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                if (pl.ViewLens.HasValue && pl.ViewLens!.Value == player.Steam64)
+                    Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, pl.Connection, sign.text);
+            }
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, player.Connection, sign.text);
         }
     }
@@ -418,7 +424,14 @@ public class Signs : BaseSingleton, ILevelStartListener
     {
         if (!comp.DropIsPlanted && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y) && !Regions.checkArea(x, y, player.Player.movement.region_x, player.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
             return;
-        Data.SendChangeText.Invoke(((InteractableSign)drop.interactable).GetNetId(), ENetReliability.Unreliable, player.Connection, comp.Translate(player.Language, player));
+        string t = comp.Translate(player.Language, player);
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (pl.ViewLens.HasValue && pl.ViewLens!.Value == player.Steam64)
+                Data.SendChangeText.Invoke(((InteractableSign)drop.interactable).GetNetId(), ENetReliability.Unreliable, pl.Connection, t);
+        }
+        Data.SendChangeText.Invoke(((InteractableSign)drop.interactable).GetNetId(), ENetReliability.Unreliable, player.Connection, t);
     }
     public static void UpdateTraitSigns(UCPlayer? player, TraitData? data)
     {

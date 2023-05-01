@@ -80,7 +80,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public string NickName;
     public SqlItem<Kit>? ActiveKit;
     public string? MuteReason;
-    public Branch Branch;
     public EMuteType MuteType;
     public EChatMode LastChatMode = EChatMode.GLOBAL;
     public DateTime TimeUnmuted;
@@ -193,6 +192,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool IsDriver => CurrentVehicle != null && CurrentVehicle.passengers.Length > 0 && CurrentVehicle.passengers[0].player != null && CurrentVehicle.passengers[0].player.playerID.steamID.m_SteamID == Steam64;
     public bool HasKit => ActiveKit?.Item is not null;
     public Class KitClass => ActiveKit?.Item is { } kit ? kit.Class : Class.None;
+    public Branch Branch => ActiveKit?.Item is { } kit ? kit.Branch : Branch.Default;
     bool IEquatable<UCPlayer>.Equals(UCPlayer other) => other == this || other.Steam64 == Steam64; 
     public SteamPlayer SteamPlayer => Player.channel.owner;
     public PlayerSave Save { get; }
@@ -200,6 +200,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public CSteamID CSteamID { get; internal set; }
     public ITransportConnection Connection => Player.channel.owner.transportConnection!;
     public EffectAsset? LastPing { get; internal set; }
+    public ulong? ViewLens { get; set; }
     ulong IPlayer.Steam64 => Steam64;
     public bool IsAdmin => Player.channel.owner.isAdmin;
     public bool IsTeam1 => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
@@ -814,6 +815,12 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         bool IEqualityComparer<UCPlayer>.Equals(UCPlayer x, UCPlayer y) => x == y || x.Steam64 == y.Steam64;
         int IEqualityComparer<UCPlayer>.GetHashCode(UCPlayer obj) => obj.Steam64.GetHashCode();
     }
+
+    public static void TryApplyViewLens(ref UCPlayer original)
+    {
+        if (original is { ViewLens: { } lens } && FromID(lens) is { IsOnline: true } vl)
+            original = vl;
+    }
 }
 
 public interface IPlayer : ITranslationArgument
@@ -956,6 +963,7 @@ public class PlayerSave
         "PlayerSave.dat");
     public static void WriteToSaveFile(PlayerSave save)
     {
+        ThreadUtil.assertIsGameThread();
         Block block = new Block();
         block.writeUInt32(DataVersion);
         block.writeByte((byte)save.Team);
@@ -978,6 +986,7 @@ public class PlayerSave
     }
     public static bool TryReadSaveFile(ulong player, out PlayerSave save)
     {
+        ThreadUtil.assertIsGameThread();
         UCPlayer? pl = PlayerManager.FromID(player);
         string path = GetPath(player);
         if (pl?.Save != null)
@@ -992,7 +1001,6 @@ public class PlayerSave
             save = null!;
             return false;
         }
-        ThreadUtil.assertIsGameThread();
         Block block = ServerSavedata.readBlock(path, 0);
         uint dv = block.readUInt32();
         save = new PlayerSave(player);

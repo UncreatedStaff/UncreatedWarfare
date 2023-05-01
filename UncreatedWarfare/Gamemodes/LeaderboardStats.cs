@@ -224,28 +224,24 @@ public abstract class BaseStatTracker<TIndividualStats> : MonoBehaviour, IStatTr
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+        bool found = false;
+        for (int j = 0; j < stats.Count; ++j)
         {
-            UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            bool found = false;
-            for (int j = 0; j < stats.Count; ++j)
+            if (stats[j].Steam64 == player.Steam64)
             {
-                if (stats[j].Steam64 == pl.Steam64)
-                {
-                    TIndividualStats st = stats[j];
-                    st.Player = pl;
-                    if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
-                        pt.Stats = st;
-                    found = true;
-                }
+                TIndividualStats st = stats[j];
+                st.Player = player;
+                if (player.Player.TryGetPlayerData(out UCPlayerData pt))
+                    pt.Stats = st;
+                found = true;
             }
-            if (!found)
-            {
-                TIndividualStats s = BasePlayerStats.New<TIndividualStats>(pl);
-                stats.Add(s);
-                if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
-                    pt.Stats = s;
-            }
+        }
+        if (!found)
+        {
+            TIndividualStats s = BasePlayerStats.New<TIndividualStats>(player);
+            stats.Add(s);
+            if (player.Player.TryGetPlayerData(out UCPlayerData pt))
+                pt.Stats = s;
         }
         L.LogDebug(player.CharacterName + " added to playerstats, " + stats.Count + " trackers");
     }

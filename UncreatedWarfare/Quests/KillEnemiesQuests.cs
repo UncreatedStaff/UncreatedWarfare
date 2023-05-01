@@ -1128,7 +1128,7 @@ public class KillEnemiesQuestEmplacement : BaseQuestData<KillEnemiesQuestEmplace
         {
             _killThreshold = questState.KillThreshold.InsistValue();
             _weapon = questState.Weapon;
-            _translationCache1 = _weapon.GetCommaList();
+            _translationCache1 = _weapon.IsWildcardInclusive() ? "any emplacement" : _weapon.GetCommaList();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {

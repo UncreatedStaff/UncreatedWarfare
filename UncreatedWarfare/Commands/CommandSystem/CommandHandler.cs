@@ -24,7 +24,7 @@ public static class CommandHandler
     private static readonly ArgumentInfo[] ArgBuffer = new ArgumentInfo[MaxArgCount];
     internal static CancellationTokenSource GlobalCommandCancel = new CancellationTokenSource();
     internal static List<CommandInteraction> ActiveCommands = new List<CommandInteraction>(8);
-    internal static bool TryingToCancel;
+    internal static volatile bool TryingToCancel;
     private static readonly List<PendingChatMessage> PendingMessages = new List<PendingChatMessage>(32);
     static CommandHandler()
     {
@@ -34,36 +34,43 @@ public static class CommandHandler
     }
     public static async Task LetCommandsFinish()
     {
-        TryingToCancel = true;
-        GlobalCommandCancel.CancelAfter(CommandMaxTimeoutAtGameEndMs);
-        foreach (CommandInteraction intx in ActiveCommands.ToList())
+        try
         {
-            if (intx.Task != null && !intx.Task.IsCompleted)
+            TryingToCancel = true;
+            GlobalCommandCancel.CancelAfter(CommandMaxTimeoutAtGameEndMs);
+            foreach (CommandInteraction intx in ActiveCommands.ToList())
             {
-                try
+                if (intx.Task != null && !intx.Task.IsCompleted)
                 {
-                    await intx.Task.ConfigureAwait(false);
+                    try
+                    {
+                        await Task.Run(() => Task.WaitAny(new Task[] { intx.Task }, 3000), new CancellationTokenSource(3000).Token);
+                    }
+                    catch (OperationCanceledException) { }
                 }
-                catch (OperationCanceledException) { }
             }
-        }
 
-        GlobalCommandCancel = new CancellationTokenSource();
-        await UCWarfare.ToUpdate(GlobalCommandCancel.Token);
-        TryingToCancel = false;
-        for (int i = 0; i < PendingMessages.Count; i++)
-        {
-            PendingChatMessage msg = PendingMessages[i];
-            if (msg.Player == null || msg.Player.IsOnline)
+            GlobalCommandCancel = new CancellationTokenSource();
+            await UCWarfare.ToUpdate(GlobalCommandCancel.Token);
+            TryingToCancel = false;
+            for (int i = 0; i < PendingMessages.Count; i++)
             {
-                bool shouldList = true;
-                CheckRunCommand(msg.Player, msg.Message, ref shouldList, msg.RequirePrefix);
-                if (shouldList && msg.Player is { IsOnline: true } pl)
-                    ChatManager.serverSendMessage(msg.Message, Palette.AMBIENT, pl.SteamPlayer, null, msg.ChatMode);
+                PendingChatMessage msg = PendingMessages[i];
+                if (msg.Player == null || msg.Player.IsOnline)
+                {
+                    bool shouldList = true;
+                    CheckRunCommand(msg.Player, msg.Message, ref shouldList, msg.RequirePrefix);
+                    if (shouldList && msg.Player is { IsOnline: true } pl)
+                        ChatManager.serverSendMessage(msg.Message, Palette.AMBIENT, pl.SteamPlayer, null, msg.ChatMode);
+                }
             }
-        }
 
-        PendingMessages.Clear();
+            PendingMessages.Clear();
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
+        }
     }
 
     private readonly struct PendingChatMessage
@@ -278,8 +285,7 @@ public static class CommandHandler
                         }
                     }
                     cmdStart = i;
-                c:
-                    continue;
+                    c: ;
                 }
 
                 if (cmdEnd == -1)
@@ -1244,13 +1250,13 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out ulong steam64, out UCPlayer? onlinePlayer, bool remainder = false)
     {
+        parameter += _offset;
         if (!IsConsole && MatchParameter(parameter, "me"))
         {
             onlinePlayer = Caller;
             steam64 = CallerID;
             return true;
         }
-        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             steam64 = 0;
@@ -1280,13 +1286,13 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out ulong steam64, out UCPlayer onlinePlayer, IEnumerable<UCPlayer> selection, bool remainder = false)
     {
+        parameter += _offset;
         if (!IsConsole && MatchParameter(parameter, "me"))
         {
             onlinePlayer = Caller;
             steam64 = CallerID;
             return selection.Contains(Caller);
         }
-        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             steam64 = 0;

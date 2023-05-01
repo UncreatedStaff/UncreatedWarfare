@@ -87,6 +87,10 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
             else FactionKey = value.PrimaryKey;
         }
     }
+
+    public bool NeedsUpgrade => Type == KitType.Loadout && Season < UCWarfare.Season;
+    public bool NeedsSetup => Type == KitType.Loadout && Disabled;
+
     /// <summary>Checks that the kit is publicly available and has a vaild class (not None or Unarmed).</summary>
     public bool IsPublicKit => Type == KitType.Public && Class > Class.Unarmed;
 
@@ -161,10 +165,11 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
         LastEditor = copy.LastEditor;
         RequiresNitro = copy.RequiresNitro;
     }
-    public Kit(ulong loadoutOwner, char loadout, Class @class, string? displayName, FactionInfo? faction)
+    /// <summary>For loadout.</summary>
+    public Kit(string loadout, Class @class, string? displayName, FactionInfo? faction)
     {
         Faction = faction;
-        Id = loadoutOwner.ToString(Data.AdminLocale) + "_" + new string(loadout, 1);
+        Id = loadout;
         Class = @class;
         Branch = KitManager.GetDefaultBranch(@class);
         Type = KitType.Loadout;
