@@ -540,7 +540,8 @@ public static class EventFunctions
             // reset the player to spawn if they have joined in a different game as they last played in.
             UCPlayer ucplayer = e.Player;
             ucplayer.Loading = true;
-            UCPlayer.LoadingUI.SendToPlayer(ucplayer.Connection, T.LoadingOnJoin.Translate(ucplayer));
+            if (UCPlayer.LoadingUI.IsValid)
+                UCPlayer.LoadingUI.SendToPlayer(ucplayer.Connection, T.LoadingOnJoin.Translate(ucplayer));
             bool isNewPlayer = e.IsNewPlayer;
             if (Data.Gamemode.LeaderboardUp(out ILeaderboard lb))
             {
@@ -634,7 +635,8 @@ public static class EventFunctions
                 await UCWarfare.ToUpdate(tkn);
                 if (ucplayer.IsOnline)
                 {
-                    UCPlayer.LoadingUI.ClearFromPlayer(ucplayer.Connection);
+                    if (UCPlayer.LoadingUI.IsValid)
+                        UCPlayer.LoadingUI.ClearFromPlayer(ucplayer.Connection);
                     ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? T.WelcomeMessage : T.WelcomeBackMessage, ucplayer, ucplayer), ToastMessageSeverity.Info));
                 }
             }, token);
@@ -1074,6 +1076,25 @@ public static class EventFunctions
         next:
         if (!shouldAllow) return;
 
+        // prevent damage to crew members
+        if (parameters.cause == EDeathCause.GUN)
+        {
+            InteractableVehicle veh = parameters.player.movement.getVehicle();
+            if (veh != null)
+            {
+                VehicleBay? bay = VehicleBay.GetSingletonQuick();
+                VehicleData? data = bay?.GetDataSync(veh.asset.GUID);
+                if (data != null)
+                {
+                    if (data.PassengersInvincible || data.CrewInvincible && Array.IndexOf(data.CrewSeats, parameters.player.movement.getSeat()) != -1)
+                    {
+                        shouldAllow = false;
+                        return;
+                    }
+                }
+            }
+        }
+
         StrengthInNumbers.OnPlayerDamageRequested(ref parameters);
 
         if (Data.Is(out IRevives rev))
@@ -1440,7 +1461,34 @@ public static class EventFunctions
             bool kick = false;
             string? cn = null;
             string? nn = null;
-            if (player.playerID.characterName.Length == 0)
+            Match match = Data.ChatFilter.Match(player.playerID.playerName);
+            if (match.Success && match.Length > 0)
+            {
+                isValid = false;
+                explanation = T.NameProfanityPlayerNameKickMessage.Translate(Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang) ? lang : L.Default,
+                    match.Value);
+                ActionLog.Add(ActionLogType.ChatFilterViolation, "PLAYER NAME: " + player.playerID.playerName, player.playerID.steamID.m_SteamID);
+                return;
+            }
+            match = Data.ChatFilter.Match(player.playerID.characterName);
+            if (match.Success && match.Length > 0)
+            {
+                isValid = false;
+                explanation = T.NameProfanityCharacterNameKickMessage.Translate(Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang) ? lang : L.Default,
+                    match.Value);
+                ActionLog.Add(ActionLogType.ChatFilterViolation, "CHARACTER NAME: " + player.playerID.characterName, player.playerID.steamID.m_SteamID);
+                return;
+            }
+            match = Data.ChatFilter.Match(player.playerID.nickName);
+            if (match.Success && match.Length > 0)
+            {
+                isValid = false;
+                explanation = T.NameProfanityNickNameKickMessage.Translate(Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang) ? lang : L.Default,
+                    match.Value);
+                ActionLog.Add(ActionLogType.ChatFilterViolation, "NICK NAME: " + player.playerID.nickName, player.playerID.steamID.m_SteamID);
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(player.playerID.characterName))
             {
                 player.playerID.characterName = player.playerID.steamID.m_SteamID.ToString(Data.LocalLocale);
                 if (player.playerID.nickName.Length == 0)
@@ -1453,7 +1501,7 @@ public static class EventFunctions
                     kick |= F.FilterName(player.playerID.nickName, out nn);
                 }
             }
-            else if (player.playerID.nickName.Length == 0)
+            else if (string.IsNullOrWhiteSpace(player.playerID.nickName))
             {
                 player.playerID.nickName = player.playerID.steamID.m_SteamID.ToString(Data.LocalLocale);
                 if (player.playerID.characterName.Length == 0)
@@ -1479,8 +1527,8 @@ public static class EventFunctions
                 return;
             }
 
-            player.playerID.characterName = Regex.Replace(cn!, "<.*>", string.Empty);
-            player.playerID.nickName = Regex.Replace(nn!, "<.*>", string.Empty);
+            player.playerID.characterName = Data.NameRichTextReplaceFilter.Replace(cn!, string.Empty);
+            player.playerID.nickName = Data.NameRichTextReplaceFilter.Replace(nn!, string.Empty);
 
             if (player.playerID.characterName.Length < 3 && player.playerID.nickName.Length < 3)
             {
@@ -1512,7 +1560,7 @@ public static class EventFunctions
             L.LogError($"Error accepting {player.playerID.playerName} in OnPrePlayerConnect:");
             L.LogError(ex);
             isValid = false;
-            explanation = "Uncreated Network was unable to authenticate your connection, try again later or contact a Director if this keeps happening (discord.gg/" + UCWarfare.Config.DiscordInviteCode + ").";
+            explanation = "Uncreated Network was unable to connect you to to the server, try again later or contact a Director if this keeps happening (discord.gg/" + UCWarfare.Config.DiscordInviteCode + ").";
         }
     }
     internal static void OnStructureDestroyed(StructureDestroyed e)

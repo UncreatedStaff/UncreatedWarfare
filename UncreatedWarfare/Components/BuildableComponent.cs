@@ -76,8 +76,8 @@ public class BuildableComponent : MonoBehaviour
 
         // TODO: add back this validation
 
-        if (!ValidatePlacementWithFriendlyFOB(Buildable, fob, builder, Foundation.GetServersideData().point, Foundation))
-            return;
+        //if (!ValidatePlacementWithFriendlyFOB(Buildable, fob, builder, Foundation.GetServersideData().point, Foundation))
+        //    return;
 
         float amount = builder.KitClass == Class.CombatEngineer ? 2f : 1f;
 
@@ -483,7 +483,8 @@ public class BuildableComponent : MonoBehaviour
                 for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
                 {
                     InteractableVehicle veh = VehicleManager.vehicles[i];
-                    if (veh.lockedOwner.m_SteamID == ownerOnly.Steam64 &&
+                    if (!veh.isDead &&
+                        veh.lockedOwner.m_SteamID == ownerOnly.Steam64 &&
                         veh.lockedGroup.m_SteamID.GetTeam() == fob.Team &&
                         veh.asset.GUID == vehicle.GUID &&
                         (veh.transform.position - pos).sqrMagnitude < 50f * 50f)
@@ -508,7 +509,7 @@ public class BuildableComponent : MonoBehaviour
     private static bool ValidatePlacementWithFriendlyFOB(BuildableData buildable, FOB? fob, UCPlayer placer, Vector3 point, BarricadeDrop? ignore = null)
     {
         if (buildable == null) return false;
-        if (!placer.HasKit || !placer.ActiveKit!.Item!.ContainsItem(buildable.Foundation.Value.Guid)) // normal player, buildable is not in their kit
+        if (!placer.HasKit || !placer.ActiveKit!.Item!.ContainsItem(buildable.Foundation.Value.Guid, placer.GetTeam())) // normal player, buildable is not in their kit
         {
             if (fob is null)
             {

@@ -1,5 +1,4 @@
-﻿using System;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using System.Collections;
 using System.Linq;
@@ -59,7 +58,7 @@ public class TeamSelector : BaseSingletonComponent
             }
         }
 
-        JoinSelectionMenu(player);
+        JoinSelectionMenu(player, JoinTeamBehavior.KeepTeam, rejoin: true);
     }
     private static void OnGamemodeStateUpdated()
     {
@@ -120,7 +119,7 @@ public class TeamSelector : BaseSingletonComponent
         GetTeamCounts(out int t1, out int t2);
         if (CheckTeam(team, player.TeamSelectorData.SelectedTeam, t1, t2))
         {
-            if (player.TeamSelectorData.SelectedTeam != 0 && player.TeamSelectorData.SelectedTeam != team)
+            if (player.TeamSelectorData.SelectedTeam is 1 or 2 && player.TeamSelectorData.SelectedTeam != team)
             {
                 ulong other = player.TeamSelectorData.SelectedTeam;
                 if (other == 1)
@@ -190,7 +189,7 @@ public class TeamSelector : BaseSingletonComponent
         Shuffle,
         KeepTeam
     }
-    public void JoinSelectionMenu(UCPlayer player, JoinTeamBehavior joinBehavior = JoinTeamBehavior.NoTeam)
+    public void JoinSelectionMenu(UCPlayer player, JoinTeamBehavior joinBehavior = JoinTeamBehavior.NoTeam, bool rejoin = false)
     {
         bool options = false;
         if (player.TeamSelectorData is null)
@@ -199,7 +198,7 @@ public class TeamSelector : BaseSingletonComponent
         }
         else
         {
-            if (player.TeamSelectorData.IsSelecting)
+            if (!rejoin && player.TeamSelectorData.IsSelecting)
                 return;
             player.TeamSelectorData.IsSelecting = true;
             player.TeamSelectorData.SelectedTeam = 0;

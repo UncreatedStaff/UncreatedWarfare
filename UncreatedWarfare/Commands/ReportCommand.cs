@@ -209,7 +209,8 @@ public class ReportCommand : AsyncCommand
     PlayerNotFound:
         throw ctx.Reply(T.PlayerNotFound);
     DiscordNotLinked:
-        throw ctx.Reply(T.ReportDiscordNotLinked, ctx.Caller);
+        ctx.Reply(T.DiscordNotLinked);
+        throw ctx.Reply(T.DiscordNotLinked2, ctx.Caller);
     Help:
         ctx.SendCorrectUsage(Syntax + " - " + Help);
     Types: // not returning here is intentional

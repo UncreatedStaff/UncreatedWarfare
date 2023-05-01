@@ -786,7 +786,6 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     private static void EnsureVehicleLocked(UCPlayer player)
     {
         InteractableVehicle? vehicle = player.Player.movement.getVehicle();
-        L.LogDebug("Left main");
         if (vehicle != null &&
             !vehicle.isDead &&
             vehicle.checkDriver(player.CSteamID) &&

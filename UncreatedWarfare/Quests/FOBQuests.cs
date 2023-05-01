@@ -555,7 +555,7 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
         public override void ResetToDefaults() => _fobUses = 0;
         public void OnPlayerSpawnedAtBunker(BuiltBuildableComponent bunker, FOB fob, UCPlayer spawner)
         {
-            if (/*spawner.Steam64 != _player.Steam64 && */spawner.GetTeam() == _player.GetTeam()
+            if (spawner.Steam64 != _player.Steam64 && spawner.GetTeam() == _player.GetTeam()
                 && bunker != null &&
                 bunker.GetPlayerContribution(_player.Steam64) >= 0.25f)
             {

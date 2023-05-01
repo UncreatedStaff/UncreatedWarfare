@@ -23,6 +23,7 @@ internal static class TraitSigns
     }
     public static string FormatTraitSign(TraitData trait, string tr2, UCPlayer player, ulong team)
     {
+        UCPlayer.TryApplyViewLens(ref player);
         for (int i = 0; i < player.ActiveTraits.Count; ++i)
         {
             if (player.ActiveTraits[i].Data.Type == trait.Type)

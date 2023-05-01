@@ -115,7 +115,7 @@ public class Action
 
         if (SquadWide && Caller.Squad != null)
         {
-            foreach (var player in ToastReceivers)
+            foreach (var player in ToastReceivers.Where(x => x.IsOnline))
             {
                 if (_toast is Translation<string> t) // TODO: better way to do account for different types of translations / clean up
                     Tips.TryGiveTip(player, 5, t, Caller.Squad.Name);
@@ -125,7 +125,7 @@ public class Action
         }
         else
         {
-            foreach (var player in ToastReceivers)
+            foreach (var player in ToastReceivers.Where(x => x.IsOnline))
             {
                 if (_toast is Translation<string> t)
                     Tips.TryGiveTip(player, 5, t, Caller.NickName);
@@ -175,9 +175,9 @@ public class Action
             _action.CallerEffect.ValidReference(out EffectAsset? callerEffect);
             if (_action.ViewerEffect.ValidReference(out EffectAsset viewerEffect))
             {
-                F.TriggerEffectReliable(viewerEffect, Data.GetPooledTransportConnectionList(_action.Viewers.Select(x => x.Connection), _action.Viewers.Count), position);
+                F.TriggerEffectReliable(viewerEffect, Data.GetPooledTransportConnectionList(_action.Viewers.Where(x => x.IsOnline).Select(x => x.Connection), _action.Viewers.Count), position);
                 if (callerEffect != null)
-                    foreach (UCPlayer player in _action.Viewers)
+                    foreach (UCPlayer player in _action.Viewers.Where(x => x.IsOnline))
                         F.TriggerEffectReliable(callerEffect, player.Connection, player.Position);
             }
         }

@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -46,6 +47,57 @@ public static class Localization
                 ((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
                 ? (UnityRichTextColorBaseStart + hex + RichTextColorEnd + inner + RichTextColorClosingTag)
                 : (TMProRichTextColorBase + hex + RichTextColorEnd + inner + RichTextColorClosingTag));
+    }
+    public static string Translate(this ITranslationArgument translatable, string language, ulong team, string? fmt = null, bool imgui = false)
+    {
+        TranslationFlags flags = TranslationFlags.ForChat;
+        if (imgui)
+            flags |= TranslationFlags.UseUnityRichText;
+        switch (team)
+        {
+            case 1:
+                flags |= TranslationFlags.Team1;
+                break;
+            case 2:
+                flags |= TranslationFlags.Team2;
+                break;
+        }
+        return translatable.Translate(language, fmt, null, GetLocale(language) as CultureInfo, ref flags);
+    }
+    public static string Translate(this ITranslationArgument translatable, UCPlayer player, string? fmt = null)
+    {
+        TranslationFlags flags = TranslationFlags.ForChat;
+        if (player.Save.IMGUI)
+            flags |= TranslationFlags.UseUnityRichText;
+        switch (player.GetTeam())
+        {
+            case 1:
+                flags |= TranslationFlags.Team1;
+                break;
+            case 2:
+                flags |= TranslationFlags.Team2;
+                break;
+        }
+        return translatable.Translate(player.Language, fmt, player, player.Culture, ref flags);
+    }
+    public static string Translate(this ITranslationArgument translatable, CommandInteraction ctx, string? fmt = null)
+    {
+        TranslationFlags flags = TranslationFlags.ForChat;
+        if (ctx.IMGUI)
+            flags |= TranslationFlags.UseUnityRichText;
+        if (!ctx.IsConsole)
+        {
+            switch (ctx.Caller.GetTeam())
+            {
+                case 1:
+                    flags |= TranslationFlags.Team1;
+                    break;
+                case 2:
+                    flags |= TranslationFlags.Team2;
+                    break;
+            }
+        }
+        return translatable.Translate(ctx.Language, fmt, ctx.Caller, ctx.GetLocale() as CultureInfo, ref flags);
     }
     public static string Translate(Translation translation, UCPlayer? player) =>
         Translate(translation, player is null ? 0 : player.Steam64);
@@ -262,40 +314,15 @@ public static class Localization
     public static string GetTimeFromMinutes(this int minutes, ulong player) => GetTimeFromSeconds(minutes * 60, player);
     public static string GetTimeFromMinutes(this int minutes, IPlayer player) => GetTimeFromSeconds(minutes * 60, player);
     public static string GetTimeFromMinutes(this int minutes, string language) => GetTimeFromSeconds(minutes * 60, language);
-    public static string TranslateSign(string key, string language, UCPlayer ucplayer, bool important = false)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        try
-        {
-            if (key == null) return string.Empty;
-            if (!key.StartsWith("sign_")) return key;
-            string key2 = key.Substring(5);
-
-            if (key2.StartsWith("loadout_"))
-            {
-                return TranslateLoadoutSign(key2, language, ucplayer);
-            }
-            Kit? kit = KitManager.GetSingletonQuick()?.FindKitNoLock(key2, true)?.Item;
-            if (kit != null)
-                return TranslateKitSign(language, kit, ucplayer);
-            Translation? tr = Translation.FromSignId(key2);
-            if (tr != null) return tr.Translate(language);
-
-            return Translation.FromSignId(key)?.Translate(language) ?? key;
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Error translating sign: ");
-            L.LogError(ex);
-            return ex.GetType().Name;
-        }
-    }
     public static string TranslateLoadoutSign(byte loadoutId, string language, UCPlayer ucplayer)
     {
+        UCPlayer.TryApplyViewLens(ref ucplayer);
         ulong team = ucplayer.GetTeam();
-        SqlItem<Kit>? proxy = KitManager.GetLoadoutQuick(ucplayer, loadoutId, team);
+        if (loadoutId <= 0)
+        {
+            return "<#ff0000>INVALID LOADOUT</color>";
+        }
+        SqlItem<Kit>? proxy = KitManager.GetLoadoutQuick(ucplayer, loadoutId);
         Kit? kit = proxy?.Item;
         if (kit != null)
         {
@@ -319,13 +346,23 @@ public static class Localization
                 name = kit.Id + '\n' + "(" + (char)(loadoutId + 47) + ") " + kit.GetDisplayName(language, false);
                 keepline = true;
             }
-            name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
-            string cost = "<sub>" + T.LoadoutName.Translate(language, loadoutId) + "</sub>";
+            name = "<b>" + name.ToUpper()
+                .ColorizeTMPro(
+                    UCWarfare.GetColorHex(KitManager.IsFavoritedQuick(proxy!.LastPrimaryKey, ucplayer) ? "kit_public_header_fav" : "kit_public_header")
+                    , true) + "</b>";
+            string cost = "<sub>" + T.LoadoutName.Translate(language, KitEx.GetLoadoutLetter(KitEx.ParseStandardLoadoutId(kit.Id))) + "</sub>";
             if (!keepline) cost = "\n" + cost;
 
             string playercount;
-
-            if (kit.RequiresNitro)
+            if (kit.NeedsUpgrade)
+            {
+                playercount = T.KitLoadoutUpgrade.Translate(language);
+            }
+            else if (kit.NeedsSetup)
+            {
+                playercount = T.KitLoadoutSetup.Translate(language);
+            }
+            else if (kit.RequiresNitro)
             {
                 if (KitManager.IsNitroBoostingQuick(ucplayer.Steam64))
                     playercount = T.KitNitroBoostOwned.Translate(language);
@@ -364,22 +401,15 @@ public static class Localization
         }
 
         return
-            "<b>" + T.LoadoutName.Translate(language, loadoutId) + "</b>\n\n\n\n" +
+            "<b>" + T.LoadoutName.Translate(language, "#" + loadoutId) + "</b>\n\n\n\n" +
             T.KitPremiumCost.Translate(language, UCWarfare.Config.LoadoutCost)
                 .ColorizeTMPro(UCWarfare.GetColorHex("kit_level_dollars"), true);
-    }
-    public static string TranslateLoadoutSign(string key, string language, UCPlayer ucplayer)
-    {
-        if (ucplayer != null && key.Length > 8 && byte.TryParse(key.Substring(8), System.Globalization.NumberStyles.Any, Data.AdminLocale, out byte loadoutid))
-        {
-            return TranslateLoadoutSign(loadoutid, language, ucplayer);
-        }
-        return key;
     }
     public static string TranslateKitSign(string language, Kit kit, UCPlayer ucplayer)
     {
         KitManager? manager = KitManager.GetSingletonQuick();
         bool keepline = false;
+        UCPlayer.TryApplyViewLens(ref ucplayer);
         ulong team = ucplayer.GetTeam();
         string name;
         if (!ucplayer.OnDuty())
@@ -400,7 +430,14 @@ public static class Localization
             name = kit.Id + "\n" + kit.GetDisplayName(language, false);
             keepline = true;
         }
-        name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex(kit.SquadLevel == SquadLevel.Commander ? "kit_public_commander_header" : "kit_public_header"), true) + "</b>";
+        name = "<b>" + name
+            .ToUpper()
+            .ColorizeTMPro(UCWarfare.GetColorHex(
+                kit.SquadLevel == SquadLevel.Commander
+                    ? "kit_public_commander_header"
+                    : (KitManager.IsFavoritedQuick(kit.PrimaryKey, ucplayer)
+                        ? "kit_public_header_fav"
+                        : "kit_public_header")), true) + "</b>";
         string weapons = kit.WeaponText ?? string.Empty;
         if (weapons.Length > 0)
             weapons = "<b>" + weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true) + "</b>";
@@ -474,13 +511,6 @@ public static class Localization
             cost + "\n" +
             weapons + "\n" +
             playercount;
-    }
-    public static string TranslateSign(string key, UCPlayer player, bool important = true)
-    {
-        if (player == null) return string.Empty;
-        if (!Data.Languages.TryGetValue(player.Steam64, out string lang))
-            lang = L.Default;
-        return TranslateSign(key, lang, player, important);
     }
 
     private static readonly Guid F15 = new Guid("423d31c55cf84396914be9175ea70d0c");

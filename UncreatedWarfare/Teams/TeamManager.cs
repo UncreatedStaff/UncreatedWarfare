@@ -12,6 +12,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using HarmonyLib;
+using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
@@ -185,6 +186,7 @@ public static class TeamManager
             Ammo = "2f3cfa9c6bb645fbab8f49ce556d1a1a",
             FOBRadio = "7bde55f70c494418bdd81926fb7d6359",
             RallyPoint = "7720ced42dba4c1eac16d14453cd8bc4",
+            DefaultHat = "4dbefaaad6fd4e728912bd929c16c2c6",
             DefaultShirt = "2c1a9c62b30a49e7bda2ef6a2727eb8c",
             DefaultBackpack = "5ac771b71bb7496bb2042d3e8cc2015c",
             DefaultVest = "b74265e7af1c4d52866907e489206f86",
@@ -945,7 +947,7 @@ public static class TeamManager
                 if (teleport)
                     TeleportToMain(player, team);
 
-                if (announce)
+                if (announce && UCWarfare.Config.EnablePlayerJoinLeaveTeamMessages)
                 {
                     ulong id = player.Steam64;
                     Chat.Broadcast(LanguageSet.Where(x => x.GetTeam() == team && x.Steam64 != id), T.TeamJoinAnnounce, GetFactionSafe(team)!, player);
@@ -1068,6 +1070,15 @@ public static class TeamManager
         {
             return Team2Main.IsInside(player.transform.position);
         }
+        return false;
+    }
+    public static bool IsInMain(ulong team, Vector3 position)
+    {
+        if (team == 1)
+            return Team1Main.IsInsideBounds(position);
+        if (team == 2)
+            return Team2Main.IsInsideBounds(position);
+
         return false;
     }
     public static bool IsInMainOrLobby(Player player)
@@ -1405,6 +1416,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultShirt.ValidReference(out ItemShirtAsset sasset);
+                    if (sasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultShirt.ValidReference(out sasset);
                     rtn = sasset;
                 }
                 break;
@@ -1414,6 +1427,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultPants.ValidReference(out ItemPantsAsset passet);
+                    if (passet == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultPants.ValidReference(out passet);
                     rtn = passet;
                 }
                 break;
@@ -1423,6 +1438,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultVest.ValidReference(out ItemVestAsset vasset);
+                    if (vasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultVest.ValidReference(out vasset);
                     rtn = vasset;
                 }
                 break;
@@ -1432,6 +1449,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultBackpack.ValidReference(out ItemBackpackAsset bkasset);
+                    if (bkasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultBackpack.ValidReference(out bkasset);
                     rtn = bkasset;
                 }
                 break;
@@ -1441,6 +1460,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultGlasses.ValidReference(out ItemGlassesAsset gasset);
+                    if (gasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultGlasses.ValidReference(out gasset);
                     rtn = gasset;
                 }
                 break;
@@ -1450,6 +1471,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultMask.ValidReference(out ItemMaskAsset masset);
+                    if (masset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultMask.ValidReference(out masset);
                     rtn = masset;
                 }
                 break;
@@ -1459,6 +1482,8 @@ public static class TeamManager
                 else
                 {
                     kitFaction.DefaultHat.ValidReference(out ItemHatAsset hasset);
+                    if (hasset == null && requesterTeam != null && requesterTeam != kitFaction)
+                        requesterTeam.DefaultHat.ValidReference(out hasset);
                     rtn = hasset;
                 }
                 break;
@@ -1566,7 +1591,15 @@ public static class TeamManager
 
         return rtn;
     }
-    internal static RedirectType GetClothingRedirect(Guid input) => GetRedirectInfo(input, out _, true);
+    internal static RedirectType GetClothingRedirect(Guid input, FactionInfo faction)
+    {
+        RedirectType type = GetRedirectInfo(input, out FactionInfo? foundFaction, true);
+        if (type == RedirectType.None || foundFaction != faction)
+            return RedirectType.None;
+
+        return type;
+    }
+
     internal static RedirectType GetItemRedirect(Guid input) => GetRedirectInfo(input, out _, false);
 #if DEBUG
     [Obsolete]

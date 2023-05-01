@@ -176,6 +176,12 @@ internal static class T
     #region Players
     private const string SectionPlayers = "Players";
 
+    [TranslationData(SectionPlayers, "Gets sent to a player who's discord is not linked to their steam account (part 1).")]
+    public static readonly Translation DiscordNotLinked = new Translation("<#9cffb3>Your account must be linked in our Discord server to use this command.");
+
+    [TranslationData(SectionPlayers, "Gets sent to a player who's discord is not linked to their steam account (part 2).", "Player's Steam64 ID")]
+    public static readonly Translation<IPlayer> DiscordNotLinked2 = new Translation<IPlayer>("<#9cffb3>Type <#7483c4>/discord</color> then type <#fff>/link {0}</color> in <#c480d9>#warfare-stats</color>.", UCPlayer.COLOR_STEAM_64_FORMAT);
+
     [TranslationData(SectionPlayers, "Gets broadcasted when a player connects.", "Connecting player")]
     public static readonly Translation<IPlayer> PlayerConnected = new Translation<IPlayer>("<#e6e3d5>{0} joined the server.");
 
@@ -190,6 +196,15 @@ internal static class T
     
     [TranslationData(SectionPlayers, "Gets sent to a player when their message gets blocked by the chat filter.", "Amount of alphanumeric characters in succession.")]
     public static readonly Translation<int> NameFilterKickMessage = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.", TranslationFlags.NoColorOptimization);
+    
+    [TranslationData(SectionPlayers, "Gets sent to a player when their nick name gets blocked by the chat filter.", "Violating text.")]
+    public static readonly Translation<string> NameProfanityNickNameKickMessage = new Translation<string>("Your nickname is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationFlags.NoColorOptimization);
+    
+    [TranslationData(SectionPlayers, "Gets sent to a player when their character name gets blocked by the chat filter.", "Violating text.")]
+    public static readonly Translation<string> NameProfanityCharacterNameKickMessage = new Translation<string>("Your character name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationFlags.NoColorOptimization);
+    
+    [TranslationData(SectionPlayers, "Gets sent to a player when their player name gets blocked by the chat filter.", "Violating text.")]
+    public static readonly Translation<string> NameProfanityPlayerNameKickMessage = new Translation<string>("Your Steam name is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationFlags.NoColorOptimization);
     
     [TranslationData(SectionPlayers, "Gets sent to a player who is attempting to main camp the other team.")]
     public static readonly Translation AntiMainCampWarning = new Translation("<#fa9e9e>Stop <b><#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you.");
@@ -680,6 +695,9 @@ internal static class T
     [TranslationData(SectionLanguages, "Fallback usage output from /lang, explains /lang reset.")]
     public static readonly Translation ResetLanguageHow                  = new Translation("<#f53b3b>Do <#e6e3d5>/lang reset</color> to reset back to default language.");
     
+    [TranslationData(SectionLanguages, "Result from using /lang refresh, reloads ui with updated text.")]
+    public static readonly Translation LanguageRefreshed                 = new Translation("<#f53b3b>Refreshed all signs and UI.");
+    
     [TranslationData(SectionLanguages, "Output from /lang current, tells the player their selected language.", "Current Language")]
     public static readonly Translation<LanguageAliasSet> LanguageCurrent = new Translation<LanguageAliasSet>("<#f53b3b>Current language: <#e6e3d5>{0}</color>.", LanguageAliasSet.FormatDisplayName);
     
@@ -775,6 +793,16 @@ internal static class T
     public static readonly Translation<string> FactionNotFoundCreateKit              = new Translation<string>("<#ff8c69>Unable to find a faction called <#fff>{0}</color>.");
     public static readonly Translation<string> ClassNotFoundCreateKit                = new Translation<string>("<#ff8c69>There is no kit class named <#fff>{0}</color>.");
     public static readonly Translation<string> TypeNotFoundCreateKit                 = new Translation<string>("<#ff8c69>There is no kit type named <#fff>{0}</color>. Use: 'public', 'elite', 'special', 'loadout'.");
+    public static readonly Translation<Kit> KitFavoriteAlreadyFavorited              = new Translation<Kit>("<#ff8c69><#e8e2d1>{0}</color> is already <#fd0>favorited</color>.");
+    public static readonly Translation<Kit> KitFavoriteAlreadyUnfavorited            = new Translation<Kit>("<#ff8c69><#e8e2d1>{0}</color> is already <#fff>unfavorited</color>.");
+    public static readonly Translation<Kit> KitFavorited                             = new Translation<Kit>("<#a0ad8e>Added <#e8e2d1>{0}</color> to your <#fd0>favorites</color>.");
+    public static readonly Translation<Kit> KitUnfavorited                           = new Translation<Kit>("<#a0ad8e>Removed <#e8e2d1>{0}</color> from your <#fd0>favorites</color>.");
+    public static readonly Translation KitLoadoutIdBadFormat                         = new Translation("Kit name must be in format: <b>765XXXXXXXXXXXXXX_X..</b>.");
+    public static readonly Translation<Kit, Class> LoadoutUpgraded                   = new Translation<Kit, Class>("<#a0ad8e>Upgraded <#e8e2d1>{0}</color> to a new <#fff>{1}</color> kit.", Kit.DisplayNameFormat, FormatUppercase);
+    public static readonly Translation<Kit> KitUpgraded                              = new Translation<Kit>("<#a0ad8e>Upgraded <#e8e2d1>{0}</color>.", Kit.DisplayNameFormat);
+    public static readonly Translation<Kit> KitUnlocked                              = new Translation<Kit>("<#a0ad8e>Unlocked <#e8e2d1>{0}</color>.", Kit.DisplayNameFormat);
+    public static readonly Translation<Kit> KitLocked                                = new Translation<Kit>("<#a0ad8e>Locked <#e8e2d1>{0}</color>.", Kit.DisplayNameFormat);
+    public static readonly Translation<Kit> DMLoadoutUnlocked                        = new Translation<Kit>("<#a0ad8e>Your kit, <#e8e2d1>{0}</color>, is ready.", Kit.DisplayNameFormat);
 
     [TranslationData(SectionKits, "Sent when the caller doesn't enter a valid integer for level.", "Skill name", "Max level")]
     public static readonly Translation<string, int> KitInvalidSkillsetLevel          = new Translation<string, int>("<#ff8c69>Please give a level between <#fff>0</color> and <#fff>{1}</color> for <#ddd>{0}</color>");
@@ -1169,6 +1197,15 @@ internal static class T
     #endregion
 
     #region Request
+    public static readonly Translation RequestUpgradeNotInDiscordServer = new Translation("<#a4baa9>Join the <#7483c4>Discord</color> server (<#fff>/discord</color>) to open a ticket.");
+    public static readonly Translation RequestUpgradeNotConnected = new Translation("<#a4baa9>The loadout upgrade system is not available right now, please try again later.");
+    public static readonly Translation<Kit> RequestUpgradeAlreadyOpen = new Translation<Kit>("<#a4baa9>You already have a ticket open for <#ffebbd>{0}</color>.", Kit.DisplayNameFormat);
+    public static readonly Translation RequestUpgradeTooManyTicketsOpen = new Translation("<#a4baa9>There are too many tickets open right now, please try again later.");
+    public static readonly Translation<string> RequestUpgradeError = new Translation<string>("<#a4baa9>Error opening ticket: <#fff>{0}</color>.", FormatUppercase);
+    public static readonly Translation<Kit> DoesNotNeedUpgrade = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be upgraded.", Kit.DisplayNameFormat);
+    public static readonly Translation<Kit> DoesNotNeedUnlock = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> does not need to be unlocked.", Kit.DisplayNameFormat);
+    public static readonly Translation<Kit> RequestUpgradeOnKit = new Translation<Kit>("<#a4baa9><#ffebbd>{0}</color> can't be upgraded.", Kit.DisplayNameFormat);
+    public static readonly Translation<Kit> TicketOpened = new Translation<Kit>("<#a8918a>An upgrade request was opened in your name for <#ffebbd>{0}</color>. Please fill it out as soon as possible.", Kit.DisplayNameFormat);
     public static readonly Translation<Kit> RequestSignSaved = new Translation<Kit>("<#a4baa9>Saved kit: <#ffebbd>{0}</color>.", Kit.IdFormat);
     public static readonly Translation<Kit> RequestSignRemoved = new Translation<Kit>("<#a8918a>Removed kit sign: <#ffebbd>{0}</color>.", Kit.IdFormat);
     public static readonly Translation<Class> RequestSignGiven = new Translation<Class>("<#a8918a>You have been allocated a <#cedcde>{0}</color> kit.");
@@ -1178,6 +1215,8 @@ internal static class T
     public static readonly Translation<int> RequestKitBought = new Translation<int>("<#c4a36a>Kit bought for <#c$credits$>C </color><#ffffff>{0}</color>. Request it with '<#b3b0ab>/request</color>'.");
     public static readonly Translation RequestKitNotRegistered = new Translation("<#a8918a>This kit has not been created yet.");
     public static readonly Translation RequestKitAlreadyOwned = new Translation("<#a8918a>You already have this kit.");
+    public static readonly Translation RequestKitNeedsUpgrade = new Translation("<#a8918a>This kit needs to be upgraded. Use <#fff>/request upgrade</color> to start a ticket.");
+    public static readonly Translation RequestKitNeedsSetup = new Translation("<#a8918a>This kit needs to be setup by an admin. Check your upgrade ticket.");
     public static readonly Translation RequestKitDisabled = new Translation("<#a8918a>This kit is disabled.");
     public static readonly Translation RequestKitMapBlacklisted = new Translation("<#a8918a>This kit is not allowed on this map.");
     public static readonly Translation RequestKitFactionBlacklisted = new Translation("<#a8918a>Your team is not allowed to use this kit.");
@@ -1471,7 +1510,9 @@ internal static class T
     public static readonly Translation<int> KitCreditCost = new Translation<int>("<#c$credits$>C</color> <#fff>{0}</color>", TranslationFlags.NoColorOptimization);
     public static readonly Translation KitUnlimited = new Translation("<#c$kit_unlimited_players$>unlimited</color>", TranslationFlags.NoColorOptimization);
     public static readonly Translation<int, int> KitPlayerCount = new Translation<int, int>("{0}/{1}", TranslationFlags.NoColorOptimization);
-    public static readonly Translation<int> LoadoutName = new Translation<int>("<#c$kit_level_dollars$>LOADOUT {0}</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string> LoadoutName = new Translation<string>("<#c$kit_level_dollars$>LOADOUT {0}</color>", TranslationFlags.NoColorOptimization, FormatUppercase);
+    public static readonly Translation KitLoadoutUpgrade = new Translation("<#33cc33>/req upgrade</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitLoadoutSetup = new Translation("<#3399ff>PENDING SETUP</color>", TranslationFlags.NoColorOptimization);
     #endregion
 
     #region Vehicle Bay Signs
@@ -1603,7 +1644,6 @@ internal static class T
 
     #region Report Command
     public static readonly Translation ReportReasons = new Translation("<#9cffb3>Report reasons: -none-, \"chat abuse\", \"voice chat abuse\", \"soloing vehicles\", \"wasteing assets\", \"teamkilling\", \"fob greifing\", \"cheating\".");
-    public static readonly Translation<IPlayer> ReportDiscordNotLinked = new Translation<IPlayer>("<#9cffb3>Your account must be linked in our Discord server to use this command. Type <#7483c4>/discord</color> then type <#fff>/link {0}</color> in <#c480d9>#warfare-stats</color>.", UCPlayer.COLOR_STEAM_64_FORMAT);
     public static readonly Translation ReportPlayerNotFound = new Translation("<#9cffb3>Unable to find a player with that name, you can use their <color=#ffffff>Steam64 ID</color> instead, as names are only stored until they've been offline for 20 minutes.");
     public static readonly Translation ReportUnknownError = new Translation("<#9cffb3>Unable to generate a report for an unknown reason, check your syntax again with <color=#ffffff>/report help</color>.");
     public static readonly Translation<IPlayer, string, string> ReportSuccessMessage1 = new Translation<IPlayer, string, string>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report.", UCPlayer.CHARACTER_NAME_FORMAT);

@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -37,8 +38,8 @@ public class UCWarfare : MonoBehaviour
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
     public static readonly Version Version = new Version(3, 0, 0, 0);
-    private readonly SystemConfig _config = new SystemConfig();
-    private readonly List<UCTask> _tasks = new List<UCTask>(16);
+    private readonly SystemConfig _config = UCWarfareNexus.Active ? new SystemConfig() : null!;
+    private readonly List<UCTask> _tasks = UCWarfareNexus.Active ? new List<UCTask>(16) : null!;
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
     public Coroutine? StatsRoutine;
@@ -52,8 +53,8 @@ public class UCWarfare : MonoBehaviour
     private DateTime _nextRestartTime;
     internal volatile bool ProcessTasks = true;
     private Task? _earlyLoadTask;
-    private readonly CancellationTokenSource _unloadCancellationTokenSource = new CancellationTokenSource();
-    public readonly SemaphoreSlim PlayerJoinLock = new SemaphoreSlim(0, 1);
+    private readonly CancellationTokenSource _unloadCancellationTokenSource = UCWarfareNexus.Active ? new CancellationTokenSource() : null!;
+    public readonly SemaphoreSlim PlayerJoinLock = UCWarfareNexus.Active ? new SemaphoreSlim(0, 1) : null!;
     public float LastUpdateDetected = -1f;
     public bool FullyLoaded { get; private set; }
     public static CancellationToken UnloadCancel => IsLoaded ? I._unloadCancellationTokenSource.Token : CancellationToken.None;
@@ -437,8 +438,8 @@ public class UCWarfare : MonoBehaviour
 
     private static Queue<MainThreadTask.MainThreadResult>? _threadActionRequests;
     private static Queue<LevelLoadTask.LevelLoadResult>? _levelLoadRequests;
-    internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests => _threadActionRequests ??= new Queue<MainThreadTask.MainThreadResult>(4);
-    internal static Queue<LevelLoadTask.LevelLoadResult> LevelLoadRequests => _levelLoadRequests ??= new Queue<LevelLoadTask.LevelLoadResult>(4);
+    internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests => !IsLoaded ? null! : _threadActionRequests ??= new Queue<MainThreadTask.MainThreadResult>(4);
+    internal static Queue<LevelLoadTask.LevelLoadResult> LevelLoadRequests => !IsLoaded ? null! : _levelLoadRequests ??= new Queue<LevelLoadTask.LevelLoadResult>(4);
     public static MainThreadTask ToUpdate(CancellationToken token = default) => IsMainThread ? MainThreadTask.CompletedNoSkip : new MainThreadTask(false, token);
     public static MainThreadTask SkipFrame(CancellationToken token = default) => IsMainThread ? MainThreadTask.CompletedSkip : new MainThreadTask(true, token);
     public static LevelLoadTask ToLevelLoad(CancellationToken token = default) => new LevelLoadTask(token);
@@ -760,6 +761,8 @@ public class UCWarfare : MonoBehaviour
                 try
                 {
                     res = _threadActionRequests.Dequeue();
+                    if (res == null)
+                        continue;
                     res.Task.Token.ThrowIfCancellationRequested();
                     res.Continuation();
                 }
@@ -783,6 +786,8 @@ public class UCWarfare : MonoBehaviour
                 try
                 {
                     res = _levelLoadRequests.Dequeue();
+                    if (res == null)
+                        continue;
                     res.Task.Token.ThrowIfCancellationRequested();
                     res.continuation();
                 }
@@ -1043,15 +1048,17 @@ public class UCWarfare : MonoBehaviour
     {
         if (Data.Colors == null) return Color.white;
         if (Data.Colors.TryGetValue(key, out Color color)) return color;
-        else if (Data.Colors.TryGetValue("default", out color)) return color;
-        else return Color.white;
+        if (JSONMethods.DefaultColors.TryGetValue(key, out string color2)) return color2.Hex();
+        if (Data.Colors.TryGetValue("default", out color)) return color;
+        return Color.white;
     }
     public static string GetColorHex(string key)
     {
-        if (Data.ColorsHex == null) return @"ffffff";
+        if (Data.ColorsHex == null) return "ffffff";
         if (Data.ColorsHex.TryGetValue(key, out string color)) return color;
-        else if (Data.ColorsHex.TryGetValue("default", out color)) return color;
-        else return @"ffffff";
+        if (JSONMethods.DefaultColors.TryGetValue(key, out color)) return color;
+        if (Data.ColorsHex.TryGetValue("default", out color)) return color;
+        return "ffffff";
     }
     public static void ShutdownIn(string reason, ulong instigator, int seconds)
     {
@@ -1133,11 +1140,13 @@ public class UCWarfare : MonoBehaviour
 
 public class UCWarfareNexus : IModuleNexus
 {
+    public static bool Active { get; private set; }
     public bool Loaded { get; private set; }
 
     void IModuleNexus.initialize()
     {
         CommandWindow.Log("Initializing UCWarfareNexus...");
+        Active = true;
         try
         {
             L.Init();
