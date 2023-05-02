@@ -451,6 +451,7 @@ public static partial class Patches
             return allow;
         }
 
+        private static readonly List<IShovelable> WorkingShovelable = new List<IShovelable>(3);
         // SDG.Unturned.UseableGun
         /// <summary>
         /// prefix of <see cref="UseableMelee.fire()"/> to determine hits with the Entrenching Tool.
@@ -468,21 +469,70 @@ public static partial class Patches
             RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), weaponAsset.range, RayMasks.BARRICADE, __instance.player);
             if (info.transform != null)
             {
-                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
-                if (drop != null)
+                UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);
+                if (builder == null || !Gamemode.Config.ItemEntrenchingTool.MatchGuid(__instance.equippedMeleeAsset.GUID)) return;
+                BarricadeDrop? barricade = BarricadeManager.FindBarricadeByRootTransform(info.transform);
+                if (barricade != null)
                 {
-                    UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);
-
-                    if (builder != null && builder.GetTeam() == drop.GetServersideData().group.GetTeam())
+                    if (builder.GetTeam() != barricade.GetServersideData().group.GetTeam())
+                        return;
+                    barricade.model.GetComponents(WorkingShovelable);
+                    try
                     {
-                        if (Gamemode.Config.ItemEntrenchingTool.MatchGuid(__instance.equippedMeleeAsset.GUID))
+                        for (int i = 0; i < WorkingShovelable.Count; ++i)
                         {
-                            if (drop.model.TryGetComponent(out RepairableComponent repairable))
-                                repairable.Repair(builder);
-                            else if (drop.model.TryGetComponent(out BuildableComponent buildable))
-                                buildable.IncrementBuildPoints(builder);
-                            else if (drop.model.TryGetComponent(out FOBComponent radio))
-                                radio.Parent.Repair(builder);
+                            if (WorkingShovelable[i].Shovel(builder))
+                                break;
+                        }
+                    }
+                    finally
+                    {
+                        WorkingShovelable.Clear();
+                    }
+                }
+                else
+                {
+                    StructureDrop? structure = StructureManager.FindStructureByRootTransform(info.transform);
+                    if (structure != null)
+                    {
+                        if (builder.GetTeam() != structure.GetServersideData().group.GetTeam())
+                            return;
+
+                        structure.model.GetComponents(WorkingShovelable);
+                        try
+                        {
+                            for (int i = 0; i < WorkingShovelable.Count; ++i)
+                            {
+                                if (WorkingShovelable[i].Shovel(builder))
+                                    break;
+                            }
+                        }
+                        finally
+                        {
+                            WorkingShovelable.Clear();
+                        }
+                    }
+                    else
+                    {
+                        InteractableVehicle? vehicle = DamageTool.getVehicle(info.transform);
+                        if (vehicle != null)
+                        {
+                            if (builder.GetTeam() != vehicle.lockedGroup.m_SteamID.GetTeam())
+                                return;
+
+                            vehicle.GetComponents(WorkingShovelable);
+                            try
+                            {
+                                for (int i = 0; i < WorkingShovelable.Count; ++i)
+                                {
+                                    if (WorkingShovelable[i].Shovel(builder))
+                                        break;
+                                }
+                            }
+                            finally
+                            {
+                                WorkingShovelable.Clear();
+                            }
                         }
                     }
                 }

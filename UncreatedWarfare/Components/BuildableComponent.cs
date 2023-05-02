@@ -59,9 +59,7 @@ public class BuildableComponent : MonoBehaviour
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         // TODO: check if this makes a difference towards fob bugs
-
-        //FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFobRadius.FULL, Foundation.GetServersideData().group.GetTeam());
-        FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFobRadius.FULL, builder.GetTeam());
+        
         if (fob == null && Buildable.Type != BuildableType.Radio && (builder.KitClass is not Class.CombatEngineer || Buildable.Type is not BuildableType.Fortification))
         {
             builder.SendChat(T.BuildTickNotInRadius);
@@ -118,7 +116,7 @@ public class BuildableComponent : MonoBehaviour
         string structureName;
         if (Buildable.Type != BuildableType.Emplacement)
         {
-            if (!Buildable.BuildableBarricade.ValidReference(out ItemBarricadeAsset asset))
+            if (!Buildable.Buildable.ValidReference(out ItemBarricadeAsset asset))
             {
                 L.LogError((Buildable.Foundation.ValidReference(out asset) ? asset.FriendlyName : "<unknown>") + " does not have a valid BuildableBarricade in FOB config.");
                 return;
@@ -134,7 +132,7 @@ public class BuildableComponent : MonoBehaviour
 
             if (Buildable.Type == BuildableType.Bunker)
             {
-                FOB? fob = FOB.GetNearestFOB(structure.model.position, EFobRadius.SHORT, data.group);
+                FOB? fob = FOB.GetNearestFOB(structure.model.position, FobRadius.Short, data.group);
                 if (fob != null)
                 {
                     transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.Spotted.FOB, data.group.GetTeam());
@@ -237,7 +235,7 @@ public class BuildableComponent : MonoBehaviour
         if (IsSalvaged)
         {
             L.LogDebug(Foundation.asset.itemName + " destroyed!");
-            FOB? fob = FOB.GetNearestFOB(Foundation.GetServersideData().point, EFobRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
+            FOB? fob = FOB.GetNearestFOB(Foundation.GetServersideData().point, FobRadius.FullBunkerDependant, Foundation.GetServersideData().group);
             if (fob is not null)
             {
                 fob.AddBuild(Buildable.RequiredBuild);
@@ -323,7 +321,7 @@ public class BuildableComponent : MonoBehaviour
             }
         }
 
-        FOB? nearbyFOB = FOB.GetNearestFOB(point, EFobRadius.FOB_PLACEMENT, team);
+        FOB? nearbyFOB = FOB.GetNearestFOB(point, FobRadius.FobPlacement, team);
         if (nearbyFOB != null)
         {
             L.LogDebug(" FOB too close.", ConsoleColor.Red);
@@ -345,7 +343,7 @@ public class BuildableComponent : MonoBehaviour
 #endif
         ulong team = placer.GetTeam();
 
-        FOB? fob = FOB.GetNearestFOB(point, EFobRadius.FULL, team);
+        FOB? fob = FOB.GetNearestFOB(point, FobRadius.Full, team);
 
         if (buildable.Type == BuildableType.Bunker)
         {
@@ -402,7 +400,7 @@ public class BuildableComponent : MonoBehaviour
             }
             else
             {
-                if (!buildable.Foundation.Value.Exists || !buildable.BuildableBarricade.Value.Exists)
+                if (!buildable.Foundation.Value.Exists || !buildable.Buildable.Value.Exists)
                 {
                     L.LogDebug(" invalid asset.", ConsoleColor.Red);
                     // invalid GUIDs
@@ -447,7 +445,7 @@ public class BuildableComponent : MonoBehaviour
             int existing = 0;
             if (buildable.Type != BuildableType.Emplacement)
             {
-                if (buildable.BuildableBarricade.ValidReference(out ItemBarricadeAsset asset))
+                if (buildable.Buildable.ValidReference(out ItemBarricadeAsset asset))
                     existing += UCBarricadeManager.CountNearbyBarricades(asset.GUID, fob.Radius, fob.Position, fob.Team);
             }
             else if (buildable.Emplacement != null && buildable.Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vehicle))
@@ -469,7 +467,7 @@ public class BuildableComponent : MonoBehaviour
             Vector3 pos = ownerOnly.Position;
             if (buildable.Type != BuildableType.Emplacement)
             {
-                if (buildable.BuildableBarricade.ValidReference(out ItemBarricadeAsset asset))
+                if (buildable.Buildable.ValidReference(out ItemBarricadeAsset asset))
                 {
                     existing = UCBarricadeManager.CountBarricadesWhere(fob.Radius, fob.Position,
                         x => x.GetServersideData().group.GetTeam() == fob.Team &&

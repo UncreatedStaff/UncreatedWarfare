@@ -98,6 +98,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public bool Every30Seconds => Ticks % Mathf.RoundToInt(30f / _eventLoopSpeed) == 0;
     public bool Every15Seconds => Ticks % Mathf.RoundToInt(15f / _eventLoopSpeed) == 0;
     public bool Every10Seconds => Ticks % Mathf.RoundToInt(10f / _eventLoopSpeed) == 0;
+    public bool EverySecond => Ticks % Mathf.RoundToInt(1f / _eventLoopSpeed) == 0;
     public string ReloadKey => GamemodeReloadKey;
     public virtual bool UseWhitelist => true;
     public abstract string DisplayName { get; }

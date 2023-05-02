@@ -906,7 +906,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                                 IsOwnerInVehicle(e.Vehicle, owner) ||
                                 (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) ||
                                 (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
-                                (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(e.Vehicle.transform.position, EFobRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
+                                (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(e.Vehicle.transform.position, FobRadius.FullBunkerDependant, e.Vehicle.lockedGroup.m_SteamID) != null);
 
                             if (!canEnterDriverSeat)
                             {

@@ -14,6 +14,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -649,14 +650,14 @@ public sealed class Points : BaseSingletonComponent, IUIListener
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer? creator = UCPlayer.FromID(fob.Creator);
+        UCPlayer? creator = UCPlayer.FromID(fob.Owner);
 
         if (creator != null)
         {
             AwardXP(creator, reward, multiplier);
         }
 
-        if (fob.Placer != fob.Creator)
+        if (fob.Placer != fob.Owner)
         {
             UCPlayer? placer = UCPlayer.FromID(fob.Placer);
             if (placer != null)

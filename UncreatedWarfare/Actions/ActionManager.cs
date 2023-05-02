@@ -113,7 +113,7 @@ public class ActionManager : BaseSingleton
         {
             ActionMenuUI.SquadSection.SetVisibility(player.Connection, true);
         }
-        FOB? fob = FOB.GetNearestFOB(player.Position, EFobRadius.FULL_WITH_BUNKER_CHECK, player.GetTeam());
+        FOB? fob = FOB.GetNearestFOB(player.Position, FobRadius.FullBunkerDependant, player.GetTeam());
         if (fob != null)
         {
             // TODO: fully test this later
@@ -486,7 +486,7 @@ public class ActionManager : BaseSingleton
         if (buildOrAmmo is null || !buildOrAmmo.Exists)
             return;
 
-        FOB? fob = FOB.GetNearestFOB(caller.Position, EFobRadius.FULL_WITH_BUNKER_CHECK, caller.GetTeam());
+        FOB? fob = FOB.GetNearestFOB(caller.Position, FobRadius.FullBunkerDependant, caller.GetTeam());
         InteractableVehicle? vehicle = caller.CurrentVehicle;
         if (vehicle == null)
             return;
@@ -531,7 +531,7 @@ public class ActionManager : BaseSingleton
         if (!supplyItem.ValidReference(out ItemAsset itemasset))
             return;
 
-        FOB? fob = FOB.GetNearestFOB(caller.Position, EFobRadius.FULL_WITH_BUNKER_CHECK, caller.GetTeam());
+        FOB? fob = FOB.GetNearestFOB(caller.Position, FobRadius.FullBunkerDependant, caller.GetTeam());
         InteractableVehicle? vehicle = caller.CurrentVehicle;
         if (vehicle != null && fob != null && vehicle.TryGetComponent(out VehicleComponent c) && c.IsLogistics)
         {

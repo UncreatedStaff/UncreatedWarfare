@@ -68,7 +68,7 @@ public class AmmoCommand : AsyncCommand
                         throw ctx.Reply(T.AmmoNotNearRepairStation);
                 }
 
-                FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, EFobRadius.FULL, vehicle.lockedGroup.m_SteamID);
+                FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, FobRadius.Full, vehicle.lockedGroup.m_SteamID);
 
                 if (fob == null && !isInMain)
                     throw ctx.Reply(T.AmmoNotNearFOB);

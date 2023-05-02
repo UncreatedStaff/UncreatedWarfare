@@ -9,13 +9,14 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Components;
 
-public class Cache : IFOB, IObjective, IDeployable
+public class Cache : IFOB, IObjective, IPlayerDisconnectListener
 {
     private CacheComponent? _component;
     private string _name;
@@ -76,11 +77,11 @@ public class Cache : IFOB, IObjective, IDeployable
     {
         if (format is not null)
         {
-            if (format.Equals(FOB.COLORED_NAME_FORMAT, StringComparison.Ordinal))
+            if (format.Equals(FOB.FormatNameColored, StringComparison.Ordinal))
                 return Localization.Colorize(UIColor, Name, flags);
-            else if (format.Equals(FOB.CLOSEST_LOCATION_FORMAT, StringComparison.Ordinal))
+            else if (format.Equals(FOB.FormatLocationName, StringComparison.Ordinal))
                 return ClosestLocation;
-            else if (format.Equals(FOB.GRID_LOCATION_FORMAT, StringComparison.Ordinal))
+            else if (format.Equals(FOB.FormatGridLocation, StringComparison.Ordinal))
                 return GridLocation.ToString();
         }
         return Name;
@@ -161,6 +162,14 @@ public class Cache : IFOB, IObjective, IDeployable
     public override string ToString()
     {
         return $"{Name} - T{Team} - Discovered: {IsDiscovered} - Destroyed: {IsDestroyed}";
+    }
+
+    void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
+    {
+        if (NearbyAttackers.Remove(player))
+            OnAttackerLeft(player);
+        if (NearbyDefenders.Remove(player))
+            OnDefenderLeft(player);
     }
     public void Destroy(bool authority)
     {

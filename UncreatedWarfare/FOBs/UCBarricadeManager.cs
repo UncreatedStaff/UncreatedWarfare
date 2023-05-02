@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -10,6 +11,30 @@ namespace Uncreated.Warfare;
 
 public static class UCBarricadeManager
 {
+    public static bool Destroy(this IBuildable buildable)
+    {
+        if (buildable.Model != null)
+        {
+            if (buildable.Type == StructType.Barricade)
+            {
+                if (BarricadeManager.tryGetRegion(buildable.Model, out byte x, out byte y, out ushort plant, out _) && buildable.Drop is BarricadeDrop d1)
+                {
+                    BarricadeManager.destroyBarricade(d1, x, y, plant);
+                    return true;
+                }
+            }
+            else if (buildable.Type == StructType.Structure)
+            {
+                if (StructureManager.tryGetRegion(buildable.Model, out byte x, out byte y, out _) && buildable.Drop is StructureDrop s1)
+                {
+                    StructureManager.destroyStructure(s1, x, y, Vector3.zero);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
     internal static readonly List<RegionCoordinate> RegionBuffer = new List<RegionCoordinate>(48);
     public static BarricadeDrop? GetSignFromInteractable(InteractableSign sign)
         => BarricadeManager.FindBarricadeByRootTransform(sign.transform);
@@ -1196,6 +1221,16 @@ public static class UCBarricadeManager
         ThreadUtil.assertIsGameThread();
         Data.SendDestroyItem.Invoke(SDG.NetTransport.ENetReliability.Reliable,
             Regions.GatherRemoteClientConnections(x, y, ItemManager.ITEM_REGIONS), x, y, instanceId, shouldPlayEffect);
+    }
+    public static void Destroy(this ItemData item)
+    {
+        if (Regions.tryGetCoordinate(item.point, out byte x, out byte y))
+        {
+            ItemRegion region = ItemManager.regions[x, y];
+            SendRemoveItem(x, y, item.instanceID, false);
+            region.items.Remove(item);
+            EventFunctions.OnItemRemoved(item);
+        }
     }
     public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius, List<RegionCoordinate> search)
     {

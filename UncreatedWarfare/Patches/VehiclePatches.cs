@@ -98,7 +98,7 @@ public static partial class Patches
                                     enterer == owner ||
                                     (owner.Squad != null && owner.Squad.Members.Contains(enterer)) ||
                                     (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2) ||
-                                    (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(__instance.transform.position, EFobRadius.FULL_WITH_BUNKER_CHECK, __instance.lockedGroup.m_SteamID) != null);
+                                    (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(__instance.transform.position, FobRadius.FullBunkerDependant, __instance.lockedGroup.m_SteamID) != null);
 
                                 if (!canEnterDriverSeat)
                                 {

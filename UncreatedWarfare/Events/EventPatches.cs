@@ -507,7 +507,7 @@ internal static class EventPatches
         }
         else destroyer = 0ul;
 
-        EventDispatcher.InvokeOnStructureDestroyed(structure, destroyer, ragdoll, wasPickedUp);
+        EventDispatcher.InvokeOnStructureDestroyed(structure, destroyer, ragdoll, wasPickedUp, x, y);
     }
     // SDG.Provider.accept
     /// <summary>

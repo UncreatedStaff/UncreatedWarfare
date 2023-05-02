@@ -339,21 +339,6 @@ public static class EventFunctions
                 player.SendChat(T.WhitelistProhibitedPlace, barricade.asset);
                 return;
             }
-
-            guid = barricade.asset.GUID;
-            if (Gamemode.Config.FOBRadios.Value.Any(r => r.MatchGuid(asset.GUID)))
-            {
-                shouldAllow = BuildableComponent.TryPlaceRadio(barricade, player, point);
-                return;
-            }
-
-            BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.Foundation.MatchGuid(guid));
-
-            if (buildable != null)
-            {
-                shouldAllow = BuildableComponent.TryPlaceBuildable(barricade, buildable, player, point);
-                return;
-            }
         }
         catch (Exception ex)
         {

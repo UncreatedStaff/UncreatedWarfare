@@ -28,3 +28,13 @@ public class BarricadeComponent : MonoBehaviour
     }
 
 }
+
+public interface ISalvageInfo
+{
+    bool IsSalvaged { set; }
+    ulong Salvager { set; }
+}
+public interface ISalvageListener : ISalvageInfo
+{
+    void OnSalvageRequested(ref bool allow);
+}

@@ -19,6 +19,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
@@ -639,8 +640,44 @@ public static class F
         player.player.sendBrowserRequest(message, url);
     }
     public static bool CanStandAtLocation(Vector3 source) => PlayerStance.hasStandingHeightClearanceAtPosition(source);
-    public static string GetClosestLocationName(Vector3 point)
+    /// <remarks>Write-locks <see cref="ZoneList"/> if <paramref name="zones"/> is <see langword="true"/>.</remarks>
+    public static string GetClosestLocationName(Vector3 point, bool zones = false, bool shortNames = false)
     {
+        if (zones)
+        {
+            ZoneList? list = Data.Singletons.GetSingleton<ZoneList>();
+            if (list != null)
+            {
+                list.WriteWait();
+                try
+                {
+                    string? val = null;
+                    float smallest = -1f;
+                    Vector2 point2d = new Vector2(point.x, point.z);
+                    for (int i = 0; i < list.Items.Count; ++i)
+                    {
+                        SqlItem<Zone> proxy = list.Items[i];
+                        Zone? z = proxy.Item;
+                        if (z != null)
+                        {
+                            float amt = (point2d - z.Center).sqrMagnitude;
+                            if (smallest < 0f || amt < smallest)
+                            {
+                                val = shortNames ? z.ShortName ?? z.Name : z.Name;
+                                smallest = amt;
+                            }
+                        }
+                    }
+
+                    if (val != null)
+                        return val;
+                }
+                finally
+                {
+                    list.Release();
+                }
+            }
+        }
         LocationDevkitNode? node = GetClosestLocation(point);
         return node == null ? new GridLocation(in point).ToString() : node.locationName;
     }
@@ -882,6 +919,10 @@ public static class F
     public static bool MatchGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, Guid match) where TAsset : Asset
     {
         return reference.ValidReference(out Guid guid) && guid == match;
+    }
+    public static bool MatchGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, TAsset match) where TAsset : Asset
+    {
+        return reference.ValidReference(out Guid guid) && guid == match.GUID;
     }
     public static bool MatchGuid<TAsset>(this JsonAssetReference<TAsset>? reference, Guid match) where TAsset : Asset
     {

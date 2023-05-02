@@ -10,52 +10,38 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
 
-internal class RepairableComponent : MonoBehaviour
+internal class RepairableComponent : MonoBehaviour, IShovelable
 {
     public BarricadeDrop Structure { get; private set; }
-
-    private Dictionary<ulong, float> PlayerHits;
+    public TickResponsibilityCollection Builders { get; } = new TickResponsibilityCollection();
 
     public void Awake()
     {
         Structure = BarricadeManager.FindBarricadeByRootTransform(transform);
-        PlayerHits = new Dictionary<ulong, float>();
     }
 
-    public void Repair(UCPlayer builder)
+    public bool Shovel(UCPlayer shoveler)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (Structure.GetServersideData().barricade.health >= Structure.asset.health)
-            return;
+            return false;
 
-        float amount = 30;
+        float amount = FOBManager.GetBuildIncrementMultiplier(shoveler);
 
-        if (builder.KitClass == Class.CombatEngineer)
-            amount *= 2;
+        BarricadeManager.repair(transform, amount, 1, shoveler.CSteamID);
+        FOBManager.TriggerBuildEffect(shoveler.Position);
 
-        BarricadeManager.repair(transform, amount, 1, builder.CSteamID);
-        if (Gamemode.Config.EffectDig.ValidReference(out EffectAsset effect))
-            F.TriggerEffectReliable(effect, EffectManager.MEDIUM, builder.Position);
-
-        if (PlayerHits.ContainsKey(builder.Steam64))
-            PlayerHits[builder.Steam64] += amount;
-        else
-            PlayerHits.Add(builder.Steam64, amount);
-
-        /*
-        if (Structure.GetServersideData().barricade.health >= Structure.asset.health)
-        {
-            // todo give XP?
-        }*/
+        Builders.Increment(shoveler.Steam64, amount);
+        return true;
     }
     public void Destroy(BarricadeDestroyed e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.BuildableBarricade.MatchGuid(Structure.asset.GUID) && b.Type != BuildableType.Emplacement);
+        BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.FullBuildable.MatchGuid(Structure.asset.GUID) && b.Type != BuildableType.Emplacement);
 
         if (buildable != null && buildable.Foundation.ValidReference(out ItemBarricadeAsset asset))
         {

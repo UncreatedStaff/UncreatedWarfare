@@ -186,7 +186,7 @@ public class VehicleComponent : MonoBehaviour
         if (e.Player.KitClass == Class.Squadleader &&
             (Data?.Item != null && VehicleData.IsLogistics(Data.Item.Type)) &&
             !F.IsInMain(e.Player.Position) &&
-            FOB.GetNearestFOB(e.Player.Position, EFobRadius.FULL_WITH_BUNKER_CHECK, e.Player.GetTeam()) == null
+            FOB.GetNearestFOB(e.Player.Position, FobRadius.FullBunkerDependant, e.Player.GetTeam()) == null
             )
         {
             Tips.TryGiveTip(e.Player, 300, T.TipPlaceRadio);

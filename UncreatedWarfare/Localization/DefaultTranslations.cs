@@ -920,11 +920,11 @@ internal static class T
     public static readonly Translation<float> BuildFOBTooHigh  = new Translation<float>("<#ffab87>You can't build a FOB more than {0}m above the ground.", "F0");
     public static readonly Translation BuildFOBTooCloseToMain  = new Translation("<#ffab87>You can't build a FOB this close to main base.");
     public static readonly Translation BuildNoLogisticsVehicle = new Translation("<#ffab87>You must be near a friendly <#cedcde>LOGISTICS VEHICLE</color> to place a FOB radio.");
-    public static readonly Translation<FOB, float, float> BuildFOBTooClose = new Translation<FOB, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", FOB.COLORED_NAME_FORMAT, "F0", "F0");
+    public static readonly Translation<FOB, float, float> BuildFOBTooClose = new Translation<FOB, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", FOB.FormatNameColored, "F0", "F0");
     public static readonly Translation<float, float> BuildBunkerTooClose = new Translation<float, float>("<#ffa238>You are too close to an existing FOB Bunker ({0}m away). You must be at least {1}m away to place a new radio.", "F0", "F0");
     public static readonly Translation BuildInvalidAsset = new Translation("<#ffa238>This buildable has invalid barricade assets (contact devs).");
     public static readonly Translation BuildableNotAllowed = new Translation("<#ffa238>You are not allowed to place this buildable.");
-    public static readonly Translation<IDeployable, GridLocation, string> FOBUI    = new Translation<IDeployable, GridLocation, string>("{0}  <#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable, GridLocation, string> FOBUI    = new Translation<IDeployable, GridLocation, string>("{0}  <#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.FormatNameColored);
     public static readonly Translation CacheDestroyedAttack    = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationFlags.UnityUI);
     public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.UnityUI);
     public static readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <#e3c59a>{0}</color>", TranslationFlags.UnityUI, FormatUppercase);
@@ -933,16 +933,16 @@ internal static class T
     #endregion
 
     #region Deploy
-    public static readonly Translation<IDeployable> DeploySuccess           = new Translation<IDeployable>("<#fae69c>You have arrived at {0}.", FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<IDeployable, int> DeployStandby      = new Translation<IDeployable, int>("<#fae69c>Now deploying to {0}. You will arrive in <#eee>{1} seconds</color>", FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<IDeployable> DeployNotSpawnableTick  = new Translation<IDeployable>("<#ffa238>{0} is no longer active.", FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<IDeployable> DeployNotSpawnable      = new Translation<IDeployable>("<#ffa238>{0} is not active.", FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<IDeployable> DeployDestroyed         = new Translation<IDeployable>("<#ffa238>{0} was destroyed.", FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<IDeployable> DeployNoBunker          = new Translation<IDeployable>("<#ffaa42>{0} doesn't have a <#cedcde>FOB BUNKER</color>. Your team must build one to use the <#cedcde>FOB</color> as a spawnpoint.", FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<IDeployable> DeployRadioDamaged      = new Translation<IDeployable>("<#ffaa42>The <#cedcde>FOB RADIO</color> at {0} is damaged. Repair it with an <#cedcde>ENTRENCHING TOOL</color>.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeploySuccess           = new Translation<IDeployable>("<#fae69c>You have arrived at {0}.", FOB.FormatNameColored);
+    public static readonly Translation<IDeployable, int> DeployStandby      = new Translation<IDeployable, int>("<#fae69c>Now deploying to {0}. You will arrive in <#eee>{1} seconds</color>", FOB.FormatNameColored);
+    public static readonly Translation<IDeployable> DeployNotSpawnableTick  = new Translation<IDeployable>("<#ffa238>{0} is no longer active.", FOB.FormatNameColored);
+    public static readonly Translation<IDeployable> DeployNotSpawnable      = new Translation<IDeployable>("<#ffa238>{0} is not active.", FOB.FormatNameColored);
+    public static readonly Translation<IDeployable> DeployDestroyed         = new Translation<IDeployable>("<#ffa238>{0} was destroyed.", FOB.FormatNameColored);
+    public static readonly Translation<IDeployable> DeployNoBunker          = new Translation<IDeployable>("<#ffaa42>{0} doesn't have a <#cedcde>FOB BUNKER</color>. Your team must build one to use the <#cedcde>FOB</color> as a spawnpoint.", FOB.FormatNameColored);
+    public static readonly Translation<IDeployable> DeployRadioDamaged      = new Translation<IDeployable>("<#ffaa42>The <#cedcde>FOB RADIO</color> at {0} is damaged. Repair it with an <#cedcde>ENTRENCHING TOOL</color>.", FOB.FormatNameColored);
     public static readonly Translation DeployMoved                          = new Translation("<#ffa238>You moved and can no longer deploy.");
     public static readonly Translation DeployDamaged                        = new Translation("<#ffa238>You were damaged and can no longer deploy.");
-    public static readonly Translation<IDeployable> DeployEnemiesNearbyTick = new Translation<IDeployable>("<#ffa238>You no longer deploy to {0} - there are enemies nearby.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployEnemiesNearbyTick = new Translation<IDeployable>("<#ffa238>You no longer deploy to {0} - there are enemies nearby.", FOB.FormatNameColored);
     public static readonly Translation<IDeployable> DeployEnemiesNearby     = new Translation<IDeployable>("<#ffaa42>You cannot deploy to {0} - there are enemies nearby.");
     public static readonly Translation DeployCancelled                      = new Translation("<#fae69c>Active deployment cancelled.");
     public static readonly Translation<string> DeployableNotFound           = new Translation<string>("<#ffa238>There is no location by the name of <#e3c27f>{0}</color>.", FormatUppercase);
@@ -1249,8 +1249,8 @@ internal static class T
 
     #region Vehicle Request Delays
     public static readonly Translation<string> RequestVehicleTimeDelay = new Translation<string>("<#b3ab9f>This vehicle is delayed for another: <#c$vbs_delay$>{0}</color>.");
-    public static readonly Translation<Cache> RequestVehicleCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this vehicle.", FOB.NAME_FORMAT);
-    public static readonly Translation<Cache> RequestVehicleCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this vehicle until you lose <color=#c$vbs_delay$>{0}</color>.", FOB.NAME_FORMAT);
+    public static readonly Translation<Cache> RequestVehicleCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this vehicle.", FOB.FormatName);
+    public static readonly Translation<Cache> RequestVehicleCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this vehicle until you lose <color=#c$vbs_delay$>{0}</color>.", FOB.FormatName);
     public static readonly Translation RequestVehicleCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#c$vbs_delay$>Discover and Destroy</color> the next cache to request this vehicle.");
     public static readonly Translation RequestVehicleCacheDelayDefUndiscovered1 = new Translation("<#b3ab9f>You can't request this vehicle until you've <color=#c$vbs_delay$>uncovered and lost</color> your next cache.");
     public static readonly Translation<int> RequestVehicleCacheDelayMultipleAtk = new Translation<int>("<#b3ab9f>Destroy <#c$vbs_delay$>{0} more caches</color> to request this vehicle.");
@@ -1265,8 +1265,8 @@ internal static class T
 
     #region Trait Request Delays
     public static readonly Translation<string> RequestTraitTimeDelay = new Translation<string>("<#b3ab9f>This trait is delayed for another: <#c$vbs_delay$>{0}</color>.");
-    public static readonly Translation<Cache> RequestTraitCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this trait.", FOB.NAME_FORMAT);
-    public static readonly Translation<Cache> RequestTraitCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this trait until you lose <color=#c$vbs_delay$>{0}</color>.", FOB.NAME_FORMAT);
+    public static readonly Translation<Cache> RequestTraitCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this trait.", FOB.FormatName);
+    public static readonly Translation<Cache> RequestTraitCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this trait until you lose <color=#c$vbs_delay$>{0}</color>.", FOB.FormatName);
     public static readonly Translation RequestTraitCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#c$vbs_delay$>Discover and Destroy</color> the next cache to request this trait.");
     public static readonly Translation RequestTraitCacheDelayDefUndiscovered1 = new Translation("<#b3ab9f>You can't request this trait until you've <color=#c$vbs_delay$>uncovered and lost</color> your next cache.");
     public static readonly Translation<int> RequestTraitCacheDelayMultipleAtk = new Translation<int>("<#b3ab9f>Destroy <#c$vbs_delay$>{0} more caches</color> to request this trait.");
@@ -1531,10 +1531,10 @@ internal static class T
     public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#c$vbs_delay$>Lose {0}</color>", TranslationFlags.NoColorOptimization | TranslationFlags.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
     public static readonly Translation<int> VBSDelayLoseFlagMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more flags.</color>", TranslationFlags.NoColorOptimization);
     public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#c$vbs_delay$>Capture {0} more flags.</color>", TranslationFlags.NoColorOptimization);
-    public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#c$vbs_delay$>Destroy {0}</color>", TranslationFlags.NoColorOptimization, FOB.CLOSEST_LOCATION_FORMAT);
+    public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#c$vbs_delay$>Destroy {0}</color>", TranslationFlags.NoColorOptimization, FOB.FormatLocationName);
     public static readonly Translation VBSDelayAttackCacheUnknown = new Translation("<#c$vbs_delay$>Destroy Next Cache</color>", TranslationFlags.NoColorOptimization);
     public static readonly Translation<int> VBSDelayAttackCacheMultiple = new Translation<int>("<#c$vbs_delay$>Destroy {0} more caches.</color>", TranslationFlags.NoColorOptimization);
-    public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#c$vbs_delay$>Lose {0}</color>", TranslationFlags.NoColorOptimization, FOB.CLOSEST_LOCATION_FORMAT);
+    public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#c$vbs_delay$>Lose {0}</color>", TranslationFlags.NoColorOptimization, FOB.FormatLocationName);
     public static readonly Translation VBSDelayDefendCacheUnknown = new Translation("<#c$vbs_delay$>Lose Next Cache</color>", TranslationFlags.NoColorOptimization);
     public static readonly Translation<int> VBSDelayDefendCacheMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more caches.</color>", TranslationFlags.NoColorOptimization);
     #endregion
@@ -1628,9 +1628,9 @@ internal static class T
     public static readonly Translation InsurgencyUnknownCacheDefense = new Translation("<color=#696969>Unknown</color>", TranslationFlags.UnityUI);
     public static readonly Translation InsurgencyDestroyedCacheAttack = new Translation("<color=#5a6e5c>Destroyed</color>", TranslationFlags.UnityUI);
     public static readonly Translation InsurgencyDestroyedCacheDefense = new Translation("<color=#6b5858>Lost</color>", TranslationFlags.UnityUI);
-    public static readonly Translation<Cache, Cache> InsurgencyCacheAttack = new Translation<Cache, Cache>("<color=#ff7661>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.NAME_FORMAT, FOB.CLOSEST_LOCATION_FORMAT);
-    public static readonly Translation<Cache, Cache> InsurgencyCacheDefense = new Translation<Cache, Cache>("<color=#555bcf>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.NAME_FORMAT, FOB.CLOSEST_LOCATION_FORMAT);
-    public static readonly Translation<Cache, Cache> InsurgencyCacheDefenseUndiscovered = new Translation<Cache, Cache>("<color=#b780d9>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.NAME_FORMAT, FOB.CLOSEST_LOCATION_FORMAT);
+    public static readonly Translation<Cache, Cache> InsurgencyCacheAttack = new Translation<Cache, Cache>("<color=#ff7661>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.FormatName, FOB.FormatLocationName);
+    public static readonly Translation<Cache, Cache> InsurgencyCacheDefense = new Translation<Cache, Cache>("<color=#555bcf>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.FormatName, FOB.FormatLocationName);
+    public static readonly Translation<Cache, Cache> InsurgencyCacheDefenseUndiscovered = new Translation<Cache, Cache>("<color=#b780d9>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.FormatName, FOB.FormatLocationName);
     #endregion
 
     #region Hardpoint
