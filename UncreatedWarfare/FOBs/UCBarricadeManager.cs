@@ -28,7 +28,8 @@ public static class UCBarricadeManager
             {
                 if (buildable.Type == StructType.Barricade)
                 {
-                    if (BarricadeManager.tryGetRegion(buildable.Model, out byte x, out byte y, out ushort plant, out _) && buildable.Drop is BarricadeDrop d1)
+                    if (buildable.Drop is BarricadeDrop d1 && !d1.GetServersideData().barricade.isDead
+                                                           && BarricadeManager.tryGetRegion(buildable.Model, out byte x, out byte y, out ushort plant, out _))
                     {
                         BarricadeManager.destroyBarricade(d1, x, y, plant);
                         return true;
@@ -36,7 +37,8 @@ public static class UCBarricadeManager
                 }
                 else if (buildable.Type == StructType.Structure)
                 {
-                    if (StructureManager.tryGetRegion(buildable.Model, out byte x, out byte y, out _) && buildable.Drop is StructureDrop s1)
+                    if (buildable.Drop is StructureDrop s1 && !s1.GetServersideData().structure.isDead
+                                                           && StructureManager.tryGetRegion(buildable.Model, out byte x, out byte y, out _))
                     {
                         StructureManager.destroyStructure(s1, x, y, Vector3.zero);
                         return true;

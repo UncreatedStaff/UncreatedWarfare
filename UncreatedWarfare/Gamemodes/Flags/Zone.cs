@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.FOBs;
@@ -163,7 +162,7 @@ public abstract class Zone : IDeployable, IListItem
         return new Vector2((x - GridLocation.ImageSize.X / 2f) * GridLocation.DistanceScale.x, -z * GridLocation.DistanceScale.y);
     }
 
-    Vector3 IDeployable.Position => Spawn3D + new Vector3(0, 1.5f, 0);
+    Vector3 IDeployable.SpawnPosition => Spawn3D + new Vector3(0, 1.5f, 0);
     
     /// <summary>
     /// Zones must set <see cref="SucessfullyParsed"/> to <see langword="true"/>.

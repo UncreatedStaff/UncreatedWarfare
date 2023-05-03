@@ -23,6 +23,7 @@ public class SpecialFOB : IFOB, IGameTickListener
     public bool IsActive;
     public bool DisappearAroundEnemies;
     public string Name => _name;
+    public Vector3 SpawnPosition => _pos;
     public Vector3 Position => _pos;
     float IDeployable.Yaw => 0f;
     public string ClosestLocation => _cl;
@@ -56,7 +57,7 @@ public class SpecialFOB : IFOB, IGameTickListener
     {
         if (DisappearAroundEnemies && Data.Gamemode.EveryXSeconds(5f) && Data.Is(out IFOBs fobs))
         {
-            Vector3 pos = Position;
+            Vector3 pos = SpawnPosition;
             for (int i = 0; i < Provider.clients.Count; ++i)
             {
                 SteamPlayer pl = Provider.clients[i];

@@ -109,7 +109,7 @@ public static class Deployment
     }
     public static void ForceDeploy(UCPlayer player, IDeployable location, bool chat, bool startCooldown = true)
     {
-        player.Player.teleportToLocationUnsafe(location.Position, location.Yaw);
+        player.Player.teleportToLocationUnsafe(location.SpawnPosition, location.Yaw);
         location.OnDeploy(player, chat);
         if (startCooldown)
             CooldownManager.StartCooldown(player, CooldownType.Deploy, RapidDeployment.GetDeployTime(player));
@@ -118,7 +118,7 @@ public static class Deployment
 
 public interface IDeployable : ITranslationArgument
 {
-    Vector3 Position { get; }
+    Vector3 SpawnPosition { get; }
     float Yaw { get; }
     float GetDelay();
     bool CheckDeployable(UCPlayer player, CommandInteraction? ctx);

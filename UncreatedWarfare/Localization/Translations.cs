@@ -786,6 +786,8 @@ public class Translation
 
             if (str.Equals("child", StringComparison.OrdinalIgnoreCase))
                 return word + "ren";
+            if (str.Equals("bunker", StringComparison.OrdinalIgnoreCase))
+                return word + "s";
             if (str.Equals("goose", StringComparison.OrdinalIgnoreCase))
                 return otherWords + (isPCaps ? "Geese" : "geese");
             if (str.Equals("wall", StringComparison.OrdinalIgnoreCase))

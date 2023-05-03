@@ -46,6 +46,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     UCPlayer? IFOB.Instigator { get; set; }
     public GridLocation GridLocation { get; private set; }
     public RadioComponent Radio { get; internal set; }
+    public Vector3 Position => transform.position;
     public BunkerComponent? Bunker
     {
         get => _bunker;
@@ -54,7 +55,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             if (ReferenceEquals(_bunker, value))
                 return;
             _bunker = value;
-            Radius = value == null
+            Radius = value == null || value.State != ShovelableComponent.BuildableState.Full
                 ? FOBManager.Config.FOBBuildPickupRadiusNoBunker
                 : FOBManager.Config.FOBBuildPickupRadius;
             FOBManager.UpdateFOBListForTeam(Team, this);
@@ -62,12 +63,12 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         }
     }
 
-    Vector3 IDeployable.Position => Bunker == null ? Vector3.zero : Bunker.SpawnPosition;
+    Vector3 IDeployable.SpawnPosition => Bunker == null ? Vector3.zero : Bunker.SpawnPosition;
     float IDeployable.Yaw => Bunker == null ? 0f : Bunker.SpawnYaw;
     public ulong Team => Radio.Team;
     public float Radius { get; private set; }
 
-    public bool Bleeding => Radio.State == RadioComponent.RadioState.Bleeding;
+    public bool Bleeding => Radio != null && Radio.State == RadioComponent.RadioState.Bleeding;
     public float ProxyScore { get; private set; }
     public bool IsProxied => ProxyScore >= 1f;
     public ulong Owner => Radio.Owner;
@@ -83,8 +84,13 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     {
         if (buildable.Type == BuildableType.Bunker && Bunker != null)
         {
-            player.SendChat(T.BuildTickStructureExists, buildable);
-            return false;
+            if (!Bunker.Equals(ignoreFoundation))
+            {
+                player.SendChat(T.BuildTickStructureExists, buildable);
+                return false;
+            }
+            
+            return true;
         }
 
         int limit = buildable.Limit;
@@ -191,17 +197,26 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     {
         if (Team is not 1 and not 2)
             return;
+        L.LogDebug($"[FOBS] [{Name}] Restocking.");
         byte[] state = Team == 1 ? FOBManager.Config.T1RadioState : FOBManager.Config.T2RadioState;
         Radio.Barricade.GetServersideData().barricade.state = state;
         Radio.Barricade.ReceiveUpdateState(state);
+        Radio.NeedsRestock = false;
+        Radio.LastRestock = Time.realtimeSinceStartup;
         Vector3 pos = transform.position;
         if (Gamemode.Config.EffectUnloadBuild.ValidReference(out EffectAsset asset))
             F.TriggerEffectReliable(asset, 40, pos);
         // refresh inventory
-        for (int i = 0; i < _friendlies.Count; ++i)
+        if (Radio.Barricade.interactable is InteractableStorage storage)
         {
-            if (_friendlies[i].Player.inventory.storage == Radio.Barricade.interactable)
-                _friendlies[i].Player.inventory.sendStorage();
+            for (int i = 0; i < _friendlies.Count; ++i)
+            {
+                if (_friendlies[i].Player.inventory.storage == storage)
+                {
+                    _friendlies[i].Player.inventory.closeStorage();
+                    _friendlies[i].Player.inventory.openStorage(storage);
+                }
+            }
         }
     }
     public string GetUIColor()
@@ -209,7 +224,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         string key;
         if (Bleeding)
             key = "bleeding_fob_color";
-        else if (Bunker == null)
+        else if (Bunker == null || Bunker.State != ShovelableComponent.BuildableState.Full)
             key = "no_bunker_fob_color";
         else if (IsProxied)
             key = "enemy_nearby_fob_color";
@@ -234,13 +249,24 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public void RegisterItem(IFOBItem item)
     {
         item.FOB = this;
+        if (item is BunkerComponent b)
+        {
+            Bunker = b;
+            FOBManager.UpdateFOBListForTeam(Team, this);
+            L.LogDebug($"[FOBS] [{Name}] Registered bunker: {item.Buildable}.");
+            return;
+        }
         _items.Add(item);
         L.LogDebug($"[FOBS] [{Name}] Registered item: {item.Buildable}.");
     }
     public void UpdateRadioState(RadioComponent.RadioState state)
     {
         ThreadUtil.assertIsGameThread();
-
+        if (Radio == null)
+        {
+            Destroy();
+            return;
+        }
         switch (state)
         {
             case RadioComponent.RadioState.Destroyed:
@@ -329,6 +355,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public void Destroy()
     {
         ThreadUtil.assertIsGameThread();
+        if (_isBeingDestroyed)
+            return;
         _isBeingDestroyed = true;
         try
         {
@@ -421,7 +449,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             
             int buildRemoved = 0;
             int ammoRemoved = 0;
-
+            Vector3 pos = nearestLogi.transform.position;
             foreach (ItemJar item in nearestLogi.trunkItems.EnumerateInOrder())
             {
                 bool shouldRemove = false;
@@ -437,8 +465,9 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 }
                 if (shouldRemove)
                 {
-                    ItemManager.dropItem(item.item, nearestLogi.transform.position, false, true, true);
+                    ItemManager.dropItem(item.item, pos, false, true, true);
                     nearestLogi.trunkItems.removeItem(nearestLogi.trunkItems.getIndex(item.x, item.y));
+                    EventFunctions.SimulateRegisterLastDroppedItem(pos, delivererId);
                 }
             }
 
@@ -492,7 +521,9 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                         }
 
                         if (!f)
+                        {
                             SupplyBuffer.Add(new KeyValuePair<ItemData, float>(item, d));
+                        }
                     }
                 }
             }
@@ -503,9 +534,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             for (int i = 0; i < SupplyBuffer.Count; ++i)
             {
                 ItemData item = SupplyBuffer[i].Key;
-                if (!EventFunctions.DroppedItemsOwners.TryGetValue(item.instanceID, out ulong playerID))
-                    continue;
-
+                EventFunctions.DroppedItemsOwners.TryGetValue(item.instanceID, out ulong playerID);
                 UCPlayer? player = UCPlayer.FromID(playerID);
                 if (player != null)
                 {
@@ -533,7 +562,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
                 if (item.item.id == _buildItemId)
                     ++buildCount;
-                else if (item.item.id == _ammoItemId)
+                else
                     ++ammoCount;
                 counter++;
                 if (counter >= 3)
@@ -552,9 +581,11 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     if (index == 0)
                         pt = d.point;
                     if (d.item.id == _buildItemId)
+                    {
                         d.Destroy();
+                        --buildCount;
+                    }
                     ++index;
-                    --buildCount;
                 }
                 if (Gamemode.Config.EffectUnloadBuild.ValidReference(out EffectAsset effect))
                     F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pt);
@@ -571,9 +602,11 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     if (index == 0)
                         pt = d.point;
                     if (d.item.id == _ammoItemId)
+                    {
                         d.Destroy();
+                        --ammoCount;
+                    }
                     ++index;
-                    --ammoCount;
                 }
                 if (Gamemode.Config.EffectUnloadAmmo.ValidReference(out EffectAsset effect))
                     F.TriggerEffectReliable(effect, EffectManager.MEDIUM, pt);
@@ -693,6 +726,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         {
             Bunker = newObj.gameObject.AddComponent<BunkerComponent>();
             Bunker.FOB = this;
+            FOBManager.UpdateFOBListForTeam(Team, this);
             Destroy(b);
             return Bunker;
         }
@@ -817,20 +851,15 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             if (!Bleeding)
                 TryConsumeResources();
 
-            if (Data.Gamemode.EveryXSeconds(2f))
+            if (Data.Gamemode.EveryXSeconds(2f) && Radio != null)
             {
                 if (Bleeding)
                 {
                     const ushort loss = 10;
-                    L.LogDebug($"[FOBS] [{Name}] Bleeding -{loss}.");
-                    BarricadeManager.damage(transform, loss, 1, false, default, EDamageOrigin.Useable_Melee);
+                    BarricadeManager.damage(Radio.Barricade.model, loss, 1, false, default, EDamageOrigin.Useable_Melee);
                 }
-
-                if (Data.Gamemode.EveryMinute)
-                {
-                    if (!Bleeding)
-                        Restock();
-                }
+                else if (Radio.NeedsRestock && Time.realtimeSinceStartup - Radio.LastRestock > 60f)
+                    Restock();
             }
         }
 
@@ -944,6 +973,7 @@ public interface IFOB : IDeployable
     string ClosestLocation { get; }
     UCPlayer? Instigator { get; set; }
     GridLocation GridLocation { get; }
+    Vector3 Position { get; }
     bool ContainsBuildable(IBuildable buildable);
     bool ContainsVehicle(InteractableVehicle vehicle);
     void Dump(UCPlayer? target);

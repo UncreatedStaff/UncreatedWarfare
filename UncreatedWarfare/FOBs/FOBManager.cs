@@ -43,7 +43,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     private List<IFOBItem> _floatingItems;
     private List<IFOB> _fobs;
     private static FOBManager _singleton;
-    private static readonly FOBConfig ConfigFile = new FOBConfig();
+    private static readonly FOBConfig ConfigFile = new FOBConfig(); 
     public static readonly FOBListUI ListUI = new FOBListUI();
     public static readonly NearbyResourceUI ResourceUI = new NearbyResourceUI();
 
@@ -112,6 +112,33 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         _fobs.Clear();
         _singleton = null!;
+    }
+    private void AddFOB(IFOB fob)
+    {
+        for (int i = 0; i < _fobs.Count; ++i)
+        {
+            if (FOBSort(_fobs[i], fob) == -1)
+            {
+                _fobs.Insert(i, fob);
+                return;
+            }
+        }
+
+        _fobs.Add(fob);
+    }
+    private static int FOBSort(IFOB a, IFOB b)
+    {
+        if (a is not FOB f)
+        {
+            if (b is not FOB)
+                return string.Compare(a.Name, b.Name, StringComparison.Ordinal);
+            
+            return 1;
+        }
+        
+        if (b is not FOB f2)
+            return -1;
+        return f.Number.CompareTo(f2.Number);
     }
     public void LoadRepairStations()
     {
@@ -390,7 +417,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         fob.Radio = radio.model.gameObject.AddComponent<RadioComponent>();
         fob.Name = GetOpenStandardFOBName(team);
 
-        _fobs.Add(fob);
+        AddFOB(fob);
         return fob;
     }
     private void OnRequestedBarricadePlace(PlaceBarricadeRequested e)
@@ -637,7 +664,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         _singleton.AssertLoaded();
         for (int i = 0; i < _singleton._fobs.Count; ++i)
         {
-            if ((_singleton._fobs[i].Position - point).sqrMagnitude <= InsideFOBRangeSqr)
+            if ((_singleton._fobs[i].SpawnPosition - point).sqrMagnitude <= InsideFOBRangeSqr)
             {
                 fob = _singleton._fobs[i];
                 return true;
@@ -668,11 +695,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     {
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
-        SpecialFOB f = new SpecialFOB(name, point, team, color, disappearAroundEnemies);
-        _singleton._fobs.Insert(0, f);
+        SpecialFOB fob = new SpecialFOB(name, point, team, color, disappearAroundEnemies);
+        _singleton.AddFOB(fob);
 
         SendFOBListToTeam(team);
-        return f;
+        return fob;
     }
     public static Cache RegisterNewCache(BarricadeDrop drop)
     {
@@ -694,7 +721,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             cache.Number = number;
             cache.Name = "CACHE" + number;
 
-            _singleton._fobs.Add(cache);
+            _singleton.AddFOB(cache);
 
             SendFOBListToTeam(cache.Team);
 
@@ -815,6 +842,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         ThreadUtil.assertIsGameThread();
         if (_singleton is { IsUnloading: false })
             _singleton.AssertLoaded();
+        if (Data.Gamemode is not { State: State.Active or State.Staging })
+            return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -864,6 +893,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     public static void SendFOBListToTeam(ulong team)
     {
         ThreadUtil.assertIsGameThread();
+        if (Data.Gamemode is not { State: State.Active or State.Staging })
+            return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif

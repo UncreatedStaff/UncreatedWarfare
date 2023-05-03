@@ -48,6 +48,23 @@ public static class EventFunctions
     internal static Dictionary<Item, PlayerInventory> ItemsTempBuffer = new Dictionary<Item, PlayerInventory>(256);
     internal static Dictionary<ulong, List<uint>> DroppedItems = new Dictionary<ulong, List<uint>>(96);
     internal static Dictionary<uint, ulong> DroppedItemsOwners = new Dictionary<uint, ulong>(256);
+    internal static void SimulateRegisterLastDroppedItem(Vector3 point, ulong steam64)
+    {
+        if (steam64 == 0 || ItemManager.regions == null) return;
+        if (Regions.tryGetCoordinate(point, out byte x, out byte y))
+        {
+            ItemData newItem = ItemManager.regions[x, y].items.GetTail();
+            if (DroppedItems.TryGetValue(steam64, out List<uint> items))
+                items.Add(newItem.instanceID);
+            else
+                DroppedItems.Add(steam64, new List<uint> { newItem.instanceID });
+
+            if (!DroppedItemsOwners.ContainsKey(newItem.instanceID))
+                DroppedItemsOwners.Add(newItem.instanceID, steam64);
+            else
+                DroppedItemsOwners[newItem.instanceID] = steam64;
+        }
+    }
     internal static void OnItemRemoved(ItemData item)
     {
         ItemsTempBuffer.Remove(item.item);

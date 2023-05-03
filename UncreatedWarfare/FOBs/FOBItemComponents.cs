@@ -33,6 +33,8 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
     public bool Destroyed => _destroyed;
     public TickResponsibilityCollection Builders { get; } = new TickResponsibilityCollection();
     public Vector3 Position => transform.position;
+    public bool NeedsRestock { get; internal set; }
+    public float LastRestock { get; internal set; }
 
     [UsedImplicitly]
     private void Awake()
@@ -79,13 +81,22 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
         }
 
         if (Barricade.interactable is InteractableStorage storage)
+        {
             storage.despawnWhenDestroyed = true;
+            storage.items.onStateUpdated += InvalidateRestock;
+        }
 
         L.LogDebug("[FOBS] Radio Initialized: " + Barricade.asset.itemName + ". (State: " + State + ").");
         return;
         destroy:
         State = RadioState.Destroyed;
         Destroy(this);
+    }
+
+    private void InvalidateRestock()
+    {
+        LastRestock = Time.realtimeSinceStartup - 45f;
+        NeedsRestock = true;
     }
     void ISalvageListener.OnSalvageRequested(SalvageRequested e)
     {
@@ -105,7 +116,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
     [UsedImplicitly]
     private void OnDestroy()
     {
-        if (!_destroyed && Barricade != null && Barricade.model != null &&
+        if (!_destroyed && Barricade != null && Barricade.model != null && !Barricade.GetServersideData().barricade.isDead &&
             BarricadeManager.tryGetRegion(Barricade.model, out byte x, out byte y, out ushort plant, out _))
         {
             BarricadeManager.destroyBarricade(Barricade, x, y, plant);
@@ -120,6 +131,8 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
 
     void IManualOnDestroy.ManualOnDestroy()
     {
+        if (Barricade is { interactable: InteractableStorage { items: { } } storage })
+            storage.items.onStateUpdated -= InvalidateRestock;
         _destroyed = true;
         Destroy(this);
     }
@@ -274,7 +287,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         {
             Total = Buildable.RequiredHits;
             State = BuildableState.Foundation;
-            if (Gamemode.Config.EffectMarkerBuildable.ValidReference(out Guid guid) && Buildable.RequiredHits < 15)
+            if (Buildable.RequiredHits > 15 && Gamemode.Config.EffectMarkerBuildable.ValidReference(out Guid guid))
                 IconManager.AttachIcon(guid, transform, Team, 2f);
         }
         else
@@ -354,7 +367,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     }
     void ISalvageListener.OnSalvageRequested(SalvageRequested e)
     {
-        if (State != BuildableState.Foundation || _buildRemoved > 0 || !e.Player.OnDuty())
+        if ((State != BuildableState.Foundation || _buildRemoved > 0) && !e.Player.OnDuty())
         {
             L.Log($"[FOBS] [{FOB?.Name ?? "FLOATING"}] {e.Player} tried to salvage {Buildable}.");
             e.Break();
@@ -402,14 +415,38 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             
             Builders.Increment(shoveler.Steam64, amount);
 
-            int build = Mathf.FloorToInt(Buildable.RequiredHits / Buildable.RequiredBuild * amount);
-            _buildRemoved += build;
-            FOB?.ModifyBuild(-build);
+            int build = Mathf.FloorToInt(Buildable.RequiredBuild / Buildable.RequiredHits * amount);
+
+            if (FOB != null)
+            {
+                if (FOB.BuildSupply <= build)
+                {
+                    shoveler.SendChat(T.BuildMissingSupplies, FOB.BuildSupply, Buildable.RequiredBuild - _buildRemoved);
+                    return true;
+                }
+
+                _buildRemoved += build;
+                FOB.ModifyBuild(-build);
+            }
 
             UpdateHitsUI();
 
             if (Progress >= Total)
+            {
+                int buildRemaining = Buildable.RequiredBuild - _buildRemoved;
+
+                if (FOB != null)
+                {
+                    if (FOB.BuildSupply <= buildRemaining)
+                    {
+                        shoveler.SendChat(T.BuildMissingSupplies, Buildable.RequiredBuild - _buildRemoved, FOB.BuildSupply);
+                        return true;
+                    }
+
+                    FOB?.ModifyBuild(-buildRemaining);
+                }
                 Build();
+            }
 
             return true;
         }
@@ -577,9 +614,6 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 newBase.Destroy();
             return false;
         }
-
-        int buildRemaining = Buildable.RequiredBuild - _buildRemoved;
-        FOB?.ModifyBuild(-buildRemaining);
 
         IFOBItem? @new = null;
         if (FOB != null)

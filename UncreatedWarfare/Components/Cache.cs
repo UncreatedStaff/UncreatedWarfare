@@ -32,6 +32,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
     public List<UCPlayer> NearbyAttackers { get; private set; }
     UCPlayer? IFOB.Instigator { get; set; }
     public Vector3 Position { get; }
+    public Vector3 SpawnPosition { get; }
     public bool IsDestroyed { get; private set; }
     public string Name { get; set; }
     float IDeployable.Yaw => _component == null ? 0 : _component.transform.rotation.eulerAngles.y;
@@ -45,8 +46,9 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         IsDiscovered = false;
         _component = drop.model.gameObject.AddComponent<CacheComponent>().Initialize(drop, this);
         Drop = drop;
-        Position = _component.transform.position;
-        Vector3 pos = Position;
+        Vector3 pos = _component.transform.position;
+        SpawnPosition = pos;
+        Position = pos;
         _gc = new GridLocation(in pos);
         _cl = F.GetClosestLocationName(pos, true, true);
 
