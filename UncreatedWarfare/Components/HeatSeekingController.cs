@@ -118,64 +118,65 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     private void ScanForTargets()
     {
-        var gunner = GetGunner(_vehicle);
+        Transform? newTarget = null;
+
+        UCPlayer? gunner = GetGunner(_vehicle);
 
         if (gunner is null)
         {
             if (_lastKnownGunner is not null)
                 CancelLockOnSound(_lastKnownGunner);
             _lastKnownGunner = null;
-            return;
         }
-
-        _lastKnownGunner = gunner;
-
-        float bestTarget = AQUISITION_ANGLE;
-
-        Transform? newTarget = null;
-
-        foreach (InteractableVehicle v in VehicleManager.vehicles)
+        else
         {
-            if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead && v.lockedGroup.m_SteamID != gunner.GetTeam() && v.isEngineOn && !(v.anySeatsOccupied && TeamManager.IsInAnyMain(v.transform.position)))
-            {
-                if (IsInRange(v.transform.position))
-                {
-                    Vector3 relativePos = transform.InverseTransformPoint(v.transform.position);
-                    relativePos = new Vector3(Mathf.Abs(relativePos.x), Mathf.Abs(relativePos.y), 0);
+            _lastKnownGunner = gunner;
 
-                    float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
-                    float angleBetween = Vector3.Angle(v.transform.position - transform.position, transform.forward);
-                    if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
+            float bestTarget = AQUISITION_ANGLE;
+
+            foreach (InteractableVehicle v in VehicleManager.vehicles)
+            {
+                if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead && v.lockedGroup.m_SteamID != gunner.GetTeam() && v.isEngineOn && !(v.anySeatsOccupied && TeamManager.IsInAnyMain(v.transform.position)))
+                {
+                    if (IsInRange(v.transform.position))
                     {
-                        bool raySuccess = Physics.Linecast(transform.position, v.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
-                        if (!raySuccess)
+                        Vector3 relativePos = transform.InverseTransformPoint(v.transform.position);
+                        relativePos = new Vector3(Mathf.Abs(relativePos.x), Mathf.Abs(relativePos.y), 0);
+
+                        float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
+                        float angleBetween = Vector3.Angle(v.transform.position - transform.position, transform.forward);
+                        if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
                         {
-                            bestTarget = lockOnDistance;
-                            newTarget = v.transform;
+                            bool raySuccess = Physics.Linecast(transform.position, v.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                            if (!raySuccess)
+                            {
+                                bestTarget = lockOnDistance;
+                                newTarget = v.transform;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        bestTarget = AQUISITION_ANGLE;
+            bestTarget = AQUISITION_ANGLE;
 
-        foreach (Countermeasure c in Countermeasure.ActiveCountermeasures)
-        {
-            if (!c.Burning)
-                continue;
-
-            Vector3 relativePos = transform.InverseTransformPoint(c.transform.position);
-
-            float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
-            float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
-            if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
+            foreach (Countermeasure c in Countermeasure.ActiveCountermeasures)
             {
-                bool raySuccess = Physics.Linecast(transform.position, c.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
-                if (!raySuccess)
+                if (!c.Burning)
+                    continue;
+
+                Vector3 relativePos = transform.InverseTransformPoint(c.transform.position);
+
+                float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
+                float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
+                if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
                 {
-                    bestTarget = lockOnDistance;
-                    newTarget = c.transform;
+                    bool raySuccess = Physics.Linecast(transform.position, c.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                    if (!raySuccess)
+                    {
+                        bestTarget = lockOnDistance;
+                        newTarget = c.transform;
+                    }
                 }
             }
         }
@@ -183,14 +184,15 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         LockOn(newTarget, gunner);
     }
 
-    private void LockOn(Transform? newTarget, UCPlayer gunner)
+    private void LockOn(Transform? newTarget, UCPlayer? gunner)
     {
         if (newTarget is null) // no target found
         {
             if (Status != ELockOnMode.IDLE)
             {
                 Status = ELockOnMode.IDLE;
-                CancelLockOnSound(gunner);
+                if (gunner != null)
+                    CancelLockOnSound(gunner);
                 LockOnTarget = null;
             }
             return;
@@ -202,7 +204,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             _timeOfAquisition = Time.time;
             Status = ELockOnMode.ACQUIRING;
 
-            PlayLockOnSound(gunner);
+            if (gunner != null)
+                PlayLockOnSound(gunner);
         }
         else // target is the same as the previous call
         {
