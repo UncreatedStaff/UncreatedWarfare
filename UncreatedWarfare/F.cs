@@ -45,6 +45,13 @@ public static class F
 #else
     public static CancellationToken DebugTimeout => default;
 #endif
+    public static string AssetToString(Guid guid)
+    {
+        if (Assets.find(guid) is { } asset)
+            return "{" + asset.FriendlyName + " / " + asset.name + " / " + asset.GUID.ToString("N") + "}";
+        return guid.ToString("N");
+    }
+
     public static bool HasPlayer(this List<UCPlayer> list, UCPlayer player)
     {
         IEqualityComparer<UCPlayer> c = UCPlayer.Comparer;
@@ -581,10 +588,10 @@ public static class F
         flag = null!;
         return false;
     }
-    public static string Colorize(this string inner, string colorhex) => $"<color=#{colorhex}>{inner}</color>";
+    public static string Colorize(this string inner, string colorhex) => "<color=#" + colorhex + ">" + inner + "</color>";
 
     public static string ColorizeTMPro(this string inner, string colorhex, bool endTag = true) =>
-        endTag ? $"<#{colorhex}>{inner}</color>" : $"<#{colorhex}>{inner}";
+        endTag ? "<#" +colorhex + ">" + inner + "</color>" : "<#" + colorhex + ">" + inner;
     public static string ColorizeName(string innerText, ulong team)
     {
         if (!Data.Is<ITeams>(out _)) return innerText;
@@ -674,7 +681,7 @@ public static class F
                 }
                 finally
                 {
-                    list.Release();
+                    list.WriteRelease();
                 }
             }
         }
@@ -820,6 +827,8 @@ public static class F
     }
     public static bool HasGuid<T>(this JsonAssetReference<T>[] assets, Guid guid) where T : Asset
     {
+        if (assets == null)
+            return false;
         for (int i = 0; i < assets.Length; ++i)
         {
             T? asset = assets[i].Asset;

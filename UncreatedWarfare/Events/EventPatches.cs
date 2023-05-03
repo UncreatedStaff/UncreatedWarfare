@@ -31,7 +31,7 @@ internal static class EventPatches
                 null,
                 new Type[] { typeof(BarricadeDrop), typeof(byte), typeof(byte), typeof(ushort) },
                 null), ref _fail,
-            postfix: PatchUtil.GetMethodInfo(DestroyBarricadePostFix));
+            transpiler: PatchUtil.GetMethodInfo(DestroyBarricadeTranspiler));
 
         PatchUtil.PatchMethod(typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.Instance | BindingFlags.NonPublic), ref _fail,
             postfix: PatchUtil.GetMethodInfo(OnVehicleSpawned));
@@ -141,11 +141,45 @@ internal static class EventPatches
         }
     }
 #pragma warning restore CS1580
+
     // SDG.Unturned.BarricadeManager
     /// <summary>
-    /// Postfix of <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="EventDispatcher.BarricadeDestroyed"/>.
+    /// Transpiler for <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="EventDispatcher.BarricadeDestroyed"/>.
     /// </summary>
-    private static void DestroyBarricadePostFix(BarricadeDrop barricade, byte x, byte y, ushort plant)
+    private static IEnumerable<CodeInstruction> DestroyBarricadeTranspiler(ILGenerator generator, IEnumerable<CodeInstruction> instructions)
+    {
+        FieldInfo? rpc = typeof(BarricadeManager).GetField("SendDestroyBarricade", BindingFlags.NonPublic | BindingFlags.Static);
+        if (rpc == null)
+        {
+            L.LogWarning("Unable to find field: BarricadeManager.SendDestroyBarricade");
+        }
+
+        bool one = false;
+        foreach (CodeInstruction instruction in instructions)
+        {
+            if (!one && rpc != null && instruction.LoadsField(rpc))
+            {
+                CodeInstruction call = new CodeInstruction(OpCodes.Ldarg_0);
+                call.labels.AddRange(instruction.labels);
+                yield return call;
+                yield return new CodeInstruction(OpCodes.Ldarg_1);
+                yield return new CodeInstruction(OpCodes.Ldarg_2);
+                yield return new CodeInstruction(OpCodes.Ldarg_3);
+                yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(DestroyBarricadeInvoker));
+                L.LogDebug("Inserted DestroyBarricadeInvoker call to BarricadeManager.destroyBarricade.");
+                CodeInstruction old = new CodeInstruction(instruction);
+                old.labels.Clear();
+                yield return old;
+                one = true;
+                continue;
+            }
+
+            yield return instruction;
+        }
+    }
+
+    
+    private static void DestroyBarricadeInvoker(BarricadeDrop barricade, byte x, byte y, ushort plant)
     {
         if (barricade is null) return;
         BarricadeRegion region;

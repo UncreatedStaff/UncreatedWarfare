@@ -682,18 +682,13 @@ public class Insurgency :
         }
     }
 
-    public class CacheData : IObjective, IDeployable, IFOB
+    public class CacheData
     {
         public int Number => Cache != null ? Cache.Number : 0;
         public bool IsActive => Cache != null;
         public bool IsDestroyed => Cache != null && Cache.IsDestroyed;
         public bool IsDiscovered => Cache != null && Cache.IsDiscovered;
         public Cache Cache { get; private set; }
-        public string Name => ((IObjective)Cache).Name;
-        public Vector3 Position => ((IObjective)Cache).Position;
-        public float Yaw => ((IDeployable)Cache).Yaw;
-        public string ClosestLocation => ((IFOB)Cache).ClosestLocation;
-        public GridLocation GridLocation => ((IFOB)Cache).GridLocation;
         public CacheData()
         {
             Cache = null!;
@@ -701,16 +696,6 @@ public class Insurgency :
         public void Activate(Cache cache)
         {
             Cache = cache;
-        }
-        public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
-            ref TranslationFlags flags) => ((ITranslationArgument)Cache).Translate(language, format, target, culture, ref flags);
-        public bool CheckDeployable(UCPlayer player, CommandInteraction? ctx) => ((IDeployable)Cache).CheckDeployable(player, ctx);
-        public bool CheckDeployableTick(UCPlayer player, bool chat) => ((IDeployable)Cache).CheckDeployableTick(player, chat);
-        public void OnDeploy(UCPlayer player, bool chat) => ((IDeployable)Cache).OnDeploy(player, chat);
-        float IDeployable.GetDelay() => ((IDeployable)Cache).GetDelay();
-        public void Destroy(bool authority)
-        {
-            FOBManager.CleanupFOB(this);
         }
     }
 #region DEFAULT CACHE SPAWNS

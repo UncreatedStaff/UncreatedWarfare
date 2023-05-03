@@ -2,29 +2,20 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Structures;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Players;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
-namespace Uncreated.Warfare.Components;
+namespace Uncreated.Warfare.FOBs;
 
-public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovelable, ISalvageInfo
+public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovelable, ISalvageListener
 {
     private bool _destroyed;
 #nullable disable
@@ -33,7 +24,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
     public RadioState State { get; private set; }
     public BuildableType Type => BuildableType.Radio;
     public BarricadeDrop Barricade { get; private set; }
-    public BuildableData Buildable { get; private set; }
+    public BuildableData? Buildable => null;
     public ulong Owner { get; private set; }
     public JsonAssetReference<EffectAsset>? Icon { get; private set; }
     public ulong Team { get; private set; }
@@ -41,6 +32,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
     public ulong Salvager { get; set; }
     public bool Destroyed => _destroyed;
     public TickResponsibilityCollection Builders { get; } = new TickResponsibilityCollection();
+    public Vector3 Position => transform.position;
 
     [UsedImplicitly]
     private void Awake()
@@ -51,9 +43,8 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
             L.LogDebug($"[FOBS] RadioComponent added to unknown barricade: {name}.");
             goto destroy;
         }
-
-        Buildable = FOBManager.FindBuildable(Barricade.asset)!;
-        if (Buildable is not { Type: BuildableType.Radio })
+        
+        if (!Gamemode.Config.FOBRadios.Value.HasGuid(Barricade.asset.GUID))
         {
             if (Gamemode.Config.BarricadeFOBRadioDamaged.MatchGuid(Barricade.asset))
             {
@@ -74,17 +65,41 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
 
         Owner = Barricade.GetServersideData().owner;
         Team = Barricade.GetServersideData().group.GetTeam();
-        Builders.Set(Owner, 1);
+        Builders.Set(Owner, FOBManager.Config.BaseFOBRepairHits);
+
+        if (State == RadioState.Alive)
+        {
+            if (Gamemode.Config.EffectMarkerRadio.ValidReference(out Guid guid))
+                IconManager.AttachIcon(guid, transform, Team, 3.5f);
+        }
+        else if (State == RadioState.Bleeding)
+        {
+            if (Gamemode.Config.EffectMarkerRadioDamaged.ValidReference(out Guid guid))
+                IconManager.AttachIcon(guid, transform, Team, 3.5f);
+        }
 
         if (Barricade.interactable is InteractableStorage storage)
             storage.despawnWhenDestroyed = true;
 
         L.LogDebug("[FOBS] Radio Initialized: " + Barricade.asset.itemName + ". (State: " + State + ").");
-
         return;
         destroy:
         State = RadioState.Destroyed;
         Destroy(this);
+    }
+    void ISalvageListener.OnSalvageRequested(SalvageRequested e)
+    {
+        if (!e.Player.OnDuty())
+        {
+            L.Log($"[FOBS] [{FOB?.Name ?? "FLOATING"}] {e.Player} tried to salvage the radio.");
+            e.Break();
+            e.Player.SendChat(T.WhitelistProhibitedSalvage, Barricade.asset);
+        }
+    }
+    [UsedImplicitly]
+    private void Start()
+    {
+        FOB?.Restock();
     }
 
     [UsedImplicitly]
@@ -98,8 +113,9 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
             Barricade = null!;
         }
 
+        FOBManager.EnsureDisposed(this);
+
         State = RadioState.Destroyed;
-        ((IManualOnDestroy)this).ManualOnDestroy();
     }
 
     void IManualOnDestroy.ManualOnDestroy()
@@ -123,6 +139,9 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
             float amt = maxHealth / FOBManager.Config.BaseFOBRepairHits * FOBManager.GetBuildIncrementMultiplier(shoveler);
 
             BarricadeManager.repair(Barricade.model, amt, 1, shoveler.CSteamID);
+            FOBManager.TriggerBuildEffect(transform.position);
+            Builders.Increment(shoveler.Steam64, amt);
+            UpdateHitsUI();
 
             if (Barricade.GetServersideData().barricade.health >= maxHealth)
             {
@@ -134,12 +153,50 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
 
         return false;
     }
+    public void QuickShovel(UCPlayer shoveler)
+    {
+        if (State == RadioState.Bleeding)
+        {
+            ushort maxHealth = Barricade.asset.health;
+            float amt = maxHealth - Barricade.GetServersideData().barricade.health;
+            BarricadeManager.repair(Barricade.model, amt, 1, shoveler.CSteamID);
+            FOBManager.TriggerBuildEffect(transform.position);
+            Builders.Increment(shoveler.Steam64, amt);
+            UpdateHitsUI();
+
+            FOB.UpdateRadioState(RadioState.Alive);
+        }
+    }
+    private void UpdateHitsUI()
+    {
+        Builders.RetrieveLock();
+        try
+        {
+            float time = Time.realtimeSinceStartup;
+            ToastMessage msg = new ToastMessage(
+                Points.GetProgressBar(Barricade.GetServersideData().barricade.health, Barricade.asset.health, 25).Colorize("ff9966"),
+                ToastMessageSeverity.Progress);
+            foreach (TickResponsibility responsibility in Builders)
+            {
+                if (time - responsibility.LastUpdated < 5f)
+                {
+                    if (UCPlayer.FromID(responsibility.Steam64) is { } pl && pl.Player.TryGetPlayerData(out UCPlayerData component))
+                        component.QueueMessage(msg, true);
+                }
+            }
+        }
+        finally
+        {
+            Builders.ReturnLock();
+        }
+    }
 }
 
-public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovelable, ISalvageInfo
+public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovelable, ISalvageListener
 {
     private bool _destroyed;
     private bool _subbedToStructureEvent;
+    private int _buildRemoved;
     public FOB? FOB { get; set; }
     public BuildableType Type { get; private set; }
     public BuildableState State { get; private set; }
@@ -217,6 +274,8 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         {
             Total = Buildable.RequiredHits;
             State = BuildableState.Foundation;
+            if (Gamemode.Config.EffectMarkerBuildable.ValidReference(out Guid guid) && Buildable.RequiredHits < 15)
+                IconManager.AttachIcon(guid, transform, Team, 2f);
         }
         else
             State = BuildableState.Full;
@@ -253,7 +312,27 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             }
             else if (ActiveVehicle != null)
             {
-                VehicleSpawner.DeleteVehicle(ActiveVehicle);
+                for (int i = 0; i < ActiveVehicle.turrets.Length; ++i)
+                {
+                    byte[] state = ActiveVehicle.turrets[i].state;
+                    if (state.Length != 18)
+                        continue;
+                    Attachments.parseFromItemState(state, out _, out _, out _, out _, out ushort mag);
+                    byte amt = state[10];
+                    if (mag != 0 && Assets.find(EAssetType.ITEM, mag) is ItemMagazineAsset asset)
+                        ItemManager.dropItem(new Item(asset.id, amt, 100), ActiveVehicle.transform.position, true, false, true);
+                }
+                VehicleBarricadeRegion region = BarricadeManager.findRegionFromVehicle(ActiveVehicle);
+                if (region != null)
+                {
+                    for (int i = 0; i < region.drops.Count; ++i)
+                    {
+                        if (region.drops[i].interactable is InteractableStorage st)
+                            st.despawnWhenDestroyed = true;
+                    }
+                }
+                if (!ActiveVehicle.isExploded)
+                    VehicleManager.sendVehicleExploded(ActiveVehicle);
                 ActiveVehicle = null;
                 _destroyed = true;
             }
@@ -263,12 +342,24 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             _destroyed = true;
             ActiveStructure = null!;
         }
+
+
+        FOBManager.EnsureDisposed(this);
         L.LogDebug($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Destroyed: {Buildable} ({Asset.FriendlyName}).");
     }
     void IManualOnDestroy.ManualOnDestroy()
     {
         _destroyed = true;
         Destroy(this);
+    }
+    void ISalvageListener.OnSalvageRequested(SalvageRequested e)
+    {
+        if (State != BuildableState.Foundation || _buildRemoved > 0 || !e.Player.OnDuty())
+        {
+            L.Log($"[FOBS] [{FOB?.Name ?? "FLOATING"}] {e.Player} tried to salvage {Buildable}.");
+            e.Break();
+            e.Player.SendChat(T.WhitelistProhibitedSalvage, ActiveStructure?.Asset ?? Buildable.Foundation.GetAsset()!);
+        }
     }
     private void OnStructureDestroyed(StructureDestroyed e)
     {
@@ -296,11 +387,217 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 shoveler.SendChat(T.BuildTickStructureExists, Buildable);
                 return true;
             }
+            if (!IsFloating && !FOB!.ValidatePlacement(Buildable, shoveler, this) ||
+                IsFloating && Data.Is(out IFOBs fobs) && !fobs.FOBManager.ValidateFloatingPlacement(Buildable, shoveler, transform.position, this))
+            {
+                return false;
+            }
+
+            float amount = FOBManager.GetBuildIncrementMultiplier(shoveler);
+
+            L.LogDebug($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Incrementing build: {shoveler} ({Progress} + {amount} = {Progress + amount} / {Total}).");
+            Progress += amount;
+            
+            FOBManager.TriggerBuildEffect(transform.position);
+            
+            Builders.Increment(shoveler.Steam64, amount);
+
+            int build = Mathf.FloorToInt(Buildable.RequiredHits / Buildable.RequiredBuild * amount);
+            _buildRemoved += build;
+            FOB?.ModifyBuild(-build);
+
+            UpdateHitsUI();
+
+            if (Progress >= Total)
+                Build();
 
             return true;
         }
 
         return false;
+    }
+    public void QuickShovel(UCPlayer shoveler)
+    {
+        if (State == BuildableState.Foundation)
+        {
+            float amount = Total - Progress;
+            L.LogDebug($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Incrementing build: {shoveler} ({Progress} + {amount} = {Progress + amount} / {Total}).");
+            Progress += amount;
+
+            FOBManager.TriggerBuildEffect(transform.position);
+
+            Builders.Increment(shoveler.Steam64, amount);
+            UpdateHitsUI();
+
+            if (Progress >= Total)
+                Build();
+        }
+    }
+
+    private void UpdateHitsUI()
+    {
+        Builders.RetrieveLock();
+        try
+        {
+            float time = Time.realtimeSinceStartup;
+            ToastMessage msg = new ToastMessage(Points.GetProgressBar(Progress, Total, 25), ToastMessageSeverity.Progress);
+            foreach (TickResponsibility responsibility in Builders)
+            {
+                if (time - responsibility.LastUpdated < 5f)
+                {
+                    if (UCPlayer.FromID(responsibility.Steam64) is { } pl && pl.Player.TryGetPlayerData(out UCPlayerData component))
+                        component.QueueMessage(msg, true);
+                }
+            }
+        }
+        finally
+        {
+            Builders.ReturnLock();
+        }
+    }
+
+    public bool Build()
+    {
+        if (State != BuildableState.Foundation)
+            return false;
+        IBuildable? newBase = null;
+        Vector3 position = transform.position;
+        Quaternion rotation = transform.rotation;
+
+        ulong group = TeamManager.GetGroupID(Team);
+        // base
+        if (Buildable.Emplacement != null && Buildable.Emplacement.BaseBarricade.ValidReference(out ItemAsset @base))
+        {
+            if (@base is ItemBarricadeAsset bAsset)
+            {
+                FOBManager.IgnorePlacingBarricade = true;
+                try
+                {
+                    Barricade b = new Barricade(bAsset, bAsset.health, bAsset.getState());
+                    Transform? t = BarricadeManager.dropNonPlantedBarricade(b, position, rotation, Owner, group);
+                    BarricadeDrop? drop = t == null ? null : BarricadeManager.FindBarricadeByRootTransform(t);
+                    if (drop != null)
+                        newBase = new UCBarricade(drop);
+                }
+                finally
+                {
+                    FOBManager.IgnorePlacingBarricade = false;
+                }
+            }
+            else if (@base is ItemStructureAsset sAsset)
+            {
+                FOBManager.IgnorePlacingStructure = true;
+                try
+                {
+                    Structure s = new Structure(sAsset, sAsset.health);
+                    bool success = StructureManager.dropReplicatedStructure(s, position, rotation, Owner, group);
+                    if (success)
+                    {
+                        if (Regions.tryGetCoordinate(position, out byte x, out byte y) && StructureManager.tryGetRegion(x, y, out StructureRegion region))
+                            newBase = new UCStructure(region.drops.GetTail());
+                    }
+                }
+                finally
+                {
+                    FOBManager.IgnorePlacingStructure = false;
+                }
+            }
+
+
+            if (newBase == null)
+                L.LogWarning($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Unable to place base: {@base.itemName}.");
+            else
+                L.LogDebug($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Placed base: {@base.itemName}.");
+        }
+
+        Transform? newTransform = null;
+
+        // emplacement
+        if (Buildable.Emplacement != null && Buildable.Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vehicle))
+        {
+            InteractableVehicle veh = FOBManager.SpawnEmplacement(vehicle, position, rotation, Owner, group);
+
+            if (veh == null)
+                L.LogWarning($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Unable to spawn vehicle: {vehicle.vehicleName}.");
+            else
+            {
+                newTransform = veh.transform;
+                L.LogDebug($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Spawned vehicle: {vehicle.vehicleName}.");
+            }
+        }
+
+        // fortification
+        if (newTransform == null && Buildable.FullBuildable.ValidReference(out ItemAsset buildable))
+        {
+            if (buildable is ItemBarricadeAsset bAsset)
+            {
+                FOBManager.IgnorePlacingBarricade = true;
+                try
+                {
+                    Barricade b = new Barricade(bAsset, bAsset.health, bAsset.getState());
+                    Transform? t = BarricadeManager.dropNonPlantedBarricade(b, position, rotation, Owner, group);
+                    BarricadeDrop? drop = t == null ? null : BarricadeManager.FindBarricadeByRootTransform(t);
+                    if (drop != null)
+                        newTransform = drop.model;
+                }
+                finally
+                {
+                    FOBManager.IgnorePlacingBarricade = false;
+                }
+            }
+            else if (buildable is ItemStructureAsset sAsset)
+            {
+                FOBManager.IgnorePlacingStructure = true;
+                try
+                {
+                    Structure s = new Structure(sAsset, sAsset.health);
+                    bool success = StructureManager.dropReplicatedStructure(s, position, rotation, Owner, group);
+                    if (success)
+                    {
+                        if (Regions.tryGetCoordinate(position, out byte x, out byte y) && StructureManager.tryGetRegion(x, y, out StructureRegion region))
+                            newTransform = region.drops.GetTail().model;
+                    }
+                }
+                finally
+                {
+                    FOBManager.IgnorePlacingStructure = false;
+                }
+            }
+
+            if (newTransform == null)
+                L.LogWarning($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Unable to place buildable: {buildable.itemName}.");
+            else
+                L.LogDebug($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Placed buildable: {buildable.itemName}.");
+        }
+
+        if (newTransform == null)
+        {
+            L.LogWarning($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Parent for buildable upgrade not spawned: {Buildable}.");
+            if (newBase != null)
+                newBase.Destroy();
+            return false;
+        }
+
+        int buildRemaining = Buildable.RequiredBuild - _buildRemoved;
+        FOB?.ModifyBuild(-buildRemaining);
+
+        IFOBItem? @new = null;
+        if (FOB != null)
+            @new = FOB.UpgradeItem(this, newTransform);
+        else if (Data.Is(out IFOBs fobs))
+            @new = fobs.FOBManager.UpgradeFloatingItem(this, newTransform);
+        
+        if (@new == null)
+        {
+            L.LogWarning($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Unable to upgrade buildable: {Buildable}.");
+            newBase?.Destroy();
+            return false;
+        }
+
+        if (@new is ShovelableComponent sh)
+            sh.Base = newBase;
+
+        return true;
     }
 
     public enum BuildableState
@@ -484,13 +781,14 @@ public interface IShovelable
 {
     TickResponsibilityCollection Builders { get; }
     bool Shovel(UCPlayer shoveler);
+    void QuickShovel(UCPlayer shoveler);
 }
 
 public interface IFOBItem
 {
     FOB? FOB { get; set; }
     BuildableType Type { get; }
-    BuildableData Buildable { get; }
+    BuildableData? Buildable { get; }
     ulong Team { get; }
     ulong Owner { get; }
     JsonAssetReference<EffectAsset>? Icon { get; }

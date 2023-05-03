@@ -223,9 +223,6 @@ public static class EventDispatcher
     {
         SpottedComponent spotted = vehicle.transform.GetComponent<SpottedComponent>();
 
-        if (vehicle.gameObject.TryGetComponent(out BuiltBuildableComponent comp))
-            UnityEngine.Object.Destroy(comp);
-
         VehicleDestroyed request = new VehicleDestroyed(vehicle, spotted);
         if (request.Instigator != null && request.Instigator.Player.TryGetPlayerData(out UCPlayerData data))
             data.LastExplodedVehicle = request.Vehicle.asset.GUID;
@@ -322,8 +319,6 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(BarricadeDestroyed));
         }
-
-        component.Destroy();
     }
     internal static void InvokeOnPlayerDied(PlayerDied e)
     {
@@ -684,6 +679,7 @@ public static class EventDispatcher
         if (!StructureManager.tryGetRegion(structure.model, out byte x, out byte y, out StructureRegion region))
             return;
         structure.model.GetComponents(WorkingSalvageInfo);
+        SalvageStructureRequested args = new SalvageStructureRequested(player, structure, structure.GetServersideData(), region!, x, y, save);
         try
         {
             for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
@@ -693,20 +689,25 @@ public static class EventDispatcher
                 salvageInfo.IsSalvaged = true;
                 if (salvageInfo is ISalvageListener listener)
                 {
-                    listener.OnSalvageRequested(ref shouldAllow);
-                    if (!shouldAllow)
-                        return;
-                    
+                    listener.OnSalvageRequested(args);
+                    if (!args.CanContinue)
+                    {
+                        shouldAllow = false;
+                        break;
+                    }
+
                 }
             }
-            SalvageStructureRequested args = new SalvageStructureRequested(player, structure, structure.GetServersideData(), region!, x, y, save);
-            foreach (EventDelegate<SalvageStructureRequested> inv in SalvageStructureRequested.GetInvocationList().Cast<EventDelegate<SalvageStructureRequested>>())
+            if (args.CanContinue)
             {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(SalvageStructureRequested));
+                foreach (EventDelegate<SalvageStructureRequested> inv in SalvageStructureRequested.GetInvocationList().Cast<EventDelegate<SalvageStructureRequested>>())
+                {
+                    if (!args.CanContinue) break;
+                    TryInvoke(inv, args, nameof(SalvageStructureRequested));
+                }
+                if (!args.CanContinue)
+                    shouldAllow = false;
             }
-            if (!args.CanContinue)
-                shouldAllow = false;
         }
         finally
         {
@@ -741,6 +742,7 @@ public static class EventDispatcher
         SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
         if (!BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out BarricadeRegion region))
             return;
+        SalvageBarricadeRequested args = new SalvageBarricadeRequested(player, barricade, barricade.GetServersideData(), region!, x, y, plant, save);
         barricade.model.GetComponents(WorkingSalvageInfo);
         try
         {
@@ -751,19 +753,24 @@ public static class EventDispatcher
                 salvageInfo.IsSalvaged = true;
                 if (salvageInfo is ISalvageListener listener)
                 {
-                    listener.OnSalvageRequested(ref shouldAllow);
-                    if (!shouldAllow)
-                        return;
+                    listener.OnSalvageRequested(args);
+                    if (!args.CanContinue)
+                    {
+                        shouldAllow = false;
+                        break;
+                    }
                 }
             }
-            SalvageBarricadeRequested args = new SalvageBarricadeRequested(player, barricade, barricade.GetServersideData(), region!, x, y, plant, save);
-            foreach (EventDelegate<SalvageBarricadeRequested> inv in SalvageBarricadeRequested.GetInvocationList().Cast<EventDelegate<SalvageBarricadeRequested>>())
+            if (args.CanContinue)
             {
-                if (!args.CanContinue) break;
-                TryInvoke(inv, args, nameof(SalvageBarricadeRequested));
+                foreach (EventDelegate<SalvageBarricadeRequested> inv in SalvageBarricadeRequested.GetInvocationList().Cast<EventDelegate<SalvageBarricadeRequested>>())
+                {
+                    if (!args.CanContinue) break;
+                    TryInvoke(inv, args, nameof(SalvageBarricadeRequested));
+                }
+                if (!args.CanContinue)
+                    shouldAllow = false;
             }
-            if (!args.CanContinue)
-                shouldAllow = false;
         }
         finally
         {

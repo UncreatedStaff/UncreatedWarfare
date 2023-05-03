@@ -592,7 +592,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             throw;
         }
     }
-    public static string GetProgressBar(float currentPoints, int totalPoints, int barLength = 50)
+    public static string GetProgressBar(float currentPoints, float totalPoints, int barLength = 50)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -602,13 +602,8 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         int progress = Mathf.RoundToInt(ratio * barLength);
         if (progress > barLength)
             progress = barLength;
-
-        char[] bars = new char[barLength];
-        for (int i = 0; i < progress; i++)
-        {
-            bars[i] = PointsConfig.ProgressBlockCharacter;
-        }
-        return new string(bars);
+        
+        return new string(PointsConfig.ProgressBlockCharacter, progress);
     }
     public static void TryAwardDriverAssist(PlayerDied args, XPReward reward, int amount = 0, float quota = 0)
     {
@@ -653,16 +648,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         UCPlayer? creator = UCPlayer.FromID(fob.Owner);
 
         if (creator != null)
-        {
             AwardXP(creator, reward, multiplier);
-        }
-
-        if (fob.Placer != fob.Owner)
-        {
-            UCPlayer? placer = UCPlayer.FromID(fob.Placer);
-            if (placer != null)
-                AwardXP(placer, reward, multiplier);
-        }
     }
     public static void OnPlayerDeath(PlayerDied e)
     {

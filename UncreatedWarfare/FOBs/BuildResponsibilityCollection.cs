@@ -1,5 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
+using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs;
 /// <summary>
@@ -37,7 +39,10 @@ public class TickResponsibilityCollection : IEnumerable<TickResponsibility>
         }
     }
 
-    /// <returns>The percentage of the work <paramref name="steam64"/> has done (from 0 to 1).</returns>
+    public void RetrieveLock() => Monitor.Enter(_list);
+    public void ReturnLock() => Monitor.Exit(_list);
+
+    /// <returns>The percentage of the work <paramref name="player"/> has done (from 0 to 1).</returns>
     public float this[IPlayer player] => this[player.Steam64];
 
     /// <returns>The percentage of the work <paramref name="steam64"/> has done (from 0 to 1).</returns>
@@ -56,6 +61,20 @@ public class TickResponsibilityCollection : IEnumerable<TickResponsibility>
 
             return 0f;
         }
+    }
+
+    public float GetLastUpdatedTime(ulong steam64)
+    {
+        lock (_list)
+        {
+            for (int i = 0; i < _list.Count; ++i)
+            {
+                if (_list[i].Steam64 == steam64)
+                    return _list[i].LastUpdated;
+            }
+        }
+
+        return 0f;
     }
 
     /// <summary>
@@ -148,9 +167,11 @@ public readonly struct TickResponsibility
 {
     public readonly ulong Steam64;
     public readonly float Ticks;
+    public readonly float LastUpdated;
     public TickResponsibility(ulong steam64, float ticks)
     {
         Steam64 = steam64;
         Ticks = ticks;
+        LastUpdated = Time.realtimeSinceStartup;
     }
 }

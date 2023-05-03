@@ -68,13 +68,13 @@ public class AmmoCommand : AsyncCommand
                         throw ctx.Reply(T.AmmoNotNearRepairStation);
                 }
 
-                FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, FobRadius.Full, vehicle.lockedGroup.m_SteamID);
+                FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(vehicle.transform.position, vehicle.lockedGroup.m_SteamID.GetTeam());
 
                 if (fob == null && !isInMain)
                     throw ctx.Reply(T.AmmoNotNearFOB);
 
-                if (!isInMain && fob!.Ammo < vehicleData.RearmCost)
-                    throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, vehicleData.RearmCost);
+                if (!isInMain && fob!.AmmoSupply < vehicleData.RearmCost)
+                    throw ctx.Reply(T.AmmoOutOfStock, fob.AmmoSupply, vehicleData.RearmCost);
 
                 if (vehicle.lockedGroup.m_SteamID != 0 && vehicle.lockedGroup.m_SteamID != ctx.Caller.GetTeam())
                     throw ctx.Reply(T.AmmoVehicleCantRearm);
@@ -93,8 +93,8 @@ public class AmmoCommand : AsyncCommand
 
                 if (!isInMain)
                 {
-                    fob!.ReduceAmmo(vehicleData.RearmCost);
-                    ctx.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.Ammo);
+                    fob!.ModifyAmmo(-vehicleData.RearmCost);
+                    ctx.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.AmmoSupply);
                     ctx.LogAction(ActionLogType.RequestAmmo, "FOR VEHICLE");
                 }
                 else
@@ -132,19 +132,26 @@ public class AmmoCommand : AsyncCommand
 
                 bool isInMain = false;
                 bool isCache = Gamemode.Config.BarricadeInsurgencyCache.MatchGuid(barricade.asset.GUID);
-
-                if (!ctx.Caller.IsOnFOB(out FOB? fob) && !isCache)
+                FOB? fob = null;
+                if ((!ctx.Caller.IsOnFOB(out IFOB? fob2) || fob2 is not FOB fob3))
                 {
-                    if (F.IsInMain(barricade.model.transform.position))
-                        isInMain = true;
-                    else
-                        throw ctx.Reply(T.AmmoNotNearFOB);
+                    if (!isCache)
+                    {
+                        if (F.IsInMain(barricade.model.transform.position))
+                        {
+                            isInMain = true;
+                        }
+                        else
+                            throw ctx.Reply(T.AmmoNotNearFOB);
+                    }
                 }
+                else
+                    fob = fob3;
                 if (isInMain && FOBManager.Config.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(ctx.Caller, CooldownType.Ammo, out Cooldown cooldown))
                     throw ctx.Reply(T.AmmoCooldown, cooldown);
 
-                if (!isInMain && !isCache && fob.Ammo < ammoCost)
-                    throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, ammoCost);
+                if (!isInMain && !isCache && fob!.AmmoSupply < ammoCost)
+                    throw ctx.Reply(T.AmmoOutOfStock, fob.AmmoSupply, ammoCost);
 
                 if (barricade.GetServersideData().group != ctx.Caller.GetTeam())
                     throw ctx.Reply(T.AmmoWrongTeam);
@@ -171,9 +178,9 @@ public class AmmoCommand : AsyncCommand
                 }
                 else
                 {
-                    fob.ReduceAmmo(ammoCost);
+                    fob!.ModifyAmmo(-ammoCost);
                     ctx.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BOX");
-                    ctx.Reply(T.AmmoResuppliedKit, ammoCost, fob.Ammo);
+                    ctx.Reply(T.AmmoResuppliedKit, ammoCost, fob.AmmoSupply);
                 }
             }
             else if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(barricade.asset.GUID))

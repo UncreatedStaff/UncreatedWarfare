@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -115,9 +116,9 @@ public class DevCommand : AsyncCommand
 
             if (ctx.TryGetTarget(out BarricadeDrop drop))
             {
-                if (drop.model.TryGetComponent<BuildableComponent>(out BuildableComponent? buildable))
+                if (drop.model.TryGetComponent(out IShovelable shovelable))
                 {
-                    buildable.Build();
+                    shovelable.QuickShovel(ctx.Caller);
                     ctx.ReplyString($"Successfully built {drop.asset.itemName}", "ebd491");
                 }
                 else throw ctx.ReplyString($"This barricade ({drop.asset.itemName}) is not buildable.", "c7a29f");
@@ -198,9 +199,9 @@ public class DevCommand : AsyncCommand
 
             ctx.AssertHelpCheck(1, "/dev <onfob|fob>. Gets what FOB you're on, if any.");
 
-            FOB? fob = FOB.GetNearestFOB(ctx.Caller!.Position, FobRadius.FullBunkerDependant, ctx.Caller!.GetTeam());
+            FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(ctx.Caller!.Position, ctx.Caller!.GetTeam());
             ctx.ReplyString((fob != null
-                ? $"Your nearest FOB is: {fob.Name.Colorize(fob.UIColor)} ({(ctx.Caller.Position - fob.Position).magnitude}m away)"
+                ? $"Your nearest FOB is: {fob.Name.Colorize(fob.GetUIColor())} ({(ctx.Caller.Position - fob.transform.position).magnitude}m away)"
                 : "You are not near a FOB."), "ebd491");
         }
         else if (ctx.MatchParameter(0, "aatest", "aa"))

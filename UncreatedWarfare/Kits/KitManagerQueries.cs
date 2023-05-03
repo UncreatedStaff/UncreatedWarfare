@@ -1149,7 +1149,6 @@ partial class KitManager
         {
             builder.Append($"DELETE FROM `{TABLE_REQUEST_SIGNS}` WHERE `{COLUMN_EXT_PK}` = @0; INSERT INTO `{TABLE_REQUEST_SIGNS}` ({SqlTypes.ColumnList(
                 COLUMN_EXT_PK, COLUMN_REQUEST_SIGN)}) VALUES ");
-            bool any = false;
             for (int i = 0; i < item.RequestSigns.Length; ++i)
             {
                 PrimaryKey f = item.RequestSigns[i];

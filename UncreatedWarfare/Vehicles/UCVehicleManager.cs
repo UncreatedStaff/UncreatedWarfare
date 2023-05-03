@@ -113,9 +113,9 @@ public static class UCVehicleManager
         if (bay == null)
             return null;
         team = TeamManager.GetGroupID(team);
-        return vehicles.FirstOrDefault(v =>
+        return vehicles.OrderBy(x => (point - x.transform.position).sqrMagnitude).FirstOrDefault(v =>
             v.lockedGroup.m_SteamID == team &&
             bay.GetDataSync(v.asset.GUID) is { } vehicleData &&
-            vehicleData.Type is VehicleType.LogisticsGround or VehicleType.TransportAir);
+            VehicleData.IsLogistics(vehicleData.Type));
     }
 }

@@ -1,10 +1,13 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
@@ -335,31 +338,107 @@ public class StructureCommand : AsyncCommand
             ctx.SendCorrectUsage(Syntax);
     }
 
-    private void DestroyBarricade(BarricadeDrop bdrop, UCPlayer player)
+    private static readonly List<ISalvageInfo> WorkingSalvageInfo = new List<ISalvageInfo>(2);
+    private static void DestroyBarricade(BarricadeDrop bdrop, UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();
-        if (bdrop != null && Regions.tryGetCoordinate(bdrop.model.position, out byte x, out byte y))
+        if (bdrop != null && BarricadeManager.tryGetRegion(bdrop.model, out byte x, out byte y, out ushort plant, out BarricadeRegion region))
         {
-            if (bdrop.model.TryGetComponent(out Components.FOBComponent f))
+            bdrop.model.GetComponents(WorkingSalvageInfo);
+            try
             {
-                f.Parent.IsWipedByAuthority = true;
-                //f.parent.Destroy();
+                SalvageBarricadeRequested? args = null;
+                for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
+                {
+                    if (args == null)
+                    {
+                        StructureSaver? saver = StructureSaver.GetSingletonQuick();
+                        args = new SalvageBarricadeRequested(player, bdrop, bdrop.GetServersideData(), region, x, y,
+                            plant, saver?.GetSaveItemSync(bdrop.instanceID, StructType.Barricade));
+                    }
+
+                    ISalvageInfo salvage = WorkingSalvageInfo[i];
+                    salvage.IsSalvaged = true;
+                    salvage.Salvager = player.Steam64;
+                    if (salvage is ISalvageListener listener)
+                    {
+                        listener.OnSalvageRequested(args);
+                        if (!args.CanContinue)
+                            break;
+                    }
+                }
+
+                if (args is { CanContinue: false })
+                {
+                    for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
+                    {
+                        ISalvageInfo salvage = WorkingSalvageInfo[i];
+                        salvage.IsSalvaged = false;
+                        salvage.Salvager = 0;
+                    }
+
+                    player.SendChat(T.WhitelistProhibitedSalvage, bdrop.asset);
+                    return;
+                }
+
+                BarricadeManager.destroyBarricade(bdrop, x, y, ushort.MaxValue);
+                player.SendChat(T.StructureDestroyed, bdrop.asset);
             }
-            BarricadeManager.destroyBarricade(bdrop, x, y, ushort.MaxValue);
-            player.SendChat(T.StructureDestroyed, bdrop.asset);
+            finally
+            {
+                WorkingSalvageInfo.Clear();
+            }
         }
         else
         {
             player.SendChat(T.StructureNotDestroyable);
         }
     }
-    private void DestroyStructure(StructureDrop sdrop, UCPlayer player)
+    private static void DestroyStructure(StructureDrop sdrop, UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();
-        if (sdrop != null && Regions.tryGetCoordinate(sdrop.model.position, out byte x, out byte y))
+        if (sdrop != null && StructureManager.tryGetRegion(sdrop.model, out byte x, out byte y, out StructureRegion region))
         {
-            StructureManager.destroyStructure(sdrop, x, y, Vector3.down);
-            player.SendChat(T.StructureDestroyed, sdrop.asset);
+            sdrop.model.GetComponents(WorkingSalvageInfo);
+            try
+            {
+                SalvageStructureRequested? args = null;
+                for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
+                {
+                    if (args == null)
+                    {
+                        StructureSaver? saver = StructureSaver.GetSingletonQuick();
+                        args = new SalvageStructureRequested(player, sdrop, sdrop.GetServersideData(), region, x, y, saver?.GetSaveItemSync(sdrop.instanceID, StructType.Structure));
+                    }
+                    
+                    ISalvageInfo salvage = WorkingSalvageInfo[i];
+                    salvage.IsSalvaged = true;
+                    salvage.Salvager = player.Steam64;
+                    if (salvage is ISalvageListener listener)
+                    {
+                        listener.OnSalvageRequested(args);
+                        if (!args.CanContinue)
+                            break;
+                    }
+                }
+                if (args is { CanContinue: false })
+                {
+                    for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
+                    {
+                        ISalvageInfo salvage = WorkingSalvageInfo[i];
+                        salvage.IsSalvaged = false;
+                        salvage.Salvager = 0;
+                    }
+                    player.SendChat(T.WhitelistProhibitedSalvage, sdrop.asset);
+                    return;
+                }
+                StructureManager.destroyStructure(sdrop, x, y, Vector3.down);
+                player.SendChat(T.StructureDestroyed, sdrop.asset);
+            }
+            finally
+            {
+                WorkingSalvageInfo.Clear();
+            }
         }
         else
         {

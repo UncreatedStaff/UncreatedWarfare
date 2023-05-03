@@ -1,44 +1,26 @@
 ﻿using SDG.Unturned;
 using Uncreated.SQL;
 using Uncreated.Warfare.Structures;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Structures;
-public class SalvageBarricadeRequested : BreakablePlayerEvent, IBuildableDestroyedEvent
+public sealed class SalvageBarricadeRequested : SalvageRequested
 {
     private readonly BarricadeDrop _drop;
     private readonly BarricadeData _data;
-    private readonly BarricadeRegion _region;
-    private readonly byte _x;
-    private readonly byte _y;
-    private readonly bool _isSaved;
     private readonly ushort _plant;
-    private readonly SqlItem<SavedStructure>? _save;
-    private IBuildable? _buildable;
-    private InteractableVehicle? _vehicle;
+    public ushort Plant => _plant;
     public BarricadeDrop Barricade => _drop;
     public BarricadeData ServersideData => _data;
-    public BarricadeRegion Region => _region;
-    public Transform Transform => _drop.model;
-    public byte RegionPosX => _x;
-    public byte RegionPosY => _y;
-    public ushort PlantId => _plant;
-    public uint InstanceID => _drop.instanceID;
-    public bool IsSaved => _isSaved;
-    public SqlItem<SavedStructure>? Save => _save;
-    public IBuildable Buildable => _buildable ??= new UCBarricade(Barricade);
-    object IBuildableDestroyedEvent.Region => Region;
-    UCPlayer? IBuildableDestroyedEvent.Instigator => Player;
-    public InteractableVehicle? Vehicle => _vehicle ??= Region is VehicleBarricadeRegion r ? r.vehicle : null;
-    internal SalvageBarricadeRequested(UCPlayer instigator, BarricadeDrop structure, BarricadeData structureData, BarricadeRegion region, byte x, byte y, ushort plant, SqlItem<SavedStructure>? save) : base(instigator)
+    public BarricadeRegion Region => (BarricadeRegion)RegionObj;
+    public override IBuildable Buildable => BuildableCache ??= new UCBarricade(Barricade);
+    internal SalvageBarricadeRequested(UCPlayer instigator, BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant, SqlItem<SavedStructure>? save)
+        : base(instigator, region, x, y, barricade.instanceID)
     {
-        this._drop = structure;
-        this._data = structureData;
-        this._region = region;
-        this._x = x;
-        this._y = y;
-        this._plant = plant;
-        _save = save;
+        _drop = barricade;
+        _data = barricadeData;
+        _plant = plant;
+        Transform = barricade.model;
+        StructureSave = save;
         if (save?.Manager is not null)
         {
             save.Manager.WriteWait();
@@ -46,8 +28,8 @@ public class SalvageBarricadeRequested : BreakablePlayerEvent, IBuildableDestroy
             {
                 if (save.Item != null)
                 {
-                    _buildable = save.Item.Buildable;
-                    _isSaved = true;
+                    BuildableCache = save.Item.Buildable;
+                    IsStructureSaved = true;
                 }
             }
             finally

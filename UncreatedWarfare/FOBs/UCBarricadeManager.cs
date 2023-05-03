@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -11,26 +12,42 @@ namespace Uncreated.Warfare;
 
 public static class UCBarricadeManager
 {
+    public static PageEnumerator EnumerateInOrder(this Items items, bool reverse = true) => new PageEnumerator(items, reverse);
+    public static bool BuildableEquals(this IBuildable? buildable, IBuildable? other)
+    {
+        if (buildable == null) return other == null;
+        if (other == null) return false;
+
+        return buildable.Type == other.Type && buildable.InstanceId == other.InstanceId;
+    }
     public static bool Destroy(this IBuildable buildable)
     {
-        if (buildable.Model != null)
+        try
         {
-            if (buildable.Type == StructType.Barricade)
+            if (buildable.Model != null)
             {
-                if (BarricadeManager.tryGetRegion(buildable.Model, out byte x, out byte y, out ushort plant, out _) && buildable.Drop is BarricadeDrop d1)
+                if (buildable.Type == StructType.Barricade)
                 {
-                    BarricadeManager.destroyBarricade(d1, x, y, plant);
-                    return true;
+                    if (BarricadeManager.tryGetRegion(buildable.Model, out byte x, out byte y, out ushort plant, out _) && buildable.Drop is BarricadeDrop d1)
+                    {
+                        BarricadeManager.destroyBarricade(d1, x, y, plant);
+                        return true;
+                    }
+                }
+                else if (buildable.Type == StructType.Structure)
+                {
+                    if (StructureManager.tryGetRegion(buildable.Model, out byte x, out byte y, out _) && buildable.Drop is StructureDrop s1)
+                    {
+                        StructureManager.destroyStructure(s1, x, y, Vector3.zero);
+                        return true;
+                    }
                 }
             }
-            else if (buildable.Type == StructType.Structure)
-            {
-                if (StructureManager.tryGetRegion(buildable.Model, out byte x, out byte y, out _) && buildable.Drop is StructureDrop s1)
-                {
-                    StructureManager.destroyStructure(s1, x, y, Vector3.zero);
-                    return true;
-                }
-            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError($"Error destroying buildable: {buildable.Asset.itemName} (#{buildable.InstanceId}).");
+            L.LogError(ex);
         }
 
         return false;
@@ -1262,4 +1279,98 @@ public static class UCBarricadeManager
         return ct >= amount;
     }
 #pragma warning restore CS0612 // Type or member is obsolete
+}
+
+public readonly struct PageEnumerator : IEnumerable<ItemJar>
+{
+    public Items Page { get; }
+    public bool Reverse { get; }
+    public PageEnumerator(Items page, bool reverse)
+    {
+        Page = page;
+        Reverse = reverse;
+    }
+
+    public IEnumerator<ItemJar> GetEnumerator() => new Enumerator(Page, Reverse);
+    IEnumerator IEnumerable.GetEnumerator() => new Enumerator(Page, Reverse);
+
+    private struct Enumerator : IEnumerator<ItemJar>
+    {
+        private int _x = -1;
+        private int _y = -1;
+        public Items Page { get; }
+        public bool Reverse { get; }
+        public ItemJar Current { get; private set; }
+        object IEnumerator.Current => Current;
+        public Enumerator(Items page, bool reverse)
+        {
+            Page = page;
+            Current = null!;
+            Reverse = reverse;
+            if (reverse)
+            {
+                _x = Page.width;
+                _y = Page.height;
+            }
+        }
+        public void Dispose()
+        {
+            Reset();
+        }
+
+        public bool MoveNext()
+        {
+            if (Reverse)
+            {
+                for (int y = _y - (_x <= 0 ? 1 : 0); y >= 0; --y)
+                {
+                    for (int x = (_x <= 0 ? Page.width : (_x - 1)); x >= 0; --x)
+                    {
+                        L.LogDebug($"{x}, {y}");
+                        byte ind = Page.getIndex((byte)x, (byte)y);
+                        if (ind == byte.MaxValue)
+                            continue;
+                        _x = x;
+                        _y = y;
+                        Current = Page.getItem(ind);
+                        L.LogDebug($" Found: {Current.item.id}.");
+                        return true;
+                    }
+                }
+            }
+            else
+            {
+                for (int y = (_x == Page.width ? _y + 1 : _y); y < Page.height; ++y)
+                {
+                    for (int x = (_x == Page.width ? 0 : _x + 1); x < Page.width; ++x)
+                    {
+                        byte ind = Page.getIndex((byte)x, (byte)y);
+                        if (ind == byte.MaxValue)
+                            continue;
+                        _x = x;
+                        _y = y;
+                        Current = Page.getItem(ind);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        public void Reset()
+        {
+            if (Reverse)
+            {
+                _x = Page.width;
+                _y = Page.height;
+            }
+            else
+            {
+                _x = -1;
+                _y = -1;
+            }
+            Current = null!;
+        }
+    }
 }

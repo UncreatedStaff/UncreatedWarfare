@@ -419,8 +419,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await list.DownloadAll(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
         }
-        if (this is IFOBs)
-            RepairManager.LoadRepairStations();
 
         if (this is ISquads)
             RallyManager.WipeAllRallies();
@@ -1046,6 +1044,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             L.LogWarning("Structure regions have not been initialized.");
         if (BarricadeManager.regions is null)
             L.LogWarning("Barricade regions have not been initialized.");
+        if (this is IFOBs fobs)
+            fobs.FOBManager.DestroyAllFOBs();
         try
         {
             //bool isStruct = this is IStructureSaving;
@@ -1107,10 +1107,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 (object drop, byte x, byte y) = toDestroy[i];
                 if (drop is BarricadeDrop bdrop)
                 {
-                    if (bdrop.model.TryGetComponent(out FOBComponent fob))
-                    {
-                        fob.Parent.IsWipedByAuthority = true;
-                    }
+                    if (bdrop.model.TryGetComponent(out ISalvageInfo fob))
+                        fob.IsSalvaged = true;
                     if (bdrop.interactable is InteractableStorage storage)
                         storage.despawnWhenDestroyed = true;
                     BarricadeManager.destroyBarricade(bdrop, x, y, ushort.MaxValue);

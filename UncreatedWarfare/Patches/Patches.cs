@@ -9,6 +9,7 @@ using System.Reflection.Emit;
 using System.Text.RegularExpressions;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Squads;
@@ -250,7 +251,7 @@ public static partial class Patches
             if (callingPlayer.isAdmin || duty)
             {
                 txtType = 1;
-                newText = "<#" + Teams.TeamManager.AdminColorHex + ">%SPEAKER%</color>: " + text;
+                newText = "<#" + TeamManager.AdminColorHex + ">%SPEAKER%</color>: " + text;
             }
             else if (caller != null && SquadManager.Loaded && SquadManager.Singleton.Commanders.IsCommander(caller))
             {
@@ -260,16 +261,16 @@ public static partial class Patches
             else
             {
                 txtType = 3;
-                string hx = Teams.TeamManager.GetTeamHexColor(team);
+                string hx = TeamManager.GetTeamHexColor(team);
                 newText = "<#" + hx + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", string.Empty);
             }
             string GetIMGUIText()
             {
                 return txtType switch
                 {
-                    1 => "<color=#" + Teams.TeamManager.AdminColorHex + ">%SPEAKER%</color>: " + text,
+                    1 => "<color=#" + TeamManager.AdminColorHex + ">%SPEAKER%</color>: " + text,
                     2 => "<color=#" + UCWarfare.GetColorHex("commander") + ">%SPEAKER%</color>: " + text.Replace('<', '{').Replace('>', '}'),
-                    _ => "<color=#" + Teams.TeamManager.GetTeamHexColor(team) + ">%SPEAKER%</color>: " + text.Replace('<', '{').Replace('>', '}')
+                    _ => "<color=#" + TeamManager.GetTeamHexColor(team) + ">%SPEAKER%</color>: " + text.Replace('<', '{').Replace('>', '}')
                 };
             }
 

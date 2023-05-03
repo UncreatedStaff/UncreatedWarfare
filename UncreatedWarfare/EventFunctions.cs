@@ -27,7 +27,6 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
@@ -132,8 +131,6 @@ public static class EventFunctions
         ActionLog.Add(ActionLogType.PlaceBarricade, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", data.owner);
 
         RallyManager.OnBarricadePlaced(drop, region);
-
-        RepairManager.OnBarricadePlaced(drop, region);
 
         if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(data.barricade.asset.GUID))
             drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(drop);
@@ -276,7 +273,7 @@ public static class EventFunctions
     }
     private static bool CheckLandminePosition(Vector3 position)
     {
-        return !(TeamManager.IsInAnyMainOrAMCOrLobby(position) || FOBManager.Loaded && FOBManager.IsPointInFOB(position, out _, out _));
+        return !(TeamManager.IsInAnyMainOrAMCOrLobby(position) || FOBManager.Loaded && FOBManager.IsPointInFOB(position, out _));
     }
     internal static void OnBarricadeTryPlaced(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angleX,
         ref float angleY, ref float angleZ, ref ulong owner, ref ulong group, ref bool shouldAllow)
@@ -1573,16 +1570,6 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.Is<IFOBs>(out _))
-        {
-            RepairManager.OnBarricadeDestroyed(e.ServersideData, e.Barricade, e.InstanceID, e.VehicleRegionIndex);
-        }
-
-        if (e.Transform.TryGetComponent(out BuildableComponent buildable))
-            buildable.Destroy();
-        if (e.Transform.TryGetComponent(out RepairableComponent repairable))
-            repairable.Destroy(e);
-
         IconRenderer[] iconrenderers = e.Transform.GetComponents<IconRenderer>();
         foreach (IconRenderer iconRenderer in iconrenderers)
             IconManager.DeleteIcon(iconRenderer);

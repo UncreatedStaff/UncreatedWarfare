@@ -2,24 +2,25 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using JetBrains.Annotations;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Components;
 
-public class Cache : IFOB, IObjective, IPlayerDisconnectListener
+public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposable
 {
+    private bool _disposed;
     private CacheComponent? _component;
-    private string _name;
     private readonly GridLocation _gc;
     private readonly string _cl;
     public int Number;
@@ -29,21 +30,25 @@ public class Cache : IFOB, IObjective, IPlayerDisconnectListener
     public ulong Team => _component == null ? 0 : _component.Team;
     public List<UCPlayer> NearbyDefenders { get; private set; }
     public List<UCPlayer> NearbyAttackers { get; private set; }
-
-    public Vector3 Position { get; private set; }
+    UCPlayer? IFOB.Instigator { get; set; }
+    public Vector3 Position { get; }
     public bool IsDestroyed { get; private set; }
-    public string Name { get => _name; set => _name = value; }
+    public string Name { get; set; }
     float IDeployable.Yaw => _component == null ? 0 : _component.transform.rotation.eulerAngles.y;
+    public BarricadeDrop Drop { get; private set; }
+    public float Radius => 40;
+    public bool ContainsBuildable(IBuildable buildable) => buildable.Type == StructType.Barricade && Drop != null && Drop.instanceID == buildable.InstanceId;
+    public bool ContainsVehicle(InteractableVehicle vehicle) => false;
 
     public Cache(BarricadeDrop drop)
     {
         IsDiscovered = false;
         _component = drop.model.gameObject.AddComponent<CacheComponent>().Initialize(drop, this);
-
+        Drop = drop;
         Position = _component.transform.position;
         Vector3 pos = Position;
         _gc = new GridLocation(in pos);
-        _cl = F.GetClosestLocationName(pos);
+        _cl = F.GetClosestLocationName(pos, true, true);
 
         if (Data.Is(out IFlagRotation fg))
         {
@@ -59,10 +64,10 @@ public class Cache : IFOB, IObjective, IPlayerDisconnectListener
         {
             if (NearbyAttackers.Count != 0)
                 return UCWarfare.GetColorHex("enemy_nearby_fob_color");
-            else if (!IsDiscovered)
+            if (!IsDiscovered)
                 return UCWarfare.GetColorHex("insurgency_cache_undiscovered_color");
-            else
-                return UCWarfare.GetColorHex("insurgency_cache_discovered_color");
+            
+            return UCWarfare.GetColorHex("insurgency_cache_discovered_color");
         }
     }
 
@@ -163,6 +168,14 @@ public class Cache : IFOB, IObjective, IPlayerDisconnectListener
     {
         return $"{Name} - T{Team} - Discovered: {IsDiscovered} - Destroyed: {IsDestroyed}";
     }
+    public void Dump(UCPlayer? target)
+    {
+        L.Log($"[FOBS] [{Name}] === Special Fob Dump ===");
+        L.Log($" Grid Location: {GridLocation}, Closest Location: {ClosestLocation}.");
+        L.Log($" Color: {UIColor}.");
+        L.Log($" Discovered: {IsDiscovered}, Destroyed: {IsDestroyed}.");
+        L.Log($" Team: {Team}.");
+    }
 
     void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
     {
@@ -171,40 +184,34 @@ public class Cache : IFOB, IObjective, IPlayerDisconnectListener
         if (NearbyDefenders.Remove(player))
             OnDefenderLeft(player);
     }
-    public void Destroy(bool authority)
+    public bool IsPlayerOn(UCPlayer player) => NearbyDefenders.Contains(player) || NearbyAttackers.Contains(player);
+    public void Dispose()
     {
+        if (_disposed) return;
         if (_component != null)
             _component.Destroy();
-
-        FOBManager.CleanupFOB(this);
+        if (Data.Is(out Insurgency ins))
+            ins.OnCacheDestroyed(this, ((IFOB)this).Instigator);
+        if (Drop != null && BarricadeManager.tryGetRegion(Drop.model, out byte x, out byte y, out ushort plant, out _))
+        {
+            BarricadeManager.destroyBarricade(Drop, x, y, plant);
+            Drop = null!;
+        }
+        _disposed = true;
     }
-    public class CacheComponent : MonoBehaviour
+    public class CacheComponent : MonoBehaviour, IManualOnDestroy
     {
         private Cache _cache;
-        private float _radius;
-        private float _sqrRadius;
         private BarricadeDrop _structure;
         public Cache Cache => _cache;
         public ulong Team => _structure.GetServersideData().group;
-        public float Radius
-        {
-            get => _radius;
-            private set
-            {
-                _radius = value;
-                _sqrRadius = value * value;
-            }
-        }
 
         public CacheComponent Initialize(BarricadeDrop drop, Cache cache)
         {
             _cache = cache;
             _structure = drop;
-            Radius = 40;
             _cache.NearbyDefenders = new List<UCPlayer>();
             _cache.NearbyAttackers = new List<UCPlayer>();
-
-            EventDispatcher.PlayerLeaving += OnPlayerDisconnect;
 
             return this;
         }
@@ -214,10 +221,6 @@ public class Cache : IFOB, IObjective, IPlayerDisconnectListener
             {
                 IconManager.AttachIcon(effect, _structure.model, ins.AttackingTeam, 30F);
             }
-        }
-        private void OnDestroy()
-        {
-            EventDispatcher.PlayerLeaving -= OnPlayerDisconnect;
         }
         public void Destroy()
         {
@@ -237,19 +240,19 @@ public class Cache : IFOB, IObjective, IPlayerDisconnectListener
 
             Destroy(gameObject);
         }
-        private void OnPlayerDisconnect(PlayerEvent e)
-        {
-            _cache.NearbyDefenders.RemoveAll(x => !x.IsOnline || x.Steam64 == e.Steam64);
-        }
 
-        private float lastTick = 0;
-        private const float TICK_SPEED = 0.25f;
+        private float _lastTick;
+        private const float TickSpeed = 0.25f;
+
+        [UsedImplicitly]
         private void Update()
         {
             float t = Time.realtimeSinceStartup;
-            if (t - lastTick > TICK_SPEED)
+            if (t - _lastTick > TickSpeed)
             {
-                lastTick = t;
+                float rad = Cache.Radius;
+                rad *= rad;
+                _lastTick = t;
                 Vector3 pos = transform.position;
                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 {
@@ -259,7 +262,7 @@ public class Cache : IFOB, IObjective, IPlayerDisconnectListener
                     if (pos2 == Vector3.zero) continue;
                     if (team == Team)
                     {
-                        if ((pos2 - pos).sqrMagnitude < _sqrRadius)
+                        if ((pos2 - pos).sqrMagnitude < rad)
                         {
                             if (!_cache.NearbyDefenders.HasPlayer(pl))
                             {
@@ -272,7 +275,7 @@ public class Cache : IFOB, IObjective, IPlayerDisconnectListener
                     }
                     else if (team is > 0 and < 3)
                     {
-                        if ((pos2 - pos).sqrMagnitude < _sqrRadius)
+                        if ((pos2 - pos).sqrMagnitude < rad)
                         {
                             if (!_cache.NearbyAttackers.HasPlayer(pl))
                             {
@@ -285,6 +288,12 @@ public class Cache : IFOB, IObjective, IPlayerDisconnectListener
                     }
                 }
             }
+        }
+
+        public void ManualOnDestroy()
+        {
+            _cache.Drop = null!;
+            _cache.Dispose();
         }
     }
 }

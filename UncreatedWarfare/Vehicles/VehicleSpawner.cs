@@ -82,7 +82,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         return base.PreUnload(token);
     }
     public static bool CanUseCountermeasures(InteractableVehicle vehicle) => true;
-    private static readonly List<BarricadeDrop> _toUpdate = new List<BarricadeDrop>(32);
+    private static readonly List<BarricadeDrop> WorkingToUpdate = new List<BarricadeDrop>(32);
     private void OnPlayerEnterMain(UCPlayer player, ulong team)
     {
         ThreadUtil.assertIsGameThread();
@@ -100,19 +100,19 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                     if (sign?.Buildable?.Drop is not BarricadeDrop drop)
                         continue;
                     if (team == 1 && TeamManager.Team1Main.IsInside(sign.Position) || team == 2 && TeamManager.Team2Main.IsInside(sign.Position))
-                        _toUpdate.Add(drop);
+                        WorkingToUpdate.Add(drop);
                 }
             }
             finally
             {
                 WriteRelease();
             }
-            for (int i = 0; i < _toUpdate.Count; ++i)
-                Signs.SendSignUpdate(_toUpdate[i], player, false);
+            for (int i = 0; i < WorkingToUpdate.Count; ++i)
+                Signs.SendSignUpdate(WorkingToUpdate[i], player, false);
         }
         finally
         {
-            _toUpdate.Clear();
+            WorkingToUpdate.Clear();
         }
         InteractableVehicle? vehicle = player.CurrentVehicle;
         if (vehicle == null)
@@ -745,10 +745,8 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
 
         foreach (Passenger passenger in vehicle.passengers)
         {
-            if (passenger.player != null && owner.CSteamID == passenger.player.playerID.steamID)
-            {
+            if (passenger.player != null && owner.Steam64 == passenger.player.playerID.steamID.m_SteamID)
                 return true;
-            }
         }
         return false;
     }
@@ -900,13 +898,14 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                     {
                         if (e.FinalSeat == 0) // if a crewman is trying to enter the driver's seat
                         {
+                            FOBManager? manager = Data.Singletons.GetSingleton<FOBManager>();
                             bool canEnterDriverSeat = owner == null ||
                                 e.Player == owner ||
                                 e.Player.OnDuty() ||
                                 IsOwnerInVehicle(e.Vehicle, owner) ||
                                 (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) ||
                                 (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
-                                (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(e.Vehicle.transform.position, FobRadius.FullBunkerDependant, e.Vehicle.lockedGroup.m_SteamID) != null);
+                                (data.Type == VehicleType.LogisticsGround && manager != null && manager.FindNearestFOB<FOB>(e.Vehicle.transform.position, e.Vehicle.lockedGroup.m_SteamID.GetTeam()) != null);
 
                             if (!canEnterDriverSeat)
                             {

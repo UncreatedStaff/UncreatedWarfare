@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using JetBrains.Annotations;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -93,12 +94,13 @@ public static partial class Patches
                         {
                             if (seat == 0)
                             {
+                                FOBManager? manager = Data.Singletons.GetSingleton<FOBManager>();
                                 bool canEnterDriverSeat =
                                     owner is null ||
                                     enterer == owner ||
                                     (owner.Squad != null && owner.Squad.Members.Contains(enterer)) ||
                                     (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2) ||
-                                    (data.Type == VehicleType.LogisticsGround && FOB.GetNearestFOB(__instance.transform.position, FobRadius.FullBunkerDependant, __instance.lockedGroup.m_SteamID) != null);
+                                    (data.Type == VehicleType.LogisticsGround && manager != null && manager.FindNearestFOB<FOB>(__instance.transform.position, __instance.lockedGroup.m_SteamID.GetTeam()) != null);
 
                                 if (!canEnterDriverSeat)
                                 {
