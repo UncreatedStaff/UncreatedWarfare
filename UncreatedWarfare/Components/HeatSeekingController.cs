@@ -120,9 +120,11 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     {
         Transform? newTarget = null;
 
-        _lastKnownGunner = GetGunner(_vehicle);
+        UCPlayer? gunner = GetGunner(_vehicle);
 
-        if (_lastKnownGunner is not null)
+        if (gunner != null)
+            _lastKnownGunner = gunner;
+        else if (_lastKnownGunner != null) // gunner exited the vehicle
             CancelLockOnSound(_lastKnownGunner);
 
         float bestTarget = AQUISITION_ANGLE;
