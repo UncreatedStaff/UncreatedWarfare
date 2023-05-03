@@ -120,68 +120,61 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     {
         Transform? newTarget = null;
 
-        UCPlayer? gunner = GetGunner(_vehicle);
+        _lastKnownGunner = GetGunner(_vehicle);
 
-        if (gunner is null)
+        if (_lastKnownGunner is not null)
+            CancelLockOnSound(_lastKnownGunner);
+
+        float bestTarget = AQUISITION_ANGLE;
+
+        foreach (InteractableVehicle v in VehicleManager.vehicles)
         {
-            if (_lastKnownGunner is not null)
-                CancelLockOnSound(_lastKnownGunner);
-            _lastKnownGunner = null;
-        }
-        else
-        {
-            _lastKnownGunner = gunner;
-
-            float bestTarget = AQUISITION_ANGLE;
-
-            foreach (InteractableVehicle v in VehicleManager.vehicles)
+            if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead && v.lockedGroup != _vehicle.lockedGroup && v.isEngineOn && !(v.anySeatsOccupied && TeamManager.IsInAnyMain(v.transform.position)))
             {
-                if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead && v.lockedGroup.m_SteamID != gunner.GetTeam() && v.isEngineOn && !(v.anySeatsOccupied && TeamManager.IsInAnyMain(v.transform.position)))
+                if (IsInRange(v.transform.position))
                 {
-                    if (IsInRange(v.transform.position))
-                    {
-                        Vector3 relativePos = transform.InverseTransformPoint(v.transform.position);
-                        relativePos = new Vector3(Mathf.Abs(relativePos.x), Mathf.Abs(relativePos.y), 0);
+                    Vector3 relativePos = transform.InverseTransformPoint(v.transform.position);
+                    relativePos = new Vector3(Mathf.Abs(relativePos.x), Mathf.Abs(relativePos.y), 0);
 
-                        float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
-                        float angleBetween = Vector3.Angle(v.transform.position - transform.position, transform.forward);
-                        if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
+                    float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
+                    float angleBetween = Vector3.Angle(v.transform.position - transform.position, transform.forward);
+                    if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
+                    {
+                        bool raySuccess = Physics.Linecast(transform.position, v.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                        if (!raySuccess)
                         {
-                            bool raySuccess = Physics.Linecast(transform.position, v.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
-                            if (!raySuccess)
-                            {
-                                bestTarget = lockOnDistance;
-                                newTarget = v.transform;
-                            }
+                            bestTarget = lockOnDistance;
+                            newTarget = v.transform;
                         }
                     }
                 }
             }
+        }
 
-            bestTarget = AQUISITION_ANGLE;
+        bestTarget = AQUISITION_ANGLE;
 
-            foreach (Countermeasure c in Countermeasure.ActiveCountermeasures)
+        foreach (Countermeasure c in Countermeasure.ActiveCountermeasures)
+        {
+            if (!c.Burning)
+                continue;
+
+            Vector3 relativePos = transform.InverseTransformPoint(c.transform.position);
+
+            float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
+            float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
+            if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
             {
-                if (!c.Burning)
-                    continue;
-
-                Vector3 relativePos = transform.InverseTransformPoint(c.transform.position);
-
-                float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
-                float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
-                if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
+                bool raySuccess = Physics.Linecast(transform.position, c.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                if (!raySuccess)
                 {
-                    bool raySuccess = Physics.Linecast(transform.position, c.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
-                    if (!raySuccess)
-                    {
-                        bestTarget = lockOnDistance;
-                        newTarget = c.transform;
-                    }
+                    bestTarget = lockOnDistance;
+                    newTarget = c.transform;
                 }
             }
         }
+        
 
-        LockOn(newTarget, gunner);
+        LockOn(newTarget, _lastKnownGunner);
     }
 
     private void LockOn(Transform? newTarget, UCPlayer? gunner)
