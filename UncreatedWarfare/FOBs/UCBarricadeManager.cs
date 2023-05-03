@@ -1328,14 +1328,12 @@ public readonly struct PageEnumerator : IEnumerable<ItemJar>
                 {
                     for (int x = (_x <= 0 ? Page.width : (_x - 1)); x >= 0; --x)
                     {
-                        L.LogDebug($"{x}, {y}");
                         byte ind = Page.getIndex((byte)x, (byte)y);
                         if (ind == byte.MaxValue)
                             continue;
                         _x = x;
                         _y = y;
                         Current = Page.getItem(ind);
-                        L.LogDebug($" Found: {Current.item.id}.");
                         return true;
                     }
                 }

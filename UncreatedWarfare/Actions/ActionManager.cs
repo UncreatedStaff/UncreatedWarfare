@@ -548,9 +548,15 @@ public class ActionManager : BaseSingleton
             }
             
             if (build)
+            {
                 fob.ModifyBuild(-successfullyAdded);
+                FOBManager.ShowResourceToast(new LanguageSet(caller), build: -successfullyAdded, message: T.FOBResourceToastLoadSupplies.Translate(caller));
+            }
             else
+            {
                 fob.ModifyAmmo(-successfullyAdded);
+                FOBManager.ShowResourceToast(new LanguageSet(caller), ammo: -successfullyAdded, message: T.FOBResourceToastLoadSupplies.Translate(caller));
+            }
 
             if (successfullyAdded > 0)
             {

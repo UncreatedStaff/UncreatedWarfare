@@ -117,28 +117,55 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     {
         for (int i = 0; i < _fobs.Count; ++i)
         {
-            if (FOBSort(_fobs[i], fob) == -1)
+            if (GetFOBPriority(_fobs[i]) > GetFOBPriority(fob))
             {
                 _fobs.Insert(i, fob);
+                for (int j = i; j < _fobs.Count; ++j)
+                    UpdateFOBListForTeam(_fobs[j].Team, _fobs[j]);
                 return;
             }
         }
 
         _fobs.Add(fob);
+        UpdateFOBListForTeam(fob.Team, fob);
     }
-    private static int FOBSort(IFOB a, IFOB b)
+    public static void ShowResourceToast(LanguageSet set, int build = 0, int ammo = 0, string? message = null)
     {
-        if (a is not FOB f)
+        if (build != 0)
         {
-            if (b is not FOB)
-                return string.Compare(a.Name, b.Name, StringComparison.Ordinal);
-            
-            return 1;
+            string number = (build > 0 ? T.FOBToastGainBuild : T.FOBToastLoseBuild).Translate(set.Language, Math.Abs(build), null, set.Team);
+            ToastMessage msg = string.IsNullOrEmpty(message)
+                ? new ToastMessage(number, ToastMessageSeverity.Mini)
+                : new ToastMessage(number + "\n" + message!.Colorize("adadad"), ToastMessageSeverity.Mini);
+            while (set.MoveNext())
+            {
+                if (set.Next.Player.TryGetPlayerData(out UCPlayerData data))
+                    data.QueueMessage(msg);
+            }
+            set.Reset();
         }
-        
-        if (b is not FOB f2)
-            return -1;
-        return f.Number.CompareTo(f2.Number);
+        if (ammo != 0)
+        {
+            string number = (ammo > 0 ? T.FOBToastGainAmmo : T.FOBToastLoseAmmo).Translate(set.Language, Math.Abs(ammo), null, set.Team);
+            ToastMessage msg = string.IsNullOrEmpty(message)
+                ? new ToastMessage(number, ToastMessageSeverity.Mini)
+                : new ToastMessage(number + "\n" + message!.Colorize("adadad"), ToastMessageSeverity.Mini);
+            while (set.MoveNext())
+            {
+                if (set.Next.Player.TryGetPlayerData(out UCPlayerData data))
+                    data.QueueMessage(msg);
+            }
+            set.Reset();
+        }
+    }
+    private static int GetFOBPriority(IFOB fob)
+    {
+        if (fob == null) return -1;
+        if (fob is FOB f)
+            return f.Number;
+        if (fob is Cache c)
+            return c.Number - 15;
+        return -100;
     }
     public void LoadRepairStations()
     {
@@ -250,7 +277,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         return vehicle;
     }
 
-    private string GetOpenStandardFOBName(ulong team)
+    private string GetOpenStandardFOBName(ulong team, out int number)
     {
         int maxId = 0;
         int lowestGap = int.MaxValue;
@@ -270,7 +297,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 maxId = c;
         }
 
-        return "FOB" + (lowestGap == int.MaxValue ? maxId + 1 : lowestGap);
+        number = lowestGap == int.MaxValue ? maxId + 1 : lowestGap;
+        return "FOB" + number.ToString(Data.LocalLocale);
     }
     public void DestroyAllFOBs(ulong instigator = 0ul)
     {
@@ -304,6 +332,15 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             .Where(x => x.Team == team)
             .OrderBy(x => (pos - x.Position).sqrMagnitude)
             .FirstOrDefault(x => (pos - x.Position).sqrMagnitude < Mathf.Pow(x.Radius, 2f));
+    }
+    public T? FindNearestFOB<T>(Vector3 pos, ulong team, float radius) where T : IRadiusFOB
+    {
+        radius *= radius;
+        return _fobs
+            .OfType<T>()
+            .Where(x => x.Team == team)
+            .OrderBy(x => (pos - x.Position).sqrMagnitude)
+            .FirstOrDefault(x => (pos - x.Position).sqrMagnitude < Mathf.Pow(radius, 2f));
     }
     internal bool ValidateFloatingPlacement(BuildableData buildable, UCPlayer player, Vector3 point, IFOBItem? ignoreFoundation)
     {
@@ -415,7 +452,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         fobObj.transform.SetPositionAndRotation(radio.model.position, radio.model.rotation);
         FOB fob = fobObj.AddComponent<FOB>();
         fob.Radio = radio.model.gameObject.AddComponent<RadioComponent>();
-        fob.Name = GetOpenStandardFOBName(team);
+        fob.Name = GetOpenStandardFOBName(team, out int number);
+        fob.Number = number;
 
         AddFOB(fob);
         return fob;
@@ -558,9 +596,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                             return;
                         }
                     }
-                    if (f is FOB fob2 && (fob2.transform.position - e.Position).sqrMagnitude < rad)
+                    if (f is FOB fob2 && (fob2.transform.position - e.Position).sqrMagnitude < sqrRad)
                     {
-                        e.OriginalPlacer?.SendChat(T.BuildFOBTooClose, fob2, (fob2.transform.position - e.Position).magnitude, sqrRad);
+                        e.OriginalPlacer?.SendChat(T.BuildFOBTooClose, fob2, (fob2.transform.position - e.Position).magnitude, rad);
                         e.Break();
                         return;
                     }
@@ -877,12 +915,17 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                     string? txt = resourcesOnly ? null : T.FOBUI.Translate(set.Language, f, f.GridLocation, f.ClosestLocation, null, set.Team);
                     while (set.MoveNext())
                     {
-                        if (set.Next.HasUIHidden)
-                            continue;
-                        if (txt is not null)
-                            ListUI.FOBNames[index].SetText(set.Next.Connection, txt);
-                        if (resx is not null)
-                            ListUI.FOBResources[index].SetText(set.Next.Connection, resx);
+                        if (!set.Next.HasFOBUI)
+                            SendFOBList(set.Next);
+                        else
+                        {
+                            if (set.Next.HasUIHidden)
+                                continue;
+                            if (txt is not null)
+                                ListUI.FOBNames[index].SetText(set.Next.Connection, txt);
+                            if (resx is not null)
+                                ListUI.FOBResources[index].SetText(set.Next.Connection, resx);
+                        }
                     }
                 }
                 return;
@@ -936,12 +979,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ITransportConnection connection = player.Connection;
-
-        if (!player.HasFOBUI)
-        {
-            ListUI.SendToPlayer(connection);
-            player.HasFOBUI = true;
-        }
+        
+        ListUI.SendToPlayer(connection);
+        player.HasFOBUI = true;
 
         List<IFOB> fobs = _singleton._fobs;
         int max = ListUI.FOBParents.Length;
@@ -1388,39 +1428,39 @@ public class BuildableData : ITranslationArgument
     {
         if (Emplacement is not null && Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vasset))
         {
-            string plural = Translation.Pluralize(language, culture, vasset.vehicleName, flags);
+            string name = Translation.Pluralize(language, culture, vasset.vehicleName, flags);
             if (format is not null && format.Equals(T.FormatRarityColor))
-                return Localization.Colorize(ItemTool.getRarityColorUI(vasset.rarity).Hex(), plural, flags);
+                return Localization.Colorize(ItemTool.getRarityColorUI(vasset.rarity).Hex(), name, flags);
 
-            return plural;
+            return name;
         }
 
         if (Foundation.ValidReference(out ItemAsset iasset) || FullBuildable.ValidReference(out iasset))
         {
-            string plural = Translation.Pluralize(language, culture, GetItemName(iasset.itemName), flags);
+            string name = GetItemName(iasset.itemName);
             if (format is not null && format.Equals(T.FormatRarityColor))
-                return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), plural, flags);
+                return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), name, flags);
             else
-                return plural;
+                return name;
         }
 
         if (Emplacement is not null)
         {
             if (Emplacement.BaseBarricade.ValidReference(out iasset))
             {
-                string plural = Translation.Pluralize(language, culture, GetItemName(iasset.itemName), flags);
+                string name = GetItemName(iasset.itemName);
                 if (format is not null && format.Equals(T.FormatRarityColor))
-                    return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), plural, flags);
+                    return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), name, flags);
                 else
-                    return plural;
+                    return name;
             }
             if (Emplacement.Ammo.ValidReference(out iasset))
             {
-                string plural = Translation.Pluralize(language, culture, GetItemName(iasset.itemName), flags);
+                string name = GetItemName(iasset.itemName);
                 if (format is not null && format.Equals(T.FormatRarityColor))
-                    return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), plural, flags);
+                    return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), name, flags);
                 else
-                    return plural;
+                    return name;
             }
         }
 

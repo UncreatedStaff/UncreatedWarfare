@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
@@ -84,7 +83,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     {
         if (buildable.Type == BuildableType.Bunker && Bunker != null)
         {
-            if (!Bunker.Equals(ignoreFoundation))
+            if (ignoreFoundation is null || !Bunker.Equals(ignoreFoundation))
             {
                 player.SendChat(T.BuildTickStructureExists, buildable);
                 return false;
@@ -128,6 +127,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         GridLocation = new GridLocation(transform.position);
         Radius = FOBManager.Config.FOBBuildPickupRadiusNoBunker;
     }
+    [UsedImplicitly]
     private void Start()
     {
         if (Radio == null)
@@ -179,19 +179,28 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     }
     public void ModifyBuild(int delta)
     {
-        BuildSupply += delta;
-        UpdateResourceUI(true, false);
+        if (delta != 0)
+        {
+            BuildSupply += delta;
+            UpdateResourceUI(true, false);
+        }
     }
     public void ModifyAmmo(int delta)
     {
-        AmmoSupply += delta;
-        UpdateResourceUI(false, true);
+        if (delta != 0)
+        {
+            AmmoSupply += delta;
+            UpdateResourceUI(false, true);
+        }
     }
     public void ModifyResources(int buildDelta, int ammoDelta)
     {
-        BuildSupply += buildDelta;
-        AmmoSupply += ammoDelta;
-        UpdateResourceUI(true, true);
+        if (buildDelta != 0 || ammoDelta != 0)
+        {
+            BuildSupply += buildDelta;
+            AmmoSupply += ammoDelta;
+            UpdateResourceUI(buildDelta != 0, ammoDelta != 0);
+        }
     }
     public void Restock()
     {
@@ -209,6 +218,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         // refresh inventory
         if (Radio.Barricade.interactable is InteractableStorage storage)
         {
+            // gets removed in InteractableStorage.updateState
+            storage.items.onStateUpdated += Radio.InvalidateRestock;
             for (int i = 0; i < _friendlies.Count; ++i)
             {
                 if (_friendlies[i].Player.inventory.storage == storage)
@@ -249,6 +260,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public void RegisterItem(IFOBItem item)
     {
         item.FOB = this;
+        if (item is MonoBehaviour mb && item.Icon.ValidReference(out Guid icon))
+            IconManager.AttachIcon(icon, mb.transform, item.Team, item.IconOffset);
         if (item is BunkerComponent b)
         {
             Bunker = b;
@@ -293,7 +306,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     L.LogWarning($"[FOBS] [{Name}] Failed to place barricade {_originalRadio.itemName}.");
                     return;
                 }
-                Destroy(Radio);
+                if (Radio != null)
+                    Destroy(Radio);
                 Radio = t.gameObject.AddComponent<RadioComponent>();
                 Radio.FOB = this;
                 break;
@@ -342,7 +356,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     component.LastDamager = oldKiller;
                     component.LastDamagerTime = oldKillerTime;
                 }
-                Destroy(Radio);
+                if (Radio != null)
+                    Destroy(Radio);
                 Radio = t.gameObject.AddComponent<RadioComponent>();
                 Radio.FOB = this;
                 break;
@@ -670,11 +685,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         if (item.Equals(Bunker))
             Bunker = null;
         if (item.Equals(Radio))
-        {
             Radio = null!;
-            if (item is RadioComponent r && r.State == RadioComponent.RadioState.Bleeding)
-                Destroy();
-        }
     }
     public bool ContainsBuildable(IBuildable buildable)
     {
@@ -722,6 +733,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
             return null;
         }
+        if (item.Icon.ValidReference(out Guid icon))
+            IconManager.AttachIcon(icon, itemMb.transform, item.Team, item.IconOffset);
         if (itemMb is BunkerComponent b && b == Bunker)
         {
             Bunker = newObj.gameObject.AddComponent<BunkerComponent>();
@@ -766,7 +779,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             return false;
         }
 
-        return false;
+        return true;
     }
     bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
     {
@@ -789,7 +802,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             return false;
         }
 
-        return false;
+        return true;
     }
     void IDeployable.OnDeploy(UCPlayer player, bool chat)
     {

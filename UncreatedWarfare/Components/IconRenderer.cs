@@ -41,35 +41,10 @@ public static class IconManager
 #endif
         if (drop.model == null || drop.model.TryGetComponent(out IconRenderer _))
             return;
-
-        BarricadeData data = drop.GetServersideData();
-        // FOB radio
-        if (isFOBRadio && Gamemode.Config.EffectMarkerRadio.ValidReference(out Guid guid))
-            AttachIcon(guid, drop.model, data.group, 3.5f);
-
-        // FOB radio damaged
-        else if (Gamemode.Config.BarricadeFOBRadioDamaged.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerRadioDamaged.ValidReference(out guid))
-            AttachIcon(guid, drop.model, data.group, 3.5f);
-
-        // FOB bunker
-        else if (Gamemode.Config.BarricadeFOBBunker.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerBunker.ValidReference(out guid))
-            AttachIcon(guid, drop.model, data.group, 5.5f);
-
+        
         // ammo bag
-        else if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerAmmo.ValidReference(out guid))
-            AttachIcon(guid, drop.model, data.group, 1f);
-
-        // ammo crate
-        else if (Gamemode.Config.BarricadeAmmoCrate.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerAmmo.ValidReference(out guid))
-            AttachIcon(guid, drop.model, data.group, 1.75f);
-
-        // repair station
-        else if (Gamemode.Config.BarricadeRepairStation.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerRepair.ValidReference(out guid))
-            AttachIcon(guid, drop.model, data.group, 4.5f);
-
-        // buildable
-        else if (Gamemode.Config.EffectMarkerBuildable.ValidReference(out guid) && FOBManager.Config.Buildables.Exists(b => b.Foundation.MatchGuid(drop.asset.GUID) && b.Type != BuildableType.Fortification))
-            AttachIcon(guid, drop.model, data.group, 2f);
+        if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerAmmo.ValidReference(out Guid guid))
+            AttachIcon(guid, drop.model, drop.GetServersideData().group.GetTeam(), 1f);
     }
     private static void OnGroupChanged(GroupChanged e)
     {

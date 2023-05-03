@@ -94,6 +94,12 @@ public class AmmoCommand : AsyncCommand
                 if (!isInMain)
                 {
                     fob!.ModifyAmmo(-vehicleData.RearmCost);
+
+                    FOBManager.ShowResourceToast(new LanguageSet(ctx.Caller), ammo: -vehicleData.RearmCost, message: T.FOBResourceToastRearmVehicle.Translate(ctx.Caller));
+
+                    if (vehicle.TryGetComponent(out VehicleComponent comp) && UCPlayer.FromID(comp.LastDriver) is { } lastDriver && lastDriver.Steam64 != ctx.CallerID)
+                        FOBManager.ShowResourceToast(new LanguageSet(lastDriver), ammo: -vehicleData.RearmCost, message: T.FOBResourceToastRearmVehicle.Translate(lastDriver));
+
                     ctx.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.AmmoSupply);
                     ctx.LogAction(ActionLogType.RequestAmmo, "FOR VEHICLE");
                 }
@@ -179,6 +185,7 @@ public class AmmoCommand : AsyncCommand
                 else
                 {
                     fob!.ModifyAmmo(-ammoCost);
+                    FOBManager.ShowResourceToast(new LanguageSet(ctx.Caller), ammo: -ammoCost, message: T.FOBResourceToastRearmPlayer.Translate(ctx.Caller));
                     ctx.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BOX");
                     ctx.Reply(T.AmmoResuppliedKit, ammoCost, fob.AmmoSupply);
                 }

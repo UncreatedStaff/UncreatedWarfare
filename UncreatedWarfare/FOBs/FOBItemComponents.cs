@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Structures;
@@ -27,6 +28,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
     public BuildableData? Buildable => null;
     public ulong Owner { get; private set; }
     public JsonAssetReference<EffectAsset>? Icon { get; private set; }
+    public float IconOffset => 3.5f;
     public ulong Team { get; private set; }
     public bool IsSalvaged { get; set; }
     public ulong Salvager { get; set; }
@@ -70,15 +72,10 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
         Builders.Set(Owner, FOBManager.Config.BaseFOBRepairHits);
 
         if (State == RadioState.Alive)
-        {
-            if (Gamemode.Config.EffectMarkerRadio.ValidReference(out Guid guid))
-                IconManager.AttachIcon(guid, transform, Team, 3.5f);
-        }
+            Icon = Gamemode.Config.EffectMarkerRadio;
         else if (State == RadioState.Bleeding)
-        {
-            if (Gamemode.Config.EffectMarkerRadioDamaged.ValidReference(out Guid guid))
-                IconManager.AttachIcon(guid, transform, Team, 3.5f);
-        }
+            Icon = Gamemode.Config.EffectMarkerRadioDamaged;
+        
 
         if (Barricade.interactable is InteractableStorage storage)
         {
@@ -93,10 +90,11 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
         Destroy(this);
     }
 
-    private void InvalidateRestock()
+    internal void InvalidateRestock()
     {
         LastRestock = Time.realtimeSinceStartup - 45f;
         NeedsRestock = true;
+        L.Log($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Restock invalidated.");
     }
     void ISalvageListener.OnSalvageRequested(SalvageRequested e)
     {
@@ -110,6 +108,8 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
     [UsedImplicitly]
     private void Start()
     {
+        if (Icon.ValidReference(out Guid guid))
+            IconManager.AttachIcon(guid, transform, Team, IconOffset);
         FOB?.Restock();
     }
 
@@ -146,20 +146,22 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
 
     public bool Shovel(UCPlayer shoveler)
     {
-        if (State == RadioState.Bleeding && shoveler.GetTeam() == Team)
+        if (shoveler.GetTeam() != Team) return false;
+        if (State is RadioState.Bleeding or RadioState.Alive)
         {
             ushort maxHealth = Barricade.asset.health;
             float amt = maxHealth / FOBManager.Config.BaseFOBRepairHits * FOBManager.GetBuildIncrementMultiplier(shoveler);
-
+            if (Barricade.GetServersideData().barricade.health + amt > maxHealth)
+                amt = Barricade.asset.health - Barricade.GetServersideData().barricade.health;
+            if (amt == 0)
+                return true;
             BarricadeManager.repair(Barricade.model, amt, 1, shoveler.CSteamID);
             FOBManager.TriggerBuildEffect(transform.position);
             Builders.Increment(shoveler.Steam64, amt);
             UpdateHitsUI();
 
-            if (Barricade.GetServersideData().barricade.health >= maxHealth)
-            {
+            if (State == RadioState.Bleeding && Barricade.GetServersideData().barricade.health >= maxHealth)
                 FOB.UpdateRadioState(RadioState.Alive);
-            }
 
             return true;
         }
@@ -168,7 +170,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
     }
     public void QuickShovel(UCPlayer shoveler)
     {
-        if (State == RadioState.Bleeding)
+        if (State is RadioState.Bleeding or RadioState.Alive)
         {
             ushort maxHealth = Barricade.asset.health;
             float amt = maxHealth - Barricade.GetServersideData().barricade.health;
@@ -177,7 +179,8 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
             Builders.Increment(shoveler.Steam64, amt);
             UpdateHitsUI();
 
-            FOB.UpdateRadioState(RadioState.Alive);
+            if (State == RadioState.Bleeding)
+                FOB.UpdateRadioState(RadioState.Alive);
         }
     }
     private void UpdateHitsUI()
@@ -210,6 +213,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     private bool _destroyed;
     private bool _subbedToStructureEvent;
     private int _buildRemoved;
+    private float _progressToBuild;
     public FOB? FOB { get; set; }
     public BuildableType Type { get; private set; }
     public BuildableState State { get; private set; }
@@ -226,6 +230,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     public ulong Salvager { get; set; }
     public bool IsFloating { get; private set; }
     public JsonAssetReference<EffectAsset>? Icon { get; protected set; }
+    public float IconOffset { get; protected set; }
     public TickResponsibilityCollection Builders { get; } = new TickResponsibilityCollection();
     public Asset Asset { get; protected set; }
 
@@ -283,15 +288,31 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             goto destroy;
         }
 
+        IconOffset = Buildable.Type switch
+        {
+            BuildableType.Bunker => 5.5f,
+            BuildableType.AmmoCrate => 1.75f,
+            BuildableType.RepairStation => 4.5f,
+            _ => default
+        };
         if (ActiveStructure != null && Buildable.Foundation.MatchGuid(ActiveStructure.Asset.GUID))
         {
             Total = Buildable.RequiredHits;
             State = BuildableState.Foundation;
             if (Buildable.RequiredHits > 15 && Gamemode.Config.EffectMarkerBuildable.ValidReference(out Guid guid))
-                IconManager.AttachIcon(guid, transform, Team, 2f);
+                Icon = Gamemode.Config.EffectMarkerBuildable;
         }
         else
+        {
             State = BuildableState.Full;
+            (Icon, IconOffset) = Buildable.Type switch
+            {
+                BuildableType.Bunker => (Gamemode.Config.EffectMarkerBunker, 5.5f),
+                BuildableType.AmmoCrate => (Gamemode.Config.EffectMarkerAmmo, 1.75f),
+                BuildableType.RepairStation => (Gamemode.Config.EffectMarkerRepair, 4.5f),
+                _ => (default, default)
+            };
+        }
 
         InitAwake();
         L.LogDebug($"[FOBS] [{FOB?.Name ?? "FLOATING"}] {Asset.FriendlyName} Initialized: {Buildable} in state: {State}.");
@@ -395,11 +416,6 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 shoveler.SendChat(T.BuildTickNotInRadius);
                 return true;
             }
-            if (!IsFloating && Buildable.Type == BuildableType.Bunker && FOB!.Bunker != null)
-            {
-                shoveler.SendChat(T.BuildTickStructureExists, Buildable);
-                return true;
-            }
             if (!IsFloating && !FOB!.ValidatePlacement(Buildable, shoveler, this) ||
                 IsFloating && Data.Is(out IFOBs fobs) && !fobs.FOBManager.ValidateFloatingPlacement(Buildable, shoveler, transform.position, this))
             {
@@ -415,18 +431,27 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             
             Builders.Increment(shoveler.Steam64, amount);
 
-            int build = Mathf.FloorToInt(Buildable.RequiredBuild / Buildable.RequiredHits * amount);
 
             if (FOB != null)
             {
-                if (FOB.BuildSupply <= build)
+                float build = (float)Buildable.RequiredBuild / (float)Buildable.RequiredHits * amount;
+                _progressToBuild += build;
+                int build2 = Mathf.FloorToInt(_progressToBuild);
+                L.LogDebug($"[FOBS] [{FOB.Name ?? "FLOATING"}]  Removing build: {build:F4} (rounded to: {build2}).");
+                if (build2 > 0)
                 {
-                    shoveler.SendChat(T.BuildMissingSupplies, FOB.BuildSupply, Buildable.RequiredBuild - _buildRemoved);
-                    return true;
-                }
+                    _progressToBuild -= build2;
 
-                _buildRemoved += build;
-                FOB.ModifyBuild(-build);
+                    if (FOB.BuildSupply < build2)
+                    {
+                        shoveler.SendChat(T.BuildMissingSupplies, FOB.BuildSupply, Buildable.RequiredBuild - _buildRemoved);
+                        return true;
+                    }
+
+                    _buildRemoved += build2;
+                    SendBuildToastToBuilders(-build2);
+                    FOB.ModifyBuild(-build2);
+                }
             }
 
             UpdateHitsUI();
@@ -434,15 +459,16 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             if (Progress >= Total)
             {
                 int buildRemaining = Buildable.RequiredBuild - _buildRemoved;
-
+                _progressToBuild = 0;
                 if (FOB != null)
                 {
-                    if (FOB.BuildSupply <= buildRemaining)
+                    if (FOB.BuildSupply < buildRemaining)
                     {
                         shoveler.SendChat(T.BuildMissingSupplies, Buildable.RequiredBuild - _buildRemoved, FOB.BuildSupply);
                         return true;
                     }
 
+                    SendBuildToastToBuilders(-buildRemaining);
                     FOB?.ModifyBuild(-buildRemaining);
                 }
                 Build();
@@ -483,13 +509,64 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 if (time - responsibility.LastUpdated < 5f)
                 {
                     if (UCPlayer.FromID(responsibility.Steam64) is { } pl && pl.Player.TryGetPlayerData(out UCPlayerData component))
+                    {
                         component.QueueMessage(msg, true);
+                    }
                 }
             }
         }
         finally
         {
             Builders.ReturnLock();
+        }
+    }
+    private void SendBuildToastToBuilders(int delta)
+    {
+        if (delta == 0) return;
+        Builders.RetrieveLock();
+        try
+        {
+            float time = Time.realtimeSinceStartup;
+            ToastMessage msg = new ToastMessage(Points.GetProgressBar(Progress, Total, 25), ToastMessageSeverity.Progress);
+            foreach (TickResponsibility responsibility in Builders)
+            {
+                if (time - responsibility.LastUpdated < 5f)
+                {
+                    if (UCPlayer.FromID(responsibility.Steam64) is { } pl)
+                    {
+                        FOBManager.ShowResourceToast(new LanguageSet(pl), build: delta);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            Builders.ReturnLock();
+        }
+    }
+    private void ShowModifyUI(LanguageSet set, int build = 0, int ammo = 0)
+    {
+        if (build != 0)
+        {
+            string number = (build > 0 ? T.FOBToastGainBuild : T.FOBToastLoseBuild).Translate(set.Language, Math.Abs(build), null, Team);
+            ToastMessage msg = new ToastMessage(number, ToastMessageSeverity.Mini);
+            while (set.MoveNext())
+            {
+                if (set.Next.Player.TryGetPlayerData(out UCPlayerData data))
+                    data.QueueMessage(msg);
+            }
+            set.Reset();
+        }
+        if (ammo != 0)
+        {
+            string number = (ammo > 0 ? T.FOBToastGainAmmo : T.FOBToastLoseAmmo).Translate(set.Language, Math.Abs(ammo), null, Team);
+            ToastMessage msg = new ToastMessage(number, ToastMessageSeverity.Mini);
+            while (set.MoveNext())
+            {
+                if (set.Next.Player.TryGetPlayerData(out UCPlayerData data))
+                    data.QueueMessage(msg);
+            }
+            set.Reset();
         }
     }
 
@@ -739,6 +816,8 @@ public class RepairStationComponent : ShovelableComponent
                                     if (owningFob != null)
                                     {
                                         owningFob.ModifyBuild(-1);
+                                        if (vehicle.TryGetComponent(out VehicleComponent comp) && UCPlayer.FromID(comp.LastDriver) is { } lastDriver)
+                                            FOBManager.ShowResourceToast(new LanguageSet(lastDriver), build: -1, message: T.FOBResourceToastRepairVehicle.Translate(lastDriver));
 
                                         UCPlayer? stationPlacer = UCPlayer.FromID(Owner);
                                         if (stationPlacer != null)
@@ -826,6 +905,7 @@ public interface IFOBItem
     ulong Team { get; }
     ulong Owner { get; }
     JsonAssetReference<EffectAsset>? Icon { get; }
+    float IconOffset { get; }
     Vector3 Position { get; }
 }
 

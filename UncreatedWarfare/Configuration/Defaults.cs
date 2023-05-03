@@ -397,6 +397,10 @@ partial class JSONMethods
         { "team_win", "e6e3d5" },
         { "team_capture", "e6e3d5" },
 
+        // FOBs
+        { "build", "d1c597" },
+        { "ammo", "d97568" },
+
         // Deaths
         { "death_background", "ffffff" },
         { "death_background_teamkill", "ff9999" },
