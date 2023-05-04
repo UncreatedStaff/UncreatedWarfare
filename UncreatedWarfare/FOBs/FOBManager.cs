@@ -365,7 +365,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (ignoreFoundation is not null && item.Equals(ignoreFoundation))
                 continue;
             BuildableData? b = item.Buildable;
-            if (b != null && item.Team == team && item.Owner == player.Steam64 && b.Foundation == buildable.Foundation)
+            if (b != null && item.Team == team && item.Owner == player.Steam64 && b.Foundation == buildable.Foundation && (item is not ShovelableComponent sh || sh.ActiveVehicle == null || !sh.ActiveVehicle.isDead))
             {
                 --limit;
                 if (limit <= 0)

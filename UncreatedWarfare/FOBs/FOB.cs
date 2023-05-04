@@ -100,7 +100,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             if (ignoreFoundation is not null && item.Equals(ignoreFoundation))
                 continue;
             BuildableData? b = item.Buildable;
-            if (b != null && b.Foundation == buildable.Foundation)
+            if (b != null && b.Foundation == buildable.Foundation && (item is not ShovelableComponent sh || sh.ActiveVehicle == null || !sh.ActiveVehicle.isDead))
             {
                 --limit;
                 if (limit <= 0)
