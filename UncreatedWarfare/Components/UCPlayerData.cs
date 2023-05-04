@@ -128,7 +128,7 @@ public class UCPlayerData : MonoBehaviour
         new ToastMessageInfo(ToastMessageSeverity.Medium,      Gamemode.Config.UIToastMedium.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),    // medium
         new ToastMessageInfo(ToastMessageSeverity.Big,         Gamemode.Config.UIToastLarge.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),     // big
         new ToastMessageInfo(ToastMessageSeverity.Progress,    Gamemode.Config.UIToastProgress.ValidReference(out guid) ? guid : Guid.Empty, 4, 1.6f),  // progress
-        new ToastMessageInfo(ToastMessageSeverity.Tip,         Gamemode.Config.UIToastTip.ValidReference(out guid) ? guid : Guid.Empty, 1, 4f, "Text"),  // tip
+        new ToastMessageInfo(ToastMessageSeverity.Tip,         Gamemode.Config.UIToastTip.ValidReference(out guid) ? guid : Guid.Empty, 2, 4f, "Text"), // tip
     };
     public struct ToastChannel
     {

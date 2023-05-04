@@ -42,9 +42,10 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
         this._ragdoll = ragoll;
         this._wasPickedUp = wasPickedUp;
         _save = save;
-        if (save?.Manager is not null)
+        ListSqlConfig<SavedStructure>? m = save?.Manager;
+        if (m is not null)
         {
-            save.Manager.WriteWait();
+            m.WriteWait();
             try
             {
                 if (save.Item != null)
@@ -55,7 +56,7 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
             }
             finally
             {
-                save.Manager.WriteRelease();
+                m.WriteRelease();
             }
         }
     }

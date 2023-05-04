@@ -68,6 +68,7 @@ public class ZoneCommand : Command
             {
                 new CommandParameter("Visualize")
                 {
+                    Aliases = new string[] { "vis" },
                     Description = "Spawns particles highlighting the zone border.",
                     Parameters = new CommandParameter[]
                     {
@@ -144,7 +145,7 @@ public class ZoneCommand : Command
 
         ctx.AssertArgs(1, "zone_syntax");
 
-        if (ctx.MatchParameter(0, "visualize"))
+        if (ctx.MatchParameter(0, "visualize", "vis"))
         {
             ctx.AssertRanByPlayer();
 

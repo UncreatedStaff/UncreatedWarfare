@@ -14,6 +14,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Quests;
@@ -691,17 +692,17 @@ public static class QuestManager
     }
     #endregion
     #region events
-    public static void OnBuildableBuilt(UCPlayer constructor, FOBs.BuildableData buildable)
+    public static void OnBuildableBuilt(UCPlayer constructor, BuildableData buildable)
     {
         foreach (INotifyBuildableBuilt tracker in RegisteredTrackers.OfType<INotifyBuildableBuilt>())
             tracker.OnBuildableBuilt(constructor, buildable);
     }
-    public static void OnFOBBuilt(UCPlayer constructor, Components.FOB fob)
+    public static void OnFOBBuilt(UCPlayer constructor, FOB fob)
     {
         foreach (INotifyFOBBuilt tracker in RegisteredTrackers.OfType<INotifyFOBBuilt>())
             tracker.OnFOBBuilt(constructor, fob);
     }
-    public static void OnSuppliesConsumed(Components.FOB fob, ulong player, int amount)
+    public static void OnSuppliesConsumed(FOB fob, ulong player, int amount)
     {
         foreach (INotifySuppliesConsumed tracker in RegisteredTrackers.OfType<INotifySuppliesConsumed>())
             tracker.OnSuppliesConsumed(fob, player, amount);
@@ -736,10 +737,10 @@ public static class QuestManager
         foreach (INotifyRallyActive tracker in RegisteredTrackers.OfType<INotifyRallyActive>())
             tracker.OnRallyActivated(rally);
     }
-    public static void OnPlayerSpawnedAtBunker(FOBs.BuiltBuildableComponent bunker, FOB fob, UCPlayer spawner)
+    public static void OnPlayerSpawnedAtBunker(BunkerComponent component, UCPlayer spawner)
     {
         foreach (INotifyBunkerSpawn tracker in RegisteredTrackers.OfType<INotifyBunkerSpawn>())
-            tracker.OnPlayerSpawnedAtBunker(bunker, fob, spawner);
+            tracker.OnPlayerSpawnedAtBunker(component, spawner);
     }
     public static void OnVehicleDestroyed(VehicleDestroyed e, UCPlayer instigator)
     {

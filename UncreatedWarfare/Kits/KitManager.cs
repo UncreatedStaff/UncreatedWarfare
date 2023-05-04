@@ -6,7 +6,6 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SDG.Framework.Utilities;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -41,7 +40,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     public override MySqlDatabase Sql => Data.AdminSql;
     public static event KitChanged? OnKitChanged;
     public static event KitAccessCallback? OnKitAccessChanged;
-    public static event KitAccessCallback? OnFavoritesRefreshed;
+    public static event System.Action? OnFavoritesRefreshed;
     public KitManager() : base("kits", SCHEMAS)
     {
         OnItemDeleted += OnKitDeleted;
@@ -2425,6 +2424,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 
         UCWarfare.RunOnMainThread(() =>
         {
+            OnFavoritesRefreshed?.Invoke();
             MenuUI.OnFavoritesRefreshed(player);
             Signs.UpdateKitSigns(player, null);
         }, true, token);

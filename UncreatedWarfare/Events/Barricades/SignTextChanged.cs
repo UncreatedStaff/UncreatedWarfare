@@ -34,9 +34,10 @@ public class SignTextChanged : EventState
         this.RegionPosY = y;
         this.VehicleRegionIndex = plant;
         Save = save;
-        if (save?.Manager is not null)
+        ListSqlConfig<SavedStructure>? m = save?.Manager;
+        if (m is not null)
         {
-            save.Manager.WriteWait();
+            m.WriteWait();
             try
             {
                 if (save.Item != null)
@@ -47,7 +48,7 @@ public class SignTextChanged : EventState
             }
             finally
             {
-                save.Manager.WriteRelease();
+                m.WriteRelease();
             }
         }
     }

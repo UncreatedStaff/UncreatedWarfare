@@ -51,17 +51,17 @@ internal class VehicleDamageCalculator
     }
     public static void ApplyAdvancedDamage(InteractableVehicle vehicle, ref ushort finalDamage)
     {
-        L.LogDebug("Attempting to apply damage...");
+        //L.LogDebug("Attempting to apply damage...");
         if (damageRegister.TryGetValue(vehicle, out float multiplier))
         {
             finalDamage = (ushort)Mathf.RoundToInt(finalDamage * multiplier);
             damageRegister.Remove(vehicle);
-            L.LogDebug($"Successfully applied {multiplier}x damage: {finalDamage}");
+            //L.LogDebug($"Successfully applied {multiplier}x damage: {finalDamage}");
         }
         else
         {
             finalDamage *= (ushort)Mathf.RoundToInt(finalDamage * 0.1f);
-            L.LogDebug($"No direct hit, applied 0.1x damage: {finalDamage}");
+            //L.LogDebug($"No direct hit, applied 0.1x damage: {finalDamage}");
         }
     }
     private static IEnumerator<WaitForFixedUpdate> TimeOutDamage(InteractableVehicle vehicle)

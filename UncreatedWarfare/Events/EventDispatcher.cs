@@ -27,6 +27,8 @@ using UnityEngine;
 namespace Uncreated.Warfare.Events;
 public static class EventDispatcher
 {
+    private static readonly List<ISalvageInfo> WorkingSalvageInfo = new List<ISalvageInfo>(4);
+
     public static event EventDelegate<ExitVehicleRequested> ExitVehicleRequested;
     public static event EventDelegate<EnterVehicleRequested> EnterVehicleRequested;
     public static event EventDelegate<VehicleSwapSeatRequested> VehicleSwapSeatRequested;
@@ -39,6 +41,7 @@ public static class EventDispatcher
 
     public static event EventDelegate<BarricadeDestroyed> BarricadeDestroyed;
     public static event EventDelegate<PlaceBarricadeRequested> BarricadePlaceRequested;
+    public static event EventDelegate<SalvageBarricadeRequested> SalvageBarricadeRequested;
     public static event EventDelegate<BarricadePlaced> BarricadePlaced;
     public static event EventDelegate<LandmineExploding> LandmineExploding;
     public static event EventDelegate<SignTextChanged> SignTextChanged;
@@ -96,6 +99,7 @@ public static class EventDispatcher
         PlayerInput.onPluginKeyTick += OnPluginKeyTick;
         PlayerCrafting.onCraftBlueprintRequested += PlayerCraftingOnCraftRequested;
         StructureDrop.OnSalvageRequested_Global += StructureDropOnSalvageRequested;
+        BarricadeDrop.OnSalvageRequested_Global += BarricadeDropOnSalvageRequested;
         StructureManager.onDamageStructureRequested += StructureManagerOnDamageStructureRequested;
         PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
         VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnOnToggleVehicleLockRequested;
@@ -106,6 +110,7 @@ public static class EventDispatcher
         PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
         StructureManager.onDamageStructureRequested -= StructureManagerOnDamageStructureRequested;
         StructureDrop.OnSalvageRequested_Global -= StructureDropOnSalvageRequested;
+        BarricadeDrop.OnSalvageRequested_Global -= BarricadeDropOnSalvageRequested;
         PlayerCrafting.onCraftBlueprintRequested -= PlayerCraftingOnCraftRequested;
         UseableGun.onBulletHit -= OnBulletHit;
         PlayerInput.onPluginKeyTick -= OnPluginKeyTick;
@@ -218,9 +223,6 @@ public static class EventDispatcher
     {
         SpottedComponent spotted = vehicle.transform.GetComponent<SpottedComponent>();
 
-        if (vehicle.gameObject.TryGetComponent(out BuiltBuildableComponent comp))
-            UnityEngine.Object.Destroy(comp);
-
         VehicleDestroyed request = new VehicleDestroyed(vehicle, spotted);
         if (request.Instigator != null && request.Instigator.Player.TryGetPlayerData(out UCPlayerData data))
             data.LastExplodedVehicle = request.Vehicle.asset.GUID;
@@ -300,25 +302,19 @@ public static class EventDispatcher
             TryInvoke(inv, args, nameof(VehicleSpawned));
         }
     }
-    internal static void InvokeOnBarricadeDestroyed(BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant)
+    internal static void InvokeOnBarricadeDestroyed(BarricadeDrop barricade, BarricadeData barricadeData, ulong instigator, BarricadeRegion region, byte x, byte y, ushort plant)
     {
         if (BarricadeDestroyed == null || Data.Gamemode is not { State: State.Active or State.Staging }) return;
-        UCPlayer? instigator = null;
-        if (barricade.model.TryGetComponent(out BarricadeComponent component) && component.LastDamagerTime + 10f >= Time.realtimeSinceStartup)
-        {
-            instigator = UCPlayer.FromID(component.LastDamager);
-        }
+        UCPlayer? player = UCPlayer.FromID(instigator);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? barricadeSave = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
 
-        BarricadeDestroyed args = new BarricadeDestroyed(instigator, barricade, barricadeData, region, x, y, plant, barricadeSave);
+        BarricadeDestroyed args = new BarricadeDestroyed(player, barricade, barricadeData, region, x, y, plant, barricadeSave);
         foreach (EventDelegate<BarricadeDestroyed> inv in BarricadeDestroyed.GetInvocationList().Cast<EventDelegate<BarricadeDestroyed>>())
         {
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(BarricadeDestroyed));
         }
-
-        component.Destroy();
     }
     internal static void InvokeOnPlayerDied(PlayerDied e)
     {
@@ -676,18 +672,121 @@ public static class EventDispatcher
         if (player == null) return;
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(structure.instanceID, StructType.Structure);
-        StructureRegion? region = null;
-        if (Regions.tryGetCoordinate(structure.model.position, out byte x, out byte y))
-            StructureManager.tryGetRegion(x, y, out region);
-
+        if (!StructureManager.tryGetRegion(structure.model, out byte x, out byte y, out StructureRegion region))
+            return;
+        structure.model.GetComponents(WorkingSalvageInfo);
         SalvageStructureRequested args = new SalvageStructureRequested(player, structure, structure.GetServersideData(), region!, x, y, save);
-        foreach (EventDelegate<SalvageStructureRequested> inv in SalvageStructureRequested.GetInvocationList().Cast<EventDelegate<SalvageStructureRequested>>())
+        try
         {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(SalvageStructureRequested));
+            for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
+            {
+                ISalvageInfo salvageInfo = WorkingSalvageInfo[i];
+                salvageInfo.Salvager = instigatorClient.playerID.steamID.m_SteamID;
+                salvageInfo.IsSalvaged = true;
+                if (salvageInfo is ISalvageListener listener)
+                {
+                    listener.OnSalvageRequested(args);
+                    if (!args.CanContinue)
+                    {
+                        shouldAllow = false;
+                        break;
+                    }
+
+                }
+            }
+            if (args.CanContinue)
+            {
+                foreach (EventDelegate<SalvageStructureRequested> inv in SalvageStructureRequested.GetInvocationList().Cast<EventDelegate<SalvageStructureRequested>>())
+                {
+                    if (!args.CanContinue) break;
+                    TryInvoke(inv, args, nameof(SalvageStructureRequested));
+                }
+                if (!args.CanContinue)
+                    shouldAllow = false;
+            }
         }
-        if (!args.CanContinue)
-            shouldAllow = false;
+        finally
+        {
+            try
+            {
+                if (!shouldAllow)
+                {
+                    for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
+                    {
+                        ISalvageInfo salvageInfo = WorkingSalvageInfo[i];
+                        salvageInfo.Salvager = instigatorClient.playerID.steamID.m_SteamID;
+                        salvageInfo.IsSalvaged = false;
+                    }
+                }
+            }
+            finally
+            {
+                WorkingSalvageInfo.Clear();
+            }
+        }
+    }
+    private static void BarricadeDropOnSalvageRequested(BarricadeDrop barricade, SteamPlayer instigatorClient, ref bool shouldAllow)
+    {
+        if (!shouldAllow) return;
+        if (instigatorClient != null) DestroyerComponent.AddOrUpdate(barricade.model.gameObject, instigatorClient.playerID.steamID.m_SteamID);
+        else return;
+
+        if (SalvageBarricadeRequested == null) return;
+        UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
+        if (player == null) return;
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
+        if (!BarricadeManager.tryGetRegion(barricade.model, out byte x, out byte y, out ushort plant, out BarricadeRegion region))
+            return;
+        SalvageBarricadeRequested args = new SalvageBarricadeRequested(player, barricade, barricade.GetServersideData(), region!, x, y, plant, save);
+        barricade.model.GetComponents(WorkingSalvageInfo);
+        try
+        {
+            for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
+            {
+                ISalvageInfo salvageInfo = WorkingSalvageInfo[i];
+                salvageInfo.Salvager = instigatorClient.playerID.steamID.m_SteamID;
+                salvageInfo.IsSalvaged = true;
+                if (salvageInfo is ISalvageListener listener)
+                {
+                    listener.OnSalvageRequested(args);
+                    if (!args.CanContinue)
+                    {
+                        shouldAllow = false;
+                        break;
+                    }
+                }
+            }
+            if (args.CanContinue)
+            {
+                foreach (EventDelegate<SalvageBarricadeRequested> inv in SalvageBarricadeRequested.GetInvocationList().Cast<EventDelegate<SalvageBarricadeRequested>>())
+                {
+                    if (!args.CanContinue) break;
+                    TryInvoke(inv, args, nameof(SalvageBarricadeRequested));
+                }
+                if (!args.CanContinue)
+                    shouldAllow = false;
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (!shouldAllow)
+                {
+                    for (int i = 0; i < WorkingSalvageInfo.Count; ++i)
+                    {
+                        ISalvageInfo salvageInfo = WorkingSalvageInfo[i];
+                        salvageInfo.Salvager = instigatorClient.playerID.steamID.m_SteamID;
+                        salvageInfo.IsSalvaged = false;
+                    }
+                }
+            }
+            finally
+            {
+                WorkingSalvageInfo.Clear();
+            }
+        }
     }
     private static void StructureManagerOnDamageStructureRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
@@ -701,9 +800,8 @@ public static class EventDispatcher
         UCPlayer? player = UCPlayer.FromCSteamID(instigatorSteamID);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
-        StructureRegion? region = null;
-        if (Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
-            StructureManager.tryGetRegion(x, y, out region);
+        if (!StructureManager.tryGetRegion(structureTransform, out byte x, out byte y, out StructureRegion region))
+            return;
 
         DamageStructureRequested args = new DamageStructureRequested(player, drop, drop.GetServersideData(), region!, x, y, save, damageOrigin, pendingTotalDamage);
         foreach (EventDelegate<DamageStructureRequested> inv in DamageStructureRequested.GetInvocationList().Cast<EventDelegate<DamageStructureRequested>>())
@@ -716,21 +814,31 @@ public static class EventDispatcher
         else
             pendingTotalDamage = args.PendingDamage;
     }
-    internal static void InvokeOnStructureDestroyed(StructureDrop drop, ulong instigator, Vector3 ragdoll, bool wasPickedUp)
+
+    private static readonly List<IManualOnDestroy> WorkingOnDestroy = new List<IManualOnDestroy>(2);
+    internal static void InvokeOnStructureDestroyed(StructureDrop drop, ulong instigator, Vector3 ragdoll, bool wasPickedUp, StructureRegion region, byte x, byte y)
     {
         if (StructureDestroyed == null) return;
         UCPlayer? player = UCPlayer.FromID(instigator);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
-        StructureRegion? region = null;
-        if (Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
-            StructureManager.tryGetRegion(x, y, out region);
 
-        StructureDestroyed args = new StructureDestroyed(player, drop, drop.GetServersideData(), region!, x, y, save, ragdoll, wasPickedUp);
+        StructureDestroyed args = new StructureDestroyed(player, drop, drop.GetServersideData(), region, x, y, save, ragdoll, wasPickedUp);
         foreach (EventDelegate<StructureDestroyed> inv in StructureDestroyed.GetInvocationList().Cast<EventDelegate<StructureDestroyed>>())
         {
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(StructureDestroyed));
+        }
+
+        drop.model.GetComponents(WorkingOnDestroy);
+        try
+        {
+            for (int i = 0; i < WorkingOnDestroy.Count; ++i)
+                WorkingOnDestroy[i].ManualOnDestroy();
+        }
+        finally
+        {
+            WorkingOnDestroy.Clear();
         }
     }
     internal static void InvokeOnInjuringPlayer(PlayerInjuring args)

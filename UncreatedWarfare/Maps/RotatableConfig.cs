@@ -373,7 +373,7 @@ public class RotatableConfig<T> : IReadWrite, INotifyValueUpdate
         }
     }
 
-    public static implicit operator T(RotatableConfig<T> config)
+    public static implicit operator T(RotatableConfig<T>? config)
     {
         if (config is null || config._isNull)
         {

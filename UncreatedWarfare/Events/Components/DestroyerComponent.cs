@@ -17,7 +17,7 @@ internal class DestroyerComponent : MonoBehaviour
     }
     public static ulong GetDestroyer(GameObject obj)
     {
-        if (obj.TryGetComponent(out DestroyerComponent comp))
+        if (obj.TryGetComponent(out DestroyerComponent comp) && Time.realtimeSinceStartup - comp.RelevantTime < 5f)
             return comp.Destroyer;
         return 0ul;
     }

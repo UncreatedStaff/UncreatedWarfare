@@ -5,6 +5,7 @@ using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
@@ -113,11 +114,12 @@ public class ActionManager : BaseSingleton
         {
             ActionMenuUI.SquadSection.SetVisibility(player.Connection, true);
         }
-        FOB? fob = FOB.GetNearestFOB(player.Position, EFobRadius.FULL_WITH_BUNKER_CHECK, player.GetTeam());
+        
+        FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(player.Position, player.GetTeam());
         if (fob != null)
         {
             // TODO: fully test this later
-            //ActionMenuUI.LogiSection.SetVisibility(player.Connection, true);
+            ActionMenuUI.LogiSection.SetVisibility(player.Connection, true);
         }
 
         player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
@@ -486,7 +488,7 @@ public class ActionManager : BaseSingleton
         if (buildOrAmmo is null || !buildOrAmmo.Exists)
             return;
 
-        FOB? fob = FOB.GetNearestFOB(caller.Position, EFobRadius.FULL_WITH_BUNKER_CHECK, caller.GetTeam());
+        FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(caller.Position, caller.GetTeam());
         InteractableVehicle? vehicle = caller.CurrentVehicle;
         if (vehicle == null)
             return;
@@ -531,24 +533,30 @@ public class ActionManager : BaseSingleton
         if (!supplyItem.ValidReference(out ItemAsset itemasset))
             return;
 
-        FOB? fob = FOB.GetNearestFOB(caller.Position, EFobRadius.FULL_WITH_BUNKER_CHECK, caller.GetTeam());
+        FOB? fob = Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(caller.Position, caller.GetTeam());
         InteractableVehicle? vehicle = caller.CurrentVehicle;
         if (vehicle != null && fob != null && vehicle.TryGetComponent(out VehicleComponent c) && c.IsLogistics)
         {
-            amount = Mathf.Clamp(amount, 0, build ? fob.Build : fob.Ammo);
+            amount = Mathf.Clamp(amount, 0, build ? fob.BuildSupply : fob.AmmoSupply);
 
             int successfullyAdded = 0;
 
             for (int i = 0; i < amount; i++)
             {
-                if (vehicle.trunkItems.tryAddItem(new Item(itemasset.id, true)))
+                if (vehicle.trunkItems.tryAddItem(new Item(itemasset, EItemOrigin.ADMIN)))
                     successfullyAdded++;
             }
             
             if (build)
-                fob.ReduceBuild(successfullyAdded);
+            {
+                fob.ModifyBuild(-successfullyAdded);
+                FOBManager.ShowResourceToast(new LanguageSet(caller), build: -successfullyAdded, message: T.FOBResourceToastLoadSupplies.Translate(caller));
+            }
             else
-                fob.ReduceAmmo(successfullyAdded);
+            {
+                fob.ModifyAmmo(-successfullyAdded);
+                FOBManager.ShowResourceToast(new LanguageSet(caller), ammo: -successfullyAdded, message: T.FOBResourceToastLoadSupplies.Translate(caller));
+            }
 
             if (successfullyAdded > 0)
             {

@@ -15,6 +15,7 @@ using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
@@ -27,6 +28,7 @@ using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Squads.Commander;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -1077,7 +1079,7 @@ public class DebugCommand : AsyncCommand
                 VehicleData veh = data[UnityEngine.Random.Range(0, data.Length)];
                 if (VehicleData.IsEmplacement(veh.Type) && Assets.find(veh.VehicleID) is VehicleAsset asset)
                 {
-                    BuildableComponent.SpawnEmplacement(asset, pos, Vector3.zero, 0ul, other, Guid.Empty);
+                    FOBManager.SpawnEmplacement(asset, pos, Quaternion.identity, 0ul, other);
                 }
                 else
                 {
@@ -1129,7 +1131,7 @@ public class DebugCommand : AsyncCommand
                         logi = vgm.VehicleBay.Items
                             .Where(x => x.Item != null && (x.Item.Team == team || x.Item.Team == 0) && x.Item.Type is VehicleType.LogisticsGround or VehicleType.TransportAir)
                             .SelectMany(x => vgm.VehicleSpawner.Items
-                                .Where(y => y.Item?.Vehicle?.Item is { } v && v.VehicleID == x.Item!.VehicleID && y.Item.HasLinkedVehicle(out _) && y.Item?.Sign?.Item == null))
+                                .Where(y => y.Item?.Vehicle?.Item is { } v && v.VehicleID == x.Item!.VehicleID && y.Item.HasLinkedVehicle(out _)))
                             .OrderBy(x => (pos - x.Item!.Sign!.Item!.Buildable!.Model.position).sqrMagnitude)
                             .FirstOrDefault();
                     }
@@ -1641,5 +1643,29 @@ public class DebugCommand : AsyncCommand
             UCWarfare.I.UpdateLangs(ctx.Caller, false);
         }
         else ctx.SendCorrectUsage("/test viewlens <player ...> - Simulates UI from another player's perspective.");
+    }
+
+    private void dumpfob(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.HELPER);
+        
+        ctx.AssertRanByPlayer();
+
+        FOBManager? fobs = Data.Singletons.GetSingleton<FOBManager>();
+        if (fobs == null)
+            throw ctx.SendGamemodeError();
+        IFOB? fob = null;
+        if (ctx.TryGetTarget(out BarricadeDrop barricade))
+            fob = fobs.FindFob(new UCBarricade(barricade));
+        if (fob == null && ctx.TryGetTarget(out StructureDrop structure))
+            fob = fobs.FindFob(new UCStructure(structure));
+        if (fob == null && ctx.TryGetTarget(out InteractableVehicle vehicle))
+            fob = fobs.FindFob(vehicle);
+
+        if (fob == null)
+            throw ctx.ReplyString("<#ff8c69>Look at a FOB item to use this command.");
+
+        fob.Dump(ctx.Caller);
+        ctx.ReplyString("Check console.");
     }
 }

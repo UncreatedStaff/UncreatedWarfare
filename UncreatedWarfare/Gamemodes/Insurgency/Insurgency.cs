@@ -436,14 +436,14 @@ public class Insurgency :
         Barricade barricade = new Barricade(asset);
         Quaternion rotation = transform.Rotation;
         rotation.eulerAngles = new Vector3(transform.Rotation.eulerAngles.x, transform.Rotation.eulerAngles.y, transform.Rotation.eulerAngles.z);
-        Transform barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, rotation, 0, DefendingTeam);
+        Transform barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, rotation, 0, TeamManager.GetGroupID(DefendingTeam));
         BarricadeDrop foundationDrop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
         if (foundationDrop == null)
         {
             L.LogWarning("CACHE: Foundation drop is null.");
             return;
         }
-        Cache cache = FOBManager.RegisterNewCache(foundationDrop);
+        Cache cache = FOBManager.RegisterNewCache(foundationDrop, DefendingTeam);
         CacheData currentCache = Caches[CachesDestroyed];
 
 
@@ -451,7 +451,6 @@ public class Insurgency :
         {
             currentCache.Activate(cache);
             InsurgencyUI.ReplicateCacheUpdate(currentCache);
-            
         }
         else if (CachesDestroyed < Caches.Count - 1)
         {
@@ -682,18 +681,13 @@ public class Insurgency :
         }
     }
 
-    public class CacheData : IObjective, IDeployable, IFOB
+    public class CacheData
     {
         public int Number => Cache != null ? Cache.Number : 0;
         public bool IsActive => Cache != null;
         public bool IsDestroyed => Cache != null && Cache.IsDestroyed;
         public bool IsDiscovered => Cache != null && Cache.IsDiscovered;
         public Cache Cache { get; private set; }
-        public string Name => ((IObjective)Cache).Name;
-        public Vector3 Position => ((IObjective)Cache).Position;
-        public float Yaw => ((IDeployable)Cache).Yaw;
-        public string ClosestLocation => ((IFOB)Cache).ClosestLocation;
-        public GridLocation GridLocation => ((IFOB)Cache).GridLocation;
         public CacheData()
         {
             Cache = null!;
@@ -701,16 +695,6 @@ public class Insurgency :
         public void Activate(Cache cache)
         {
             Cache = cache;
-        }
-        public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
-            ref TranslationFlags flags) => ((ITranslationArgument)Cache).Translate(language, format, target, culture, ref flags);
-        public bool CheckDeployable(UCPlayer player, CommandInteraction? ctx) => ((IDeployable)Cache).CheckDeployable(player, ctx);
-        public bool CheckDeployableTick(UCPlayer player, bool chat) => ((IDeployable)Cache).CheckDeployableTick(player, chat);
-        public void OnDeploy(UCPlayer player, bool chat) => ((IDeployable)Cache).OnDeploy(player, chat);
-        float IDeployable.GetDelay() => ((IDeployable)Cache).GetDelay();
-        public void Destroy(bool authority)
-        {
-            FOBManager.CleanupFOB(this);
         }
     }
 #region DEFAULT CACHE SPAWNS

@@ -5,7 +5,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
@@ -25,8 +28,8 @@ public class Whitelister : ListSingleton<WhitelistItem>
     public override void Load()
     {
         ItemManager.onTakeItemRequested += OnItemPickup;
-        BarricadeDrop.OnSalvageRequested_Global += OnBarricadeSalvageRequested;
-        StructureDrop.OnSalvageRequested_Global += OnStructureSalvageRequested;
+        EventDispatcher.SalvageBarricadeRequested += OnBarricadeSalvageRequested;
+        EventDispatcher.SalvageStructureRequested += OnStructureSalvageRequested;
         StructureManager.onDeployStructureRequested += OnStructurePlaceRequested;
         BarricadeManager.onModifySignRequested += OnEditSignRequest;
         _singleton = this;
@@ -37,8 +40,8 @@ public class Whitelister : ListSingleton<WhitelistItem>
         _singleton = null!;
         BarricadeManager.onModifySignRequested -= OnEditSignRequest;
         StructureManager.onDeployStructureRequested -= OnStructurePlaceRequested;
-        StructureDrop.OnSalvageRequested_Global -= OnStructureSalvageRequested;
-        BarricadeDrop.OnSalvageRequested_Global -= OnBarricadeSalvageRequested;
+        EventDispatcher.SalvageStructureRequested -= OnStructureSalvageRequested;
+        EventDispatcher.SalvageBarricadeRequested -= OnBarricadeSalvageRequested;
         ItemManager.onTakeItemRequested -= OnItemPickup;
     }
     internal void OnStructureDamageRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
@@ -125,49 +128,37 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 instances.Remove(instanceID);
         }
     }
-    private void OnBarricadeSalvageRequested(BarricadeDrop barricade, SteamPlayer instigatorClient, ref bool shouldAllow)
+    private void OnBarricadeSalvageRequested(SalvageBarricadeRequested e)
     {
-        if (!shouldAllow) return;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-
-        UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
-
-        bool isFOB = barricade.model.TryGetComponent(out FOBComponent f);
-
-        if (player == null || player.OnDuty() && isFOB)
+        if (!(e.Player.OnDuty() || IsWhitelisted(e.Barricade.asset.GUID, out _) || e.Player.IsSquadLeader() && RallyManager.IsRally(e.Barricade.asset)))
         {
-            f.Parent.IsWipedByAuthority = true;
-        }
-        else
-        {
-            if (!(player.OnDuty() || isFOB && player.OnDuty() || IsWhitelisted(barricade.asset.GUID, out _) || (player.IsSquadLeader() && RallyManager.IsRally(barricade.asset))))
+            SqlItem<Kit>? proxy = e.Player.ActiveKit;
+            Kit? kit = proxy?.Item;
+            if (e.ServersideData.owner != e.Player.Steam64 || kit == null || !kit.ContainsItem(e.Barricade.asset.GUID, e.ServersideData.group.GetTeam()))
             {
-                player.SendChat(T.WhitelistProhibitedSalvage, barricade.asset);
-                shouldAllow = false;
-                return;
+                e.Player.SendChat(T.WhitelistProhibitedSalvage, e.Barricade.asset);
+                e.Break();
             }
         }
-        if (barricade.model.TryGetComponent(out BuildableComponent b))
-        {
-            b.IsSalvaged = true;
-        }
     }
-    private void OnStructureSalvageRequested(StructureDrop structure, SteamPlayer instigatorClient, ref bool shouldAllow)
+    private void OnStructureSalvageRequested(SalvageStructureRequested e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
-        if (player == null || player.OnDuty())
-            return;
-        StructureData data = structure.GetServersideData();
-        if (IsWhitelisted(data.structure.asset.GUID, out _))
+        if (e.Player.OnDuty() || IsWhitelisted(e.Structure.asset.GUID, out _))
             return;
 
-        player.SendChat(T.WhitelistProhibitedSalvage, structure.asset);
-        shouldAllow = false;
+        SqlItem<Kit>? proxy = e.Player.ActiveKit;
+        Kit? kit = proxy?.Item;
+        if (e.ServersideData.owner != e.Player.Steam64 || kit == null || !kit.ContainsItem(e.Structure.asset.GUID, e.ServersideData.group.GetTeam()))
+        {
+            e.Player.SendChat(T.WhitelistProhibitedSalvage, e.Structure.asset);
+            e.Break();
+        }
     }
     private void OnEditSignRequest(CSteamID steamID, InteractableSign sign, ref string text, ref bool shouldAllow)
     {
@@ -324,18 +315,28 @@ public class Whitelister : ListSingleton<WhitelistItem>
     public static void AddItem(Guid guid, byte amount = 255)
     {
         _singleton.AssertLoaded<Whitelister, WhitelistItem>();
+        if (IsWhitelisted(guid, out WhitelistItem item))
+        {
+            if (amount != item.Amount)
+                SetAmount(guid, amount);
+            L.Log($"[WHITELISTER] Already whitelisted: {F.AssetToString(guid)}.");
+            return;
+        }
         _singleton.AddObjectToSave(new WhitelistItem(guid, amount));
+        L.Log($"[WHITELISTER] Whitelisted {F.AssetToString(guid)}.");
     }
     public static void RemoveItem(Guid guid)
     {
         _singleton.AssertLoaded<Whitelister, WhitelistItem>();
         _singleton.RemoveWhere(i => i.Item == guid);
+        L.Log($"[WHITELISTER] Unwhitelisted {F.AssetToString(guid)}.");
     }
 
     public static void SetAmount(Guid guid, ushort newAmount)
     {
         _singleton.AssertLoaded<Whitelister, WhitelistItem>();
         _singleton.UpdateObjectsWhere(i => i.Item == guid, i => i.Amount = newAmount);
+        L.Log($"[WHITELISTER] Set whitelist amount: {F.AssetToString(guid)}.");
     }
 
     public static bool IsWhitelisted(Guid guid, out WhitelistItem item)

@@ -123,6 +123,8 @@ internal class ProjectileSolver : MonoBehaviour
     private IEnumerator Simulate()
     {
         ProjectileData data = _current;
+        if (data.Gun?.equippedGunAsset?.projectile == null)
+            yield break;
         Transform transform = Instantiate(data.Gun.equippedGunAsset.projectile, data.Origin, Quaternion.LookRotation(data.Direction) * Quaternion.Euler(90f, 0.0f, 0.0f)).transform;
         SceneManager.MoveGameObjectToScene(transform.gameObject, _simScene);
 

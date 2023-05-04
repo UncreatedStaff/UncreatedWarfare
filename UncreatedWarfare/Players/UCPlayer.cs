@@ -18,6 +18,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
@@ -396,14 +397,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             KitMenuData = null!;
         }
     }
-    public static UCPlayer? FromID(ulong steamID)
-    {
-        if (steamID == 0) return null;
-        return PlayerManager.FromID(steamID);
-        //return PlayerManager.OnlinePlayers.Find(p => p != null && p.Steam64 == steamID);
-    }
-    public static UCPlayer? FromCSteamID(CSteamID steamID) =>
-        steamID == default ? null : FromID(steamID.m_SteamID);
+    public static UCPlayer? FromID(ulong steamID) => steamID == 0 ? null : PlayerManager.FromID(steamID);
+    public static UCPlayer? FromCSteamID(CSteamID steamID) => steamID.m_SteamID == 0 ? null : FromID(steamID.m_SteamID);
     public static UCPlayer? FromPlayer(Player player) => player == null ? null : FromID(player.channel.owner.playerID.steamID.m_SteamID);
     public static UCPlayer? FromSteamPlayer(SteamPlayer player)
     {
@@ -631,10 +626,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ApplyIntl() => PlayerManager.ApplyTo(this);
-    public bool IsOnFOB(out FOB fob)
-    {
-        return FOB.IsOnFOB(this, out fob);
-    }
+    public bool IsOnFOB(out IFOB fob) => FOBManager.IsOnFOB(this, out fob);
     public int CompareTo(UCPlayer obj) => Steam64.CompareTo(obj.Steam64);
     public void SetCosmeticStates(bool state)
     {
@@ -858,7 +850,6 @@ public struct OfflinePlayer : IPlayer
         ref TranslationFlags flags)
     {
         UCPlayer? pl = UCPlayer.FromID(Steam64);
-        PlayerNames? n = _names ?? pl?.Name;
         if (format is null || !_names.HasValue) goto end;
         PlayerNames names = _names.Value;
 

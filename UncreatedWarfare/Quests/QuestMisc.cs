@@ -10,6 +10,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
@@ -2901,7 +2902,7 @@ public interface INotifyRallyActive : INotifyTracker
 }
 public interface INotifyBunkerSpawn : INotifyTracker
 {
-    public void OnPlayerSpawnedAtBunker(FOBs.BuiltBuildableComponent bunker, FOB fob, UCPlayer spawner);
+    public void OnPlayerSpawnedAtBunker(BunkerComponent component, UCPlayer spawner);
 }
 public interface INotifyGainedXP : INotifyTracker
 {

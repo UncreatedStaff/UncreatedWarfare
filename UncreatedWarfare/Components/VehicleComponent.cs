@@ -19,6 +19,7 @@ using Random = UnityEngine.Random;
 using UnityEngine.PlayerLoop;
 using System.Diagnostics;
 using Uncreated.Warfare.Actions;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Players;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
@@ -182,11 +183,11 @@ public class VehicleComponent : MonoBehaviour
             EvaluateUsage(e.Player.Player.channel.owner);
 
         HideHUD(e.Player);
-
+        
         if (e.Player.KitClass == Class.Squadleader &&
             (Data?.Item != null && VehicleData.IsLogistics(Data.Item.Type)) &&
             !F.IsInMain(e.Player.Position) &&
-            FOB.GetNearestFOB(e.Player.Position, EFobRadius.FULL_WITH_BUNKER_CHECK, e.Player.GetTeam()) == null
+            Warfare.Data.Singletons.GetSingleton<FOBManager>()?.FindNearestFOB<FOB>(e.Player.Position, e.Player.GetTeam()) == null
             )
         {
             Tips.TryGiveTip(e.Player, 300, T.TipPlaceRadio);

@@ -4,50 +4,36 @@ using Uncreated.Warfare.Structures;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events.Structures;
-public class SalvageStructureRequested : BreakablePlayerEvent, IBuildableDestroyedEvent
+public sealed class SalvageStructureRequested : SalvageRequested
 {
     private readonly StructureDrop _drop;
     private readonly StructureData _data;
-    private readonly StructureRegion _region;
-    private readonly byte _x;
-    private readonly byte _y;
-    private readonly bool _isSaved;
-    private readonly SqlItem<SavedStructure>? _save;
-    private IBuildable? _buildable;
     public StructureDrop Structure => _drop;
     public StructureData ServersideData => _data;
-    public StructureRegion Region => _region;
-    public Transform Transform => _drop.model;
-    public byte RegionPosX => _x;
-    public byte RegionPosY => _y;
-    public uint InstanceID => _drop.instanceID;
-    public bool IsSaved => _isSaved;
-    public SqlItem<SavedStructure>? Save => _save;
-    public IBuildable Buildable => _buildable ??= new UCStructure(Structure);
-    object IBuildableDestroyedEvent.Region => Region;
-    UCPlayer? IBuildableDestroyedEvent.Instigator => Player;
-    internal SalvageStructureRequested(UCPlayer instigator, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save) : base(instigator)
+    public StructureRegion Region => (StructureRegion)RegionObj;
+    public override IBuildable Buildable => BuildableCache ??= new UCStructure(Structure);
+    internal SalvageStructureRequested(UCPlayer instigator, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save)
+        : base(instigator, region, x, y, structure.instanceID)
     {
         this._drop = structure;
         this._data = structureData;
-        this._region = region;
-        this._x = x;
-        this._y = y;
-        _save = save;
-        if (save?.Manager is not null)
+        Transform = structure.model;
+        StructureSave = save;
+        ListSqlConfig<SavedStructure>? m = save?.Manager;
+        if (m is not null)
         {
-            save.Manager.WriteWait();
+            m.WriteWait();
             try
             {
                 if (save.Item != null)
                 {
-                    _buildable = save.Item.Buildable;
-                    _isSaved = true;
+                    BuildableCache = save.Item.Buildable;
+                    IsStructureSaved = true;
                 }
             }
             finally
             {
-                save.Manager.WriteRelease();
+                m.WriteRelease();
             }
         }
     }

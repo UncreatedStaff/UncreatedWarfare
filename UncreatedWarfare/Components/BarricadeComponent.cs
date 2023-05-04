@@ -1,11 +1,12 @@
 ﻿using SDG.Unturned;
 using System;
 using JetBrains.Annotations;
+using Uncreated.Warfare.Events;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
 
-public class BarricadeComponent : MonoBehaviour
+public class BarricadeComponent : MonoBehaviour, IManualOnDestroy
 {
     public ulong Owner;
     /// <summary>For Signs</summary>
@@ -27,4 +28,15 @@ public class BarricadeComponent : MonoBehaviour
         Destroy(this);
     }
 
+    public void ManualOnDestroy() => Destroy(this);
+}
+
+public interface ISalvageInfo
+{
+    bool IsSalvaged { set; get; }
+    ulong Salvager { set; get; }
+}
+public interface ISalvageListener : ISalvageInfo
+{
+    void OnSalvageRequested(SalvageRequested e);
 }

@@ -1,8 +1,10 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -10,6 +12,48 @@ namespace Uncreated.Warfare;
 
 public static class UCBarricadeManager
 {
+    public static PageEnumerator EnumerateInOrder(this Items items, bool reverse = true) => new PageEnumerator(items, reverse);
+    public static bool BuildableEquals(this IBuildable? buildable, IBuildable? other)
+    {
+        if (buildable == null) return other == null;
+        if (other == null) return false;
+
+        return buildable.Type == other.Type && buildable.InstanceId == other.InstanceId;
+    }
+    public static bool Destroy(this IBuildable buildable)
+    {
+        try
+        {
+            if (buildable.Model != null)
+            {
+                if (buildable.Type == StructType.Barricade)
+                {
+                    if (buildable.Drop is BarricadeDrop d1 && !d1.GetServersideData().barricade.isDead
+                                                           && BarricadeManager.tryGetRegion(buildable.Model, out byte x, out byte y, out ushort plant, out _))
+                    {
+                        BarricadeManager.destroyBarricade(d1, x, y, plant);
+                        return true;
+                    }
+                }
+                else if (buildable.Type == StructType.Structure)
+                {
+                    if (buildable.Drop is StructureDrop s1 && !s1.GetServersideData().structure.isDead
+                                                           && StructureManager.tryGetRegion(buildable.Model, out byte x, out byte y, out _))
+                    {
+                        StructureManager.destroyStructure(s1, x, y, Vector3.zero);
+                        return true;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError($"Error destroying buildable: {buildable.Asset.itemName} (#{buildable.InstanceId}).");
+            L.LogError(ex);
+        }
+
+        return false;
+    }
     internal static readonly List<RegionCoordinate> RegionBuffer = new List<RegionCoordinate>(48);
     public static BarricadeDrop? GetSignFromInteractable(InteractableSign sign)
         => BarricadeManager.FindBarricadeByRootTransform(sign.transform);
@@ -1197,6 +1241,16 @@ public static class UCBarricadeManager
         Data.SendDestroyItem.Invoke(SDG.NetTransport.ENetReliability.Reliable,
             Regions.GatherRemoteClientConnections(x, y, ItemManager.ITEM_REGIONS), x, y, instanceId, shouldPlayEffect);
     }
+    public static void Destroy(this ItemData item)
+    {
+        if (Regions.tryGetCoordinate(item.point, out byte x, out byte y))
+        {
+            ItemRegion region = ItemManager.regions[x, y];
+            SendRemoveItem(x, y, item.instanceID, false);
+            region.items.Remove(item);
+            EventFunctions.OnItemRemoved(item);
+        }
+    }
     public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius, List<RegionCoordinate> search)
     {
 #if DEBUG
@@ -1227,4 +1281,96 @@ public static class UCBarricadeManager
         return ct >= amount;
     }
 #pragma warning restore CS0612 // Type or member is obsolete
+}
+
+public readonly struct PageEnumerator : IEnumerable<ItemJar>
+{
+    public Items Page { get; }
+    public bool Reverse { get; }
+    public PageEnumerator(Items page, bool reverse)
+    {
+        Page = page;
+        Reverse = reverse;
+    }
+
+    public IEnumerator<ItemJar> GetEnumerator() => new Enumerator(Page, Reverse);
+    IEnumerator IEnumerable.GetEnumerator() => new Enumerator(Page, Reverse);
+
+    private struct Enumerator : IEnumerator<ItemJar>
+    {
+        private int _x = -1;
+        private int _y = -1;
+        public Items Page { get; }
+        public bool Reverse { get; }
+        public ItemJar Current { get; private set; }
+        object IEnumerator.Current => Current;
+        public Enumerator(Items page, bool reverse)
+        {
+            Page = page;
+            Current = null!;
+            Reverse = reverse;
+            if (reverse)
+            {
+                _x = Page.width;
+                _y = Page.height;
+            }
+        }
+        public void Dispose()
+        {
+            Reset();
+        }
+
+        public bool MoveNext()
+        {
+            if (Reverse)
+            {
+                for (int y = _y - (_x <= 0 ? 1 : 0); y >= 0; --y)
+                {
+                    for (int x = (_x <= 0 ? Page.width : (_x - 1)); x >= 0; --x)
+                    {
+                        byte ind = Page.getIndex((byte)x, (byte)y);
+                        if (ind == byte.MaxValue)
+                            continue;
+                        _x = x;
+                        _y = y;
+                        Current = Page.getItem(ind);
+                        return true;
+                    }
+                }
+            }
+            else
+            {
+                for (int y = (_x == Page.width ? _y + 1 : _y); y < Page.height; ++y)
+                {
+                    for (int x = (_x == Page.width ? 0 : _x + 1); x < Page.width; ++x)
+                    {
+                        byte ind = Page.getIndex((byte)x, (byte)y);
+                        if (ind == byte.MaxValue)
+                            continue;
+                        _x = x;
+                        _y = y;
+                        Current = Page.getItem(ind);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        public void Reset()
+        {
+            if (Reverse)
+            {
+                _x = Page.width;
+                _y = Page.height;
+            }
+            else
+            {
+                _x = -1;
+                _y = -1;
+            }
+            Current = null!;
+        }
+    }
 }

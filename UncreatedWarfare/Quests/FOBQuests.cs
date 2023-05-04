@@ -1,11 +1,10 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Text.Json;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Json;
 using Uncreated.Framework;
+using Uncreated.Json;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Quests.Types;
@@ -47,14 +46,14 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
     }
     public class Tracker : BaseQuestTracker, INotifyFOBBuilt
     {
-        private readonly int BuildCount = 0;
+        private readonly int _buildCount;
         private int _fobsBuilt;
         public override short FlagValue => (short)_fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
-        protected override bool CompletedCheck => _fobsBuilt >= BuildCount;
+        protected override bool CompletedCheck => _fobsBuilt >= _buildCount;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            BuildCount = questState.BuildCount.InsistValue();
+            _buildCount = questState.BuildCount.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -70,16 +69,16 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
             if (constructor.Steam64 == _player.Steam64)
             {
                 _fobsBuilt++;
-                if (_fobsBuilt >= BuildCount)
+                if (_fobsBuilt >= _buildCount)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _fobsBuilt, BuildCount);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _fobsBuilt, _buildCount);
         public override void ManualComplete()
         {
-            _fobsBuilt = BuildCount;
+            _fobsBuilt = _buildCount;
             base.ManualComplete();
         }
     }
@@ -132,17 +131,17 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
     }
     public class Tracker : BaseQuestTracker, INotifyFOBBuilt
     {
-        private readonly int BuildCount = 0;
-        private readonly float SqrBuildRange = 0f;
+        private readonly int _buildCount;
+        private readonly float _sqrBuildRange;
         private int _fobsBuilt;
         public override short FlagValue => (short)_fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
-        protected override bool CompletedCheck => _fobsBuilt >= BuildCount;
+        protected override bool CompletedCheck => _fobsBuilt >= _buildCount;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            BuildCount = questState.BuildCount.InsistValue();
-            SqrBuildRange = questState.BuildRange.InsistValue();
-            SqrBuildRange *= SqrBuildRange;
+            _buildCount = questState.BuildCount.InsistValue();
+            _sqrBuildRange = questState.BuildRange.InsistValue();
+            _sqrBuildRange *= _sqrBuildRange;
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -162,16 +161,16 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
                 {
                     if (Data.Is(out IAttackDefense inv))
                     {
-                        if ((inv.AttackingTeam == 1 && ctf.ObjectiveTeam1 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam1.Position) <= SqrBuildRange) ||
-                            (inv.AttackingTeam == 2 && ctf.ObjectiveTeam2 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam2.Position) <= SqrBuildRange))
+                        if ((inv.AttackingTeam == 1 && ctf.ObjectiveTeam1 != null && Util.SqrDistance2D(fob.transform.position, ctf.ObjectiveTeam1.Position) <= _sqrBuildRange) ||
+                            (inv.AttackingTeam == 2 && ctf.ObjectiveTeam2 != null && Util.SqrDistance2D(fob.transform.position, ctf.ObjectiveTeam2.Position) <= _sqrBuildRange))
                         {
                             goto add;
                         }
                     }
                     else
                     {
-                        if ((team == 1 && ctf.ObjectiveTeam1 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam1.Position) <= SqrBuildRange) ||
-                            (team == 2 && ctf.ObjectiveTeam2 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam2.Position) <= SqrBuildRange))
+                        if ((team == 1 && ctf.ObjectiveTeam1 != null && Util.SqrDistance2D(fob.transform.position, ctf.ObjectiveTeam1.Position) <= _sqrBuildRange) ||
+                            (team == 2 && ctf.ObjectiveTeam2 != null && Util.SqrDistance2D(fob.transform.position, ctf.ObjectiveTeam2.Position) <= _sqrBuildRange))
                         {
                             goto add;
                         }
@@ -182,7 +181,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
                     for (int i = 0; i < ins.Caches.Count; i++)
                     {
                         Gamemodes.Insurgency.Insurgency.CacheData cache = ins.Caches[i];
-                        if (cache != null && cache.IsActive && Util.SqrDistance2D(fob.Position, cache.Cache.Position) <= SqrBuildRange)
+                        if (cache != null && cache.IsActive && Util.SqrDistance2D(fob.transform.position, cache.Cache.Position) <= _sqrBuildRange)
                             goto add;
                     }
                 }
@@ -190,15 +189,15 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
             return;
         add:
             _fobsBuilt++;
-            if (_fobsBuilt >= BuildCount)
+            if (_fobsBuilt >= _buildCount)
                 TellCompleted();
             else
                 TellUpdated();
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _fobsBuilt, BuildCount);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _fobsBuilt, _buildCount);
         public override void ManualComplete()
         {
-            _fobsBuilt = BuildCount;
+            _fobsBuilt = _buildCount;
             base.ManualComplete();
         }
     }
@@ -239,14 +238,14 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
     }
     public class Tracker : BaseQuestTracker, INotifyFOBBuilt
     {
-        private readonly int BuildCount = 0;
+        private readonly int _buildCount;
         private int _fobsBuilt;
         public override short FlagValue => (short)_fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
-        protected override bool CompletedCheck => _fobsBuilt >= BuildCount;
+        protected override bool CompletedCheck => _fobsBuilt >= _buildCount;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            BuildCount = questState.BuildCount.InsistValue();
+            _buildCount = questState.BuildCount.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -257,7 +256,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
         {
             writer.WriteProperty("fobs_built", _fobsBuilt);
         }
-        public void OnFOBBuilt(UCPlayer constructor, Components.FOB fob)
+        public void OnFOBBuilt(UCPlayer constructor, FOB fob)
         {
             if (constructor.Steam64 == _player.Steam64)
             {
@@ -266,16 +265,16 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
                 {
                     if (Data.Is(out IAttackDefense inv))
                     {
-                        if ((inv.AttackingTeam == 1 && ctf.ObjectiveTeam1 != null && ctf.ObjectiveTeam1.PlayerInRange(fob.Position)) ||
-                            (inv.AttackingTeam == 2 && ctf.ObjectiveTeam2 != null && ctf.ObjectiveTeam2.PlayerInRange(fob.Position)))
+                        if ((inv.AttackingTeam == 1 && ctf.ObjectiveTeam1 != null && ctf.ObjectiveTeam1.PlayerInRange(fob.transform.position)) ||
+                            (inv.AttackingTeam == 2 && ctf.ObjectiveTeam2 != null && ctf.ObjectiveTeam2.PlayerInRange(fob.transform.position)))
                         {
                             goto add;
                         }
                     }
                     else
                     {
-                        if ((team == 1 && ctf.ObjectiveTeam1 != null && ctf.ObjectiveTeam1.PlayerInRange(fob.Position)) ||
-                            (team == 2 && ctf.ObjectiveTeam2 != null && ctf.ObjectiveTeam2.PlayerInRange(fob.Position)))
+                        if ((team == 1 && ctf.ObjectiveTeam1 != null && ctf.ObjectiveTeam1.PlayerInRange(fob.transform.position)) ||
+                            (team == 2 && ctf.ObjectiveTeam2 != null && ctf.ObjectiveTeam2.PlayerInRange(fob.transform.position)))
                         {
                             goto add;
                         }
@@ -286,7 +285,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
                     for (int i = 0; i < ins.Caches.Count; i++)
                     {
                         Gamemodes.Insurgency.Insurgency.CacheData cache = ins.Caches[i];
-                        if (cache != null && cache.IsActive && Util.SqrDistance2D(fob.Position, cache.Cache.Position) <= 100f)
+                        if (cache != null && cache.IsActive && Util.SqrDistance2D(fob.transform.position, cache.Cache.Position) <= 100f)
                             goto add;
                     }
                 }
@@ -294,15 +293,15 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
             return;
         add:
             _fobsBuilt++;
-            if (_fobsBuilt >= BuildCount)
+            if (_fobsBuilt >= _buildCount)
                 TellCompleted();
             else
                 TellUpdated();
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _fobsBuilt, BuildCount);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _fobsBuilt, _buildCount);
         public override void ManualComplete()
         {
-            _fobsBuilt = BuildCount;
+            _fobsBuilt = _buildCount;
             base.ManualComplete();
         }
     }
@@ -343,14 +342,14 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
     }
     public class Tracker : BaseQuestTracker, INotifySuppliesConsumed
     {
-        private readonly int SupplyCount = 0;
+        private readonly int _supplyCount;
         private int _suppliesDelivered;
         public override short FlagValue => (short)_suppliesDelivered;
         public override void ResetToDefaults() => _suppliesDelivered = 0;
-        protected override bool CompletedCheck => _suppliesDelivered >= SupplyCount;
+        protected override bool CompletedCheck => _suppliesDelivered >= _supplyCount;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            SupplyCount = questState.SupplyCount.InsistValue();
+            _supplyCount = questState.SupplyCount.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -361,25 +360,24 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
         {
             writer.WriteProperty("supplies_delivered", _suppliesDelivered);
         }
-        public void OnSuppliesConsumed(Components.FOB fob, ulong player, int amount)
+        public void OnSuppliesConsumed(FOB fob, ulong player, int amount)
         {
             if (player == _player.Steam64)
             {
                 _suppliesDelivered += amount;
-                if (_suppliesDelivered >= SupplyCount)
+                if (_suppliesDelivered >= _supplyCount)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _suppliesDelivered, SupplyCount);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _suppliesDelivered, _supplyCount);
         public override void ManualComplete()
         {
-            _suppliesDelivered = SupplyCount;
+            _suppliesDelivered = _supplyCount;
             base.ManualComplete();
         }
     }
-    public enum ESupplyType : byte { AMMO, BUILD }
 }
 [QuestData(QuestType.ShovelBuildables)]
 public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQuest.State, HelpBuildQuest>
@@ -439,22 +437,22 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
     }
     public class Tracker : BaseQuestTracker, INotifyBuildableBuilt
     {
-        private readonly int Amount = 0;
-        private readonly DynamicAssetValue<ItemBarricadeAsset>.Choice BaseIDs;
-        private readonly DynamicEnumValue<BuildableType>.Choice BuildableType;
+        private readonly int _amount;
+        private readonly DynamicAssetValue<ItemBarricadeAsset>.Choice _baseIds;
+        private readonly DynamicEnumValue<BuildableType>.Choice _buildableType;
         private int _built;
-        private readonly string translationCache1;
-        private readonly string translationCache2;
-        protected override bool CompletedCheck => _built >= Amount;
+        private readonly string _translationCache1;
+        private readonly string _translationCache2;
+        protected override bool CompletedCheck => _built >= _amount;
         public override short FlagValue => (short)_built;
         public override void ResetToDefaults() => _built = 0;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            Amount = questState.Amount.InsistValue();
-            BaseIDs = questState.BaseIDs;
-            BuildableType = questState.BuildableType;
-            translationCache1 = BuildableType.GetCommaList(_player == null ? 0 : _player.Steam64);
-            translationCache2 = BaseIDs.GetCommaList();
+            _amount = questState.Amount.InsistValue();
+            _baseIds = questState.BaseIDs;
+            _buildableType = questState.BuildableType;
+            _translationCache1 = _buildableType.GetCommaList(_player == null ? 0 : _player.Steam64);
+            _translationCache2 = _baseIds.GetCommaList();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -469,10 +467,10 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         [Obsolete("redo this function plz")]
         public void OnBuildableBuilt(UCPlayer player, BuildableData buildable)
         {
-            if (player.Steam64 == _player.Steam64 && BuildableType.IsMatch(buildable.Type) && buildable.Foundation.ValidReference(out Guid guid) && BaseIDs.IsMatch(guid))
+            if (player.Steam64 == _player.Steam64 && _buildableType.IsMatch(buildable.Type) && buildable.Foundation.ValidReference(out Guid guid) && _baseIds.IsMatch(guid))
             {
                 _built++;
-                if (_built >= Amount)
+                if (_built >= _amount)
                     TellCompleted();
                 else
                     TellUpdated();
@@ -480,20 +478,20 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         }
         protected override string Translate(bool forAsset)
         {
-            if (BaseIDs.Behavior == ChoiceBehavior.Inclusive && BaseIDs.ValueType == DynamicValueType.Wildcard)
+            if (_baseIds.Behavior == ChoiceBehavior.Inclusive && _baseIds.ValueType == DynamicValueType.Wildcard)
             {
-                if (BuildableType.Behavior == ChoiceBehavior.Inclusive && BuildableType.ValueType == DynamicValueType.Wildcard)
-                    return QuestData.Translate(forAsset, _player, _built, Amount, "buildables");
+                if (_buildableType.Behavior == ChoiceBehavior.Inclusive && _buildableType.ValueType == DynamicValueType.Wildcard)
+                    return QuestData.Translate(forAsset, _player, _built, _amount, "buildables");
 
-                return QuestData.Translate(forAsset, _player, _built, Amount, translationCache1);
+                return QuestData.Translate(forAsset, _player, _built, _amount, _translationCache1);
             }
 
-            return QuestData!.Translate(forAsset, _player, _built, Amount, translationCache2);
+            return QuestData.Translate(forAsset, _player, _built, _amount, _translationCache2);
         }
 
         public override void ManualComplete()
         {
-            _built = Amount;
+            _built = _amount;
             base.ManualComplete();
         }
     }
@@ -535,13 +533,13 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
     }
     public class Tracker : BaseQuestTracker, INotifyBunkerSpawn
     {
-        private readonly int UseCount = 0;
+        private readonly int _useCount;
         private int _fobUses;
-        protected override bool CompletedCheck => _fobUses >= UseCount;
+        protected override bool CompletedCheck => _fobUses >= _useCount;
         public override short FlagValue => (short)_fobUses;
         public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
-            UseCount = questState.UseCount.InsistValue();
+            _useCount = questState.UseCount.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -553,23 +551,22 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
             writer.WriteProperty("deployments", _fobUses);
         }
         public override void ResetToDefaults() => _fobUses = 0;
-        public void OnPlayerSpawnedAtBunker(BuiltBuildableComponent bunker, FOB fob, UCPlayer spawner)
+        public void OnPlayerSpawnedAtBunker(BunkerComponent component, UCPlayer spawner)
         {
             if (spawner.Steam64 != _player.Steam64 && spawner.GetTeam() == _player.GetTeam()
-                && bunker != null &&
-                bunker.GetPlayerContribution(_player.Steam64) >= 0.25f)
+                && component.Builders[_player.Steam64] >= 0.25f)
             {
                 _fobUses++;
-                if (_fobUses >= UseCount)
+                if (_fobUses >= _useCount)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _fobUses, UseCount);
+        protected override string Translate(bool forAsset) => QuestData.Translate(forAsset, _player, _fobUses, _useCount);
         public override void ManualComplete()
         {
-            _fobUses = UseCount;
+            _fobUses = _useCount;
             base.ManualComplete();
         }
     }
