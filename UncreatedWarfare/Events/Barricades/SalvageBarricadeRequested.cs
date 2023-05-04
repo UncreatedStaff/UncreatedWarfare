@@ -21,9 +21,10 @@ public sealed class SalvageBarricadeRequested : SalvageRequested
         _plant = plant;
         Transform = barricade.model;
         StructureSave = save;
-        if (save?.Manager is not null)
+        ListSqlConfig<SavedStructure>? m = save?.Manager;
+        if (m is not null)
         {
-            save.Manager.WriteWait();
+            m.WriteWait();
             try
             {
                 if (save.Item != null)
@@ -34,7 +35,7 @@ public sealed class SalvageBarricadeRequested : SalvageRequested
             }
             finally
             {
-                save.Manager.WriteRelease();
+                m.WriteRelease();
             }
         }
     }

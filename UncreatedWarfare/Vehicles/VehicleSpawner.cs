@@ -1555,7 +1555,7 @@ public class VehicleSpawn : IListItem
             }
             Quaternion rotation = Quaternion.Euler(euler);
             Vector3 offset = structure.Buildable.Model.position + new Vector3(0f, VehicleSpawner.VehicleHeightOffset, 0f);
-            InteractableVehicle? veh = await VehicleSpawner.SpawnLockedVehicle(data.VehicleID, offset, rotation, checkExisting: true, token: token).ConfigureAwait(false);
+            InteractableVehicle? veh = await VehicleSpawner.SpawnLockedVehicle(data.VehicleID, offset, rotation, checkExisting: true, token: token, @lock: false).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
             if (veh == null)
                 return null;

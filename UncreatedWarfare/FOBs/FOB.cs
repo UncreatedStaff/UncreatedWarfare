@@ -341,7 +341,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     }
                 }
 
-                b = new Barricade(damagedFobRadio, damagedFobRadio.health, Array.Empty<byte>());
+                b = new Barricade(damagedFobRadio);
                 FOBManager.IgnorePlacingBarricade = true;
                 try
                 {
@@ -381,6 +381,10 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         if (_isBeingDestroyed)
             return;
         _isBeingDestroyed = true;
+        for (int i = 0; i < _friendlies.Count; ++i)
+        {
+            FOBManager.ResourceUI.ClearFromPlayer(_friendlies[i].Connection);
+        }
         try
         {
             for (int i = _items.Count - 1; i >= 0; --i)
@@ -771,7 +775,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     float IDeployable.GetDelay() => FOBManager.Config.DeployFOBDelay;
     bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
     {
-        if (Bunker == null || Bunker.ActiveStructure?.Model == null)
+        if (Bunker == null || Bunker.ActiveStructure?.Model == null || Bunker.State != ShovelableComponent.BuildableState.Full)
         {
             if (ctx is not null)
                 throw ctx.Reply(T.DeployNoBunker, this);
@@ -794,7 +798,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     }
     bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
     {
-        if (Bunker == null || Bunker.ActiveStructure?.Model == null)
+        if (Bunker == null || Bunker.ActiveStructure?.Model == null || Bunker.State != ShovelableComponent.BuildableState.Full)
         {
             if (chat)
                 player.SendChat(T.DeployNoBunker, this);

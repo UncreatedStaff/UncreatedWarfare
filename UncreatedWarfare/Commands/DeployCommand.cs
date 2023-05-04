@@ -82,7 +82,7 @@ public class DeployCommand : Command
                 throw ctx.Reply(T.DeployInCombat, combatlog);
 
             if (!Gamemode.Config.BarricadeInsurgencyCache.ValidReference(out Guid guid) ||
-                !(ctx.Caller.IsOnFOB(out IFOB fob) && (fob is not FOB f2 || !f2.Bleeding) || UCBarricadeManager.IsBarricadeNearby(guid, 10, ctx.Caller.Position, team, out _)))
+                !(ctx.Caller.IsOnFOB(out IFOB fob) && (fob is not FOB f2 || !f2.Bleeding) && fob.CheckDeployable(ctx.Caller, null) || UCBarricadeManager.IsBarricadeNearby(guid, 10, ctx.Caller.Position, team, out _)))
                 throw ctx.Reply(Data.Is<Insurgency>() ? T.DeployNotNearFOBInsurgency : T.DeployNotNearFOB);
         }
 

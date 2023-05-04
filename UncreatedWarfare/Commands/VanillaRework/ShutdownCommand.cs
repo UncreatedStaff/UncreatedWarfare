@@ -142,6 +142,7 @@ public class ShutdownCommand : Command
             ActionLog.Add(ActionLogType.ShutdownServer, "IN " + time.ToUpper() + ": " + reason, instigator);
         }
         NetCalls.SendShuttingDownInSeconds.NetInvoke(instigator, reason, (uint)seconds);
+        Console.WriteLine("shutdown");
         Provider.shutdown(seconds, reason);
     }
     public static void ShutdownAfterGameDaily() => ShutdownAfterGame("Daily Restart", true);
@@ -155,6 +156,7 @@ public class ShutdownCommand : Command
             UCWarfare.I.StopCoroutine(Messager);
         Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
         NetCalls.SendShuttingDownAfter.NetInvoke(0UL, reason);
+        Console.WriteLine("shutdown");
     }
     public static IEnumerator<WaitForSeconds> ShutdownMessageSender(string reason)
     {

@@ -27,7 +27,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
     public bool IsDiscovered;
     public GridLocation GridLocation => _gc;
     public string ClosestLocation => _cl;
-    public ulong Team => _component == null ? 0 : _component.Team;
+    public ulong Team { get; }
     public List<UCPlayer> NearbyDefenders { get; private set; }
     public List<UCPlayer> NearbyAttackers { get; private set; }
     UCPlayer? IFOB.Instigator { get; set; }
@@ -41,7 +41,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
     public bool ContainsBuildable(IBuildable buildable) => buildable.Type == StructType.Barricade && Drop != null && Drop.instanceID == buildable.InstanceId;
     public bool ContainsVehicle(InteractableVehicle vehicle) => false;
 
-    public Cache(BarricadeDrop drop)
+    public Cache(BarricadeDrop drop, ulong team)
     {
         IsDiscovered = false;
         _component = drop.model.gameObject.AddComponent<CacheComponent>().Initialize(drop, this);
@@ -50,6 +50,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         SpawnPosition = pos;
         Position = pos;
         _gc = new GridLocation(in pos);
+        Team = team;
         _cl = F.GetClosestLocationName(pos, true, true);
 
         if (Data.Is(out IFlagRotation fg))
@@ -206,7 +207,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         private Cache _cache;
         private BarricadeDrop _structure;
         public Cache Cache => _cache;
-        public ulong Team => _structure.GetServersideData().group;
+        public ulong Team => _structure.GetServersideData().group.GetTeam();
 
         public CacheComponent Initialize(BarricadeDrop drop, Cache cache)
         {

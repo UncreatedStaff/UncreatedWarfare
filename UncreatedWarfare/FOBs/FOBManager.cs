@@ -353,8 +353,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         Kit? kit = player.ActiveKit?.Item;
         if (kit == null || !kit.ContainsItem(buildable.Foundation.Value.Guid, player.GetTeam()) || _floatingItems == null)
+        {
+            player.SendChat(T.BuildNoRadio, buildable.Type == BuildableType.Bunker ? Config.FOBBuildPickupRadiusNoBunker : Config.FOBBuildPickupRadius);
             return false;
-
+        }
+        ulong team = player.GetTeam();
         int limit = kit.CountItems(buildable.Foundation.Value.Guid);
         for (int i = 0; i < _floatingItems.Count; ++i)
         {
@@ -362,12 +365,12 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (ignoreFoundation is not null && item.Equals(ignoreFoundation))
                 continue;
             BuildableData? b = item.Buildable;
-            if (b != null && b.Foundation == buildable.Foundation)
+            if (b != null && item.Team == team && item.Owner == player.Steam64 && b.Foundation == buildable.Foundation)
             {
                 --limit;
                 if (limit <= 0)
                 {
-                    player.SendChat(T.RegionalBuildLimitReached, buildable.Limit, buildable);
+                    player.SendChat(T.RegionalBuildLimitReached, limit, buildable);
                     return false;
                 }
             }
@@ -739,7 +742,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         SendFOBListToTeam(team);
         return fob;
     }
-    public static Cache RegisterNewCache(BarricadeDrop drop)
+    public static Cache RegisterNewCache(BarricadeDrop drop, ulong team)
     {
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
@@ -748,7 +751,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            Cache cache = new Cache(drop);
+            Cache cache = new Cache(drop, team);
             int number;
             List<Insurgency.CacheData> caches = insurgency.ActiveCaches;
             if (caches.Count == 0)
@@ -760,8 +763,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             cache.Name = "CACHE" + number;
 
             _singleton.AddFOB(cache);
-
-            SendFOBListToTeam(cache.Team);
 
             if (Gamemode.Config.EffectMarkerCacheDefend.ValidReference(out Guid effectGuid))
                 IconManager.AttachIcon(effectGuid, drop.model, insurgency.DefendingTeam, 3.25f);
@@ -895,7 +896,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             int max = ListUI.FOBNames.Length;
             int index = -1;
             bool found = false;
-            for (int i = 0; i < list.Count && index < max; ++i)
+            int i = 0;
+            for (; i < list.Count && index < max; ++i)
             {
                 if (!teams || list[i].Team != team) continue;
                 ++index;
@@ -908,7 +910,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
             if (found && index < max)
             {
-                IFOB f = list[index];
+                IFOB f = list[i];
                 foreach (LanguageSet set in LanguageSet.OnTeam(team))
                 {
                     string? resx = (f as IResourceFOB)?.UIResourceString;

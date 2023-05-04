@@ -114,7 +114,7 @@ public class ClearCommand : Command
                 }
                 ItemManager.ServerClearItemsInSphere(pos, range);
                 ctx.LogAction(ActionLogType.ClearItems, "RANGE: " + range.ToString("F0") + "m");
-                throw ctx.Reply(T.ClearItemsInRange);
+                throw ctx.Reply(T.ClearItemsInRange, range);
             }
             ClearItems();
             ctx.LogAction(ActionLogType.ClearItems);

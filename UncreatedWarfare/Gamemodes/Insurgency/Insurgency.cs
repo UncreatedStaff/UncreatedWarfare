@@ -436,14 +436,14 @@ public class Insurgency :
         Barricade barricade = new Barricade(asset);
         Quaternion rotation = transform.Rotation;
         rotation.eulerAngles = new Vector3(transform.Rotation.eulerAngles.x, transform.Rotation.eulerAngles.y, transform.Rotation.eulerAngles.z);
-        Transform barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, rotation, 0, DefendingTeam);
+        Transform barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, rotation, 0, TeamManager.GetGroupID(DefendingTeam));
         BarricadeDrop foundationDrop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
         if (foundationDrop == null)
         {
             L.LogWarning("CACHE: Foundation drop is null.");
             return;
         }
-        Cache cache = FOBManager.RegisterNewCache(foundationDrop);
+        Cache cache = FOBManager.RegisterNewCache(foundationDrop, DefendingTeam);
         CacheData currentCache = Caches[CachesDestroyed];
 
 
@@ -451,7 +451,6 @@ public class Insurgency :
         {
             currentCache.Activate(cache);
             InsurgencyUI.ReplicateCacheUpdate(currentCache);
-            
         }
         else if (CachesDestroyed < Caches.Count - 1)
         {
