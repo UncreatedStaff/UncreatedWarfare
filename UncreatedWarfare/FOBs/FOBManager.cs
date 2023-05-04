@@ -451,9 +451,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         GameObject fobObj = new GameObject("FOB_" + radio.instanceID);
         fobObj.transform.SetPositionAndRotation(radio.model.position, radio.model.rotation);
         FOB fob = fobObj.AddComponent<FOB>();
-        fob.Radio = radio.model.gameObject.AddComponent<RadioComponent>();
         fob.Name = GetOpenStandardFOBName(team, out int number);
         fob.Number = number;
+        fob.RegisterItem(radio.model.gameObject.AddComponent<RadioComponent>());
 
         AddFOB(fob);
         return fob;
@@ -1049,6 +1049,7 @@ public class FOBConfigData : JSONConfigData
     public byte FobLimit;
     public int TicketsFOBRadioLost;
     public float BaseFOBRepairHits;
+    public float SalvageRefundPercentage;
 
     public float AmmoCommandCooldown;
     public ushort AmmoCrateRequiredBuild;
@@ -1092,6 +1093,7 @@ public class FOBConfigData : JSONConfigData
         TicketsFOBRadioLost = -40;
         // amount of hits it takes to full repair a radio. 30 dmg x 20 = 600 total hp
         BaseFOBRepairHits = 20;
+        SalvageRefundPercentage = 75f;
 
         AmmoCrateRequiredBuild = 2;
         AmmoCommandCooldown = 120f;
@@ -1428,7 +1430,7 @@ public class BuildableData : ITranslationArgument
     {
         if (Emplacement is not null && Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vasset))
         {
-            string name = Translation.Pluralize(language, culture, vasset.vehicleName, flags);
+            string name = vasset.vehicleName;
             if (format is not null && format.Equals(T.FormatRarityColor))
                 return Localization.Colorize(ItemTool.getRarityColorUI(vasset.rarity).Hex(), name, flags);
 

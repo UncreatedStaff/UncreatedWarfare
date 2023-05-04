@@ -59,7 +59,7 @@ internal static class EventPatches
 
         PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(
                 new Action<StructureDrop, byte, byte, Vector3, bool>(StructureManager.destroyStructure)), ref _fail,
-            postfix: PatchUtil.GetMethodInfo(OnStructureDestroyed));
+            transpiler: PatchUtil.GetMethodInfo(DestroyStructureTranspiler));
 
         PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(new Action<SteamPending>(Provider.accept)), ref _fail,
             prefix: PatchUtil.GetMethodInfo(OnAcceptingPlayer));
@@ -146,7 +146,7 @@ internal static class EventPatches
     /// <summary>
     /// Transpiler for <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="EventDispatcher.BarricadeDestroyed"/>.
     /// </summary>
-    private static IEnumerable<CodeInstruction> DestroyBarricadeTranspiler(ILGenerator generator, IEnumerable<CodeInstruction> instructions)
+    private static IEnumerable<CodeInstruction> DestroyBarricadeTranspiler(IEnumerable<CodeInstruction> instructions)
     {
         FieldInfo? rpc = typeof(BarricadeManager).GetField("SendDestroyBarricade", BindingFlags.NonPublic | BindingFlags.Static);
         if (rpc == null)
@@ -192,7 +192,73 @@ internal static class EventPatches
         else if (BarricadeManager.vehicleRegions.Count > plant)
             region = BarricadeManager.vehicleRegions[plant];
         else return;
-        EventDispatcher.InvokeOnBarricadeDestroyed(barricade, barricade.GetServersideData(), region, x, y, plant);
+
+        ulong destroyer;
+        if (barricade.model.TryGetComponent(out DestroyerComponent comp))
+        {
+            destroyer = comp.Destroyer;
+            float time = comp.RelevantTime;
+            if (destroyer != 0 && Time.realtimeSinceStartup - time > 1f)
+                destroyer = 0ul;
+            UnityEngine.Object.Destroy(comp);
+        }
+        else destroyer = 0ul;
+        EventDispatcher.InvokeOnBarricadeDestroyed(barricade, barricade.GetServersideData(), destroyer, region, x, y, plant);
+    }
+    // SDG.Unturned.BarricadeManager
+    /// <summary>
+    /// Transpiler for <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="EventDispatcher.BarricadeDestroyed"/>.
+    /// </summary>
+    private static IEnumerable<CodeInstruction> DestroyStructureTranspiler(IEnumerable<CodeInstruction> instructions)
+    {
+        FieldInfo? rpc = typeof(StructureManager).GetField("SendDestroyStructure", BindingFlags.NonPublic | BindingFlags.Static);
+        if (rpc == null)
+        {
+            L.LogWarning("Unable to find field: StructureManager.SendDestroyStructure");
+        }
+
+        bool one = false;
+        foreach (CodeInstruction instruction in instructions)
+        {
+            if (!one && rpc != null && instruction.LoadsField(rpc))
+            {
+                CodeInstruction call = new CodeInstruction(OpCodes.Ldarg_0);
+                call.labels.AddRange(instruction.labels);
+                yield return call;
+                yield return new CodeInstruction(OpCodes.Ldarg_1);
+                yield return new CodeInstruction(OpCodes.Ldarg_2);
+                yield return new CodeInstruction(OpCodes.Ldarg_3);
+                yield return new CodeInstruction(OpCodes.Ldarg_S, 4);
+                yield return new CodeInstruction(OpCodes.Call, PatchUtil.GetMethodInfo(DestroyStructureInvoker));
+                L.LogDebug("Inserted DestroyStructureInvoker call to StructureManager.destroyStructure.");
+                CodeInstruction old = new CodeInstruction(instruction);
+                old.labels.Clear();
+                yield return old;
+                one = true;
+                continue;
+            }
+
+            yield return instruction;
+        }
+    }
+
+    
+    private static void DestroyStructureInvoker(StructureDrop structure, byte x, byte y, Vector3 ragdoll, bool wasPickedUp)
+    {
+        if (structure is null) return;
+        if (!StructureManager.tryGetRegion(x, y, out StructureRegion region))
+            return;
+        ulong destroyer;
+        if (structure.model.TryGetComponent(out DestroyerComponent comp))
+        {
+            destroyer = comp.Destroyer;
+            float time = comp.RelevantTime;
+            if (destroyer != 0 && Time.realtimeSinceStartup - time > 1f)
+                destroyer = 0ul;
+            UnityEngine.Object.Destroy(comp);
+        }
+        else destroyer = 0ul;
+        EventDispatcher.InvokeOnStructureDestroyed(structure, destroyer, ragdoll, wasPickedUp, region, x, y);
     }
     // SDG.Unturned.VehicleManager.addVehicle
     /// <summary>
@@ -523,25 +589,6 @@ internal static class EventPatches
         }
 
         return true;
-    }
-    // SDG.Unturned.StructureManager.destroyStructure
-    /// <summary>
-    /// Creates a post-structure destroyed event.
-    /// </summary>
-    private static void OnStructureDestroyed(StructureDrop structure, byte x, byte y, Vector3 ragdoll, bool wasPickedUp)
-    {
-        ulong destroyer;
-        if (structure.model.TryGetComponent(out DestroyerComponent comp))
-        {
-            destroyer = comp.Destroyer;
-            float time = comp.RelevantTime;
-            if (destroyer != 0 && Time.realtimeSinceStartup - time > 1f)
-                destroyer = 0ul;
-            UnityEngine.Object.Destroy(comp);
-        }
-        else destroyer = 0ul;
-
-        EventDispatcher.InvokeOnStructureDestroyed(structure, destroyer, ragdoll, wasPickedUp, x, y);
     }
     // SDG.Provider.accept
     /// <summary>

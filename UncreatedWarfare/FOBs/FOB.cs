@@ -6,6 +6,7 @@ using System.Globalization;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
@@ -161,9 +162,6 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         if (Bunker != null)
             Bunker.FOB = this;
 
-        if (Radio.Icon.ValidReference(out Guid radioEffect))
-            IconManager.AttachIcon(radioEffect, transform, Team, 3.5f);
-
         L.LogDebug($"[FOBS] [{Name}] Initialized FOB: {Radio.Barricade.asset.itemName} (Radio State: {Radio.State})");
 
         OffloadNearbyLogisticsVehicle();
@@ -269,6 +267,13 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             L.LogDebug($"[FOBS] [{Name}] Registered bunker: {item.Buildable}.");
             return;
         }
+        if (item is RadioComponent c)
+        {
+            Radio = c;
+            FOBManager.UpdateFOBListForTeam(Team, this);
+            L.LogDebug($"[FOBS] [{Name}] Registered radio: {item.Buildable}.");
+            return;
+        }
         _items.Add(item);
         L.LogDebug($"[FOBS] [{Name}] Registered item: {item.Buildable}.");
     }
@@ -306,10 +311,12 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     L.LogWarning($"[FOBS] [{Name}] Failed to place barricade {_originalRadio.itemName}.");
                     return;
                 }
+
+                // important, keeps the radio from breaking the rest of the fob when it's broken
+                Radio.FOB = null;
                 if (Radio != null)
                     Destroy(Radio);
-                Radio = t.gameObject.AddComponent<RadioComponent>();
-                Radio.FOB = this;
+                RegisterItem(t.gameObject.AddComponent<RadioComponent>());
                 break;
             case RadioComponent.RadioState.Bleeding:
                 if (Radio.State == RadioComponent.RadioState.Bleeding)
@@ -326,7 +333,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 if (Radio.State == RadioComponent.RadioState.Alive)
                 {
                     _originalState = Util.CloneBytes(Radio.Barricade.GetServersideData().barricade.state);
-                    if (Radio.Barricade.model.TryGetComponent(out component))
+                    oldKiller = DestroyerComponent.GetDestroyer(Radio.Barricade.model.gameObject, out oldKillerTime);
+                    if ((oldKiller == 0 || Time.realtimeSinceStartup - oldKillerTime > 5f) && Radio.Barricade.model.TryGetComponent(out component))
                     {
                         oldKiller = component.LastDamager;
                         oldKillerTime = component.LastDamagerTime;
@@ -350,16 +358,16 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     L.LogWarning($"[FOBS] [{Name}] Failed to place barricade {damagedFobRadio.itemName}.");
                     return;
                 }
-
+                
                 if (t.TryGetComponent(out component))
                 {
                     component.LastDamager = oldKiller;
                     component.LastDamagerTime = oldKillerTime;
                 }
+
                 if (Radio != null)
                     Destroy(Radio);
-                Radio = t.gameObject.AddComponent<RadioComponent>();
-                Radio.FOB = this;
+                RegisterItem(t.gameObject.AddComponent<RadioComponent>());
                 break;
             default:
                 L.LogWarning($"[FOBS] [{Name}] Unknown radio state: {state}.");
@@ -733,14 +741,14 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
             return null;
         }
-        if (item.Icon.ValidReference(out Guid icon))
-            IconManager.AttachIcon(icon, itemMb.transform, item.Team, item.IconOffset);
         if (itemMb is BunkerComponent b && b == Bunker)
         {
             Bunker = newObj.gameObject.AddComponent<BunkerComponent>();
             Bunker.FOB = this;
             FOBManager.UpdateFOBListForTeam(Team, this);
             Destroy(b);
+            if (Bunker.Icon.ValidReference(out Guid icon))
+                IconManager.AttachIcon(icon, newObj, Bunker.Team, Bunker.IconOffset);
             return Bunker;
         }
 
@@ -748,10 +756,13 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         {
             if (_items[i] is MonoBehaviour mb && mb == itemMb)
             {
-                _items[i] = (IFOBItem)newObj.gameObject.AddComponent(item.GetType());
-                _items[i].FOB = this;
+                IFOBItem comp = (IFOBItem)newObj.gameObject.AddComponent(item.GetType());
+                comp.FOB = this;
+                if (comp.Icon.ValidReference(out Guid icon))
+                    IconManager.AttachIcon(icon, newObj, comp.Team, comp.IconOffset);
                 Destroy(itemMb);
-                return _items[i];
+                _items[i] = comp;
+                return comp;
             }
         }
 

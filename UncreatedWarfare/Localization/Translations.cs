@@ -406,10 +406,13 @@ public class Translation
         }
         private static string ItemAssetToString(string language, CultureInfo culture, ItemAsset asset, string? format, TranslationFlags flags)
         {
+            string name = asset.itemName;
+            if (name.EndsWith(" Built", StringComparison.Ordinal))
+                name = name.Substring(0, name.Length - 6);
             if (format is not null)
             {
                 if (format.Equals(Warfare.T.FormatRarityColor, StringComparison.Ordinal))
-                    return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Pluralize(language, culture, asset.itemName, flags), flags);
+                    return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Pluralize(language, culture, name, flags), flags);
             }
             return Pluralize(language, culture, asset.itemName, flags);
         }
@@ -815,6 +818,8 @@ public class Translation
                 return str.Substring(0, str.Length - 2) + (char.IsUpper(str[str.Length - 2]) ? "E" : "e") + str[str.Length - 1];
 
             char last = str[str.Length - 1];
+            if (char.IsDigit(last))
+                return word + "s";
             char slast = str[str.Length - 2];
 
             if (last is 's' or 'x' or 'z' || (last is 'h' && slast is 's' or 'c'))

@@ -6,6 +6,7 @@ using System.Linq;
 using JetBrains.Annotations;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
@@ -19,6 +20,7 @@ public static class IconManager
     {
         EventDispatcher.GroupChanged += OnGroupChanged;
     }
+
     public static void OnGamemodeReloaded()
     {
         for (int i = Icons.Count - 1; i >= 0; i--)
@@ -80,15 +82,23 @@ public static class IconManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        IconRenderer icon = transform.gameObject.AddComponent<IconRenderer>();
+        Guid guid = Guid.Empty;
+        if (transform.gameObject.TryGetComponent(out IconRenderer icon))
+            EffectManager.ClearEffectByGuid_AllPlayers(guid = icon.EffectGUID);
+        else icon = transform.gameObject.AddComponent<IconRenderer>();
+
         icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team);
         
         icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Team == 0
                 ? PlayerManager.OnlinePlayers
                 : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
             .Select(x => x.Connection)));
+        
+        if (guid != Guid.Empty)
+            SpawnNewIconsOfType(guid);
 
-        Icons.Add(icon);
+        if (!Icons.Contains(icon))
+            Icons.Add(icon);
     }
     public static void DeleteIcon(IconRenderer icon, bool destroy = true)
     {
@@ -147,6 +157,7 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
     void OnDestroy()
     {
         IconManager.DeleteIcon(this, false);
+        L.LogDebug($"Icon destroyed: {Effect?.FriendlyName ?? EffectGUID.ToString("N")}");
     }
     public void Destroy()
     {
@@ -165,7 +176,7 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
         F.TriggerEffectReliable(Effect, players, Point);
     }
 
-    public void ManualOnDestroy()
+    void IManualOnDestroy.ManualOnDestroy()
     {
         Destroy();
     }

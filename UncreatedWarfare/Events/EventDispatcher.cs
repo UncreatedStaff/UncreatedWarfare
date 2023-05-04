@@ -302,18 +302,14 @@ public static class EventDispatcher
             TryInvoke(inv, args, nameof(VehicleSpawned));
         }
     }
-    internal static void InvokeOnBarricadeDestroyed(BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant)
+    internal static void InvokeOnBarricadeDestroyed(BarricadeDrop barricade, BarricadeData barricadeData, ulong instigator, BarricadeRegion region, byte x, byte y, ushort plant)
     {
         if (BarricadeDestroyed == null || Data.Gamemode is not { State: State.Active or State.Staging }) return;
-        UCPlayer? instigator = null;
-        if (barricade.model.TryGetComponent(out BarricadeComponent component) && component.LastDamagerTime + 10f >= Time.realtimeSinceStartup)
-        {
-            instigator = UCPlayer.FromID(component.LastDamager);
-        }
+        UCPlayer? player = UCPlayer.FromID(instigator);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? barricadeSave = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
 
-        BarricadeDestroyed args = new BarricadeDestroyed(instigator, barricade, barricadeData, region, x, y, plant, barricadeSave);
+        BarricadeDestroyed args = new BarricadeDestroyed(player, barricade, barricadeData, region, x, y, plant, barricadeSave);
         foreach (EventDelegate<BarricadeDestroyed> inv in BarricadeDestroyed.GetInvocationList().Cast<EventDelegate<BarricadeDestroyed>>())
         {
             if (!args.CanContinue) break;
@@ -818,19 +814,31 @@ public static class EventDispatcher
         else
             pendingTotalDamage = args.PendingDamage;
     }
-    internal static void InvokeOnStructureDestroyed(StructureDrop drop, ulong instigator, Vector3 ragdoll, bool wasPickedUp, byte x, byte y)
+
+    private static readonly List<IManualOnDestroy> WorkingOnDestroy = new List<IManualOnDestroy>(2);
+    internal static void InvokeOnStructureDestroyed(StructureDrop drop, ulong instigator, Vector3 ragdoll, bool wasPickedUp, StructureRegion region, byte x, byte y)
     {
         if (StructureDestroyed == null) return;
         UCPlayer? player = UCPlayer.FromID(instigator);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
-        StructureManager.tryGetRegion(x, y, out StructureRegion? region);
 
-        StructureDestroyed args = new StructureDestroyed(player, drop, drop.GetServersideData(), region!, x, y, save, ragdoll, wasPickedUp);
+        StructureDestroyed args = new StructureDestroyed(player, drop, drop.GetServersideData(), region, x, y, save, ragdoll, wasPickedUp);
         foreach (EventDelegate<StructureDestroyed> inv in StructureDestroyed.GetInvocationList().Cast<EventDelegate<StructureDestroyed>>())
         {
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(StructureDestroyed));
+        }
+
+        drop.model.GetComponents(WorkingOnDestroy);
+        try
+        {
+            for (int i = 0; i < WorkingOnDestroy.Count; ++i)
+                WorkingOnDestroy[i].ManualOnDestroy();
+        }
+        finally
+        {
+            WorkingOnDestroy.Clear();
         }
     }
     internal static void InvokeOnInjuringPlayer(PlayerInjuring args)
