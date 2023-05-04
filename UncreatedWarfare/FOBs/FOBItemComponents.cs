@@ -736,7 +736,7 @@ public class RepairStationComponent : ShovelableComponent
                             (Position - vehicle.transform.position).sqrMagnitude > 12f * 12f)
                             continue;
 
-                        if (vehicle.health >= vehicle.asset.health && vehicle.fuel >= vehicle.asset.fuel - 10) // - 10 so it doesn't use a build as you drive away
+                        if (vehicle.health >= vehicle.asset.health && vehicle.fuel >= vehicle.asset.fuel - 10) // '- 10' so it doesn't use a build as you drive away
                         {
                             if (VehiclesRepairing.ContainsKey(vehicle.instanceID))
                                 VehiclesRepairing.Remove(vehicle.instanceID);
