@@ -65,7 +65,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
     Vector3 IDeployable.SpawnPosition => Bunker == null ? Vector3.zero : Bunker.SpawnPosition;
     float IDeployable.Yaw => Bunker == null ? 0f : Bunker.SpawnYaw;
-    public ulong Team => Radio.Team;
+    public ulong Team => Radio == null ? 0 : Radio.Team;
     public float Radius { get; private set; }
 
     public bool Bleeding => Radio != null && Radio.State == RadioComponent.RadioState.Bleeding;

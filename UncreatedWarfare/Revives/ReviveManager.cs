@@ -122,6 +122,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     void IPlayerConnectListener.OnPlayerConnecting(UCPlayer player)
     {
+        if (player?.Player == null) return;
         if (!player.Player.transform.gameObject.TryGetComponent<Reviver>(out _))
             player.Player.transform.gameObject.AddComponent<Reviver>();
         _injuredPlayers.Remove(player.Steam64);
