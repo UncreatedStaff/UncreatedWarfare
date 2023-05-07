@@ -74,7 +74,7 @@ internal class ProjectileComponent : MonoBehaviour
         _lastpos = transform.position;
     }
     
-#if DEBUG
+#if false && DEBUG
     private float _lastSpawn;
     [UsedImplicitly]
     void Update()
