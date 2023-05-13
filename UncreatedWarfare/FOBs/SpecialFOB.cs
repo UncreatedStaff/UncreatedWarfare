@@ -61,7 +61,7 @@ public class SpecialFOB : IFOB, IGameTickListener
             for (int i = 0; i < Provider.clients.Count; ++i)
             {
                 SteamPlayer pl = Provider.clients[i];
-                if ((pl.player.transform.position - pos).sqrMagnitude < 70 * 70)
+                if (pl.GetTeam() != Team && (pl.player.transform.position - pos).sqrMagnitude < 70 * 70)
                 {
                     L.LogDebug($"[FOBS] [{Name}] Deleting FOB because of nearby enemies.", ConsoleColor.Green);
                     fobs.FOBManager.DeleteFOB(this);
