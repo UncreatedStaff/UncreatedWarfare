@@ -42,6 +42,8 @@ public class TickResponsibilityCollection : IEnumerable<TickResponsibility>
     public void RetrieveLock() => Monitor.Enter(_list);
     public void ReturnLock() => Monitor.Exit(_list);
 
+    public float GetTicksNoLock() => _total;
+
     /// <returns>The percentage of the work <paramref name="player"/> has done (from 0 to 1).</returns>
     public float this[IPlayer player] => this[player.Steam64];
 

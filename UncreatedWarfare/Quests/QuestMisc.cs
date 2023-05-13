@@ -1800,7 +1800,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
         {
             if (player == 0 || !Data.Languages.TryGetValue(player, out string language))
                 language = L.Default;
-            return kit.GetDisplayName(language).Replace('\n', ' ').Replace("\t", string.Empty);
+            return kit.GetDisplayName(language);
         }
     }
 }

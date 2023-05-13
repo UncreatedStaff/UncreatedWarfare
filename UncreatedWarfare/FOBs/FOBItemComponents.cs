@@ -10,6 +10,7 @@ using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -656,7 +657,38 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             @new = FOB.UpgradeItem(this, newTransform);
         else if (Data.Is(out IFOBs fobs))
             @new = fobs.FOBManager.UpgradeFloatingItem(this, newTransform);
-        
+
+        Builders.RetrieveLock();
+        try
+        {
+            foreach (TickResponsibility builder in Builders)
+            {
+                UCPlayer? player = UCPlayer.FromID(builder.Steam64);
+
+                float contribution = builder.Ticks / Builders.GetTicksNoLock();
+
+                if (contribution >= 0.1f && player != null)
+                {
+                    XPReward reward;
+                    if (Buildable.Type == BuildableType.Bunker)
+                        reward = XPReward.BunkerBuilt;
+                    else
+                        reward = XPReward.Shoveling;
+
+                    string msg = Buildable.Translate(player).ToUpperInvariant();
+
+                    Points.AwardXP(player, reward, msg + " BUILT", multiplier: contribution);
+                    ActionLog.Add(ActionLogType.HelpBuildBuildable, $"{Buildable} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.AdminLocale)}%", player);
+                    if (contribution > 0.3333f)
+                        QuestManager.OnBuildableBuilt(player, Buildable);
+                }
+            }
+        }
+        finally
+        {
+            Builders.ReturnLock();
+        }
+
         if (@new == null)
         {
             L.LogWarning($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Unable to upgrade buildable: {Buildable}.");

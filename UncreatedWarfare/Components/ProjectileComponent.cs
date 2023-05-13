@@ -17,7 +17,7 @@ internal class ProjectileComponent : MonoBehaviour
     internal Rocket RocketComponent;
     private bool _isExploded;
     public float LaunchTime;
-    private static MethodInfo? _explodeMethod = typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.NonPublic | BindingFlags.Instance);
+    private static readonly MethodInfo? ExplodeMethod = typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.NonPublic | BindingFlags.Instance);
     public bool IgnoreArmor { get; private set; }
     [UsedImplicitly]
     private void Awake()
@@ -59,9 +59,9 @@ internal class ProjectileComponent : MonoBehaviour
                                     (other.transform == RocketComponent.ignoreTransform ||
                                      other.transform.IsChildOf(RocketComponent.ignoreTransform))))
                 goto rtn;
-            if (TryGetComponent(out Rocket rocket) && _explodeMethod != null)
+            if (TryGetComponent(out Rocket rocket) && ExplodeMethod != null)
             {
-                _explodeMethod.Invoke(rocket, new object[] { hit.collider });
+                ExplodeMethod.Invoke(rocket, new object[] { other });
 #if DEBUG
                 string gun = Assets.find(GunID)?.FriendlyName ?? GunID.ToString("N");
                 L.LogWarning("Ghost rocket prevented: " + gun);

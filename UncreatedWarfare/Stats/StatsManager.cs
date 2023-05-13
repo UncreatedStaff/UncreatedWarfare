@@ -481,11 +481,17 @@ public static class StatsManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        WarfareStats? stats = OnlinePlayers.FirstOrDefault(x => x.Steam64 == s64);
+        WarfareStats? stats = SaveCachedPlayer(s64);
         if (stats == null) return;
-        WarfareStats.IO.WriteTo(stats, Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + ".dat"));
         NetCalls.BackupStats.NetInvoke(stats);
         OnlinePlayers.Remove(stats);
+    }
+    public static WarfareStats? SaveCachedPlayer(ulong player)
+    {
+        WarfareStats? stats = OnlinePlayers.FirstOrDefault(x => x.Steam64 == player);
+        if (stats != null)
+            WarfareStats.IO.WriteTo(stats, Path.Combine(StatsDirectory, player.ToString(Data.AdminLocale) + ".dat"));
+        return stats;
     }
     private static void OnPlayerDied(PlayerDied e)
     {
@@ -686,9 +692,10 @@ public static class StatsManager
         [NetCall(ENetCall.FROM_SERVER, 2000)]
         internal static void ReceiveRequestPlayerData(MessageContext context, ulong player)
         {
+            WarfareStats? stats = SaveCachedPlayer(player);
             bool online = UCPlayer.FromID(player) is { IsOnline: true };
             string dir = Path.Combine(StatsDirectory, player.ToString(Data.AdminLocale) + ".dat");
-            if (WarfareStats.IO.ReadFrom(dir, out WarfareStats stats))
+            if (stats != null || WarfareStats.IO.ReadFrom(dir, out stats))
             {
                 context.Reply(SendPlayerData, stats, online);
             }

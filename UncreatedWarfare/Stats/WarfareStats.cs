@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Stats;
 public class WarfareStats
 {
     public static readonly RawByteIO<WarfareStats> IO = new RawByteIO<WarfareStats>(Read, Write, null!, 85);
-    public const uint CurrentDataVersion = 1;
+    public const uint CurrentDataVersion = 2;
     public uint DataVersion;
     public ulong Steam64;
     public uint PlaytimeMinutes;
@@ -33,6 +33,7 @@ public class WarfareStats
     public class KitData
     {
         public string KitID;
+        public string? DisplayName;
         public byte Team;
         public uint Kills;
         public uint Deaths;
@@ -80,6 +81,7 @@ public class WarfareStats
             writer.Write(kitData.AverageGunKillDistance);
             writer.Write(kitData.AverageGunKillDistanceCounter);
             writer.Write(kitData.PlaytimeMinutes);
+            writer.WriteNullable(kitData.DisplayName);
         }
     }
     public static WarfareStats Read(ByteReader reader)
@@ -114,21 +116,22 @@ public class WarfareStats
             stats.Kits = new List<KitData>(kitCount);
             for (int i = 0; i < kitCount; i++)
             {
-                stats.Kits.Add(
-                    new KitData
-                    {
-                        KitID = reader.ReadString(),
-                        Team = reader.ReadUInt8(),
-                        Kills = reader.ReadUInt32(),
-                        Deaths = reader.ReadUInt32(),
-                        Downs = reader.ReadUInt32(),
-                        Revives = reader.ReadUInt32(),
-                        TimesRequested = reader.ReadUInt32(),
-                        AverageGunKillDistance = reader.ReadFloat(),
-                        AverageGunKillDistanceCounter = reader.ReadUInt32(),
-                        PlaytimeMinutes = reader.ReadUInt32()
-                    }
-                );
+                KitData d = new KitData
+                {
+                    KitID = reader.ReadString(),
+                    Team = reader.ReadUInt8(),
+                    Kills = reader.ReadUInt32(),
+                    Deaths = reader.ReadUInt32(),
+                    Downs = reader.ReadUInt32(),
+                    Revives = reader.ReadUInt32(),
+                    TimesRequested = reader.ReadUInt32(),
+                    AverageGunKillDistance = reader.ReadFloat(),
+                    AverageGunKillDistanceCounter = reader.ReadUInt32(),
+                    PlaytimeMinutes = reader.ReadUInt32()
+                };
+                if (stats.DataVersion > 1)
+                    d.DisplayName = reader.ReadNullableString();
+                stats.Kits.Add(d);
             }
         }
         return stats;
