@@ -195,12 +195,12 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
             _component.Destroy();
         if (Data.Is(out Insurgency ins))
             ins.OnCacheDestroyed(this, ((IFOB)this).Instigator);
+        _disposed = true; // MUST be set to true before deleting the barricade, or this method will be called multiple times recursively
         if (Drop != null && BarricadeManager.tryGetRegion(Drop.model, out byte x, out byte y, out ushort plant, out _))
         {
             BarricadeManager.destroyBarricade(Drop, x, y, plant);
             Drop = null!;
         }
-        _disposed = true;
     }
     public class CacheComponent : MonoBehaviour, IManualOnDestroy
     {
