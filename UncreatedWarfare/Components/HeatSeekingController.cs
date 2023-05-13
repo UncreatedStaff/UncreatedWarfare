@@ -3,15 +3,17 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Components;
 internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'Aim' gameobject to allow it to control projectiles
 {
     private const float AQUISITION_ANGLE = 65f;
-    private const float AQUISITION_FREQUENCY = 0.5f;
+    private const float AQUISITION_FREQUENCY = 0.25f;
+    private const float FLARE_PER_TICK_LOCK_ON_CHANCE = 0.4f;
 
 
-    private float _horizontalRange = 400;
+    private float _horizontalRange = 550;
     private float? _verticalRange = 800;
 
     private InteractableVehicle _vehicle;
@@ -155,33 +157,42 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         bestTarget = AQUISITION_ANGLE;
 
-        foreach (Countermeasure c in Countermeasure.ActiveCountermeasures)
+        bool lockedOntoCountermeassure = LockOnTarget is not null &&
+            LockOnTarget.TryGetComponent(out Countermeasure countermeasure) &&
+            countermeasure.Burning;
+
+        if (!lockedOntoCountermeassure)
         {
-            if (!c.Burning)
-                continue;
-
-            Vector3 relativePos = transform.InverseTransformPoint(c.transform.position);
-
-            float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
-            float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
-            if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
+            foreach (Countermeasure c in Countermeasure.ActiveCountermeasures)
             {
-                bool raySuccess = Physics.Linecast(transform.position, c.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
-                if (!raySuccess)
+                if (!c.Burning)
+                    continue;
+
+                if (Random.Range(0f, 1f) > FLARE_PER_TICK_LOCK_ON_CHANCE)
+                    continue;
+
+                Vector3 relativePos = transform.InverseTransformPoint(c.transform.position);
+
+                float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
+                float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
+                if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
                 {
-                    bestTarget = lockOnDistance;
-                    newTarget = c.transform;
+                    bool raySuccess = Physics.Linecast(transform.position, c.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                    if (!raySuccess)
+                    {
+                        bestTarget = lockOnDistance;
+                        newTarget = c.transform;
+                    }
                 }
             }
         }
-        
 
         LockOn(newTarget, _lastKnownGunner);
     }
 
     private void LockOn(Transform? newTarget, UCPlayer? gunner)
     {
-        if (newTarget is null) // no target found
+        if (newTarget is null) // no target found-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ 
         {
             if (Status != ELockOnMode.IDLE)
             {

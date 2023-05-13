@@ -487,7 +487,7 @@ public class VehicleComponent : MonoBehaviour
     const int STARTING_FLARES_ATTACKHELI = 20;
     const int STARTING_FLARES_TRANSHELI = 26;
     const int STARTING_FLARES_JET = 16;
-    const int FLARE_BURST_COUNT = 6;
+    const int FLARE_BURST_COUNT = 1;
     private void FixedUpdate()
     {
         if (_flaresLeft > 0 && Time.time - _timeLastFlare > 0.15f)
@@ -510,7 +510,7 @@ public class VehicleComponent : MonoBehaviour
 
                 Rigidbody? rigidbody = countermeasureVehicle.transform.GetComponent<Rigidbody>();
                 //Vector3 velocity = Vehicle.transform.GetComponent<Rigidbody>().velocity);
-                Vector3 velocity = Vehicle.transform.forward * Vehicle.speed * 0.5f - Vehicle.transform.up * 15 + Vehicle.transform.right * sideforce;
+                Vector3 velocity = Vehicle.transform.forward * Vehicle.speed * 0.9f - Vehicle.transform.up * 15 + Vehicle.transform.right * sideforce;
                 rigidbody.velocity = velocity;
 
                 var countermeasure = countermeasureVehicle.gameObject.AddComponent<Countermeasure>();

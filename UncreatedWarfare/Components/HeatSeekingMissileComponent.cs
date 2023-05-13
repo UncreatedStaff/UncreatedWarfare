@@ -19,7 +19,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
     private GameObject _projectile;
     private HeatSeekingController _controller;
     private Transform? _lastKnownTarget;
-    private Vector3 _alternativeTarget;
+    private Vector3 _randomRelativePosition;
 
     private Rigidbody _rigidbody;
 
@@ -66,7 +66,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
 
         this._rigidbody = projectile.GetComponent<Rigidbody>();
 
-        _alternativeTarget = _projectile.transform.TransformPoint(Quaternion.AngleAxis(Random.Range(0f, 360f), Vector3.forward) * new Vector3(0, 500, 500));
+        _randomRelativePosition = Quaternion.AngleAxis(Random.Range(0f, 360f), Vector3.forward) * new Vector3(0, 10, 100);
     }
 
     private void TrySendWarning()
@@ -103,17 +103,19 @@ public class HeatSeekingMissileComponent : MonoBehaviour
             _lastKnownTarget = _controller.LockOnTarget;
         }
 
-        if (_controller.LockOnTarget != null && Vector3.Angle(_projectile.transform.forward, _controller.LockOnTarget.position - _projectile.transform.position) > 90)
+        if (_controller.LockOnTarget != null && Vector3.Angle(_projectile.transform.forward, _controller.LockOnTarget.position - _projectile.transform.position) > 40)
         {
             _lost = true;
         }
 
         Vector3 idealDirection;
         float turnDegrees = _maxTurnDegrees;
+        float guidanceMultiplier = Mathf.Clamp((Time.time - _startTime) / _guidanceRampTime, 0, _guidanceRampTime);
 
         if (_lastKnownTarget == null || _lost)
         {
-            idealDirection = _alternativeTarget - _projectile.transform.position;
+            idealDirection = _projectile.transform.TransformPoint(_randomRelativePosition) - _projectile.transform.position;
+            guidanceMultiplier *= 0.1f;
         }
         else
         {
@@ -127,8 +129,6 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         }
         else
         {
-            float guidanceMultiplier = Mathf.Clamp((Time.time - _startTime) / _guidanceRampTime, 0, _guidanceRampTime);
-
             Vector3 targetDirection = Vector3.RotateTowards(transform.forward, idealDirection, Mathf.Deg2Rad * guidanceMultiplier * turnDegrees, 0);
 
             _projectile.transform.forward = targetDirection;
