@@ -1,4 +1,4 @@
-﻿// #define FUNCTION_LOG
+﻿#define FUNCTION_LOG
 
 using HarmonyLib;
 using JetBrains.Annotations;
@@ -30,7 +30,7 @@ public static class L
     private static int _indention;
     private static FileStream _log;
     private static readonly List<LogMessage> BadLogBuffer = new List<LogMessage>(0);
-#if DEBUG && FUNCTION_LOG
+#if FUNCTION_LOG
     private static FileStream _flog;
 #endif
     private static bool _inL;
@@ -127,7 +127,7 @@ public static class L
                 File.Move(Data.Paths.CurrentLog, n);
             }
             _log = new FileStream(Data.Paths.CurrentLog, FileMode.Create, FileAccess.Write, FileShare.Read);
-#if DEBUG && FUNCTION_LOG
+#if FUNCTION_LOG
             _flog = new FileStream(Data.Paths.FunctionLog, FileMode.Create, FileAccess.Write, FileShare.Read);
             try
             {
@@ -200,7 +200,7 @@ public static class L
             CommandWindow.LogError(ex);
         }
     }
-#if DEBUG && FUNCTION_LOG
+#if FUNCTION_LOG
     private static readonly string[] BlockedLoggingFunction =
     {
         "Update",
@@ -209,6 +209,7 @@ public static class L
         "IsDelayed",
         "UpdateSign",
         "UpdateSignInternal",
+        "IsInMain"
     };
     static void StartTracking(string callerName, string filepath, int linenumber)
     {
