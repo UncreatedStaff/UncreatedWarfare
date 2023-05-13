@@ -128,6 +128,8 @@ public class WarfareStats
                 );
             }
         }
+
+        S.DATA_VERSION = CURRENT_DATA_VERSION;
         return S;
     }
 }
@@ -179,6 +181,8 @@ public class WarfareWeapon
             W.ArmKills = R.ReadUInt32();
             W.LegKills = R.ReadUInt32();
         }
+
+        W.DATA_VERSION = CURRENT_DATA_VERSION;
         return W;
     }
 }
@@ -218,6 +222,8 @@ public class WarfareKit
             K.AverageGunKillDistanceCounter = R.ReadUInt32();
             K.FlagsCaptured = R.ReadUInt32();
         }
+
+        K.DATA_VERSION = CURRENT_DATA_VERSION;
         return K;
     }
 }
@@ -290,6 +296,8 @@ public class WarfareTeam
             T.AveragePlayers = R.ReadFloat();
             T.AveragePlayersCounter = R.ReadUInt32();
         }
+
+        T.DATA_VERSION = CURRENT_DATA_VERSION;
         return T;
     }
 }
@@ -321,6 +329,8 @@ public class WarfareVehicle
             V.TimesDestroyed = R.ReadUInt32();
             V.KillsWithGunner = R.ReadUInt32();
         }
+
+        V.DATA_VERSION = CURRENT_DATA_VERSION;
         return V;
     }
 }
