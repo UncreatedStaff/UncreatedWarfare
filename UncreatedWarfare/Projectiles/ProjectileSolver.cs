@@ -144,17 +144,15 @@ internal class ProjectileSolver : MonoBehaviour
         c.OriginalRocketData = rocket;
 
         int i = 0;
-#if DEBUG
-        float lastSent = 0f;
-#endif
         int iter = Mathf.CeilToInt(MAX_TIME / Time.fixedDeltaTime);
         int skip = Mathf.CeilToInt(1f / (Time.fixedDeltaTime * 1.5f));
-#if DEBUG
+#if false && DEBUG
         float seconds;
+        float lastSent = 0f;
 #endif
         for (; !c.IsExploded && i < iter; ++i)
         {
-#if DEBUG
+#if false && DEBUG
             seconds = i * Time.fixedDeltaTime;
             if (seconds - lastSent > 0.25f)
             {
@@ -172,7 +170,7 @@ internal class ProjectileSolver : MonoBehaviour
                     yield break;
             }
         }
-#if !DEBUG
+#if !false || !DEBUG
         float
 #endif
         seconds = i * Time.fixedDeltaTime;

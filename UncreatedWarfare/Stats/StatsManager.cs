@@ -52,7 +52,7 @@ public static class StatsManager
         WarfareTeam.IO.InitializeTo(
             () => new WarfareTeam
             {
-                DATA_VERSION = WarfareTeam.CURRENT_DATA_VERSION,
+                DataVersion = WarfareTeam.CurrentDataVersion,
                 Team = 1,
                 Kills = 0,
                 Deaths = 0,
@@ -75,7 +75,7 @@ public static class StatsManager
         WarfareTeam.IO.InitializeTo(
             () => new WarfareTeam
             {
-                DATA_VERSION = WarfareTeam.CURRENT_DATA_VERSION,
+                DataVersion = WarfareTeam.CurrentDataVersion,
                 Team = 2,
                 Kills = 0,
                 Deaths = 0,
@@ -97,15 +97,15 @@ public static class StatsManager
         );
         WarfareTeam.IO.ReadFrom(t1, out Team1Stats);
         WarfareTeam.IO.ReadFrom(t2, out Team2Stats);
-        if (Team1Stats.DATA_VERSION != WarfareTeam.CURRENT_DATA_VERSION || Team1Stats.Team != 1)
+        if (Team1Stats.DataVersion != WarfareTeam.CurrentDataVersion || Team1Stats.Team != 1)
         {
-            Team1Stats.DATA_VERSION = WarfareTeam.CURRENT_DATA_VERSION;
+            Team1Stats.DataVersion = WarfareTeam.CurrentDataVersion;
             Team1Stats.Team = 1;
             WarfareTeam.IO.WriteTo(Team1Stats, t1);
         }
-        if (Team2Stats.DATA_VERSION != WarfareTeam.CURRENT_DATA_VERSION || Team2Stats.Team != 2)
+        if (Team2Stats.DataVersion != WarfareTeam.CurrentDataVersion || Team2Stats.Team != 2)
         {
-            Team2Stats.DATA_VERSION = WarfareTeam.CURRENT_DATA_VERSION;
+            Team2Stats.DataVersion = WarfareTeam.CurrentDataVersion;
             Team2Stats.Team = 2;
             WarfareTeam.IO.WriteTo(Team2Stats, t2);
         }
@@ -224,9 +224,9 @@ public static class StatsManager
             FileInfo file = new FileInfo(weapons[i]);
             if (WarfareWeapon.IO.ReadFrom(file, out WarfareWeapon weapon) && weapon != null)
             {
-                if (weapon.DATA_VERSION != WarfareWeapon.CURRENT_DATA_VERSION)
+                if (weapon.DataVersion != WarfareWeapon.CurrentDataVersion)
                 {
-                    weapon.DATA_VERSION = WarfareWeapon.CURRENT_DATA_VERSION;
+                    weapon.DataVersion = WarfareWeapon.CurrentDataVersion;
                     WarfareWeapon.IO.WriteTo(weapon, file);
                 }
                 if (!Weapons.Exists(x => x.ID == weapon.ID && x.KitID == weapon.KitID))
@@ -251,9 +251,9 @@ public static class StatsManager
             FileInfo file = new FileInfo(vehicles[i]);
             if (WarfareVehicle.IO.ReadFrom(file, out WarfareVehicle vehicle) && vehicle != null)
             {
-                if (vehicle.DATA_VERSION != WarfareVehicle.CURRENT_DATA_VERSION)
+                if (vehicle.DataVersion != WarfareVehicle.CurrentDataVersion)
                 {
-                    vehicle.DATA_VERSION = WarfareVehicle.CURRENT_DATA_VERSION;
+                    vehicle.DataVersion = WarfareVehicle.CurrentDataVersion;
                     WarfareVehicle.IO.WriteTo(vehicle, file);
                 }
                 if (!Vehicles.Exists(x => x.ID == vehicle.ID))
@@ -278,9 +278,9 @@ public static class StatsManager
             FileInfo file = new FileInfo(kits[i]);
             if (WarfareKit.IO.ReadFrom(file, out WarfareKit kit) && kit != null)
             {
-                if (kit.DATA_VERSION != WarfareKit.CURRENT_DATA_VERSION)
+                if (kit.DataVersion != WarfareKit.CurrentDataVersion)
                 {
-                    kit.DATA_VERSION = WarfareKit.CURRENT_DATA_VERSION;
+                    kit.DataVersion = WarfareKit.CurrentDataVersion;
                     WarfareKit.IO.WriteTo(kit, file);
                 }
                 if (!Kits.Exists(x => x.KitID == kit.KitID))
@@ -311,7 +311,7 @@ public static class StatsManager
         }
         if (File.Exists(dir) && WarfareWeapon.IO.ReadFrom(dir, out WarfareWeapon weapon) && weapon != null)
         {
-            weapon.DATA_VERSION = WarfareWeapon.CURRENT_DATA_VERSION;
+            weapon.DataVersion = WarfareWeapon.CurrentDataVersion;
             modification.Invoke(weapon);
             Weapons.Add(weapon);
             WarfareWeapon.IO.WriteTo(weapon, dir);
@@ -319,7 +319,7 @@ public static class StatsManager
         }
         weapon = new WarfareWeapon()
         {
-            DATA_VERSION = WarfareWeapon.CURRENT_DATA_VERSION,
+            DataVersion = WarfareWeapon.CurrentDataVersion,
             ID = id,
             KitID = kitId
         };
@@ -346,7 +346,7 @@ public static class StatsManager
         }
         if (File.Exists(dir) && WarfareVehicle.IO.ReadFrom(dir, out WarfareVehicle weapon) && weapon != null)
         {
-            weapon.DATA_VERSION = WarfareVehicle.CURRENT_DATA_VERSION;
+            weapon.DataVersion = WarfareVehicle.CurrentDataVersion;
             modification.Invoke(weapon);
             Vehicles.Add(weapon);
             WarfareVehicle.IO.WriteTo(weapon, dir);
@@ -354,7 +354,7 @@ public static class StatsManager
         }
         weapon = new WarfareVehicle()
         {
-            DATA_VERSION = WarfareVehicle.CURRENT_DATA_VERSION,
+            DataVersion = WarfareVehicle.CurrentDataVersion,
             ID = id
         };
         modification.Invoke(weapon);
@@ -380,14 +380,14 @@ public static class StatsManager
         }
         if (File.Exists(dir) && WarfareStats.IO.ReadFrom(dir, out WarfareStats stats) && stats != null)
         {
-            stats.DATA_VERSION = WarfareWeapon.CURRENT_DATA_VERSION;
+            stats.DataVersion = WarfareWeapon.CurrentDataVersion;
             modification.Invoke(stats);
             WarfareStats.IO.WriteTo(stats, dir);
             return true;
         }
         stats = new WarfareStats()
         {
-            DATA_VERSION = WarfareStats.CURRENT_DATA_VERSION,
+            DataVersion = WarfareStats.CurrentDataVersion,
             Kits = new List<WarfareStats.KitData>(),
             Steam64 = s64
         };
@@ -413,7 +413,7 @@ public static class StatsManager
         }
         if (File.Exists(dir) && WarfareKit.IO.ReadFrom(dir, out WarfareKit kit) && kit != null)
         {
-            kit.DATA_VERSION = WarfareWeapon.CURRENT_DATA_VERSION;
+            kit.DataVersion = WarfareWeapon.CurrentDataVersion;
             modification.Invoke(kit);
             Kits.Add(kit);
             WarfareKit.IO.WriteTo(kit, dir);
@@ -421,7 +421,7 @@ public static class StatsManager
         }
         kit = new WarfareKit()
         {
-            DATA_VERSION = WarfareKit.CURRENT_DATA_VERSION,
+            DataVersion = WarfareKit.CurrentDataVersion,
             KitID = kitId
         };
         modification.Invoke(kit);
@@ -455,7 +455,7 @@ public static class StatsManager
                     File.Move(dir, p2);
                     WarfareStats reset = new WarfareStats()
                     {
-                        DATA_VERSION = WarfareStats.CURRENT_DATA_VERSION,
+                        DataVersion = WarfareStats.CurrentDataVersion,
                         Kits = new List<WarfareStats.KitData>(),
                         Steam64 = s64
                     };
@@ -467,7 +467,7 @@ public static class StatsManager
             {
                 WarfareStats reset = new WarfareStats
                 {
-                    DATA_VERSION = WarfareStats.CURRENT_DATA_VERSION,
+                    DataVersion = WarfareStats.CurrentDataVersion,
                     Kits = new List<WarfareStats.KitData>(),
                     Steam64 = s64
                 };
