@@ -6,9 +6,9 @@ namespace Uncreated.Warfare.Stats;
 
 public class WarfareStats
 {
-    public readonly static RawByteIO<WarfareStats> IO = new RawByteIO<WarfareStats>(Read, Write, null!, 85);
-    public const uint CURRENT_DATA_VERSION = 1;
-    public uint DATA_VERSION;
+    public static readonly RawByteIO<WarfareStats> IO = new RawByteIO<WarfareStats>(Read, Write, null!, 85);
+    public const uint CurrentDataVersion = 1;
+    public uint DataVersion;
     public ulong Steam64;
     public uint PlaytimeMinutes;
     public long LastOnline;
@@ -43,101 +43,102 @@ public class WarfareStats
         public uint AverageGunKillDistanceCounter;
         public uint PlaytimeMinutes;
     }
-    public static void Write(ByteWriter W, WarfareStats S)
+    public static void Write(ByteWriter writer, WarfareStats stats)
     {
-        W.Write(S.DATA_VERSION);
-        W.Write(S.Steam64);
-        W.Write(S.PlaytimeMinutes);
-        W.Write(S.LastOnline);
-        W.Write(S.Kills);
-        W.Write(S.Deaths);
-        W.Write(S.Teamkills);
-        W.Write(S.Downs);
-        W.Write(S.Revives);
-        W.Write(S.Wins);
-        W.Write(S.Losses);
-        W.Write(S.VehiclesRequested);
-        W.Write(S.VehiclesDestroyed);
-        W.Write(S.FlagsCaptured);
-        W.Write(S.FlagsLost);
-        W.Write(S.FobsBuilt);
-        W.Write(S.FobsDestroyed);
-        W.Write(S.EmplacementsBuilt);
-        W.Write(S.FortificationsBuilt);
-        W.Write(S.KillsWhileAttackingFlags);
-        W.Write(S.KillsWhileDefendingFlags);
-        W.Write((byte)S.Kits.Count);
-        for (int i = 0; i < S.Kits.Count; i++)
+        writer.Write(CurrentDataVersion);
+        writer.Write(stats.Steam64);
+        writer.Write(stats.PlaytimeMinutes);
+        writer.Write(stats.LastOnline);
+        writer.Write(stats.Kills);
+        writer.Write(stats.Deaths);
+        writer.Write(stats.Teamkills);
+        writer.Write(stats.Downs);
+        writer.Write(stats.Revives);
+        writer.Write(stats.Wins);
+        writer.Write(stats.Losses);
+        writer.Write(stats.VehiclesRequested);
+        writer.Write(stats.VehiclesDestroyed);
+        writer.Write(stats.FlagsCaptured);
+        writer.Write(stats.FlagsLost);
+        writer.Write(stats.FobsBuilt);
+        writer.Write(stats.FobsDestroyed);
+        writer.Write(stats.EmplacementsBuilt);
+        writer.Write(stats.FortificationsBuilt);
+        writer.Write(stats.KillsWhileAttackingFlags);
+        writer.Write(stats.KillsWhileDefendingFlags);
+        writer.Write((byte)stats.Kits.Count);
+        for (int i = 0; i < stats.Kits.Count; i++)
         {
-            KitData K = S.Kits[i];
-            W.Write(K.KitID);
-            W.Write(K.Team);
-            W.Write(K.Kills);
-            W.Write(K.Deaths);
-            W.Write(K.Downs);
-            W.Write(K.Revives);
-            W.Write(K.TimesRequested);
-            W.Write(K.AverageGunKillDistance);
-            W.Write(K.AverageGunKillDistanceCounter);
-            W.Write(K.PlaytimeMinutes);
+            KitData kitData = stats.Kits[i];
+            writer.Write(kitData.KitID);
+            writer.Write(kitData.Team);
+            writer.Write(kitData.Kills);
+            writer.Write(kitData.Deaths);
+            writer.Write(kitData.Downs);
+            writer.Write(kitData.Revives);
+            writer.Write(kitData.TimesRequested);
+            writer.Write(kitData.AverageGunKillDistance);
+            writer.Write(kitData.AverageGunKillDistanceCounter);
+            writer.Write(kitData.PlaytimeMinutes);
         }
     }
-    public static WarfareStats Read(ByteReader R)
+    public static WarfareStats Read(ByteReader reader)
     {
-        WarfareStats S = new WarfareStats() { DATA_VERSION = R.ReadUInt32() };
-        S.Steam64 = R.ReadUInt64();
-        if (S.DATA_VERSION > 0)
+        WarfareStats stats = new WarfareStats
         {
-            S.PlaytimeMinutes = R.ReadUInt32();
-            S.LastOnline = R.ReadInt64();
-            S.Kills = R.ReadUInt32();
-            S.Deaths = R.ReadUInt32();
-            S.Teamkills = R.ReadUInt32();
-            S.Downs = R.ReadUInt32();
-            S.Revives = R.ReadUInt32();
-            S.Wins = R.ReadUInt32();
-            S.Losses = R.ReadUInt32();
-            S.VehiclesRequested = R.ReadUInt32();
-            S.VehiclesDestroyed = R.ReadUInt32();
-            S.FlagsCaptured = R.ReadUInt32();
-            S.FlagsLost = R.ReadUInt32();
-            S.FobsBuilt = R.ReadUInt32();
-            S.FobsDestroyed = R.ReadUInt32();
-            S.EmplacementsBuilt = R.ReadUInt32();
-            S.FortificationsBuilt = R.ReadUInt32();
-            S.KillsWhileAttackingFlags = R.ReadUInt32();
-            S.KillsWhileDefendingFlags = R.ReadUInt32();
-            int kitCount = R.ReadUInt8();
-            S.Kits = new List<KitData>(kitCount);
+            DataVersion = reader.ReadUInt32(),
+            Steam64 = reader.ReadUInt64()
+        };
+        if (stats.DataVersion > 0)
+        {
+            stats.PlaytimeMinutes = reader.ReadUInt32();
+            stats.LastOnline = reader.ReadInt64();
+            stats.Kills = reader.ReadUInt32();
+            stats.Deaths = reader.ReadUInt32();
+            stats.Teamkills = reader.ReadUInt32();
+            stats.Downs = reader.ReadUInt32();
+            stats.Revives = reader.ReadUInt32();
+            stats.Wins = reader.ReadUInt32();
+            stats.Losses = reader.ReadUInt32();
+            stats.VehiclesRequested = reader.ReadUInt32();
+            stats.VehiclesDestroyed = reader.ReadUInt32();
+            stats.FlagsCaptured = reader.ReadUInt32();
+            stats.FlagsLost = reader.ReadUInt32();
+            stats.FobsBuilt = reader.ReadUInt32();
+            stats.FobsDestroyed = reader.ReadUInt32();
+            stats.EmplacementsBuilt = reader.ReadUInt32();
+            stats.FortificationsBuilt = reader.ReadUInt32();
+            stats.KillsWhileAttackingFlags = reader.ReadUInt32();
+            stats.KillsWhileDefendingFlags = reader.ReadUInt32();
+            int kitCount = reader.ReadUInt8();
+            stats.Kits = new List<KitData>(kitCount);
             for (int i = 0; i < kitCount; i++)
             {
-                S.Kits.Add(
-                    new KitData()
+                stats.Kits.Add(
+                    new KitData
                     {
-                        KitID = R.ReadString(),
-                        Team = R.ReadUInt8(),
-                        Kills = R.ReadUInt32(),
-                        Deaths = R.ReadUInt32(),
-                        Downs = R.ReadUInt32(),
-                        Revives = R.ReadUInt32(),
-                        TimesRequested = R.ReadUInt32(),
-                        AverageGunKillDistance = R.ReadFloat(),
-                        AverageGunKillDistanceCounter = R.ReadUInt32(),
-                        PlaytimeMinutes = R.ReadUInt32()
+                        KitID = reader.ReadString(),
+                        Team = reader.ReadUInt8(),
+                        Kills = reader.ReadUInt32(),
+                        Deaths = reader.ReadUInt32(),
+                        Downs = reader.ReadUInt32(),
+                        Revives = reader.ReadUInt32(),
+                        TimesRequested = reader.ReadUInt32(),
+                        AverageGunKillDistance = reader.ReadFloat(),
+                        AverageGunKillDistanceCounter = reader.ReadUInt32(),
+                        PlaytimeMinutes = reader.ReadUInt32()
                     }
                 );
             }
         }
-
-        S.DATA_VERSION = CURRENT_DATA_VERSION;
-        return S;
+        return stats;
     }
 }
 public class WarfareWeapon
 {
-    public readonly static RawByteIO<WarfareWeapon> IO = new RawByteIO<WarfareWeapon>(Read, Write, null!, 49);
-    public const uint CURRENT_DATA_VERSION = 1;
-    public uint DATA_VERSION;
+    public static readonly RawByteIO<WarfareWeapon> IO = new RawByteIO<WarfareWeapon>(Read, Write, null!, 49);
+    public const uint CurrentDataVersion = 1;
+    public uint DataVersion;
     public ushort ID;
     public string KitID;
     public uint Kills;
@@ -149,48 +150,49 @@ public class WarfareWeapon
     public uint BodyKills;
     public uint ArmKills;
     public uint LegKills;
-    public static void Write(ByteWriter W, WarfareWeapon S)
+    public static void Write(ByteWriter writer, WarfareWeapon weapon)
     {
-        W.Write(S.DATA_VERSION);
-        W.Write(S.ID);
-        W.Write(S.KitID);
-        W.Write(S.Kills);
-        W.Write(S.Deaths);
-        W.Write(S.Downs);
-        W.Write(S.AverageKillDistance);
-        W.Write(S.AverageKillDistanceCounter);
-        W.Write(S.SkullKills);
-        W.Write(S.BodyKills);
-        W.Write(S.ArmKills);
-        W.Write(S.LegKills);
+        writer.Write(CurrentDataVersion);
+        writer.Write(weapon.ID);
+        writer.Write(weapon.KitID);
+        writer.Write(weapon.Kills);
+        writer.Write(weapon.Deaths);
+        writer.Write(weapon.Downs);
+        writer.Write(weapon.AverageKillDistance);
+        writer.Write(weapon.AverageKillDistanceCounter);
+        writer.Write(weapon.SkullKills);
+        writer.Write(weapon.BodyKills);
+        writer.Write(weapon.ArmKills);
+        writer.Write(weapon.LegKills);
     }
-    public static WarfareWeapon Read(ByteReader R)
+    public static WarfareWeapon Read(ByteReader reader)
     {
-        WarfareWeapon W = new WarfareWeapon() { DATA_VERSION = R.ReadUInt32() };
-        W.ID = R.ReadUInt16();
-        W.KitID = R.ReadString();
-        if (W.DATA_VERSION > 0)
+        WarfareWeapon weapon = new WarfareWeapon
         {
-            W.Kills = R.ReadUInt32();
-            W.Deaths = R.ReadUInt32();
-            W.Downs = R.ReadUInt32();
-            W.AverageKillDistance = R.ReadFloat();
-            W.AverageKillDistanceCounter = R.ReadUInt32();
-            W.SkullKills = R.ReadUInt32();
-            W.BodyKills = R.ReadUInt32();
-            W.ArmKills = R.ReadUInt32();
-            W.LegKills = R.ReadUInt32();
+            DataVersion = reader.ReadUInt32(),
+            ID = reader.ReadUInt16(),
+            KitID = reader.ReadString()
+        };
+        if (weapon.DataVersion > 0)
+        {
+            weapon.Kills = reader.ReadUInt32();
+            weapon.Deaths = reader.ReadUInt32();
+            weapon.Downs = reader.ReadUInt32();
+            weapon.AverageKillDistance = reader.ReadFloat();
+            weapon.AverageKillDistanceCounter = reader.ReadUInt32();
+            weapon.SkullKills = reader.ReadUInt32();
+            weapon.BodyKills = reader.ReadUInt32();
+            weapon.ArmKills = reader.ReadUInt32();
+            weapon.LegKills = reader.ReadUInt32();
         }
-
-        W.DATA_VERSION = CURRENT_DATA_VERSION;
-        return W;
+        return weapon;
     }
 }
 public class WarfareKit
 {
-    public readonly static RawByteIO<WarfareKit> IO = new RawByteIO<WarfareKit>(Read, Write, null!, 34);
-    public const uint CURRENT_DATA_VERSION = 1;
-    public uint DATA_VERSION;
+    public static readonly RawByteIO<WarfareKit> IO = new RawByteIO<WarfareKit>(Read, Write, null!, 34);
+    public const uint CurrentDataVersion = 1;
+    public uint DataVersion;
     public string KitID;
     public uint Kills;
     public uint Deaths;
@@ -198,40 +200,41 @@ public class WarfareKit
     public float AverageGunKillDistance;
     public uint AverageGunKillDistanceCounter;
     public uint FlagsCaptured;
-    public static void Write(ByteWriter W, WarfareKit S)
+    public static void Write(ByteWriter writer, WarfareKit kit)
     {
-        W.Write(S.DATA_VERSION);
-        W.Write(S.KitID);
-        W.Write(S.Kills);
-        W.Write(S.Deaths);
-        W.Write(S.TimesRequested);
-        W.Write(S.AverageGunKillDistance);
-        W.Write(S.AverageGunKillDistanceCounter);
-        W.Write(S.FlagsCaptured);
+        writer.Write(CurrentDataVersion);
+        writer.Write(kit.KitID);
+        writer.Write(kit.Kills);
+        writer.Write(kit.Deaths);
+        writer.Write(kit.TimesRequested);
+        writer.Write(kit.AverageGunKillDistance);
+        writer.Write(kit.AverageGunKillDistanceCounter);
+        writer.Write(kit.FlagsCaptured);
     }
-    public static WarfareKit Read(ByteReader R)
+    public static WarfareKit Read(ByteReader reader)
     {
-        WarfareKit K = new WarfareKit() { DATA_VERSION = R.ReadUInt32() };
-        K.KitID = R.ReadString();
-        if (K.DATA_VERSION > 0)
+        WarfareKit kit = new WarfareKit
         {
-            K.Kills = R.ReadUInt32();
-            K.Deaths = R.ReadUInt32();
-            K.TimesRequested = R.ReadUInt32();
-            K.AverageGunKillDistance = R.ReadFloat();
-            K.AverageGunKillDistanceCounter = R.ReadUInt32();
-            K.FlagsCaptured = R.ReadUInt32();
+            DataVersion = reader.ReadUInt32(),
+            KitID = reader.ReadString()
+        };
+        if (kit.DataVersion > 0)
+        {
+            kit.Kills = reader.ReadUInt32();
+            kit.Deaths = reader.ReadUInt32();
+            kit.TimesRequested = reader.ReadUInt32();
+            kit.AverageGunKillDistance = reader.ReadFloat();
+            kit.AverageGunKillDistanceCounter = reader.ReadUInt32();
+            kit.FlagsCaptured = reader.ReadUInt32();
         }
-
-        K.DATA_VERSION = CURRENT_DATA_VERSION;
-        return K;
+        return kit;
     }
 }
 public class WarfareTeam
 {
-    public readonly static RawByteIO<WarfareTeam> IO = new RawByteIO<WarfareTeam>(Read, Write, null!, 65);
-    public const uint CURRENT_DATA_VERSION = 1;
-    public uint DATA_VERSION;
+    public static readonly RawByteIO<WarfareTeam> IO = new RawByteIO<WarfareTeam>(Read, Write, null!, 65);
+    public const uint CurrentDataVersion = 1;
+    public uint DataVersion;
     public byte Team;
     public uint Kills;
     public uint Deaths;
@@ -250,87 +253,89 @@ public class WarfareTeam
     public uint FortificationsBuilt;
     public float AveragePlayers;
     public uint AveragePlayersCounter;
-    public static void Write(ByteWriter W, WarfareTeam S)
+    public static void Write(ByteWriter writer, WarfareTeam team)
     {
-        W.Write(S.DATA_VERSION);
-        W.Write(S.Team);
-        W.Write(S.Kills);
-        W.Write(S.Deaths);
-        W.Write(S.Teamkills);
-        W.Write(S.Downs);
-        W.Write(S.Revives);
-        W.Write(S.Wins);
-        W.Write(S.Losses);
-        W.Write(S.VehiclesRequested);
-        W.Write(S.VehiclesDestroyed);
-        W.Write(S.FlagsCaptured);
-        W.Write(S.FlagsLost);
-        W.Write(S.FobsBuilt);
-        W.Write(S.FobsDestroyed);
-        W.Write(S.EmplacementsBuilt);
-        W.Write(S.FortificationsBuilt);
-        W.Write(S.AveragePlayers);
-        W.Write(S.AveragePlayersCounter);
+        writer.Write(CurrentDataVersion);
+        writer.Write(team.Team);
+        writer.Write(team.Kills);
+        writer.Write(team.Deaths);
+        writer.Write(team.Teamkills);
+        writer.Write(team.Downs);
+        writer.Write(team.Revives);
+        writer.Write(team.Wins);
+        writer.Write(team.Losses);
+        writer.Write(team.VehiclesRequested);
+        writer.Write(team.VehiclesDestroyed);
+        writer.Write(team.FlagsCaptured);
+        writer.Write(team.FlagsLost);
+        writer.Write(team.FobsBuilt);
+        writer.Write(team.FobsDestroyed);
+        writer.Write(team.EmplacementsBuilt);
+        writer.Write(team.FortificationsBuilt);
+        writer.Write(team.AveragePlayers);
+        writer.Write(team.AveragePlayersCounter);
     }
-    public static WarfareTeam Read(ByteReader R)
+    public static WarfareTeam Read(ByteReader reader)
     {
-        WarfareTeam T = new WarfareTeam() { DATA_VERSION = R.ReadUInt32() };
-        T.Team = R.ReadUInt8();
-        if (T.DATA_VERSION > 0)
+        WarfareTeam team = new WarfareTeam
         {
-            T.Kills = R.ReadUInt32();
-            T.Deaths = R.ReadUInt32();
-            T.Teamkills = R.ReadUInt32();
-            T.Downs = R.ReadUInt32();
-            T.Revives = R.ReadUInt32();
-            T.Wins = R.ReadUInt32();
-            T.Losses = R.ReadUInt32();
-            T.VehiclesRequested = R.ReadUInt32();
-            T.VehiclesDestroyed = R.ReadUInt32();
-            T.FlagsCaptured = R.ReadUInt32();
-            T.FlagsLost = R.ReadUInt32();
-            T.FobsBuilt = R.ReadUInt32();
-            T.FobsDestroyed = R.ReadUInt32();
-            T.EmplacementsBuilt = R.ReadUInt32();
-            T.FortificationsBuilt = R.ReadUInt32();
-            T.AveragePlayers = R.ReadFloat();
-            T.AveragePlayersCounter = R.ReadUInt32();
+            DataVersion = reader.ReadUInt32(),
+            Team = reader.ReadUInt8()
+        };
+        if (team.DataVersion > 0)
+        {
+            team.Kills = reader.ReadUInt32();
+            team.Deaths = reader.ReadUInt32();
+            team.Teamkills = reader.ReadUInt32();
+            team.Downs = reader.ReadUInt32();
+            team.Revives = reader.ReadUInt32();
+            team.Wins = reader.ReadUInt32();
+            team.Losses = reader.ReadUInt32();
+            team.VehiclesRequested = reader.ReadUInt32();
+            team.VehiclesDestroyed = reader.ReadUInt32();
+            team.FlagsCaptured = reader.ReadUInt32();
+            team.FlagsLost = reader.ReadUInt32();
+            team.FobsBuilt = reader.ReadUInt32();
+            team.FobsDestroyed = reader.ReadUInt32();
+            team.EmplacementsBuilt = reader.ReadUInt32();
+            team.FortificationsBuilt = reader.ReadUInt32();
+            team.AveragePlayers = reader.ReadFloat();
+            team.AveragePlayersCounter = reader.ReadUInt32();
         }
-
-        T.DATA_VERSION = CURRENT_DATA_VERSION;
-        return T;
+        return team;
     }
 }
 public class WarfareVehicle
 {
-    public readonly static RawByteIO<WarfareVehicle> IO = new RawByteIO<WarfareVehicle>(Read, Write, null!, 22);
-    public const uint CURRENT_DATA_VERSION = 1;
-    public uint DATA_VERSION;
+    public static readonly RawByteIO<WarfareVehicle> IO = new RawByteIO<WarfareVehicle>(Read, Write, null!, 22);
+    public const uint CurrentDataVersion = 1;
+    public uint DataVersion;
     public ushort ID;
     public uint TimesRequested;
     public uint TimesDestroyed;
     public uint KillsWithGunner;
 
-    public static void Write(ByteWriter W, WarfareVehicle V)
+    public static void Write(ByteWriter writer, WarfareVehicle vehicle)
     {
-        W.Write(V.DATA_VERSION);
-        W.Write(V.ID);
-        W.Write(V.TimesRequested);
-        W.Write(V.TimesDestroyed);
-        W.Write(V.KillsWithGunner);
+        writer.Write(CurrentDataVersion);
+        writer.Write(vehicle.ID);
+        writer.Write(vehicle.TimesRequested);
+        writer.Write(vehicle.TimesDestroyed);
+        writer.Write(vehicle.KillsWithGunner);
     }
-    public static WarfareVehicle Read(ByteReader R)
+    public static WarfareVehicle Read(ByteReader reader)
     {
-        WarfareVehicle V = new WarfareVehicle() { DATA_VERSION = R.ReadUInt32() };
-        V.ID = R.ReadUInt16();
-        if (V.DATA_VERSION > 0)
+        WarfareVehicle vehicle = new WarfareVehicle
         {
-            V.TimesRequested = R.ReadUInt32();
-            V.TimesDestroyed = R.ReadUInt32();
-            V.KillsWithGunner = R.ReadUInt32();
+            DataVersion = reader.ReadUInt32(),
+            ID = reader.ReadUInt16()
+        };
+        if (vehicle.DataVersion > 0)
+        {
+            vehicle.TimesRequested = reader.ReadUInt32();
+            vehicle.TimesDestroyed = reader.ReadUInt32();
+            vehicle.KillsWithGunner = reader.ReadUInt32();
         }
-
-        V.DATA_VERSION = CURRENT_DATA_VERSION;
-        return V;
+        return vehicle;
     }
 }
