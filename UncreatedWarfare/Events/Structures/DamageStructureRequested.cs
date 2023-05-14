@@ -7,6 +7,7 @@ namespace Uncreated.Warfare.Events.Structures;
 public class DamageStructureRequested : BreakableEvent, IBuildableDestroyedEvent
 {
     private readonly UCPlayer? _instigator;
+    private readonly ulong _instigatorId;
     private readonly StructureDrop _drop;
     private readonly StructureData _data;
     private readonly StructureRegion _region;
@@ -17,6 +18,7 @@ public class DamageStructureRequested : BreakableEvent, IBuildableDestroyedEvent
     private readonly EDamageOrigin _damageOrigin;
     private IBuildable? _buildable;
     public UCPlayer? Instigator => _instigator;
+    public ulong InstigatorId => _instigatorId;
     public StructureDrop Structure => _drop;
     public StructureData ServersideData => _data;
     public StructureRegion Region => _region;
@@ -30,10 +32,11 @@ public class DamageStructureRequested : BreakableEvent, IBuildableDestroyedEvent
     public IBuildable Buildable => _buildable ??= new UCStructure(Structure);
     object IBuildableDestroyedEvent.Region => Region;
     public ushort PendingDamage { get; set; }
-    internal DamageStructureRequested(UCPlayer? instigator, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, EDamageOrigin damageOrigin, ushort pendingTotalDamage)
+    internal DamageStructureRequested(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, EDamageOrigin damageOrigin, ushort pendingTotalDamage)
     {
         this._damageOrigin = damageOrigin;
         this._instigator = instigator;
+        this._instigatorId = instigatorId;
         this._drop = structure;
         this._data = structureData;
         this._region = region;

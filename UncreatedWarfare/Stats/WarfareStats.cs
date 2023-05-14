@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Stats;
 public class WarfareStats
 {
     public static readonly RawByteIO<WarfareStats> IO = new RawByteIO<WarfareStats>(Read, Write, null!, 85);
-    public const uint CurrentDataVersion = 2;
+    public const uint CurrentDataVersion = 3;
     public uint DataVersion;
     public ulong Steam64;
     public uint PlaytimeMinutes;
@@ -67,7 +67,7 @@ public class WarfareStats
         writer.Write(stats.FortificationsBuilt);
         writer.Write(stats.KillsWhileAttackingFlags);
         writer.Write(stats.KillsWhileDefendingFlags);
-        writer.Write((byte)stats.Kits.Count);
+        writer.Write(stats.Kits.Count);
         for (int i = 0; i < stats.Kits.Count; i++)
         {
             KitData kitData = stats.Kits[i];
@@ -112,7 +112,7 @@ public class WarfareStats
             stats.FortificationsBuilt = reader.ReadUInt32();
             stats.KillsWhileAttackingFlags = reader.ReadUInt32();
             stats.KillsWhileDefendingFlags = reader.ReadUInt32();
-            int kitCount = reader.ReadUInt8();
+            int kitCount = stats.DataVersion > 2 ? reader.ReadInt32() : reader.ReadUInt8();
             stats.Kits = new List<KitData>(kitCount);
             for (int i = 0; i < kitCount; i++)
             {

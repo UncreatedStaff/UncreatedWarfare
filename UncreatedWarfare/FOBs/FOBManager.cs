@@ -22,6 +22,7 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -637,6 +638,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                     ItemManager.dropItem(new Item(ammoBase.id, true), e.Owner.Position, true, true, true);
                 QuestManager.OnFOBBuilt(e.Owner, fob);
                 Tips.TryGiveTip(e.Owner, 3, T.TipPlaceBunker);
+                StatsManager.ModifyStats(e.Owner.Steam64, s => ++s.FobsBuilt, false);
             }
             SendFOBListToTeam(fob.Team);
             return;
@@ -686,6 +688,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 }
                 else if (Gamemode.Config.BarricadeFOBRadioDamaged.MatchGuid(e.ServersideData.barricade.asset.GUID))
                 {
+                    StatsManager.ModifyStats(e.InstigatorId, s => ++s.FobsDestroyed, false);
                     if (radio.State == RadioComponent.RadioState.Bleeding)
                         radio.FOB.Destroy();
                 }

@@ -309,7 +309,7 @@ public static class EventDispatcher
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? barricadeSave = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
 
-        BarricadeDestroyed args = new BarricadeDestroyed(player, barricade, barricadeData, region, x, y, plant, barricadeSave);
+        BarricadeDestroyed args = new BarricadeDestroyed(player, instigator, barricade, barricadeData, region, x, y, plant, barricadeSave);
         foreach (EventDelegate<BarricadeDestroyed> inv in BarricadeDestroyed.GetInvocationList().Cast<EventDelegate<BarricadeDestroyed>>())
         {
             if (!args.CanContinue) break;
@@ -803,7 +803,7 @@ public static class EventDispatcher
         if (!StructureManager.tryGetRegion(structureTransform, out byte x, out byte y, out StructureRegion region))
             return;
 
-        DamageStructureRequested args = new DamageStructureRequested(player, drop, drop.GetServersideData(), region!, x, y, save, damageOrigin, pendingTotalDamage);
+        DamageStructureRequested args = new DamageStructureRequested(player, instigatorSteamID.m_SteamID, drop, drop.GetServersideData(), region!, x, y, save, damageOrigin, pendingTotalDamage);
         foreach (EventDelegate<DamageStructureRequested> inv in DamageStructureRequested.GetInvocationList().Cast<EventDelegate<DamageStructureRequested>>())
         {
             if (!args.CanContinue) break;
@@ -823,7 +823,7 @@ public static class EventDispatcher
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
 
-        StructureDestroyed args = new StructureDestroyed(player, drop, drop.GetServersideData(), region, x, y, save, ragdoll, wasPickedUp);
+        StructureDestroyed args = new StructureDestroyed(player, instigator, drop, drop.GetServersideData(), region, x, y, save, ragdoll, wasPickedUp);
         foreach (EventDelegate<StructureDestroyed> inv in StructureDestroyed.GetInvocationList().Cast<EventDelegate<StructureDestroyed>>())
         {
             if (!args.CanContinue) break;

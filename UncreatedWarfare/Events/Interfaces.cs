@@ -7,6 +7,7 @@ namespace Uncreated.Warfare.Events;
 public interface IBuildableDestroyedEvent
 {
     UCPlayer? Instigator { get; }
+    ulong InstigatorId { get; }
     Transform Transform { get; }
     IBuildable Buildable { get; }
     SqlItem<SavedStructure>? Save { get; }

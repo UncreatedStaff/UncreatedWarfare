@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.SQL;
 using Uncreated.Warfare.Events;
@@ -367,7 +368,7 @@ public static class StatsManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!Data.TrackStats) return false;
+        if (!Data.TrackStats || !Util.IsValidSteam64Id(s64)) return false;
         string dir = Path.Combine(StatsDirectory, s64.ToString(Data.AdminLocale) + ".dat");
         for (int i = 0; i < OnlinePlayers.Count; i++)
         {
@@ -571,7 +572,7 @@ public static class StatsManager
                                         x.BodyKills++;
                                         break;
                                     case ELimb.LEFT_HAND or ELimb.RIGHT_HAND or ELimb.LEFT_ARM or ELimb.RIGHT_ARM:
-                                        x.BodyKills++;
+                                        x.ArmKills++;
                                         break;
                                     case ELimb.LEFT_FOOT or ELimb.RIGHT_FOOT or ELimb.LEFT_LEG or ELimb.RIGHT_LEG:
                                         x.LegKills++;

@@ -11,6 +11,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -667,20 +668,27 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
 
                 float contribution = builder.Ticks / Builders.GetTicksNoLock();
 
-                if (contribution >= 0.1f && player != null)
+                if (contribution >= 0.1f)
                 {
-                    XPReward reward;
-                    if (Buildable.Type == BuildableType.Bunker)
-                        reward = XPReward.BunkerBuilt;
-                    else
-                        reward = XPReward.Shoveling;
+                    if (player != null)
+                    {
+                        XPReward reward;
+                        if (Buildable.Type == BuildableType.Bunker)
+                            reward = XPReward.BunkerBuilt;
+                        else
+                            reward = XPReward.Shoveling;
 
-                    string msg = Buildable.Translate(player).ToUpperInvariant();
+                        string msg = Buildable.Translate(player).ToUpperInvariant();
 
-                    Points.AwardXP(player, reward, msg + " BUILT", multiplier: contribution);
-                    ActionLog.Add(ActionLogType.HelpBuildBuildable, $"{Buildable} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.AdminLocale)}%", player);
-                    if (contribution > 0.3333f)
-                        QuestManager.OnBuildableBuilt(player, Buildable);
+                        Points.AwardXP(player, reward, msg + " BUILT", multiplier: contribution);
+                        ActionLog.Add(ActionLogType.HelpBuildBuildable, $"{Buildable} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.AdminLocale)}%", player);
+                        if (contribution > 0.3333f)
+                            QuestManager.OnBuildableBuilt(player, Buildable);
+                    }
+                    if (Buildable.Emplacement != null)
+                        StatsManager.ModifyStats(builder.Steam64, s => ++s.EmplacementsBuilt, false);
+                    if (Buildable.Type == BuildableType.Fortification)
+                        StatsManager.ModifyStats(builder.Steam64, s => ++s.FortificationsBuilt, false);
                 }
             }
         }

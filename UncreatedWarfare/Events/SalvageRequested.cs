@@ -27,7 +27,8 @@ public abstract class SalvageRequested : BreakablePlayerEvent, IBuildableDestroy
     public Transform Transform { get; protected set; }
     UCPlayer? IBuildableDestroyedEvent.Instigator => Player;
     object IBuildableDestroyedEvent.Region => RegionObj;
-    
+    ulong IBuildableDestroyedEvent.InstigatorId => Player.Steam64;
+
     protected SalvageRequested(UCPlayer player, object region, byte x, byte y, uint instanceId) : base(player)
     {
         RegionObj = region;

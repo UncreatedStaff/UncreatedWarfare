@@ -7,6 +7,7 @@ namespace Uncreated.Warfare.Events.Structures;
 public class StructureDestroyed : EventState, IBuildableDestroyedEvent
 {
     private readonly UCPlayer? instigator;
+    private readonly ulong instigatorId;
     private readonly StructureDrop drop;
     private readonly StructureData data;
     private readonly StructureRegion region;
@@ -18,6 +19,7 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
     private readonly SqlItem<SavedStructure>? _save;
     private IBuildable? _buildable;
     public UCPlayer? Instigator => instigator;
+    public ulong InstigatorId => instigatorId;
     public StructureDrop Structure => drop;
     public StructureData ServersideData => data;
     public StructureRegion Region => region;
@@ -31,9 +33,10 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
     public SqlItem<SavedStructure>? Save => _save;
     public IBuildable Buildable => _buildable ??= new UCStructure(Structure);
     object IBuildableDestroyedEvent.Region => Region;
-    internal StructureDestroyed(UCPlayer? instigator, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, Vector3 ragoll, bool wasPickedUp) : base()
+    internal StructureDestroyed(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, Vector3 ragoll, bool wasPickedUp) : base()
     {
         this.instigator = instigator;
+        this.instigatorId = instigatorId;
         this.drop = structure;
         this.data = structureData;
         this.region = region;
