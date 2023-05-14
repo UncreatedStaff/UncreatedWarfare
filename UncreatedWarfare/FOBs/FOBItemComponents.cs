@@ -659,6 +659,11 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         else if (Data.Is(out IFOBs fobs))
             @new = fobs.FOBManager.UpgradeFloatingItem(this, newTransform);
 
+        if (Buildable.Emplacement != null)
+            StatsManager.ModifyTeam(Team, s => ++s.EmplacementsBuilt, false);
+        if (Buildable.Type == BuildableType.Fortification)
+            StatsManager.ModifyTeam(Team, s => ++s.FortificationsBuilt, false);
+
         Builders.RetrieveLock();
         try
         {

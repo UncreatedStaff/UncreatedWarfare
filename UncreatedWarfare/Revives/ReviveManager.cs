@@ -130,10 +130,16 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
     {
-        if (_injuredPlayers.TryGetValue(player.Steam64, out DownedPlayerData data))
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        DeathTracker.RemovePlayerInfo(player.Steam64);
+        if (_injuredPlayers.TryGetValue(player.Steam64, out DownedPlayerData p))
         {
             player.Save.ShouldRespawnOnJoin = true;
             PlayerSave.WriteToSaveFile(player.Save);
+            player.Player.life.askDamage(byte.MaxValue, Vector3.up, p.Parameters.cause, p.Parameters.limb, p.Parameters.killer, out _, p.Parameters.trackKill, p.Parameters.ragdollEffect, false, true);
+            // player will be removed from list in OnDeath
         }
     }
     private IEnumerator<WaitForSeconds> UpdatePositions()
@@ -183,23 +189,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             r.TellStandDelayed(1.5f);
         obj.player.movement.sendPluginSpeedMultiplier(1.0f);
         obj.player.movement.sendPluginJumpMultiplier(1.0f);
-    }
-    internal void OnPlayerDisconnected(SteamPlayer player)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        DeathTracker.RemovePlayerInfo(player.playerID.steamID.m_SteamID);
-        if (_injuredPlayers.TryGetValue(player.playerID.steamID.m_SteamID, out DownedPlayerData p))
-        {
-            if (PlayerManager.HasSave(player.playerID.steamID.m_SteamID, out PlayerSave save))
-            {
-                save.ShouldRespawnOnJoin = true;
-                PlayerManager.ApplyToOnline();
-            }
-            player.player.life.askDamage(byte.MaxValue, Vector3.up, p.Parameters.cause, p.Parameters.limb, p.Parameters.killer, out _, p.Parameters.trackKill, p.Parameters.ragdollEffect, false, true);
-            // player will be removed from list in OnDeath
-        }
     }
     internal void SetStanceBetter(Player player, EPlayerStance stance)
     {

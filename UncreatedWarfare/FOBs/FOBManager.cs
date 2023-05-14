@@ -630,6 +630,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             fob = CreateStandardFob(drop);
             if (fob == null)
                 return;
+            StatsManager.ModifyTeam(team, s => ++s.FobsBuilt, false);
             if (e.Owner != null)
             {
                 if (Gamemode.Config.BarricadeFOBBunkerBase.ValidReference(out ItemBarricadeAsset fobBase))
@@ -833,8 +834,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
                     Points.TryAwardDriverAssist(killer.Player, XPReward.RadioDestroyed, quota: 5);
 
-                    Stats.StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
-                    Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
+                    StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
+                    StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
                 }
             }
         }

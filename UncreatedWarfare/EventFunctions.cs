@@ -30,6 +30,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
@@ -1416,6 +1417,8 @@ public static class EventFunctions
             else if ((type & EAdminType.TRIAL_ADMIN_ON_DUTY) == EAdminType.TRIAL_ADMIN_ON_DUTY)
                 Commands.DutyCommand.InternOnToOff(ucplayer);
 
+            StatsCoroutine.RemovePlayer(ucplayer.Steam64);
+            StatsManager.DeregisterPlayer(ucplayer.Steam64);
             try
             {
                 Data.Gamemode.PlayerLeave(ucplayer);

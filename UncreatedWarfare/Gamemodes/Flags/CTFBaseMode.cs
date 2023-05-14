@@ -489,9 +489,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 }
             }
         }
-        StatsCoroutine.RemovePlayer(player.Player.channel.owner.playerID.steamID.m_SteamID);
-        _reviveManager.OnPlayerDisconnected(player.Player.channel.owner);
-        StatsManager.DeregisterPlayer(player.CSteamID.m_SteamID);
         base.PlayerLeave(player);
     }
 }

@@ -30,9 +30,9 @@ public static class StatsManager
     public static readonly List<WarfareKit> Kits = new List<WarfareKit>();
     public static readonly List<WarfareVehicle> Vehicles = new List<WarfareVehicle>();
     public static readonly List<WarfareStats> OnlinePlayers = new List<WarfareStats>();
-    private static int _weaponCounter;
-    private static int _kitCounter;
-    private static int _vehicleCounter;
+    private static int _weaponCounter = -1;
+    private static int _kitCounter = -1;
+    private static int _vehicleCounter = -1;
     private static int _teamBackupCounter;
     private static int _minsCounter;
     public static void LoadEvents()
@@ -124,6 +124,12 @@ public static class StatsManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (_weaponCounter == -1)
+            _weaponCounter = UnityEngine.Random.Range(0, Weapons.Count);
+        if (_kitCounter == -1)
+            _kitCounter = UnityEngine.Random.Range(0, Kits.Count);
+        if (_vehicleCounter == -1)
+            _vehicleCounter = UnityEngine.Random.Range(0, Vehicles.Count);
         if (_weaponCounter >= Weapons.Count)
             _weaponCounter = 0;
         if (_vehicleCounter >= Vehicles.Count)
@@ -741,7 +747,7 @@ public static class StatsManager
             if (team == 1)
                 context.Reply(SendTeamData, Team1Stats);
             else if (team == 2)
-                context.Reply(SendTeamData, Team1Stats);
+                context.Reply(SendTeamData, Team2Stats);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2006)]

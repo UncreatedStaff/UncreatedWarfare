@@ -146,6 +146,11 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+            if (_aim == null)
+            {
+                _isActive = false;
+                return;
+            }
             _guiderDistance += Time.fixedDeltaTime * _projectileSpeed;
 
             _turnMultiplier = Mathf.Clamp(_turnMultiplier + Time.fixedDeltaTime / _fullGuidanceDelay, 0, 1);

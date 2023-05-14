@@ -1369,9 +1369,11 @@ public class AssetRedirectClothing : IClothingJar, IAssetRedirect, IKitItem
 public class PageItem : IItemJar, IItem, IKitItem
 {
     private Guid _item;
+#if DEBUG
     private bool _isLegacyRedirect;
     private RedirectType _legacyRedirect;
     public RedirectType? LegacyRedirect => _isLegacyRedirect ? _legacyRedirect : null;
+#endif
 
     [JsonPropertyName("id")]
     public Guid Item
@@ -1381,17 +1383,14 @@ public class PageItem : IItemJar, IItem, IKitItem
         {
             _item = value;
 #if DEBUG
-#pragma warning disable CS0612
-            TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
-#pragma warning restore CS0612
-            if (_legacyRedirect == RedirectType.None)
-                _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, false);
-            _isLegacyRedirect = _legacyRedirect != RedirectType.None;
-#else
-            if (_isLegacyRedirect)
+            if (UCWarfare.IsLoaded)
             {
-                _legacyRedirect = RedirectType.None;
-                _isLegacyRedirect = false;
+#pragma warning disable CS0612
+                TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+#pragma warning restore CS0612
+                if (_legacyRedirect == RedirectType.None)
+                    _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, false);
+                _isLegacyRedirect = _legacyRedirect != RedirectType.None;
             }
 #endif
         }
@@ -1529,8 +1528,10 @@ public class PageItem : IItemJar, IItem, IKitItem
         unchecked
         {
             int hashCode = _item.GetHashCode();
+#if DEBUG
             hashCode = (hashCode * 397) ^ _isLegacyRedirect.GetHashCode();
             hashCode = (hashCode * 397) ^ (int)_legacyRedirect;
+#endif
             hashCode = (hashCode * 397) ^ X.GetHashCode();
             hashCode = (hashCode * 397) ^ Y.GetHashCode();
             hashCode = (hashCode * 397) ^ Rotation.GetHashCode();
@@ -1592,12 +1593,15 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
         {
             _item = value;
 #if DEBUG
+            if (UCWarfare.IsLoaded)
+            {
 #pragma warning disable CS0612
-            TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
+                TeamManager.GetLegacyRedirect(value, out _legacyRedirect);
 #pragma warning restore CS0612
-            if (_legacyRedirect == RedirectType.None)
-                _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, true);
-            _isLegacyRedirect = _legacyRedirect != RedirectType.None;
+                if (_legacyRedirect == RedirectType.None)
+                    _legacyRedirect = TeamManager.GetRedirectInfo(value, out _, true);
+                _isLegacyRedirect = _legacyRedirect != RedirectType.None;
+            }
 #endif
         }
     }
