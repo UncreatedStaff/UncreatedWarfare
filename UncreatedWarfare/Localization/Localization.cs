@@ -571,7 +571,7 @@ public static class Localization
     {
         if (value == null)
             throw new ArgumentNullException(nameof(value));
-        if (EnumTranslations.TryGetValue(typeof(TEnum), out Dictionary<string, Dictionary<string, string>> t))
+        if (UCWarfare.IsLoaded && EnumTranslations.TryGetValue(typeof(TEnum), out Dictionary<string, Dictionary<string, string>> t))
         {
             if (!t.TryGetValue(language, out Dictionary<string, string>? v) &&
                 (L.Default.Equals(language, StringComparison.Ordinal) ||
@@ -592,7 +592,6 @@ public static class Localization
             name = name.Substring(1);
         return name;
     }
-
     private static string EnumToStringDynamic(string name)
     {
         bool isAlreadyProperCase = false;
@@ -612,13 +611,13 @@ public static class Localization
     private static string EnumToStringDynamic<TEnum>(TEnum value) => EnumToStringDynamic(value!.ToString());
     public static string TranslateEnum<TEnum>(TEnum value, ulong player)
     {
-        if (player != 0 && Data.Languages.TryGetValue(player, out string language))
+        if (UCWarfare.IsLoaded && player != 0 && Data.Languages.TryGetValue(player, out string language))
             return TranslateEnum(value, language);
         return TranslateEnum(value, L.Default);
     }
     public static string TranslateEnumName(Type type, string language)
     {
-        if (EnumTranslations.TryGetValue(type, out Dictionary<string, Dictionary<string, string>> t))
+        if (UCWarfare.IsLoaded && EnumTranslations.TryGetValue(type, out Dictionary<string, Dictionary<string, string>> t))
         {
             if (!t.TryGetValue(language, out Dictionary<string, string>? v) &&
                 (L.Default.Equals(language, StringComparison.Ordinal) ||
@@ -633,13 +632,13 @@ public static class Localization
     public static string TranslateEnumName<TEnum>(string language) where TEnum : struct, Enum => TranslateEnumName(typeof(TEnum), language);
     public static string TranslateEnumName<TEnum>(ulong player) where TEnum : struct, Enum
     {
-        if (player != 0 && Data.Languages.TryGetValue(player, out string language))
+        if (UCWarfare.IsLoaded && player != 0 && Data.Languages.TryGetValue(player, out string language))
             return TranslateEnumName<TEnum>(language);
         return TranslateEnumName<TEnum>(L.Default);
     }
     public static string TranslateEnumName(Type type, ulong player)
     {
-        if (player != 0 && Data.Languages.TryGetValue(player, out string language))
+        if (UCWarfare.IsLoaded && player != 0 && Data.Languages.TryGetValue(player, out string language))
             return TranslateEnumName(type, language);
         return TranslateEnumName(type, L.Default);
     }
