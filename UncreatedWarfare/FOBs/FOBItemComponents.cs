@@ -434,7 +434,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 float build = (float)Buildable.RequiredBuild / (float)Buildable.RequiredHits * amount;
                 _progressToBuild += build;
                 int build2 = Mathf.FloorToInt(_progressToBuild);
-                L.LogDebug($"[FOBS] [{FOB.Name ?? "FLOATING"}]  Removing build: {build:F4} (rounded to: {build2}).");
+                L.LogDebug($"[FOBS] [{FOB.Name ?? "FLOATING"}]  Removing build: {build:F4} (rounded to: {build2}) {_progressToBuild:F4}/{FOB.BuildSupply}.");
                 if (FOB.BuildSupply < _progressToBuild)
                 {
                     shoveler.SendChat(T.BuildMissingSupplies, FOB.BuildSupply, Buildable.RequiredBuild - _buildRemoved);
@@ -450,11 +450,12 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             }
 
 
+            UpdateHitsUI();
             if (Progress >= Total)
             {
                 int buildRemaining = Buildable.RequiredBuild - _buildRemoved;
                 _progressToBuild = 0;
-                if (FOB != null)
+                if (FOB != null && buildRemaining > 0)
                 {
                     if (FOB.BuildSupply < buildRemaining)
                     {
@@ -462,14 +463,12 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                         return true;
                     }
 
+                    L.LogDebug($"[FOBS] [{FOB.Name ?? "FLOATING"}]  Removing build: {buildRemaining:F4}.");
                     SendBuildToastToBuilders(-buildRemaining);
                     FOB?.ModifyBuild(-buildRemaining);
                 }
-                UpdateHitsUI();
                 Build();
             }
-            else
-                UpdateHitsUI();
 
             return true;
         }

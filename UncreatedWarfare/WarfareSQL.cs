@@ -118,6 +118,7 @@ public class WarfareSQL : MySqlDatabase
     public const string ColumnMutesTimestamp = "Timestamp";
     public const string ColumnMutesType = "Type";
     public const string ColumnMutesDeactivated = "Deactivated";
+    public const string ColumnMutesDeactivatedTimestamp = "DeactivateTimestamp";
 
     public const string ColumnTeamkillsPrimaryKey = "TeamkillID";
     public const string ColumnTeamkillsViolator = "Teamkiller";
@@ -375,6 +376,10 @@ public class WarfareSQL : MySqlDatabase
             {
                 Nullable = true,
                 Default = "b'0'"
+            },
+            new Schema.Column(ColumnMutesDeactivatedTimestamp, SqlTypes.DATETIME)
+            {
+                Nullable = true
             }
         }, true, null),
         new Schema(TableTeamkills, new Schema.Column[]

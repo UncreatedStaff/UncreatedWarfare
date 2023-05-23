@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using Steamworks;
 using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
@@ -93,10 +94,13 @@ public class ReportCommand : AsyncCommand
             type = GetReportType(ctx.Get(1)!);
             if (type == EReportType.CUSTOM)
                 goto Help;
-            if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, NumberStyles.Number, Data.LocalLocale, out target)))
+            if (Util.TryParseSteamId(inPlayer, out CSteamID id) && id.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+                target = id.m_SteamID;
+            else
             {
                 UCPlayer.NameSearch search = GetNameType(type);
-                target = Data.Reporter.RecentPlayerNameCheck(inPlayer, search);
+                UCPlayer? temptarget = UCPlayer.FromName(inPlayer, search);
+                target = temptarget == null ? Data.Reporter.RecentPlayerNameCheck(inPlayer, search) : temptarget.Steam64;
                 if (target == 0)
                     goto PlayerNotFound;
             }
@@ -113,6 +117,15 @@ public class ReportCommand : AsyncCommand
             type = GetReportType(ctx.Get(1)!);
             message = type == EReportType.CUSTOM ? ctx.GetRange(1)! : ctx.GetRange(2)!;
 
+            if (Util.TryParseSteamId(inPlayer, out CSteamID id) && id.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+                target = id.m_SteamID;
+            else
+            {
+                UCPlayer.NameSearch search = GetNameType(type);
+                target = Data.Reporter.RecentPlayerNameCheck(inPlayer, search);
+                if (target == 0)
+                    goto PlayerNotFound;
+            }
             if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, NumberStyles.Number, Data.LocalLocale, out target)))
             {
                 UCPlayer.NameSearch search = GetNameType(type);

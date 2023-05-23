@@ -1248,7 +1248,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         return false;
     }
-    public bool TryGet(int parameter, out ulong steam64, out UCPlayer? onlinePlayer, bool remainder = false)
+    public bool TryGet(int parameter, out ulong steam64, out UCPlayer? onlinePlayer, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
     {
         parameter += _offset;
         if (!IsConsole && MatchParameter(parameter, "me"))
@@ -1267,13 +1267,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
         string? s = remainder ? GetRange(parameter - _offset) : GetParamForParse(parameter);
         if (s != null)
         {
-            if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && Util.IsValidSteam64Id(steam64))
+            if (Util.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
             {
+                steam64 = steamId.m_SteamID;
                 onlinePlayer = UCPlayer.FromID(steam64);
                 return true;
             }
-            onlinePlayer = UCPlayer.FromName(s, true);
-            if (onlinePlayer is not null)
+            onlinePlayer = UCPlayer.FromName(s, searchType);
+            if (onlinePlayer is { IsOnline: true })
             {
                 steam64 = onlinePlayer.Steam64;
                 return true;
@@ -1284,7 +1285,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         onlinePlayer = null;
         return false;
     }
-    public bool TryGet(int parameter, out ulong steam64, out UCPlayer onlinePlayer, IEnumerable<UCPlayer> selection, bool remainder = false)
+    public bool TryGet(int parameter, out ulong steam64, out UCPlayer onlinePlayer, IEnumerable<UCPlayer> selection, bool remainder = false, UCPlayer.NameSearch searchType = UCPlayer.NameSearch.CharacterName)
     {
         parameter += _offset;
         if (!IsConsole && MatchParameter(parameter, "me"))
@@ -1307,8 +1308,9 @@ public sealed class CommandInteraction : BaseCommandInteraction
             onlinePlayer = default!;
             return false;
         }
-        if (ulong.TryParse(s, NumberStyles.Number, Warfare.Data.LocalLocale, out steam64) && Util.IsValidSteam64Id(steam64))
+        if (Util.TryParseSteamId(s, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
+            steam64 = steamId.m_SteamID;
             foreach (UCPlayer player in selection)
             {
                 if (player.Steam64 == steam64)
@@ -1318,14 +1320,17 @@ public sealed class CommandInteraction : BaseCommandInteraction
                 }
             }
         }
-        onlinePlayer = UCPlayer.FromName(s, true, selection)!;
-        if (onlinePlayer is not null)
+        onlinePlayer = UCPlayer.FromName(s, selection, searchType)!;
+        if (onlinePlayer is { IsOnline:true })
         {
             steam64 = onlinePlayer.Steam64;
             return true;
         }
         else
+        {
+            steam64 = default;
             return false;
+        }
     }
     /// <summary>Get an asset based on a <see cref="Guid"/> search, <see cref="ushort"/> search, then <see cref="Asset.FriendlyName"/> search.</summary>
     /// <typeparam name="TAsset"><see cref="Asset"/> type to find.</typeparam>

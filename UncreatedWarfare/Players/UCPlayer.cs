@@ -441,22 +441,39 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         }
         return player;
     }
+
     /// <summary>Slow, use rarely.</summary>
-    public static UCPlayer? FromName(string name, NameSearch type)
+    public static UCPlayer? FromName(string name, NameSearch type) => FromName(name, PlayerManager.OnlinePlayers, type);
+    public static UCPlayer? FromName(string name, IEnumerable<UCPlayer> selection, NameSearch type)
     {
         if (type == NameSearch.CharacterName)
         {
-            foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
+            foreach (UCPlayer current in selection)
+            {
+                if (current.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current;
+            }
+            foreach (UCPlayer current in selection)
+            {
+                if (current.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current;
+            }
+            foreach (UCPlayer current in selection)
+            {
+                if (current.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current;
+            }
+            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
             {
                 if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
                     return current;
             }
-            foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
+            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
             {
                 if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
                     return current;
             }
-            foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
+            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
             {
                 if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
                     return current;
@@ -465,17 +482,32 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         }
         else if (type == NameSearch.NickName)
         {
-            foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
+            foreach (UCPlayer current in selection)
+            {
+                if (current.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current;
+            }
+            foreach (UCPlayer current in selection)
+            {
+                if (current.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current;
+            }
+            foreach (UCPlayer current in selection)
+            {
+                if (current.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current;
+            }
+            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
             {
                 if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
                     return current;
             }
-            foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
+            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
             {
                 if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
                     return current;
             }
-            foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
+            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
             {
                 if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
                     return current;
@@ -484,19 +516,34 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         }
         else if (type == NameSearch.PlayerName)
         {
-            foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
+            foreach (UCPlayer current in selection)
+            {
+                if (current.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current;
+            }
+            foreach (UCPlayer current in selection)
+            {
+                if (current.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current;
+            }
+            foreach (UCPlayer current in selection)
+            {
+                if (current.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current;
+            }
+            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
             {
                 if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
                     return current;
             }
-            foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
-            {
-                if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    return current;
-            }
-            foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
+            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
             {
                 if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
+                    return current;
+            }
+            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
+            {
+                if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
                     return current;
             }
             return null;

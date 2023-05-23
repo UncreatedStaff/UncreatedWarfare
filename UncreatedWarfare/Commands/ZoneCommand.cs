@@ -81,7 +81,8 @@ public class ZoneCommand : Command
                     Parameters = new CommandParameter[]
                     {
                         new CommandParameter("Zone", typeof(Zone))
-                    }
+                    },
+                    Permission = EAdminType.MODERATOR
                 },
                 new CommandParameter("Delete")
                 {
@@ -89,7 +90,8 @@ public class ZoneCommand : Command
                     Parameters = new CommandParameter[]
                     {
                         new CommandParameter("Zone", typeof(Zone))
-                    }
+                    },
+                    Permission = EAdminType.MODERATOR
                 },
                 new CommandParameter("Edit")
                 {
@@ -108,7 +110,8 @@ public class ZoneCommand : Command
                                 }
                             }
                         }
-                    }
+                    },
+                    Permission = EAdminType.MODERATOR
                 },
                 new CommandParameter("Create")
                 {
@@ -122,7 +125,8 @@ public class ZoneCommand : Command
                                 new CommandParameter("Name", typeof(string))
                             }
                         }
-                    }
+                    },
+                    Permission = EAdminType.MODERATOR
                 },
                 new CommandParameter("Util")
                 {
@@ -220,8 +224,6 @@ public class ZoneCommand : Command
         else if (ctx.MatchParameter(0, "util", "u", "tools"))
         {
             ctx.AssertRanByPlayer();
-
-            ctx.AssertOnDuty();
 
             if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
             {

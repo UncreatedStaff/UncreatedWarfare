@@ -360,6 +360,21 @@ public class Reporter : MonoBehaviour
 #endif
         if (type == UCPlayer.NameSearch.CharacterName)
         {
+            foreach (PlayerData current in data)
+            {
+                if (current.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current.Steam64;
+            }
+            foreach (PlayerData current in data)
+            {
+                if (current.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current.Steam64;
+            }
+            foreach (PlayerData current in data)
+            {
+                if (current.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current.Steam64;
+            }
             foreach (PlayerData current in data.OrderBy(x => x.characterName.Length))
             {
                 if (current.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
@@ -379,6 +394,21 @@ public class Reporter : MonoBehaviour
         }
         else if (type == UCPlayer.NameSearch.NickName)
         {
+            foreach (PlayerData current in data)
+            {
+                if (current.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current.Steam64;
+            }
+            foreach (PlayerData current in data)
+            {
+                if (current.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current.Steam64;
+            }
+            foreach (PlayerData current in data)
+            {
+                if (current.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current.Steam64;
+            }
             foreach (PlayerData current in data.OrderBy(x => x.nickName.Length))
             {
                 if (current.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
@@ -398,19 +428,34 @@ public class Reporter : MonoBehaviour
         }
         else if (type == UCPlayer.NameSearch.PlayerName)
         {
+            foreach (PlayerData current in data)
+            {
+                if (current.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current.Steam64;
+            }
+            foreach (PlayerData current in data)
+            {
+                if (current.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current.Steam64;
+            }
+            foreach (PlayerData current in data)
+            {
+                if (current.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return current.Steam64;
+            }
             foreach (PlayerData current in data.OrderBy(x => x.playerName.Length))
             {
                 if (current.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
                     return current.Steam64;
             }
-            foreach (PlayerData current in data.OrderBy(x => x.nickName.Length))
-            {
-                if (current.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                    return current.Steam64;
-            }
             foreach (PlayerData current in data.OrderBy(x => x.characterName.Length))
             {
                 if (current.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                    return current.Steam64;
+            }
+            foreach (PlayerData current in data.OrderBy(x => x.nickName.Length))
+            {
+                if (current.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
                     return current.Steam64;
             }
             return 0;

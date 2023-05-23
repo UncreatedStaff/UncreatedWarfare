@@ -1001,11 +1001,12 @@ public static class OffenseManager
         UCPlayer? caller = UCPlayer.FromID(callerId);
         UCPlayer? onlinePlayer = UCPlayer.FromID(targetId);
         PlayerNames names = await Data.DatabaseManager.GetUsernamesAsync(targetId).ConfigureAwait(false);
+        DateTime now = DateTime.UtcNow;
         if (names.WasFound)
         {
             int rows = await Data.DatabaseManager.NonQueryAsync(
-                    "UPDATE `muted` SET `Deactivated` = 1 WHERE `Steam64` = @0 AND " +
-                    "`Deactivated` = 0 AND (`Duration` = -1 OR TIMESTAMPDIFF(SECOND, `Timestamp`, UTC_TIMESTAMP()) < `Duration`)", new object[] { targetId })
+                    "UPDATE `muted` SET `Deactivated` = 1, `DeactivateTimestamp` = @1 WHERE `Steam64` = @0 AND " +
+                    "`Deactivated` = 0 AND (`Duration` = -1 OR TIMESTAMPDIFF(SECOND, `Timestamp`, UTC_TIMESTAMP()) < `Duration`)", new object[] { targetId, now })
                 .ConfigureAwait(false);
 
             await UCWarfare.ToUpdate();
@@ -1026,7 +1027,7 @@ public static class OffenseManager
                     onlinePlayer.MuteType = EMuteType.NONE;
                     onlinePlayer.TimeUnmuted = DateTime.MinValue;
                 }
-                LogUnmutePlayer(targetId, callerId, DateTime.Now);
+                LogUnmutePlayer(targetId, callerId, now);
                 PlayerNames n2 = await F.GetPlayerOriginalNamesAsync(callerId).ConfigureAwait(false);
                 await UCWarfare.ToUpdate();
                 if (callerId == 0)

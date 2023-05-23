@@ -38,7 +38,7 @@ public class ICommand : Command
         ctx.AssertRanByPlayer();
 
         ctx.AssertArgs(1, Syntax + " - " + Help);
-        ctx.AssertHelpCheck(1, Syntax + " - " + Help);
+        ctx.AssertHelpCheck(0, Syntax + " - " + Help);
 
         int amount = 1;
         int itemAmt = -1;
