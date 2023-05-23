@@ -1045,11 +1045,11 @@ internal class ZonePlayerComponent : MonoBehaviour
                     if (!ctx.TryGet(1, out float srcX) || !ctx.TryGet(2, out float srcZ))
                         throw ctx.Reply(T.ZoneEditOrderPointInvalid);
 
-                    if (!ctx.TryGet(2, out to))
+                    if (!ctx.TryGet(3, out to))
                     {
-                        if (ctx.MatchParameter(2, "end", "bottom"))
+                        if (ctx.MatchParameter(3, "end", "bottom"))
                             to = _currentPoints.Count;
-                        else if (ctx.MatchParameter(2, "start", "first", "top"))
+                        else if (ctx.MatchParameter(3, "start", "first", "top"))
                             to = 1;
                         else
                             throw ctx.Reply(T.ZoneEditOrderPointInvalid);
