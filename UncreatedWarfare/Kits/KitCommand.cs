@@ -203,7 +203,6 @@ public sealed class KitCommand : AsyncCommand
                     {
                         new CommandParameter("Player", typeof(IPlayer))
                         {
-                            ChainDisplayCount = 3,
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("Kit", typeof(Kit))
@@ -262,7 +261,6 @@ public sealed class KitCommand : AsyncCommand
                     {
                         new CommandParameter("Player", typeof(IPlayer))
                         {
-                            ChainDisplayCount = 3,
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("Class", typeof(Class))
@@ -290,7 +288,6 @@ public sealed class KitCommand : AsyncCommand
                         new CommandParameter("Add")
                         {
                             Aliases = new string[] { "set" },
-                            ChainDisplayCount = 3,
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("Skill", typeof(string))
@@ -305,7 +302,6 @@ public sealed class KitCommand : AsyncCommand
                         new CommandParameter("Remove")
                         {
                             Aliases = new string[] { "delete", "clear" },
-                            ChainDisplayCount = 2,
                             Parameters = new CommandParameter[]
                             {
                                 new CommandParameter("Skill", typeof(string))
