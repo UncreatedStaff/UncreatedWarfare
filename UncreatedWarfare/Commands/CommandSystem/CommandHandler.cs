@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using SDG.Framework.Utilities;
 using Uncreated.Framework;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
@@ -1338,7 +1339,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     /// <param name="multipleResultsFound"><see langword="true"/> if <paramref name="allowMultipleResults"/> is <see langword="false"/> and multiple results were found.</param>
     /// <param name="allowMultipleResults">Set to <see langword="false"/> to make the function return <see langword="false"/> if multiple results are found. <paramref name="asset"/> will still be set.</param>
     /// <returns><see langword="true"/> If a <typeparamref name="TAsset"/> is found or multiple are found and <paramref name="allowMultipleResults"/> is <see langword="true"/>.</returns>
-    public bool TryGet<TAsset>(int parameter, out TAsset asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Func<TAsset, bool>? selector = null) where TAsset : Asset
+    public bool TryGet<TAsset>(int parameter, out TAsset asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
     {
         if (!TryGetRange(parameter, out string p, remainder ? -1 : len) || p.Length == 0)
         {
@@ -1348,100 +1349,8 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
         if ((remainder || parameter == ArgumentCount - 1) && p[p.Length - 1] == '\\')
             p = p.Substring(0, p.Length - 1);
-        if (Guid.TryParse(p, out Guid guid))
-        {
-            asset = Assets.find<TAsset>(guid);
-            multipleResultsFound = false;
-            return asset is not null && (selector is null || selector(asset));
-        }
-        EAssetType type = AssetTypeHelper<TAsset>.Type;
-        if (type != EAssetType.NONE)
-        {
-            if (ushort.TryParse(p, out ushort value))
-            {
-                if (Assets.find(type, value) is TAsset asset2)
-                {
-                    if (selector is not null && !selector(asset2))
-                    {
-                        asset = null!;
-                        multipleResultsFound = false;
-                        return false;
-                    }
 
-                    asset = asset2;
-                    multipleResultsFound = false;
-                    return true;
-                }
-            }
-
-            TAsset[] assets = selector is null ? Assets.find(type).OfType<TAsset>().OrderBy(x => x.FriendlyName.Length).ToArray() : Assets.find(type).OfType<TAsset>().Where(selector).OrderBy(x => x.FriendlyName.Length).ToArray();
-            if (allowMultipleResults)
-            {
-                for (int i = 0; i < assets.Length; ++i)
-                {
-                    if (assets[i].FriendlyName.Equals(p, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        asset = assets[i];
-                        multipleResultsFound = false;
-                        return true;
-                    }
-                }
-                for (int i = 0; i < assets.Length; ++i)
-                {
-                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    {
-                        asset = assets[i];
-                        multipleResultsFound = false;
-                        return true;
-                    }
-                }
-            }
-            else
-            {
-                List<TAsset> results = new List<TAsset>(16);
-                for (int i = 0; i < assets.Length; ++i)
-                {
-                    if (assets[i].FriendlyName.Equals(p, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        results.Add(assets[i]);
-                    }
-                }
-                if (results.Count == 1)
-                {
-                    asset = results[0];
-                    multipleResultsFound = false;
-                    return true;
-                }
-                if (results.Count > 1)
-                {
-                    multipleResultsFound = true;
-                    asset = results[0];
-                    return false; // if multiple results match for the full name then a partial will be the same
-                }
-                for (int i = 0; i < assets.Length; ++i)
-                {
-                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    {
-                        results.Add(assets[i]);
-                    }
-                }
-                if (results.Count == 1)
-                {
-                    asset = results[0];
-                    multipleResultsFound = false;
-                    return true;
-                }
-                if (results.Count > 1)
-                {
-                    multipleResultsFound = true;
-                    asset = results[0];
-                    return false;
-                }
-            }
-        }
-        multipleResultsFound = false;
-        asset = null!;
-        return false;
+        return UCAssetManager.TryGetAsset(p, out asset, out multipleResultsFound, allowMultipleResults);
     }
     public bool TryGetTarget(out Transform transform)
     {

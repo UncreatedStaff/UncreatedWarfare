@@ -2,7 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
+using SDG.Framework.Utilities;
+using Uncreated.Encoding;
 using Uncreated.Networking;
+using Uncreated.Networking.Async;
 using ItemData = Uncreated.Framework.Assets.ItemData;
     
 namespace Uncreated.Warfare;
@@ -11,24 +16,7 @@ public static class UCAssetManager
 {
     private static readonly char[] Ignore = { '.', ',', '&', '-', '_' };
     private static readonly char[] Splits = { ' ' };
-    public static VehicleAsset? FindVehicleAsset(ushort vehicleID) => Assets.find(EAssetType.VEHICLE).Cast<VehicleAsset>().Where(k => k?.id == vehicleID).FirstOrDefault();
-    public static VehicleAsset? FindVehicleAsset(string vehicleName)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        List<VehicleAsset> assets = Assets.find(EAssetType.VEHICLE).Cast<VehicleAsset>()
-            .Where(k => k?.name != null && k.vehicleName != null).OrderBy(k => k.vehicleName.Length).ToList();
-
-        VehicleAsset? asset = assets.FirstOrDefault(k =>
-            vehicleName.Equals(k.id.ToString(Data.AdminLocale), StringComparison.OrdinalIgnoreCase) ||
-            vehicleName.Split(Splits).All(l => k.vehicleName.ToLower().Contains(l)) ||
-            vehicleName.Split(Splits).All(l => k.name.ToLower().Contains(l))
-            );
-
-        return asset;
-    }
-    public static ItemAsset? FindItemAsset(string itemName, out int numberOfSimilarNames, bool additionalCheckWithoutNonAlphanumericCharacters = false)
+    public static ItemAsset? FindItemAsset(string itemName, out int numberOfSimilarNames, bool additionalCheckWithoutNonAlphanumericCharacters = true)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -37,95 +25,434 @@ public static class UCAssetManager
         string[] insplits = itemName.Split(Splits);
 
         numberOfSimilarNames = 0;
+        ItemAsset? asset;
+        List<ItemAsset> list = ListPool<ItemAsset>.claim();
+        try
+        {
+            Assets.find(list);
+            list.RemoveAll(k => !(k is { name: { }, itemName: { } } && (
+                itemName.Equals(k.id.ToString(Data.AdminLocale), StringComparison.OrdinalIgnoreCase) ||
+                insplits.All(l => k.itemName.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))));
 
-        List<ItemAsset> selection = Assets.find(EAssetType.ITEM).Cast<ItemAsset>()
-            .Where(k => k?.name != null && k.itemName != null && (
-            itemName.Equals(k.id.ToString(Data.AdminLocale), StringComparison.OrdinalIgnoreCase) ||
-            insplits.All(l => k.itemName.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
-            ).OrderBy(k => k.itemName.Length).ToList();
+            list.Sort((a, b) => a.itemName.Length.CompareTo(b.itemName.Length));
 
-        numberOfSimilarNames = selection.Count;
+            numberOfSimilarNames = list.Count;
 
-        ItemAsset? asset = numberOfSimilarNames < 1 ? null : selection[0];
+            asset = numberOfSimilarNames < 1 ? null : list[0];
+        }
+        finally
+        {
+            ListPool<ItemAsset>.release(list);
+        }
 
         if (asset == null && additionalCheckWithoutNonAlphanumericCharacters)
         {
             itemName = itemName.RemoveMany(false, Ignore);
 
-            selection = Assets.find(EAssetType.ITEM).Cast<ItemAsset>()
-                .Where(k => k?.name != null && k.itemName != null && (
+            list = ListPool<ItemAsset>.claim();
+            try
+            {
+                Assets.find(list);
+                    
+                list.RemoveAll(k => !(k is { name: { }, itemName: { } } && (
                     itemName.Equals(k.id.ToString(Data.AdminLocale), StringComparison.OrdinalIgnoreCase) ||
-                    insplits.All(l => k.itemName.RemoveMany(false, Ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
-                ).OrderBy(k => k.itemName.Length).ToList();
+                    insplits.All(l => k.itemName.RemoveMany(false, Ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))));
 
-            numberOfSimilarNames = selection.Count;
-            asset = numberOfSimilarNames < 1 ? null : selection[0];
+                list.Sort((a, b) => a.itemName.Length.CompareTo(b.itemName.Length));
+
+                numberOfSimilarNames = list.Count;
+                asset = numberOfSimilarNames < 1 ? null : list[0];
+            }
+            finally
+            {
+                ListPool<ItemAsset>.release(list);
+            }
         }
 
         numberOfSimilarNames--;
 
         return asset;
     }
+
+    public static bool TryGetAsset<TAsset>(string assetName, out TAsset asset, out bool multipleResultsFound, bool allowMultipleResults = false, Predicate<TAsset>? selector = null) where TAsset : Asset
+    {
+        if (Guid.TryParse(assetName, out Guid guid))
+        {
+            asset = Assets.find<TAsset>(guid);
+            multipleResultsFound = false;
+            return asset is not null && (selector is null || selector(asset));
+        }
+        EAssetType type = AssetTypeHelper<TAsset>.Type;
+        if (type != EAssetType.NONE)
+        {
+            if (ushort.TryParse(assetName, out ushort value))
+            {
+                if (Assets.find(type, value) is TAsset asset2)
+                {
+                    if (selector is not null && !selector(asset2))
+                    {
+                        asset = null!;
+                        multipleResultsFound = false;
+                        return false;
+                    }
+
+                    asset = asset2;
+                    multipleResultsFound = false;
+                    return true;
+                }
+            }
+
+            List<TAsset> list = ListPool<TAsset>.claim();
+            try
+            {
+                Assets.find(list);
+
+                if (selector != null)
+                    list.RemoveAll(x => !selector(x));
+
+                list.Sort((a, b) => a.FriendlyName.Length.CompareTo(b.FriendlyName.Length));
+
+                if (allowMultipleResults)
+                {
+                    for (int i = 0; i < list.Count; ++i)
+                    {
+                        if (list[i].FriendlyName.Equals(assetName, StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            asset = list[i];
+                            multipleResultsFound = false;
+                            return true;
+                        }
+                    }
+                    for (int i = 0; i < list.Count; ++i)
+                    {
+                        if (list[i].FriendlyName.IndexOf(assetName, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        {
+                            asset = list[i];
+                            multipleResultsFound = false;
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    List<TAsset> results = ListPool<TAsset>.claim();
+                    try
+                    {
+                        for (int i = 0; i < list.Count; ++i)
+                        {
+                            if (list[i].FriendlyName.Equals(assetName, StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                results.Add(list[i]);
+                            }
+                        }
+                        if (results.Count == 1)
+                        {
+                            asset = results[0];
+                            multipleResultsFound = false;
+                            return true;
+                        }
+                        if (results.Count > 1)
+                        {
+                            multipleResultsFound = true;
+                            asset = results[0];
+                            return false; // if multiple results match for the full name then a partial will be the same
+                        }
+                        for (int i = 0; i < list.Count; ++i)
+                        {
+                            if (list[i].FriendlyName.IndexOf(assetName, StringComparison.InvariantCultureIgnoreCase) != -1)
+                            {
+                                results.Add(list[i]);
+                            }
+                        }
+                        if (results.Count == 1)
+                        {
+                            asset = results[0];
+                            multipleResultsFound = false;
+                            return true;
+                        }
+                        if (results.Count > 1)
+                        {
+                            multipleResultsFound = true;
+                            asset = results[0];
+                            return false;
+                        }
+                    }
+                    finally
+                    {
+                        ListPool<TAsset>.release(results);
+                    }
+                }
+            }
+            finally
+            {
+                ListPool<TAsset>.release(list);
+            }
+        }
+        multipleResultsFound = false;
+        asset = null!;
+        return false;
+    }
+    public static List<TAsset> TryGetAssets<TAsset>(string assetName, Predicate<TAsset>? selector = null, bool pool = false) where TAsset : Asset
+    {
+        TAsset asset;
+        List<TAsset> assets = pool ? ListPool<TAsset>.claim() : new List<TAsset>(4);
+        if (Guid.TryParse(assetName, out Guid guid))
+        {
+            asset = Assets.find<TAsset>(guid);
+            if (asset != null)
+                assets.Add(asset);
+            return assets;
+        }
+        EAssetType type = AssetTypeHelper<TAsset>.Type;
+        if (type != EAssetType.NONE)
+        {
+            if (ushort.TryParse(assetName, out ushort value))
+            {
+                if (Assets.find(type, value) is TAsset asset2)
+                {
+                    if (selector is null || selector(asset2))
+                        assets.Add(asset2);
+                    return assets;
+                }
+            }
+        }
+        else if (ushort.TryParse(assetName, out ushort value))
+        {
+            for (int i = 0; i <= 10; ++i)
+            {
+                if (Assets.find((EAssetType)i, value) is TAsset asset2)
+                {
+                    if (selector is null || selector(asset2))
+                        assets.Add(asset2);
+                }
+            }
+
+            return assets;
+        }
+
+        List<TAsset> list = ListPool<TAsset>.claim();
+        try
+        {
+            Assets.find(list);
+
+            list.Sort((a, b) => a.FriendlyName.Length.CompareTo(b.FriendlyName.Length));
+
+            for (int i = 0; i < list.Count; ++i)
+            {
+                TAsset item = list[i];
+                if (item.FriendlyName.Equals(assetName, StringComparison.InvariantCultureIgnoreCase) && (selector == null || selector(item)))
+                {
+                    assets.Add(item);
+                }
+            }
+            for (int i = 0; i < list.Count; ++i)
+            {
+                TAsset item = list[i];
+                if (item.FriendlyName.IndexOf(assetName, StringComparison.InvariantCultureIgnoreCase) != -1 && (selector == null || selector(item)))
+                {
+                    assets.Add(item);
+                }
+            }
+
+            string assetName2 = assetName.RemoveMany(false, Ignore);
+            string[] inSplits = assetName2.Split(Splits);
+            for (int i = 0; i < list.Count; ++i)
+            {
+                TAsset item = list[i];
+                if (item is { FriendlyName: { } fn } &&
+                    inSplits.All(l => fn.RemoveMany(false, Ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                {
+                    assets.Add(item);
+                }
+            }
+        }
+        finally
+        {
+            ListPool<TAsset>.release(list);
+        }
+
+        return assets;
+    }
     public static class NetCalls
     {
-        public static readonly NetCall<ushort, EAssetType> RequestAssetName = new NetCall<ushort, EAssetType>(ReceiveRequestAssetName);
-        public static readonly NetCall<Guid> RequestItemInfo = new NetCall<Guid>(ReceiveItemInfoRequest);
-        public static readonly NetCall<Guid[]> RequestItemInfos = new NetCall<Guid[]>(ReceiveItemInfosRequest);
-        public static readonly NetCall RequestAllItemInfos = new NetCall(ReceiveAllItemInfosRequest);
-
-        public static readonly NetCall<ushort, EAssetType, string> SendAssetName = new NetCall<ushort, EAssetType, string>(1026);
-        public static readonly NetCallRaw<ItemData?> SendItemInfo = new NetCallRaw<ItemData?>(1120, ItemData.Read, ItemData.Write);
-        public static readonly NetCallRaw<ItemData?[]> SendItemInfos = new NetCallRaw<ItemData?[]>(1122, ItemData.ReadMany, ItemData.WriteMany);
-
-        [NetCall(ENetCall.FROM_SERVER, 1025)]
-        internal static void ReceiveRequestAssetName(MessageContext context, ushort id, EAssetType type)
+        /// <summary>Server-side</summary>
+        public static async Task<AssetInfo[]?> SearchAssets<TAsset>(IConnection connection, string name) where TAsset : Asset
         {
-            Asset a = Assets.find(type, id);
-            if (a is null)
-            {
-                context.Reply(SendAssetName, id, type, string.Empty);
+            RequestResponse response = await RequestFindAssetByText.Request(SendFindAssets, connection, name, typeof(TAsset));
+            response.TryGetParameter(0, out AssetInfo[]? info);
+            return info;
+        }
+        /// <summary>Server-side</summary>
+        public static async Task<AssetInfo[]?> SearchAssets<TAsset>(IConnection connection, ushort id) where TAsset : Asset
+        {
+            RequestResponse response = await RequestFindAssetById.Request(SendFindAssets, connection, id, typeof(TAsset));
+            response.TryGetParameter(0, out AssetInfo[]? info);
+            return info;
+        }
+        /// <summary>Server-side</summary>
+        public static async Task<AssetInfo?> SearchAssets(IConnection connection, Guid id)
+        {
+            RequestResponse response = await RequestFindAssetByGuid.Request(SendFindAssets, connection, id);
+            response.TryGetParameter(0, out AssetInfo[]? info);
+            return info is { Length: > 0 } ? info[0] : null;
+        }
+
+        public static readonly NetCall<ushort, Type> RequestFindAssetById = new NetCall<ushort, Type>(ReceiveRequestAssetById);
+        public static readonly NetCall<string, Type> RequestFindAssetByText = new NetCall<string, Type>(ReceiveRequestAssetByText);
+        public static readonly NetCall<Guid> RequestFindAssetByGuid = new NetCall<Guid>(ReceiveRequestAssetByGuid);
+
+        public static readonly NetCallRaw<AssetInfo[]> SendFindAssets = new NetCallRaw<AssetInfo[]>(3103, AssetInfo.ReadMany, AssetInfo.WriteMany);
+
+        private static MethodInfo? _idMethod;
+        private static MethodInfo? _textMethod;
+        [NetCall(ENetCall.FROM_SERVER, 3100)]
+        private static void ReceiveRequestAssetById(MessageContext context, ushort id, Type assetType)
+        {
+            if (!Level.isLoaded)
                 return;
-            }
-            context.Reply(SendAssetName, id, type, a.FriendlyName);
+
+            _idMethod ??= typeof(NetCalls).GetMethod(nameof(ReceiveRequestAssetByIdGeneric), BindingFlags.NonPublic | BindingFlags.Static)!;
+            _idMethod.MakeGenericMethod(assetType).Invoke(null, new object[] { context, id });
         }
-        [NetCall(ENetCall.FROM_SERVER, 1119)]
-        internal static void ReceiveItemInfoRequest(MessageContext context, Guid item)
+        private static void ReceiveRequestAssetByIdGeneric<TAsset>(MessageContext ctx, ushort id) where TAsset : Asset
         {
-            if (Assets.find(item) is ItemAsset asset)
-                context.Reply(SendItemInfo, ItemData.FromAsset(asset));
+            EAssetType type = AssetTypeHelper<TAsset>.Type;
+            if (type == EAssetType.NONE)
+            {
+                List<AssetInfo> assets = ListPool<AssetInfo>.claim();
+                for (int i = 0; i <= 10; ++i)
+                {
+                    if (Assets.find((EAssetType)i, id) is { } asset)
+                        assets.Add(new AssetInfo(asset));
+                }
+
+                ctx.Reply(SendFindAssets, assets.ToArray());
+            }
             else
-                context.Reply(SendItemInfo, null);
-        }
-        [NetCall(ENetCall.FROM_SERVER, 1121)]
-        internal static void ReceiveItemInfosRequest(MessageContext context, Guid[] items)
-        {
-            ItemData[] rtn = new ItemData[items.Length];
-            for (int i = 0; i < items.Length; i++)
             {
-                if (Assets.find(items[i]) is ItemAsset asset)
-                    rtn[i] = ItemData.FromAsset(asset);
+                Asset? asset = Assets.find(type, id);
+                AssetInfo[] info = asset == null ? Array.Empty<AssetInfo>() : new AssetInfo[] { new AssetInfo(asset) };
+
+                ctx.Reply(SendFindAssets, info);
             }
-            context.Reply(SendItemInfos, rtn);
         }
-        [NetCall(ENetCall.FROM_SERVER, 1123)]
-        internal static void ReceiveAllItemInfosRequest(MessageContext context)
+        [NetCall(ENetCall.FROM_SERVER, 3101)]
+        private static void ReceiveRequestAssetByText(MessageContext context, string name, Type assetType)
         {
-            Asset[] assets = Assets.find(EAssetType.ITEM);
-            ItemData[] rtn = new ItemData[assets.Length];
-            for (int i = 0; i < assets.Length; i++)
-            {
-                try
-                {
-                    if (assets[i] is ItemAsset asset) rtn[i] = ItemData.FromAsset(asset);
-                }
-                catch (Exception ex)
-                {
-                    L.LogError($"Error converting asset of type {assets[i].GetType().FullName} to ItemData ({assets[i].name}).");
-                    L.LogError(ex);
-                    rtn[i] = null!;
-                }
-            }
-            context.Reply(SendItemInfos, rtn);
+            if (!Level.isLoaded)
+                return;
+
+            _textMethod ??= typeof(NetCalls).GetMethod(nameof(ReceiveRequestAssetByTextGeneric), BindingFlags.NonPublic | BindingFlags.Static)!;
+            _textMethod.MakeGenericMethod(assetType).Invoke(null, new object[] { context, name });
         }
+        private static void ReceiveRequestAssetByTextGeneric<TAsset>(MessageContext ctx, string name) where TAsset : Asset
+        {
+            List<TAsset> assets = TryGetAssets<TAsset>(name, pool: true);
+            AssetInfo[] info = new AssetInfo[assets.Count];
+            try
+            {
+                for (int i = 0; i < assets.Count; ++i)
+                    info[i] = new AssetInfo(assets[i]);
+            }
+            finally
+            {
+                ListPool<TAsset>.release(assets);
+            }
+
+            ctx.Reply(SendFindAssets, info);
+        }
+        [NetCall(ENetCall.FROM_SERVER, 3102)]
+        private static void ReceiveRequestAssetByGuid(MessageContext context, Guid guid)
+        {
+            if (!Level.isLoaded)
+                return;
+            
+            context.Reply(SendFindAssets, Assets.find(guid) is { } asset ? new AssetInfo[] { new AssetInfo(asset) } : Array.Empty<AssetInfo>());
+        }
+    }
+}
+
+public readonly struct AssetInfo
+{
+    private const ushort DataVersion = 0;
+    public readonly EAssetType Category;
+    public readonly EItemType? Type;
+    public readonly Type AssetType;
+    public readonly Guid Guid;
+    public readonly ushort Id;
+    public readonly string AssetName;
+    public readonly string? EnglishName;
+    public readonly string? ItemDescription;
+    public AssetInfo(Asset asset)
+    {
+        Category = asset.assetCategory;
+        AssetType = asset.GetType();
+        Guid = asset.GUID;
+        Id = asset.id;
+        AssetName = asset.name;
+        EnglishName = asset.FriendlyName;
+        if (asset is ItemAsset item)
+        {
+            Type = item.type;
+            ItemDescription = item.itemDescription;
+        }
+        else
+        {
+            Type = null;
+            ItemDescription = null;
+        }
+    }
+    public AssetInfo(EAssetType category, EItemType? type, Type assetType, Guid guid, ushort id, string assetName, string englishName, string? itemDescription)
+    {
+        Category = category;
+        Type = type;
+        AssetType = assetType;
+        Guid = guid;
+        Id = id;
+        AssetName = assetName;
+        EnglishName = englishName;
+        ItemDescription = itemDescription;
+    }
+    public AssetInfo(ByteReader reader)
+    {
+        _ = reader.ReadUInt16();
+        Category = (EAssetType)reader.ReadUInt8();
+        Type = reader.ReadBool() ? (EItemType)reader.ReadUInt16() : null;
+        AssetType = reader.ReadType()!;
+        Guid = reader.ReadGuid();
+        Id = reader.ReadUInt16();
+        AssetName = reader.ReadString();
+        EnglishName = reader.ReadNullableString();
+        ItemDescription = reader.ReadNullableString();
+    }
+    public void Write(ByteWriter writer)
+    {
+        writer.Write(DataVersion);
+        writer.Write((byte)Category);
+        writer.Write(Type.HasValue);
+        if (Type.HasValue)
+            writer.Write((ushort)Type.Value);
+        writer.Write(AssetType);
+        writer.Write(Guid);
+        writer.Write(Id);
+        writer.Write(AssetName);
+        writer.WriteNullable(EnglishName);
+        writer.WriteNullable(ItemDescription);
+    }
+
+    public static void Write(ByteWriter writer, AssetInfo info) => info.Write(writer);
+    public static AssetInfo Read(ByteReader reader) => new AssetInfo(reader);
+    public static void WriteMany(ByteWriter writer, AssetInfo[] info)
+    {
+        writer.Write(info.Length);
+        for (int i = 0; i < info.Length; ++i)
+            info[i].Write(writer);
+    }
+    public static AssetInfo[] ReadMany(ByteReader reader)
+    {
+        AssetInfo[] rtn = new AssetInfo[reader.ReadInt32()];
+        for (int i = 0; i < rtn.Length; ++i)
+            rtn[i] = new AssetInfo(reader);
+        return rtn;
     }
 }

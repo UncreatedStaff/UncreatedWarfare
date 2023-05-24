@@ -554,7 +554,7 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
         public void OnPlayerSpawnedAtBunker(BunkerComponent component, UCPlayer spawner)
         {
             if (spawner.Steam64 != _player.Steam64 && spawner.GetTeam() == _player.GetTeam()
-                && component.Builders[_player.Steam64] >= 0.25f)
+                && (component.Owner == _player.Steam64 || component.Builders[_player.Steam64] >= 0.25f))
             {
                 _fobUses++;
                 if (_fobUses >= _useCount)
