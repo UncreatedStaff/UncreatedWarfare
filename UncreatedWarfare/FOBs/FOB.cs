@@ -845,7 +845,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             UCPlayer player = PlayerManager.OnlinePlayers[i];
             if (player.GetTeam() == Team)
             {
-                if ((player.Position - pos).sqrMagnitude < sqrRad)
+                if (!player.Player.life.isDead && (player.Position - pos).sqrMagnitude < sqrRad)
                 {
                     if (!_friendlies.Contains(player))
                     {
@@ -853,11 +853,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                         OnPlayerEnteredRadius(player);
                     }
                 }
-                else
-                {
-                    if (_friendlies.RemoveFast(player))
-                        OnPlayerLeftRadius(player);
-                }
+                else if(_friendlies.RemoveFast(player))
+                    OnPlayerLeftRadius(player);
             }
             else
             {

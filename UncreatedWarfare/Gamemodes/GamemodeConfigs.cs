@@ -216,6 +216,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("ui_loading")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UILoading { get; set; }
 
+    [Sync(460, OnPullMethod = nameof(OnUIIncomingMortarWarningUpdated))]
+    [JsonPropertyName("ui_incoming_mortar_warning")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> UIIncomingMortarWarning { get; set; }
+
     [Sync(475)]
     [JsonPropertyName("effect_spotted_marker_infantry")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectSpottedMarkerInfantry { get; set; }
@@ -810,6 +814,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         UIToastWin = new JsonAssetReference<EffectAsset>("1f3ce50c120042c390f5c42522bd0fcd");
         UIKitMenu = new JsonAssetReference<EffectAsset>("c0155ea486d8427d9c70541abc875e78");
         UIVehicleHUD = new JsonAssetReference<EffectAsset>("1e1762d6f01442e89d159d4cd0ae7587");
+        UIIncomingMortarWarning = new RotatableConfig<JsonAssetReference<EffectAsset>>("6d7958eb3e2d4caea9fb5c4c4dccb75f");
         EffectSpottedMarkerInfantry = new JsonAssetReference<EffectAsset>("79add0f1b07c478f87207d30fe5a5f4f");
         EffectSpottedMarkerFOB = new JsonAssetReference<EffectAsset>("39dce42142074b46b819feba9ce83353");
         EffectSpottedMarkerAA = new JsonAssetReference<EffectAsset>("0e90e68eff624456b76fee28a4875d14");
@@ -959,6 +964,7 @@ public sealed class GamemodeConfigData : JSONConfigData
     private void OnUIToastWinUpdated() => Gamemode.WinToastUI.LoadFromConfig(UIToastWin);
     private void OnUIActionMenuUpdated() => ActionManager.ActionMenuUI.LoadFromConfig(UIActionMenu);
     private void OnUILoadingUpdated() => UCPlayer.LoadingUI.LoadFromConfig(UILoading);
+    private void OnUIIncomingMortarWarningUpdated() => UCPlayer.MortarWarningUI.LoadFromConfig(UIIncomingMortarWarning);
     private void OnUIMutedUpdated() => UCPlayer.MutedUI.LoadFromConfig(UIMuted);
     private void OnUITicketsUpdated() => TicketManager.TicketUI.LoadFromConfig(UITickets);
     private void OnUITeamSelectorUpdated() => Teams.TeamSelector.JoinUI.LoadFromConfig(UITeamSelector);

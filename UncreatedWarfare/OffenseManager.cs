@@ -5,11 +5,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using HarmonyLib;
+using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Networking;
@@ -19,12 +22,25 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Networking;
 using Color = UnityEngine.Color;
 
 namespace Uncreated.Warfare;
 
+[HarmonyPatch]
 public static class OffenseManager
 {
+    public static readonly IIPAddressFilter[] IPAddressFilters =
+    {
+        IPv4AddressRangeFilter.GeforceNow,
+        IPv4AddressRangeFilter.VKPlay,
+        MySqlAddressFilter.Instance
+    };
+    public static readonly IPv4AddressRangeFilter[] RemotePlayAddressFilters =
+    {
+        IPv4AddressRangeFilter.GeforceNow,
+        IPv4AddressRangeFilter.VKPlay
+    };
     private static readonly List<Ban> PendingBans = new List<Ban>(8);
     private static readonly List<Unban> PendingUnbans = new List<Unban>(8);
     private static readonly List<Kick> PendingKicks = new List<Kick>(8);
@@ -33,7 +49,33 @@ public static class OffenseManager
     private static readonly List<BattlEyeKick> PendingBattlEyeKicks = new List<BattlEyeKick>(8);
     private static readonly List<Teamkill> PendingTeamkills = new List<Teamkill>(8);
     private static readonly List<VehicleTeamkill> PendingVehicleTeamkills = new List<VehicleTeamkill>(8);
-    private static readonly List<Unmute> PendingUnmutes = new List<Unmute>(9);
+    private static readonly List<Unmute> PendingUnmutes = new List<Unmute>(8);
+    private static readonly List<IPWhitelist> PendingIPWhitelists = new List<IPWhitelist>(8);
+    public static bool IsRemotePlay(IPAddress address)
+    {
+        for (int i = 0; i < RemotePlayAddressFilters.Length; ++i)
+        {
+            if (RemotePlayAddressFilters[i].IsFiltered(address))
+                return true;
+        }
+
+        return false;
+    }
+    public static async Task<bool> IsIpFiltered(IPAddress address, ulong steam64, CancellationToken token = default)
+    {
+        for (int i = 0; i < IPAddressFilters.Length; ++i)
+        {
+            if (await IPAddressFilters[i].IsFiltered(address, steam64, token).ConfigureAwait(false))
+                return true;
+        }
+
+        return false;
+    }
+    public static async Task RemoveFilteredIPs(List<uint> ips, ulong steam64, CancellationToken token = default)
+    {
+        for (int i = 0; i < IPAddressFilters.Length; ++i)
+            await IPAddressFilters[i].RemoveFilteredIPs(ips, steam64, token).ConfigureAwait(false);
+    }
     // calls the type initializer
     internal static void Init()
     {
@@ -41,6 +83,26 @@ public static class OffenseManager
         EventDispatcher.PlayerJoined += OnPlayerJoined;
         EventDispatcher.PlayerPendingAsync += OnPlayerPending;
         Reload();
+
+        List<IPv4Range> ranges = new List<IPv4Range>(128);
+        for (int i = 0; i < RemotePlayAddressFilters.Length; ++i)
+            ranges.AddRange(RemotePlayAddressFilters[i].Ranges);
+        ranges = IPv4Range.GetNonOverlappingIPs(ranges);
+        L.Log($"Counted {IPv4Range.CountIncludedIPs(ranges)} filtered IPs for remote play.", ConsoleColor.Cyan);
+    }
+
+    [HarmonyPatch(typeof(SteamBlacklist), nameof(SteamBlacklist.checkBanned), new Type[]
+    {
+        typeof(CSteamID), typeof(uint), typeof(IEnumerable<byte[]>), typeof(SteamBlacklistID)
+    }, new ArgumentType[]
+    {
+        ArgumentType.Normal, ArgumentType.Normal, ArgumentType.Normal, ArgumentType.Out
+    })]
+    [HarmonyPrefix]
+    [UsedImplicitly]
+    private static void CheckBannedPrefix(CSteamID playerID, ref uint ip, IEnumerable<byte[]> hwids, SteamBlacklistID blacklistID)
+    {
+        ip = 0;
     }
     private static void Reload()
     {
@@ -53,6 +115,7 @@ public static class OffenseManager
         Load<Teamkill>(6);
         Load<VehicleTeamkill>(7);
         Load<Unmute>(8);
+        Load<IPWhitelist>(9);
     }
     internal static void Deinit()
     {
@@ -73,14 +136,18 @@ public static class OffenseManager
         {
             packs.Add(reader.GetUInt32(0));
         }, token);
-        for (int i = 0; i < SteamBlacklist.list.Count; ++i)
+        await RemoveFilteredIPs(packs, e.Steam64, token);
+        if (packs.Count != 0)
         {
-            uint ip = SteamBlacklist.list[i].ip;
-            for (int j = 0; j < packs.Count; ++j)
+            for (int i = 0; i < SteamBlacklist.list.Count; ++i)
             {
-                if (ip != 0 && ip == packs[j])
+                uint ip = SteamBlacklist.list[i].ip;
+                if (ip == 0)
+                    continue;
+                for (int j = 0; j < packs.Count; ++j)
                 {
-                    throw e.Reject("Your IP is banned for: " + SteamBlacklist.list[i].reason);
+                    if (ip == packs[j])
+                        throw e.Reject("Your IP is banned for: " + SteamBlacklist.list[i].reason);
                 }
             }
         }
@@ -255,6 +322,7 @@ public static class OffenseManager
         6 => "teamkills",
         7 => "vehicle_teamkills",
         8 => "unmute",
+        9 => "ipwhitelists",
         _ => throw new ArgumentOutOfRangeException("#" + index.ToString(Data.AdminLocale) + " doesn't match a pending type.")
     } + ".json");
 
@@ -268,7 +336,8 @@ public static class OffenseManager
         PendingBattlEyeKicks,
         PendingTeamkills,
         PendingVehicleTeamkills,
-        PendingUnmutes
+        PendingUnmutes,
+        PendingIPWhitelists
     };
     private static void Save<T>(int index) where T : ITimestampOffense
     {
@@ -329,6 +398,7 @@ public static class OffenseManager
         lock (PendingTeamkills)
         lock (PendingVehicleTeamkills)
         lock (PendingUnmutes)
+        lock (PendingIPWhitelists)
         {
             return PendingBans
                 .Cast<ITimestampOffense>()
@@ -347,6 +417,8 @@ public static class OffenseManager
                 .Concat(PendingVehicleTeamkills
                     .Cast<ITimestampOffense>())
                 .Concat(PendingUnmutes
+                    .Cast<ITimestampOffense>())
+                .Concat(PendingIPWhitelists
                     .Cast<ITimestampOffense>())
                 .OrderBy(x => x.Timestamp)
                 .ToArray();
@@ -524,6 +596,22 @@ public static class OffenseManager
                             else
                             {
                                 L.LogWarning("  Failed to send unmute #" + i.ToString(Data.AdminLocale) + "!");
+                                brk = true;
+                            }
+
+                            break;
+                        case IPWhitelist whitelist:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerIPWhitelisted.RequestAck(
+                                    UCWarfare.I.NetClient!, whitelist.Player, whitelist.Admin, whitelist.Timestamp, whitelist.Range.PackedIP, whitelist.Range.Mask, whitelist.Add, 10000))
+                                .Responded)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                RemoveFromSave(whitelist, 9);
+                                Save<IPWhitelist>(9);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send ip whitelist request #" + i.ToString(Data.AdminLocale) + "!");
                                 brk = true;
                             }
 
@@ -714,6 +802,49 @@ public static class OffenseManager
                 PendingUnmutes.Add(new Unmute(violator, callerId, timestamp));
             Save<Unmute>(8);
         }, ctx: "Unmute log");
+    }
+    public static void LogIPWhitelistPlayer(ulong violator, ulong callerId, DateTimeOffset timestamp, IPv4Range range, bool add)
+    {
+        UCWarfare.RunTask(async () =>
+        {
+            await UCWarfare.ToUpdate();
+            if (UCWarfare.CanUseNetCall)
+            {
+                RequestResponse response = await NetCalls.SendPlayerIPWhitelisted.RequestAck(UCWarfare.I.NetClient!, violator, callerId, timestamp, range.PackedIP, range.Mask, add, 10000);
+                if (response.Responded)
+                    return;
+            }
+
+            lock (PendingIPWhitelists)
+                PendingIPWhitelists.Add(new IPWhitelist(violator, callerId, timestamp, range, add));
+            Save<IPWhitelist>(8);
+        }, ctx: "IP whitelist log");
+    }
+    public static async Task<StandardErrorCode> WhitelistIP(ulong targetId, ulong callerId, IPv4Range range, bool add, DateTimeOffset timestamp, CancellationToken token = default)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        if (add)
+        {
+            await Data.AdminSql.NonQueryAsync(
+                $"DELETE FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0 AND `{WarfareSQL.ColumnIPWhitelistsIPRange}` = @2; INSERT INTO `{WarfareSQL.TableIPWhitelists}` (`{WarfareSQL.ColumnIPWhitelistsSteam64}`, `{WarfareSQL.ColumnIPWhitelistsAdmin}`, `{WarfareSQL.ColumnIPWhitelistsIPRange}`) VALUES (@0, @1, @2);",
+                new object[] { targetId, callerId, range.ToString() }, token).ConfigureAwait(false);
+        }
+        else
+        {
+
+            StandardErrorCode success = (await Data.AdminSql.NonQueryAsync(
+                $"DELETE FROM `{WarfareSQL.TableIPWhitelists}` WHERE `{WarfareSQL.ColumnIPWhitelistsSteam64}` = @0 AND `{WarfareSQL.ColumnIPWhitelistsIPRange}` = @1;",
+                new object[] { targetId, range.ToString() }, token).ConfigureAwait(false)) > 0 ? StandardErrorCode.Success : StandardErrorCode.NotFound;
+            if (success == StandardErrorCode.NotFound)
+                return StandardErrorCode.NotFound;
+        }
+
+        ActionLog.Add(ActionLogType.IPWhitelist, $"IP {(add ? "WHITELIST" : "BLACKLIST")} {targetId.ToString(Data.AdminLocale)} FOR {range}.", callerId);
+        LogIPWhitelistPlayer(targetId, callerId, timestamp, range, add);
+        L.Log($"{targetId} was ip {(add ? "whitelisted" : "blacklisted")} by {callerId} on {range}.", ConsoleColor.Cyan);
+        return StandardErrorCode.Success;
     }
     /// <returns>0 for a successful ban.</returns>
     internal static async Task<StandardErrorCode> BanPlayerAsync(ulong targetId, ulong callerId, string reason, int duration, DateTimeOffset timestamp, CancellationToken token = default)
@@ -1243,6 +1374,27 @@ public static class OffenseManager
             return Violator == offense.Violator && Admin == offense.Admin && Timestamp == offense.Timestamp;
         }
     }
+    private struct IPWhitelist : ITimestampOffense, IEquatable<IPWhitelist>
+    {
+        public readonly ulong Player;
+        public readonly ulong Admin;
+        public readonly IPv4Range Range;
+        public readonly bool Add;
+        public DateTimeOffset Timestamp { get; set; }
+        [JsonConstructor]
+        public IPWhitelist(ulong player, ulong admin, DateTimeOffset timestamp, IPv4Range range, bool add)
+        {
+            Player = player;
+            Admin = admin;
+            Timestamp = timestamp;
+            Range = range;
+            Add = add;
+        }
+        public bool Equals(IPWhitelist offense)
+        {
+            return Player == offense.Player && Admin == offense.Admin && Timestamp == offense.Timestamp && Range == offense.Range && Add == offense.Add;
+        }
+    }
     public static class NetCalls
     {
         public static readonly NetCall<ulong, ulong, string, int, DateTimeOffset> SendBanRequest = new NetCall<ulong, ulong, string, int, DateTimeOffset>(ReceiveBanRequest);
@@ -1251,6 +1403,7 @@ public static class OffenseManager
         public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendWarnRequest = new NetCall<ulong, ulong, string, DateTimeOffset>(ReceiveWarnRequest);
         public static readonly NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset> SendMuteRequest = new NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset>(ReceieveMuteRequest);
         public static readonly NetCall<ulong, ulong, DateTimeOffset> SendUnmuteRequest = new NetCall<ulong, ulong, DateTimeOffset>(ReceieveUnmuteRequest);
+        public static readonly NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool> SendIPWhitelistRequest = new NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool>(ReceieveIPWhitelistRequest);
         public static readonly NetCall<ulong> GrantAdminRequest = new NetCall<ulong>(ReceiveGrantAdmin);
         public static readonly NetCall<ulong> RevokeAdminRequest = new NetCall<ulong>(ReceiveRevokeAdmin);
         public static readonly NetCall<ulong> GrantInternRequest = new NetCall<ulong>(ReceiveGrantIntern);
@@ -1267,6 +1420,7 @@ public static class OffenseManager
         public static readonly NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset> SendPlayerMuted = new NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset>(1027);
         public static readonly NetCall<ulong, ushort, string, DateTimeOffset> SendVehicleTeamkilled = new NetCall<ulong, ushort, string, DateTimeOffset>(1112);
         public static readonly NetCall<ulong, ulong, DateTimeOffset> SendPlayerUnmuted = new NetCall<ulong, ulong, DateTimeOffset>(1020);
+        public static readonly NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool> SendPlayerIPWhitelisted = new NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool>(1025);
 
         [NetCall(ENetCall.FROM_SERVER, 1007)]
         internal static async Task ReceiveBanRequest(MessageContext context, ulong target, ulong admin, string reason, int duration, DateTimeOffset timestamp)
@@ -1301,6 +1455,12 @@ public static class OffenseManager
         {
             await UCWarfare.ToUpdate();
             context.Acknowledge(await UnmutePlayerAsync(target, admin, timestamp));
+        }
+        [NetCall(ENetCall.FROM_SERVER, 1026)]
+        internal static async Task ReceieveIPWhitelistRequest(MessageContext context, ulong target, ulong admin, DateTimeOffset timestamp, uint ip, byte mask, bool add)
+        {
+            await UCWarfare.ToUpdate();
+            context.Acknowledge(await WhitelistIP(target, admin, new IPv4Range(ip, mask), add, timestamp));
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1011)]

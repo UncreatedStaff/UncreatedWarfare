@@ -40,7 +40,7 @@ public class SignTextChanged : EventState
             m.WriteWait();
             try
             {
-                if (save.Item != null)
+                if (save!.Item != null)
                 {
                     _buildable = save.Item.Buildable;
                     IsSaved = true;

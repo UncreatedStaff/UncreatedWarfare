@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using SDG.Framework.Utilities;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Players;
@@ -1950,7 +1951,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             if (value.type == DynamicValueType.Constant)
             {
                 _value = value.constant;
-                if (Level.isLoaded)
+                if (Level.isLoading)
                 {
                     _valueCache = Assets.find<TAsset>(_value);
                     _areValuesCached = _valueCache is not null;
@@ -1965,7 +1966,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                 if (_behavior == ChoiceBehavior.Selective)
                 {
                     _value = value.set.Length == 1 ? value.set.Set[0] : value.set.Set[UnityEngine.Random.Range(0, value.set.Length)];
-                    if (Level.isLoaded)
+                    if (Level.isLoading)
                     {
                         _valueCache = Assets.find<TAsset>(_value);
                         _areValuesCached = _valueCache is not null;
@@ -1987,23 +1988,26 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                             hasNull = true;
                         else _valuesCache[i] = asset;
                     }
-                    _areValuesCached = !hasNull || Level.isLoaded;
+                    _areValuesCached = !hasNull || Level.isLoading;
                 }
             }
             else if (value.type == DynamicValueType.Wildcard && value._choiceBehavior == ChoiceBehavior.Selective)
             {
-                if (Level.isLoaded)
+                if (Level.isLoading)
                 {
-                    TAsset[] assets = Assets.find(_assetType).OfType<TAsset>().ToArray();
-                    if (assets.Length == 1)
+                    List<TAsset> assets = ListPool<TAsset>.claim();
+                    try
                     {
-                        _valueCache = assets[0];
+                        Assets.find(assets);
+                        if (assets.Count == 1)
+                            _valueCache = assets[0];
+                        else
+                            _valueCache = assets[UnityEngine.Random.Range(0, assets.Count)];
                         _value = _valueCache.GUID;
                     }
-                    else
+                    finally
                     {
-                        _valueCache = assets[UnityEngine.Random.Range(0, assets.Length)];
-                        _value = _valueCache.GUID;
+                        ListPool<TAsset>.release(assets);
                     }
                     _areValuesCached = true;
                 }
@@ -2015,7 +2019,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             else
             {
                 _value = value.constant;
-                if (Level.isLoaded)
+                if (Level.isLoading)
                 {
                     _valueCache = Assets.find<TAsset>(_value);
                     _areValuesCached = _valueCache is not null;
@@ -2036,7 +2040,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             {
                 TAsset[] values = new TAsset[_values!.Length];
                 for (int i = 0; i < values.Length; i++)
-                    values[i] = (!Level.isLoaded ? null : Assets.find<TAsset>(_values[i]))!;
+                    values[i] = (!Level.isLoading ? null : Assets.find<TAsset>(_values[i]))!;
                 return values;
             }
             return _valuesCache!;

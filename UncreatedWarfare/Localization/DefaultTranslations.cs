@@ -13,6 +13,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
@@ -23,6 +24,7 @@ using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+using Uncreated.Networking;
 
 namespace Uncreated.Warfare;
 internal static class T
@@ -835,7 +837,7 @@ internal static class T
     public static readonly Translation<Squad> SquadDisbanded        = new Translation<Squad>("<#a7a8a5>{0} squad was disbanded.", Squad.FormatColorName);
     public static readonly Translation SquadLockedSquad             = new Translation("<#a7a8a5>You <#6be888>locked</color> your squad.");
     public static readonly Translation SquadUnlockedSquad           = new Translation("<#999e90>You <#fff>unlocked</color> your squad.");
-    public static readonly Translation<Squad> SquadPromoted         = new Translation<Squad>("<#999e90>You're now the <#cedcde>sqauad leader</color> of {0}.", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadPromoted         = new Translation<Squad>("<#999e90>You're now the <#cedcde>squad leader</color> of {0}.", Squad.FormatColorName);
     public static readonly Translation<Squad> SquadKicked           = new Translation<Squad>("<#ae8f8f>You were kicked from {0} squad.", Squad.FormatColorName);
     public static readonly Translation<string> SquadNotFound        = new Translation<string>("<#ae8f8f>Failed to find a squad called \"<#c$neutral$>{0}</color>\". You can also use the first letter of the squad name.");
     public static readonly Translation SquadAlreadyInSquad          = new Translation("<#ae8f8f>You're already in a squad.");
@@ -1189,6 +1191,12 @@ internal static class T
     public static readonly Translation UnmuteSuccessDMOperator                  = new Translation("<#ffff00>An operator unmuted you.");
     #endregion
 
+    #region IPWhitelist
+    public static readonly Translation<IPlayer, IPv4Range> IPWhitelistSuccess = new Translation<IPlayer, IPv4Range>("<#00ffff>Whitelisted the IP range: <#9cffb3>{1}</color> for {0}.");
+    public static readonly Translation<IPlayer, IPv4Range> IPUnwhitelistSuccess = new Translation<IPlayer, IPv4Range>("<#00ffff>Unwhitelisted the IP range: <#9cffb3>{1}</color> for {0}.");
+    public static readonly Translation<IPlayer, IPv4Range> IPWhitelistNotFound = new Translation<IPlayer, IPv4Range>("<#b3a6a2>The IP range: <#9cffb3>{1}</color> is not whitelisted for {0}.");
+    #endregion
+
     #region Duty Command
     public static readonly Translation DutyOnFeedback            = new Translation("<#c6d4b8>You are now <#95ff4a>on duty</color>.");
     public static readonly Translation DutyOffFeedback           = new Translation("<#c6d4b8>You are now <#ff8c4a>off duty</color>.");
@@ -1476,8 +1484,6 @@ internal static class T
     #endregion
     #region Trait Interactions
     private const string SectionTraitInteractions = "Traits / Interactions";
-    [TranslationData(SectionTraitInteractions, "Sent to players with Bad Omen when there's an enemy mortar incoming on a toast.", "Seconds out")]
-    public static readonly Translation<float> BadOmenMortarWarning = new Translation<float>("Mortar incoming in <color=#c$points$>{0}</color> seconds.", TranslationFlags.UnityUI, "F0");
     [TranslationData(SectionTraitInteractions, "Sent when the player consumes their self-revive.", "Self-revive trait data.")]
     public static readonly Translation<TraitData> TraitUsedSelfRevive = new Translation<TraitData>("<#c$trait$>{0}</color> <#d97568>consumed</color>.", TraitData.FormatName);
     [TranslationData(SectionTraitInteractions, "Sent when the player tries to use their self-revive on cooldown.", "Self-revive trait data.", "Time string")]

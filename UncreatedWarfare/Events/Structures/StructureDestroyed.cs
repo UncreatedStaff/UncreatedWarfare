@@ -51,7 +51,7 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
             m.WriteWait();
             try
             {
-                if (save.Item != null)
+                if (save!.Item != null)
                 {
                     _buildable = save.Item.Buildable;
                     _wasSaved = true;

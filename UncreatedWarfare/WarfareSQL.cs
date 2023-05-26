@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
+using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Levels;
@@ -53,6 +54,11 @@ public class WarfareSQL : MySqlDatabase
     public const string TableLoginData = "logindata";
     public const string TableIPAddresses = "ip_addresses";
     public const string TableHWIDs = "hwids";
+    public const string TableIPWhitelists = "ip_whitelists";
+
+    public const string ColumnIPWhitelistsSteam64 = "Steam64";
+    public const string ColumnIPWhitelistsIPRange = "IPRange";
+    public const string ColumnIPWhitelistsAdmin = "Admin";
 
     public const string ColumnUsernamesSteam64 = "Steam64";
     public const string ColumnUsernamesPlayerName = "PlayerName";
@@ -487,7 +493,13 @@ public class WarfareSQL : MySqlDatabase
             {
                 Nullable = true
             },
-        }, true, null)
+        }, true, null),
+        new Schema(TableIPWhitelists, new Schema.Column[]
+        {
+            new Schema.Column(ColumnIPWhitelistsSteam64, SqlTypes.STEAM_64),
+            new Schema.Column(ColumnIPWhitelistsAdmin, SqlTypes.STEAM_64),
+            new Schema.Column(ColumnIPWhitelistsIPRange, SqlTypes.String(18))
+        }, true, typeof(IPv4Range))
     };
     public async Task<PlayerNames> GetUsernamesAsync(ulong s64, CancellationToken token = default)
     {

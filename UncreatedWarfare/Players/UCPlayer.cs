@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -22,8 +22,8 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Ranks;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
@@ -55,6 +55,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
     public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UIMuted, false, false);
     public static readonly UnturnedUI LoadingUI = new UnturnedUI(15624, Gamemode.Config.UILoading, false, false, false);
+    public static readonly UnturnedUI MortarWarningUI = new UnturnedUI(15625, Gamemode.Config.UIIncomingMortarWarning, true, false, false);
     /*
      * There can never be more than one semaphore per player (even if they've gone offline)
      * as this object will get reused until the finalizer runs, so don't save the semaphore outside of a sync local scope.
@@ -103,6 +104,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     internal byte PointsDirtyMask = 0b00111111;
     internal bool HasTicketUI = false;
     internal bool HasFOBUI = false;
+    internal int MortarWarningCount = 0;
     private readonly CancellationTokenSource _disconnectTokenSrc;
     private int _multVersion = -1;
     private bool _isTalking;
@@ -151,6 +153,17 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         }
         Keys = new UCPlayerKeys(this);
         Events = new UCPlayerEvents(this);
+
+        try
+        {
+            IPAddress address = player.channel.owner.transportConnection.GetAddress();
+            UsingRemotePlay = OffenseManager.IsRemotePlay(address);
+        }
+        catch (Exception ex)
+        {
+            L.LogWarning("Error getting IP address.");
+            L.LogError(ex);
+        }
     }
     ~UCPlayer()
     {
@@ -202,6 +215,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public ITransportConnection Connection => Player.channel.owner.transportConnection!;
     public EffectAsset? LastPing { get; internal set; }
     public ulong? ViewLens { get; set; }
+    public bool UsingRemotePlay { get; }
     ulong IPlayer.Steam64 => Steam64;
     public bool IsAdmin => Player.channel.owner.isAdmin;
     public bool IsTeam1 => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;

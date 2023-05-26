@@ -1,6 +1,8 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using SDG.Framework.Utilities;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Kits;
@@ -54,18 +56,50 @@ public class ICommand : Command
         if (ctx.MatchParameter(0, "ammo") && ctx.Caller.Player.equipment.useable is UseableGun)
         {
             // held item
-            ItemJar item = ctx.Caller.Player.inventory.items[ctx.Caller.Player.equipment.equippedPage].getItem(
-                ctx.Caller.Player.inventory.items[ctx.Caller.Player.equipment.equippedPage]
-                    .getIndex(ctx.Caller.Player.equipment.equipped_x, ctx.Caller.Player.equipment.equipped_y));
-            if (item != null && item.item.GetAsset() is ItemGunAsset gun)
+            ItemGunAsset? gunAsset = null;
+            byte[]? state = null;
+            if (!ctx.Caller.Player.equipment.isTurret)
             {
-                ushort oldItem = BitConverter.ToUInt16(item.item.state, (int)AttachmentType.Magazine);
+                ItemJar item = ctx.Caller.Player.inventory.items[ctx.Caller.Player.equipment.equippedPage].getItem(
+                    ctx.Caller.Player.inventory.items[ctx.Caller.Player.equipment.equippedPage]
+                        .getIndex(ctx.Caller.Player.equipment.equipped_x, ctx.Caller.Player.equipment.equipped_y));
+                if (item != null && item.item.GetAsset() is ItemGunAsset gun2)
+                {
+                    gunAsset = gun2;
+                    state = item.item.state;
+                }
+            }
+            // turret
+            else
+            {
+                InteractableVehicle? vehicle = ctx.Caller.Player.movement.getVehicle();
+                byte seat = ctx.Caller.Player.movement.getSeat();
+                if (vehicle != null && vehicle.passengers[seat].turret != null)
+                {
+                    state = vehicle.passengers[seat].state;
+                    gunAsset = ctx.Caller.Player.equipment.asset as ItemGunAsset;
+                }
+            }
+            if (state != null && gunAsset != null)
+            {
+                ushort oldItem = BitConverter.ToUInt16(state, (int)AttachmentType.Magazine);
                 if (Assets.find(EAssetType.ITEM, oldItem) is ItemMagazineAsset magAsset)
                     asset = magAsset;
-                else if (Assets.find(EAssetType.ITEM, gun.getMagazineID()) is ItemMagazineAsset magAsset2)
+                else if (Assets.find(EAssetType.ITEM, gunAsset.getMagazineID()) is ItemMagazineAsset magAsset2)
                     asset = magAsset2;
                 else
-                    asset = Assets.find(EAssetType.ITEM).OfType<ItemMagazineAsset>().FirstOrDefault(x => x.calibers.Any(y => gun.magazineCalibers.Contains(y)));
+                {
+                    List<ItemMagazineAsset> mags = ListPool<ItemMagazineAsset>.claim();
+                    try
+                    {
+                        Assets.find(mags);
+                        asset = mags.FirstOrDefault(x => x.calibers.Any(y => gunAsset.magazineCalibers.Contains(y)));
+                    }
+                    finally
+                    {
+                        ListPool<ItemMagazineAsset>.release(mags);
+                    }
+                }
                 itemSt = Array.Empty<byte>();
                 if (asset != null)
                     itemAmt = asset.amount;

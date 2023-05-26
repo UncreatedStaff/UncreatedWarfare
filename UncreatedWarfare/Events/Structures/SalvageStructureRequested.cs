@@ -25,7 +25,7 @@ public sealed class SalvageStructureRequested : SalvageRequested
             m.WriteWait();
             try
             {
-                if (save.Item != null)
+                if (save!.Item != null)
                 {
                     BuildableCache = save.Item.Buildable;
                     IsStructureSaved = true;

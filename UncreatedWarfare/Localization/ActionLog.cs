@@ -896,8 +896,10 @@ public enum ActionLogType : byte
     UpgradeLoadout,
     [Translatable("UNLOCK_LOADOUT")]
     UnlockLoadout,
+    [Translatable("IP_WHITELIST")]
+    IPWhitelist,
 
     [Obsolete("Don't use this.")]
-    Max = UnlockLoadout
+    Max = IPWhitelist
 }
 // ReSharper restore InconsistentNaming

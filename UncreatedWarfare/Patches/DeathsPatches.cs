@@ -23,7 +23,7 @@ public static partial class Patches
     [HarmonyPatch]
     public static class DeathsPatches
     {
-        internal static GameObject lastProjected;
+        internal static GameObject? lastProjected;
         // SDG.Unturned.UseableGun
 
         /// <summary>
@@ -49,6 +49,8 @@ public static partial class Patches
                     UCWarfare.I.Solver.GetLandingPoint(lastProjected, origin, direction, __instance, OnMortarLandingPointFound);
                 }
             }
+
+            lastProjected = null;
         }
 
         private static void OnMortarLandingPointFound(Player? owner, Vector3 position, float impactTime, ItemGunAsset gun, ItemMagazineAsset? ammoType)
@@ -63,16 +65,9 @@ public static partial class Patches
 
             if (data == null) return;
 
-            UCPlayer? player = UCPlayer.FromPlayer(owner!);
+            UCPlayer? player = UCPlayer.FromPlayer(owner);
             if (player != null)
-            {
-                if (data.Emplacement!.ShouldWarnEnemies)
-                    BadOmen.WarnEnemies(player, position, impactTime, gun, ammoType);
-
-                if (data.Emplacement!.ShouldWarnFriendlies)
-                    BadOmen.WarnFreindlies(player, position, impactTime, gun, ammoType);
-            }
-
+                BadOmen.TryWarn(player, position, impactTime, gun, ammoType, data.Emplacement!.ShouldWarnFriendlies, data.Emplacement!.ShouldWarnEnemies);
         }
 
         // SDG.Unturned.Bumper

@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.Traits.Buffs;
 public class BadOmen : Buff
 {
     private static TraitData? DATA;
-    public static TraitData DefaultData = new TraitData()
+    public static TraitData DefaultData = new TraitData
     {
         TypeName = nameof(BadOmen),
         NameTranslations = new TranslationList("Bad Omen"),
@@ -63,82 +63,81 @@ public class BadOmen : Buff
         TraitData? d = DATA ??= TraitManager.GetData(typeof(BadOmen));
         return d != null && TraitManager.IsAffected(d, player, out _);
     }
-    public static void WarnEnemies(UCPlayer owner, Vector3 position, float impactTime, ItemGunAsset gun, ItemMagazineAsset? ammoType)
+    public static void TryWarn(UCPlayer owner, Vector3 position, float impactTime, ItemGunAsset gun, ItemMagazineAsset? ammoType, bool warnFriendlies, bool warnEnemies)
     {
-        UCWarfare.I.StartCoroutine(WarnEnemiesCoroutine(owner, position, impactTime, gun, ammoType));
+        if (!warnEnemies && !warnFriendlies)
+            return;
+        UCWarfare.I.StartCoroutine(WarnCoroutine(owner, position, impactTime, gun, ammoType, warnFriendlies, warnEnemies));
     }
 
-    private static IEnumerator WarnEnemiesCoroutine(UCPlayer owner, Vector3 position, float impactTime, ItemGunAsset gun, ItemMagazineAsset? ammoType)
+    private static IEnumerator WarnCoroutine(UCPlayer owner, Vector3 position, float impactTime, ItemGunAsset gun, ItemMagazineAsset? ammoType, bool warnFriendlies, bool warnEnemies)
     {
-        float secsLeft = impactTime - Time.realtimeSinceStartup;
-
         float blastRadius = gun.range;
         if (ammoType != null)
             blastRadius *= ammoType.projectileBlastRadiusMultiplier;
         blastRadius += 5;
         blastRadius *= blastRadius;
-        List<ulong> warned = new List<ulong>(8);
+        List<UCPlayer> warned = new List<UCPlayer>(8);
         ulong team = owner.GetTeam();
-        while (impactTime - Time.realtimeSinceStartup >= 0f)
+        float secsLeft = impactTime - Time.realtimeSinceStartup;
+        while (secsLeft >= 0f)
         {
             for (int j = 0; j < PlayerManager.OnlinePlayers.Count; ++j)
             {
                 UCPlayer target = PlayerManager.OnlinePlayers[j];
-                if (team == target.GetTeam())
+                bool friendly = team == target.GetTeam();
+                if (friendly)
+                {
+                    if (!warnFriendlies)
+                        continue;
+                }
+                else if (!warnEnemies)
                     continue;
+
                 if ((target.Position - position).sqrMagnitude < blastRadius)
                 {
                     L.LogDebug("[BAD OMEN] Checking " + target.Name.PlayerName);
-                    if (!warned.Contains(target.Steam64))
+                    if (!warned.Contains(target))
                     {
-                        float warnTime = GetBadOmenWarn(target);
+                        float warnTime = !friendly ? GetBadOmenWarn(target) : float.PositiveInfinity;
                         L.LogDebug("[BAD OMEN] warning " + target.Name.PlayerName + ", warn time: " + warnTime);
-                        if (warnTime > 0f && secsLeft <= warnTime)
+                        if (friendly || warnTime > 0f && secsLeft <= warnTime)
                         {
-                            WarnPlayer(target, secsLeft);
-                            warned.Add(target.Steam64);
+                            WarnPlayer(target);
+                            warned.Add(target);
                         }
                     }
+                }
+                else if (warned.RemoveFast(target))
+                {
+                    Clear(target);
                 }
             }
             yield return new WaitForSecondsRealtime(1f);
             secsLeft = impactTime - Time.realtimeSinceStartup;
         }
-    }
-    private static void WarnPlayer(UCPlayer player, float timeLeft)
-    {
-        ToastMessage msg = new ToastMessage(T.BadOmenMortarWarning.Translate(player, timeLeft), ToastMessageSeverity.Severe);
-        ToastMessage.QueueMessage(player, msg, true);
-        L.Log("Warning " + player.Name.PlayerName + " for incoming mortar " + timeLeft + " seconds out.");
-        player.Player.StartCoroutine(WarnTimer(player, timeLeft, msg));
-    }
-    private static IEnumerator WarnTimer(UCPlayer player, float timeLeft, ToastMessage msg)
-    {
-        float endTime = Time.realtimeSinceStartup + timeLeft;
-        uint id = msg.InstanceID;
-        UCPlayerData.ToastMessageInfo info = UCPlayerData.ToastMessageInfo.Nil;
-        for (int i = 0; i < UCPlayerData.Toasts.Length; i++)
+        for (int i = 0; i < warned.Count; ++i)
         {
-            if (UCPlayerData.Toasts[i].Type == msg.Severity)
+            Clear(warned[i]);
+        }
+
+        void Clear(UCPlayer player)
+        {
+            if (!player.IsOnline) return;
+            L.LogDebug("[BAD OMEN] Clearing " + player.Name.PlayerName);
+            ++player.MortarWarningCount;
+            if (player.MortarWarningCount >= 0)
             {
-                info = UCPlayerData.Toasts[i];
-                break;
+                player.MortarWarningCount = 0;
+                UCPlayer.MortarWarningUI.ClearFromPlayer(player.Connection);
             }
         }
-        if (info.Guid == Guid.Empty)
-            yield break;
-        if (player.Player.TryGetPlayerData(out UCPlayerData data))
-        {
-            float t;
-            while ((t = endTime - Time.realtimeSinceStartup) >= 0f)
-            {
-                if (data.Channels[info.Channel].Message.InstanceID != id)
-                    yield break;
-                EffectManager.sendUIEffectText(unchecked((short)info.Id), player.Connection, true, "Text", T.BadOmenMortarWarning.Translate(player, t));
-                yield return new WaitForSecondsRealtime(1f);
-            }
-            EffectManager.askEffectClearByID(info.Id, player.Connection);
-        }
+    }
+    private static void WarnPlayer(UCPlayer player)
+    {
+        --player.MortarWarningCount;
+        if (player.MortarWarningCount == -1)
+            UCPlayer.MortarWarningUI.SendToPlayer(player.Connection);
     }
     private static float GetBadOmenWarn(UCPlayer player)
     {
@@ -155,10 +154,5 @@ public class BadOmen : Buff
         }
 
         return highest;
-    }
-
-    internal static void WarnFreindlies(UCPlayer player, Vector3 position, float impactTime, ItemGunAsset gun, ItemMagazineAsset ammoType)
-    {
-        return;
     }
 }

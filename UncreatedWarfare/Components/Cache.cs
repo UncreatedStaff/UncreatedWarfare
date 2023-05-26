@@ -265,7 +265,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
                     if (pos2 == Vector3.zero) continue;
                     if (team == Team)
                     {
-                        if ((pos2 - pos).sqrMagnitude < rad)
+                        if (!pl.Player.life.isDead && (pos2 - pos).sqrMagnitude < rad)
                         {
                             if (!_cache.NearbyDefenders.HasPlayer(pl))
                             {
@@ -278,7 +278,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
                     }
                     else if (team is > 0 and < 3)
                     {
-                        if ((pos2 - pos).sqrMagnitude < rad)
+                        if (!pl.Player.life.isDead && (pos2 - pos).sqrMagnitude < rad)
                         {
                             if (!_cache.NearbyAttackers.HasPlayer(pl))
                             {
