@@ -34,7 +34,10 @@ public sealed class IPv4AddressRangeFilter : IIPAddressFilter
             for (int i = 0; i < ranges.Length; ++i)
             {
                 if (ranges[i].InRange(ips[j]))
+                {
                     ips.RemoveAt(j);
+                    break;
+                }
             }
         }
     }

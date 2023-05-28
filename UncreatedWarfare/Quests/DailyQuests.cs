@@ -1,7 +1,6 @@
 ﻿using HarmonyLib;
 using SDG.Unturned;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -13,13 +12,11 @@ using Uncreated.Framework;
 using Uncreated.Framework.Quests;
 using Uncreated.Json;
 using Uncreated.Networking;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Quests;
 
 public static class DailyQuests
 {
-    private static InstanceSetter<AssetOrigin, bool>? SetOverrideIDs;
     private const ulong DailyQuestsWorkshopID = 2773379635ul;
     public static BaseQuestData[] DailyQuestDatas = new BaseQuestData[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
     public static IQuestState[] States = new IQuestState[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
@@ -30,7 +27,6 @@ public static class DailyQuests
     private static int _index;
     private static bool _sendHrNotif;
     private static bool _hasRead;
-    private static Coroutine? _loadingAssetsCoroutine;
     public static TimeSpan TimeLeftForQuests => DateTime.Now - _nextRefresh;
     public static void OnConnectedToServer()
     {
@@ -43,11 +39,6 @@ public static class DailyQuests
         name = "Daily Quests",
         workshopFileId = DailyQuestsWorkshopID
     };
-    static DailyQuests()
-    {
-        SetOverrideIDs = Util.GenerateInstanceSetter<AssetOrigin, bool>("shouldAssetsOverrideExistingIds", BindingFlags.NonPublic);
-        SetOverrideIDs.Invoke(QuestModOrigin, true);
-    }
     public static void EarlyLoad()
     {
         MethodInfo? m = typeof(Provider).GetMethod("onDedicatedUGCInstalled", BindingFlags.NonPublic | BindingFlags.Static);
@@ -255,7 +246,7 @@ public static class DailyQuests
             int rndPick;
             while (true)
             {
-                exists:;
+            exists:;
                 rndPick = UnityEngine.Random.Range(0, QuestManager.Quests.Count);
                 for (int p = 0; p < i; ++p)
                 {
@@ -786,29 +777,23 @@ public static class DailyQuests
     {
         string p = Path.Combine(QuestManager.QUEST_FOLDER, "DailyQuests", DailyQuest.WORKSHOP_FILE_NAME) + Path.DirectorySeparatorChar;
         L.Log("Loading assets from \"" + p + "\"...", ConsoleColor.Magenta);
-        if (_loadingAssetsCoroutine != null)
-        {
-            UCWarfare.I.StopCoroutine(_loadingAssetsCoroutine);
-            _loadingAssetsCoroutine = null;
-        }
-
         if (!Directory.Exists(p))
+        {
             L.LogError("Directory doesn't exist!");
+        }
         else
-            _loadingAssetsCoroutine = UCWarfare.I.StartCoroutine(LoadAssets(p));
-    }
-    private static IEnumerator LoadAssets(string path)
-    {
-        while (Assets.isLoading)
-            yield return null;
+        {
+            string parent = Path.Combine(p, "NPCs", "Quests");
+            for (int i = 0; i < DailyQuest.DAILY_QUEST_LENGTH; ++i)
+            {
+                string path = Path.Combine(parent, "DailyQuest" + i.ToString(CultureInfo.InvariantCulture), "DailyQuest" + i.ToString(CultureInfo.InvariantCulture) + ".dat");
+                UCAssetManager.TryLoadAsset(path, QuestModOrigin);
+            }
 
-        Assets.RequestAddSearchLocation(path, QuestModOrigin);
-        yield return null;
-        yield return new WaitForEndOfFrame();
-        while (Assets.isLoading) yield return null;
-        _loadingAssetsCoroutine = null;
-        L.Log("Assets loaded", ConsoleColor.Magenta);
-        PrintQuests();
+            UCAssetManager.SyncAssetsFromOrigin(QuestModOrigin);
+            L.Log("Assets loaded", ConsoleColor.Magenta);
+            PrintQuests();
+        }
     }
 
     public static class NetCalls
