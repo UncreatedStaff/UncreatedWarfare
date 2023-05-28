@@ -398,17 +398,26 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     private void InternalPreDispose()
     {
-        if (StagingPhaseTimer is not null)
-            StopCoroutine(StagingPhaseTimer);
-        if (State == State.Staging)
+        try
         {
-            StagingSeconds = 0;
-            EndStagingPhase();
-            StagingPhaseTimer = null;
+            if (StagingPhaseTimer is not null)
+                StopCoroutine(StagingPhaseTimer);
+            if (State == State.Staging)
+            {
+                StagingSeconds = 0;
+                EndStagingPhase();
+                StagingPhaseTimer = null;
+            }
+
+            if (this is IImplementsLeaderboard { Leaderboard: MonoBehaviour { isActiveAndEnabled: true } b })
+            {
+                Destroy(b);
+            }
         }
-        if (this is IImplementsLeaderboard { Leaderboard: MonoBehaviour { isActiveAndEnabled: true } b } lb)
+        catch (Exception ex)
         {
-            Destroy(b);
+            L.LogError("Error in Insurgency Dispose.");
+            L.LogError(ex);
         }
     }
     private async Task InternalOnReady(CancellationToken token = default)
