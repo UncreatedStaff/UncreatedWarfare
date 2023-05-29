@@ -1226,10 +1226,12 @@ public class Translation
             FileInfo info = new FileInfo(Path.Combine(langFolder.FullName, LocalFileName));
             if (!info.Exists) continue;
             string lang = langFolder.Name;
+            bool isDefault = false;
             if (lang.Equals(L.Default, StringComparison.OrdinalIgnoreCase))
             {
                 lang = L.Default;
                 defRead = true;
+                isDefault = true;
             }
             else
             {
@@ -1317,7 +1319,7 @@ public class Translation
                 }
             }
 
-            WriteLanguage(lang);
+            WriteLanguage(lang, isDefault);
             L.Log("Loaded " + amt + " translations for " + lang + ".", ConsoleColor.Magenta);
             amt = 0;
         }
@@ -1364,7 +1366,7 @@ public class Translation
 
         writer.Flush();
     }
-    private static void WriteLanguage(string language)
+    private static void WriteLanguage(string language, bool writeAll = false)
     {
         DirectoryInfo dir = new DirectoryInfo(Path.Combine(Data.Paths.LangStorage, language));
         if (!dir.Exists)
@@ -1375,13 +1377,20 @@ public class Translation
         string? lastSection = null;
         foreach (Translation t in T.Translations.OrderBy(x => x.AttributeData?.Section ?? "~", StringComparer.OrdinalIgnoreCase))
         {
-            if (t._data is null) continue;
             string? val = null;
-            for (int i = 0; i < t._data.Length; ++i)
+            if (t._data != null)
             {
-                if (t._data[i].Language.Equals(language, StringComparison.Ordinal))
-                    val = t._data[i].Original;
+                for (int i = 0; i < t._data.Length; ++i)
+                {
+                    if (t._data[i].Language.Equals(language, StringComparison.Ordinal))
+                        val = t._data[i].Original;
+                }
             }
+            if (val == null && writeAll && t._defaultData != null)
+            {
+                val = t._defaultData.Original;
+            }
+            
             if (val is not null)
                 WriteTranslation(writer, t, val, ref lastSection);
         }

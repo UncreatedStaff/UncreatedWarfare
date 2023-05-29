@@ -16,7 +16,7 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
     protected List<TStats>? StatsTeam2;
     bool[]? _vcStateT1;
     bool[]? _vcStateT2;
-    internal readonly ConventionalLeaderboardUI LeaderboardUI = new ConventionalLeaderboardUI();
+    internal static readonly ConventionalLeaderboardUI LeaderboardUI = new ConventionalLeaderboardUI();
     protected override UnturnedUI UI => LeaderboardUI;
     protected StatValue[] LeaderboardOverrides { get; set; } = Array.Empty<StatValue>();
     protected StatValue[] WarStatOverrides { get; set; } = Array.Empty<StatValue>();
