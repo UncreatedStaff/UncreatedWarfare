@@ -569,93 +569,93 @@ internal static class Localization
     }
     public static string TranslateMessage(string language, DeathMessageArgs args)
     {
+        language ??= L.Default;
         if (string.IsNullOrEmpty(args.ItemName)) args.Flags &= ~DeathFlags.Item;
         if (string.IsNullOrEmpty(args.Item2Name)) args.Flags &= ~DeathFlags.Item2;
         if (string.IsNullOrEmpty(args.KillerName)) args.Flags &= ~DeathFlags.Killer;
         if (string.IsNullOrEmpty(args.Player3Name)) args.Flags &= ~DeathFlags.Player3;
-        DeathCause[] causes;
         bool isDefault = false;
-        if (DeathTranslations.Count == 0)
+        if (DeathTranslations.Count == 0 || (!DeathTranslations.TryGetValue(language, out DeathCause[] causes) && (L.Default.Equals(language) || !DeathTranslations.TryGetValue(L.Default, out causes))))
         {
             isDefault = true;
             causes = DefaultValues;
         }
-        else DeathTranslations.TryGetValue(language, out causes);
+
         if (causes is null)
             return Warfare.Localization.TranslateEnum(args.DeathCause, language) + " Dead: " + args.DeadPlayerName;
         rtn:
-        int i = FindDeathCause(causes, ref args);
-        if (i == -1)
-        {
-            if (language.Equals(L.Default, StringComparison.Ordinal))
-            {
-                isDefault = true;
-                causes = DefaultValues;
-            }
-            else
-                DeathTranslations.TryGetValue(L.Default, out causes);
-            i = FindDeathCause(causes!, ref args);
-            if (i == -1)
-                return Warfare.Localization.TranslateEnum(args.DeathCause, language) + " Dead: " + args.DeadPlayerName;
-        }
+        int i = FindDeathCause(language, causes, ref args);
 
         DeathCause cause = causes![i];
         string? val = Translate(language, cause, args);
         if (val is null)
         {
-            if (isDefault) return Warfare.Localization.TranslateEnum(args.DeathCause, language) + " Dead: " + args.DeadPlayerName;
+            if (isDefault)
+                return Warfare.Localization.TranslateEnum(args.DeathCause, language) + " Dead: " + args.DeadPlayerName;
             causes = DefaultValues;
             isDefault = true;
             goto rtn;
         }
         return val;
     }
-    private static int FindDeathCause(DeathCause[] causes, ref DeathMessageArgs args)
+
+    private static int FindDeathCause(string lang, DeathCause[] causes, ref DeathMessageArgs args)
     {
-        Guid guid;
-        bool item = (guid = args.ItemGuid) != default;
-        string? specKey = args.SpecialKey;
-        if (specKey is not null)
+        while (true)
         {
+            Guid guid;
+            bool item = (guid = args.ItemGuid) != default;
+            string? specKey = args.SpecialKey;
+            if (specKey is not null)
+            {
+                for (int i = 0; i < causes.Length; ++i)
+                {
+                    DeathCause cause = causes[i];
+                    if (cause.CustomKey is not null && cause.CustomKey.Equals(specKey, StringComparison.Ordinal)) return i;
+                }
+            }
+
+            if (item)
+            {
+                if (args.ItemIsVehicle)
+                {
+                    for (int i = 0; i < causes.Length; ++i)
+                    {
+                        DeathCause cause = causes[i];
+                        if (cause.VehicleCause.HasValue && cause.VehicleCause.Value.IsMatch(guid)) return i;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < causes.Length; ++i)
+                    {
+                        DeathCause cause = causes[i];
+                        if (cause.ItemCause.HasValue && cause.ItemCause.Value.IsMatch(guid)) return i;
+                    }
+                }
+            }
+
+            EDeathCause cause2 = args.DeathCause;
             for (int i = 0; i < causes.Length; ++i)
             {
                 DeathCause cause = causes[i];
-                if (cause.CustomKey is not null && cause.CustomKey.Equals(specKey, StringComparison.Ordinal))
-                    return i;
+                if (cause.Cause.HasValue && cause.Cause == cause2) return i;
             }
-        }
-        if (item)
-        {
-            if (args.ItemIsVehicle)
+            if (!L.Default.Equals(lang) && DeathTranslations.TryGetValue(L.Default, out causes))
             {
-                for (int i = 0; i < causes.Length; ++i)
-                {
-                    DeathCause cause = causes[i];
-                    if (cause.VehicleCause.HasValue && cause.VehicleCause.Value.IsMatch(guid))
-                        return i;
-                }
+                lang = L.Default;
+                continue;
             }
-            else
+            if (causes != DefaultValues)
             {
-                for (int i = 0; i < causes.Length; ++i)
-                {
-                    DeathCause cause = causes[i];
-                    if (cause.ItemCause.HasValue && cause.ItemCause.Value.IsMatch(guid))
-                        return i;
-                }
+                causes = DefaultValues;
+                continue;
             }
-        }
 
-        EDeathCause cause2 = args.DeathCause;
-        for (int i = 0; i < causes.Length; ++i)
-        {
-            DeathCause cause = causes[i];
-            if (cause.Cause.HasValue && cause.Cause == cause2)
-                return i;
+            return -1;
         }
-
-        return -1;
     }
+
     private static string? Translate(string language, DeathCause cause, DeathMessageArgs args)
     {
         DeathFlags flags = args.Flags;
