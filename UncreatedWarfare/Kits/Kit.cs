@@ -1803,17 +1803,17 @@ public readonly struct ItemDropTransformation
 }
 
 /// <summary>Max field character limit: <see cref="KitEx.SquadLevelMaxCharLimit"/>.</summary>
-[Translatable("Squad Level")]
+[Translatable("Squad Level", Description = "Rank level associated with a Kit.")]
 public enum SquadLevel : byte
 {
-    [Translatable("Member")]
+    [Translatable("Member", Description = "Normal member.")]
     Member = 0,
-    [Translatable("Commander")]
+    [Translatable("Commander", Description = "Can request UAVs.")]
     Commander = 4
 }
 
 /// <summary>Max field character limit: <see cref="KitEx.BranchMaxCharLimit"/>.</summary>
-[Translatable("Branch")]
+[Translatable("Branch", Description = "Branch or section of the military the kit falls into.")]
 public enum Branch : byte
 {
     Default,
@@ -1844,12 +1844,16 @@ public enum ClothingType : byte
 }
 
 /// <summary>Max field character limit: <see cref="KitEx.TypeMaxCharLimit"/>.</summary>
-[Translatable("Kit Type")]
+[Translatable("Kit Type", Description = "Determines kit request behavior.")]
 public enum KitType : byte
 {
+    [Translatable("Public", Description = "Free kits or kits bought with in-game credits.")]
     Public,
+    [Translatable("Elite", Description = "Pre-made kits bought with real money.")]
     Elite,
+    [Translatable("Special", Description = "Exclusive kits won through events or other means.")]
     Special,
+    [Translatable("Loadout", Description = "Custom kits bought with real money.")]
     Loadout
 }
 
@@ -1862,7 +1866,7 @@ public enum KitAccessType : byte
     QuestReward
 }
 
-[Translatable]
+[Translatable(Description = "Common items represented by a redirect Id.")]
 /// <summary>Max field character limit: <see cref="KitEx.RedirectTypeCharLimit"/>.</summary>
 public enum RedirectType : byte
 {
@@ -1905,9 +1909,11 @@ public enum RedirectType : byte
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "FOB 地堡")]
     [Translatable("FOB Bunker")]
     Bunker,
+    [Translatable("Vehicle Bay")]
     VehicleBay,
     [Translatable("Entrenching Tool")]
     EntrenchingTool,
+    [Translatable("UAV", Description = "Unmanned Aerial Vehicle")]
     UAV,
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "建造维修站")]
     [Translatable("Built Repair Station")]
@@ -1918,13 +1924,19 @@ public enum RedirectType : byte
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "建造FOB地堡")]
     [Translatable("Built FOB Bunker")]
     BunkerBuilt,
+    [Translatable("Insurgency Cache")]
     Cache,
+    [Translatable("Damaged Radio")]
     RadioDamaged,
     [Translatable("Laser Designator")]
     LaserDesignator,
+    [Translatable("Generic Ammo", IsPrioritizedTranslation = false)]
     StandardAmmoIcon,
+    [Translatable("Generic Knife", IsPrioritizedTranslation = false)]
     StandardMeleeIcon,
+    [Translatable("Generic Grenade", IsPrioritizedTranslation = false)]
     StandardGrenadeIcon,
+    [Translatable("Generic Smoke Grenade", IsPrioritizedTranslation = false)]
     StandardSmokeGrenadeIcon,
 }
 public enum Page : byte

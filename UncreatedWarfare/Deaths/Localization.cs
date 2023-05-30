@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using Uncreated.Framework;
 using Uncreated.Json;
@@ -513,6 +514,123 @@ internal static class Localization
         else
             ActionLog.Add(ActionLogType.Death, log, e.Player.Steam64);
     }
+    private const string JsonComment = @"/*
+This file details all the different combinations of attributes that form a death message.
+These attributes are represented by 6 formatting arguments:
+
+ • None = death with little to no extra info.
+ • Item = the primary item that killed the player is known.
+ • Item2 = a secondary item that killed the player is known.
+ • NoDistance = don't show the distance in the killfeed. This is used mainly when a player crashes a vehicle so the distance doesn't show up as 0
+ • Killer = a player at fault is known, this isn't filled in for suicides
+ • Player3 = a third player involved is known
+ • Suicide = the dead player is at fault
+ • Bleeding = the death happened after bleeding out
+
+ • Always present
+{0} = Dead player's name
+
+ • Present when 'Killer' is in argument list, if the killer is the dead player 'Suicide' will be in the argument list instead
+{1} = Killer's name
+
+ • Present in gun and melee deaths
+{2} = Limb name
+
+ • Present when 'Item' is in argument list
+{3} = Item Name
+
+ • Present unless 'NoDistance' is in the argument list
+{4} = Kill Distance
+
+ • Present when 'Player3' is in the argument list. This player is used for some special cases:
+  ○ Landmines (Killer = placer of landmine, Player3 = person that triggered it)
+  ○ Vehicle (Killer = person that blew up the vehicle (sometimes the driver), Player3 = driver)
+  ○ Gun (Killer = original shooter, Player3 = driver of vehicle if on a turret)
+  ○ Splash damage (Killer = original shooter, Player3 = driver of vehicle if on a turret)
+{5} = Player 3
+
+ • present when 'Item2' is in the argument list
+  ○ Gun (Item = original gun, Item2 = vehicle if shot from a turret)
+  ○ Splash damage (Item = original gun, Item2 = vehicle if shot from a turret)
+  ○ Landmines (Item = original landmine, Item2 = throwable item used to trigger landmine)
+  ○ Sentry (Item = original sentry, Item2 = gun held by sentry)
+  ○ Vehicle (Item = original vehicle, Item2 = item used to destroy the vehicle (gun, explosive, etc))
+{6} = Item 2
+
+The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for the mortar
+*/
+
+";
+    public static void Write(string? path, string? language, bool writeMissing)
+    {
+        language ??= L.Default;
+        if (path == null)
+        {
+            path = Path.Combine(Data.Paths.LangStorage, L.Default);
+            F.CheckDir(path, out bool folderIsThere);
+            if (!folderIsThere)
+                return;
+            path = Path.Combine(path, "deaths.json");
+        }
+
+        if (!DeathTranslations.TryGetValue(language, out DeathCause[] causes) && (language.IsDefault() || !DeathTranslations.TryGetValue(L.Default, out causes)))
+            causes = DefaultValues;
+        List<DeathCause> causesFull = new List<DeathCause>(causes);
+        if (causes != DefaultValues && writeMissing)
+        {
+            for (int i = 0; i < DefaultValues.Length; ++i)
+            {
+                DeathCause current = DefaultValues[i];
+                int existingIndex = causesFull.FindIndex(x => x.Equals(current));
+                if (existingIndex < 0)
+                {
+                    causesFull.Add(current);
+                }
+                else
+                {
+                    DeathCause? existing = causesFull[existingIndex];
+                    List<DeathTranslation>? existingTranslations = null;
+                    for (int j = 0; j < current.Translations.Length; ++j)
+                    {
+                        bool found = false;
+                        ref DeathTranslation t = ref current.Translations[j];
+                        for (int k = 0; k < existing.Translations.Length; ++k)
+                        {
+                            ref DeathTranslation t2 = ref existing.Translations[k];
+                            if (t2.Flags == t.Flags)
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found)
+                        {
+                            (existingTranslations ??= new List<DeathTranslation>(4)).Add(t);
+                        }
+                    }
+                    if (existingTranslations != null)
+                    {
+                        causesFull[existingIndex] = existing = (DeathCause)existing.Clone();
+                        DeathTranslation[] newArr = new DeathTranslation[existing.Translations.Length + existingTranslations.Count];
+                        Array.Copy(existing.Translations, 0, newArr, 0, existing.Translations.Length);
+                        existingTranslations.CopyTo(newArr, existing.Translations.Length);
+                        existing.Translations = newArr;
+                    }
+                }
+            }
+        }
+        using FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        byte[] comment = System.Text.Encoding.UTF8.GetBytes(JsonComment);
+        stream.Write(comment, 0, comment.Length);
+        Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+        writer.WriteStartArray();
+        for (int i = 0; i < causesFull.Count; ++i)
+        {
+            causesFull[i].WriteJson(writer);
+        }
+        writer.WriteEndArray();
+        writer.Dispose();
+    }
     internal static void Reload()
     {
         string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
@@ -524,6 +642,8 @@ internal static class Localization
             if (!File.Exists(directory))
             {
                 using FileStream stream = File.Create(directory);
+                byte[] comment = System.Text.Encoding.UTF8.GetBytes(JsonComment);
+                stream.Write(comment, 0, comment.Length);
                 Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                 writer.WriteStartArray();
                 for (int i = 0; i < DefaultValues.Length; ++i)
@@ -761,7 +881,7 @@ public struct DeathMessageArgs
     }
 }
 
-public class DeathCause : IJsonReadWrite
+public class DeathCause : IJsonReadWrite, IEquatable<DeathCause>, ICloneable
 {
     public EDeathCause? Cause;
     public DynamicAssetValue<ItemAsset>.Choice? ItemCause;
@@ -771,6 +891,14 @@ public class DeathCause : IJsonReadWrite
 
     public DeathCause() { }
 
+    private DeathCause(EDeathCause? cause, DynamicAssetValue<ItemAsset>.Choice? itemCause, DynamicAssetValue<VehicleAsset>.Choice? vehicleCause, string? customKey, DeathTranslation[] translations)
+    {
+        Cause = cause;
+        ItemCause = itemCause;
+        VehicleCause = vehicleCause;
+        CustomKey = customKey;
+        Translations = translations;
+    }
     public DeathCause(EDeathCause cause)
     {
         this.Cause = cause;
@@ -889,6 +1017,37 @@ public class DeathCause : IJsonReadWrite
         }
         writer.WriteEndObject();
         writer.WriteEndObject();
+    }
+
+    public override bool Equals(object obj) => obj is DeathCause c && Equals(c);
+    public object Clone()
+    {
+        DeathTranslation[] newTranslations = new DeathTranslation[Translations.Length];
+        Array.Copy(Translations, 0, newTranslations, 0, newTranslations.Length);
+        return new DeathCause(Cause, ItemCause, VehicleCause, CustomKey, newTranslations);
+    }
+
+    public bool Equals(DeathCause other)
+    {
+        if (ReferenceEquals(this, other)) return true;
+        if (other is null) return false;
+
+        if (other.Cause.HasValue != Cause.HasValue)
+            return false;
+        if (other.Cause.HasValue && other.Cause.Value != Cause!.Value)
+            return false;
+
+        if (other.ItemCause.HasValue != ItemCause.HasValue)
+            return false;
+        if (other.ItemCause.HasValue && !other.ItemCause.Value.Equals(ItemCause!.Value))
+            return false;
+
+        if (other.VehicleCause.HasValue != VehicleCause.HasValue)
+            return false;
+        if (other.VehicleCause.HasValue && !other.VehicleCause.Value.Equals(VehicleCause!.Value))
+            return false;
+
+        return string.Equals(other.CustomKey, CustomKey, StringComparison.Ordinal);
     }
 }
 public readonly struct DeathTranslation

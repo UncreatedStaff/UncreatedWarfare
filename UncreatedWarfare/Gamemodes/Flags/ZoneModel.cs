@@ -192,7 +192,7 @@ public enum ZoneType : byte
     Rectangle = 2,
     Polygon = 4
 }
-[Translatable("Use Case")]
+[Translatable("Use Case", IsPrioritizedTranslation = false)]
 public enum ZoneUseCase : byte
 {
     [Translatable("Unknown")]

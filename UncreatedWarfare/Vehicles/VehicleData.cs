@@ -412,10 +412,10 @@ public class VBarricade : IListSubItem
     }
 }
 
-[Translatable("Vehicle Type")]
+[Translatable("Vehicle Type", Description = "Variant of vehicle, influences death messages, XP toasts, and spotting icons.")]
 public enum VehicleType
 {
-    [Translatable("Unknown")]
+    [Translatable("Unknown", IsPrioritizedTranslation = false)]
     None,
     [Translatable(LanguageAliasSet.RUSSIAN, "Хамви")]
     [Translatable(LanguageAliasSet.SPANISH, "Humvee")]
@@ -487,6 +487,7 @@ public enum VehicleType
     [Translatable(LanguageAliasSet.ROMANIAN, "Amplasament")]
     [Translatable(LanguageAliasSet.PORTUGUESE, "Emplacamento")]
     [Translatable(LanguageAliasSet.POLISH, "Fortyfikacja")]
+    [Translatable("Emplacement", IsPrioritizedTranslation = false)]
     [Obsolete("Use the individual emplacement types instead.", true)]
     Emplacement,
     [Translatable(LanguageAliasSet.RUSSIAN, "зенитный")]

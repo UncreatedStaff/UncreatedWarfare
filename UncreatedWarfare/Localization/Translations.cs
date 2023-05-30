@@ -3,6 +3,7 @@ using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -12,7 +13,11 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Uncreated.Framework;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Traits;
 using UnityEngine;
 using Action = System.Action;
 
@@ -32,6 +37,7 @@ public class Translation
     private readonly TranslationValue _defaultData;
     private TranslationValue[]? _data;
     private bool _init;
+    public readonly int? DeclarationLineNumber;
     public string Key;
     public int Id;
     public static event Action? OnReload;
@@ -46,6 +52,28 @@ public class Translation
     {
         _defaultData = new TranslationValue(L.Default, @default, _flags);
         ProcessValue(_defaultData, Flags);
+
+        // gets the declaration line number from the static constructor
+        try
+        {
+            StackTrace trace = new StackTrace(1, true);
+            StackFrame[] frames = trace.GetFrames()!;
+            for (int i = 0; i < frames.Length; ++i)
+            {
+                StackFrame frame = frames[i];
+                if (frame.GetMethod() is { } method && method.DeclaringType == typeof(T))
+                {
+                    DeclarationLineNumber = frame.GetFileLineNumber();
+                    break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            L.Log("Error getting line number:");
+            L.LogError(ex);
+            DeclarationLineNumber = null;
+        }
     }
     internal void Dump()
     {
@@ -1235,16 +1263,19 @@ public class Translation
             }
             else
             {
-                foreach (LanguageAliasSet set in Data.LanguageAliases)
+                if (!lang.Equals("Export", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    if (set.key.Equals(lang, StringComparison.OrdinalIgnoreCase))
+                    foreach (LanguageAliasSet set in Data.LanguageAliases)
                     {
-                        lang = set.key;
-                        goto foundLanguage;
+                        if (set.key.Equals(lang, StringComparison.OrdinalIgnoreCase))
+                        {
+                            lang = set.key;
+                            goto foundLanguage;
+                        }
                     }
-                }
 
-                L.LogWarning("Unknown language: " + lang + ", skipping directory.");
+                    L.LogWarning("Unknown language: " + lang + ", skipping directory.");
+                }
                 continue;
             }
 
@@ -1319,7 +1350,7 @@ public class Translation
                 }
             }
 
-            WriteLanguage(lang, isDefault);
+            WriteLanguage(lang, null, writeAll: isDefault);
             L.Log("Loaded " + amt + " translations for " + lang + ".", ConsoleColor.Magenta);
             amt = 0;
         }
@@ -1366,17 +1397,23 @@ public class Translation
 
         writer.Flush();
     }
-    private static void WriteLanguage(string language, bool writeAll = false)
+    private static void WriteLanguage(string language, string? path = null, bool writeAll = false, bool missingOnly = false, bool excludeNonPrioritized = false)
     {
-        DirectoryInfo dir = new DirectoryInfo(Path.Combine(Data.Paths.LangStorage, language));
-        if (!dir.Exists)
-            dir.Create();
-        FileInfo info = new FileInfo(Path.Combine(dir.FullName, LocalFileName));
-        using FileStream str = new FileStream(info.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
-        using StreamWriter writer = new StreamWriter(str);
+        if (path == null)
+        {
+            DirectoryInfo dir = new DirectoryInfo(Path.Combine(Data.Paths.LangStorage, language));
+            if (!dir.Exists)
+                dir.Create();
+            FileInfo info = new FileInfo(Path.Combine(dir.FullName, LocalFileName));
+            path = info.FullName;
+        }
+        using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        using StreamWriter writer = new StreamWriter(str, System.Text.Encoding.UTF8);
         string? lastSection = null;
         foreach (Translation t in T.Translations.OrderBy(x => x.AttributeData?.Section ?? "~", StringComparer.OrdinalIgnoreCase))
         {
+            if (excludeNonPrioritized && t.AttributeData is { IsPrioritizedTranslation: false })
+                continue;
             string? val = null;
             if (t._data != null)
             {
@@ -1386,6 +1423,9 @@ public class Translation
                         val = t._data[i].Original;
                 }
             }
+
+            if (missingOnly && val != null)
+                continue;
             if (val == null && writeAll && t._defaultData != null)
             {
                 val = t._defaultData.Original;
@@ -1396,6 +1436,120 @@ public class Translation
         }
 
         writer.Flush();
+    }
+
+    private static byte[]? _exportReadmeUtf8;
+    private static byte[] ExportReadmeUTF8 => _exportReadmeUtf8 ??= System.Text.Encoding.UTF8.GetBytes(
+@"# Files
+## Enums (Folder)
+Enums (enumerations) are a list of text values that correspond represent an option. For example, you could have an enum for direction:
+```cs
+enum Direction
+{
+    North,
+    South,
+    East,
+    West
+}
+```
+Some enums have translations, all of which are in the Enums folder. The **%NAME%** option is the name of the enum. In English, the name of this one would be ""Direction"". Each value also has an option.
+<br>See **JSON** section below.
+
+## translations.properties
+Primary translations file. Contains the main translations used for chat messages, UI, etc.
+<br>See **properties** section below.
+
+## factions.properties
+Contains the faction translations, including names, short names, and abbreviations.
+<br>See **properties** section below.
+
+## kits.properties
+Contains the kit sign text translations.
+<br>\<br> is used as a line break for sign texts, causing the name to go on two lines.
+<br>See **properties** section below.
+
+## traits.properties
+Contains the trait sign text and description translations.
+<br>See **properties** section below.
+
+## deaths.json
+Stores all possible death messages for each set of available data/flags.
+<br>There is a comment at the beginning of the file explaining the flags.
+<br>See **JSON** section below.
+
+## readme.md
+This file.
+
+# Properties
+Use IDE Format: **Java Properties** available.
+<br>Anything starting with a **!** or a **#** is a comment, and ignored by the file reader.
+```properties
+# Comment
+! Comment
+Key: Value
+```
+Keys should be left as is, and values should be translated.
+
+# JSON
+Use IDE Format: **JSONC**, or **JSON** if JSONC is not available.
+<br>Anything starting with a **//** or between **/\*** and **\*/** is a comment, and ignored by the file reader.
+```jsonc
+/*
+    Multi-line
+    comment
+*/
+{
+    /* Comment */
+    ""key1"": ""value1"",
+    // Comment
+    ""key2"": ""value2"",
+}
+```
+Keys should be left as is, and values should be translated.<br>
+For deaths, the `death-cause`, `custom-key`, `item-cause`, and `vehicle-cause` key/value pairs should not be translated.
+
+# Rich Text
+We use rich text to format our translations. The most common you'll see is \<color> tags, but there are others (\<b>, \<i>, \<sub>).
+<br>These should not be removed.
+
+Example:
+```properties
+# Description: Sent when a player tries to abandon a damaged vehicle.
+# Formatting Arguments:
+#  {0} - [InteractableVehicle]
+# Default Value: <#ff8c69>Your <#cedcde>{0}</color> is damaged, repair it before returning it to the yard.
+AbandonDamaged: <#ff8c69>Al tau <#cedcde>{0}</color> este deteriorat, reparal inainte sa il returnezi.
+```
+Notice how the default value was translated but the rich text tags were left.
+<br>More info about rich text here: [TMPro Documentation](http://digitalnativestudios.com/textmeshpro/docs/rich-text/).
+
+# Formatting Arguments
+Also notice the `{n}` formatting placeholders. These are replaced by translation arguments, which are sometimes explained in the comments above.
+```properties
+#  {n} - [Type] (Formatting) Description
+```
+
+# Other
+Please leave in-game terms such as **FOB**, **Rally**, **Build**, **Ammo**, and other item names in English."
+);
+    public static void ExportLanguage(string? language, bool missingOnly, bool excludeNonPrioritized)
+    {
+        language ??= L.Default;
+        ReloadCommand.ReloadTranslations();
+
+        DirectoryInfo dir = new DirectoryInfo(Path.Combine(Data.Paths.LangStorage, "Export"));
+        if (dir.Exists)
+            dir.Delete(true);
+        dir.Create();
+        FileInfo file = new FileInfo(Path.Combine(dir.FullName, LocalFileName));
+        WriteLanguage(language, file.FullName, true, missingOnly, excludeNonPrioritized);
+        Deaths.Localization.Write(Path.Combine(dir.FullName, "deaths.json"), language, true);
+        Localization.WriteEnums(language, Path.Combine(dir.FullName, "Enums"), true, true);
+        KitEx.WriteKitLocalization(language, Path.Combine(dir.FullName, "kits.properties"), true);
+        TeamManager.WriteFactionLocalization(language, Path.Combine(dir.FullName, "factions.properties"), true);
+        TraitManager.WriteTraitLocalization(language, Path.Combine(dir.FullName, "traits.properties"), true);
+        using FileStream str = new FileStream(Path.Combine(dir.FullName, "README.md"), FileMode.Create, FileAccess.Write, FileShare.Read);
+        str.Write(ExportReadmeUTF8, 0, ExportReadmeUTF8.Length);
     }
     private static void WriteTranslation(StreamWriter writer, Translation t, string val, ref string? lastSection)
     {
@@ -2581,55 +2735,47 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
 [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
 public sealed class TranslationDataAttribute : Attribute
 {
-    private string? _signId;
-    private string? _description;
-    private string? _section;
-    private string[]? _formatArgs;
-    private bool _announcerTranslation;
     public TranslationDataAttribute()
     {
 
     }
     public TranslationDataAttribute(string section)
     {
-        _section = section;
+        Section = section;
     }
     public TranslationDataAttribute(string section, string description, params string[] parameters)
     {
-        _section = section;
-        _description = description;
+        Section = section;
+        Description = description;
         for (int i = 0; i < parameters.Length; ++i)
         {
             parameters[i] ??= string.Empty;
         }
 
-        _formatArgs = parameters;
+        FormattingDescriptions = parameters;
     }
-    public string? SignId { get => _signId; set => _signId = value; }
-    public string? Description { get => _description; set => _description = value; }
-    public string? Section { get => _section; set => _section = value; }
-    public string[]? FormattingDescriptions { get => _formatArgs; set => _formatArgs = value; }
-    public bool IsAnnounced { get => _announcerTranslation; set => _announcerTranslation = value; }
+    public string? SignId { get; set; }
+    public string? Description { get; set; }
+    public string? Section { get; set; }
+    public string[]? FormattingDescriptions { get; set; }
+    public bool IsAnnounced { get; set; }
+    public bool IsPrioritizedTranslation { get; set; } = true;
 }
 
 [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = true)]
 public sealed class FormatDisplayAttribute : Attribute
 {
-    private readonly string _displayName;
-    private readonly Type? _forType;
-    private readonly bool _typeSupplied;
     public FormatDisplayAttribute(string displayName)
     {
-        _displayName = displayName;
+        DisplayName = displayName;
     }
     public FormatDisplayAttribute(Type? forType, string displayName)
     {
-        _displayName = displayName;
-        _typeSupplied = true;
-        _forType = forType;
+        DisplayName = displayName;
+        TypeSupplied = true;
+        TargetType = forType;
     }
-
-    public string DisplayName => _displayName;
-    public bool TypeSupplied => _typeSupplied;
-    public Type? TargetType => _forType;
+    public string DisplayName { get; }
+    public bool TypeSupplied { get; }
+    public Type? TargetType { get; }
 }

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -1694,6 +1695,90 @@ public static class TeamManager
             _factionsReadonly = _factions.AsReadOnly();
         }
         return FactionInfo.DownloadFactions(Data.AdminSql, _factions, token);
+    }
+    public static void WriteFactionLocalization(string language, string path, bool writeMising)
+    {
+        language ??= L.Default;
+        
+        using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        using StreamWriter writer = new StreamWriter(str, System.Text.Encoding.UTF8);
+        writer.WriteLine("# Kit Name Translations");
+        writer.WriteLine("#  <br> = new line on signs");
+        writer.WriteLine();
+        for (int i = 0; i < _factions.Count; i++)
+        {
+            if (WriteFactionIntl(_factions[i], language, writer, writeMising) && i != _factions.Count - 1)
+                writer.WriteLine();
+        }
+    }
+    private static bool WriteFactionIntl(FactionInfo faction, string language, StreamWriter writer, bool writeMising)
+    {
+        bool isDefault = language.IsDefault();
+        FactionInfo? defaultFaction = Array.Find(DefaultFactions, x => x.PrimaryKey.Key == faction.PrimaryKey.Key);
+
+        GetValue(faction.NameTranslations, defaultFaction?.NameTranslations, out string? nameValue, out bool isNameValueDefault);
+        GetValue(faction.ShortNameTranslations, defaultFaction?.ShortNameTranslations, out string? shortNameValue, out bool isShortNameValueDefault);
+        GetValue(faction.AbbreviationTranslations, defaultFaction?.AbbreviationTranslations, out string? abbreviationValue, out bool isAbbreviationNameValueDefault);
+
+        if (!writeMising && isNameValueDefault && isShortNameValueDefault && isAbbreviationNameValueDefault)
+            return false;
+
+        writer.WriteLine("# " + faction.GetName(L.Default) + " (ID: " + faction.FactionId + ", #" + faction.PrimaryKey.Key.ToString(CultureInfo.InvariantCulture) + ")");
+        if (faction.Name != null)
+            writer.WriteLine("#  Name:         " + faction.Name);
+        if (faction.ShortName != null)
+            writer.WriteLine("#  Short Name:   " + faction.ShortName);
+        if (faction.Abbreviation != null)
+            writer.WriteLine("#  Abbreviation: " + faction.Abbreviation);
+        if (!string.IsNullOrEmpty(faction.FlagImageURL))
+            writer.WriteLine("#  Flag:         " + faction.FlagImageURL);
+
+        if (writeMising || !isNameValueDefault)
+        {
+            if (!isNameValueDefault)
+                writer.WriteLine("# Default: " + faction.GetName(L.Default));
+            writer.WriteLine("Name: " + (nameValue ?? faction.Name ?? defaultFaction?.Name ?? faction.FactionId));
+        }
+        if (writeMising || !isShortNameValueDefault)
+        {
+            if (!isShortNameValueDefault)
+                writer.WriteLine("# Default: " + faction.GetShortName(L.Default));
+            writer.WriteLine("ShortName: " + (shortNameValue ?? faction.ShortName ?? defaultFaction?.ShortName ?? faction.FactionId));
+        }
+        if (writeMising || !isAbbreviationNameValueDefault)
+        {
+            if (!isAbbreviationNameValueDefault)
+                writer.WriteLine("# Default: " + faction.GetAbbreviation(L.Default));
+            writer.WriteLine("Abbreviation: " + (abbreviationValue ?? faction.Abbreviation ?? defaultFaction?.Abbreviation ?? faction.FactionId));
+        }
+        return true;
+
+        void GetValue(Dictionary<string, string>? loaded, Dictionary<string, string>? @default, out string? value, out bool isDefaultValue)
+        {
+            value = null;
+            if (loaded != null)
+            {
+                if (loaded.TryGetValue(language, out value))
+                    isDefaultValue = isDefault;
+                else if (!isDefault && loaded.TryGetValue(L.Default, out value))
+                    isDefaultValue = true;
+                else if (@default != null && @default.TryGetValue(language, out value))
+                    isDefaultValue = isDefault;
+                else if (@default != null && !isDefault && @default.TryGetValue(L.Default, out value))
+                    isDefaultValue = true;
+                else
+                {
+                    value = faction.Name ?? faction.FactionId;
+                    isDefaultValue = true;
+                }
+            }
+            else if (@default != null && @default.TryGetValue(language, out value))
+                isDefaultValue = isDefault;
+            else if (@default != null && !isDefault && @default.TryGetValue(L.Default, out value))
+                isDefaultValue = true;
+            else
+                isDefaultValue = true;
+        }
     }
 }
 public class FactionInfo : ITranslationArgument, IListItem, ICloneable

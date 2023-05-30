@@ -1,6 +1,8 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Reflection;
 using System.Text.Json;
 using Uncreated.Json;
@@ -648,5 +650,76 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
     void ITimeSyncListener.TimeSync(float time)
     {
         TraitSigns.TimeSync();
+    }
+    public static void WriteTraitLocalization(string language, string path, bool writeMising)
+    {
+        if (Singleton == null)
+            return;
+        language ??= L.Default;
+
+        using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        using StreamWriter writer = new StreamWriter(str, System.Text.Encoding.UTF8);
+        writer.WriteLine("# Trait Translations");
+        writer.WriteLine("#  <br> = new line on signs");
+        writer.WriteLine();
+        for (int i = 0; i < Singleton.Count; i++)
+        {
+            if (WriteTraitIntl(Singleton[i], language, writer, writeMising) && i != Singleton.Count - 1)
+                writer.WriteLine();
+        }
+    }
+    private static bool WriteTraitIntl(TraitData trait, string language, StreamWriter writer, bool writeMising)
+    {
+        bool isDefault = language.IsDefault();
+        TraitData? defaultFaction = Array.Find(DefaultTraits, x => x.Type == trait.Type);
+
+        GetValue(trait.NameTranslations, defaultFaction?.NameTranslations, out string? nameValue, out bool isNameValueDefault);
+        GetValue(trait.DescriptionTranslations, defaultFaction?.DescriptionTranslations, out string? descValue, out bool isDescValueDefault);
+
+        if (!writeMising && isNameValueDefault && isDescValueDefault)
+            return false;
+
+        writer.WriteLine("# " + trait.NameTranslations.Translate(L.Default).Replace("\r", string.Empty).Replace('\n', ' ') + " (ID: " + trait.TypeName + ")");
+
+        if (writeMising || !isNameValueDefault)
+        {
+            if (!isNameValueDefault)
+                writer.WriteLine("# Default: " + trait.NameTranslations.Translate(L.Default));
+            writer.WriteLine("Name: " + (nameValue?.Replace("\r", string.Empty).Replace("\n", "<br>") ?? trait.TypeName));
+        }
+        if (writeMising || !isDescValueDefault)
+        {
+            if (!isNameValueDefault)
+                writer.WriteLine("# Default: " + trait.DescriptionTranslations.Translate(L.Default));
+            writer.WriteLine("Description: " + (descValue?.Replace("\r", string.Empty).Replace("\n", "<br>") ?? string.Empty));
+        }
+
+        return true;
+        void GetValue(TranslationList? loaded, TranslationList? @default, out string? value, out bool isDefaultValue)
+        {
+            value = null;
+            if (loaded != null)
+            {
+                if (loaded.TryGetValue(language, out value))
+                    isDefaultValue = isDefault;
+                else if (!isDefault && loaded.TryGetValue(L.Default, out value))
+                    isDefaultValue = true;
+                else if (@default != null && @default.TryGetValue(language, out value))
+                    isDefaultValue = isDefault;
+                else if (@default != null && !isDefault && @default.TryGetValue(L.Default, out value))
+                    isDefaultValue = true;
+                else
+                {
+                    value = trait.TypeName;
+                    isDefaultValue = true;
+                }
+            }
+            else if (@default != null && @default.TryGetValue(language, out value))
+                isDefaultValue = isDefault;
+            else if (@default != null && !isDefault && @default.TryGetValue(L.Default, out value))
+                isDefaultValue = true;
+            else
+                isDefaultValue = true;
+        }
     }
 }

@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
@@ -660,6 +661,7 @@ public class ActionLog : MonoBehaviour
 }
 
 // Add a Translatable attribute in all caps format and update ActionLogType.Max if you add a log type
+[Translatable(IsPrioritizedTranslation = false)]
 public enum ActionLogType : byte
 {
     [Translatable("NONE")]
@@ -899,6 +901,8 @@ public enum ActionLogType : byte
     [Translatable("IP_WHITELIST")]
     IPWhitelist,
 
+    [JsonIgnore]
+    [Translatable(IsPrioritizedTranslation = false)]
     [Obsolete("Don't use this.")]
     Max = IPWhitelist
 }

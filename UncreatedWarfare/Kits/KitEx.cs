@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,6 +31,75 @@ public static class KitEx
     public const int WeaponTextMaxCharLimit = 128;
     public const int SignTextMaxCharLimit = 50;
     public const int MaxStateArrayLimit = 18;
+    public static void WriteKitLocalization(string language, string path, bool writeMising)
+    {
+        language ??= L.Default;
+        KitManager? manager = KitManager.GetSingletonQuick();
+        if (manager == null)
+            return;
+
+        manager.WriteWait();
+        try
+        {
+            using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+            using StreamWriter writer = new StreamWriter(str, System.Text.Encoding.UTF8);
+            writer.WriteLine("# Kit Name Translations");
+            writer.WriteLine("#  <br> = new line on signs");
+            writer.WriteLine();
+            for (int i = 0; i < manager.Items.Count; i++)
+            {
+                SqlItem<Kit> proxy = manager.Items[i];
+                Kit? kit = proxy.Item;
+                if (kit == null || kit.Type == KitType.Loadout || kit.Class <= Class.Unarmed)
+                    continue;
+                if (WriteKitIntl(kit, language, writer, writeMising) && i != manager.Items.Count - 1)
+                    writer.WriteLine();
+            }
+        }
+        finally
+        {
+            manager.WriteRelease();
+        }
+    }
+    private static bool WriteKitIntl(Kit kit, string language, StreamWriter writer, bool writeMising)
+    {
+        bool isDefault = language.IsDefault();
+        bool isDefaultValue = false;
+        string? value = null;
+        if (kit.SignText != null)
+        {
+            isDefaultValue = !kit.SignText.TryGetValue(language, out value);
+            if (isDefaultValue && !isDefault && writeMising)
+                kit.SignText.TryGetValue(L.Default, out value);
+        }
+        if (value == null)
+        {
+            if (!writeMising)
+                return false;
+            isDefaultValue = true;
+            value = kit.Id;
+        }
+
+        string? @default = null;
+        kit.SignText?.TryGetValue(L.Default, out @default);
+        if (@default != null)
+            @default = @default.Replace("\r", string.Empty).Replace("\n", "<br>");
+        value = value.Replace("\r", string.Empty).Replace("\n", "<br>");
+        writer.WriteLine("# " + kit.GetDisplayName(L.Default) + " (ID: " + kit.Id + ")");
+        if (kit.WeaponText != null)
+            writer.WriteLine("#  Weapons: " + kit.WeaponText);
+        writer.WriteLine("#  Class:   " + Localization.TranslateEnum(kit.Class, L.Default));
+        writer.WriteLine("#  Type:    " + Localization.TranslateEnum(kit.Type, L.Default));
+        FactionInfo? factionInfo = kit.Faction;
+        if (factionInfo != null)
+            writer.WriteLine("#  Faction: " + factionInfo.GetName(L.Default));
+        if (!isDefaultValue && @default != null)
+        {
+            writer.WriteLine("# Default: \"" + @default + "\".");
+        }
+        writer.WriteLine(kit.Id + ": " + value);
+        return true;
+    }
     public static void UpdateLastEdited(this Kit kit, ulong player)
     {
         if (Util.IsValidSteam64Id(player))

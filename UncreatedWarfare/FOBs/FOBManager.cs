@@ -1507,13 +1507,15 @@ public class EmplacementData
     public bool ShouldWarnEnemies;
 }
 
-[Translatable("Buildable Type")]
+[Translatable("Buildable Type", Description = "Buildable types for FOB buildings.")]
 public enum BuildableType
 {
     Bunker,
     AmmoCrate,
     RepairStation,
+    [Translatable("Fortification", Description = "Barricade or Structure buildables that do not fall into another category.")]
     Fortification,
+    [Translatable("Emplacement", Description = "Vehicle buildables.")]
     Emplacement,
     Radio
 }

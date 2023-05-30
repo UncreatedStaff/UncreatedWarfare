@@ -19,7 +19,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Quests;
 
-[Translatable("Weapon Class")]
+[Translatable("Weapon Class", IsPrioritizedTranslation = false)]
 public enum WeaponClass : byte
 {
     Unknown,
@@ -43,7 +43,7 @@ public enum WeaponClass : byte
     [Translatable("SMG")]
     SMG
 }
-[Translatable("Quest Type")]
+[Translatable("Quest Type", Description = "Display names of quests.", IsPrioritizedTranslation = false)]
 public enum QuestType : byte
 {
     Invalid,
@@ -854,7 +854,7 @@ public static class QuestJsonEx
     }
 }
 /// <summary>Datatype storing either a constant <see cref="int"/>, a <see cref="IntegralRange"/> or a <see cref="IntegralSet"/>.</summary>
-public readonly struct DynamicIntegerValue : IDynamicValue<int>
+public readonly struct DynamicIntegerValue : IDynamicValue<int>, IEquatable<DynamicIntegerValue>
 {
     internal readonly int constant;
     internal readonly IntegralRange range;
@@ -928,6 +928,41 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
     public IDynamicValue<int>.IChoice GetValue()
     {
         return new Choice(this);
+    }
+    public override bool Equals(object obj) => obj is DynamicIntegerValue c && Equals(in c);
+    bool IEquatable<DynamicIntegerValue>.Equals(DynamicIntegerValue other) => Equals(in other);
+    public bool Equals(in DynamicIntegerValue other)
+    {
+        if (other._choiceBehavior != _choiceBehavior || other.type != type)
+            return false;
+
+        if (type == DynamicValueType.Wildcard)
+            return true;
+
+        if (type == DynamicValueType.Set)
+        {
+            if (set.Length != other.set.Length)
+                return false;
+            for (int i = 0; i < set.Length; ++i)
+            {
+                if (set.Set[i] == other.set.Set[i])
+                    return false;
+            }
+
+            return true;
+        }
+        if (type == DynamicValueType.Range)
+        {
+            if (range.IsInfiniteMax != other.range.IsInfiniteMax || range.IsInfiniteMin != other.range.IsInfiniteMin)
+                return false;
+            if (!range.IsInfiniteMax && range.Maximum != other.range.Maximum)
+                return false;
+            return range.IsInfiniteMin || range.Minimum == other.range.Minimum;
+        }
+        if (type == DynamicValueType.Constant)
+            return constant == other.Constant;
+
+        return false;
     }
     public override string ToString()
     {
@@ -1003,6 +1038,40 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
             _type = default;
             _behavior = default;
             FromValue(ref value);
+        }
+        public override bool Equals(object obj) => obj is Choice c && Equals(in c);
+        public bool Equals(in Choice other)
+        {
+            if (other._behavior != _behavior || other._type != _type)
+                return false;
+
+            if (_type == DynamicValueType.Wildcard)
+                return true;
+
+            if (_behavior == ChoiceBehavior.Selective || _type == DynamicValueType.Constant)
+            {
+                return _value == other._value;
+            }
+
+            if (_type == DynamicValueType.Range)
+            {
+                return _minVal == other._minVal && _maxVal == other._maxVal;
+            }
+
+            if (_type == DynamicValueType.Set && _values != null && other._values != null)
+            {
+                if (_values.Length != other._values.Length)
+                    return false;
+                for (int i = 0; i < _values.Length; ++i)
+                {
+                    if (_values[i] != other._values[i])
+                        return false;
+                }
+
+                return true;
+            }
+
+            return false;
         }
         private void FromValue(ref DynamicIntegerValue value)
         {
@@ -1162,7 +1231,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
 }
 
 /// <summary>Datatype storing either a constant <see cref="float"/>, a <see cref="FloatRange"/> or a <see cref="FloatSet"/>.</summary>
-public readonly struct DynamicFloatValue : IDynamicValue<float>
+public readonly struct DynamicFloatValue : IDynamicValue<float>, IEquatable<DynamicFloatValue>
 {
     private readonly float _constant;
     public float Constant => _constant;
@@ -1238,6 +1307,41 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         choice.Read(ref reader);
         return choice;
     }
+    bool IEquatable<DynamicFloatValue>.Equals(DynamicFloatValue other) => Equals(in other);
+    public override bool Equals(object obj) => obj is DynamicFloatValue c && Equals(in c);
+    public bool Equals(in DynamicFloatValue other)
+    {
+        if (other._choiceBehavior != _choiceBehavior || other._type != _type)
+            return false;
+
+        if (_type == DynamicValueType.Wildcard)
+            return true;
+
+        if (_type == DynamicValueType.Set)
+        {
+            if (_set.Length != other._set.Length)
+                return false;
+            for (int i = 0; i < _set.Length; ++i)
+            {
+                if (!_set.Set[i].AlmostEquals(other._set.Set[i], 0.005f))
+                    return false;
+            }
+
+            return true;
+        }
+        if (_type == DynamicValueType.Range)
+        {
+            if (_range.IsInfiniteMax != other._range.IsInfiniteMax || _range.IsInfiniteMin != other._range.IsInfiniteMin)
+                return false;
+            if (!_range.IsInfiniteMax && !_range.Maximum.AlmostEquals(other._range.Maximum, 0.005f))
+                return false;
+            return _range.IsInfiniteMin || _range.Minimum.AlmostEquals(other._range.Minimum, 0.005f);
+        }
+        if (_type == DynamicValueType.Constant)
+            return _constant.AlmostEquals(other.Constant, 0.005f);
+
+        return false;
+    }
     public override string ToString()
     {
         if (_type == DynamicValueType.Constant)
@@ -1312,6 +1416,40 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
             _type = default;
             _behavior = default;
             FromValue(ref value);
+        }
+        public override bool Equals(object obj) => obj is Choice c && Equals(in c);
+        public bool Equals(in Choice other)
+        {
+            if (other._behavior != _behavior || other._type != _type)
+                return false;
+
+            if (_type == DynamicValueType.Wildcard)
+                return true;
+
+            if (_behavior == ChoiceBehavior.Selective || _type == DynamicValueType.Constant)
+            {
+                return _value.AlmostEquals(other._value, 0.005f);
+            }
+
+            if (_type == DynamicValueType.Range)
+            {
+                return _minVal.AlmostEquals(other._minVal, 0.005f) && _maxVal.AlmostEquals(other._maxVal, 0.005f);
+            }
+
+            if (_type == DynamicValueType.Set && _values != null && other._values != null)
+            {
+                if (_values.Length != other._values.Length)
+                    return false;
+                for (int i = 0; i < _values.Length; ++i)
+                {
+                    if (!_values[i].AlmostEquals(other._values[i], 0.005f))
+                        return false;
+                }
+
+                return true;
+            }
+
+            return false;
         }
         private void FromValue(ref DynamicFloatValue value)
         {
@@ -1470,7 +1608,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
     }
 }
 /// <summary>Datatype storing either a constant <see cref="string"/> or a <see cref="StringSet"/>.</summary>
-public readonly struct DynamicStringValue : IDynamicValue<string>
+public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<DynamicStringValue>
 {
     internal readonly string? constant;
     public string Constant => constant!;
@@ -1530,6 +1668,34 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
         Choice choice = new Choice();
         choice.Read(ref reader);
         return choice;
+    }
+    bool IEquatable<DynamicStringValue>.Equals(DynamicStringValue other) => Equals(in other);
+    public override bool Equals(object obj) => obj is DynamicStringValue c && Equals(in c);
+    public bool Equals(in DynamicStringValue other)
+    {
+        if (other._choiceBehavior != _choiceBehavior || other.type != type || other.IsKitSelector != IsKitSelector)
+            return false;
+
+        if (type == DynamicValueType.Wildcard)
+            return true;
+
+        if (type == DynamicValueType.Set)
+        {
+            if (set.Length != other.set.Length)
+                return false;
+            for (int i = 0; i < set.Length; ++i)
+            {
+                if (!set.Set[i].Equals(other.set.Set[i], StringComparison.Ordinal))
+                    return false;
+            }
+
+            return true;
+        }
+
+        if (type == DynamicValueType.Constant)
+            return constant!.Equals(other.constant!, StringComparison.Ordinal);
+
+        return false;
     }
     public override string ToString()
     {
@@ -1604,6 +1770,35 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
             _kitName = null;
             _kitNames = null;
             FromValue(ref value);
+        }
+        public override bool Equals(object obj) => obj is Choice c && Equals(in c);
+        public bool Equals(in Choice other)
+        {
+            if (other._behavior != _behavior || other._type != _type || _isKitSelector != other._isKitSelector)
+                return false;
+
+            if (_type == DynamicValueType.Wildcard)
+                return true;
+
+            if ((_behavior == ChoiceBehavior.Selective || _type == DynamicValueType.Constant) && _value != null && other._value != null)
+            {
+                return _value.Equals(other._value, StringComparison.Ordinal);
+            }
+
+            if (_type == DynamicValueType.Set && _values != null && other._values != null)
+            {
+                if (_values.Length != other._values.Length)
+                    return false;
+                for (int i = 0; i < _values.Length; ++i)
+                {
+                    if (!_values[i].Equals(other._values[i], StringComparison.Ordinal))
+                        return false;
+                }
+
+                return true;
+            }
+
+            return false;
         }
         private void FromValue(ref DynamicStringValue value)
         {
@@ -1809,7 +2004,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
 /// <para>Formatted like <see cref="DynamicStringValue"/> with <seealso cref="Guid"/>s.</para>
 /// <para>Can also be formatted as "$*" to act as a wildcard, only applicable for some quests.</para></summary>
 /// <typeparam name="TAsset">Any <see cref="Asset"/>.</typeparam>
-public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAsset : Asset
+public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid>, IEquatable<DynamicAssetValue<TAsset>> where TAsset : Asset
 {
     internal readonly Guid constant;
     internal readonly GuidSet set;
@@ -1857,6 +2052,33 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         this.type = DynamicValueType.Set;
         this.assetType = GetAssetType();
         this._choiceBehavior = choiceBehavior;
+    }
+    bool IEquatable<DynamicAssetValue<TAsset>>.Equals(DynamicAssetValue<TAsset> other) => Equals(in other);
+    public override bool Equals(object obj) => obj is DynamicAssetValue<TAsset> c && Equals(in c);
+    public bool Equals(in DynamicAssetValue<TAsset> other)
+    {
+        if (other._choiceBehavior != _choiceBehavior || other.type != type)
+            return false;
+
+        if (type == DynamicValueType.Wildcard)
+            return true;
+
+        if (type == DynamicValueType.Set)
+        {
+            if (set.Length != other.set.Length)
+                return false;
+            for (int i = 0; i < set.Length; ++i)
+            {
+                if (set.Set[i] != other.set.Set[i])
+                    return false;
+            }
+
+            return true;
+        }
+        if (type == DynamicValueType.Constant)
+            return constant == other.constant;
+
+        return false;
     }
     public Choice GetValue()
     {
@@ -1941,6 +2163,35 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             _areValuesCached = false;
             _assetType = default;
             FromValue(ref value);
+        }
+        public override bool Equals(object obj) => obj is Choice c && Equals(in c);
+        public bool Equals(in Choice other)
+        {
+            if (other._behavior != _behavior || other._type != _type)
+                return false;
+
+            if (_type == DynamicValueType.Wildcard)
+                return true;
+
+            if (_behavior == ChoiceBehavior.Selective || _type == DynamicValueType.Constant)
+            {
+                return _value == other._value;
+            }
+
+            if (_type == DynamicValueType.Set && _values != null && other._values != null)
+            {
+                if (_values.Length != other._values.Length)
+                    return false;
+                for (int i = 0; i < _values.Length; ++i)
+                {
+                    if (_values[i] != other._values[i])
+                        return false;
+                }
+
+                return true;
+            }
+
+            return false;
         }
         private void FromValue(ref DynamicAssetValue<TAsset> value)
         {
@@ -2229,7 +2480,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
 /// <summary>Datatype storing either a constant enum value or a set of enum values.
 /// <para>Formatted like <see cref="DynamicStringValue"/>.</para></summary>
 /// <typeparam name="TEnum">Any enumeration.</typeparam>
-public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnum : struct, Enum
+public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatable<DynamicEnumValue<TEnum>> where TEnum : struct, Enum
 {
     internal readonly TEnum constant;
     internal readonly EnumSet<TEnum> set;
@@ -2290,6 +2541,41 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
         _choiceBehavior = choiceBehavior;
     }
 
+    bool IEquatable<DynamicEnumValue<TEnum>>.Equals(DynamicEnumValue<TEnum> other) => Equals(in other);
+    public override bool Equals(object obj) => obj is DynamicEnumValue<TEnum> c && Equals(in c);
+    public bool Equals(in DynamicEnumValue<TEnum> other)
+    {
+        if (other._choiceBehavior != _choiceBehavior || other.type != type)
+            return false;
+
+        if (type == DynamicValueType.Wildcard)
+            return true;
+
+        if (type == DynamicValueType.Set)
+        {
+            if (set.Length != other.set.Length)
+                return false;
+            for (int i = 0; i < set.Length; ++i)
+            {
+                if (set.Set[i].CompareTo(other.set.Set[i]) != 0)
+                    return false;
+            }
+
+            return true;
+        }
+        if (type == DynamicValueType.Range)
+        {
+            if (range.IsInfiniteMax != other.range.IsInfiniteMax || range.IsInfiniteMin != other.range.IsInfiniteMin)
+                return false;
+            if (!range.IsInfiniteMax && range.Maximum.CompareTo(other.range.Maximum) != 0)
+                return false;
+            return range.IsInfiniteMin || range.Minimum.CompareTo(other.range.Minimum) == 0;
+        }
+        if (type == DynamicValueType.Constant)
+            return constant.CompareTo(other.constant) == 0;
+
+        return false;
+    }
     public IDynamicValue<TEnum>.IChoice GetValue() => GetValueIntl();
     internal Choice GetValueIntl()
     {
@@ -2392,6 +2678,35 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
             _minValUnderlying = default;
             _maxValUnderlying = default;
             FromValue(ref value);
+        }
+        public override bool Equals(object obj) => obj is Choice c && Equals(in c);
+        public bool Equals(in Choice other)
+        {
+            if (other._behavior != _behavior || other._type != _type)
+                return false;
+
+            if (_type == DynamicValueType.Wildcard)
+                return true;
+
+            if (_behavior == ChoiceBehavior.Selective || _type == DynamicValueType.Constant)
+            {
+                return _value.CompareTo(other._value) == 0;
+            }
+
+            if (_type == DynamicValueType.Set && _values != null && other._values != null)
+            {
+                if (_values.Length != other._values.Length)
+                    return false;
+                for (int i = 0; i < _values.Length; ++i)
+                {
+                    if (_values[i].CompareTo(other._values[i]) != 0)
+                        return false;
+                }
+
+                return true;
+            }
+
+            return false;
         }
         private void FromValue(ref DynamicEnumValue<TEnum> value)
         {

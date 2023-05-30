@@ -197,7 +197,7 @@ public class Cooldown : ITranslationArgument
         return ToString();
     }
 }
-[Translatable("Cooldown Type")]
+[Translatable("Cooldown Type", IsPrioritizedTranslation = false)]
 public enum CooldownType
 {
     [Translatable("Combat")]

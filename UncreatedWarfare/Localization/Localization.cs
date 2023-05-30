@@ -6,8 +6,11 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Steamworks;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
@@ -30,6 +33,7 @@ public static class Localization
 
     private static readonly string EnumTranslationFileName = "Enums" + Path.DirectorySeparatorChar;
     private static readonly Dictionary<Type, Dictionary<string, Dictionary<string, string>>> EnumTranslations = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>(16);
+    private static readonly Dictionary<Type, Dictionary<string, List<TranslatableAttribute>>> EnumTranslationAttributes = new Dictionary<Type, Dictionary<string, List<TranslatableAttribute>>>(16);
 
     public const string UnityRichTextColorBaseStart = "<color=#";
     public const string RichTextColorEnd = ">";
@@ -672,9 +676,50 @@ public static class Localization
         {
             if (EnumTranslations.ContainsKey(enumType.Key)) continue;
             Dictionary<string, Dictionary<string, string>> k = new Dictionary<string, Dictionary<string, string>>();
+            Dictionary<string, List<TranslatableAttribute>>? a = null;
+            if (!EnumTranslationAttributes.TryGetValue(enumType.Key, out a))
+            {
+                a = new Dictionary<string, List<TranslatableAttribute>>(8) { { EnumNamePlaceholder, new List<TranslatableAttribute>(2) } };
+                EnumTranslationAttributes.Add(enumType.Key, a);
+            }
+            else if (a.TryGetValue(EnumNamePlaceholder, out List<TranslatableAttribute> nameList))
+            {
+                if (!nameList.Exists(x => x.Language.Equals(enumType.Value.Language, StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (enumType.Value.Language.IsDefault())
+                        nameList.Insert(0, enumType.Value);
+                    else
+                        nameList.Add(enumType.Value);
+                }
+            }
+            else a.Add(EnumNamePlaceholder, new List<TranslatableAttribute>(2) { enumType.Value });
             EnumTranslations.Add(enumType.Key, k);
             string fn = Path.Combine(def, EnumTranslationFileName, enumType.Key.FullName + ".json");
             FieldInfo[] fields = enumType.Key.GetFields(BindingFlags.Public | BindingFlags.Static);
+            for (int i = 0; i < fields.Length; ++i)
+            {
+                if (Attribute.IsDefined(fields[i], typeof(JsonIgnoreAttribute)))
+                    continue;
+                string name = fields[i].GetValue(null).ToString();
+                Attribute[] attrs = Attribute.GetCustomAttributes(fields[i]);
+                if (attrs.Length == 0) continue;
+                if (!a.TryGetValue(name, out List<TranslatableAttribute> list))
+                {
+                    list = new List<TranslatableAttribute>(2);
+                    a.Add(name, list);
+                }
+
+                for (int j = 0; j < attrs.Length; ++j)
+                {
+                    if (attrs[j] is TranslatableAttribute t && !list.Exists(x => x.Language.Equals(t.Language, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        if (t.Language.IsDefault())
+                            list.Insert(0, t);
+                        else
+                            list.Add(t);
+                    }
+                }
+            }
             if (!File.Exists(fn))
             {
                 Dictionary<string, string> k2 = new Dictionary<string, string>(fields.Length + 1);
@@ -701,17 +746,20 @@ public static class Localization
                     }
                     byte[] bytes = new byte[stream.Length];
                     stream.Read(bytes, 0, bytes.Length);
-                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                    while (reader.Read())
+                    if (bytes.Length > 0)
                     {
-                        if (reader.TokenType == JsonTokenType.PropertyName)
+                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                        while (reader.Read())
                         {
-                            string? key = reader.GetString();
-                            if (reader.Read() && key != null)
+                            if (reader.TokenType == JsonTokenType.PropertyName)
                             {
-                                string? value = reader.GetString();
-                                if (value != null)
-                                    k2.Add(key, value);
+                                string? key = reader.GetString();
+                                if (reader.Read() && key != null)
+                                {
+                                    string? value = reader.GetString();
+                                    if (value != null)
+                                        k2.Add(key, value);
+                                }
                             }
                         }
                     }
@@ -770,7 +818,7 @@ public static class Localization
             for (int j = 0; j < tas.Length; ++j)
             {
                 TranslatableAttribute t = tas[j];
-                if (t.Language is null || t.Language.Equals(L.Default, StringComparison.Ordinal))
+                if (t.Language.Equals(L.Default, StringComparison.Ordinal))
                     continue;
                 for (int k = 0; k < otherlangs.Count; ++k)
                 {
@@ -781,6 +829,68 @@ public static class Localization
                 otherlangs.Add(new KeyValuePair<Type, List<string>>(enumType.Key, new List<string>(1) { t.Language }));
             added:;
             }
+        }
+    }
+    public static void WriteEnums(string language, string folder, bool writeMissing, bool excludeNonPriorities)
+    {
+        bool isDefault = (language ??= L.Default).IsDefault();
+        F.CheckDir(folder, out _);
+        foreach (KeyValuePair<Type, Dictionary<string, Dictionary<string, string>>> enumData in EnumTranslations)
+        {
+            if ((!enumData.Value.TryGetValue(language, out Dictionary<string, string> values) && (isDefault || !enumData.Value.TryGetValue(L.Default, out values))) || values == null)
+                continue;
+            string? mainDesc = null;
+            if (EnumTranslationAttributes.TryGetValue(enumData.Key, out Dictionary<string, List<TranslatableAttribute>> attrs) &&
+                attrs.TryGetValue(EnumNamePlaceholder, out List<TranslatableAttribute> nameAttrs))
+            {
+                if (excludeNonPriorities && nameAttrs.Exists(x => !x.IsPrioritizedTranslation))
+                    continue;
+                mainDesc = nameAttrs.Find(x => x.Language.IsDefault())?.Description ?? nameAttrs.Find(x => x.Description != null)?.Description;
+            }
+            Type type = enumData.Key;
+            string fn = Path.Combine(folder, TranslateEnumName(type, L.Default).RemoveMany(false, Data.Paths.BadFileNameCharacters));
+            string path = fn + ".json";
+            int c = 1;
+            while (File.Exists(path))
+                path = fn + " " + (++c).ToString(CultureInfo.InvariantCulture) + ".json";
+
+            using FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+            string comment = "// " + type.AssemblyQualifiedName + Environment.NewLine + "// " + type.FullName + ".json" + Environment.NewLine;
+            if (mainDesc != null)
+                comment += "// " + mainDesc + Environment.NewLine;
+            byte[] commentUtf8 = System.Text.Encoding.UTF8.GetBytes(comment);
+            stream.Write(commentUtf8, 0, commentUtf8.Length);
+            Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+            writer.WriteStartObject();
+            if (!isDefault && writeMissing && enumData.Value.TryGetValue(L.Default, out Dictionary<string, string> defaultValues))
+            {
+                Dictionary<string, string> clone = new Dictionary<string, string>(values.Count);
+                foreach (KeyValuePair<string, string> pair in values)
+                    clone.Add(pair.Key, pair.Value);
+                values = clone;
+                foreach (KeyValuePair<string, string> pair in defaultValues)
+                {
+                    if (!values.ContainsKey(pair.Key))
+                        values.Add(pair.Key, pair.Value);
+                }
+            }
+            foreach (KeyValuePair<string, string> pair in values)
+            {
+                if (!pair.Key.Equals(EnumNamePlaceholder, StringComparison.OrdinalIgnoreCase) &&
+                    EnumTranslationAttributes.TryGetValue(enumData.Key, out Dictionary<string, List<TranslatableAttribute>> attrs2) &&
+                    attrs2.TryGetValue(pair.Key, out List<TranslatableAttribute> nameAttrs2))
+                {
+                    if (excludeNonPriorities && nameAttrs2.Exists(x => !x.IsPrioritizedTranslation))
+                        continue;
+                    if ((nameAttrs2.Find(x => x.Language.IsDefault())?.Description ??
+                         nameAttrs2.Find(x => x.Description != null)?.Description) is { } desc)
+                        writer.WriteCommentValue(desc);
+                }
+                writer.WritePropertyName(pair.Key);
+                writer.WriteStringValue(pair.Value);
+            }
+            writer.WriteEndObject();
+            writer.Dispose();
         }
     }
     private static void WriteEnums(string language, FieldInfo[] fields, Type type, TranslatableAttribute? attr1, string fn, Dictionary<string, string> k2, List<KeyValuePair<Type, List<string>>>? otherlangs)
@@ -816,6 +926,8 @@ public static class Localization
 
         for (int i = 0; i < fields.Length; ++i)
         {
+            if (Attribute.IsDefined(fields[i], typeof(JsonIgnoreAttribute)))
+                continue;
             string k0 = fields[i].GetValue(null).ToString();
             string? k1 = null;
             TranslatableAttribute[] tas = fields[i].GetCustomAttributes(typeof(TranslatableAttribute)).OfType<TranslatableAttribute>().ToArray();
@@ -1740,25 +1852,23 @@ public struct LanguageSet : IEnumerator<UCPlayer>
 [AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface, Inherited = false, AllowMultiple = true)]
 public sealed class TranslatableAttribute : Attribute
 {
-    private readonly string? _default;
-    private readonly string _language;
-
     public TranslatableAttribute()
     {
-        _default = null;
-        _language = L.Default;
+        Default = null;
+        Language = L.Default;
     }
     public TranslatableAttribute(string? @default)
     {
-        _default = @default;
-        _language = L.Default;
+        Default = @default;
+        Language = L.Default;
     }
     public TranslatableAttribute(string language, string value)
     {
-        _default = value;
-        _language = language;
+        Default = value;
+        Language = language;
     }
-
-    public string Language => _language;
-    public string? Default => _default;
+    public string Language { get; }
+    public string? Default { get; }
+    public string? Description { get; set; }
+    public bool IsPrioritizedTranslation { get; set; } = true;
 }

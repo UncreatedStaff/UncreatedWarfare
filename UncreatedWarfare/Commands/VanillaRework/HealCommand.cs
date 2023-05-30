@@ -29,8 +29,6 @@ public class HealCommand : Command
     {
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
-        ctx.AssertRanByPlayer();
-
         if (!ctx.HasPermission(EAdminType.VANILLA_ADMIN, PermissionComparison.Exact))
             ctx.AssertOnDuty();
 
@@ -42,9 +40,14 @@ public class HealCommand : Command
                 rev.ReviveManager.RevivePlayer(onlinePlayer);
 
             ctx.Reply(T.HealPlayer, onlinePlayer);
+
+            if (onlinePlayer.Steam64 != ctx.CallerID)
+                onlinePlayer.SendChat(T.HealSelf);
         }
         else
         {
+            ctx.AssertRanByPlayer();
+
             ctx.Caller.Player.life.sendRevive();
 
             if (Data.Is(out IRevives rev))

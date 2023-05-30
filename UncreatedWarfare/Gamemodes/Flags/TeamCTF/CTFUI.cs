@@ -355,37 +355,37 @@ public static class CTFUI
     }
 }
 
-[Translatable("Flag Status")]
+[Translatable("Flag Status", Description = "Displayed on the capturing progress circle UI.")]
 public enum EFlagStatus
 {
-    [Translatable("CAPTURING")]
+    [Translatable("CAPTURING", Description = "Shown when your team is capturing the flag.")]
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "占领中")]
     CAPTURING,
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "失去中")]
-    [Translatable("LOSING")]
+    [Translatable("LOSING", Description = "Shown when your team is losing the flag because the other team has more players.")]
     LOSING,
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "保护")]
-    [Translatable("SECURED")]
+    [Translatable("SECURED", Description = "Shown when your team is holding the flag after it has been captured.")]
     SECURED,
-    [Translatable("NEUTRALIZED")]
+    [Translatable("NEUTRALIZED", Description = "Shown when the flag has not been captured by either team.")]
     NEUTRALIZED,
-    [Translatable("LOST")]
+    [Translatable("LOST", Description = "Shown when your team lost the flag and you dont have enough people on the flag to clear.")]
     LOST,
-    [Translatable("CONTESTED")]
+    [Translatable("CONTESTED", Description = "Shown when your team and the other team have the same amount of people on the flag.")]
     CONTESTED,
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "不是目标点")]
-    [Translatable("INEFFECTIVE")]
+    [Translatable("INEFFECTIVE", Description = "Shown when you're on a flag but it's not the objective.")]
     INEFFECTIVE,
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "清理中")]
-    [Translatable("CLEARING")]
+    [Translatable("CLEARING", Description = "Shown when your team is capturing a flag still owned by the other team.")]
     CLEARING,
-    [Translatable("")]
+    [Translatable("", Description = "Leave blank.", IsPrioritizedTranslation = false)]
     BLANK,
-    [Translatable("")]
+    [Translatable("", Description = "Leave blank.", IsPrioritizedTranslation = false)]
     DONT_DISPLAY,
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "在载具中")]
-    [Translatable("IN VEHICLE")]
+    [Translatable("IN VEHICLE", Description = "Shown when you're trying to capture a flag while in a vehicle.")]
     IN_VEHICLE,
-    [Translatable("LOCKED")]
+    [Translatable("LOCKED", Description = "Shown in Invasion when a flag has already been captured by attackers and can't be recaptured.")]
     LOCKED
 }

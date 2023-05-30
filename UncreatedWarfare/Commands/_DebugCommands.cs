@@ -7,14 +7,11 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using SDG.NetTransport;
-using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -1667,5 +1664,14 @@ public class DebugCommand : AsyncCommand
 
         fob.Dump(ctx.Caller);
         ctx.ReplyString("Check console.");
+    }
+
+    private void exportlang(CommandInteraction ctx)
+    {
+        ctx.AssertRanByConsole();
+
+        string? lang = ctx.GetRange(0);
+        Translation.ExportLanguage(lang, false, true);
+        ctx.ReplyString((lang ?? L.Default) + " exported.");
     }
 }
