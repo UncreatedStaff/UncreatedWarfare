@@ -16,11 +16,14 @@ public sealed class IPv4AddressRangeFilter : IIPAddressFilter
     public bool IsFiltered(IPAddress ip)
     {
         byte[] ipv4 = ip.MapToIPv4().GetAddressBytes();
+        return IsFiltered(((uint)ipv4[0] << 24) | ((uint)ipv4[1] << 16) | ((uint)ipv4[2] << 8) | ipv4[3]);
+    }
+    public bool IsFiltered(uint ip)
+    {
         IPv4Range[] ranges = Ranges;
-        uint packed = ((uint)ipv4[0] << 24) | ((uint)ipv4[1] << 16) | ((uint)ipv4[2] << 8) | ipv4[3];
         for (int i = 0; i < ranges.Length; ++i)
         {
-            if (ranges[i].InRange(packed))
+            if (ranges[i].InRange(ip))
                 return true;
         }
 
@@ -110,6 +113,7 @@ public sealed class IPv4AddressRangeFilter : IIPAddressFilter
         new IPv4Range(24, 51, 29, 0, 24),
         new IPv4Range(24, 51, 30, 0, 24),
         new IPv4Range(24, 51, 31, 0, 24),
+        new IPv4Range(24, 51, 8, 0, 24),
         new IPv4Range(66, 22, 128, 0, 24),
         new IPv4Range(66, 22, 132, 0, 24),
         new IPv4Range(66, 22, 133, 0, 24),

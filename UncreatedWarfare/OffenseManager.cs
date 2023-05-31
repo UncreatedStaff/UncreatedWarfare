@@ -53,10 +53,43 @@ public static class OffenseManager
     private static readonly List<IPWhitelist> PendingIPWhitelists = new List<IPWhitelist>(8);
     public static bool IsRemotePlay(IPAddress address)
     {
+        byte[] ipv4 = address.MapToIPv4().GetAddressBytes();
+        return IsRemotePlay(((uint)ipv4[0] << 24) | ((uint)ipv4[1] << 16) | ((uint)ipv4[2] << 8) | ipv4[3]);
+    }
+    public static bool IsRemotePlay(uint address)
+    {
         for (int i = 0; i < RemotePlayAddressFilters.Length; ++i)
         {
             if (RemotePlayAddressFilters[i].IsFiltered(address))
                 return true;
+        }
+
+        return false;
+    }
+    public static bool IsAnyRemotePlay(IEnumerable<IPAddress> addresses)
+    {
+        foreach (IPAddress addr in addresses)
+        {
+            byte[] ipv4 = addr.MapToIPv4().GetAddressBytes();
+            uint address = ((uint)ipv4[0] << 24) | ((uint)ipv4[1] << 16) | ((uint)ipv4[2] << 8) | ipv4[3];
+            for (int i = 0; i < RemotePlayAddressFilters.Length; ++i)
+            {
+                if (RemotePlayAddressFilters[i].IsFiltered(address))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+    public static bool IsAnyRemotePlay(IEnumerable<uint> addresses)
+    {
+        foreach (uint addr in addresses)
+        {
+            for (int i = 0; i < RemotePlayAddressFilters.Length; ++i)
+            {
+                if (RemotePlayAddressFilters[i].IsFiltered(addr))
+                    return true;
+            }
         }
 
         return false;
@@ -100,9 +133,11 @@ public static class OffenseManager
     })]
     [HarmonyPrefix]
     [UsedImplicitly]
-    private static void CheckBannedPrefix(CSteamID playerID, ref uint ip, IEnumerable<byte[]> hwids, SteamBlacklistID blacklistID)
+    private static void CheckBannedPrefix(CSteamID playerID, ref uint ip, ref IEnumerable<byte[]>? hwids, SteamBlacklistID blacklistID)
     {
         ip = 0;
+        if (IsRemotePlay(ip))
+            hwids = null;
     }
     private static void Reload()
     {
@@ -163,80 +198,83 @@ public static class OffenseManager
         {
             try
             {
-                await Data.DatabaseManager.QueryAsync("SELECT `Id`, `Index`, `HWID` FROM `hwids` WHERE `Steam64` = @0 ORDER BY `LastLogin` DESC;",
-                    new object[] { s64 },
-                    R =>
-                    {
-                        int id = R.GetInt32(0);
-                        byte[] buffer = new byte[20];
-                        R.GetBytes(2, 0, buffer, 0, 20);
-                        for (int i = 0; i < update.Length; ++i)
+                if (!e.Player.UsingRemotePlay)
+                {
+                    await Data.DatabaseManager.QueryAsync("SELECT `Id`, `Index`, `HWID` FROM `hwids` WHERE `Steam64` = @0 ORDER BY `LastLogin` DESC;",
+                        new object[] { s64 },
+                        reader =>
                         {
-                            if (update[i] > 0) continue;
-                            byte[] b = bytes[i];
-                            if (b is null) continue;
-                            for (int x = 0; x < 20; ++x)
-                                if (b[x] != buffer[x])
-                                    goto cont;
-                            update[i] = id;
-                            ++updates;
-                            break;
-                        cont:;
+                            int id = reader.GetInt32(0);
+                            byte[] buffer = new byte[20];
+                            reader.GetBytes(2, 0, buffer, 0, 20);
+                            for (int i = 0; i < update.Length; ++i)
+                            {
+                                if (update[i] > 0) continue;
+                                byte[] b = bytes[i];
+                                if (b is null) continue;
+                                for (int x = 0; x < 20; ++x)
+                                    if (b[x] != buffer[x])
+                                        goto cont;
+                                update[i] = id;
+                                ++updates;
+                                break;
+                                cont:;
+                            }
+                        });
+                    StringBuilder sbq = new StringBuilder(64);
+                    StringBuilder sbq2 = new StringBuilder(64);
+                    int c = 2;
+                    for (int i = 0; i < update.Length; ++i)
+                    {
+                        if (update[i] < 1 && bytes[i] is not null && bytes[i].Length == 20 && i < 8)
+                            c += 2;
+                    }
+                    object[] objs = new object[c];
+                    objs[0] = s64;
+                    objs[1] = DateTime.UtcNow;
+                    c = 1;
+                    int d = 0;
+                    object[] o2 = new object[update.Length];
+                    for (int i = 0; i < update.Length; ++i)
+                    {
+                        if (update[i] > 0)
+                        {
+                            sbq2.Append($"UPDATE `{WarfareSQL.TableHWIDs}` SET `{WarfareSQL.ColumnHWIDsLoginCount}` = `{WarfareSQL.ColumnHWIDsLoginCount}` + 1," +
+                                        $" `{WarfareSQL.ColumnHWIDsLastLogin}` = NOW() WHERE `{WarfareSQL.ColumnHWIDsPrimaryKey}` = @" + i + ";");
+                            ++d;
+                            o2[i] = update[i];
+                            continue;
                         }
-                    });
+                        if (bytes[i] is not null && bytes[i].Length == 20 && i < 8)
+                        {
+                            if (c != 1)
+                                sbq.Append(',');
+                            sbq.Append("(@0, @1, @").Append(c * 2).Append(", @").Append(c * 2 + 1).Append(')');
+                            objs[c * 2] = i;
+                            objs[c * 2 + 1] = bytes[i];
+                            ++c;
+                        }
+
+                        o2[i] = 0;
+                    }
+                    if (c > 1)
+                    {
+                        sbq.Insert(0, $"INSERT INTO `{WarfareSQL.TableHWIDs}` (`{WarfareSQL.ColumnHWIDsSteam64}`, `{WarfareSQL.ColumnHWIDsFirstLogin}`, " +
+                                      $"`{WarfareSQL.ColumnHWIDsIndex}`, `{WarfareSQL.ColumnHWIDsHWID}`) VALUES ");
+                        sbq.Append(';');
+                        string query = sbq.ToString();
+
+                        await Data.DatabaseManager.NonQueryAsync(query, objs);
+                    }
+                    if (d > 0)
+                    {
+                        await Data.DatabaseManager.NonQueryAsync(sbq2.ToString(), o2);
+                    }
+                }
 
                 uint? id = null;
                 await Data.DatabaseManager.QueryAsync("SELECT `Id` FROM `ip_addresses` WHERE `Steam64` = @0 AND `Packed` = @1 LIMIT 1;", new object[] { s64, packed },
                     R => id = R.GetUInt32(0));
-                StringBuilder sbq = new StringBuilder(64);
-                StringBuilder sbq2 = new StringBuilder(64);
-                int c = 2;
-                for (int i = 0; i < update.Length; ++i)
-                {
-                    if (update[i] < 1 && bytes[i] is not null && bytes[i].Length == 20 && i < 8)
-                        c += 2;
-                }
-                object[] objs = new object[c];
-                objs[0] = s64;
-                objs[1] = DateTime.UtcNow;
-                c = 1;
-                int d = 0;
-                object[] o2 = new object[update.Length];
-                for (int i = 0; i < update.Length; ++i)
-                {
-                    if (update[i] > 0)
-                    {
-                        sbq2.Append($"UPDATE `{WarfareSQL.TableHWIDs}` SET `{WarfareSQL.ColumnHWIDsLoginCount}` = `{WarfareSQL.ColumnHWIDsLoginCount}` + 1," +
-                                    $" `{WarfareSQL.ColumnHWIDsLastLogin}` = NOW() WHERE `{WarfareSQL.ColumnHWIDsPrimaryKey}` = @" + i + ";");
-                        ++d;
-                        o2[i] = update[i];
-                        continue;
-                    }
-                    if (bytes[i] is not null && bytes[i].Length == 20 && i < 8)
-                    {
-                        if (c != 1)
-                            sbq.Append(',');
-                        sbq.Append("(@0, @1, @").Append(c * 2).Append(", @").Append(c * 2 + 1).Append(')');
-                        objs[c * 2] = i;
-                        objs[c * 2 + 1] = bytes[i];
-                        ++c;
-                    }
-
-                    o2[i] = 0;
-                }
-                if (c > 1)
-                {
-                    sbq.Insert(0, $"INSERT INTO `{WarfareSQL.TableHWIDs}` (`{WarfareSQL.ColumnHWIDsSteam64}`, `{WarfareSQL.ColumnHWIDsFirstLogin}`, " +
-                                  $"`{WarfareSQL.ColumnHWIDsIndex}`, `{WarfareSQL.ColumnHWIDsHWID}`) VALUES ");
-                    sbq.Append(';');
-                    string query = sbq.ToString();
-
-                    await Data.DatabaseManager.NonQueryAsync(query, objs);
-                }
-                if (d > 0)
-                {
-                    await Data.DatabaseManager.NonQueryAsync(sbq2.ToString(), o2);
-                }
                 if (id.HasValue)
                     await Data.DatabaseManager.NonQueryAsync(
                         $"UPDATE `{WarfareSQL.TableIPAddresses}` SET " +
