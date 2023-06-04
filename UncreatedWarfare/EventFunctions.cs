@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.SQL;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Deaths;
@@ -677,7 +678,7 @@ public static class EventFunctions
         UCPlayer? ucplayer = PlayerManager.FromID(speaker.channel.owner.playerID.steamID.m_SteamID);
         if (ucplayer is not null)
         {
-            if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
+            if ((ucplayer.MuteType & EMuteType.VOICE_CHAT) == EMuteType.VOICE_CHAT && ucplayer.TimeUnmuted > DateTime.Now)
                 isMuted = true;
 
             ucplayer.OnUseVoice(isMuted);

@@ -61,14 +61,14 @@ public class CommandWaiter : CustomYieldInstruction
         if (timeoutCoroutine != null)
             UCWarfare.I.StopCoroutine(timeoutCoroutine);
     }
-    internal static void OnCommandExecuted(UCPlayer player, IExecutableCommand command)
+    internal static void OnCommandExecuted(UCPlayer? player, IExecutableCommand command)
     {
         for (int i = 0; i < ActiveWaiters.Count; ++i)
         {
             CommandWaiter aw = ActiveWaiters[i];
             if (aw.command != null)
             {
-                if (player.Steam64 == aw.player.Steam64 && aw.timeoutCoroutine != null && aw.command.Equals(command.CommandName, StringComparison.OrdinalIgnoreCase))
+                if ((player == null && aw.player == null || player != null && aw.player != null && player.Steam64 == aw.player.Steam64) && aw.timeoutCoroutine != null && aw.command.Equals(command.CommandName, StringComparison.OrdinalIgnoreCase))
                 {
                     aw.Receive(true);
                     return;
@@ -76,7 +76,7 @@ public class CommandWaiter : CustomYieldInstruction
             }
             else if (aw.commandType is not null)
             {
-                if (player.Steam64 == aw.player.Steam64 && aw.timeoutCoroutine != null && aw.commandType.IsInstanceOfType(command))
+                if ((player == null && aw.player == null || player != null && aw.player != null && player.Steam64 == aw.player.Steam64) && aw.timeoutCoroutine != null && aw.commandType.IsInstanceOfType(command))
                 {
                     aw.Receive(true);
                     return;
@@ -94,14 +94,14 @@ public class CommandWaiter : CustomYieldInstruction
         private readonly string? command;
         private readonly Type? commandType;
         private readonly CancellationTokenSource cancel;
-        public static void OnCommandExecuted(UCPlayer player, IExecutableCommand command)
+        public static void OnCommandExecuted(UCPlayer? player, IExecutableCommand command)
         {
             for (int i = 0; i < awaiters.Count; ++i)
             {
                 CommandWaitTask aw = awaiters[i];
                 if (aw.command != null)
                 {
-                    if (player.Steam64 == aw.player.Steam64 && aw.command.Equals(command.CommandName, StringComparison.OrdinalIgnoreCase))
+                    if ((player == null && aw.player == null || player != null && aw.player != null && player.Steam64 == aw.player.Steam64) && aw.command.Equals(command.CommandName, StringComparison.OrdinalIgnoreCase))
                     {
                         aw._awaiter.TellRanCommand();
                         break;
@@ -109,7 +109,7 @@ public class CommandWaiter : CustomYieldInstruction
                 }
                 else if (aw.commandType != null)
                 {
-                    if (player.Steam64 == aw.player.Steam64 && aw.commandType.IsAssignableFrom(command.GetType()))
+                    if ((player == null && aw.player == null || player != null && aw.player != null && player.Steam64 == aw.player.Steam64) && aw.commandType.IsInstanceOfType(command))
                     {
                         aw._awaiter.TellRanCommand();
                         break;

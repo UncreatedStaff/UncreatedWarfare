@@ -15,6 +15,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Quests;
@@ -1938,6 +1939,15 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
                     if (_kitName == null && !string.IsNullOrEmpty(_value))
                     {
                         SqlItem<Kit>? find = KitManager.GetSingletonQuick()?.FindKitNoLock(_value!, true);
+                        Kit? item = find?.Item;
+                        if (item != null)
+                        {
+                            _kitName = GetKitName(item, player);
+                            // adds the faction name so kits named 'Rifleman #1', etc show the right team
+                            if (item.Type == KitType.Public && item.Faction is { } faction)
+                                _kitName = faction.ShortName + " " + _kitName;
+                        }
+                        else _kitName = _value;
                         _kitName = find?.Item != null ? GetKitName(find.Item, player) : _value!;
                     }
                     else _kitName = _value!;
@@ -1959,7 +1969,14 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
                             for (int i = 0; i < _values.Length; ++i)
                             {
                                 SqlItem<Kit>? find = m.FindKitNoLock(_value!, true);
-                                _kitNames[i] = find?.Item != null ? GetKitName(find.Item, player) : _values[i];
+                                Kit? item = find?.Item;
+                                if (item != null)
+                                {
+                                    _kitNames[i] = GetKitName(item, player);
+                                    if (item.Type == KitType.Public && item.Faction is { } faction)
+                                        _kitNames[i] = faction.ShortName + " " + _kitNames[i];
+                                }
+                                else _kitNames[i] = _values[i];
                             }
                         }
                         else
