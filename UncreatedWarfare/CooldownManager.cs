@@ -14,6 +14,7 @@ namespace Uncreated.Warfare;
 public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownConfig>
 {
     public static CooldownManager Singleton;
+    public new static bool IsLoaded => Singleton.IsLoaded();
     public new static CooldownConfig Config => Singleton.IsLoaded() ? Singleton.ConfigurationFile.Data : null!;
     internal List<Cooldown> Cooldowns;
     public CooldownManager() : base("cooldowns", Data.Paths.CooldownStorage, "config.json") { }
@@ -61,14 +62,22 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
         if (state1 is null && state2 is null) return true;
         if (state1 is null) return state2.Length == 0;
         if (state2 is null) return state1.Length == 0;
-        if (state1.Length == 0 && state2.Length == 0) return true;
 
         if (state1.Length != state2.Length) return false;
 
         for (int i = 0; i < state1.Length; ++i)
         {
-            if (Comparer.Default.Compare(state1[i], state2[i]) != 0)
+            object objA = state1[i], objB = state2[i];
+
+            if (!ReferenceEquals(objA, objB))
                 return false;
+            if ((objA is IComparable || objB is IComparable) && Comparer.Default.Compare(objA, objB) != 0)
+                return false;
+            if (objA != null ^ objB != null)
+            {
+                if (objA != null && !objA.Equals(objB))
+                    return false;
+            }
         }
         return true;
     }
@@ -227,5 +236,9 @@ public enum CooldownType
     [Translatable("Announce Action")]
     AnnounceAction,
     [Translatable("Rally")]
-    Rally
+    Rally,
+    [Translatable("Execute Command")]
+    Command,
+    [Translatable("Execute Command Portion")]
+    PortionCommand
 }

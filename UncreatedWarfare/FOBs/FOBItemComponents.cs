@@ -2,11 +2,8 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
-using System.Linq;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
@@ -91,7 +88,6 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
         if (!NeedsRestock)
             LastRestock = Time.realtimeSinceStartup - 40f;
         NeedsRestock = true;
-        L.Log($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Restock invalidated.");
     }
     void ISalvageListener.OnSalvageRequested(SalvageRequested e)
     {
@@ -435,7 +431,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 _progressToBuild += build;
                 int build2 = Mathf.FloorToInt(_progressToBuild);
                 L.LogDebug($"[FOBS] [{FOB.Name ?? "FLOATING"}]  Removing build: {build:F4} (rounded to: {build2}) {_progressToBuild:F4}/{FOB.BuildSupply}.");
-                if (FOB.BuildSupply < _progressToBuild)
+                if (FOB.BuildSupply < _progressToBuild && Mathf.Abs(_progressToBuild - FOB.BuildSupply) >= 0.05)
                 {
                     shoveler.SendChat(T.BuildMissingSupplies, FOB.BuildSupply, Buildable.RequiredBuild - _buildRemoved);
                     return true;
@@ -449,9 +445,8 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
                 }
             }
 
-
             UpdateHitsUI();
-            if (Progress >= Total)
+            if (Progress >= Total || Mathf.Abs(Progress - Total) < 0.05)
             {
                 int buildRemaining = Buildable.RequiredBuild - _buildRemoved;
                 _progressToBuild = 0;

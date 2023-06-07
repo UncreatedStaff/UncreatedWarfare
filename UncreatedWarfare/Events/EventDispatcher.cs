@@ -81,8 +81,8 @@ public static class EventDispatcher
     {
         EventPatches.TryPatchAll();
         VehicleManager.onExitVehicleRequested += VehicleManagerOnExitVehicleRequested;
-        VehicleManager.onEnterVehicleRequested += VehicleManagerOnEnterVehicleRequested;
-        VehicleManager.onSwapSeatRequested += VehicleManagerOnSwapSeatRequested;
+        VehicleManager.onEnterVehicleRequested += InvokeVehicleManagerOnEnterVehicleRequested;
+        VehicleManager.onSwapSeatRequested += InvokeVehicleManagerOnSwapSeatRequested;
         VehicleManager.OnVehicleExploded += VehicleManagerOnVehicleExploded;
         InteractableVehicle.OnPassengerAdded_Global += InteractableVehicleOnPassengerAdded;
         InteractableVehicle.OnPassengerRemoved_Global += InteractableVehicleOnPassengerRemoved;
@@ -126,8 +126,8 @@ public static class EventDispatcher
         InteractableVehicle.OnPassengerRemoved_Global -= InteractableVehicleOnPassengerRemoved;
         InteractableVehicle.OnPassengerAdded_Global -= InteractableVehicleOnPassengerAdded;
         VehicleManager.OnVehicleExploded -= VehicleManagerOnVehicleExploded;
-        VehicleManager.onSwapSeatRequested -= VehicleManagerOnSwapSeatRequested;
-        VehicleManager.onEnterVehicleRequested -= VehicleManagerOnEnterVehicleRequested;
+        VehicleManager.onSwapSeatRequested -= InvokeVehicleManagerOnSwapSeatRequested;
+        VehicleManager.onEnterVehicleRequested -= InvokeVehicleManagerOnEnterVehicleRequested;
         VehicleManager.onExitVehicleRequested -= VehicleManagerOnExitVehicleRequested;
     }
     private static void TryInvoke<TState>(EventDelegate<TState> @delegate, TState request, string name) where TState : EventState
@@ -195,7 +195,7 @@ public static class EventDispatcher
             pendingYaw = request.ExitLocationYaw;
         }
     }
-    private static void VehicleManagerOnEnterVehicleRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
+    internal static void InvokeVehicleManagerOnEnterVehicleRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
     {
         if (EnterVehicleRequested == null || !shouldAllow || vehicle == null || player == null) return;
         EnterVehicleRequested request = new EnterVehicleRequested(player, vehicle, shouldAllow);
@@ -207,7 +207,7 @@ public static class EventDispatcher
         if (!request.CanContinue)
             shouldAllow = false;
     }
-    private static void VehicleManagerOnSwapSeatRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
+    internal static void InvokeVehicleManagerOnSwapSeatRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
     {
         if (VehicleSwapSeatRequested == null || !shouldAllow) return;
         VehicleSwapSeatRequested request = new VehicleSwapSeatRequested(player, vehicle, shouldAllow, fromSeatIndex, toSeatIndex);

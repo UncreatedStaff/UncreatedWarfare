@@ -33,7 +33,7 @@ internal static class TraitSigns
                 else
                 {
                     int secs = Mathf.CeilToInt(trait.EffectDuration - (Time.realtimeSinceStartup - player.ActiveTraits[i].StartTime));
-                    return Util.QuickFormat(tr2, T.TraitSignAlreadyActiveTime.Translate(player, secs / 60, secs % 60));
+                    return Util.QuickFormat(tr2, T.TraitSignAlreadyActiveTime.Translate(player, false, secs / 60, secs % 60));
                 }
             }
         }
@@ -48,7 +48,7 @@ internal static class TraitSigns
                 goto next;
 
             int secs = Mathf.CeilToInt(cooldown.SecondsLeft);
-            return Util.QuickFormat(tr2, T.TraitSignCooldown.Translate(player, secs / 60, secs % 60));
+            return Util.QuickFormat(tr2, T.TraitSignCooldown.Translate(player, false, secs / 60, secs % 60));
         }
         next:
         if (trait.UnlockRequirements is not null)
@@ -66,10 +66,10 @@ internal static class TraitSigns
             if (!trait.CanClassUse(player.KitClass))
             {
                 if (trait.ClassListIsBlacklist || trait.ClassList.Length > 2 || trait.ClassList.Length == 0)
-                    return Util.QuickFormat(tr2, T.TraitSignClassBlacklisted.Translate(player, player.KitClass));
+                    return Util.QuickFormat(tr2, T.TraitSignClassBlacklisted.Translate(player, false, player.KitClass));
                 if (trait.ClassList.Length == 2)
-                    return Util.QuickFormat(tr2, T.TraitSignClassWhitelisted2.Translate(player, trait.ClassList[0], trait.ClassList[1]));
-                return Util.QuickFormat(tr2, T.TraitSignClassWhitelisted1.Translate(player, trait.ClassList[0]));
+                    return Util.QuickFormat(tr2, T.TraitSignClassWhitelisted2.Translate(player, false, trait.ClassList[0], trait.ClassList[1]));
+                return Util.QuickFormat(tr2, T.TraitSignClassWhitelisted1.Translate(player, false, trait.ClassList[0]));
             }
         }
         else

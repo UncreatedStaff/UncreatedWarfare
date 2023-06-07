@@ -52,11 +52,17 @@ internal static class T
     [TranslationData(SectionCommonErrors, "A command or feature can only be used by a player (instead of the server console).")]
     public static readonly Translation PlayersOnly = new Translation("<#ff8c69>This command can not be called from console.");
 
+    [TranslationData(SectionCommonErrors, "A command or feature is on cooldown.")]
+    public static readonly Translation<Cooldown, string> CommandCooldown = new Translation<Cooldown, string>("<#ff8c69>You can't use <#fff>/{1}</color> for another <#aaa>{0}</color>.", Cooldown.FormatTimeLong, FormatLowercase);
+
     [TranslationData(SectionCommonErrors, "A player name or ID search turned up no results.")]
     public static readonly Translation PlayerNotFound = new Translation("<#ff8c69>Player not found.");
 
     [TranslationData(SectionCommonErrors, "A command didn't respond to an interaction, or a command chose to throw a vague error response to an uncommon problem.")]
     public static readonly Translation UnknownError = new Translation("<#ff8c69>We ran into an unknown error executing that command.");
+
+    [TranslationData(SectionCommonErrors, "A vanilla command didn't print a response.")]
+    public static readonly Translation VanillaCommandDidNotRespond = new Translation("<#d09595>The vanilla command you ran didn't print a response.");
 
     [TranslationData(SectionCommonErrors, "An async command was cancelled mid-execution.")]
     public static readonly Translation ErrorCommandCancelled = new Translation("<#ff8c69>This command was cancelled during it's execution. This could be caused by the game ending or a bug.");
@@ -1590,6 +1596,10 @@ internal static class T
     public static readonly Translation<Asset, IPlayer, FactionInfo> StructureExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo>("Last owner of {0}: {1}, Team: {2}.", TranslationFlags.TMProUI | TranslationFlags.NoRichText, arg1Fmt: UCPlayer.PLAYER_NAME_FORMAT, arg2Fmt: FactionInfo.FormatDisplayName);
     [TranslationData(SectionStructures)]
     public static readonly Translation<Asset, IPlayer, IPlayer, FactionInfo> StructureExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo>("<#c6d4b8>Last owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}.", TranslationFlags.TMProUI | TranslationFlags.NoRichText, FormatRarityColor, arg1Fmt: UCPlayer.COLOR_PLAYER_NAME_FORMAT, arg2Fmt: UCPlayer.STEAM_64_FORMAT, arg3Fmt: FactionInfo.FormatColorDisplayName);
+    [TranslationData(SectionStructures)]
+    public static readonly Translation<Asset, IPlayer, FactionInfo, string, ulong> VehicleExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo, string, ulong>("Owner of {0}: {1}, Team: {2}. Previous Owner: {3} ({4}).", TranslationFlags.TMProUI | TranslationFlags.NoRichText, arg1Fmt: UCPlayer.PLAYER_NAME_FORMAT, arg2Fmt: FactionInfo.FormatDisplayName);
+    [TranslationData(SectionStructures)]
+    public static readonly Translation<Asset, IPlayer, IPlayer, FactionInfo, string, ulong> VehicleExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo, string, ulong>("<#c6d4b8>Owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}. Previous Owner: {4} <i>({5})</i>.", TranslationFlags.TMProUI | TranslationFlags.NoRichText, FormatRarityColor, arg1Fmt: UCPlayer.COLOR_PLAYER_NAME_FORMAT, arg2Fmt: UCPlayer.STEAM_64_FORMAT, arg3Fmt: FactionInfo.FormatColorDisplayName);
     [TranslationData(SectionStructures, IsPrioritizedTranslation = false)]
     public static readonly Translation<string> StructureSaveInvalidProperty = new Translation<string>("<#ff8c69>{0} isn't a valid a structure property. Try putting 'owner' or 'group'.");
     [TranslationData(SectionStructures, IsPrioritizedTranslation = false)]
@@ -1657,6 +1667,57 @@ internal static class T
     public static readonly Translation VehicleNoPassengerSeats = new Translation("<#bda897>There are no free passenger seats in this vehicle.");
     [TranslationData(SectionVehicles)]
     public static readonly Translation VehicleEnterGameNotStarted = new Translation("<#ff8c69>You may not enter a vehicle right now, the game has not started.");
+
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation VehicleMustBeLookingAtLinkedVehicle = new Translation("<#ff8c69>You must be looking at a vehicle or own only one nearby.");
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<FactionInfo> VehicleNotOnSameTeam = new Translation<FactionInfo>("<#ff8c69>This vehicle is on {0} and you're not.", FactionInfo.FormatColorDisplayName);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer> VehicleLinkedVehicleNotOwnedByCaller = new Translation<IPlayer>("<#ff8c69>This vehicle is owned by {0}.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<VehicleAsset, IPlayer> VehicleGiven = new Translation<VehicleAsset, IPlayer>("<#d1bda7>Gave your <#a0ad8e>{0}</color> to {1}.", arg1Fmt: UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<VehicleAsset, IPlayer> VehicleGivenDm = new Translation<VehicleAsset, IPlayer>("<#d1bda7>{1} gave you their <#a0ad8e>{0}</color>.", arg1Fmt: UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer> VehicleTargetNotInVehicle = new Translation<IPlayer>("<#ff8c69>{0} is not in a vehicle.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<int> VehicleSeatNotValidOutOfRange = new Translation<int>("<#ff8c69>That vehicle doesn't have <#ddd>{0}</color> ${p:0:seat}.");
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<string> VehicleSeatNotValidText = new Translation<string>("<#ff8c69>Unable to choose a seat from \"<#fff>{0}</color>\".");
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<int> VehicleSeatNotOccupied = new Translation<int>("<#ff8c69>Seat <#ddd>#{0}</color> is not occupied.");
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<VehicleAsset, IPlayer, int> VehicleOwnerKickedDM = new Translation<VehicleAsset, IPlayer, int>("<#d1a8a8>The owner of the <#ccc>{0}</color>, {1}, kicked you out of seat <#ddd>#{2}</color>.", arg1Fmt: UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<VehicleAsset, IPlayer, int> VehicleOwnerTookSeatDM = new Translation<VehicleAsset, IPlayer, int>("<#d1a8a8>The owner of the <#ccc>{0}</color>, {1}, took seat <#ddd>#{2}</color> from you.", arg1Fmt: UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<VehicleAsset, IPlayer, int> VehicleKickedPlayer = new Translation<VehicleAsset, IPlayer, int>("<#d1bda7>Kicked {1} out of seat <#ddd>#{2}</color> in your <#ccc>{0}</color>.", arg1Fmt: UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer> VehicleSwappedSeats = new Translation<IPlayer>("<#d1bda7>Swapped seats with {0}.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<VehicleAsset, int> VehicleEnterFailed = new Translation<VehicleAsset, int>("<#ff8c69>Unable to put you in seat <#ddd>#{1}</color> of your <#ccc>{0}</color>.");
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<VehicleAsset, int> VehicleEnterForceSwapped = new Translation<VehicleAsset, int>("<#d1bda7>Put you in seat <#ddd>#{1}</color> of your <#ccc>{0}</color>.");
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<VehicleAsset, IPlayer> VehicleSwapRequestNotInSameVehicle = new Translation<VehicleAsset, IPlayer>("<#ff8c69>You must be in the same <#ccc>{0}</color> as {1}.", arg1Fmt: UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer, int, IPlayer> VehicleSwapRequestAlreadySent = new Translation<IPlayer, int, IPlayer>("<#ff8c69>{0} already has a pending swap request from {2}, try again in <#ccc>{1}</color> ${p:1:second}.", UCPlayer.COLOR_NICK_NAME_FORMAT, arg2Fmt: UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer, int, string> VehicleSentSwapRequestDm = new Translation<IPlayer, int, string>("<#d1bda7>{0} wants to swap from seat <#ddd>#{1}</color> with you. Do <#fff>{2}</color> to respond.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer, int, int> VehicleSwapRequestSent = new Translation<IPlayer, int, int>("<#d1bda7>Sent {0} a swap request for seat <#ddd>#{1}</color>. They have <#ccc>{2}</color> {p:2:second} to respond.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer> VehicleSwapRequestDeniedByTarget = new Translation<IPlayer>("<#d1a8a8>{0} denied your swap request.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer> VehicleSwapRequestTimedOutByTarget = new Translation<IPlayer>("<#d1a8a8>{0} didn't respond to your swap request.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer> VehicleSwapRequestAcceptedByTarget = new Translation<IPlayer>("<#d1bda7>{0} accepted your swap request.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation VehicleSwapRequestNotSent = new Translation("<#d1a8a8>You do not have any pending swap requests.");
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer> VehicleSwapRequestDenied = new Translation<IPlayer>("<#d1a8a8>Denied {0}'s swap request.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(SectionVehicles)]
+    public static readonly Translation<IPlayer> VehicleSwapRequestAccepted = new Translation<IPlayer>("<#d1bda7>Accepted {0}'s swap request.", UCPlayer.COLOR_NICK_NAME_FORMAT);
 
     [TranslationData(SectionVehicleBay, IsPrioritizedTranslation = false)]
     public static readonly Translation<VehicleAsset> VehicleBayAdded = new Translation<VehicleAsset>("<#a0ad8e>Added {0} to the vehicle bay.", FormatRarityColor);
@@ -2213,6 +2274,8 @@ internal static class T
     public static readonly Translation<InteractableVehicle> AbandonSuccess = new Translation<InteractableVehicle>("<#a0ad8e>Your <#cedcde>{0}</color> was returned to the yard.");
     [TranslationData(SectionAbandon, "Credits toast for returning a vehicle soon after requesting it.")]
     public static readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationFlags.UnityUI);
+    [TranslationData(SectionAbandon, "Credits toast for returning a vehicle soon after requesting it, but not getting anything because the vehicle was transferred.")]
+    public static readonly Translation AbandonCompensationToastTransferred = new Translation("+0 <color=#c$credits$>C</color> [GIVEN]\nRETURNED VEHICLE", TranslationFlags.UnityUI);
     #endregion
     
     #region DailyQuests

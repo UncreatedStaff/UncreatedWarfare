@@ -369,7 +369,19 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
     public bool TryGetSpawn(BarricadeDrop drop, out SqlItem<VehicleSpawn> spawn)
     {
-        uint instId = drop.instanceID;
+        StructureSaver? saver = StructureSaver.GetSingletonQuick();
+        if (saver == null || !saver.TryGetSaveNoLock(drop, out SqlItem<SavedStructure> structure))
+        {
+            spawn = null!;
+            return false;
+        }
+        
+        int key = structure.LastPrimaryKey.Key;
+        if (key < 0)
+        {
+            spawn = null!;
+            return false;
+        }
         WriteWait();
         try
         {
@@ -377,10 +389,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             {
                 for (int i = 0; i < Items.Count; ++i)
                 {
-                    SavedStructure? str = Items[i].Item?.Sign?.Item;
-                    if (str is null)
-                        continue;
-                    if (str.InstanceID == instId && str.Buildable != null && str.Buildable.Type == StructType.Barricade)
+                    if (Items[i].Item is { } spawn2 && spawn2.SignKey.Key == key)
                     {
                         spawn = Items[i];
                         return true;
@@ -391,10 +400,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             {
                 for (int i = 0; i < Items.Count; ++i)
                 {
-                    SavedStructure? str = Items[i].Item?.Structure?.Item;
-                    if (str is null)
-                        continue;
-                    if (str.InstanceID == instId && str.Buildable != null && str.Buildable.Type == StructType.Barricade)
+                    if (Items[i].Item is { } spawn2 && spawn2.StructureKey.Key == key)
                     {
                         spawn = Items[i];
                         return true;
@@ -413,43 +419,25 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
     public bool TryGetSpawn(StructureDrop drop, out SqlItem<VehicleSpawn> spawn)
     {
-        uint instId = drop.instanceID;
-        WriteWait();
-        try
+        StructureSaver? saver = StructureSaver.GetSingletonQuick();
+        if (saver == null || !saver.TryGetSaveNoLock(drop, out SqlItem<SavedStructure> structure))
         {
-            for (int i = 0; i < Items.Count; ++i)
-            {
-                SavedStructure? str = Items[i].Item?.Structure?.Item;
-                if (str is null)
-                    continue;
-                if (str.InstanceID == instId && str.Buildable != null && str.Buildable.Type == StructType.Structure)
-                {
-                    spawn = Items[i];
-                    return true;
-                }
-            }
-
             spawn = null!;
             return false;
         }
-        finally
+
+        int key = structure.LastPrimaryKey.Key;
+        if (key < 0)
         {
-            WriteRelease();
+            spawn = null!;
+            return false;
         }
-    }
-    /// <summary>Locks <see cref="VehicleSpawner"/> write semaphore.</summary>
-    public bool TryGetSpawn(InteractableSign sign, out SqlItem<VehicleSpawn> spawn)
-    {
         WriteWait();
         try
         {
             for (int i = 0; i < Items.Count; ++i)
             {
-                SavedStructure? str = Items[i].Item?.Sign?.Item;
-                if (str is null)
-                    continue;
-                if (str.Buildable is { Type: StructType.Barricade, Asset: ItemBarricadeAsset { build: EBuild.SIGN or EBuild.SIGN_WALL } } &&
-                    str.Buildable.Model == sign.transform)
+                if (Items[i].Item is { } spawn2 && spawn2.StructureKey.Key == key)
                 {
                     spawn = Items[i];
                     return true;
@@ -477,7 +465,8 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         {
             for (int i = 0; i < Items.Count; ++i)
             {
-                if (Items[i].Item?.LinkedVehicle == vehicle)
+                VehicleSpawn? vehicleSpawn = Items[i].Item;
+                if (vehicleSpawn?.LinkedVehicle == vehicle)
                 {
                     spawn = Items[i];
                     return true;
@@ -606,12 +595,19 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         {
             VehicleBayComponent? component = sp.Structure?.Item?.Buildable?.Model.GetComponent<VehicleBayComponent>();
             found = dt != null && pl != null && component != null;
-            if (found && dt!.CreditCost > 0 && component!.RequestTime != 0)
+            if (found && dt!.CreditCost > 0 && component!.RequestTime != 0 &&
+                // check if the ownership has changed in the vehicle's history, don't award credits if so, to prevent transferring credits.
+                (!vehicle.TryGetComponent(out VehicleComponent vehicleComponent) || vehicleComponent.OwnerHistory.Count < 2))
             {
                 int creditReward = dt.CreditCost - Mathf.Min(dt.CreditCost,
                     Mathf.FloorToInt(dt.AbandonValueLossSpeed * (Time.realtimeSinceStartup - component.RequestTime)));
                 Points.AwardCredits(pl!, creditReward, T.AbandonCompensationToast.Translate(pl), false, false);
             }
+        }
+        else if (pl != null)
+        {
+            ToastMessage msg = new ToastMessage(T.AbandonCompensationToastTransferred.Translate(pl).Colorize("adadad"), ToastMessageSeverity.Mini);
+            ToastMessage.QueueMessage(pl, msg, false);
         }
 
         DeleteVehicle(vehicle);
@@ -1587,7 +1583,7 @@ public class VehicleSpawn : IListItem
             return false;
         }
         vehicle = LinkedVehicle;
-        return vehicle.isDead || vehicle.isExploded;
+        return !vehicle.isDead && !vehicle.isExploded;
     }
     public void LinkNewVehicle(InteractableVehicle vehicle)
     {

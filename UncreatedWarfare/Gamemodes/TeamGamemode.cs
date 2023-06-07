@@ -166,7 +166,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     private void OnPlayerMainCamping(UCPlayer player)
     {
         ToastMessage.QueueMessage(player, new ToastMessage(
-            T.EnteredEnemyTerritory.Translate(player, Mathf.RoundToInt(Config.GeneralAMCKillTime.Value).GetTimeFromSeconds(player)),
+            T.EnteredEnemyTerritory.Translate(player, false, Mathf.RoundToInt(Config.GeneralAMCKillTime.Value).GetTimeFromSeconds(player)),
             ToastMessageSeverity.Warning));
         player.Player.StartCoroutine(PlayerMainCampingCoroutine(player));
     }

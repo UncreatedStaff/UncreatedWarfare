@@ -1,12 +1,11 @@
-﻿using SDG.Unturned;
+﻿using SDG.Framework.Utilities;
+using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using SDG.Framework.Utilities;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Players;
@@ -15,7 +14,6 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Quests;

@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using SDG.Framework.Utilities;
 using Uncreated.Framework;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
@@ -499,15 +498,15 @@ public static class CommandHandler
             }
             runCommand:
             if (cmdInd == -1) goto notCommand;
-            int ct2 = 0;
+            int cT1 = 0;
             for (int i = 0; i <= argCt; ++i)
             {
                 ref ArgumentInfo ai = ref ArgBuffer[i];
-                if (ai.End > 0) ct2++;
+                if (ai.End > 0) cT1++;
             }
 
             int i3 = -1;
-            string[] args = argCt == -1 ? Array.Empty<string>() : new string[ct2];
+            string[] args = argCt == -1 ? Array.Empty<string>() : new string[cT1];
             for (int i = 0; i <= argCt; ++i)
             {
                 ref ArgumentInfo ai = ref ArgBuffer[i];
@@ -555,7 +554,10 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public int Offset { get => _offset; set => _offset = value; }
     public bool IMGUI { get; }
     public string Language { get; }
-
+    public float? CommandCooldownTime { get; set; }
+    public bool ShouldGiveCommandCooldown => CommandCooldownTime is > 0f;
+    public float? PortionCommandCooldownTime { get; set; }
+    public bool ShouldGivePortionCommandCooldown => PortionCommandCooldownTime is > 0f;
     public CommandInteraction(ContextData ctx, IExecutableCommand? cmd)
         : base(cmd, ctx.IsConsole ? ("Console Command: " + ctx.OriginalMessage) :
             ("Command ran by " + ctx.CallerID + ": " + ctx.OriginalMessage))
@@ -570,10 +572,50 @@ public sealed class CommandInteraction : BaseCommandInteraction
         return new CommandInteraction(new ContextData(player, Array.Empty<string>(), string.Empty), null);
     }
     public string? this[int index] => Get(index);
+    private bool CheckOnCooldown()
+    {
+        if (Caller != null && !Caller.OnDuty() && CooldownManager.IsLoaded && Command != null && CooldownManager.HasCooldown(Caller, CooldownType.Command, out Cooldown cooldown, Command))
+        {
+            if (Command is ICompoundingCooldownCommand compounding)
+            {
+                cooldown.seconds *= compounding.CompoundMultiplier;
+                if (compounding.MaxCooldown > 0 && cooldown.seconds > compounding.MaxCooldown)
+                    cooldown.seconds = compounding.MaxCooldown;
+            }
+
+            Caller.SendChat(T.CommandCooldown, cooldown, Command.CommandName);
+            return false;
+        }
+
+        return true;
+    }
+    public void AssertNotOnPortionCooldown()
+    {
+        if (Caller != null && !Caller.OnDuty() && CooldownManager.IsLoaded && Command != null && CooldownManager.HasCooldown(Caller, CooldownType.PortionCommand, out Cooldown cooldown, Command))
+        {
+            if (Command is ICompoundingCooldownCommand compounding)
+            {
+                cooldown.seconds *= compounding.CompoundMultiplier;
+                if (compounding.MaxCooldown > 0 && cooldown.seconds > compounding.MaxCooldown)
+                    cooldown.seconds = compounding.MaxCooldown;
+            }
+
+            throw Reply(T.CommandCooldown, cooldown, Command.CommandName);
+        }
+    }
+    private void CheckShouldStartCooldown()
+    {
+        if (ShouldGiveCommandCooldown && Caller != null && !Caller.OnDuty() && CooldownManager.IsLoaded && Command != null)
+            CooldownManager.StartCooldown(Caller, CooldownType.Command, CommandCooldownTime!.Value, Command);
+        if (ShouldGivePortionCommandCooldown && Caller != null && !Caller.OnDuty() && CooldownManager.IsLoaded && Command != null)
+            CooldownManager.StartCooldown(Caller, CooldownType.PortionCommand, PortionCommandCooldownTime!.Value, Command);
+    }
     internal void ExecuteCommandSync()
     {
         if (Command == null)
             throw new NotSupportedException("Can not execute a temporary context.");
+        if (!CheckOnCooldown())
+            return;
         if (Command.CheckPermission(this))
         {
             try
@@ -588,9 +630,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
                 CommandHandler.ActiveCommands.Remove(this);
                 if (!Responded)
                 {
-                    Reply(T.UnknownError);
+                    if (Command is not VanillaCommand)
+                        Reply(T.UnknownError);
+                    else
+                        Reply(T.VanillaCommandDidNotRespond);
                     MarkComplete();
                 }
+
+                CheckShouldStartCooldown();
 
                 if (Caller is not null)
                     CommandWaiter.OnCommandExecuted(Caller, Command);
@@ -598,12 +645,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
             catch (BaseCommandInteraction i)
             {
                 i.MarkComplete();
+                CheckShouldStartCooldown();
                 if (Caller is not null)
                     CommandWaiter.OnCommandExecuted(Caller, Command);
             }
             catch (Exception ex)
             {
                 Reply(T.UnknownError);
+                CheckShouldStartCooldown();
                 MarkComplete();
                 L.LogError(ex);
             }
@@ -626,6 +675,8 @@ public sealed class CommandInteraction : BaseCommandInteraction
             await UCWarfare.ToUpdate();
             if (CommandHandler.GlobalCommandCancel.IsCancellationRequested)
                 return;
+            if (!CheckOnCooldown())
+                return;
             if (Command.CheckPermission(this))
             {
                 try
@@ -634,7 +685,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
                     using IDisposable profiler = ProfilingUtils.StartTracking("Execute command: " + Command.CommandName);
 #endif
                     if (Command.Synchronize)
-                        await Command.Semaphore!.WaitAsync().ConfigureAwait(false);
+                        await Command.Semaphore!.WaitAsync(CommandHandler.GlobalCommandCancel.Token).ConfigureAwait(false);
                     try
                     {
                         await (Task = Command.Execute(this,
@@ -651,6 +702,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
                             profiler.Dispose();
 #endif
                             CommandHandler.ActiveCommands.Remove(this);
+                            CheckShouldStartCooldown();
                         }
                         finally
                         {
@@ -1033,19 +1085,19 @@ public sealed class CommandInteraction : BaseCommandInteraction
             return value is > 0 and < 4;
         }
         if (p.Equals(Teams.TeamManager.Team1Code, StringComparison.InvariantCultureIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.Team1Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t1", StringComparison.InvariantCultureIgnoreCase))
+                 p.Equals(Teams.TeamManager.Team1Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("T0", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 1ul;
             return true;
         }
         if (p.Equals(Teams.TeamManager.Team2Code, StringComparison.InvariantCultureIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.Team2Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t2", StringComparison.InvariantCultureIgnoreCase))
+                 p.Equals(Teams.TeamManager.Team2Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("T1", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 2ul;
             return true;
         }
         if (p.Equals(Teams.TeamManager.AdminCode, StringComparison.InvariantCultureIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.AdminName, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t3", StringComparison.InvariantCultureIgnoreCase))
+                 p.Equals(Teams.TeamManager.AdminName, StringComparison.InvariantCultureIgnoreCase) || p.Equals("T2", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 3ul;
             return true;
@@ -1460,6 +1512,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         player = (info.player == null ? null : UCPlayer.FromPlayer(info.player))!;
         return player != null && player.IsOnline;
     }
+    /// <remarks>Thread Safe</remarks>
     public void LogAction(ActionLogType type, string? data = null)
     {
         ActionLog.Add(type, data, CallerID);
@@ -1468,10 +1521,16 @@ public sealed class CommandInteraction : BaseCommandInteraction
     {
         return Caller.PermissionCheck(level, comparison);
     }
+    /// <remarks>Thread Safe</remarks>
     public void AssertPermissions(EAdminType level, PermissionComparison comparison = PermissionComparison.AtLeast)
     {
         if (!HasPermission(level, comparison))
+        {
+            if (level is EAdminType.ADMIN_ON_DUTY or EAdminType.TRIAL_ADMIN_ON_DUTY && F.GetPermissions(CallerID) is EAdminType.ADMIN_OFF_DUTY or EAdminType.TRIAL_ADMIN_OFF_DUTY)
+                throw Reply(T.NotOnDuty);
+
             throw SendNoPermission();
+        }
     }
     /// <exception cref="CommandInteraction"/>
     public void AssertGamemode<T>() where T : class, IGamemode
@@ -1539,16 +1598,25 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if (MatchParameter(parameter, "help"))
             throw SendCorrectUsage(usage.Translate(Caller));
     }
-
+    /// <remarks>Thread Safe</remarks>
     public Exception SendNotImplemented() => Reply(T.NotImplemented);
+    /// <remarks>Thread Safe</remarks>
     public Exception SendNotEnabled() => Reply(T.NotEnabled);
+    /// <remarks>Thread Safe</remarks>
     public Exception SendGamemodeError() => Reply(T.GamemodeError);
+    /// <remarks>Thread Safe</remarks>
     public Exception SendPlayerOnlyError() => Reply(T.PlayersOnly);
+    /// <remarks>Thread Safe</remarks>
     public Exception SendConsoleOnlyError() => Reply(T.ConsoleOnly);
+    /// <remarks>Thread Safe</remarks>
     public Exception SendUnknownError() => Reply(T.UnknownError);
+    /// <remarks>Thread Safe</remarks>
     public Exception SendNoPermission() => Reply(T.NoPermissions);
+    /// <remarks>Thread Safe</remarks>
     public Exception SendPlayerNotFound() => Reply(T.PlayerNotFound);
+    /// <remarks>Thread Safe</remarks>
     public Exception SendCorrectUsage(string usage) => Reply(T.CorrectUsage, usage);
+    /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message, Color color)
     {
         if (message is null) throw new ArgumentNullException(nameof(message));
@@ -1564,6 +1632,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
 
         return this;
     }
+    /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message, ConsoleColor color)
     {
         if (message is null) throw new ArgumentNullException(nameof(message));
@@ -1577,6 +1646,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         Responded = true;
         return this;
     }
+    /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message, string hex)
     {
         if (message is null) throw new ArgumentNullException(nameof(message));
@@ -1591,6 +1661,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         Responded = true;
         return this;
     }
+    /// <remarks>Thread Safe</remarks>
     public Exception ReplyString(string message)
     {
         if (message is null) throw new ArgumentNullException(nameof(message));
@@ -1604,6 +1675,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         Responded = true;
         return this;
     }
+    /// <remarks>Thread Safe</remarks>
     public Exception Reply(Translation translation)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
@@ -1619,7 +1691,8 @@ public sealed class CommandInteraction : BaseCommandInteraction
         Responded = true;
         return this;
     }
-    public Exception Reply<T>(Translation<T> translation, T arg)
+    /// <remarks>Thread Safe</remarks>
+    public Exception Reply<T0>(Translation<T0> translation, T0 arg)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
@@ -1634,138 +1707,147 @@ public sealed class CommandInteraction : BaseCommandInteraction
         Responded = true;
         return this;
     }
-    public Exception Reply<T1, T2>(Translation<T1, T2> translation, T1 arg1, T2 arg2)
+    /// <remarks>Thread Safe</remarks>
+    public Exception Reply<T0, T1>(Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.Default, arg1, arg2, out Color color);
+            string message = translation.Translate(L.Default, arg0, arg1, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
-            Caller.SendChat(translation, arg1, arg2);
+            Caller.SendChat(translation, arg0, arg1);
         Responded = true;
         return this;
     }
-    public Exception Reply<T1, T2, T3>(Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
+    /// <remarks>Thread Safe</remarks>
+    public Exception Reply<T0, T1, T2>(Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.Default, arg1, arg2, arg3, out Color color);
+            string message = translation.Translate(L.Default, arg0, arg1, arg2, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
-            Caller.SendChat(translation, arg1, arg2, arg3);
+            Caller.SendChat(translation, arg0, arg1, arg2);
         Responded = true;
         return this;
     }
-    public Exception Reply<T1, T2, T3, T4>(Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    /// <remarks>Thread Safe</remarks>
+    public Exception Reply<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, out Color color);
+            string message = translation.Translate(L.Default, arg0, arg1, arg2, arg3, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
-            Caller.SendChat(translation, arg1, arg2, arg3, arg4);
+            Caller.SendChat(translation, arg0, arg1, arg2, arg3);
         Responded = true;
         return this;
     }
-    public Exception Reply<T1, T2, T3, T4, T5>(Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    /// <remarks>Thread Safe</remarks>
+    public Exception Reply<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, out Color color);
+            string message = translation.Translate(L.Default, arg0, arg1, arg2, arg3, arg4, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
-            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5);
+            Caller.SendChat(translation, arg0, arg1, arg2, arg3, arg4);
         Responded = true;
         return this;
     }
-    public Exception Reply<T1, T2, T3, T4, T5, T6>(Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    /// <remarks>Thread Safe</remarks>
+    public Exception Reply<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, out Color color);
+            string message = translation.Translate(L.Default, arg0, arg1, arg2, arg3, arg4, arg5, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
-            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6);
+            Caller.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5);
         Responded = true;
         return this;
     }
-    public Exception Reply<T1, T2, T3, T4, T5, T6, T7>(Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    /// <remarks>Thread Safe</remarks>
+    public Exception Reply<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color color);
+            string message = translation.Translate(L.Default, arg0, arg1, arg2, arg3, arg4, arg5, arg6, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
-            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            Caller.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
         Responded = true;
         return this;
     }
-    public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    /// <remarks>Thread Safe</remarks>
+    public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color color);
+            string message = translation.Translate(L.Default, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
-            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            Caller.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
         Responded = true;
         return this;
     }
-    public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    /// <remarks>Thread Safe</remarks>
+    public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color color);
+            string message = translation.Translate(L.Default, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
-            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+            Caller.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
         Responded = true;
         return this;
     }
-    public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    /// <remarks>Thread Safe</remarks>
+    public Exception Reply<T0, T1, T2, T3, T4, T5, T6, T7, T8, T10>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T10> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T10 arg10)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         if (IsConsole || Caller is null)
         {
-            string message = translation.Translate(L.Default, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, out Color color);
+            string message = translation.Translate(L.Default, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg10, out Color color);
             message = Util.RemoveRichText(message);
             ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
-            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+            Caller.SendChat(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg10);
         Responded = true;
         return this;
     }

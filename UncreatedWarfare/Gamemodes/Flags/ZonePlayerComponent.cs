@@ -1709,7 +1709,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     ZoneType.Polygon => "Polygon_YLimit",
                     _ => string.Empty
                 },
-                T.ZoneEditUIYLimits.Translate(_player,
+                T.ZoneEditUIYLimits.Translate(_player, false,
             float.IsNaN(_currentBuilder.MinHeight) ? T.ZoneEditUIYLimitsInfinity.Translate(_player) : _currentBuilder.MinHeight.ToString("0.##", Data.LocalLocale),
             float.IsNaN(_currentBuilder.MaxHeight) ? T.ZoneEditUIYLimitsInfinity.Translate(_player) : _currentBuilder.MaxHeight.ToString("0.##", Data.LocalLocale)));
         }

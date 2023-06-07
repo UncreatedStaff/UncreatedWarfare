@@ -14,6 +14,7 @@ public static class Chat
     internal static void SendSingleMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, SteamPlayer recipient)
     {
         ThreadUtil.assertIsGameThread();
+
         if (Data.SendChatIndividual == null)
         {
             ChatManager.serverSendMessage(text, color, null, recipient, mode, iconURL, richText);
@@ -30,8 +31,11 @@ public static class Chat
         }
         Data.SendChatIndividual.Invoke(ENetReliability.Reliable, recipient.transportConnection, CSteamID.Nil, iconURL ?? string.Empty, mode, color, richText, text);
     }
+    /// <remarks>Thread Safe</remarks>
     public static void SendString(this Player player, string message, Color color) => SendString(player.channel.owner, message, color);
+    /// <remarks>Thread Safe</remarks>
     public static void SendString(this UCPlayer player, string message, Color color) => SendString(player.SteamPlayer, message, color);
+    /// <remarks>Thread Safe</remarks>
     public static void SendString(this SteamPlayer player, string message, Color color)
     {
         if (player?.player == null)
@@ -40,8 +44,11 @@ public static class Chat
             SendSingleMessage(message, color, EChatMode.SAY, null, true, player);
         else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, color, EChatMode.SAY, null, true, player));
     }
+    /// <remarks>Thread Safe</remarks>
     public static void SendString(this Player player, string message, string hex) => SendString(player.channel.owner, message, hex);
+    /// <remarks>Thread Safe</remarks>
     public static void SendString(this UCPlayer player, string message, string hex) => SendString(player.SteamPlayer, message, hex);
+    /// <remarks>Thread Safe</remarks>
     public static void SendString(this SteamPlayer player, string message, string hex)
     {
         if (player?.player == null)
@@ -50,8 +57,11 @@ public static class Chat
             SendSingleMessage(message, hex.Hex(), EChatMode.SAY, null, true, player);
         else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, hex.Hex(), EChatMode.SAY, null, true, player));
     }
+    /// <remarks>Thread Safe</remarks>
     public static void SendString(this Player player, string message) => SendString(player.channel.owner, message);
+    /// <remarks>Thread Safe</remarks>
     public static void SendString(this UCPlayer player, string message) => SendString(player.SteamPlayer, message);
+    /// <remarks>Thread Safe</remarks>
     public static void SendString(this SteamPlayer player, string message)
     {
         if (player?.player == null)
@@ -60,126 +70,150 @@ public static class Chat
             SendSingleMessage(message, Palette.AMBIENT, EChatMode.SAY, null, true, player);
         else UCWarfare.RunOnMainThread(() => SendSingleMessage(message, Palette.AMBIENT, EChatMode.SAY, null, true, player));
     }
+    /// <remarks>Thread Safe</remarks>
     public static void SendChat(this Player player, Translation translation) => SendChat(UCPlayer.FromPlayer(player)!, translation);
+    /// <remarks>Thread Safe</remarks>
     public static void SendChat(this SteamPlayer player, Translation translation) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation);
+    /// <remarks>Thread Safe</remarks>
     public static void SendChat(this UCPlayer player, Translation translation)
     {
         if (player is not { IsOnline: true })
             return;
-        GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
-        CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player, out Color textColor, true);
+        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
-    public static void SendChat<T>(this Player player, Translation<T> translation, T arg) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg);
-    public static void SendChat<T>(this SteamPlayer player, Translation<T> translation, T arg) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg);
-    public static void SendChat<T>(this UCPlayer player, Translation<T> translation, T arg)
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0>(this Player player, Translation<T0> translation, T0 arg) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0>(this SteamPlayer player, Translation<T0> translation, T0 arg) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0>(this UCPlayer player, Translation<T0> translation, T0 arg0)
     {
         if (player is not { IsOnline: true })
             return;
-        GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
-        CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Language, arg0, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
-    public static void SendChat<T1, T2>(this Player player, Translation<T1, T2> translation, T1 arg1, T2 arg2) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg1, arg2);
-    public static void SendChat<T1, T2>(this SteamPlayer player, Translation<T1, T2> translation, T1 arg1, T2 arg2) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2);
-    public static void SendChat<T1, T2>(this UCPlayer player, Translation<T1, T2> translation, T1 arg1, T2 arg2)
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1>(this Player player, Translation<T0, T1> translation, T0 arg0, T1 arg1) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1>(this SteamPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1>(this UCPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
         if (player is not { IsOnline: true })
             return;
-        GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
-        CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Language, arg0, arg1, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
-    public static void SendChat<T1, T2, T3>(this Player player, Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg1, arg2, arg3);
-    public static void SendChat<T1, T2, T3>(this SteamPlayer player, Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3);
-    public static void SendChat<T1, T2, T3>(this UCPlayer player, Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2>(this Player player, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2>(this SteamPlayer player, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2>(this UCPlayer player, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
         if (player is not { IsOnline: true })
             return;
-        GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
-        CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Language, arg0, arg1, arg2, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
-    public static void SendChat<T1, T2, T3, T4>(this Player player, Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg1, arg2, arg3, arg4);
-    public static void SendChat<T1, T2, T3, T4>(this SteamPlayer player, Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4);
-    public static void SendChat<T1, T2, T3, T4>(this UCPlayer player, Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3>(this Player player, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3>(this SteamPlayer player, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3>(this UCPlayer player, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
         if (player is not { IsOnline: true })
             return;
-        GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
-        CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
-    public static void SendChat<T1, T2, T3, T4, T5>(this Player player, Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5);
-    public static void SendChat<T1, T2, T3, T4, T5>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5);
-    public static void SendChat<T1, T2, T3, T4, T5>(this UCPlayer player, Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4>(this Player player, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4>(this UCPlayer player, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         if (player is not { IsOnline: true })
             return;
-        GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
-        CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
-    public static void SendChat<T1, T2, T3, T4, T5, T6>(this Player player, Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6);
-    public static void SendChat<T1, T2, T3, T4, T5, T6>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6);
-    public static void SendChat<T1, T2, T3, T4, T5, T6>(this UCPlayer player, Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5>(this Player player, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5>(this UCPlayer player, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         if (player is not { IsOnline: true })
             return;
-        GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
-        CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, arg5, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7>(this Player player, Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7>(this UCPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6>(this UCPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         if (player is not { IsOnline: true })
             return;
-        GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
-        CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8>(this Player player, Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8>(this UCPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7>(this UCPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         if (player is not { IsOnline: true })
             return;
-        GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
-        CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Player player, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this UCPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8>(this UCPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         if (player is not { IsOnline: true })
             return;
-        GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
-        CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this Player player, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this SteamPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
-    public static void SendChat<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this UCPlayer player, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this Player player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) => SendChat(UCPlayer.FromPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this SteamPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    /// <remarks>Thread Safe</remarks>
+    public static void SendChat<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(this UCPlayer player, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         if (player is not { IsOnline: true })
             return;
-        GetTranslationData(player, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat, player.Save.IMGUI);
-        CheckTranslationLength(lang, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
+    /// <remarks>Thread Safe</remarks>
     public static void Broadcast(LanguageSet set, Translation translation)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
@@ -187,142 +221,171 @@ public static class Chat
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T>(LanguageSet set, Translation<T> translation, T arg1)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0>(LanguageSet set, Translation<T0> translation, T0 arg0)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, null, set.Team, translation.Flags | TranslationFlags.ForChat, set.IMGUI);
+        value = translation.Translate(value, lang, arg0, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2>(LanguageSet set, Translation<T1, T2> translation, T1 arg1, T2 arg2)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1>(LanguageSet set, Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, null, set.Team, translation.Flags | TranslationFlags.ForChat, set.IMGUI);
+        value = translation.Translate(value, lang, arg0, arg1, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3>(LanguageSet set, Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2>(LanguageSet set, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, null, set.Team, translation.Flags | TranslationFlags.ForChat, set.IMGUI);
+        value = translation.Translate(value, lang, arg0, arg1, arg2, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4>(LanguageSet set, Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3>(LanguageSet set, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, null, set.Team, translation.Flags | TranslationFlags.ForChat, set.IMGUI);
+        value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5>(LanguageSet set, Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4>(LanguageSet set, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, null, set.Team, translation.Flags | TranslationFlags.ForChat, set.IMGUI);
+        value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6>(LanguageSet set, Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5>(LanguageSet set, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, null, set.Team, translation.Flags | TranslationFlags.ForChat, set.IMGUI);
+        value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, arg5, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7>(LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6>(LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, set.Team, translation.Flags | TranslationFlags.ForChat, set.IMGUI);
+        value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8>(LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, set.Team, translation.Flags | TranslationFlags.ForChat, set.IMGUI);
+        value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9>(LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, set.Team, translation.Flags | TranslationFlags.ForChat, set.IMGUI);
+        value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
-        value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, set.Team, translation.Flags | TranslationFlags.ForChat, set.IMGUI);
+        value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
+    /// <remarks>Thread Safe</remarks>
     public static void Broadcast(IEnumerable<LanguageSet> sets, Translation translation)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation);
     }
-    public static void Broadcast<T>(IEnumerable<LanguageSet> sets, Translation<T> translation, T arg1)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0>(IEnumerable<LanguageSet> sets, Translation<T0> translation, T0 arg0)
     {
         foreach (LanguageSet set in sets)
-            Broadcast(set, translation, arg1);
+            Broadcast(set, translation, arg0);
     }
-    public static void Broadcast<T1, T2>(IEnumerable<LanguageSet> sets, Translation<T1, T2> translation, T1 arg1, T2 arg2)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1>(IEnumerable<LanguageSet> sets, Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
         foreach (LanguageSet set in sets)
-            Broadcast(set, translation, arg1, arg2);
+            Broadcast(set, translation, arg0, arg1);
     }
-    public static void Broadcast<T1, T2, T3>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
         foreach (LanguageSet set in sets)
-            Broadcast(set, translation, arg1, arg2, arg3);
+            Broadcast(set, translation, arg0, arg1, arg2);
     }
-    public static void Broadcast<T1, T2, T3, T4>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
         foreach (LanguageSet set in sets)
-            Broadcast(set, translation, arg1, arg2, arg3, arg4);
+            Broadcast(set, translation, arg0, arg1, arg2, arg3);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         foreach (LanguageSet set in sets)
-            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5);
+            Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         foreach (LanguageSet set in sets)
-            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6);
+            Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         foreach (LanguageSet set in sets)
-            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         foreach (LanguageSet set in sets)
-            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         foreach (LanguageSet set in sets)
-            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+            Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         foreach (LanguageSet set in sets)
-            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+            Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }
+    /// <remarks>Thread Safe</remarks>
     public static void Broadcast(Translation translation)
+    {
+        if (UCWarfare.IsMainThread)
+            BroadcastIntl(translation);
+        else
+            UCWarfare.RunOnMainThread(() => BroadcastIntl(translation));
+    }
+    private static void BroadcastIntl(Translation translation)
     {
         if ((translation.Flags & TranslationFlags.PerPlayerTranslation) == TranslationFlags.PerPlayerTranslation)
         {
@@ -340,7 +403,15 @@ public static class Chat
                 Broadcast(set, translation);
         }
     }
-    public static void Broadcast<T>(Translation<T> translation, T arg)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0>(Translation<T0> translation, T0 arg0)
+    {
+        if (UCWarfare.IsMainThread)
+            BroadcastIntl(translation, arg0);
+        else
+            UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0));
+    }
+    private static void BroadcastIntl<T0>(Translation<T0> translation, T0 arg)
     {
         if ((translation.Flags & TranslationFlags.PerPlayerTranslation) == TranslationFlags.PerPlayerTranslation)
         {
@@ -358,177 +429,239 @@ public static class Chat
                 Broadcast(set, translation, arg);
         }
     }
-    public static void Broadcast<T1, T2>(Translation<T1, T2> translation, T1 arg1, T2 arg2)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1>(Translation<T0, T1> translation, T0 arg0, T1 arg1)
+    {
+        if (UCWarfare.IsMainThread)
+            BroadcastIntl(translation, arg0, arg1);
+        else
+            UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1));
+    }
+    private static void BroadcastIntl<T0, T1>(Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
         if ((translation.Flags & TranslationFlags.PerPlayerTranslation) == TranslationFlags.PerPlayerTranslation)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2);
+                SendChat(PlayerManager.OnlinePlayers[i], translation, arg0, arg1);
         }
         else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
         {
-            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2);
-            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2);
+            Broadcast(LanguageSet.OnTeam(1), translation, arg0, arg1);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg0, arg1);
         }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
-                Broadcast(set, translation, arg1, arg2);
+                Broadcast(set, translation, arg0, arg1);
         }
     }
-    public static void Broadcast<T1, T2, T3>(Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2>(Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
+    {
+        if (UCWarfare.IsMainThread)
+            BroadcastIntl(translation, arg0, arg1, arg2);
+        else
+            UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2));
+    }
+    private static void BroadcastIntl<T0, T1, T2>(Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
         if ((translation.Flags & TranslationFlags.PerPlayerTranslation) == TranslationFlags.PerPlayerTranslation)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3);
+                SendChat(PlayerManager.OnlinePlayers[i], translation, arg0, arg1, arg2);
         }
         else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
         {
-            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3);
-            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3);
+            Broadcast(LanguageSet.OnTeam(1), translation, arg0, arg1, arg2);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg0, arg1, arg2);
         }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
-                Broadcast(set, translation, arg1, arg2, arg3);
+                Broadcast(set, translation, arg0, arg1, arg2);
         }
     }
-    public static void Broadcast<T1, T2, T3, T4>(Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+    {
+        if (UCWarfare.IsMainThread)
+            BroadcastIntl(translation, arg0, arg1, arg2, arg3);
+        else
+            UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3));
+    }
+    private static void BroadcastIntl<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
         if ((translation.Flags & TranslationFlags.PerPlayerTranslation) == TranslationFlags.PerPlayerTranslation)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4);
+                SendChat(PlayerManager.OnlinePlayers[i], translation, arg0, arg1, arg2, arg3);
         }
         else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
         {
-            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4);
-            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4);
+            Broadcast(LanguageSet.OnTeam(1), translation, arg0, arg1, arg2, arg3);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg0, arg1, arg2, arg3);
         }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
-                Broadcast(set, translation, arg1, arg2, arg3, arg4);
+                Broadcast(set, translation, arg0, arg1, arg2, arg3);
         }
     }
-    public static void Broadcast<T1, T2, T3, T4, T5>(Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    {
+        if (UCWarfare.IsMainThread)
+            BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4);
+        else
+            UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4));
+    }
+    private static void BroadcastIntl<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         if ((translation.Flags & TranslationFlags.PerPlayerTranslation) == TranslationFlags.PerPlayerTranslation)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5);
+                SendChat(PlayerManager.OnlinePlayers[i], translation, arg0, arg1, arg2, arg3, arg4);
         }
         else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
         {
-            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5);
-            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5);
+            Broadcast(LanguageSet.OnTeam(1), translation, arg0, arg1, arg2, arg3, arg4);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg0, arg1, arg2, arg3, arg4);
         }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
-                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5);
+                Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4);
         }
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6>(Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    {
+        if (UCWarfare.IsMainThread)
+            BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5);
+        else
+            UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5));
+    }
+    private static void BroadcastIntl<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         if ((translation.Flags & TranslationFlags.PerPlayerTranslation) == TranslationFlags.PerPlayerTranslation)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5, arg6);
+                SendChat(PlayerManager.OnlinePlayers[i], translation, arg0, arg1, arg2, arg3, arg4, arg5);
         }
         else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
         {
-            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5, arg6);
-            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5, arg6);
+            Broadcast(LanguageSet.OnTeam(1), translation, arg0, arg1, arg2, arg3, arg4, arg5);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg0, arg1, arg2, arg3, arg4, arg5);
         }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
-                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6);
+                Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5);
         }
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7>(Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    {
+        if (UCWarfare.IsMainThread)
+            BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+        else
+            UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6));
+    }
+    private static void BroadcastIntl<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         if ((translation.Flags & TranslationFlags.PerPlayerTranslation) == TranslationFlags.PerPlayerTranslation)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                SendChat(PlayerManager.OnlinePlayers[i], translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
         }
         else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
         {
-            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            Broadcast(LanguageSet.OnTeam(1), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
         }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
-                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
         }
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    {
+        if (UCWarfare.IsMainThread)
+            BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+        else
+            UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7));
+    }
+    private static void BroadcastIntl<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         if ((translation.Flags & TranslationFlags.PerPlayerTranslation) == TranslationFlags.PerPlayerTranslation)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+                SendChat(PlayerManager.OnlinePlayers[i], translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
         }
         else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
         {
-            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            Broadcast(LanguageSet.OnTeam(1), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
         }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
-                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+                Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
         }
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    {
+        if (UCWarfare.IsMainThread)
+            BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+        else
+            UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8));
+    }
+    private static void BroadcastIntl<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         if ((translation.Flags & TranslationFlags.PerPlayerTranslation) == TranslationFlags.PerPlayerTranslation)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+                SendChat(PlayerManager.OnlinePlayers[i], translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
         }
         else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
         {
-            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+            Broadcast(LanguageSet.OnTeam(1), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
         }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
-                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+                Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
         }
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    /// <remarks>Thread Safe</remarks>
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    {
+        if (UCWarfare.IsMainThread)
+            BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+        else
+            UCWarfare.RunOnMainThread(() => BroadcastIntl(translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9));
+    }
+    private static void BroadcastIntl<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         if ((translation.Flags & TranslationFlags.PerPlayerTranslation) == TranslationFlags.PerPlayerTranslation)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+                SendChat(PlayerManager.OnlinePlayers[i], translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
         }
         else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
         {
-            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
-            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+            Broadcast(LanguageSet.OnTeam(1), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
         }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
-                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+                Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
         }
-    }
-    private static void GetTranslationData(UCPlayer player, Translation translation, out string value, out string lang, out Color textColor)
-    {
-        if (player is null || player.Player == null) throw new ArgumentNullException(nameof(player));
-        if (translation is null) throw new ArgumentNullException(nameof(translation));
-
-        if (Data.Languages is null || !Data.Languages.TryGetValue(player.Steam64, out lang))
-            lang = L.Default;
-
-        value = translation.Translate(lang, out textColor, player.Save.IMGUI);
     }
     private static void GetBroadcastTranslationData(in LanguageSet set, Translation translation, out string value, out string lang, out Color textColor)
     {

@@ -19,6 +19,7 @@ public static partial class Patches
     [HarmonyPatch]
     public class VehiclePatches
     {
+        public static int DesiredSeat = -1;
         // SDG.Unturned.PlayerAnimator
         /// <summary>
         /// Postfix of <see cref="InteractableVehicle.tryAddPlayer(out byte, Player)"/> to control which seats the player enters.
@@ -33,6 +34,8 @@ public static partial class Patches
 #endif
             if (__result)
             {
+                if (DesiredSeat is >= 0 and <= byte.MaxValue)
+                    seat = (byte)DesiredSeat;
                 VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSync(__instance.asset.GUID);
                 if (data != null)
                 {

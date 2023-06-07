@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
@@ -455,22 +456,29 @@ public class StructureCommand : AsyncCommand
         else
         {
             ulong team = vehicle.lockedGroup.m_SteamID.GetTeam();
+            ulong prevOwner = vehicle.transform.TryGetComponent(out VehicleComponent vcomp) ? vcomp.PreviousOwner : 0ul;
             IPlayer names = await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ConfigureAwait(false);
+            string prevOwnerName;
+            if (prevOwner != 0ul)
+            {
+                PlayerNames pl = await F.GetPlayerOriginalNamesAsync(prevOwner, token).ConfigureAwait(false);
+                prevOwnerName = pl.PlayerName;
+            }
+            else prevOwnerName = "None";
             await UCWarfare.ToUpdate(token);
             if (sendurl)
             {
                 player.SteamPlayer.SendSteamURL(
-                    T.StructureExamineLastOwnerPrompt.Translate(player, vehicle.asset, names
-                    ,
-                    Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!), vehicle.lockedOwner.m_SteamID);
+                    T.VehicleExamineLastOwnerPrompt.Translate(player, false, vehicle.asset, names,
+                    Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!, prevOwnerName, prevOwner), vehicle.lockedOwner.m_SteamID);
             }
             else
             {
                 OfflinePlayer pl = new OfflinePlayer(vehicle.lockedOwner.m_SteamID);
                 await pl.CacheUsernames(token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate(token);
-                player.SendChat(T.StructureExamineLastOwnerChat,
-                    vehicle.asset, names, pl, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!);
+                player.SendChat(T.VehicleExamineLastOwnerChat,
+                    vehicle.asset, names, pl, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!, prevOwnerName, prevOwner);
             }
         }
     }
@@ -490,7 +498,7 @@ public class StructureCommand : AsyncCommand
             await UCWarfare.ToUpdate(token);
             if (sendurl)
             {
-                player.SteamPlayer.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player, data.barricade.asset,
+                player.SteamPlayer.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player, false, data.barricade.asset,
                         names, Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
             }
             else
@@ -522,7 +530,7 @@ public class StructureCommand : AsyncCommand
             await UCWarfare.ToUpdate(token);
             if (sendurl)
             {
-                player.SteamPlayer.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player, data.structure.asset, names,
+                player.SteamPlayer.SendSteamURL(T.StructureExamineLastOwnerPrompt.Translate(player, false, data.structure.asset, names,
                         Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
             }
             else

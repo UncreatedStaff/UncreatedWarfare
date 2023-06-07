@@ -115,83 +115,85 @@ public static class Localization
             lang = L.Default;
         return translation.Translate(lang, out color);
     }
-    public static string Translate<T>(Translation<T> translation, UCPlayer? player, T arg)
+    public static string Translate<T0>(Translation<T0> translation, UCPlayer? player, T0 arg0)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = L.Default;
-        return translation.Translate(lang, arg, player, player is null ? 0 : player.GetTeam());
+        return translation.Translate(lang, arg0, player, player is null ? 0 : player.GetTeam());
     }
-    public static string Translate<T1, T2>(Translation<T1, T2> translation, UCPlayer? player, T1 arg1, T2 arg2)
+    public static string Translate<T0, T1>(Translation<T0, T1> translation, UCPlayer? player, T0 arg0, T1 arg1)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = L.Default;
-        return translation.Translate(lang, arg1, arg2, player, player is null ? 0 : player.GetTeam());
+        return translation.Translate(lang, arg0, arg1, player, player is null ? 0 : player.GetTeam());
     }
-    public static string Translate<T1, T2, T3>(Translation<T1, T2, T3> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3)
+    public static string Translate<T0, T1, T2>(Translation<T0, T1, T2> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = L.Default;
-        return translation.Translate(lang, arg1, arg2, arg3, player, player is null ? 0 : player.GetTeam());
+        return translation.Translate(lang, arg0, arg1, arg2, player, player is null ? 0 : player.GetTeam());
     }
-    public static string Translate<T1, T2, T3, T4>(Translation<T1, T2, T3, T4> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    public static string Translate<T0, T1, T2, T3>(Translation<T0, T1, T2, T3> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = L.Default;
-        return translation.Translate(lang, arg1, arg2, arg3, arg4, player, player is null ? 0 : player.GetTeam());
+        return translation.Translate(lang, arg0, arg1, arg2, arg3, player, player is null ? 0 : player.GetTeam());
     }
-    public static string Translate<T1, T2, T3, T4, T5>(Translation<T1, T2, T3, T4, T5> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    public static string Translate<T0, T1, T2, T3, T4>(Translation<T0, T1, T2, T3, T4> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = L.Default;
-        return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, player, player is null ? 0 : player.GetTeam());
+        return translation.Translate(lang, arg0, arg1, arg2, arg3, arg4, player, player is null ? 0 : player.GetTeam());
     }
-    public static string Translate<T1, T2, T3, T4, T5, T6>(Translation<T1, T2, T3, T4, T5, T6> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    public static string Translate<T0, T1, T2, T3, T4, T5>(Translation<T0, T1, T2, T3, T4, T5> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = L.Default;
-        return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, arg6, player, player is null ? 0 : player.GetTeam());
+        return translation.Translate(lang, arg0, arg1, arg2, arg3, arg4, arg5, player, player is null ? 0 : player.GetTeam());
     }
-    public static string Translate<T1, T2, T3, T4, T5, T6, T7>(Translation<T1, T2, T3, T4, T5, T6, T7> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6>(Translation<T0, T1, T2, T3, T4, T5, T6> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = L.Default;
-        return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, player is null ? 0 : player.GetTeam());
+        return translation.Translate(lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, player, player is null ? 0 : player.GetTeam());
     }
-    public static string Translate<T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7>(Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = L.Default;
-        return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, player is null ? 0 : player.GetTeam());
+        return translation.Translate(lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, player is null ? 0 : player.GetTeam());
     }
-    public static string Translate<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = L.Default;
-        return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, player is null ? 0 : player.GetTeam());
+        return translation.Translate(lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, player is null ? 0 : player.GetTeam());
     }
-    public static string Translate<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, UCPlayer? player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    public static string Translate<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, UCPlayer? player, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = L.Default;
-        return translation.Translate(lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player, player is null ? 0 : player.GetTeam());
+        return translation.Translate(lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, player is null ? 0 : player.GetTeam());
     }
-    public static string TranslateUnsafe(Translation translation, UCPlayer? player, object[] formatting)
+    public static string TranslateUnsafe(Translation translation, UCPlayer? player, object?[] formatting, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
         if (player == null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = L.Default;
-        return translation.TranslateUnsafe(lang, formatting, player, player is null ? 0 : player.GetTeam());
+        return translation.TranslateUnsafe(lang, formatting, player, player is null ? 0 : player.GetTeam(), canUseIMGUI, flags);
     }
-    public static string TranslateUnsafe(Translation translation, ulong player, object[] formatting)
+    public static string TranslateUnsafe(Translation translation, ulong player, object?[] formatting, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
         if (player == 0 || !Data.Languages.TryGetValue(player, out string lang))
             lang = L.Default;
-        return translation.TranslateUnsafe(lang, formatting, null, 0);
+        UCPlayer? pl = UCPlayer.FromID(player);
+        return translation.TranslateUnsafe(lang, formatting, pl, pl is null ? 0 : player.GetTeam(), canUseIMGUI, flags);
     }
-    public static string TranslateUnsafe(Translation translation, ulong player, out Color color, object[] formatting)
+    public static string TranslateUnsafe(Translation translation, ulong player, out Color color, object?[] formatting, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
         if (player == 0 || !Data.Languages.TryGetValue(player, out string lang))
             lang = L.Default;
-        return translation.TranslateUnsafe(lang, out color, formatting, null, 0);
+        UCPlayer? pl = UCPlayer.FromID(player);
+        return translation.TranslateUnsafe(lang, out color, formatting, pl, pl is null ? 0 : player.GetTeam(), canUseIMGUI, flags);
     }
     public static string GetTimeFromSeconds(this int seconds, ulong player)
     {

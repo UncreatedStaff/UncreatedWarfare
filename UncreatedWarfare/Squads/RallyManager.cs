@@ -168,11 +168,11 @@ public class RallyPoint : MonoBehaviour
             return;
         TimeSpan seconds = TimeSpan.FromSeconds(secondsLeft);
         
-        foreach (var player in AwaitingPlayers)
+        foreach (UCPlayer? player in AwaitingPlayers)
         {
             if (!player.IsOnline)
                 break;
-            SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUITimer.Translate(player, secondsLeft >= 0 ? seconds : TimeSpan.Zero, NearestLocation));
+            SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUITimer.Translate(player, false, secondsLeft >= 0 ? seconds : TimeSpan.Zero, NearestLocation));
         }
     }
     public void ShowUIForPlayer(UCPlayer player)
@@ -180,7 +180,7 @@ public class RallyPoint : MonoBehaviour
         if (!player.IsOnline)
             return;
 
-        SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUI.Translate(player, NearestLocation));
+        SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUI.Translate(player, false, NearestLocation));
     }
     public void ShowUIForSquad()
     {

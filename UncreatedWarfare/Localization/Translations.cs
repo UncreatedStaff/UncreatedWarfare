@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections;
@@ -75,6 +76,66 @@ public class Translation
             DeclarationLineNumber = null;
         }
     }
+    protected readonly struct TranslationHelper
+    {
+        public readonly TranslationValue ValueSet;
+        public readonly bool UseIMGUI;
+        public readonly bool Inner;
+        public readonly string PreformattedValue;
+        public readonly UCPlayer? Player;
+        public readonly ulong Team;
+        public readonly TranslationFlags Flags;
+        public readonly string Language;
+        public readonly CultureInfo? Culture;
+
+        public ArgumentSpan[] Pluralizers
+        {
+            get
+            {
+                if (ValueSet == null) return Array.Empty<ArgumentSpan>();
+                if (UseIMGUI)
+                    return Inner ? ValueSet.ProcessedInnerNoTMProTagsPluralizers : ValueSet.ProcessedNoTMProTagsPluralizers;
+                return Inner ? ValueSet.ProcessedInnerPluralizers : ValueSet.ProcessedPluralizers;
+            }
+        }
+        public TranslationHelper(TranslationValue valueSet, bool useIMGUI, bool inner, string preformattedValue, string language, UCPlayer? player, ulong team, TranslationFlags flags, CultureInfo? culture)
+        {
+            ValueSet = valueSet;
+            UseIMGUI = useIMGUI;
+            Inner = inner;
+            PreformattedValue = preformattedValue;
+            Language = language;
+            Player = player;
+            Team = team;
+            Flags = flags;
+            Culture = culture;
+        }
+    }
+    protected readonly struct ArgumentSpan
+    {
+        public readonly int Argument;
+        public readonly int StartIndex;
+        public readonly int Length;
+        public ArgumentSpan(int argument, int startIndex, int length)
+        {
+            Argument = argument;
+            StartIndex = startIndex;
+            Length = length;
+        }
+        public void Pluralize(in TranslationHelper helper, ref string value, ref int offset)
+        {
+            int index = StartIndex + offset;
+            if (StartIndex >= value.Length)
+                return;
+            int len = Length;
+            if (len > value.Length - StartIndex)
+                len = value.Length - StartIndex;
+            string plural = Translation.Pluralize(helper.Language, helper.Culture, value.Substring(index, len), helper.Flags);
+            offset += plural.Length - len;
+            value = value.Substring(0, index) + plural + value.Substring(index + len);
+        }
+    }
+
     internal void Dump()
     {
         L.Log($"Key: {Key}");
@@ -125,7 +186,7 @@ public class Translation
         if ((_flags & TranslationFlags.SuppressWarnings) == TranslationFlags.SuppressWarnings) return;
         if ((_flags & TranslationFlags.TMProSign) == TranslationFlags.TMProSign && def.IndexOf("<size", StringComparison.OrdinalIgnoreCase) != -1)
             L.LogWarning("[" + (lang == null ? "DEFAULT" : lang.ToUpper()) + "] " + Key + " has a size tag, which shouldn't be on signs.", method: "TRANSLATIONS");
-        int ct = this.GetType().GenericTypeArguments.Length;
+        int ct = GetType().GenericTypeArguments.Length;
         int index = -2;
         int flag = 0;
         int max = -1;
@@ -246,6 +307,54 @@ public class Translation
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ToString<T>(T value, string language, CultureInfo culture, string? format, UCPlayer? target, TranslationFlags flags)
         => ToStringHelperClass<T>.ToString(value, language, format, target, culture, flags);
+
+    private static readonly List<ArgumentSpan> WorkingPluralizers = new List<ArgumentSpan>(10);
+    protected static ArgumentSpan[] GetPluralizers(ref string str) => GetArgumentModifiers(ref str, 'p');
+    protected static ArgumentSpan[] GetArgumentModifiers(ref string str, char modifier)
+    {
+        lock (WorkingPluralizers)
+        {
+            try
+            {
+                int index = -1;
+                while (index + 1 < str.Length)
+                {
+                    // ${p:10:test}
+                    int nextSign = str.IndexOf('$', index + 1);
+                    if (nextSign == -1)
+                        break;
+                    index = nextSign;
+                    if (nextSign >= str.Length - 4 || str[nextSign + 1] != '{' || (str[nextSign + 2] != modifier && str[nextSign + 2] != char.ToUpperInvariant(modifier)) || str[nextSign + 3] != ':')
+                        continue;
+                    int closing = str.IndexOf('}', nextSign + 2);
+                    if (closing == -1)
+                        break;
+                    int firstDigit = -1;
+                    int lastDigit = -1;
+                    for (int j = nextSign + 4; j < str.Length; ++j)
+                    {
+                        if (!char.IsDigit(str[j]))
+                            break;
+                        if (firstDigit == -1)
+                            firstDigit = j;
+                        lastDigit = j;
+                    }
+                    if (str.Length >= lastDigit + 1 || str[lastDigit + 1] != ':' || !int.TryParse(str.SubstringRange(firstDigit, lastDigit), NumberStyles.Number, Data.AdminLocale, out int argument))
+                        continue;
+
+                    str = str.Substring(0, nextSign) + (closing < str.Length - 1 ? str.Substring(closing + 1) : string.Empty);
+                    index = closing - (7 + (lastDigit - firstDigit));
+                    WorkingPluralizers.Add(new ArgumentSpan(argument, nextSign, closing - (nextSign + 2)));
+                }
+
+                return WorkingPluralizers.Count == 0 ? Array.Empty<ArgumentSpan>() : WorkingPluralizers.ToArray();
+            }
+            finally
+            {
+                WorkingPluralizers.Clear();
+            }
+        }
+    }
 
     private static readonly Type[] TypeArray1 = { typeof(string), typeof(IFormatProvider) };
     private static readonly Type[] TypeArray2 = { typeof(string) };
@@ -499,19 +608,19 @@ public class Translation
                 if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
                     return names.CharacterName;
                 if (format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
-                    return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), names.CharacterName, flags);
+                    return Localization.Colorize(TeamManager.GetTeamHexColor(player.GetTeam()), names.CharacterName, flags);
                 if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal))
                     return names.NickName;
                 if (format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
-                    return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), names.NickName, flags);
+                    return Localization.Colorize(TeamManager.GetTeamHexColor(player.GetTeam()), names.NickName, flags);
                 if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                     return names.PlayerName;
                 if (format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
-                    return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), names.PlayerName, flags);
+                    return Localization.Colorize(TeamManager.GetTeamHexColor(player.GetTeam()), names.PlayerName, flags);
                 if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
                     return player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.AdminLocale);
                 if (format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
-                    return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.AdminLocale), flags);
+                    return Localization.Colorize(TeamManager.GetTeamHexColor(player.GetTeam()), player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.AdminLocale), flags);
             }
             return names.CharacterName;
         }
@@ -772,6 +881,10 @@ public class Translation
         public string Processed; // has colors replaced and correct color tag type.
         public string ProcessedNoTMProTags; // tmpro tags are converted to unity tags
         public string ProcessedInnerNoTMProTags; // tmpro tags are converted to unity tags
+        public ArgumentSpan[] ProcessedInnerPluralizers;
+        public ArgumentSpan[] ProcessedPluralizers;
+        public ArgumentSpan[] ProcessedNoTMProTagsPluralizers;
+        public ArgumentSpan[] ProcessedInnerNoTMProTagsPluralizers;
         public Color Color;
         public bool RichText;
         private string? _console;
@@ -783,6 +896,10 @@ public class Translation
             RichText = (flags & TranslationFlags.NoRichText) == 0;
             Original = original;
             ProcessValue(this, flags);
+            ProcessedInnerPluralizers = GetPluralizers(ref ProcessedInner!);
+            ProcessedPluralizers = GetPluralizers(ref Processed!);
+            ProcessedNoTMProTagsPluralizers = GetPluralizers(ref ProcessedNoTMProTags!);
+            ProcessedInnerNoTMProTagsPluralizers = GetPluralizers(ref ProcessedInnerNoTMProTags!);
             _console = null;
         }
         public TranslationValue(string language, string original, string processedInner, string processed, Color color)
@@ -1052,128 +1169,154 @@ public class Translation
             flags |= TranslationFlags.TranslateWithUnityRichText;
         return flags;
     }
+    protected string PrintFormatException(Exception ex, TranslationFlags flags)
+    {
+        if ((flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
+        {
+            throw new ArgumentException("[TRANSLATIONS] Error while formatting " + Key, ex);
+        }
 
+        L.LogError("[TRANSLATIONS] Error while formatting " + Key);
+        L.LogError(ex);
+        return InvalidValue;
+    }
     internal static string Null(TranslationFlags flags) =>
         ((flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText)
             ? NullNoColor
             : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
                 ? NullColorUnity
                 : NullColorTMPro);
-    public string Translate(string? language, bool imgui = false) => Translate(language, LanguageAliasSet.GetCultureInfo(language), imgui);
-    public string Translate(IPlayer? player, out Color color, bool imgui = false)
+    protected static string CheckLanguage(string? language)
+    {
+        if (language is null || language.Length == 0 || language.Length == 1 && language[0] is '0' or 'o' or 'O')
+            return L.Default;
+        return language;
+    }
+    protected TranslationHelper StartTranslation(string language, UCPlayer? target, ulong team, bool canUseIMGUI, bool inner, TranslationFlags flags)
+    {
+        language = CheckLanguage(language);
+        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
+        bool imgui = canUseIMGUI && target is not null && target.Save.IMGUI;
+        TranslationValue data = this[language];
+        string rtn = imgui ? data.ProcessedNoTMProTags : data.Processed;
+        AdjustForCulture(culture, ref rtn);
+        return new TranslationHelper(data, imgui, inner, rtn, language, target, team, flags | GetFlags(team, imgui), culture);
+    }
+    protected TranslationHelper StartTranslation(UCPlayer player, bool canUseIMGUI, bool inner)
+    {
+        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
+        bool imgui = canUseIMGUI && player is not null && player.Save.IMGUI;
+        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
+        TranslationValue data = this[lang];
+        string rtn = imgui ? data.ProcessedNoTMProTags : data.Processed;
+        AdjustForCulture(culture, ref rtn);
+        ulong team = player == null ? 0 : player.GetTeam();
+        return new TranslationHelper(data, imgui, inner, rtn, lang, player, team, GetFlags(team, imgui), culture);
+    }
+    protected TranslationHelper StartTranslation(string? language, CultureInfo? culture, bool useIMGUI, bool inner, UCPlayer? target, ulong team, TranslationFlags flags)
+    {
+        language = CheckLanguage(language);
+        TranslationValue data = this[language];
+        string rtn = useIMGUI ? data.ProcessedNoTMProTags : data.Processed;
+        AdjustForCulture(culture, ref rtn);
+        return new TranslationHelper(data, useIMGUI, inner, rtn, language, target, team, flags | GetFlags(team, useIMGUI), culture);
+    }
+
+
+    public string Translate(string? language, bool canUseIMGUI = false)
+        => Translate(language, LanguageAliasSet.GetCultureInfo(language), canUseIMGUI);
+    public string Translate(IPlayer? player, out Color color, bool canUseIMGUI = false)
     {
         if (player is UCPlayer pl)
-            return Translate(pl.Language, pl.Culture, out color, imgui && pl.Save.IMGUI);
+            return Translate(pl.Language, pl.Culture, out color, canUseIMGUI && pl.Save.IMGUI);
         if (player is null)
             return Translate(L.Default, Data.LocalLocale, out color);
         string l = Localization.GetLang(player.Steam64);
         return Translate(l, LanguageAliasSet.GetCultureInfo(l), out color);
     }
-    public string Translate(IPlayer? player, bool imgui = false)
+    public string Translate(IPlayer? player, bool canUseIMGUI = false)
     {
         if (player is UCPlayer pl)
-            return Translate(pl.Language, pl.Culture, imgui && pl.Save.IMGUI);
+            return Translate(pl.Language, pl.Culture, canUseIMGUI && pl.Save.IMGUI);
         if (player is null)
             return Translate(L.Default, Data.LocalLocale);
         string l = Localization.GetLang(player.Steam64);
         return Translate(l, LanguageAliasSet.GetCultureInfo(l));
     }
-    public string Translate(ulong player, bool imgui = false) => Translate(Localization.GetLang(player), imgui && UCPlayer.FromID(player) is { Save.IMGUI: true });
-    public string Translate(ulong player, out Color color, bool imgui = false)
-        => Translate(Localization.GetLang(player), out color, imgui && UCPlayer.FromID(player) is { Save.IMGUI: true });
-
-    public string Translate(string? language, out Color color, bool imgui = false) => Translate(language, LanguageAliasSet.GetCultureInfo(language), out color, imgui);
-    public string Translate(string? language, CultureInfo? culture, bool imgui = false)
+    public string Translate(ulong player, bool canUseIMGUI = false)
+        => Translate(Localization.GetLang(player), canUseIMGUI && UCPlayer.FromID(player) is { Save.IMGUI: true });
+    public string Translate(string? language, CultureInfo? culture, bool useIMGUI = false)
+        => StartTranslation(language, culture, useIMGUI, false, null, 0, 0).PreformattedValue;
+    public string Translate(ulong player, out Color color, bool canUseIMGUI = false)
+        => Translate(Localization.GetLang(player), out color, canUseIMGUI && player != 0 && UCPlayer.FromID(player) is { Save.IMGUI: true });
+    public string Translate(string? language, out Color color, bool useIMGUI = false)
+        => Translate(language, LanguageAliasSet.GetCultureInfo(language), out color, useIMGUI);
+    public string Translate(string? language, CultureInfo? culture, out Color color, bool useIMGUI = false)
     {
-        if (language is null)
-            return _defaultData.Processed;
-        if (language.Length == 0 || language.Length == 1 && language[0] == '0')
-            language = L.Default;
-
-        TranslationValue data = this[language];
-        string rtn = imgui ? data.ProcessedNoTMProTags : data.Processed;
-        AdjustForCulture(culture, ref rtn);
-        return rtn;
+        TranslationHelper helper = StartTranslation(language, culture, useIMGUI, true, null, 0, 0);
+        color = helper.ValueSet.Color;
+        return helper.PreformattedValue;
     }
-    public string Translate(string? language, CultureInfo? culture, out Color color, bool imgui = false)
-    {
-        if (language is null)
-        {
-            color = _defaultData.Color;
-            return _defaultData.ProcessedInner;
-        }
-        if (language.Length == 0 || language.Length == 1 && language[0] == '0')
-            language = L.Default;
-
-        TranslationValue data = this[language];
-        color = data.Color;
-        string rtn = imgui ? data.ProcessedInnerNoTMProTags : data.ProcessedInner;
-        AdjustForCulture(culture, ref rtn);
-        return rtn;
-    }
+    [Conditional("FALSE")]
+    [UsedImplicitly]
     private static void AdjustForCulture(CultureInfo? culture, ref string output)
     {
-        if (culture == null)
-            return;
-        /*
-
-        if (culture.TextInfo.IsRightToLeft)
-        {
-            RightToLeftify(ref output);
-        }
-        */
+        // for later purposes
     }
-    
-    private string BaseUnsafeTranslate(Type t, string val, string language, Type[] gens, object[] formatting, UCPlayer? target, ulong targetTeam)
+    private string BaseUnsafeTranslate(Type t, Type[] gens, object?[] formatting, in TranslationHelper helper)
     {
         if (gens.Length > formatting.Length)
-            throw new ArgumentException("Insufficient amount of formatting arguments supplied.", nameof(formatting));
+            Array.Resize(ref formatting, gens.Length);
         for (int i = 0; i < gens.Length; ++i)
         {
-            object v = formatting[i];
-            if (v is not null && !gens[i].IsInstanceOfType(v))
+            object? v = formatting[i];
+            if (v != null)
             {
-                if (gens[i].IsAssignableFrom(typeof(string)))
+                Type suppliedType = v.GetType();
+                if (v is not null && !gens[i].IsAssignableFrom(suppliedType))
                 {
-                    formatting[i] = typeof(ToStringHelperClass<>).MakeGenericType(v.GetType())
-                        .GetMethod("ToString", BindingFlags.Static | BindingFlags.Public)!
-                        .Invoke(null, new object[] { language, (t.GetField("_arg" + i.ToString(Data.AdminLocale) + "Fmt",
-                            BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(this) as string)!, target!, Localization.GetLocale(language), this.Flags });
-                    continue;
+                    if (gens[i] == typeof(string))
+                    {
+                        formatting[i] = typeof(ToStringHelperClass<>).MakeGenericType(suppliedType)
+                            .GetMethod("ToString", BindingFlags.Static | BindingFlags.Public)!
+                            .Invoke(null, new object[] { helper.Language, (t.GetField("_arg" + i.ToString(Data.AdminLocale) + "Fmt",
+                                BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(this) as string)!, helper.Player!, Localization.GetLocale(helper.Language), Flags });
+                        continue;
+                    }
+                    throw new ArgumentException("Formatting argument at index " + i + " is not a type compatable with it's generic type!", nameof(formatting) + "[" + i + "]");
                 }
-                throw new ArgumentException("Formatting argument at index " + i + " is not a type compatable with it's generic type!", nameof(formatting) + "[" + i + "]");
             }
+            else if (gens[i].IsValueType)
+                throw new ArgumentException("Formatting argument at index " + i + " is null and its generic type is a value type!", nameof(formatting) + "[" + i + "]");
         }
-        object[] newCallArr = new object[gens.Length + 5];
-        Array.Copy(formatting, 0, newCallArr, 2, gens.Length);
-        newCallArr[0] = val;
-        newCallArr[1] = language;
-        int ind = gens.Length + 2;
-        newCallArr[ind] = target!;
-        newCallArr[ind + 1] = targetTeam;
-        newCallArr[ind + 2] = this.Flags;
-        return (string)this.GetType()
+        object[] newCallArr = new object[gens.Length + 1];
+        Array.Copy(formatting, 0, newCallArr, 1, gens.Length);
+        newCallArr[0] = helper;
+        return (string)GetType()
             .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-            .FirstOrDefault(x => x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 5 + gens.Length)!.Invoke(this, newCallArr);
+            .FirstOrDefault(x => x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 1 + gens.Length)!.Invoke(this, newCallArr);
     }
     /// <exception cref="ArgumentException">Either not enough formatting arguments were supplied or </exception>
-    internal string TranslateUnsafe(string language, object[] formatting, UCPlayer? target = null, ulong targetTeam = 0)
+    internal string TranslateUnsafe(string language, object?[] formatting, UCPlayer? target = null, ulong targetTeam = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        Type t = this.GetType();
+        language ??= L.Default;
+        Type t = GetType();
         Type[] gens = t.GenericTypeArguments;
-        string val = this.Translate(language);
+        TranslationHelper helper = StartTranslation(language, LanguageAliasSet.GetCultureInfo(language), canUseIMGUI && target is { Save.IMGUI: true }, false, target, targetTeam, flags);
         if (gens.Length == 0 || formatting is null || formatting.Length == 0)
-            return val;
-        return BaseUnsafeTranslate(t, val, language, gens, formatting, target, targetTeam);
+            return helper.PreformattedValue;
+        return BaseUnsafeTranslate(t, gens, formatting, helper);
     }
-    internal string TranslateUnsafe(string language, out Color color, object[] formatting, UCPlayer? target = null, ulong targetTeam = 0)
+    internal string TranslateUnsafe(string language, out Color color, object?[] formatting, UCPlayer? target = null, ulong targetTeam = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        Type t = this.GetType();
+        language ??= L.Default;
+        Type t = GetType();
         Type[] gens = t.GenericTypeArguments;
-        string val = this.Translate(language, out color);
+        TranslationHelper helper = StartTranslation(language, LanguageAliasSet.GetCultureInfo(language), canUseIMGUI && target is { Save.IMGUI: true }, false, target, targetTeam, flags);
+        color = helper.ValueSet.Color;
         if (gens.Length == 0 || formatting is null || formatting.Length == 0)
-            return val;
-        return BaseUnsafeTranslate(t, val, language, gens, formatting, target, targetTeam);
+            return helper.PreformattedValue;
+        return BaseUnsafeTranslate(t, gens, formatting, helper);
     }
     internal static void OnColorsReloaded()
     {
@@ -1769,7 +1912,7 @@ public interface ITranslationArgument
 {
     string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags);
 }
-public sealed class Translation<T> : Translation
+public sealed class Translation<T0> : Translation
 {
     private readonly string? _arg0Fmt;
     private readonly short _arg0PluralExp = -1;
@@ -1781,59 +1924,53 @@ public sealed class Translation<T> : Translation
         _arg0Fmt = arg0Fmt;
         CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
     }
-    public string Translate(string value, string language, T arg, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
+
+    private string Translate(in TranslationHelper data, T0 arg0)
     {
-        flags |= GetFlags(targetTeam, imgui);
+        string value = data.PreformattedValue;
+        ArgumentSpan[] pluralizers = data.Pluralizers;
+        for (int i = 0; i < pluralizers.Length; ++i)
+        {
+            ref ArgumentSpan span = ref pluralizers[i];
+            int offset = 0;
+            if (span.Argument == 0 && !IsOne(arg0))
+                span.Pluralize(in data, ref value, ref offset);
+        }
         try
         {
-            return string.Format(value, ToString(arg, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags)));
+            return string.Format(value, ToString(arg0, data.Language, _arg0Fmt, data.Player, _arg0PluralExp == -1 ? data.Flags : CheckPlurality(_arg0PluralExp, data.Flags, in arg0)));
         }
         catch (FormatException ex)
         {
-            if ((Flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
-            {
-                throw new ArgumentException("[TRANSLATIONS] Error while formatting " + Key, ex);
-            }
-
-            L.LogError("[TRANSLATIONS] Error while formatting " + Key);
-            L.LogError(ex);
-            return InvalidValue;
+            return PrintFormatException(ex, data.Flags);
         }
     }
+    public string Translate(string value, string? language, T0 arg0, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool useIMGUI = false)
+    {
+        language = CheckLanguage(language);
+        return Translate(new TranslationHelper(null!, useIMGUI, false, value, language, target, targetTeam, Flags | flags | GetFlags(targetTeam, useIMGUI), target?.Culture ?? LanguageAliasSet.GetCultureInfo(language)), arg0);
+    }
+    private static TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T0 arg0)
+    {
+        if (expectation == -1)
+            return flags;
+        flags |= TranslationFlags.Plural;
 
-    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags)
-    {
-        return expectation == -1 ? flags : flags | TranslationFlags.Plural;
+        if (expectation == 0 && IsOne(arg0)) return flags | TranslationFlags.NoPlural;
+        return flags;
     }
-    public string Translate(string language, T arg, UCPlayer? target = null, ulong team = 0)
+    public string Translate(string language, T0 arg0, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
+        => Translate(StartTranslation(language, target, team, canUseIMGUI, false, flags), arg0);
+    public string Translate(string language, T0 arg0, out Color color, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language), language, arg, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
+        TranslationHelper helper = StartTranslation(language, target, team, canUseIMGUI, true, flags);
+        color = helper.ValueSet.Color;
+        return Translate(helper, arg0);
     }
-
-    public string Translate(string language, T arg, out Color color, UCPlayer? target = null, ulong team = 0)
-    {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language, out color), language, arg, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
-    }
-
-    public string Translate(UCPlayer player, T arg)
-    {
-        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        bool imgui = player is not null && player.Save.IMGUI;
-        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
-        return player == null
-            ? Translate(Translate(lang, culture), lang, arg, null, 0, Flags, imgui)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg, player, player.GetTeam(), Flags, imgui);
-    }
+    public string Translate(UCPlayer player, bool canUseIMGUI, T0 arg0)
+        => Translate(StartTranslation(player, canUseIMGUI, false), arg0);
 }
-public sealed class Translation<T1, T2> : Translation
+public sealed class Translation<T0, T1> : Translation
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -1849,67 +1986,66 @@ public sealed class Translation<T1, T2> : Translation
         CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
         CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
+    private string Translate(in TranslationHelper data, T0 arg0, T1 arg1)
     {
-        flags |= GetFlags(targetTeam, imgui);
+        string value = data.PreformattedValue;
+        ArgumentSpan[] pluralizers = data.Pluralizers;
+        for (int i = 0; i < pluralizers.Length; ++i)
+        {
+            ref ArgumentSpan span = ref pluralizers[i];
+            int offset = 0;
+            if (!(span.Argument switch
+                {
+                    0 => IsOne(arg0),
+                    1 => IsOne(arg1),
+                    _ => true
+                }))
+            {
+                span.Pluralize(in data, ref value, ref offset);
+            }
+        }
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2)));
+            return string.Format(value,
+                ToString(arg0, data.Language, _arg0Fmt, data.Player, _arg0PluralExp == -1 ? data.Flags : CheckPlurality(_arg0PluralExp, data.Flags, arg0, arg1)),
+                ToString(arg1, data.Language, _arg1Fmt, data.Player, _arg1PluralExp == -1 ? data.Flags : CheckPlurality(_arg1PluralExp, data.Flags, arg0, arg1))
+            );
         }
         catch (FormatException ex)
         {
-            if ((Flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
-            {
-                throw new ArgumentException("[TRANSLATIONS] Error while formatting " + Key, ex);
-            }
-
-            L.LogError("[TRANSLATIONS] Error while formatting " + Key);
-            L.LogError(ex);
-            return InvalidValue;
+            return PrintFormatException(ex, data.Flags);
         }
     }
-    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2)
+    public string Translate(string value, string? language, T0 arg0, T1 arg1, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool useIMGUI = false)
+    {
+        language = CheckLanguage(language);
+        return Translate(new TranslationHelper(null!, useIMGUI, false, value, language, target, targetTeam, Flags | flags | GetFlags(targetTeam, useIMGUI), target?.Culture ?? LanguageAliasSet.GetCultureInfo(language)),
+            arg0, arg1);
+    }
+    private static TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T0 arg0, in T1 arg1)
     {
         if (expectation == -1)
             return flags;
-        flags |= expectation switch
+        flags |= TranslationFlags.Plural;
+        return expectation switch
         {
-            0 => IsOne(arg1) ? TranslationFlags.NoPlural : TranslationFlags.Plural,
-            1 => IsOne(arg2) ? TranslationFlags.NoPlural : TranslationFlags.Plural,
-            _ => TranslationFlags.Plural
+            0 => IsOne(arg0) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            _ => flags
         };
-        return flags;
     }
-    public string Translate(string language, T1 arg1, T2 arg2, UCPlayer? target = null, ulong team = 0)
+    public string Translate(string language, T0 arg0, T1 arg1, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
+        => Translate(StartTranslation(language, target, team, canUseIMGUI, false, flags), arg0, arg1);
+    public string Translate(string language, T0 arg0, T1 arg1, out Color color, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language), language, arg1, arg2, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
+        TranslationHelper helper = StartTranslation(language, target, team, canUseIMGUI, true, flags);
+        color = helper.ValueSet.Color;
+        return Translate(helper, arg0, arg1);
     }
-
-    public string Translate(string language, T1 arg1, T2 arg2, out Color color, UCPlayer? target = null, ulong team = 0)
-    {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
-    }
-
-    public string Translate(UCPlayer player, T1 arg1, T2 arg2)
-    {
-        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        bool imgui = player is not null && player.Save.IMGUI;
-        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
-        return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, null, 0, Flags, imgui)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, player, player.GetTeam(), Flags, imgui);
-    }
+    public string Translate(UCPlayer player, bool canUseIMGUI, T0 arg0, T1 arg1)
+        => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1);
 }
-public sealed class Translation<T1, T2, T3> : Translation
+public sealed class Translation<T0, T1, T2> : Translation
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -1929,69 +2065,69 @@ public sealed class Translation<T1, T2, T3> : Translation
         CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
         CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
+    private string Translate(in TranslationHelper data, T0 arg0, T1 arg1, T2 arg2)
     {
-        flags |= GetFlags(targetTeam, imgui);
+        string value = data.PreformattedValue;
+        ArgumentSpan[] pluralizers = data.Pluralizers;
+        for (int i = 0; i < pluralizers.Length; ++i)
+        {
+            ref ArgumentSpan span = ref pluralizers[i];
+            int offset = 0;
+            if (!(span.Argument switch
+                {
+                    0 => IsOne(arg0),
+                    1 => IsOne(arg1),
+                    2 => IsOne(arg2),
+                    _ => true
+                }))
+            {
+                span.Pluralize(in data, ref value, ref offset);
+            }
+        }
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3)));
+            return string.Format(value,
+                ToString(arg0, data.Language, _arg0Fmt, data.Player, _arg0PluralExp == -1 ? data.Flags : CheckPlurality(_arg0PluralExp, data.Flags, arg0, arg1, arg2)),
+                ToString(arg1, data.Language, _arg1Fmt, data.Player, _arg1PluralExp == -1 ? data.Flags : CheckPlurality(_arg1PluralExp, data.Flags, arg0, arg1, arg2)),
+                ToString(arg2, data.Language, _arg2Fmt, data.Player, _arg2PluralExp == -1 ? data.Flags : CheckPlurality(_arg2PluralExp, data.Flags, arg0, arg1, arg2))
+            );
         }
         catch (FormatException ex)
         {
-            if ((Flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
-            {
-                throw new ArgumentException("[TRANSLATIONS] Error while formatting " + Key, ex);
-            }
-
-            L.LogError("[TRANSLATIONS] Error while formatting " + Key);
-            L.LogError(ex);
-            return InvalidValue;
+            return PrintFormatException(ex, data.Flags);
         }
     }
-    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3)
+    public string Translate(string value, string? language, T0 arg0, T1 arg1, T2 arg2, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool useIMGUI = false)
+    {
+        language = CheckLanguage(language);
+        return Translate(new TranslationHelper(null!, useIMGUI, false, value, language, target, targetTeam, Flags | flags | GetFlags(targetTeam, useIMGUI), target?.Culture ?? LanguageAliasSet.GetCultureInfo(language)),
+            arg0, arg1, arg2);
+    }
+    private static TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T0 arg0, in T1 arg1, in T2 arg2)
     {
         if (expectation == -1)
             return flags;
         flags |= TranslationFlags.Plural;
         return expectation switch
         {
-            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
-            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
-            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            0 => IsOne(arg0) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target = null, ulong team = 0)
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
+        => Translate(StartTranslation(language, target, team, canUseIMGUI, false, flags), arg0, arg1, arg2);
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, out Color color, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
+        TranslationHelper helper = StartTranslation(language, target, team, canUseIMGUI, true, flags);
+        color = helper.ValueSet.Color;
+        return Translate(helper, arg0, arg1, arg2);
     }
-
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, out Color color, UCPlayer? target = null, ulong team = 0)
-    {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
-    }
-
-    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3)
-    {
-        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        bool imgui = player is not null && player.Save.IMGUI;
-        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
-        return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, null, 0, Flags, imgui)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, player, player.GetTeam(), Flags, imgui);
-    }
+    public string Translate(UCPlayer player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2)
+        => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2);
 }
-public sealed class Translation<T1, T2, T3, T4> : Translation
+public sealed class Translation<T0, T1, T2, T3> : Translation
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2015,71 +2151,72 @@ public sealed class Translation<T1, T2, T3, T4> : Translation
         CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
         CheckPluralFormatting(ref _arg3PluralExp, ref _arg3Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
+    private string Translate(in TranslationHelper data, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
-        flags |= GetFlags(targetTeam, imgui);
+        string value = data.PreformattedValue;
+        ArgumentSpan[] pluralizers = data.Pluralizers;
+        for (int i = 0; i < pluralizers.Length; ++i)
+        {
+            ref ArgumentSpan span = ref pluralizers[i];
+            int offset = 0;
+            if (!(span.Argument switch
+                {
+                    0 => IsOne(arg0),
+                    1 => IsOne(arg1),
+                    2 => IsOne(arg2),
+                    3 => IsOne(arg3),
+                    _ => true
+                }))
+            {
+                span.Pluralize(in data, ref value, ref offset);
+            }
+        }
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4)));
+            return string.Format(value,
+                ToString(arg0, data.Language, _arg0Fmt, data.Player, _arg0PluralExp == -1 ? data.Flags : CheckPlurality(_arg0PluralExp, data.Flags, arg0, arg1, arg2, arg3)),
+                ToString(arg1, data.Language, _arg1Fmt, data.Player, _arg1PluralExp == -1 ? data.Flags : CheckPlurality(_arg1PluralExp, data.Flags, arg0, arg1, arg2, arg3)),
+                ToString(arg2, data.Language, _arg2Fmt, data.Player, _arg2PluralExp == -1 ? data.Flags : CheckPlurality(_arg2PluralExp, data.Flags, arg0, arg1, arg2, arg3)),
+                ToString(arg3, data.Language, _arg3Fmt, data.Player, _arg3PluralExp == -1 ? data.Flags : CheckPlurality(_arg3PluralExp, data.Flags, arg0, arg1, arg2, arg3))
+            );
         }
         catch (FormatException ex)
         {
-            if ((Flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
-            {
-                throw new ArgumentException("[TRANSLATIONS] Error while formatting " + Key, ex);
-            }
-
-            L.LogError("[TRANSLATIONS] Error while formatting " + Key);
-            L.LogError(ex);
-            return InvalidValue;
+            return PrintFormatException(ex, data.Flags);
         }
     }
-    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4)
+    public string Translate(string value, string? language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool useIMGUI = false)
+    {
+        language = CheckLanguage(language);
+        return Translate(new TranslationHelper(null!, useIMGUI, false, value, language, target, targetTeam, Flags | flags | GetFlags(targetTeam, useIMGUI), target?.Culture ?? LanguageAliasSet.GetCultureInfo(language)),
+            arg0, arg1, arg2, arg3);
+    }
+    private static TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T0 arg0, in T1 arg1, in T2 arg2, in T3 arg3)
     {
         if (expectation == -1)
             return flags;
         flags |= TranslationFlags.Plural;
         return expectation switch
         {
-            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
-            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
-            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
-            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            0 => IsOne(arg0) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target = null, ulong team = 0)
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
+        => Translate(StartTranslation(language, target, team, canUseIMGUI, false, flags), arg0, arg1, arg2, arg3);
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, out Color color, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
+        TranslationHelper helper = StartTranslation(language, target, team, canUseIMGUI, true, flags);
+        color = helper.ValueSet.Color;
+        return Translate(helper, arg0, arg1, arg2, arg3);
     }
-
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, out Color color, UCPlayer? target = null, ulong team = 0)
-    {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
-    }
-
-    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-    {
-        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        bool imgui = player is not null && player.Save.IMGUI;
-        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
-        return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, null, 0, Flags, imgui)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, player, player.GetTeam(), Flags, imgui);
-    }
+    public string Translate(UCPlayer player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+        => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3);
 }
-public sealed class Translation<T1, T2, T3, T4, T5> : Translation
+public sealed class Translation<T0, T1, T2, T3, T4> : Translation
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2107,73 +2244,75 @@ public sealed class Translation<T1, T2, T3, T4, T5> : Translation
         CheckPluralFormatting(ref _arg3PluralExp, ref _arg3Fmt);
         CheckPluralFormatting(ref _arg4PluralExp, ref _arg4Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
+    private string Translate(in TranslationHelper data, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
-        flags |= GetFlags(targetTeam, imgui);
+        string value = data.PreformattedValue;
+        ArgumentSpan[] pluralizers = data.Pluralizers;
+        for (int i = 0; i < pluralizers.Length; ++i)
+        {
+            ref ArgumentSpan span = ref pluralizers[i];
+            int offset = 0;
+            if (!(span.Argument switch
+                {
+                    0 => IsOne(arg0),
+                    1 => IsOne(arg1),
+                    2 => IsOne(arg2),
+                    3 => IsOne(arg3),
+                    4 => IsOne(arg4),
+                    _ => true
+                }))
+            {
+                span.Pluralize(in data, ref value, ref offset);
+            }
+        }
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5)));
+            return string.Format(value,
+                ToString(arg0, data.Language, _arg0Fmt, data.Player, _arg0PluralExp == -1 ? data.Flags : CheckPlurality(_arg0PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4)),
+                ToString(arg1, data.Language, _arg1Fmt, data.Player, _arg1PluralExp == -1 ? data.Flags : CheckPlurality(_arg1PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4)),
+                ToString(arg2, data.Language, _arg2Fmt, data.Player, _arg2PluralExp == -1 ? data.Flags : CheckPlurality(_arg2PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4)),
+                ToString(arg3, data.Language, _arg3Fmt, data.Player, _arg3PluralExp == -1 ? data.Flags : CheckPlurality(_arg3PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4)),
+                ToString(arg4, data.Language, _arg4Fmt, data.Player, _arg4PluralExp == -1 ? data.Flags : CheckPlurality(_arg4PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4))
+            );
         }
         catch (FormatException ex)
         {
-            if ((Flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
-            {
-                throw new ArgumentException("[TRANSLATIONS] Error while formatting " + Key, ex);
-            }
-
-            L.LogError("[TRANSLATIONS] Error while formatting " + Key);
-            L.LogError(ex);
-            return InvalidValue;
+            return PrintFormatException(ex, data.Flags);
         }
     }
-    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5)
+    public string Translate(string value, string? language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool useIMGUI = false)
+    {
+        language = CheckLanguage(language);
+        return Translate(new TranslationHelper(null!, useIMGUI, false, value, language, target, targetTeam, Flags | flags | GetFlags(targetTeam, useIMGUI), target?.Culture ?? LanguageAliasSet.GetCultureInfo(language)),
+            arg0, arg1, arg2, arg3, arg4);
+    }
+    private static TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T0 arg0, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4)
     {
         if (expectation == -1)
             return flags;
         flags |= TranslationFlags.Plural;
         return expectation switch
         {
-            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
-            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
-            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
-            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
-            4 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
+            0 => IsOne(arg0) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            4 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target = null, ulong team = 0)
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
+        => Translate(StartTranslation(language, target, team, canUseIMGUI, false, flags), arg0, arg1, arg2, arg3, arg4);
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, out Color color, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
+        TranslationHelper helper = StartTranslation(language, target, team, canUseIMGUI, true, flags);
+        color = helper.ValueSet.Color;
+        return Translate(helper, arg0, arg1, arg2, arg3, arg4);
     }
-
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, out Color color, UCPlayer? target = null, ulong team = 0)
-    {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
-    }
-
-    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-    {
-        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        bool imgui = player is not null && player.Save.IMGUI;
-        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
-        return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, null, 0, Flags, imgui)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, player, player.GetTeam(), Flags, imgui);
-    }
+    public string Translate(UCPlayer player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+        => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4);
 }
-public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
+public sealed class Translation<T0, T1, T2, T3, T4, T5> : Translation
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2205,75 +2344,78 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
         CheckPluralFormatting(ref _arg4PluralExp, ref _arg4Fmt);
         CheckPluralFormatting(ref _arg5PluralExp, ref _arg5Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
+    private string Translate(in TranslationHelper data, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
-        flags |= GetFlags(targetTeam, imgui);
+        string value = data.PreformattedValue;
+        ArgumentSpan[] pluralizers = data.Pluralizers;
+        for (int i = 0; i < pluralizers.Length; ++i)
+        {
+            ref ArgumentSpan span = ref pluralizers[i];
+            int offset = 0;
+            if (!(span.Argument switch
+            {
+                0 => IsOne(arg0),
+                1 => IsOne(arg1),
+                2 => IsOne(arg2),
+                3 => IsOne(arg3),
+                4 => IsOne(arg4),
+                5 => IsOne(arg5),
+                _ => true
+            }))
+            {
+                span.Pluralize(in data, ref value, ref offset);
+            }
+        }
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)),
-                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)));
+            return string.Format(value,
+                ToString(arg0, data.Language, _arg0Fmt, data.Player, _arg0PluralExp == -1 ? data.Flags : CheckPlurality(_arg0PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5)),
+                ToString(arg1, data.Language, _arg1Fmt, data.Player, _arg1PluralExp == -1 ? data.Flags : CheckPlurality(_arg1PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5)),
+                ToString(arg2, data.Language, _arg2Fmt, data.Player, _arg2PluralExp == -1 ? data.Flags : CheckPlurality(_arg2PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5)),
+                ToString(arg3, data.Language, _arg3Fmt, data.Player, _arg3PluralExp == -1 ? data.Flags : CheckPlurality(_arg3PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5)),
+                ToString(arg4, data.Language, _arg4Fmt, data.Player, _arg4PluralExp == -1 ? data.Flags : CheckPlurality(_arg4PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5)),
+                ToString(arg5, data.Language, _arg5Fmt, data.Player, _arg5PluralExp == -1 ? data.Flags : CheckPlurality(_arg5PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5))
+                );
         }
         catch (FormatException ex)
         {
-            if ((Flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
-            {
-                throw new ArgumentException("[TRANSLATIONS] Error while formatting " + Key, ex);
-            }
-
-            L.LogError("[TRANSLATIONS] Error while formatting " + Key);
-            L.LogError(ex);
-            return InvalidValue;
+            return PrintFormatException(ex, data.Flags);
         }
     }
-    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6)
+    public string Translate(string value, string? language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool useIMGUI = false)
+    {
+        language = CheckLanguage(language);
+        return Translate(new TranslationHelper(null!, useIMGUI, false, value, language, target, targetTeam, Flags | flags | GetFlags(targetTeam, useIMGUI), target?.Culture ?? LanguageAliasSet.GetCultureInfo(language)),
+            arg0, arg1, arg2, arg3, arg4, arg5);
+    }
+    private static TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T0 arg0, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5)
     {
         if (expectation == -1)
             return flags;
         flags |= TranslationFlags.Plural;
         return expectation switch
         {
-            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
-            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
-            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
-            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
-            4 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
-            5 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
+            0 => IsOne(arg0) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            4 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            5 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target = null, ulong team = 0)
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
+        => Translate(StartTranslation(language, target, team, canUseIMGUI, false, flags), arg0, arg1, arg2, arg3, arg4, arg5);
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, out Color color, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
+        TranslationHelper helper = StartTranslation(language, target, team, canUseIMGUI, true, flags);
+        color = helper.ValueSet.Color;
+        return Translate(helper, arg0, arg1, arg2, arg3, arg4, arg5);
     }
-
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, out Color color, UCPlayer? target = null, ulong team = 0)
-    {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
-    }
-
-    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-    {
-        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        bool imgui = player is not null && player.Save.IMGUI;
-        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
-        return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, null, 0, Flags, imgui)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, player, player.GetTeam(), Flags, imgui);
-    }
+    public string Translate(UCPlayer player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+        => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4, arg5);
 }
-public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
+public sealed class Translation<T0, T1, T2, T3, T4, T5, T6> : Translation
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2309,77 +2451,81 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
         CheckPluralFormatting(ref _arg5PluralExp, ref _arg5Fmt);
         CheckPluralFormatting(ref _arg6PluralExp, ref _arg6Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
+    private string Translate(in TranslationHelper data, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
-        flags |= GetFlags(targetTeam, imgui);
+        string value = data.PreformattedValue;
+        ArgumentSpan[] pluralizers = data.Pluralizers;
+        for (int i = 0; i < pluralizers.Length; ++i)
+        {
+            ref ArgumentSpan span = ref pluralizers[i];
+            int offset = 0;
+            if (!(span.Argument switch
+            {
+                0 => IsOne(arg0),
+                1 => IsOne(arg1),
+                2 => IsOne(arg2),
+                3 => IsOne(arg3),
+                4 => IsOne(arg4),
+                5 => IsOne(arg5),
+                6 => IsOne(arg6),
+                _ => true
+            }))
+            {
+                span.Pluralize(in data, ref value, ref offset);
+            }
+        }
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
-                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
-                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)));
+            return string.Format(value,
+                ToString(arg0, data.Language, _arg0Fmt, data.Player, _arg0PluralExp == -1 ? data.Flags : CheckPlurality(_arg0PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6)),
+                ToString(arg1, data.Language, _arg1Fmt, data.Player, _arg1PluralExp == -1 ? data.Flags : CheckPlurality(_arg1PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6)),
+                ToString(arg2, data.Language, _arg2Fmt, data.Player, _arg2PluralExp == -1 ? data.Flags : CheckPlurality(_arg2PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6)),
+                ToString(arg3, data.Language, _arg3Fmt, data.Player, _arg3PluralExp == -1 ? data.Flags : CheckPlurality(_arg3PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6)),
+                ToString(arg4, data.Language, _arg4Fmt, data.Player, _arg4PluralExp == -1 ? data.Flags : CheckPlurality(_arg4PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6)),
+                ToString(arg5, data.Language, _arg5Fmt, data.Player, _arg5PluralExp == -1 ? data.Flags : CheckPlurality(_arg5PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6)),
+                ToString(arg6, data.Language, _arg6Fmt, data.Player, _arg6PluralExp == -1 ? data.Flags : CheckPlurality(_arg6PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6))
+                );
         }
         catch (FormatException ex)
         {
-            if ((Flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
-            {
-                throw new ArgumentException("[TRANSLATIONS] Error while formatting " + Key, ex);
-            }
-
-            L.LogError("[TRANSLATIONS] Error while formatting " + Key);
-            L.LogError(ex);
-            return InvalidValue;
+            return PrintFormatException(ex, data.Flags);
         }
     }
-    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6, in T7 arg7)
+    public string Translate(string value, string? language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool useIMGUI = false)
+    {
+        language = CheckLanguage(language);
+        return Translate(new TranslationHelper(null!, useIMGUI, false, value, language, target, targetTeam, Flags | flags | GetFlags(targetTeam, useIMGUI), target?.Culture ?? LanguageAliasSet.GetCultureInfo(language)),
+            arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+    }
+    private static TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T0 arg0, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6)
     {
         if (expectation == -1)
             return flags;
         flags |= TranslationFlags.Plural;
         return expectation switch
         {
-            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
-            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
-            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
-            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
-            4 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
-            5 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
-            6 => IsOne(arg7) ? flags | TranslationFlags.NoPlural : flags,
+            0 => IsOne(arg0) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            4 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            5 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
+            6 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target = null, ulong team = 0)
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
+        => Translate(StartTranslation(language, target, team, canUseIMGUI, false, flags), arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, out Color color, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
+        TranslationHelper helper = StartTranslation(language, target, team, canUseIMGUI, true, flags);
+        color = helper.ValueSet.Color;
+        return Translate(helper, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
     }
-
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, out Color color, UCPlayer? target = null, ulong team = 0)
-    {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
-    }
-
-    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-    {
-        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        bool imgui = player is not null && player.Save.IMGUI;
-        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
-        return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, 0, Flags, imgui)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player, player.GetTeam(), Flags, imgui);
-    }
+    public string Translate(UCPlayer player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+        => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4, arg5, arg6);
 }
-public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
+public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7> : Translation
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2419,79 +2565,84 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
         CheckPluralFormatting(ref _arg6PluralExp, ref _arg6Fmt);
         CheckPluralFormatting(ref _arg7PluralExp, ref _arg7Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
+    private string Translate(in TranslationHelper data, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
-        flags |= GetFlags(targetTeam, imgui);
+        string value = data.PreformattedValue;
+        ArgumentSpan[] pluralizers = data.Pluralizers;
+        for (int i = 0; i < pluralizers.Length; ++i)
+        {
+            ref ArgumentSpan span = ref pluralizers[i];
+            int offset = 0;
+            if (!(span.Argument switch
+            {
+                0 => IsOne(arg0),
+                1 => IsOne(arg1),
+                2 => IsOne(arg2),
+                3 => IsOne(arg3),
+                4 => IsOne(arg4),
+                5 => IsOne(arg5),
+                6 => IsOne(arg6),
+                7 => IsOne(arg7),
+                _ => true
+            }))
+            {
+                span.Pluralize(in data, ref value, ref offset);
+            }
+        }
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
-                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
-                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
-                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)));
+            return string.Format(value,
+                ToString(arg0, data.Language, _arg0Fmt, data.Player, _arg0PluralExp == -1 ? data.Flags : CheckPlurality(_arg0PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg1, data.Language, _arg1Fmt, data.Player, _arg1PluralExp == -1 ? data.Flags : CheckPlurality(_arg1PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg2, data.Language, _arg2Fmt, data.Player, _arg2PluralExp == -1 ? data.Flags : CheckPlurality(_arg2PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg3, data.Language, _arg3Fmt, data.Player, _arg3PluralExp == -1 ? data.Flags : CheckPlurality(_arg3PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg4, data.Language, _arg4Fmt, data.Player, _arg4PluralExp == -1 ? data.Flags : CheckPlurality(_arg4PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg5, data.Language, _arg5Fmt, data.Player, _arg5PluralExp == -1 ? data.Flags : CheckPlurality(_arg5PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg6, data.Language, _arg6Fmt, data.Player, _arg6PluralExp == -1 ? data.Flags : CheckPlurality(_arg6PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg7, data.Language, _arg7Fmt, data.Player, _arg7PluralExp == -1 ? data.Flags : CheckPlurality(_arg7PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7))
+                );
         }
         catch (FormatException ex)
         {
-            if ((Flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
-            {
-                throw new ArgumentException("[TRANSLATIONS] Error while formatting " + Key, ex);
-            }
-
-            L.LogError("[TRANSLATIONS] Error while formatting " + Key);
-            L.LogError(ex);
-            return InvalidValue;
+            return PrintFormatException(ex, data.Flags);
         }
     }
-    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6, in T7 arg7, in T8 arg8)
+    public string Translate(string value, string? language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool useIMGUI = false)
+    {
+        language = CheckLanguage(language);
+        return Translate(new TranslationHelper(null!, useIMGUI, false, value, language, target, targetTeam, Flags | flags | GetFlags(targetTeam, useIMGUI), target?.Culture ?? LanguageAliasSet.GetCultureInfo(language)),
+            arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+    private static TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T0 arg0, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6, in T7 arg7)
     {
         if (expectation == -1)
             return flags;
         flags |= TranslationFlags.Plural;
         return expectation switch
         {
-            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
-            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
-            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
-            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
-            4 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
-            5 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
-            6 => IsOne(arg7) ? flags | TranslationFlags.NoPlural : flags,
-            7 => IsOne(arg8) ? flags | TranslationFlags.NoPlural : flags,
+            0 => IsOne(arg0) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            4 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            5 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
+            6 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
+            7 => IsOne(arg7) ? flags | TranslationFlags.NoPlural : flags,
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target = null, ulong team = 0)
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
+        => Translate(StartTranslation(language, target, team, canUseIMGUI, false, flags), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, out Color color, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
+        TranslationHelper helper = StartTranslation(language, target, team, canUseIMGUI, true, flags);
+        color = helper.ValueSet.Color;
+        return Translate(helper, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
-
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, out Color color, UCPlayer? target = null, ulong team = 0)
-    {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
-    }
-
-    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-    {
-        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        bool imgui = player is not null && player.Save.IMGUI;
-        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
-        return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, 0, Flags, imgui)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player, player.GetTeam(), Flags, imgui);
-    }
+    public string Translate(UCPlayer player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+        => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
-public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translation
+public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> : Translation
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2535,80 +2686,87 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translatio
         CheckPluralFormatting(ref _arg7PluralExp, ref _arg7Fmt);
         CheckPluralFormatting(ref _arg8PluralExp, ref _arg8Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
+    private string Translate(in TranslationHelper data, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
-        flags |= GetFlags(targetTeam, imgui);
+        string value = data.PreformattedValue;
+        ArgumentSpan[] pluralizers = data.Pluralizers;
+        for (int i = 0; i < pluralizers.Length; ++i)
+        {
+            ref ArgumentSpan span = ref pluralizers[i];
+            int offset = 0;
+            if (!(span.Argument switch
+            {
+                0 => IsOne(arg0),
+                1 => IsOne(arg1),
+                2 => IsOne(arg2),
+                3 => IsOne(arg3),
+                4 => IsOne(arg4),
+                5 => IsOne(arg5),
+                6 => IsOne(arg6),
+                7 => IsOne(arg7),
+                8 => IsOne(arg8),
+                _ => true
+            }))
+            {
+                span.Pluralize(in data, ref value, ref offset);
+            }
+        }
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
-                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
-                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
-                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
-                ToString(arg9, language, _arg8Fmt, target, CheckPlurality(_arg8PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)));
+            return string.Format(value,
+                ToString(arg0, data.Language, _arg0Fmt, data.Player, _arg0PluralExp == -1 ? data.Flags : CheckPlurality(_arg0PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg1, data.Language, _arg1Fmt, data.Player, _arg1PluralExp == -1 ? data.Flags : CheckPlurality(_arg1PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg2, data.Language, _arg2Fmt, data.Player, _arg2PluralExp == -1 ? data.Flags : CheckPlurality(_arg2PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg3, data.Language, _arg3Fmt, data.Player, _arg3PluralExp == -1 ? data.Flags : CheckPlurality(_arg3PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg4, data.Language, _arg4Fmt, data.Player, _arg4PluralExp == -1 ? data.Flags : CheckPlurality(_arg4PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg5, data.Language, _arg5Fmt, data.Player, _arg5PluralExp == -1 ? data.Flags : CheckPlurality(_arg5PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg6, data.Language, _arg6Fmt, data.Player, _arg6PluralExp == -1 ? data.Flags : CheckPlurality(_arg6PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg7, data.Language, _arg7Fmt, data.Player, _arg7PluralExp == -1 ? data.Flags : CheckPlurality(_arg7PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg8, data.Language, _arg8Fmt, data.Player, _arg8PluralExp == -1 ? data.Flags : CheckPlurality(_arg8PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8))
+                );
         }
         catch (FormatException ex)
         {
-            if ((Flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
-            {
-                throw new ArgumentException("[TRANSLATIONS] Error while formatting " + Key, ex);
-            }
-            L.LogError("[TRANSLATIONS] Error while formatting " + Key);
-            L.LogError(ex);
-            return InvalidValue;
+            return PrintFormatException(ex, data.Flags);
         }
     }
-    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6, in T7 arg7, in T8 arg8, in T9 arg9)
+    public string Translate(string value, string? language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool useIMGUI = false)
+    {
+        language = CheckLanguage(language);
+        return Translate(new TranslationHelper(null!, useIMGUI, false, value, language, target, targetTeam, Flags | flags | GetFlags(targetTeam, useIMGUI), target?.Culture ?? LanguageAliasSet.GetCultureInfo(language)),
+            arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+    private static TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T0 arg0, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6, in T7 arg7, in T8 arg8)
     {
         if (expectation == -1)
             return flags;
         flags |= TranslationFlags.Plural;
         return expectation switch
         {
-            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
-            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
-            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
-            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
-            4 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
-            5 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
-            6 => IsOne(arg7) ? flags | TranslationFlags.NoPlural : flags,
-            7 => IsOne(arg8) ? flags | TranslationFlags.NoPlural : flags,
-            8 => IsOne(arg9) ? flags | TranslationFlags.NoPlural : flags,
+            0 => IsOne(arg0) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            4 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            5 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
+            6 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
+            7 => IsOne(arg7) ? flags | TranslationFlags.NoPlural : flags,
+            8 => IsOne(arg8) ? flags | TranslationFlags.NoPlural : flags,
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target = null, ulong team = 0)
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
+        => Translate(StartTranslation(language, target, team, canUseIMGUI, false, flags), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, out Color color, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
+        TranslationHelper helper = StartTranslation(language, target, team, canUseIMGUI, true, flags);
+        color = helper.ValueSet.Color;
+        return Translate(helper, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
-
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, out Color color, UCPlayer? target = null, ulong team = 0)
-    {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
-    }
-
-    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-    {
-        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        bool imgui = player is not null && player.Save.IMGUI;
-        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
-        return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, 0, Flags, imgui)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player, player.GetTeam(), Flags, imgui);
-    }
+    public string Translate(UCPlayer player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+        => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 }
-public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Translation
+public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translation
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
@@ -2656,81 +2814,89 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
         CheckPluralFormatting(ref _arg8PluralExp, ref _arg8Fmt);
         CheckPluralFormatting(ref _arg9PluralExp, ref _arg9Fmt);
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool imgui = false)
+
+    private string Translate(in TranslationHelper data, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
-        flags |= GetFlags(targetTeam, imgui);
+        string value = data.PreformattedValue;
+        ArgumentSpan[] pluralizers = data.Pluralizers;
+        for (int i = 0; i < pluralizers.Length; ++i)
+        {
+            ref ArgumentSpan span = ref pluralizers[i];
+            int offset = 0;
+            if (!(span.Argument switch
+                {
+                    0 => IsOne(arg0),
+                    1 => IsOne(arg1),
+                    2 => IsOne(arg2),
+                    3 => IsOne(arg3),
+                    4 => IsOne(arg4),
+                    5 => IsOne(arg5),
+                    6 => IsOne(arg6),
+                    7 => IsOne(arg7),
+                    8 => IsOne(arg8),
+                    9 => IsOne(arg9),
+                    _ => true
+                }))
+            {
+                span.Pluralize(in data, ref value, ref offset);
+            }
+        }
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
-                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
-                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
-                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
-                ToString(arg9, language, _arg8Fmt, target, CheckPlurality(_arg8PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
-                ToString(arg10, language, _arg9Fmt, target, CheckPlurality(_arg9PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)));
+            return string.Format(value,
+                ToString(arg0, data.Language, _arg0Fmt, data.Player, _arg0PluralExp == -1 ? data.Flags : CheckPlurality(_arg0PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg1, data.Language, _arg1Fmt, data.Player, _arg1PluralExp == -1 ? data.Flags : CheckPlurality(_arg1PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg2, data.Language, _arg2Fmt, data.Player, _arg2PluralExp == -1 ? data.Flags : CheckPlurality(_arg2PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg3, data.Language, _arg3Fmt, data.Player, _arg3PluralExp == -1 ? data.Flags : CheckPlurality(_arg3PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg4, data.Language, _arg4Fmt, data.Player, _arg4PluralExp == -1 ? data.Flags : CheckPlurality(_arg4PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg5, data.Language, _arg5Fmt, data.Player, _arg5PluralExp == -1 ? data.Flags : CheckPlurality(_arg5PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg6, data.Language, _arg6Fmt, data.Player, _arg6PluralExp == -1 ? data.Flags : CheckPlurality(_arg6PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg7, data.Language, _arg7Fmt, data.Player, _arg7PluralExp == -1 ? data.Flags : CheckPlurality(_arg7PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg8, data.Language, _arg8Fmt, data.Player, _arg8PluralExp == -1 ? data.Flags : CheckPlurality(_arg8PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg9, data.Language, _arg9Fmt, data.Player, _arg9PluralExp == -1 ? data.Flags : CheckPlurality(_arg9PluralExp, data.Flags, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9))
+                );
         }
         catch (FormatException ex)
         {
-            if ((Flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
-            {
-                throw new ArgumentException("[TRANSLATIONS] Error while formatting " + Key, ex);
-            }
-
-            L.LogError("[TRANSLATIONS] Error while formatting " + Key);
-            L.LogError(ex);
-            return InvalidValue;
+            return PrintFormatException(ex, data.Flags);
         }
     }
-    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6, in T7 arg7, in T8 arg8, in T9 arg9, in T10 arg10)
+    public string Translate(string value, string? language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target, ulong targetTeam, TranslationFlags flags, bool useIMGUI = false)
+    {
+        language = CheckLanguage(language);
+        return Translate(new TranslationHelper(null!, useIMGUI, false, value, language, target, targetTeam, Flags | flags | GetFlags(targetTeam, useIMGUI), target?.Culture ?? LanguageAliasSet.GetCultureInfo(language)),
+            arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    }
+    private static TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T0 arg0, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6, in T7 arg7, in T8 arg8, in T9 arg9)
     {
         if (expectation == -1)
             return flags;
         flags |= TranslationFlags.Plural;
         return expectation switch
         {
-            0 => arg1 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            1 => arg2 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            2 => arg3 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            3 => arg4 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            4 => arg5 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            5 => arg6 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            6 => arg7 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            7 => arg8 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            8 => arg9 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            9 => arg10 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            0 => IsOne(arg0) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            4 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            5 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
+            6 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
+            7 => IsOne(arg7) ? flags | TranslationFlags.NoPlural : flags,
+            8 => IsOne(arg8) ? flags | TranslationFlags.NoPlural : flags,
+            9 => IsOne(arg9) ? flags | TranslationFlags.NoPlural : flags,
             _ => flags
         };
     }
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, UCPlayer? target = null, ulong team = 0)
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
+        => Translate(StartTranslation(language, target, team, canUseIMGUI, false, flags), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    public string Translate(string language, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, out Color color, UCPlayer? target = null, ulong team = 0, bool canUseIMGUI = false, TranslationFlags flags = TranslationFlags.None)
     {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
+        TranslationHelper helper = StartTranslation(language, target, team, canUseIMGUI, true, flags);
+        color = helper.ValueSet.Color;
+        return Translate(helper, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }
-
-    public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, out Color color, UCPlayer? target = null, ulong team = 0)
-    {
-        CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
-        bool imgui = target is not null && target.Save.IMGUI;
-        return target == null
-            ? Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, team, Flags, imgui)
-            : Translate(Translate(language, culture, out color, target.Save.IMGUI), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team == 0 ? target.GetTeam() : team, Flags, imgui);
-    }
-
-    public string Translate(UCPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
-    {
-        string lang = player is null ? L.Default : Localization.GetLang(player.Steam64);
-        bool imgui = player is not null && player.Save.IMGUI;
-        CultureInfo culture = player?.Culture ?? Data.LocalLocale;
-        return player == null
-            ? Translate(Translate(lang, culture), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, 0, Flags, imgui)
-            : Translate(Translate(lang, culture, player.Save.IMGUI), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player, player.GetTeam(), Flags, imgui);
-    }
+    public string Translate(UCPlayer player, bool canUseIMGUI, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+        => Translate(StartTranslation(player, canUseIMGUI, false), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
 }
 [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
 public sealed class TranslationDataAttribute : Attribute

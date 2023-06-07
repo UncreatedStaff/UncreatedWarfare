@@ -711,6 +711,7 @@ public class Signs : BaseSingleton, ILevelStartListener
     }
     private abstract class CustomSignComponent : MonoBehaviour
     {
+        protected BarricadeDrop Barricade;
         protected InteractableSign Sign;
         public bool DropIsPlanted { get; private set; }
         public virtual bool OptimizedBroadcast => false;
@@ -718,6 +719,7 @@ public class Signs : BaseSingleton, ILevelStartListener
         public abstract bool CheckStillValid();
         public void Init(BarricadeDrop drop)
         {
+            Barricade = drop;
             if (BarricadeManager.tryGetRegion(drop.model, out _, out _, out ushort plant, out _) && plant != ushort.MaxValue)
                 DropIsPlanted = true;
             Sign = (InteractableSign)drop.interactable;
@@ -793,7 +795,7 @@ public class Signs : BaseSingleton, ILevelStartListener
             {
                 if (_spawn is not null && _spawn.Manager != null)
                     return _spawn;
-                VehicleSpawner.GetSingletonQuick()?.TryGetSpawn(Sign, out _spawn);
+                VehicleSpawner.GetSingletonQuick()?.TryGetSpawn(Barricade, out _spawn);
                 return _spawn;
             }
         }

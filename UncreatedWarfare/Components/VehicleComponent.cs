@@ -18,6 +18,7 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 using UnityEngine.PlayerLoop;
 using System.Diagnostics;
+using Steamworks;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Players;
@@ -41,6 +42,9 @@ public class VehicleComponent : MonoBehaviour
     private Dictionary<ulong, DateTime> _timeEnteredTable;
     private Dictionary<ulong, DateTime> _timeRewardedTable;
     public Dictionary<ulong, KeyValuePair<ushort, DateTime>> DamageTable;
+    public bool DroppingFlares;
+    public ulong PreviousOwner;
+    public Stack<ulong> OwnerHistory { get; } = new Stack<ulong>(2);
     public ulong Team => Vehicle.lockedGroup.m_SteamID.GetTeam();
     public Dictionary<ulong, Vector3> TransportTable { get; private set; }
     public Dictionary<ulong, double> UsageTable { get; private set; }
@@ -55,7 +59,6 @@ public class VehicleComponent : MonoBehaviour
     public bool IsEmplacement => Data?.Item != null && VehicleData.IsEmplacement(Data.Item.Type);
     public bool IsInVehiclebay => Data?.Item != null;
     public bool CanTransport => Data?.Item != null && VehicleData.CanTransport(Data.Item, Vehicle);
-    public bool DroppingFlares;
 
     public void Initialize(InteractableVehicle vehicle)
     {
@@ -66,6 +69,8 @@ public class VehicleComponent : MonoBehaviour
         _timeRewardedTable = new Dictionary<ulong, DateTime>();
         DamageTable = new Dictionary<ulong, KeyValuePair<ushort, DateTime>>();
         _isResupplied = true;
+        if (vehicle.lockedOwner.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+            OwnerHistory.Push(vehicle.lockedOwner.m_SteamID);
 
         Quota = 0;
         RequiredQuota = -1;
@@ -88,6 +93,15 @@ public class VehicleComponent : MonoBehaviour
         }
 
         ReloadCountermeasures();
+    }
+    public static void TryAddOwnerToHistory(InteractableVehicle vehicle, ulong steam64)
+    {
+        if (vehicle.TryGetComponent(out VehicleComponent comp))
+        {
+            if (comp.OwnerHistory.Count > 0)
+                comp.PreviousOwner = comp.OwnerHistory.Peek();
+            comp.OwnerHistory.Push(steam64);
+        }
     }
     public bool IsType(VehicleType type) => Data?.Item != null && Data.Item.Type == type;
 

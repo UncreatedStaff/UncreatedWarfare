@@ -100,7 +100,7 @@ public static class Data
     internal static readonly IUncreatedSingleton[] GamemodeListeners = new IUncreatedSingleton[1];
     public const string SuppressCategory = "Microsoft.Performance";
     public const string SuppressID = "IDE0051";
-    public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/]\W{0,}[il1\|\!]\W{0,}[gqb](?!h|(?:an))\W{0,}[gqb]{0,}\W{0,}[gqb]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:f\W{0,}a\W{0,}g{1,}\W{0,}o{0,}\W{0,}t{0,1})");
+    public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/]\W{0,}[il1\|\!]\W{0,}[gqb96](?!h|(?:an))\W{0,}[gqb96]{0,}\W{0,}[gqb96]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:f\W{0,}a\W{0,}g{1,}\W{0,}o{0,}\W{0,}t{0,1})");
     public static readonly Regex NameRichTextReplaceFilter = new Regex("<.*>");
     [Obsolete("Choose between LocalLocale and AdminLocale")]
     public static CultureInfo Locale = LanguageAliasSet.ENGLISH_C;
@@ -136,6 +136,7 @@ public static class Data
     internal static ClientInstanceMethod<string> SendChangeText;
     internal static ClientStaticMethod SendMultipleBarricades;
     internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual;
+    internal static ClientStaticMethod<uint, byte, byte>? SendSwapVehicleSeats;
     internal static ClientInstanceMethod? SendInventory;
     internal static ClientInstanceMethod? SendScreenshotDestination;
     internal static SingletonManager Singletons;
@@ -148,6 +149,7 @@ public static class Data
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
+    internal static SteamPlayer NilSteamPlayer;
     [OperationTest(DisplayName = "Fast Kits Check")]
     [Conditional("DEBUG")]
     [UsedImplicitly]
@@ -287,7 +289,7 @@ public static class Data
 
         await UCWarfare.ToUpdate(token);
         Gamemode.ReadGamemodes();
-        
+
         if (UCWarfare.Config.EnableReporter)
             Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
 
@@ -300,19 +302,20 @@ public static class Data
         /* REFLECT PRIVATE VARIABLES */
         L.Log("Getting RPCs...", ConsoleColor.Magenta);
         IDisposable indent = L.IndentLog(1);
-        SendChangeText            = Util.GetRPC<ClientInstanceMethod<string>, InteractableSign>("SendChangeText", true)!;
-        SendMultipleBarricades    = Util.GetRPC<ClientStaticMethod, BarricadeManager>("SendMultipleBarricades", true)!;
-        SendChatIndividual        = Util.GetRPC<ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>, ChatManager>("SendChatEntry", true)!;
-        SendDestroyItem           = Util.GetRPC<ClientStaticMethod<byte, byte, uint, bool>, ItemManager>("SendDestroyItem", true)!;
-        SendUpdateBarricadeState  = Util.GetRPC<ClientInstanceMethod<byte[]>, BarricadeDrop>("SendUpdateState");
-        SendInventory             = Util.GetRPC<ClientInstanceMethod, PlayerInventory>("SendInventory");
-        SendWearShirt             = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearShirt");
-        SendWearPants             = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearPants");
-        SendWearHat               = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearHat");
-        SendWearBackpack          = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearBackpack");
-        SendWearVest              = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearVest");
-        SendWearMask              = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearMask");
-        SendWearGlasses           = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearGlasses");
+        SendChangeText = Util.GetRPC<ClientInstanceMethod<string>, InteractableSign>("SendChangeText", true)!;
+        SendMultipleBarricades = Util.GetRPC<ClientStaticMethod, BarricadeManager>("SendMultipleBarricades", true)!;
+        SendChatIndividual = Util.GetRPC<ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>, ChatManager>("SendChatEntry", true)!;
+        SendDestroyItem = Util.GetRPC<ClientStaticMethod<byte, byte, uint, bool>, ItemManager>("SendDestroyItem", true)!;
+        SendUpdateBarricadeState = Util.GetRPC<ClientInstanceMethod<byte[]>, BarricadeDrop>("SendUpdateState");
+        SendInventory = Util.GetRPC<ClientInstanceMethod, PlayerInventory>("SendInventory");
+        SendWearShirt = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearShirt");
+        SendWearPants = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearPants");
+        SendWearHat = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearHat");
+        SendWearBackpack = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearBackpack");
+        SendWearVest = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearVest");
+        SendWearMask = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearMask");
+        SendWearGlasses = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearGlasses");
+        SendSwapVehicleSeats = Util.GetRPC<ClientStaticMethod<uint, byte, byte>, VehicleManager>("SendSwapVehicleSeats");
         SendScreenshotDestination = Util.GetRPC<ClientInstanceMethod, Player>("SendScreenshotDestination");
         UseFastKits = true;
         if (SendWearShirt is null || SendWearPants is null || SendWearHat is null || SendWearBackpack is null || SendWearVest is null || SendWearMask is null || SendWearGlasses is null || SendInventory is null)
@@ -353,7 +356,7 @@ public static class Data
         }
         try
         {
-            ServerSpawnLegacyImpact = 
+            ServerSpawnLegacyImpact =
                 (Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>?)typeof(DamageTool)
                     .GetMethod("ServerSpawnLegacyImpact", BindingFlags.Static | BindingFlags.NonPublic)?
                     .CreateDelegate(typeof(Action<Vector3, Vector3, string, Transform, List<ITransportConnection>>));
@@ -396,6 +399,23 @@ public static class Data
         L.Log("Loading first gamemode...", ConsoleColor.Magenta);
         if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF), token))
             throw new SingletonLoadException(SingletonLoadType.Load, null, new Exception("Failed to load gamemode"));
+
+        SteamPlayerID id = new SteamPlayerID(CSteamID.Nil, 0, "Nil", "Nil", "Nil", CSteamID.Nil);
+        GameObject obj = Provider.gameMode.getPlayerGameObject(id);
+        obj.SetActive(false);
+        NetId nilNetId = new NetId(uint.MaxValue - 100);
+
+        NilSteamPlayer = new SteamPlayer(null, nilNetId, id, obj.transform, false, false, -1, 0, 0, 0,
+            Color.white, Color.white, Color.white, false, 0, 0, 0, 0, 0, 0, 0, Array.Empty<int>(), Array.Empty<string>(), Array.Empty<string>(), EPlayerSkillset.NONE,
+            Provider.language, CSteamID.Nil, EClientPlatform.Windows);
+
+        for (uint i = nilNetId.id; i < uint.MaxValue; ++i)
+        {
+            if (!NetIdRegistry.Release(new NetId(i)))
+                break;
+        }
+
+        UnityEngine.Object.Destroy(obj);
     }
     public static PooledTransportConnectionList GetPooledTransportConnectionList(int capacity = -1)
     {

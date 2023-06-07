@@ -237,7 +237,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                     else
                     {
                         ToastMessage.QueueMessage(ucmedic, new ToastMessage(
-                            T.XPToastGainXP.Translate(ucmedic, 0) + "\n" +
+                            T.XPToastGainXP.Translate(ucmedic, false, 0) + "\n" +
                             T.XPToastHealedTeammate.Translate(ucmedic).Colorize("adadad"), ToastMessageSeverity.Mini));
                     }
                 }

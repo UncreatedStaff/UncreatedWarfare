@@ -932,7 +932,7 @@ public class LevelUnlockRequirement : UnlockRequirement
             return string.Empty;
 
         int lvl = Points.GetLevel(player.CachedXP);
-        return T.KitRequiredLevel.Translate(player, LevelData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
+        return T.KitRequiredLevel.Translate(player, false, LevelData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
     }
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)
     {
@@ -988,7 +988,7 @@ public class RankUnlockRequirement : UnlockRequirement
     {
         ref Ranks.RankData data = ref Ranks.RankManager.GetRank(player, out bool success);
         ref Ranks.RankData reqData = ref Ranks.RankManager.GetRank(UnlockRank, out _);
-        return T.KitRequiredRank.Translate(player, reqData, success && data.Order >= reqData.Order ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
+        return T.KitRequiredRank.Translate(player, false, reqData, success && data.Order >= reqData.Order ? UCWarfare.GetColor("kit_level_available") : UCWarfare.GetColor("kit_level_unavailable"));
     }
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)
     {
@@ -1056,9 +1056,9 @@ public class QuestUnlockRequirement : UnlockRequirement
         if (access)
             return T.KitRequiredQuestsComplete.Translate(player);
         if (Assets.find(QuestID) is QuestAsset quest)
-            return T.KitRequiredQuest.Translate(player, quest, UCWarfare.GetColor("kit_level_unavailable"));
+            return T.KitRequiredQuest.Translate(player, false, quest, UCWarfare.GetColor("kit_level_unavailable"));
 
-        return T.KitRequiredQuestsMultiple.Translate(player, UnlockPresets.Length, UCWarfare.GetColor("kit_level_unavailable"), UnlockPresets.Length.S());
+        return T.KitRequiredQuestsMultiple.Translate(player, false, UnlockPresets.Length, UCWarfare.GetColor("kit_level_unavailable"), UnlockPresets.Length.S());
     }
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)
     {

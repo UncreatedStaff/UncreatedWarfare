@@ -8,6 +8,7 @@ using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -20,8 +21,11 @@ using Uncreated.Warfare.Vehicles;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Commands;
-public class RequestCommand : AsyncCommand
+public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
 {
+    public float CompoundMultiplier => 2f;
+    public float MaxCooldown => 600f; // 10 mins
+
     private const string Syntax = "/request [save|remove]";
     private const string Help = "Request a kit by targeting a sign or request a vehicle by targeting the vehicle or it's sign while doing /request.";
 
@@ -252,32 +256,35 @@ public class RequestCommand : AsyncCommand
 
             if (Data.Is(out IVehicles vgm) && vgm.VehicleSpawner.TryGetSpawn(drop, out SqlItem<VehicleSpawn> vbsign))
             {
-                if (vbsign.Item != null && vbsign.Item.HasLinkedVehicle(out InteractableVehicle vehicle))
+                VehicleSpawn? spawn = vbsign.Item;
+                if (spawn == null)
+                    throw ctx.Reply(T.RequestNoTarget);
+
+                if (!spawn.HasLinkedVehicle(out InteractableVehicle vehicle))
+                    throw ctx.Reply(T.RequestVehicleDead, spawn.Vehicle?.Item!);
+
+                await UCWarfare.ToUpdate();
+                VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+                if (bay != null && bay.IsLoaded)
                 {
+                    SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
                     await UCWarfare.ToUpdate();
-                    VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
-                    if (bay != null && bay.IsLoaded)
+                    if (data?.Item != null)
                     {
-                        SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
-                        await UCWarfare.ToUpdate();
-                        if (data?.Item != null)
+                        await data.Enter(token).ConfigureAwait(false);
+                        try
                         {
-                            await data.Enter(token).ConfigureAwait(false);
-                            try
-                            {
-                                await RequestVehicle(ctx, vehicle, data.Item, token);
-                                ctx.Defer();
-                            }
-                            finally
-                            {
-                                data.Release();
-                            }
-                            return;
+                            await RequestVehicle(ctx, vehicle, data.Item, token);
+                            ctx.Defer();
                         }
+                        finally
+                        {
+                            data.Release();
+                        }
+                        return;
                     }
-                    else throw ctx.SendGamemodeError();
                 }
-                else throw ctx.Reply(T.RequestVehicleDead, vbsign.Item?.Vehicle?.Item!);
+                else throw ctx.SendGamemodeError();
             }
             throw ctx.Reply(T.RequestNoTarget);
         }
@@ -369,6 +376,9 @@ public class RequestCommand : AsyncCommand
         }
         if (data.IsDelayed(out Delay delay) && delay.Type != DelayType.None)
         {
+            ctx.AssertNotOnPortionCooldown();
+
+            ctx.PortionCommandCooldownTime = 5f;
             Localization.SendDelayRequestText(in delay, ctx.Caller, team, Localization.DelayTarget.VehicleBay);
             ctx.Defer();
             return;
@@ -423,6 +433,7 @@ public class RequestCommand : AsyncCommand
     internal static void GiveVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, VehicleData data)
     {
         VehicleManager.ServerSetVehicleLock(vehicle, ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
+        VehicleComponent.TryAddOwnerToHistory(vehicle, ucplayer.Steam64);
 
         if (Data.Is(out IVehicles vgm) && vgm.VehicleSpawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))
         {

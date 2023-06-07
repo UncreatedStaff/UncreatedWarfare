@@ -360,7 +360,12 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             (x => x.OnPrePlayerInit(player, wasAlreadyOnline),
                 x => x.OnPrePlayerInit(player, wasAlreadyOnline, token), token, onlineCheck: player)
             .ConfigureAwait(false);
+
         await UCWarfare.ToUpdate(token);
+
+        if (player.PendingVehicleSwapRequest.RespondToken is { IsCancellationRequested: false })
+            player.PendingVehicleSwapRequest.RespondToken.Cancel();
+
         ThreadUtil.assertIsGameThread();
         if (!wasAlreadyOnline)
         {

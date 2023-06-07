@@ -66,20 +66,24 @@ public sealed class CommandStructure
 
         string? desc = GetDescription(ctx.Language);
 
-        StringBuilder builder = new StringBuilder(ctx.IMGUI ? "/<color=#ffffff>" : "/<#fff>", Chat.MaxMessageSize);
-        builder.Append(cmd.CommandName.ToLowerInvariant()).Append("</color>");
+        StringBuilder builder = new StringBuilder(ctx.IsConsole ? "/" : (ctx.IMGUI ? "/<color=#ffffff>" : "/<#fff>"), Chat.MaxMessageSize);
+        builder.Append(cmd.CommandName.ToLowerInvariant());
+        if (!ctx.IsConsole)
+            builder.Append("</color>");
         if (Parameters is { Length: > 0 })
         {
             builder.Append(' ');
-            FormatParameters(Parameters, builder, ctx, out string? desc2);
+            FormatParameters(Parameters, builder, ctx, out string? desc2, colors: !ctx.IsConsole);
             if (desc2 != null)
                 desc = desc2;
             if (builder.Length > Chat.MaxMessageSize - 64) // retry without colors
             {
-                builder.Clear()
-                    .Append("<#fff>").Append(ctx.IMGUI ? "/<color=#ffffff>" : "/<#fff>")
-                    .Append(cmd.CommandName.ToLowerInvariant()).Append("</color>")
-                    .Append(' ');
+                if (ctx.IsConsole)
+                    builder.Clear().Append('/').Append(cmd.CommandName.ToLowerInvariant()).Append(' ');
+                else
+                    builder.Clear().Append("<#fff>").Append(ctx.IMGUI ? "/<color=#ffffff>" : "/<#fff>")
+                    .Append(cmd.CommandName.ToLowerInvariant()).Append("</color>").Append(' ');
+
                 FormatParameters(Parameters, builder, ctx, out _, colors: false);
             }
         }
@@ -125,22 +129,6 @@ public sealed class CommandStructure
         ++ctx.Offset;
         try
         {
-            for (int i = 0; i < paramters.Length; ++i)
-            {
-                CommandParameter p = paramters[i];
-                string? flag = p.FlagName;
-                if (string.IsNullOrEmpty(flag))
-                    continue;
-                bool has = ctx.MatchFlag(flag!);
-                if (has)
-                    builder.Append('[');
-                if (flag![0] != '-')
-                    builder.Append('-');
-                if (ctx.MatchParameter(0, flag[0] == '-' ? flag : ("-" + flag)))
-                    desc = p.GetDescription(ctx.Language);
-                builder.Append(flag);
-                builder.Append(": ").Append(p.Name);
-            }
             if (ctx.TryGet(0, out string val)) // part of path
             {
                 // match to a parameter or explicit value
@@ -196,6 +184,22 @@ public sealed class CommandStructure
                     desc = p.GetDescription(ctx.Language);
                     return;
                 }
+            }
+            for (int i = 0; i < paramters.Length; ++i)
+            {
+                CommandParameter p = paramters[i];
+                string? flag = p.FlagName;
+                if (string.IsNullOrEmpty(flag) || p.Permission.HasValue && !ctx.HasPermission(p.Permission.Value))
+                    continue;
+                bool has = ctx.MatchFlag(flag!);
+                if (has)
+                    builder.Append('[');
+                if (flag![0] != '-')
+                    builder.Append('-');
+                if (ctx.MatchParameter(0, flag[0] == '-' ? flag : ("-" + flag)))
+                    desc = p.GetDescription(ctx.Language);
+                builder.Append(flag);
+                builder.Append(": ").Append(p.Name).Append(", ");
             }
 
             // is end

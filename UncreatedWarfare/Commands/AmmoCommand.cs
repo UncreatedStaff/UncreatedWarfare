@@ -12,6 +12,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 
@@ -126,21 +127,17 @@ public class AmmoCommand : AsyncCommand
             if (kit2 == null)
                 throw ctx.Reply(T.AmmoNoKit);
 
+            FOBManager? fobManager = Data.Singletons.GetSingleton<FOBManager>();
+
             int ammoCost = KitManager.GetAmmoCost(kit2.Class);
 
             if (Data.Gamemode.CanRefillAmmoAt(barricade.asset))
             {
-                if (TeamManager.Team1Faction.Ammo is null || !TeamManager.Team1Faction.Ammo.Exists || TeamManager.Team2Faction.Ammo is null || !TeamManager.Team2Faction.Ammo.Exists)
-                {
-                    L.LogError("Either t1ammo or t2ammo guid isn't a valid item");
-                    return;
-                }
-
                 bool isInMain = false;
                 bool isCache = Gamemode.Config.BarricadeInsurgencyCache.MatchGuid(barricade.asset.GUID);
-                FOB? fob = null;
-                if ((!ctx.Caller.IsOnFOB(out IFOB? fob2) || fob2 is not FOB fob3))
+                if (fobManager?.FindFob(new UCBarricade(barricade)) is not FOB fob)
                 {
+                    fob = null!;
                     if (!isCache)
                     {
                         if (F.IsInMain(barricade.model.transform.position))
@@ -151,16 +148,20 @@ public class AmmoCommand : AsyncCommand
                             throw ctx.Reply(T.AmmoNotNearFOB);
                     }
                 }
-                else
-                    fob = fob3;
                 if (isInMain && FOBManager.Config.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(ctx.Caller, CooldownType.Ammo, out Cooldown cooldown))
                     throw ctx.Reply(T.AmmoCooldown, cooldown);
 
-                if (!isInMain && !isCache && fob!.AmmoSupply < ammoCost)
+                if (!isInMain && !isCache && fob.AmmoSupply < ammoCost)
                     throw ctx.Reply(T.AmmoOutOfStock, fob.AmmoSupply, ammoCost);
 
                 if (barricade.GetServersideData().group != ctx.Caller.GetTeam())
                     throw ctx.Reply(T.AmmoWrongTeam);
+
+                if (!isInMain && !isCache)
+                {
+                    ctx.AssertNotOnPortionCooldown();
+                    ctx.PortionCommandCooldownTime = 15f;
+                }
 
                 WipeDroppedItems(ctx.CallerID);
                 await req.KitManager.ResupplyKit(ctx.Caller, kit!, token: token).ConfigureAwait(false);

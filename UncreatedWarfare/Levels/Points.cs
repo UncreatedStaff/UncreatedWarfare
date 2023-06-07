@@ -185,10 +185,10 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         int strt = GetLevelXP(lvl);
         return (float)(xp - strt) / (GetNextLevelXP(lvl) - strt);
     }
-    public static void AwardCredits<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
-        AwardCredits(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase, @lock);
-    public static void AwardCredits<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
-        AwardCredits(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase, @lock);
+    public static void AwardCredits<T0>(UCPlayer player, int amount, Translation<T0> message, T0 arg0, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
+        AwardCredits(player, amount, Localization.Translate(message, player, arg0), redmessage, isPurchase, @lock);
+    public static void AwardCredits<T0, T1>(UCPlayer player, int amount, Translation<T0, T1> message, T0 arg0, T1 arg1, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
+        AwardCredits(player, amount, Localization.Translate(message, player, arg0, arg1), redmessage, isPurchase, @lock);
     public static Task AwardCreditsAsync(UCPlayer player, int amount, Translation message, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default) =>
         AwardCreditsAsync(player, amount, Localization.Translate(message, player), redmessage, isPurchase, @lock, token);
     public static async Task AwardCreditsAsync(CreditsParameters parameters, CancellationToken token = default, bool @lock = true)
@@ -274,10 +274,10 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         if (remote != null && !remote.IsCompleted)
             await remote.ConfigureAwait(false);
     }
-    public static Task AwardCreditsAsync<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default) =>
-        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase, @lock, token);
-    public static Task AwardCreditsAsync<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default) =>
-        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase, @lock, token);
+    public static Task AwardCreditsAsync<T0>(UCPlayer player, int amount, Translation<T0> message, T0 arg0, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default) =>
+        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg0), redmessage, isPurchase, @lock, token);
+    public static Task AwardCreditsAsync<T0, T1>(UCPlayer player, int amount, Translation<T0, T1> message, T0 arg0, T1 arg1, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default) =>
+        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg0, arg1), redmessage, isPurchase, @lock, token);
     public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false, bool @lock = true)
     {
         CreditsParameters parameters = new CreditsParameters(player, player.GetTeam(), amount, message, redmessage)
@@ -320,7 +320,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         if (translation is Translation<VehicleType> vehicleTranslation &&
             PointsConfig.TryGetVehicleType(reward, out VehicleType type))
         {
-            t = vehicleTranslation.Translate(player, type);
+            t = vehicleTranslation.Translate(player, false, type);
         }
         else t = translation.Translate(player);
         AwardXP(new XPParameters(player, 0, reward) { Multiplier = multiplier, Message = t });
@@ -330,7 +330,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         string? t;
         if (translation is Translation<VehicleType> vehicleTranslation && PointsConfig.TryGetVehicleType(reward, out VehicleType type))
         {
-            t = vehicleTranslation.Translate(player, type);
+            t = vehicleTranslation.Translate(player, false, type);
         }
         else t = translation.Translate(player);
         AwardXP(new XPParameters(player, 0, amount) { Reward = reward, Message = t });
@@ -1456,16 +1456,16 @@ public struct CreditsParameters
 
     public static CreditsParameters WithTranslation(UCPlayer player, Translation translation, int amount) =>
         new CreditsParameters(player, player.GetTeam(), amount, translation.Translate(player));
-    public static CreditsParameters WithTranslation<T>(UCPlayer player, Translation<T> translation, T arg, int amount) =>
-        new CreditsParameters(player, player.GetTeam(), amount, translation.Translate(player, arg));
-    public static CreditsParameters WithTranslation<T1, T2>(UCPlayer player, Translation<T1, T2> translation, T1 arg1, T2 arg2, int amount) =>
-        new CreditsParameters(player, player.GetTeam(), amount, translation.Translate(player, arg1, arg2));
+    public static CreditsParameters WithTranslation<T0>(UCPlayer player, Translation<T0> translation, T0 arg0, int amount) =>
+        new CreditsParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0));
+    public static CreditsParameters WithTranslation<T0, T1>(UCPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount) =>
+        new CreditsParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0, arg1));
     public static CreditsParameters WithTranslation(UCPlayer player, ulong team, Translation translation, int amount) =>
         new CreditsParameters(player, team, amount, translation.Translate(player));
-    public static CreditsParameters WithTranslation<T>(UCPlayer player, ulong team, Translation<T> translation, T arg, int amount) =>
-        new CreditsParameters(player, team, amount, translation.Translate(player, arg));
-    public static CreditsParameters WithTranslation<T1, T2>(UCPlayer player, ulong team, Translation<T1, T2> translation, T1 arg1, T2 arg2, int amount) =>
-        new CreditsParameters(player, team, amount, translation.Translate(player, arg1, arg2));
+    public static CreditsParameters WithTranslation<T0>(UCPlayer player, ulong team, Translation<T0> translation, T0 arg0, int amount) =>
+        new CreditsParameters(player, team, amount, translation.Translate(player, false, arg0));
+    public static CreditsParameters WithTranslation<T0, T1>(UCPlayer player, ulong team, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount) =>
+        new CreditsParameters(player, team, amount, translation.Translate(player, false, arg0, arg1));
     public CreditsParameters(ulong player, ulong team, int amount)
     {
         if (!Util.IsValidSteam64Id(player))
@@ -1526,40 +1526,40 @@ public struct XPParameters
     public bool AnnounceRankChange = true;
     public static XPParameters WithTranslation(UCPlayer player, Translation translation, int amount, bool awardCredits = true) =>
         new XPParameters(player, player.GetTeam(), amount, translation.Translate(player), awardCredits);
-    public static XPParameters WithTranslation<T>(UCPlayer player, Translation<T> translation, T arg, int amount, bool awardCredits = true) =>
-        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, arg), awardCredits);
-    public static XPParameters WithTranslation<T1, T2>(UCPlayer player, Translation<T1, T2> translation, T1 arg1, T2 arg2, int amount, bool awardCredits = true) =>
-        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, arg1, arg2), awardCredits);
+    public static XPParameters WithTranslation<T0>(UCPlayer player, Translation<T0> translation, T0 arg0, int amount, bool awardCredits = true) =>
+        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0), awardCredits);
+    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount, bool awardCredits = true) =>
+        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0, arg1), awardCredits);
     public static XPParameters WithTranslation(UCPlayer player, ulong team, Translation translation, int amount, bool awardCredits = true) =>
         new XPParameters(player, team, amount, translation.Translate(player), awardCredits);
-    public static XPParameters WithTranslation<T>(UCPlayer player, ulong team, Translation<T> translation, T arg, int amount, bool awardCredits = true) =>
-        new XPParameters(player, team, amount, translation.Translate(player, arg), awardCredits);
-    public static XPParameters WithTranslation<T1, T2>(UCPlayer player, ulong team, Translation<T1, T2> translation, T1 arg1, T2 arg2, int amount, bool awardCredits = true) =>
-        new XPParameters(player, team, amount, translation.Translate(player, arg1, arg2), awardCredits);
+    public static XPParameters WithTranslation<T0>(UCPlayer player, ulong team, Translation<T0> translation, T0 arg0, int amount, bool awardCredits = true) =>
+        new XPParameters(player, team, amount, translation.Translate(player, false, arg0), awardCredits);
+    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, ulong team, Translation<T0, T1> translation, T0 arg0, T1 arg1, int amount, bool awardCredits = true) =>
+        new XPParameters(player, team, amount, translation.Translate(player, false, arg0, arg1), awardCredits);
     public static XPParameters WithTranslation(UCPlayer player, Translation translation, XPReward reward) =>
         new XPParameters(player, player.GetTeam(), reward, translation.Translate(player), true);
-    public static XPParameters WithTranslation<T>(UCPlayer player, Translation<T> translation, T arg, XPReward reward) =>
-        new XPParameters(player, player.GetTeam(), reward, translation.Translate(player, arg), true);
-    public static XPParameters WithTranslation<T1, T2>(UCPlayer player, Translation<T1, T2> translation, T1 arg1, T2 arg2, XPReward reward) =>
-        new XPParameters(player, player.GetTeam(), reward, translation.Translate(player, arg1, arg2), true);
+    public static XPParameters WithTranslation<T0>(UCPlayer player, Translation<T0> translation, T0 arg0, XPReward reward) =>
+        new XPParameters(player, player.GetTeam(), reward, translation.Translate(player, false, arg0), true);
+    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward) =>
+        new XPParameters(player, player.GetTeam(), reward, translation.Translate(player, false, arg0, arg1), true);
     public static XPParameters WithTranslation(UCPlayer player, ulong team, Translation translation, XPReward reward) =>
         new XPParameters(player, team, reward, translation.Translate(player), true);
-    public static XPParameters WithTranslation<T>(UCPlayer player, ulong team, Translation<T> translation, T arg, XPReward reward) =>
-        new XPParameters(player, team, reward, translation.Translate(player, arg), true);
-    public static XPParameters WithTranslation<T1, T2>(UCPlayer player, ulong team, Translation<T1, T2> translation, T1 arg1, T2 arg2, XPReward reward) =>
-        new XPParameters(player, team, reward, translation.Translate(player, arg1, arg2), true);
+    public static XPParameters WithTranslation<T0>(UCPlayer player, ulong team, Translation<T0> translation, T0 arg0, XPReward reward) =>
+        new XPParameters(player, team, reward, translation.Translate(player, false, arg0), true);
+    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, ulong team, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward) =>
+        new XPParameters(player, team, reward, translation.Translate(player, false, arg0, arg1), true);
     public static XPParameters WithTranslation(UCPlayer player, Translation translation, XPReward reward, int amount) =>
         new XPParameters(player, player.GetTeam(), amount, translation.Translate(player), true) { Reward = reward };
-    public static XPParameters WithTranslation<T>(UCPlayer player, Translation<T> translation, T arg, XPReward reward, int amount) =>
-        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, arg), true) { Reward = reward };
-    public static XPParameters WithTranslation<T1, T2>(UCPlayer player, Translation<T1, T2> translation, T1 arg1, T2 arg2, XPReward reward, int amount) =>
-        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, arg1, arg2), true) { Reward = reward };
+    public static XPParameters WithTranslation<T0>(UCPlayer player, Translation<T0> translation, T0 arg0, XPReward reward, int amount) =>
+        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0), true) { Reward = reward };
+    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward, int amount) =>
+        new XPParameters(player, player.GetTeam(), amount, translation.Translate(player, false, arg0, arg1), true) { Reward = reward };
     public static XPParameters WithTranslation(UCPlayer player, ulong team, Translation translation, XPReward reward, int amount) =>
         new XPParameters(player, team, amount, translation.Translate(player), true) { Reward = reward };
-    public static XPParameters WithTranslation<T>(UCPlayer player, ulong team, Translation<T> translation, T arg, XPReward reward, int amount) =>
-        new XPParameters(player, team, amount, translation.Translate(player, arg), true) { Reward = reward };
-    public static XPParameters WithTranslation<T1, T2>(UCPlayer player, ulong team, Translation<T1, T2> translation, T1 arg1, T2 arg2, XPReward reward, int amount) =>
-        new XPParameters(player, team, amount, translation.Translate(player, arg1, arg2), true) { Reward = reward };
+    public static XPParameters WithTranslation<T0>(UCPlayer player, ulong team, Translation<T0> translation, T0 arg0, XPReward reward, int amount) =>
+        new XPParameters(player, team, amount, translation.Translate(player, false, arg0), true) { Reward = reward };
+    public static XPParameters WithTranslation<T0, T1>(UCPlayer player, ulong team, Translation<T0, T1> translation, T0 arg0, T1 arg1, XPReward reward, int amount) =>
+        new XPParameters(player, team, amount, translation.Translate(player, false, arg0, arg1), true) { Reward = reward };
     public XPParameters(ulong player, ulong team, int amount)
     {
         if (!Util.IsValidSteam64Id(player))

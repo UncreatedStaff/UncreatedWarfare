@@ -308,20 +308,26 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     public IFOB? FindFob(IBuildable buildable)
     {
-        for (int i = 0; i < _fobs.Count; ++i)
+        if (buildable?.Model == null)
+            return null;
+        Vector3 pos = buildable.Model.position;
+        foreach (IFOB fob in FOBs.OrderBy(x => (pos - x.Position).sqrMagnitude))
         {
-            if (_fobs[i].ContainsBuildable(buildable))
-                return _fobs[i];
+            if (fob.ContainsBuildable(buildable))
+                return fob;
         }
 
         return null;
     }
     public IFOB? FindFob(InteractableVehicle vehicle)
     {
-        for (int i = 0; i < _fobs.Count; ++i)
+        if (vehicle == null)
+            return null;
+        Vector3 pos = vehicle.transform.position;
+        foreach (IFOB fob in FOBs.OrderBy(x => (pos - x.Position).sqrMagnitude))
         {
-            if (_fobs[i].ContainsVehicle(vehicle))
-                return _fobs[i];
+            if (fob.ContainsVehicle(vehicle))
+                return fob;
         }
 
         return null;
@@ -736,6 +742,23 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         fob = null!;
         return false;
     }
+    public static bool IsOnFOB<TFOB>(UCPlayer player, out TFOB fob) where TFOB : class, IRadiusFOB
+    {
+        ThreadUtil.assertIsGameThread();
+        _singleton.AssertLoaded();
+
+        for (int i = 0; i < _singleton._fobs.Count; ++i)
+        {
+            if (_singleton._fobs[i] is TFOB fob2 && fob2.IsPlayerOn(player))
+            {
+                fob = fob2;
+                return true;
+            }
+        }
+
+        fob = null!;
+        return false;
+    }
     public static SpecialFOB RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string color, bool disappearAroundEnemies)
     {
         ThreadUtil.assertIsGameThread();
@@ -998,7 +1021,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 continue;
             IFOB fob = fobs[i];
             ListUI.FOBParents[i2].SetVisibility(connection, true);
-            ListUI.FOBNames[i2].SetText(connection, T.FOBUI.Translate(player, fob, fob.GridLocation, fob.ClosestLocation));
+            ListUI.FOBNames[i2].SetText(connection, T.FOBUI.Translate(player, false, fob, fob.GridLocation, fob.ClosestLocation));
             ListUI.FOBResources[i2].SetText(connection, fob is IResourceFOB r ? r.UIResourceString : string.Empty);
             i2++;
         }

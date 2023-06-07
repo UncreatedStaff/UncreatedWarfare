@@ -78,11 +78,11 @@ public static class InsurgencyUI
             {
                 if (team == insurgency.AttackingTeam)
                 {
-                    return T.InsurgencyCacheAttack.Translate(player, cache.Cache, cache.Cache);
+                    return T.InsurgencyCacheAttack.Translate(player, false, cache.Cache, cache.Cache);
                 }
                 else
                 {
-                    return T.InsurgencyCacheDefense.Translate(player, cache.Cache, cache.Cache);
+                    return T.InsurgencyCacheDefense.Translate(player, false, cache.Cache, cache.Cache);
                 }
             }
             else
@@ -93,7 +93,7 @@ public static class InsurgencyUI
                 }
                 else
                 {
-                    return T.InsurgencyCacheDefenseUndiscovered.Translate(player, cache.Cache, cache.Cache);
+                    return T.InsurgencyCacheDefenseUndiscovered.Translate(player, false, cache.Cache, cache.Cache);
                 }
             }
         }

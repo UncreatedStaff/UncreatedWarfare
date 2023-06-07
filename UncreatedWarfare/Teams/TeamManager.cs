@@ -787,6 +787,7 @@ public static class TeamManager
 
         return null;
     }
+    public static IEnumerable<UCPlayer> EnumerateTeam(ulong team) => PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == team);
     /// <summary>Advanced search using name, abbreviation, and short name.</summary>
     /// <remarks>Exact matches for Id are prioritized.</remarks>
     public static FactionInfo? FindFactionInfo(string search)
@@ -1076,9 +1077,18 @@ public static class TeamManager
     public static bool IsInMain(ulong team, Vector3 position)
     {
         if (team == 1)
-            return Team1Main.IsInsideBounds(position);
+            return Team1Main.IsInside(position);
         if (team == 2)
-            return Team2Main.IsInsideBounds(position);
+            return Team2Main.IsInside(position);
+
+        return false;
+    }
+    public static bool IsInMainOrAMC(ulong team, Vector3 position)
+    {
+        if (team == 1)
+            return Team1Main.IsInside(position) || Team1AMC.IsInside(position);
+        if (team == 2)
+            return Team2Main.IsInside(position) || Team2AMC.IsInside(position);
 
         return false;
     }

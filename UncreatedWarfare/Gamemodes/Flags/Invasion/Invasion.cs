@@ -415,7 +415,7 @@ public class Invasion :
         if (player.GetTeam() == AttackingTeam)
             CTFUI.StagingUI.Top.SetText(c, T.PhaseBreifingInvasionAttack.Translate(player));
         else if (player.GetTeam() == DefendingTeam)
-            CTFUI.StagingUI.Top.SetText(c, T.PhaseBreifingInvasionDefense.Translate(player, obj));
+            CTFUI.StagingUI.Top.SetText(c, T.PhaseBreifingInvasionDefense.Translate(player, false, obj));
     }
     protected override void EndStagingPhase()
     {

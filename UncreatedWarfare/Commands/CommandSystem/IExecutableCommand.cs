@@ -27,8 +27,8 @@ public interface IExecutableCommand
     CommandInteraction SetupCommand(UCPlayer? caller, string[] args, string message, bool keepSlash);
     CommandStructure? Structure { get; set; }
 }
-
-public interface IInteractableCommand : IExecutableCommand, _Exception
+public interface ICompoundingCooldownCommand : IExecutableCommand
 {
-    bool Handled { get; }
+    float CompoundMultiplier { get; }
+    float MaxCooldown { get; }
 }

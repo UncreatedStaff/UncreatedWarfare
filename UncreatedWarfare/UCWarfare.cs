@@ -1034,6 +1034,8 @@ public class UCWarfare : MonoBehaviour
             await ToUpdate(token);
             ThreadUtil.assertIsGameThread();
         }
+
+        Data.NilSteamPlayer = null!;
 #if DEBUG
         profiler2.Dispose();
 #endif

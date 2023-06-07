@@ -17,6 +17,7 @@ using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -116,6 +117,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private EAdminType? _pLvl;
     private LevelData? _level;
     private PlayerNames _cachedName;
+    internal VehicleSwapRequest PendingVehicleSwapRequest;
     public UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore)
     {
         Steam64 = steamID.m_SteamID;
@@ -688,6 +690,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ApplyIntl() => PlayerManager.ApplyTo(this);
     public bool IsOnFOB(out IFOB fob) => FOBManager.IsOnFOB(this, out fob);
+    public bool IsOnFOB<TFOB>(out TFOB fob) where TFOB : class, IRadiusFOB => FOBManager.IsOnFOB(this, out fob);
     public int CompareTo(UCPlayer obj) => Steam64.CompareTo(obj.Steam64);
     public void SetCosmeticStates(bool state)
     {
@@ -898,7 +901,8 @@ public struct OfflinePlayer : IPlayer
     }
     public async ValueTask CacheUsernames(CancellationToken token = default)
     {
-        _names = await F.GetPlayerOriginalNamesAsync(_s64, token).ConfigureAwait(false);
+        if (!TryCacheLocal())
+            _names = await F.GetPlayerOriginalNamesAsync(_s64, token).ConfigureAwait(false);
     }
     public bool TryCacheLocal()
     {
