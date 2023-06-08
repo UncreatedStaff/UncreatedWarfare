@@ -226,6 +226,34 @@ public static class UCBarricadeManager
             return false;
         }
     }
+    public static bool IsStructureNearby(Guid id, float range, Vector3 origin, out StructureDrop drop)
+    {
+        lock (RegionBuffer)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            RegionBuffer.Clear();
+            float sqrRange = range * range;
+            Regions.getRegionsInRadius(origin, range, RegionBuffer);
+            for (int r = 0; r < RegionBuffer.Count; r++)
+            {
+                RegionCoordinate rc = RegionBuffer[r];
+                StructureRegion region = StructureManager.regions[rc.x, rc.y];
+                foreach (StructureDrop structure in region.drops)
+                {
+                    if (structure.asset.GUID == id && (structure.model.position - origin).sqrMagnitude <= sqrRange)
+                    {
+                        drop = structure;
+                        return true;
+                    }
+                }
+            }
+
+            drop = null!;
+            return false;
+        }
+    }
     public static IEnumerable<BarricadeDrop> GetBarricadesByGuid(Guid guid)
     {
 #if DEBUG
@@ -514,6 +542,78 @@ public static class UCBarricadeManager
             return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list;
         }
     }
+    public static IEnumerable<StructureDrop> GetNearbyStructures(IEnumerable<StructureDrop> selection, float range, Vector3 origin, bool sortClosest)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        List<StructureDrop> list = new List<StructureDrop>();
+        if (range == 0) return list;
+        float sqrRange = range * range;
+        foreach (StructureDrop structure in selection)
+        {
+            if (structure == null)
+                continue;
+            if ((structure.model.position - origin).sqrMagnitude <= sqrRange)
+                list.Add(structure);
+        }
+
+        return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list;
+    }
+    public static IEnumerable<StructureDrop> GetNearbyStructures(Guid id, float range, Vector3 origin, bool sortClosest)
+    {
+        lock (RegionBuffer)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            RegionBuffer.Clear();
+            float sqrRange = range * range;
+            List<StructureDrop> list = new List<StructureDrop>();
+            Regions.getRegionsInRadius(origin, range, RegionBuffer);
+            for (int r = 0; r < RegionBuffer.Count; r++)
+            {
+                RegionCoordinate rc = RegionBuffer[r];
+                StructureRegion region = StructureManager.regions[rc.x, rc.y];
+                foreach (StructureDrop structure in region.drops)
+                {
+                    if (structure.asset.GUID == id && (structure.model.position - origin).sqrMagnitude <= sqrRange)
+                    {
+                        list.Add(structure);
+                    }
+                }
+            }
+            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list;
+        }
+    }
+    public static IEnumerable<StructureDrop> GetNearbyStructures(Guid id, float range, Vector3 origin, ulong team, bool sortClosest)
+    {
+        lock (RegionBuffer)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            RegionBuffer.Clear();
+            float sqrRange = range * range;
+            //ulong group = TeamManager.GetGroupID(team);
+            ulong group = team;
+            List<StructureDrop> list = new List<StructureDrop>();
+            Regions.getRegionsInRadius(origin, range, RegionBuffer);
+            for (int r = 0; r < RegionBuffer.Count; r++)
+            {
+                RegionCoordinate rc = RegionBuffer[r];
+                StructureRegion region = StructureManager.regions[rc.x, rc.y];
+                foreach (StructureDrop structure in region.drops)
+                {
+                    if (structure.GetServersideData().group == group && structure.asset.GUID == id && (structure.model.position - origin).sqrMagnitude <= sqrRange)
+                    {
+                        list.Add(structure);
+                    }
+                }
+            }
+            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list;
+        }
+    }
     public static int CountNearbyBarricades(Guid id, float range, Vector3 origin, ulong team)
     {
         lock (RegionBuffer)
@@ -559,6 +659,35 @@ public static class UCBarricadeManager
                     if (barricade.GetServersideData().group == group && barricade.asset.GUID == id && (barricade.model.position - origin).sqrMagnitude <= sqrRange)
                     {
                         drop = barricade;
+                        return true;
+                    }
+                }
+            }
+
+            drop = null!;
+            return false;
+        }
+    }
+    public static bool IsStructureNearby(Guid id, float range, Vector3 origin, ulong team, out StructureDrop drop)
+    {
+        lock (RegionBuffer)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            RegionBuffer.Clear();
+            float sqrRange = range * range;
+            ulong group = TeamManager.GetGroupID(team);
+            Regions.getRegionsInRadius(origin, range, RegionBuffer);
+            for (int r = 0; r < RegionBuffer.Count; r++)
+            {
+                RegionCoordinate rc = RegionBuffer[r];
+                StructureRegion region = StructureManager.regions[rc.x, rc.y];
+                foreach (StructureDrop structure in region.drops)
+                {
+                    if (structure.GetServersideData().group == group && structure.asset.GUID == id && (structure.model.position - origin).sqrMagnitude <= sqrRange)
+                    {
+                        drop = structure;
                         return true;
                     }
                 }

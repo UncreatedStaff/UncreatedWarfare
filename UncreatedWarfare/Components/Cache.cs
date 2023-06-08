@@ -47,7 +47,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         _component = drop.model.gameObject.AddComponent<CacheComponent>().Initialize(drop, this);
         Drop = drop;
         Vector3 pos = _component.transform.position;
-        SpawnPosition = pos;
+        SpawnPosition = pos + new Vector3(0, 1f, 0);
         Position = pos;
         _gc = new GridLocation(in pos);
         Team = team;

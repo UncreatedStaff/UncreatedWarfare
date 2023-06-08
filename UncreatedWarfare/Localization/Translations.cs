@@ -132,7 +132,9 @@ public class Translation
             int len = Length;
             if (len > value.Length - index)
                 len = value.Length - index;
+            L.LogDebug($"Argument: {Argument}, index {index} for {len} char. Inverted: {Inverted}");
             string plural = Translation.Pluralize(helper.Language, helper.Culture, value.Substring(index, len), helper.Flags | TranslationFlags.Plural);
+            L.LogDebug($"Value: {plural} ({value.Substring(index, len)})");
             offset += plural.Length - len;
             value = value.Substring(0, index) + plural + value.Substring(index + len);
         }
@@ -344,7 +346,13 @@ public class Translation
                     }
                     if (str.Length <= lastDigit + 1 || str[lastDigit + 1] != ':' || !int.TryParse(str.SubstringRange(firstDigit, lastDigit), NumberStyles.Number, Data.AdminLocale, out int argument))
                         continue;
+#if DEBUG
+                    string old = str;
+#endif
                     str = str.Substring(0, nextSign) + str.SubstringRange(lastDigit + 2, closing - (inverted ? 2 : 1)) + (closing < str.Length - 1 ? str.Substring(closing + 1) : string.Empty);
+#if DEBUG
+                    L.LogDebug($"Arg Mod {char.ToUpperInvariant(modifier)}: {old} -> {str}");
+#endif
                     index = closing - ((inverted ? 8 : 7) + (lastDigit - firstDigit));
                     WorkingPluralizers.Add(new ArgumentSpan(argument, nextSign, closing - (lastDigit + (inverted ? 3 : 2)), inverted));
                 }
@@ -915,6 +923,18 @@ public class Translation
             _console = null;
         }
 
+        public string GetValue(bool inner, bool imgui)
+        {
+            if (imgui)
+            {
+                return inner ? ProcessedInnerNoTMProTags : ProcessedNoTMProTags;
+            }
+            else
+            {
+                return inner ? ProcessedInner : Processed;
+            }
+        }
+
         internal void ResetConsole() => _console = null;
     }
     public static string Pluralize(string language, CultureInfo? culture, string word, TranslationFlags flags)
@@ -1215,7 +1235,7 @@ public class Translation
         CultureInfo culture = target?.Culture ?? LanguageAliasSet.GetCultureInfo(language);
         bool imgui = canUseIMGUI && target is not null && target.Save.IMGUI;
         TranslationValue data = this[language];
-        string rtn = imgui ? data.ProcessedNoTMProTags : data.Processed;
+        string rtn = data.GetValue(inner, imgui);
         AdjustForCulture(culture, ref rtn);
         return new TranslationHelper(data, imgui, inner, rtn, language, target, team, flags | GetFlags(team, imgui), culture);
     }
@@ -1225,7 +1245,7 @@ public class Translation
         bool imgui = canUseIMGUI && player is not null && player.Save.IMGUI;
         CultureInfo culture = player?.Culture ?? Data.LocalLocale;
         TranslationValue data = this[lang];
-        string rtn = imgui ? data.ProcessedNoTMProTags : data.Processed;
+        string rtn = data.GetValue(inner, imgui);
         AdjustForCulture(culture, ref rtn);
         ulong team = player == null ? 0 : player.GetTeam();
         return new TranslationHelper(data, imgui, inner, rtn, lang, player, team, GetFlags(team, imgui), culture);
@@ -1234,7 +1254,7 @@ public class Translation
     {
         language = CheckLanguage(language);
         TranslationValue data = this[language];
-        string rtn = useIMGUI ? data.ProcessedNoTMProTags : data.Processed;
+        string rtn = data.GetValue(inner, useIMGUI);
         AdjustForCulture(culture, ref rtn);
         return new TranslationHelper(data, useIMGUI, inner, rtn, language, target, team, flags | GetFlags(team, useIMGUI), culture);
     }
@@ -2075,6 +2095,7 @@ public sealed class Translation<T0, T1> : Translation
             {
                 L.LogDebug($"Pluralizing from {span.Argument}: Offset: {value}");
                 span.Pluralize(in data, ref value, ref offset);
+                L.LogDebug($"Pluralized from {span.Argument}: Offset: {value}");
             }
             else
             {

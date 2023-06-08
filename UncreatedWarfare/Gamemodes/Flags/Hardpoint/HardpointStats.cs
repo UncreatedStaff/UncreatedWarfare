@@ -61,7 +61,6 @@ public class HardpointLeaderboard : ConventionalLeaderboard<HardpointPlayerStats
     public override void SendLeaderboard(in LanguageSet set)
     {
         SendLeaderboardPreset(set);
-        //LeaderboardUI.SendHardpointLeaderboard(set, in tracker._longestShot, StatsTeam1, StatsTeam2, tracker, shuttingDown ? shuttingDownMessage : null, _winner);
     }
 }
 public class HardpointTracker : TeamStatTracker<HardpointPlayerStats>, ILongestShotTracker, IFobsTracker

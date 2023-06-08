@@ -23,6 +23,7 @@ using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 namespace Uncreated.Warfare.Commands;
 public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
 {
+    private static readonly Guid KitSign = new Guid("275dd81d60ae443e91f0655b8b7aa920");
     public float CompoundMultiplier => 2f;
     public float MaxCooldown => 900f; // 15 mins
 
@@ -259,11 +260,14 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                 VehicleSpawn? spawn = vbsign.Item;
                 if (spawn == null)
                     throw ctx.Reply(T.RequestNoTarget);
-
+                
+                ctx.AssertNotOnPortionCooldown();
                 if (!spawn.HasLinkedVehicle(out InteractableVehicle vehicle))
+                {
+                    ctx.PortionCommandCooldownTime = 5f;
                     throw ctx.Reply(T.RequestVehicleDead, spawn.Vehicle?.Item!);
+                }
 
-                await UCWarfare.ToUpdate();
                 VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
                 if (bay != null && bay.IsLoaded)
                 {
@@ -298,6 +302,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                 await UCWarfare.ToUpdate();
                 if (data?.Item != null)
                 {
+                    ctx.AssertNotOnPortionCooldown();
                     await data.Enter(token).ConfigureAwait(false);
                     try
                     {
@@ -313,8 +318,49 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
             }
             else throw ctx.SendGamemodeError();
         }
+        else if (ctx.TryGetTarget(out StructureDrop structure))
+        {
+            if (Data.Is(out IVehicles vgm) && vgm.VehicleSpawner.TryGetSpawn(structure, out SqlItem<VehicleSpawn> spawnProxy))
+            {
+                VehicleSpawn? spawn = spawnProxy.Item;
+                if (spawn == null)
+                    throw ctx.Reply(T.RequestNoTarget);
+
+                ctx.AssertNotOnPortionCooldown();
+                if (!spawn.HasLinkedVehicle(out vehicle))
+                {
+                    ctx.PortionCommandCooldownTime = 5f;
+                    throw ctx.Reply(T.RequestVehicleDead, spawn.Vehicle?.Item!);
+                }
+
+                VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+                if (bay != null && bay.IsLoaded)
+                {
+                    SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
+                    await UCWarfare.ToUpdate();
+                    if (data?.Item != null)
+                    {
+                        await data.Enter(token).ConfigureAwait(false);
+                        try
+                        {
+                            await RequestVehicle(ctx, vehicle, data.Item, token);
+                            ctx.Defer();
+                        }
+                        finally
+                        {
+                            data.Release();
+                        }
+                        return;
+                    }
+                }
+                else throw ctx.SendGamemodeError();
+            }
+        }
         else
         {
+            if (Gamemode.Config.StructureVehicleBay.ValidReference(out Guid guid) && UCBarricadeManager.IsStructureNearby(guid, 20f, ctx.Caller.Position, out _) && UCBarricadeManager.CountNearbyBarricades(KitSign, 8f, ctx.Caller.Position) > 5)
+                ctx.PortionCommandCooldownTime = 5f;
+            
             await UCWarfare.ToUpdate(token);
             throw ctx.Reply(T.RequestNoTarget);
         }
@@ -376,9 +422,8 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
         }
         if (data.IsDelayed(out Delay delay) && delay.Type != DelayType.None)
         {
-            ctx.AssertNotOnPortionCooldown();
-
             ctx.PortionCommandCooldownTime = 5f;
+
             Localization.SendDelayRequestText(in delay, ctx.Caller, team, Localization.DelayTarget.VehicleBay);
             ctx.Defer();
             return;

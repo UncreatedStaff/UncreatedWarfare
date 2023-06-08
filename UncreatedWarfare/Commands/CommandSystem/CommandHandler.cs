@@ -568,6 +568,8 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool ShouldGiveCommandCooldown => CommandCooldownTime is > 0f;
     public float? PortionCommandCooldownTime { get; set; }
     public bool ShouldGivePortionCommandCooldown => PortionCommandCooldownTime is > 0f;
+    public bool OnPortionCooldown { get; private set; }
+    public Cooldown? PortionCooldown { get; private set; }
     public CommandInteraction(ContextData ctx, IExecutableCommand? cmd)
         : base(cmd, ctx.IsConsole ? ("Console Command: " + ctx.OriginalMessage) :
             ("Command ran by " + ctx.CallerID + ": " + ctx.OriginalMessage))
@@ -599,26 +601,52 @@ public sealed class CommandInteraction : BaseCommandInteraction
 
         return true;
     }
-    public void AssertNotOnPortionCooldown()
+    private void CheckPortionCooldown()
     {
         if (Caller != null && !Caller.OnDuty() && CooldownManager.IsLoaded && Command != null && CooldownManager.HasCooldown(Caller, CooldownType.PortionCommand, out Cooldown cooldown, Command))
         {
+            OnPortionCooldown = true;
+            PortionCooldown = cooldown;
+        }
+        else
+        {
+            OnPortionCooldown = false;
+            PortionCooldown = null;
+        }
+    }
+    public void AssertNotOnPortionCooldown()
+    {
+        if (OnPortionCooldown)
+        {
             if (Command is ICompoundingCooldownCommand compounding)
             {
-                cooldown.seconds *= compounding.CompoundMultiplier;
-                if (compounding.MaxCooldown > 0 && cooldown.seconds > compounding.MaxCooldown)
-                    cooldown.seconds = compounding.MaxCooldown;
+                PortionCooldown!.seconds *= compounding.CompoundMultiplier;
+                if (compounding.MaxCooldown > 0 && PortionCooldown.seconds > compounding.MaxCooldown)
+                    PortionCooldown.seconds = compounding.MaxCooldown;
             }
 
-            throw Reply(T.CommandCooldown, cooldown, Command.CommandName);
+            throw Reply(T.CommandCooldown, PortionCooldown!, Command!.CommandName);
         }
     }
     private void CheckShouldStartCooldown()
     {
         if (ShouldGiveCommandCooldown && Caller != null && !Caller.OnDuty() && CooldownManager.IsLoaded && Command != null)
             CooldownManager.StartCooldown(Caller, CooldownType.Command, CommandCooldownTime!.Value, Command);
-        if (ShouldGivePortionCommandCooldown && Caller != null && !Caller.OnDuty() && CooldownManager.IsLoaded && Command != null)
-            CooldownManager.StartCooldown(Caller, CooldownType.PortionCommand, PortionCommandCooldownTime!.Value, Command);
+        if (!OnPortionCooldown)
+        {
+            if (ShouldGivePortionCommandCooldown && Caller != null && !Caller.OnDuty() && CooldownManager.IsLoaded && Command != null)
+                CooldownManager.StartCooldown(Caller, CooldownType.PortionCommand, PortionCommandCooldownTime!.Value, Command);
+        }
+        else if (ShouldGivePortionCommandCooldown)
+        {
+            if (Command is ICompoundingCooldownCommand compounding)
+            {
+                PortionCooldown!.seconds *= compounding.CompoundMultiplier;
+                if (compounding.MaxCooldown > 0 && PortionCooldown.seconds > compounding.MaxCooldown)
+                    PortionCooldown.seconds = compounding.MaxCooldown;
+            }
+            else PortionCooldown!.seconds = PortionCommandCooldownTime!.Value;
+        }
     }
     internal void ExecuteCommandSync()
     {
@@ -626,6 +654,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             throw new NotSupportedException("Can not execute a temporary context.");
         if (!CheckOnCooldown())
             return;
+        CheckPortionCooldown();
         if (Command.CheckPermission(this))
         {
             try
@@ -687,6 +716,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
                 return;
             if (!CheckOnCooldown())
                 return;
+            CheckPortionCooldown();
             if (Command.CheckPermission(this))
             {
                 try

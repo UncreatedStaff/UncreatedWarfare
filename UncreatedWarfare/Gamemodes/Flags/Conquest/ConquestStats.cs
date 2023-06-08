@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using JetBrains.Annotations;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -12,6 +13,7 @@ public sealed class ConquestStatTracker : TeamStatTracker<ConquestStats>, ILonge
     public int fobsDestroyedT1;
     public int fobsDestroyedT2;
     public int flagOwnerChanges;
+    public float timecontested;
     public LongestShot LongestShot { get; set; } = LongestShot.Nil;
     public override void Reset()
     {
@@ -23,6 +25,21 @@ public sealed class ConquestStatTracker : TeamStatTracker<ConquestStats>, ILonge
         flagOwnerChanges = 0;
         LongestShot = LongestShot.Nil;
     }
+
+    protected override void OnTick()
+    {
+        base.OnTick();
+
+        if (!Data.Is(out Conquest conquest))
+            return;
+
+        foreach (Flag flag in conquest.Rotation)
+        {
+            if (flag.IsContested(out _))
+                timecontested += BasePlayerStats.TickTime;
+        }
+    }
+
     public void GetTopStats(int count, out List<ConquestStats> statsT1, out List<ConquestStats> statsT2)
     {
 #if DEBUG

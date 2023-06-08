@@ -282,14 +282,14 @@ public abstract class BaseStatTracker<TIndividualStats> : MonoBehaviour, IStatTr
         StopTicking();
         ticker = StartCoroutine(Ticker());
     }
-    private IEnumerator<WaitForSeconds> Ticker()
+    private IEnumerator<WaitForSecondsRealtime> Ticker()
     {
         lastTickTime = Time.realtimeSinceStartup;
         while (true)
         {
             OnTick();
             lastTickTime = Time.realtimeSinceStartup;
-            yield return new WaitForSeconds(10f);
+            yield return new WaitForSecondsRealtime(BasePlayerStats.TickTime);
         }
     }
     public TIndividualStats? GetPlayerStats(ulong player)
@@ -396,6 +396,7 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
 
 public abstract class BasePlayerStats : IPresenceStats
 {
+    public const float TickTime = 10f;
     public PlayerNames? cachedNames;
     protected UCPlayer _player;
     public UCPlayer Player { get => _player; set => _player = value; }

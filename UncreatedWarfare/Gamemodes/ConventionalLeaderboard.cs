@@ -278,50 +278,20 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
             LeaderboardUI.TeamTeamkillsLabel.SetText(c, values[15]);
             LeaderboardUI.TeamLongestShotLabel.SetText(c, values[16]);
 
-            LeaderboardUI.PersonalStats0Label.SetText(c, values[17]);
-            LeaderboardUI.PersonalStats1Label.SetText(c, values[18]);
-            LeaderboardUI.PersonalStats2Label.SetText(c, values[19]);
-            LeaderboardUI.PersonalStats3Label.SetText(c, values[20]);
-            LeaderboardUI.PersonalStats4Label.SetText(c, values[21]);
-            LeaderboardUI.PersonalStats5Label.SetText(c, values[22]);
-            LeaderboardUI.PersonalStats6Label.SetText(c, values[23]);
-            LeaderboardUI.PersonalStats7Label.SetText(c, values[24]);
-            LeaderboardUI.PersonalStats8Label.SetText(c, values[25]);
-            LeaderboardUI.PersonalStats9Label.SetText(c, values[26]);
-            LeaderboardUI.PersonalStats10Label.SetText(c, values[27]);
-            LeaderboardUI.PersonalStats11Label.SetText(c, values[28]);
+            for (int i = 0; i < 12; ++i)
+                LeaderboardUI.PersonalStatsLabels[i].SetText(c, values[i + 17]);
 
             if (stats is not null)
             {
                 LeaderboardUI.PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, Tracker is not null ? Tracker.GetPresence(stats) : 0f));
-                LeaderboardUI.PersonalStats0.SetText(c, PlayerStatOverrides[0].GetValue(null, stats, locale));
-                LeaderboardUI.PersonalStats1.SetText(c, PlayerStatOverrides[1].GetValue(null, stats, locale));
-                LeaderboardUI.PersonalStats2.SetText(c, PlayerStatOverrides[2].GetValue(null, stats, locale));
-                LeaderboardUI.PersonalStats3.SetText(c, PlayerStatOverrides[3].GetValue(null, stats, locale));
-                LeaderboardUI.PersonalStats4.SetText(c, PlayerStatOverrides[4].GetValue(null, stats, locale));
-                LeaderboardUI.PersonalStats5.SetText(c, PlayerStatOverrides[5].GetValue(null, stats, locale));
-                LeaderboardUI.PersonalStats6.SetText(c, PlayerStatOverrides[6].GetValue(null, stats, locale));
-                LeaderboardUI.PersonalStats7.SetText(c, PlayerStatOverrides[7].GetValue(null, stats, locale));
-                LeaderboardUI.PersonalStats8.SetText(c, PlayerStatOverrides[8].GetValue(null, stats, locale));
-                LeaderboardUI.PersonalStats9.SetText(c, PlayerStatOverrides[9].GetValue(null, stats, locale));
-                LeaderboardUI.PersonalStats10.SetText(c, PlayerStatOverrides[10].GetValue(null, stats, locale));
-                LeaderboardUI.PersonalStats11.SetText(c, PlayerStatOverrides[11].GetValue(null, stats, locale));
+                for (int i = 0; i < 12; ++i)
+                    LeaderboardUI.PersonalStatsValues[i].SetText(c, PlayerStatOverrides[i].GetValue(null, stats, locale));
             }
             else
             {
                 LeaderboardUI.PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, 0f));
-                LeaderboardUI.PersonalStats0.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
-                LeaderboardUI.PersonalStats1.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
-                LeaderboardUI.PersonalStats2.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
-                LeaderboardUI.PersonalStats3.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
-                LeaderboardUI.PersonalStats4.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
-                LeaderboardUI.PersonalStats5.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
-                LeaderboardUI.PersonalStats6.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
-                LeaderboardUI.PersonalStats7.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
-                LeaderboardUI.PersonalStats8.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
-                LeaderboardUI.PersonalStats9.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
-                LeaderboardUI.PersonalStats10.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
-                LeaderboardUI.PersonalStats11.SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
+                for (int i = 0; i < 12; ++i)
+                    LeaderboardUI.PersonalStatsValues[i].SetText(c, LeaderboardEx.EmptyFieldPlaceholder);
             }
 
             LeaderboardUI.TeamDuration.SetText(c, values[29]);
