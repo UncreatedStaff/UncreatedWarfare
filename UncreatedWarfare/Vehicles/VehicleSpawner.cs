@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using MySqlConnector;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Players;
@@ -482,6 +483,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         }
     }
     /// <remarks>Thread Safe</remarks>
+    /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
     public async Task RespawnAllVehicles(CancellationToken token = default)
     {
         L.Log("Respawning vehicles...", ConsoleColor.Magenta);
@@ -557,6 +559,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     public void AbandonAllVehicles(bool respawn)
     {
         ThreadUtil.assertIsGameThread();
+        List<(InteractableVehicle, SqlItem<VehicleData>?, SqlItem<VehicleSpawn>?)> candidates = new List<(InteractableVehicle, SqlItem<VehicleData>?, SqlItem<VehicleSpawn>?)>(32);
         WriteWait();
         try
         {
@@ -569,7 +572,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                     if (t == 1ul && TeamManager.Team1Main.IsInside(veh.transform.position) ||
                         t == 2ul && TeamManager.Team2Main.IsInside(veh.transform.position))
                     {
-                        AbandonVehicle(veh, v.Vehicle, Items[i], respawn);
+                        candidates.Add((veh, v.Vehicle, Items[i]));
                     }
                 }
             }
@@ -578,7 +581,14 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         {
             WriteRelease();
         }
+
+        foreach ((InteractableVehicle vehicle, SqlItem<VehicleData>? data, SqlItem<VehicleSpawn>? spawn) in candidates)
+        {
+            if (!vehicle.isDead && !vehicle.isExploded)
+                AbandonVehicle(vehicle, data, spawn, respawn);
+        }
     }
+    /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
     /// <returns><see langword="true"/> if all the info is found about the vehicle and its deleted, <see langword="false"/> if it's just deleted (or is already dead).</returns>
     public bool AbandonVehicle(InteractableVehicle vehicle, SqlItem<VehicleData>? data, SqlItem<VehicleSpawn>? spawn, bool respawn = true)
     {
@@ -630,6 +640,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             spawn.Release();
         }
     }
+    /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
     public static void DeleteVehicle(InteractableVehicle vehicle)
     {
 #if DEBUG
@@ -639,6 +650,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         PreDeleteVehicle(vehicle);
         VehicleManager.askVehicleDestroy(vehicle);
     }
+    /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
     public static void DeleteAllVehiclesFromWorld()
     {
 #if DEBUG
@@ -651,6 +663,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         }
         VehicleManager.askVehicleDestroyAll();
     }
+    /// <remarks>Do not call in <see cref="VehicleSpawner"/> write wait.</remarks>
     private static void PreDeleteVehicle(InteractableVehicle vehicle)
     {
         BarricadeRegion reg = BarricadeManager.getRegionFromVehicle(vehicle);
@@ -677,6 +690,11 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                     pl.player.teleportToLocationUnsafe(p with { y = height }, pl.player.look.aim.transform.rotation.eulerAngles.y);
                 }
             }
+        }
+        if (GetSingletonQuick() is { } spawner && spawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))
+        {
+            VehicleSpawn? vehicleSpawn = spawn.Item;
+            vehicleSpawn?.Unlink();
         }
     }
     public static bool IsVehicleFull(InteractableVehicle vehicle, bool excludeDriver = false)
@@ -828,6 +846,11 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (!UCVehicleManager.IgnoreSwapCooldown && CooldownManager.IsLoaded && CooldownManager.HasCooldown(e.Player, CooldownType.InteractVehicleSeats, out _, e.Vehicle))
+        {
+            e.Break();
+            return;
+        }
         if (Data.Gamemode.State != State.Active && Data.Gamemode.State != State.Staging)
         {
             e.Player.SendChat(T.VehicleStaging, e.Vehicle.asset);
@@ -859,6 +882,11 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (!UCVehicleManager.IgnoreSwapCooldown && CooldownManager.IsLoaded && CooldownManager.HasCooldown(e.Player, CooldownType.InteractVehicleSeats, out _, e.Vehicle))
+        {
+            e.Break();
+            return;
+        }
         if (!e.Vehicle.TryGetComponent(out VehicleComponent c))
             return;
         if (c.IsEmplacement && e.FinalSeat == 0)
@@ -879,7 +907,8 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             if (data != null &&
                 data.RequiredClass != Class.None) // vehicle requires crewman or pilot
             {
-                if (c.IsAircraft &&
+                if (!UCVehicleManager.AllowEnterDriverSeat
+                    && c.IsAircraft &&
                     e.InitialSeat == 0 &&
                     e.FinalSeat != 0 &&
                     e.Vehicle.transform.position.y - LevelGround.getHeight(e.Vehicle.transform.position) > 30 &&
@@ -895,7 +924,8 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                         if (e.FinalSeat == 0) // if a crewman is trying to enter the driver's seat
                         {
                             FOBManager? manager = Data.Singletons.GetSingleton<FOBManager>();
-                            bool canEnterDriverSeat = owner == null ||
+                            bool canEnterDriverSeat = UCVehicleManager.AllowEnterDriverSeat ||
+                                                      owner == null ||
                                 e.Player == owner ||
                                 e.Player.OnDuty() ||
                                 IsOwnerInVehicle(e.Vehicle, owner) ||
@@ -1247,8 +1277,8 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             _ran = false;
         }
 
-        public IEnumerator<SqlItem<VehicleSpawn>> GetEnumerator() => ++_uses == 1 ? this : (SpawnEnumerator)this.Clone();
-        IEnumerator IEnumerable.GetEnumerator() => ++_uses == 1 ? this : (SpawnEnumerator)this.Clone();
+        public IEnumerator<SqlItem<VehicleSpawn>> GetEnumerator() => ++_uses == 1 ? this : (SpawnEnumerator)Clone();
+        IEnumerator IEnumerable.GetEnumerator() => ++_uses == 1 ? this : (SpawnEnumerator)Clone();
         public object Clone() => new SpawnEnumerator(_data, _spawner);
     }
 
@@ -1610,7 +1640,7 @@ public class VehicleSpawn : IListItem
     }
     public void UpdateSign(SteamPlayer player)
     {
-        IBuildable? sign = this.Sign?.Item?.Buildable;
+        IBuildable? sign = Sign?.Item?.Buildable;
         if (sign is null || sign.Model == null || sign.Drop is not BarricadeDrop drop) return;
         UpdateSignInternal(player, this, drop);
     }
@@ -1635,7 +1665,7 @@ public class VehicleSpawn : IListItem
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        IBuildable? sign = this.Sign?.Item?.Buildable;
+        IBuildable? sign = Sign?.Item?.Buildable;
         if (sign is null || sign.Model == null || sign.Drop is not BarricadeDrop drop) return;
         if (TeamManager.PlayerBaseStatus != null && TeamManager.Team1Main.IsInside(sign.Model.transform.position))
         {
@@ -1736,7 +1766,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
     private float _lastDelayCheck;
     public void OnSpawn(InteractableVehicle? vehicle)
     {
-        this._vehicle = vehicle == null || vehicle.isDead || vehicle.isExploded ? null : vehicle;
+        _vehicle = vehicle == null || vehicle.isDead || vehicle.isExploded ? null : vehicle;
         if (_vehicle is null)
         {
             _state = VehicleBayState.Dead;
@@ -1752,8 +1782,8 @@ public sealed class VehicleBayComponent : MonoBehaviour
         DeadTime = 0f;
         _lastSignUpdate = 0f;
         if (_vehicleData.Item != null && _vehicleData.Item.IsDelayed(out Delay delay))
-            this._state = delay.Type == DelayType.Time ? VehicleBayState.TimeDelayed : VehicleBayState.Delayed;
-        else this._state = VehicleBayState.Ready;
+            _state = delay.Type == DelayType.Time ? VehicleBayState.TimeDelayed : VehicleBayState.Delayed;
+        else _state = VehicleBayState.Ready;
         _lastDelayCheck = Time.realtimeSinceStartup;
     }
     public void OnRequest()

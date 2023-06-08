@@ -614,7 +614,7 @@ internal static class ItemIconProvider
         }
         public ItemIconData(Guid item, Guid parent) : this(item, default, default)
         {
-            this.Parent = parent;
+            Parent = parent;
             ParentCopyFlag = 0b11;
         }
         public ItemIconData(RedirectType item, char? character, int color)

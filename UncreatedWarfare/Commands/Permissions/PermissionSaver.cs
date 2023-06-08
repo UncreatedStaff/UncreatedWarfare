@@ -16,7 +16,7 @@ public class PermissionSaver : JSONSaver<PermissionSave>
     protected override string LoadDefaults() => EMPTY_LIST;
     protected override void OnRead()
     {
-        if (this.RemoveAll(x => x.PermissionLevel == EAdminType.MEMBER) > 0) Save();
+        if (RemoveAll(x => x.PermissionLevel == EAdminType.MEMBER) > 0) Save();
     }
     public EAdminType GetPlayerPermissionLevel(ulong player, bool forceFullSearch = false)
     {
@@ -27,7 +27,7 @@ public class PermissionSaver : JSONSaver<PermissionSave>
             return pl.PermissionLevel;
         else
         {
-            for (int i = 0; i < this.Count; ++i)
+            for (int i = 0; i < Count; ++i)
             {
                 PermissionSave save = this[i];
                 for (int j = 0; j < save.Members.Length; ++j)
@@ -46,7 +46,7 @@ public class PermissionSaver : JSONSaver<PermissionSave>
         if (PlayerManager.FromID(player) is UCPlayer pl)
             pl.ResetPermissionLevel();
         bool set = false;
-        for (int i = this.Count - 1; i >= 0; --i)
+        for (int i = Count - 1; i >= 0; --i)
         {
             PermissionSave save = this[i];
             for (int j = save.Members.Length - 1; j >= 0; --j)
@@ -68,7 +68,7 @@ public class PermissionSaver : JSONSaver<PermissionSave>
         }
         if (!set && level > EAdminType.MEMBER)
         {
-            this.Add(new PermissionSave() { PermissionLevel = level, Members = new ulong[1] { player } });
+            Add(new PermissionSave() { PermissionLevel = level, Members = new ulong[1] { player } });
             set = true;
         }
 
@@ -101,7 +101,7 @@ public class PermissionSaver : JSONSaver<PermissionSave>
         psave.Members = new ulong[old.Length - 1];
         if (old.Length == 1)
         {
-            this.Remove(psave);
+            Remove(psave);
             return true;
         }
         if (index != 0)

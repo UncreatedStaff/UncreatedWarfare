@@ -499,21 +499,21 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
     public readonly Dictionary<string, string> AbbreviationTranslations;
     private RankData(int order)
     {
-        this.Order = order;
-        this.NameTranslations = null!;
-        this.AbbreviationTranslations = null!;
-        this.Color = UCWarfare.GetColorHex("default");
-        this.UnlockRequirements = null!;
-        this.QuestID = default;
+        Order = order;
+        NameTranslations = null!;
+        AbbreviationTranslations = null!;
+        Color = UCWarfare.GetColorHex("default");
+        UnlockRequirements = null!;
+        QuestID = default;
     }
     public RankData(int order, Dictionary<string, string> names, Dictionary<string, string> abbreviations, string color, Guid questID, params Guid[] unlockRequirements)
     {
-        this.Color = F.FilterRarityToHex(color);
-        this.Order = order;
-        this.NameTranslations = names;
-        this.AbbreviationTranslations = abbreviations;
-        this.QuestID = questID;
-        this.UnlockRequirements = unlockRequirements;
+        Color = F.FilterRarityToHex(color);
+        Order = order;
+        NameTranslations = names;
+        AbbreviationTranslations = abbreviations;
+        QuestID = questID;
+        UnlockRequirements = unlockRequirements;
     }
     public RankData(int order, string name, string abbreviation, string color, Guid questID, params Guid[] unlockRequirements) :
         this(order, new Dictionary<string, string>(1) { { L.Default, name } }, new Dictionary<string, string>(1) { { L.Default, abbreviation } },

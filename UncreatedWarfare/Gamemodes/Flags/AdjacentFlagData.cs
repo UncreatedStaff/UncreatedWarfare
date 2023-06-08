@@ -22,8 +22,8 @@ public struct AdjacentFlagData : IJsonReadWrite, IListItem
     public float Weight;
     public AdjacentFlagData(int flagId, float weight = 1f)
     {
-        this.PrimaryKey = flagId;
-        this.Weight = weight;
+        PrimaryKey = flagId;
+        Weight = weight;
     }
 
     public void ReadJson(ref Utf8JsonReader reader)
@@ -38,10 +38,10 @@ public struct AdjacentFlagData : IJsonReadWrite, IListItem
                 switch (prop)
                 {
                     case "flag_id":
-                        this.PrimaryKey = reader.GetInt32();
+                        PrimaryKey = reader.GetInt32();
                         break;
                     case "weight":
-                        this.Weight = (float)reader.GetDecimal();
+                        Weight = (float)reader.GetDecimal();
                         break;
                 }
             }

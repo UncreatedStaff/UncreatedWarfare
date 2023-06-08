@@ -34,14 +34,14 @@ public class DamageStructureRequested : BreakableEvent, IBuildableDestroyedEvent
     public ushort PendingDamage { get; set; }
     internal DamageStructureRequested(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, EDamageOrigin damageOrigin, ushort pendingTotalDamage)
     {
-        this._damageOrigin = damageOrigin;
-        this._instigator = instigator;
-        this._instigatorId = instigatorId;
-        this._drop = structure;
-        this._data = structureData;
-        this._region = region;
-        this._x = x;
-        this._y = y;
+        _damageOrigin = damageOrigin;
+        _instigator = instigator;
+        _instigatorId = instigatorId;
+        _drop = structure;
+        _data = structureData;
+        _region = region;
+        _x = x;
+        _y = y;
         PendingDamage = pendingTotalDamage;
         _save = save;
         if (save?.Manager is not null)

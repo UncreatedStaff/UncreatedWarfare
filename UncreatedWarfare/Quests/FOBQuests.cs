@@ -30,7 +30,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
         public IDynamicValue<int>.IChoice FlagValue => BuildCount;
         public void Init(BuildFOBsQuest data)
         {
-            this.BuildCount = data.BuildCount.GetValue();
+            BuildCount = data.BuildCount.GetValue();
         }
         public bool IsEligable(UCPlayer player) => true;
 
@@ -112,8 +112,8 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
         public IDynamicValue<int>.IChoice FlagValue => BuildCount;
         public void Init(BuildFOBsNearObjQuest data)
         {
-            this.BuildCount = data.BuildCount.GetValue();
-            this.BuildRange = data.BuildRange.GetValue();
+            BuildCount = data.BuildCount.GetValue();
+            BuildRange = data.BuildRange.GetValue();
         }
         public bool IsEligable(UCPlayer player) => true;
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
@@ -223,7 +223,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
         public IDynamicValue<int>.IChoice FlagValue => BuildCount;
         public void Init(BuildFOBsOnObjQuest data)
         {
-            this.BuildCount = data.BuildCount.GetValue();
+            BuildCount = data.BuildCount.GetValue();
         }
         public bool IsEligable(UCPlayer player) => true;
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
@@ -327,7 +327,7 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
         public IDynamicValue<int>.IChoice FlagValue => SupplyCount;
         public void Init(DeliverSuppliesQuest data)
         {
-            this.SupplyCount = data.SupplyCount.GetValue();
+            SupplyCount = data.SupplyCount.GetValue();
         }
         public bool IsEligable(UCPlayer player) => true;
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
@@ -414,9 +414,9 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         public IDynamicValue<int>.IChoice FlagValue => Amount;
         public void Init(HelpBuildQuest data)
         {
-            this.Amount = data.Amount.GetValue();
-            this.BaseIDs = data.BaseIDs.GetValue();
-            this.BuildableType = data.BuildableType.GetValueIntl();
+            Amount = data.Amount.GetValue();
+            BaseIDs = data.BaseIDs.GetValue();
+            BuildableType = data.BuildableType.GetValueIntl();
         }
         public bool IsEligable(UCPlayer player) => true;
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
@@ -517,7 +517,7 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
         public IDynamicValue<int>.IChoice FlagValue => UseCount;
         public void Init(FOBUseQuest data)
         {
-            this.UseCount = data.UseCount.GetValue();
+            UseCount = data.UseCount.GetValue();
         }
         public bool IsEligable(UCPlayer player) => true;
 

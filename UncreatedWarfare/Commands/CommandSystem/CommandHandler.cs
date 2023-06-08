@@ -232,7 +232,15 @@ public static class CommandHandler
     {
         public int Start;
         public int End;
-    } 
+    }
+    public static bool IsFlag(string arg)
+    {
+        return arg.Length > 1 && arg[0] == '-' && !char.IsDigit(arg[1]) && arg[1] != '.';
+    }
+    public static bool IsEscapedFlag(string arg)
+    {
+        return arg.Length > 2 && arg[0] == '\\' && arg[1] == '-' && !char.IsDigit(arg[2]) && arg[2] != '.';
+    }
     private static unsafe bool CheckRunCommand(UCPlayer? player, string message, ref bool shouldList, bool requirePrefix, EChatMode chatmode = EChatMode.SAY)
     {
         ThreadUtil.assertIsGameThread();
@@ -498,15 +506,15 @@ public static class CommandHandler
             }
             runCommand:
             if (cmdInd == -1) goto notCommand;
-            int cT1 = 0;
+            int ct2 = 0;
             for (int i = 0; i <= argCt; ++i)
             {
                 ref ArgumentInfo ai = ref ArgBuffer[i];
-                if (ai.End > 0) cT1++;
+                if (ai.End > 0) ct2++;
             }
 
             int i3 = -1;
-            string[] args = argCt == -1 ? Array.Empty<string>() : new string[cT1];
+            string[] args = argCt == -1 ? Array.Empty<string>() : new string[ct2];
             for (int i = 0; i <= argCt; ++i)
             {
                 ref ArgumentInfo ai = ref ArgBuffer[i];
@@ -528,7 +536,7 @@ public abstract class BaseCommandInteraction : Exception
     public bool Responded { get; protected set; }
     protected BaseCommandInteraction(IExecutableCommand? cmd, string message) : base(message)
     {
-        this.Command = cmd;
+        Command = cmd;
     }
     internal virtual void MarkComplete()
     {
@@ -546,8 +554,10 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public ContextData Context => _ctx;
     public UCPlayer Caller => _ctx.Caller;
     public bool IsConsole => _ctx.IsConsole;
-    public string[] Parameters => _ctx.Parameters;
-    public int ArgumentCount => _ctx.ArgumentCount - _offset;
+    public string[] Parameters => _ctx.NonFlagParameters;
+    public string[] AllParameters => _ctx.Parameters;
+    public string[] Flags => _ctx.Flags;
+    public int ArgumentCount => _ctx.NonFlagArgumentCount - _offset;
     public ulong CallerID => _ctx.CallerID;
     public CSteamID CallerCSteamID => _ctx.CallerCSteamID;
     public string OriginalMessage => _ctx.OriginalMessage;
@@ -564,7 +574,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     {
         IMGUI = _ctx.Caller != null && _ctx.Caller.Save.IMGUI;
         Language = _ctx.Caller?.Language ?? L.Default;
-        this._ctx = ctx;
+        _ctx = ctx;
         _offset = 0;
     }
     public static CommandInteraction CreateTemporary(UCPlayer player)
@@ -778,25 +788,25 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool HasArg(int position)
     {
         position += _offset;
-        return position > -1 && position < _ctx.ArgumentCount;
+        return position > -1 && position < _ctx.NonFlagArgumentCount;
     }
     /// <summary>One based. Checks if there are at least <paramref name="count"/> arguments.</summary>
     public bool HasArgs(int count)
     {
         count += _offset;
-        return count > -1 && count <= _ctx.ArgumentCount;
+        return count > -1 && count <= _ctx.NonFlagArgumentCount;
     }
     /// <summary>One based. Checks if there are exactly <paramref name="count"/> argument(s).</summary>
     public bool HasArgsExact(int count)
     {
         count += _offset;
-        return count == _ctx.ArgumentCount;
+        return count == _ctx.NonFlagArgumentCount;
     }
     /// <summary>Zero based, compare the value of argument <paramref name="parameter"/> with <paramref name="value"/>. Case insensitive.</summary>
     public bool MatchParameter(int parameter, string value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
             return false;
         return Parameters[parameter].Equals(value, StringComparison.InvariantCultureIgnoreCase);
     }
@@ -805,7 +815,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool MatchParameter(int parameter, string value, string alternate)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
             return false;
         string v = Parameters[parameter];
         return v.Equals(value, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate, StringComparison.InvariantCultureIgnoreCase);
@@ -815,7 +825,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool MatchParameter(int parameter, string value, string alternate1, string alternate2)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
             return false;
         string v = Parameters[parameter];
         return v.Equals(value, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate1, StringComparison.InvariantCultureIgnoreCase) || v.Equals(alternate2, StringComparison.InvariantCultureIgnoreCase);
@@ -825,7 +835,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool MatchParameter(int parameter, params string[] alternates)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
             return false;
         string v = Parameters[parameter];
         for (int i = 0; i < alternates.Length; ++i)
@@ -837,12 +847,15 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     /// <summary>Compare the value of all flags with <paramref name="value"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if the parameter matches.</returns>
-    public bool MatchFlag(string value, bool offset = true)
+    public bool MatchFlag(string value)
     {
-        value = "-" + value;
-        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
+        if (value.Length < 1 || value[0] == '-' && value.Length < 2)
+            return false;
+        if (value[0] == '-')
+            value = value.Substring(1);
+        for (int i = 0; i < Flags.Length; ++i)
         {
-            if (Parameters[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
+            if (Flags[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
                 return true;
         }
 
@@ -850,18 +863,27 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     /// <summary>Compare the value of all flags with <paramref name="value"/> and <paramref name="alternate"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
-    public bool MatchFlag(string value, string alternate, bool offset = true)
+    public bool MatchFlag(string value, string alternate)
     {
-        value = "-" + value;
-        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
+        if (value.Length >= 1 && (value[0] != '-' || value.Length >= 2))
         {
-            if (Parameters[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
-                return true;
+            if (value[0] == '-')
+                value = value.Substring(1);
+            for (int i = 0; i < Flags.Length; ++i)
+            {
+                if (Flags[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
+                    return true;
+            }
         }
-        alternate = "-" + alternate;
-        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
+
+        if (alternate.Length < 1 || alternate[0] == '-' && alternate.Length < 2)
+            return false;
+        if (alternate[0] == '-')
+            alternate = alternate.Substring(1);
+
+        for (int i = 0; i < Flags.Length; ++i)
         {
-            if (Parameters[i].Equals(alternate, StringComparison.InvariantCultureIgnoreCase))
+            if (Flags[i].Equals(alternate, StringComparison.InvariantCultureIgnoreCase))
                 return true;
         }
 
@@ -871,22 +893,36 @@ public sealed class CommandInteraction : BaseCommandInteraction
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
     public bool MatchFlag(string value, string alternate1, string alternate2, bool offset = true)
     {
-        value = "-" + value;
-        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
+        if (value.Length >= 1 && (value[0] != '-' || value.Length >= 2))
         {
-            if (Parameters[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
-                return true;
+            if (value[0] == '-')
+                value = value.Substring(1);
+            for (int i = 0; i < Flags.Length; ++i)
+            {
+                if (Flags[i].Equals(value, StringComparison.InvariantCultureIgnoreCase))
+                    return true;
+            }
         }
-        alternate1 = "-" + alternate1;
-        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
+
+        if (alternate1.Length >= 1 && (alternate1[0] != '-' || alternate1.Length >= 2))
         {
-            if (Parameters[i].Equals(alternate1, StringComparison.InvariantCultureIgnoreCase))
-                return true;
+            if (alternate1[0] == '-')
+                alternate1 = alternate1.Substring(1);
+            for (int i = 0; i < Flags.Length; ++i)
+            {
+                if (Flags[i].Equals(alternate1, StringComparison.InvariantCultureIgnoreCase))
+                    return true;
+            }
         }
-        alternate2 = "-" + alternate2;
-        for (int i = offset ? _offset : 0; i < Parameters.Length; ++i)
+
+        if (alternate2.Length < 1 || alternate2[0] == '-' && alternate2.Length < 2)
+            return false;
+        if (alternate2[0] == '-')
+            alternate2 = alternate2.Substring(1);
+
+        for (int i = 0; i < Flags.Length; ++i)
         {
-            if (Parameters[i].Equals(alternate2, StringComparison.InvariantCultureIgnoreCase))
+            if (Flags[i].Equals(alternate2, StringComparison.InvariantCultureIgnoreCase))
                 return true;
         }
 
@@ -894,14 +930,18 @@ public sealed class CommandInteraction : BaseCommandInteraction
     }
     /// <summary>Compare the value of all flags with all <paramref name="alternates"/>. Case insensitive.</summary>
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
-    public bool MatchFlag(bool offset, params string[] alternates)
+    public bool MatchFlag(params string[] alternates)
     {
         for (int i = 0; i < alternates.Length; ++i)
         {
-            string value = "-" + alternates[i];
-            for (int j = offset ? _offset : 0; j < Parameters.Length; ++j)
+            string value = alternates[i];
+            if (value.Length < 1 || value[0] == '-' && value.Length < 2)
+                continue;
+            if (value[0] == '-')
+                value = value.Substring(1);
+            for (int j = 0; j < Flags.Length; ++j)
             {
-                if (Parameters[j].Equals(value, StringComparison.InvariantCultureIgnoreCase))
+                if (Flags[j].Equals(value, StringComparison.InvariantCultureIgnoreCase))
                     return true;
             }
         }
@@ -912,7 +952,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public string? Get(int parameter)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
             return null;
         return Parameters[parameter];
     }
@@ -920,15 +960,15 @@ public sealed class CommandInteraction : BaseCommandInteraction
     {
         if (length == 1) return Get(start);
         start += _offset;
-        if (start < 0 || start >= _ctx.ArgumentCount)
+        if (start < 0 || start >= _ctx.NonFlagArgumentCount)
             return null;
-        if (start == _ctx.ArgumentCount - 1)
+        if (start == _ctx.NonFlagArgumentCount - 1)
             return Parameters[start];
         if (length == -1)
-            return string.Join(" ", Parameters, start, _ctx.ArgumentCount - start);
+            return string.Join(" ", Parameters, start, _ctx.NonFlagArgumentCount - start);
         if (length < 1) return null;
-        if (start + length >= _ctx.ArgumentCount)
-            length = _ctx.ArgumentCount - start;
+        if (start + length >= _ctx.NonFlagArgumentCount)
+            length = _ctx.NonFlagArgumentCount - start;
         return string.Join(" ", Parameters, start, length);
     }
     public bool TryGetRange(int start, out string value, int length = -1)
@@ -939,7 +979,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out string value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = null!;
             return false;
@@ -950,7 +990,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet<TEnum>(int parameter, out TEnum value) where TEnum : unmanaged, Enum
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = default;
             return false;
@@ -960,7 +1000,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out int value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -970,7 +1010,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out byte value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -980,7 +1020,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out short value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -990,7 +1030,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out sbyte value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1000,7 +1040,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out Guid value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = default;
             return false;
@@ -1010,7 +1050,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out uint value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1020,7 +1060,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out ushort value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1030,7 +1070,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out ulong value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1040,7 +1080,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out bool value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = false;
             return false;
@@ -1073,7 +1113,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetTeam(int parameter, out ulong value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1085,19 +1125,19 @@ public sealed class CommandInteraction : BaseCommandInteraction
             return value is > 0 and < 4;
         }
         if (p.Equals(Teams.TeamManager.Team1Code, StringComparison.InvariantCultureIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.Team1Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("T0", StringComparison.InvariantCultureIgnoreCase))
+                 p.Equals(Teams.TeamManager.Team1Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t1", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 1ul;
             return true;
         }
         if (p.Equals(Teams.TeamManager.Team2Code, StringComparison.InvariantCultureIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.Team2Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("T1", StringComparison.InvariantCultureIgnoreCase))
+                 p.Equals(Teams.TeamManager.Team2Name, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t2", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 2ul;
             return true;
         }
         if (p.Equals(Teams.TeamManager.AdminCode, StringComparison.InvariantCultureIgnoreCase) ||
-                 p.Equals(Teams.TeamManager.AdminName, StringComparison.InvariantCultureIgnoreCase) || p.Equals("T2", StringComparison.InvariantCultureIgnoreCase))
+                 p.Equals(Teams.TeamManager.AdminName, StringComparison.InvariantCultureIgnoreCase) || p.Equals("t3", StringComparison.InvariantCultureIgnoreCase))
         {
             value = 3ul;
             return true;
@@ -1108,7 +1148,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out float value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1118,7 +1158,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out double value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1128,7 +1168,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out decimal value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1139,7 +1179,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef<TEnum>(int parameter, ref TEnum value) where TEnum : unmanaged, Enum
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = default;
             return false;
@@ -1154,7 +1194,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref int value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1169,7 +1209,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref byte value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1184,7 +1224,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref sbyte value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1199,7 +1239,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref Guid value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = default;
             return false;
@@ -1214,7 +1254,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref uint value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1229,7 +1269,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref ushort value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1244,7 +1284,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref ulong value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1259,7 +1299,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref float value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1274,7 +1314,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref double value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1289,7 +1329,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref decimal value)
     {
         parameter += _offset;
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             value = 0;
             return false;
@@ -1310,7 +1350,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             steam64 = CallerID;
             return true;
         }
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             steam64 = 0;
             onlinePlayer = null;
@@ -1347,7 +1387,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             steam64 = CallerID;
             return selection.Contains(Caller);
         }
-        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
         {
             steam64 = 0;
             onlinePlayer = null!;
@@ -1402,7 +1442,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         if ((remainder || parameter == ArgumentCount - 1) && p[p.Length - 1] == '\\')
             p = p.Substring(0, p.Length - 1);
 
-        return UCAssetManager.TryGetAsset(p, out asset, out multipleResultsFound, allowMultipleResults);
+        return UCAssetManager.TryGetAsset(p, out asset, out multipleResultsFound, allowMultipleResults, selector);
     }
     public bool TryGetTarget(out Transform transform)
     {
@@ -1860,15 +1900,61 @@ public sealed class CommandInteraction : BaseCommandInteraction
         public readonly UCPlayer Caller;
         public readonly bool IsConsole;
         public readonly string[] Parameters;
+        public readonly string[] NonFlagParameters;
+        public readonly string[] Flags;
         public readonly int ArgumentCount;
+        public readonly int NonFlagArgumentCount;
         public readonly ulong CallerID;
         public readonly CSteamID CallerCSteamID;
         public readonly string OriginalMessage;
         public ContextData(UCPlayer? caller, string[] args, string message)
         {
-            this.OriginalMessage = message;
+            OriginalMessage = message;
             Parameters = args ?? Array.Empty<string>();
+
+            // flag parsing
+            int flags = 0;
+            for (int i = 0; i < Parameters.Length; ++i)
+            {
+                if (CommandHandler.IsFlag(Parameters[i]))
+                    ++flags;
+            }
+
+            NonFlagParameters = flags == 0 ? Parameters : new string[Parameters.Length - flags];
+            if (flags > 0)
+            {
+                Flags = new string[flags];
+                for (int i = Parameters.Length - 1; i >= 0; --i)
+                {
+                    if (CommandHandler.IsFlag(Parameters[i]))
+                        Flags[--flags] = Parameters[i].Substring(1);
+                }
+                flags = Parameters.Length - Flags.Length;
+                for (int i = Parameters.Length - 1; i >= 0; --i)
+                {
+                    if (!CommandHandler.IsFlag(Parameters[i]))
+                        NonFlagParameters[--flags] = Parameters[i];
+                }
+            }
+            else Flags = Array.Empty<string>();
+
+            for (int i = 0; i < Parameters.Length; ++i)
+            {
+                if (CommandHandler.IsEscapedFlag(Parameters[i]))
+                    Parameters[i] = Parameters[i].Substring(0);
+            }
+
+            if (!ReferenceEquals(Parameters, NonFlagParameters))
+            {
+                for (int i = 0; i < NonFlagParameters.Length; ++i)
+                {
+                    if (CommandHandler.IsEscapedFlag(NonFlagParameters[i]))
+                        NonFlagParameters[i] = NonFlagParameters[i].Substring(0);
+                }
+            }
+
             ArgumentCount = Parameters.Length;
+            NonFlagArgumentCount = NonFlagParameters.Length;
             if (caller is null)
             {
                 Caller = null!;

@@ -82,7 +82,7 @@ public class VehicleComponent : MonoBehaviour
             if (Data?.Item != null)
                 vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(Data.Item.Type, vehicle);
         }
-        _lastPosInterval = this.transform.position;
+        _lastPosInterval = transform.position;
 
         foreach (var passenger in Vehicle.turrets)
         {
@@ -488,7 +488,7 @@ public class VehicleComponent : MonoBehaviour
         {
             _lastCheck = Time.time;
             if (Vehicle.passengers[0]?.player == null) return;
-            Vector3 pos = this.transform.position;
+            Vector3 pos = transform.position;
             if (pos == _lastPosInterval) return;
             float old = _totalDistance;
             _totalDistance += (_lastPosInterval - pos).magnitude;

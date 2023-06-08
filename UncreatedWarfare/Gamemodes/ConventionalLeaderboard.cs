@@ -42,7 +42,7 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
             }
             catch (Exception ex)
             {
-                L.LogError("Error sending " + this.GetType().Name + " to all players.");
+                L.LogError("Error sending " + GetType().Name + " to all players.");
                 L.LogError(ex);
             }
         }
@@ -57,7 +57,7 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
         }
         catch (Exception ex)
         {
-            L.LogError("Error sending " + this.GetType().Name + " to " + player.Steam64.ToString(Data.AdminLocale) + ".");
+            L.LogError("Error sending " + GetType().Name + " to " + player.Steam64.ToString(Data.AdminLocale) + ".");
             L.LogError(ex);
         }
     }

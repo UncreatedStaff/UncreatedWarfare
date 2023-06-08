@@ -296,7 +296,7 @@ public class TDMPlayerStats : IStats, ITeamPVPModeStats, IRevivesStats, IExperie
     public TDMPlayerStats(UCPlayer player)
     {
         this.player = player;
-        this.id = player.Steam64;
+        id = player.Steam64;
         Reset();
     }
     public TDMPlayerStats()
@@ -305,19 +305,19 @@ public class TDMPlayerStats : IStats, ITeamPVPModeStats, IRevivesStats, IExperie
     }
     public void Reset()
     {
-        this.kills = 0;
-        this.deaths = 0;
-        this.timeDeployedCounter = 0;
-        this.captures = 0;
-        this.teamkills = 0;
-        this.fobsdestroyed = 0;
-        this.fobsplaced = 0;
-        this.damagedone = 0;
-        this.xpgained = 0;
-        this.creditsgained = 0;
-        this.onlineCount1 = 0;
-        this.onlineCount2 = 0;
-        this.revives = 0;
+        kills = 0;
+        deaths = 0;
+        timeDeployedCounter = 0;
+        captures = 0;
+        teamkills = 0;
+        fobsdestroyed = 0;
+        fobsplaced = 0;
+        damagedone = 0;
+        xpgained = 0;
+        creditsgained = 0;
+        onlineCount1 = 0;
+        onlineCount2 = 0;
+        revives = 0;
     }
     public void AddKill()
     {

@@ -25,16 +25,16 @@ public struct LandmineData
         if (trap == null || owner == null)
         {
             Barricade = Guid.Empty;
-            this.Owner = null;
-            this.OwnerId = owner != null ? owner.Owner : 0ul;
+            Owner = null;
+            OwnerId = owner != null ? owner.Owner : 0ul;
             InstanceId = 0;
         }
         else
         {
-            this.InstanceId = trap.GetInstanceID();
-            this.Barricade = owner.BarricadeGUID;
-            this.Owner = owner.Player;
-            this.OwnerId = owner.Owner;
+            InstanceId = trap.GetInstanceID();
+            Barricade = owner.BarricadeGUID;
+            Owner = owner.Player;
+            OwnerId = owner.Owner;
         }
     }
 
@@ -84,20 +84,20 @@ public class UCPlayerData : MonoBehaviour
         public string? TextContainerName;
         public ToastMessageInfo(ToastMessageSeverity type, Guid guid, byte channel, float time, string? text1container = null)
         {
-            this.Type = type;
-            this.Channel = channel;
-            this.Guid = guid;
-            this.Time = time;
-            this.Id = 0;
+            Type = type;
+            Channel = channel;
+            Guid = guid;
+            Time = time;
+            Id = 0;
             TextContainerName = text1container;
             ReloadAsset();
         }
         public void ReloadAsset()
         {
-            if (Assets.find(this.Guid) is not EffectAsset ea)
-                L.Log("Unable to find effect asset with GUID " + this.Guid.ToString("N") + " in toast messages.");
+            if (Assets.find(Guid) is not EffectAsset ea)
+                L.Log("Unable to find effect asset with GUID " + Guid.ToString("N") + " in toast messages.");
             else
-                this.Id = ea.id;
+                Id = ea.id;
         }
     }
     internal static void ReloadToastIDs()
@@ -140,25 +140,25 @@ public class UCPlayerData : MonoBehaviour
         public bool HasPending = false;
         public ToastChannel(byte channel)
         {
-            this.Info = default;
-            this.Message = default;
-            this.TimeRemaining = 0f;
-            this.Channel = channel;
+            Info = default;
+            Message = default;
+            TimeRemaining = 0f;
+            Channel = channel;
         }
         public void SetMessage(ToastMessageInfo info, ToastMessage message)
         {
-            this.Info = info;
-            this.Message = message;
-            this.TimeRemaining = info.Time;
+            Info = info;
+            Message = message;
+            TimeRemaining = info.Time;
         }
         /// <returns><see langword="true"/> if there is a message currently playing on the channel, otherwise <see langword="false"/>.</returns>
         public bool Update(float dt)
         {
-            if (this.TimeRemaining <= 0f) return HasPending;
-            this.TimeRemaining -= dt;
-            if (this.TimeRemaining <= 0f)
+            if (TimeRemaining <= 0f) return HasPending;
+            TimeRemaining -= dt;
+            if (TimeRemaining <= 0f)
             {
-                this.TimeRemaining = 0f;
+                TimeRemaining = 0f;
                 return HasPending;
             }
             return false;
@@ -223,7 +223,7 @@ public class UCPlayerData : MonoBehaviour
     #endregion
     public void StartTracking(Player player)
     {
-        this.Player = player;
+        Player = player;
         _currentTimeSeconds = 0.0f;
         JoinTime = Time.realtimeSinceStartup;
         byte max = 0;

@@ -116,21 +116,23 @@ public class Translation
         public readonly int Argument;
         public readonly int StartIndex;
         public readonly int Length;
-        public ArgumentSpan(int argument, int startIndex, int length)
+        public readonly bool Inverted;
+        public ArgumentSpan(int argument, int startIndex, int length, bool inverted)
         {
             Argument = argument;
             StartIndex = startIndex;
             Length = length;
+            Inverted = inverted;
         }
         public void Pluralize(in TranslationHelper helper, ref string value, ref int offset)
         {
             int index = StartIndex + offset;
-            if (StartIndex >= value.Length)
+            if (index >= value.Length)
                 return;
             int len = Length;
-            if (len > value.Length - StartIndex)
-                len = value.Length - StartIndex;
-            string plural = Translation.Pluralize(helper.Language, helper.Culture, value.Substring(index, len), helper.Flags);
+            if (len > value.Length - index)
+                len = value.Length - index;
+            string plural = Translation.Pluralize(helper.Language, helper.Culture, value.Substring(index, len), helper.Flags | TranslationFlags.Plural);
             offset += plural.Length - len;
             value = value.Substring(0, index) + plural + value.Substring(index + len);
         }
@@ -329,6 +331,7 @@ public class Translation
                     int closing = str.IndexOf('}', nextSign + 2);
                     if (closing == -1)
                         break;
+                    bool inverted = str[closing - 1] == '!';
                     int firstDigit = -1;
                     int lastDigit = -1;
                     for (int j = nextSign + 4; j < str.Length; ++j)
@@ -339,12 +342,11 @@ public class Translation
                             firstDigit = j;
                         lastDigit = j;
                     }
-                    if (str.Length >= lastDigit + 1 || str[lastDigit + 1] != ':' || !int.TryParse(str.SubstringRange(firstDigit, lastDigit), NumberStyles.Number, Data.AdminLocale, out int argument))
+                    if (str.Length <= lastDigit + 1 || str[lastDigit + 1] != ':' || !int.TryParse(str.SubstringRange(firstDigit, lastDigit), NumberStyles.Number, Data.AdminLocale, out int argument))
                         continue;
-
-                    str = str.Substring(0, nextSign) + (closing < str.Length - 1 ? str.Substring(closing + 1) : string.Empty);
-                    index = closing - (7 + (lastDigit - firstDigit));
-                    WorkingPluralizers.Add(new ArgumentSpan(argument, nextSign, closing - (nextSign + 2)));
+                    str = str.Substring(0, nextSign) + str.SubstringRange(lastDigit + 2, closing - (inverted ? 2 : 1)) + (closing < str.Length - 1 ? str.Substring(closing + 1) : string.Empty);
+                    index = closing - ((inverted ? 8 : 7) + (lastDigit - firstDigit));
+                    WorkingPluralizers.Add(new ArgumentSpan(argument, nextSign, closing - (lastDigit + (inverted ? 3 : 2)), inverted));
                 }
 
                 return WorkingPluralizers.Count == 0 ? Array.Empty<ArgumentSpan>() : WorkingPluralizers.ToArray();
@@ -922,15 +924,30 @@ public class Translation
         //culture ??= LanguageAliasSet.GetCultureInfo(language);
         if (language.Equals(LanguageAliasSet.ENGLISH))
         {
+            if (word.Equals("is", StringComparison.InvariantCulture))
+                return "are";
+            if (word.Equals("was", StringComparison.InvariantCulture))
+                return "were";
+            if (word.Equals("did", StringComparison.InvariantCulture))
+                return "do";
+            if (word.Equals("comes", StringComparison.InvariantCulture))
+                return "come";
+            if (word.Equals("it", StringComparison.InvariantCulture))
+                return "they";
+            if (word.Equals("a ", StringComparison.InvariantCulture) || word.Equals(" a", StringComparison.InvariantCulture))
+                return string.Empty;
+            if (word.Equals("an ", StringComparison.InvariantCulture) || word.Equals(" an", StringComparison.InvariantCulture))
+                return string.Empty;
             string[] words = word.Split(' ');
             bool hOthWrds = words.Length > 1;
             string otherWords = string.Empty;
-            string str = (hOthWrds ? words[words.Length - 1] : word).ToLowerInvariant();
+            string str = hOthWrds ? words[words.Length - 1] : word;
             if (str.Length < 2)
                 return word;
             if (hOthWrds)
-                otherWords = string.Join(" ", words, 0, words.Length - 1);
+                otherWords = string.Join(" ", words, 0, words.Length - 1) + " ";
             bool isPCaps = char.IsUpper(str[0]);
+            str = str.ToLowerInvariant();
 
             if (str.Equals("child", StringComparison.OrdinalIgnoreCase))
                 return word + "ren";
@@ -1156,7 +1173,7 @@ public class Translation
         value.Color = color;
         value.ResetConsole();
     }
-    protected TranslationFlags GetFlags(ulong targetTeam, bool imgui = false) //todo
+    protected TranslationFlags GetFlags(ulong targetTeam, bool imgui = false)
     {
         TranslationFlags flags = targetTeam switch
         {
@@ -1600,20 +1617,68 @@ Some enums have translations, all of which are in the Enums folder. The **%NAME%
 
 ## translations.properties
 Primary translations file. Contains the main translations used for chat messages, UI, etc.
-<br>See **properties** section below.
+<br><br>See **Properties** and **Rich Text** sections below.
+### Extra Notation
+**Arguments**
+
+Zero based, surrounded in curly brackets (`{}`).
+<br> Example (Translation<`int`, `ItemAsset`>): `Given you {0}x {1}.`
+<br>  -> `Given you 4x M4A1.`
+
+
+**Formatting**
+
+***Default Formatting (T Constants)***
+```
+• FormatPlural              ""$plural$""  See Below
+• FormatUppercase           ""upper""     Turns the argument UPPERCASE.
+• FormatLowercase           ""lower""     Turns the argument lowercase.
+• FormatPropercase          ""proper""    Turns the argument ProperCase.
+• FormatRarityColor         ""rarity""    Colors assets to their rarity color.
+• FormatTimeLong            ""tlong""     Turns time to: 3 minutes and 4 seconds, etc.
+• FormatTimeShort_MM_SS     ""tshort1""   Turns time to: 03:04, etc.
+• FormatTimeShort_HH_MM_SS  ""tshort2""   Turns time to: 01:03:04, etc.
+   Time can be int, uint, float (all in seconds), or TimeSpan
+```
+Other formats are stored in the most prominant class of the interface (`UCPlayer` for `IPlayer`, `FOB` for `IDeployable`, etc.)
+<br>Anything that would work in `T[N].ToString(string, IFormatProvider)` will work here.
+
+<br>**Color substitution from color dictionary**
+
+`c$value$` will be replaced by the color `value` from the color dictionary on startup.
+<br> Example: `You need 100 more <#c$credits$>credits</color>.`
+
+<br>**Conditional pluralization of existing terms**
+
+`${p:arg:text}`  will replace text with the plural version of text if `{arg}` is not one.
+`${p:arg:text!}` will replace text with the plural version of text if `{arg}` is one.
+ Example: `There ${p:0:is} {0} ${p:0:apple}, ${p:0:it} ${p:0:is} ${p:0:a }${p:0:fruit}. ${p:0:It} ${p:0:taste!} good.`
+  -> ({0} = 1) `There is 1 apple, it is a fruit. It tastes good.`
+  -> ({0} = 3) `There are 3 apples, they are fruits. They taste good.`
+
+<br>**Conditional pluralization of argument values**
+
+Using the format: `'xxxx' + FormatPlural` will replace the value for that argument with the plural version.
+<br> Example: `You cant place {0} here.` arg0Fmt: `RarityFormat + FormatPlural`
+<br>  -> `You can't place <#xxxxx>FOB Radios</color> here.`
+<br>
+<br>Using the format: `'xxxx' + FormatPlural + '{arg}'` will replace the value for that argument with the plural version if `{arg}` is not one.
+<br> Example: `There are {0} {1} already on this FOB.` arg1Fmt: `RarityFormat + FormatPlural + {0}`
+<br>  -> (4, FOB Radio Asset) `There are 4 <#xxxxx>FOB Radios</color> already on this FOB.`
+
 
 ## factions.properties
 Contains the faction translations, including names, short names, and abbreviations.
-<br>See **properties** section below.
+<br>See **Properties** section below.
 
 ## kits.properties
 Contains the kit sign text translations.
 <br>\<br> is used as a line break for sign texts, causing the name to go on two lines.
-<br>See **properties** section below.
+<br>See **Properties** section below.
 
 ## traits.properties
 Contains the trait sign text and description translations.
-<br>See **properties** section below.
+<br>See **Properties** section below.
 
 ## deaths.json
 Stores all possible death messages for each set of available data/flags.
@@ -1933,8 +1998,15 @@ public sealed class Translation<T0> : Translation
         {
             ref ArgumentSpan span = ref pluralizers[i];
             int offset = 0;
-            if (span.Argument == 0 && !IsOne(arg0))
+            if (span.Argument == 0 && !IsOne(arg0) ^ span.Inverted)
+            {
+                L.LogDebug($"Pluralizing from {span.Argument}: Offset: {value}");
                 span.Pluralize(in data, ref value, ref offset);
+            }
+            else
+            {
+                L.LogDebug($"Not plural: {span.Argument}.");
+            }
         }
         try
         {
@@ -1999,9 +2071,14 @@ public sealed class Translation<T0, T1> : Translation
                     0 => IsOne(arg0),
                     1 => IsOne(arg1),
                     _ => true
-                }))
+                }) ^ span.Inverted)
             {
+                L.LogDebug($"Pluralizing from {span.Argument}: Offset: {value}");
                 span.Pluralize(in data, ref value, ref offset);
+            }
+            else
+            {
+                L.LogDebug($"Not plural: {span.Argument}.");
             }
         }
         try
@@ -2079,9 +2156,14 @@ public sealed class Translation<T0, T1, T2> : Translation
                     1 => IsOne(arg1),
                     2 => IsOne(arg2),
                     _ => true
-                }))
+                }) ^ span.Inverted)
             {
+                L.LogDebug($"Pluralizing from {span.Argument}: Offset: {value}");
                 span.Pluralize(in data, ref value, ref offset);
+            }
+            else
+            {
+                L.LogDebug($"Not plural: {span.Argument}.");
             }
         }
         try
@@ -2166,9 +2248,14 @@ public sealed class Translation<T0, T1, T2, T3> : Translation
                     2 => IsOne(arg2),
                     3 => IsOne(arg3),
                     _ => true
-                }))
+                }) ^ span.Inverted)
             {
+                L.LogDebug($"Pluralizing from {span.Argument}: Offset: {value}");
                 span.Pluralize(in data, ref value, ref offset);
+            }
+            else
+            {
+                L.LogDebug($"Not plural: {span.Argument}.");
             }
         }
         try
@@ -2260,9 +2347,14 @@ public sealed class Translation<T0, T1, T2, T3, T4> : Translation
                     3 => IsOne(arg3),
                     4 => IsOne(arg4),
                     _ => true
-                }))
+                }) ^ span.Inverted)
             {
+                L.LogDebug($"Pluralizing from {span.Argument}: Offset: {value}");
                 span.Pluralize(in data, ref value, ref offset);
+            }
+            else
+            {
+                L.LogDebug($"Not plural: {span.Argument}.");
             }
         }
         try
@@ -2361,9 +2453,14 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5> : Translation
                 4 => IsOne(arg4),
                 5 => IsOne(arg5),
                 _ => true
-            }))
+            }) ^ span.Inverted)
             {
+                L.LogDebug($"Pluralizing from {span.Argument}: Offset: {value}");
                 span.Pluralize(in data, ref value, ref offset);
+            }
+            else
+            {
+                L.LogDebug($"Not plural: {span.Argument}.");
             }
         }
         try
@@ -2469,9 +2566,14 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6> : Translation
                 5 => IsOne(arg5),
                 6 => IsOne(arg6),
                 _ => true
-            }))
+            }) ^ span.Inverted)
             {
+                L.LogDebug($"Pluralizing from {span.Argument}: Offset: {value}");
                 span.Pluralize(in data, ref value, ref offset);
+            }
+            else
+            {
+                L.LogDebug($"Not plural: {span.Argument}.");
             }
         }
         try
@@ -2584,9 +2686,14 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7> : Translation
                 6 => IsOne(arg6),
                 7 => IsOne(arg7),
                 _ => true
-            }))
+            }) ^ span.Inverted)
             {
+                L.LogDebug($"Pluralizing from {span.Argument}: Offset: {value}");
                 span.Pluralize(in data, ref value, ref offset);
+            }
+            else
+            {
+                L.LogDebug($"Not plural: {span.Argument}.");
             }
         }
         try
@@ -2706,9 +2813,14 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> : Translatio
                 7 => IsOne(arg7),
                 8 => IsOne(arg8),
                 _ => true
-            }))
+            }) ^ span.Inverted)
             {
+                L.LogDebug($"Pluralizing from {span.Argument}: Offset: {value}");
                 span.Pluralize(in data, ref value, ref offset);
+            }
+            else
+            {
+                L.LogDebug($"Not plural: {span.Argument}.");
             }
         }
         try
@@ -2836,9 +2948,14 @@ public sealed class Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> : Transl
                     8 => IsOne(arg8),
                     9 => IsOne(arg9),
                     _ => true
-                }))
+                }) ^ span.Inverted)
             {
+                L.LogDebug($"Pluralizing from {span.Argument}: Offset: {value}");
                 span.Pluralize(in data, ref value, ref offset);
+            }
+            else
+            {
+                L.LogDebug($"Not plural: {span.Argument}.");
             }
         }
         try

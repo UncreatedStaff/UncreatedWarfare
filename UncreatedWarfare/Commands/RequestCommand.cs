@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Commands;
 public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
 {
     public float CompoundMultiplier => 2f;
-    public float MaxCooldown => 600f; // 10 mins
+    public float MaxCooldown => 900f; // 15 mins
 
     private const string Syntax = "/request [save|remove]";
     private const string Help = "Request a kit by targeting a sign or request a vehicle by targeting the vehicle or it's sign while doing /request.";
@@ -54,7 +54,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
 #endif
 
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
-        BarricadeDrop? drop = null;
+        BarricadeDrop? drop;
         string? kitId = null;
         if (ctx.HasArg(0))
         {

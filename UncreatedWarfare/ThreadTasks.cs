@@ -18,16 +18,16 @@ public class MainThreadTask
 
     private MainThreadTask(bool skipFrame)
     {
-        this.SkipFrame = skipFrame;
-        this.Token = CancellationToken.None;
+        SkipFrame = skipFrame;
+        Token = CancellationToken.None;
         IsCompleted = true;
         Awaiter = new MainThreadResult(this);
     }
     public MainThreadTask(bool skipFrame, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        this.SkipFrame = skipFrame;
-        this.Token = token;
+        SkipFrame = skipFrame;
+        Token = token;
         Awaiter = new MainThreadResult(this);
     }
     public MainThreadResult GetAwaiter()
@@ -40,7 +40,7 @@ public class MainThreadTask
         public readonly MainThreadTask Task;
         public MainThreadResult(MainThreadTask task)
         {
-            this.Task = task ?? throw new ArgumentNullException(nameof(task), "Task was null in MainThreadResult constructor.");
+            Task = task ?? throw new ArgumentNullException(nameof(task), "Task was null in MainThreadResult constructor.");
         }
         public bool IsCompleted { get => UCWarfare.IsMainThread || Task.IsCompleted; }
         public void OnCompleted(Action continuation)
@@ -53,7 +53,7 @@ public class MainThreadTask
             }
             else
             {
-                this.Continuation = continuation;
+                Continuation = continuation;
                 lock (UCWarfare.ThreadActionRequests)
                     UCWarfare.ThreadActionRequests.Enqueue(this);
             }
@@ -94,7 +94,7 @@ public sealed class LevelLoadTask
         public readonly LevelLoadTask Task;
         public LevelLoadResult(LevelLoadTask task)
         {
-            this.Task = task ?? throw new ArgumentNullException(nameof(task), "Task was null in MainThreadResult constructor.");
+            Task = task ?? throw new ArgumentNullException(nameof(task), "Task was null in MainThreadResult constructor.");
         }
         internal Action continuation;
         public bool IsCompleted { get => Task.isCompleted; }

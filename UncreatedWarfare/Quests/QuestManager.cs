@@ -747,7 +747,7 @@ public static class QuestManager
         foreach (INotifyVehicleDestroyed tracker in RegisteredTrackers.OfType<INotifyVehicleDestroyed>())
             tracker.OnVehicleDestroyed(e, instigator);
     }
-    public static void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, Components.VehicleComponent vehicle)
+    public static void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, VehicleComponent vehicle)
     {
         foreach (INotifyVehicleDistanceUpdates tracker in RegisteredTrackers.OfType<INotifyVehicleDistanceUpdates>())
             tracker.OnDistanceUpdated(lastDriver, totalDistance, newDistance, vehicle);

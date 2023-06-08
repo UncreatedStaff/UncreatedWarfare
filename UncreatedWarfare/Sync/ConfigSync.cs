@@ -1177,7 +1177,7 @@ public sealed class SyncAttribute : Attribute
     public SyncAttribute(ushort syncId, SyncMode mode = SyncMode.Automatic)
     {
         this.syncId = syncId;
-        this.syncMode = mode;
+        syncMode = mode;
     }
 }
 public sealed class PropertyValue : IReadWrite

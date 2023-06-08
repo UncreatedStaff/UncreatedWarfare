@@ -83,9 +83,9 @@ public struct SerializableVector3 : IJsonReadWrite
     }
     public readonly void WriteJson(Utf8JsonWriter writer)
     {
-        writer.WriteProperty(nameof(x), this.x);
-        writer.WriteProperty(nameof(y), this.y);
-        writer.WriteProperty(nameof(z), this.z);
+        writer.WriteProperty(nameof(x), x);
+        writer.WriteProperty(nameof(y), y);
+        writer.WriteProperty(nameof(z), z);
     }
     public void ReadJson(ref Utf8JsonReader reader)
     {
@@ -152,23 +152,23 @@ public struct SerializableTransform : IJsonReadWrite
     }
     public SerializableTransform(Transform transform)
     {
-        this.position = new SerializableVector3(transform.position);
-        this.euler_angles = new SerializableVector3(transform.rotation.eulerAngles);
+        position = new SerializableVector3(transform.position);
+        euler_angles = new SerializableVector3(transform.rotation.eulerAngles);
     }
     public SerializableTransform(Vector3 position, Vector3 eulerAngles)
     {
         this.position = new SerializableVector3(position);
-        this.euler_angles = new SerializableVector3(eulerAngles);
+        euler_angles = new SerializableVector3(eulerAngles);
     }
     public SerializableTransform(float posx, float posy, float posz, float rotx, float roty, float rotz)
     {
-        this.position = new SerializableVector3(posx, posy, posz);
-        this.euler_angles = new SerializableVector3(rotx, roty, rotz);
+        position = new SerializableVector3(posx, posy, posz);
+        euler_angles = new SerializableVector3(rotx, roty, rotz);
     }
     public SerializableTransform(Vector3 position, Quaternion rotation)
     {
         this.position = new SerializableVector3(position);
-        this.euler_angles = new SerializableVector3(rotation.eulerAngles);
+        euler_angles = new SerializableVector3(rotation.eulerAngles);
     }
     public readonly void WriteJson(Utf8JsonWriter writer)
     {
@@ -394,11 +394,11 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
                 string prop = reader.GetString()!;
                 if (!reader.Read()) continue;
                 if (prop == nameof(key))
-                    this.key = reader.GetString()!;
+                    key = reader.GetString()!;
                 else if (prop == nameof(display_name))
-                    this.display_name = reader.GetString()!;
+                    display_name = reader.GetString()!;
                 else if (prop == "imgui")
-                    this.RequiresIMGUI = reader.TokenType != JsonTokenType.Null && reader.GetBoolean();
+                    RequiresIMGUI = reader.TokenType != JsonTokenType.Null && reader.GetBoolean();
                 else if (prop == nameof(values) && reader.TokenType == JsonTokenType.StartArray)
                 {
                     List<string> tlist = new List<string>(24);
@@ -409,7 +409,7 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
                             tlist.Add(reader.GetString()!);
                         }
                     }
-                    this.values = tlist.ToArray();
+                    values = tlist.ToArray();
                 }
             }
         }

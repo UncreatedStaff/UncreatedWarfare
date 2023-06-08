@@ -20,7 +20,7 @@ public static class RallyManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SDG.Unturned.BarricadeData data = drop.GetServersideData();
+        BarricadeData data = drop.GetServersideData();
 
         if (IsRally(drop.asset))
         {

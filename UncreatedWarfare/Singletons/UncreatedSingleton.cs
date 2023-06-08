@@ -193,7 +193,7 @@ public abstract class BaseAsyncSingleton : IUncreatedSingleton
     internal void AssertLoadedIntl()
     {
         if (!_isLoaded)
-            throw new SingletonUnloadedException(this.GetType());
+            throw new SingletonUnloadedException(GetType());
     }
 }
 public abstract class BaseAsyncSingletonComponent : MonoBehaviour, IUncreatedSingleton
@@ -228,7 +228,7 @@ public abstract class BaseAsyncSingletonComponent : MonoBehaviour, IUncreatedSin
     internal void AssertLoadedIntl()
     {
         if (!_isLoaded)
-            throw new SingletonUnloadedException(this.GetType());
+            throw new SingletonUnloadedException(GetType());
     }
 }
 public abstract class BaseAsyncReloadSingleton : BaseAsyncSingleton, IReloadableSingleton
@@ -236,7 +236,7 @@ public abstract class BaseAsyncReloadSingleton : BaseAsyncSingleton, IReloadable
     public string? ReloadKey { get; }
     protected BaseAsyncReloadSingleton(string? reloadKey)
     {
-        this.ReloadKey = reloadKey;
+        ReloadKey = reloadKey;
     }
     public void Reload() => throw new NotImplementedException();
     public abstract Task ReloadAsync(CancellationToken token);
@@ -339,7 +339,7 @@ public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadabl
     internal void AssertLoadedIntl()
     {
         if (!_isLoaded)
-            throw new SingletonUnloadedException(this.GetType());
+            throw new SingletonUnloadedException(GetType());
     }
 }
 public abstract class BaseSingleton : IUncreatedSingleton
@@ -357,7 +357,7 @@ public abstract class BaseSingleton : IUncreatedSingleton
     internal void AssertLoadedIntl()
     {
         if (!_isLoaded)
-            throw new SingletonUnloadedException(this.GetType());
+            throw new SingletonUnloadedException(GetType());
     }
     public abstract void Load();
     public abstract void Unload();
@@ -393,7 +393,7 @@ public abstract class BaseSingletonComponent : MonoBehaviour, IUncreatedSingleto
     internal void AssertLoadedIntl()
     {
         if (!_isLoaded)
-            throw new SingletonUnloadedException(this.GetType());
+            throw new SingletonUnloadedException(GetType());
     }
     public abstract void Load();
     public abstract void Unload();
@@ -419,7 +419,7 @@ public abstract class BaseReloadSingleton : BaseSingleton, IReloadableSingleton
     public string? ReloadKey { get; }
     protected BaseReloadSingleton(string? reloadKey)
     {
-        this.ReloadKey = reloadKey;
+        ReloadKey = reloadKey;
     }
     public abstract void Reload();
     public Task ReloadAsync(CancellationToken token) => throw new NotImplementedException();
@@ -445,16 +445,16 @@ public abstract class ListSingleton<TData> : JSONSaver<TData>, IReloadableSingle
     internal void AssertLoadedIntl()
     {
         if (!_isLoaded)
-            throw new SingletonUnloadedException(this.GetType());
+            throw new SingletonUnloadedException(GetType());
     }
     protected ListSingleton(string? reloadKey, string file) : base(file, false)
     {
-        this.ReloadKey = reloadKey;
+        ReloadKey = reloadKey;
     }
     protected ListSingleton(string file) : this(null, file) { }
     protected ListSingleton(string? reloadKey, string file, CustomSerializer? serializer, CustomDeserializer? deserializer) : base(file, serializer, deserializer, false)
     {
-        this.ReloadKey = reloadKey;
+        ReloadKey = reloadKey;
     }
     protected ListSingleton(string file, CustomSerializer? serializer, CustomDeserializer? deserializer) : this(null, file, serializer, deserializer) { }
     public virtual void Reload() { }

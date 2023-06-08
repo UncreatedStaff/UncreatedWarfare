@@ -367,7 +367,7 @@ public class WhitelistItem
     }
     public WhitelistItem(Guid itemID, ushort amount)
     {
-        this.Item = itemID;
-        this.Amount = amount;
+        Item = itemID;
+        Amount = amount;
     }
 }

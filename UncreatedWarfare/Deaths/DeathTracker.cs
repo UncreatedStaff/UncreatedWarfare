@@ -707,7 +707,6 @@ public class DeathTracker : BaseReloadSingleton
     {
         _injuredPlayers.Remove(steam64);
     }
-
     private readonly struct InjuredDeathCache
     {
         public readonly PlayerDied EventArgs;

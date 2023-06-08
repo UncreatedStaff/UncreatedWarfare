@@ -49,7 +49,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
     private void Start()
     {
         if (!_inited)
-            throw new InvalidOperationException("Trait " + this.GetType().Name + " was not initialized. You must run Trait.Init(...) within the same frame of creating it.");
+            throw new InvalidOperationException("Trait " + GetType().Name + " was not initialized. You must run Trait.Init(...) within the same frame of creating it.");
         TraitManager.ActivateTrait(this);
         if (Warfare.Data.Gamemode.State == Gamemodes.State.Staging)
         {
@@ -115,7 +115,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
     private void OnDestroy()
     {
         if (!_inited)
-            throw new InvalidOperationException("Trait " + this.GetType().Name + " was not initialized.");
+            throw new InvalidOperationException("Trait " + GetType().Name + " was not initialized.");
 
         TraitManager.DeactivateTrait(this);
         OnDeactivate();

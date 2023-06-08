@@ -54,17 +54,17 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         }
         // TODO: add support for non-vehicle controller
 
-        this._projectile = projectile;
-        this._maxTurnDegrees = responsiveness;
-        this._projectileSpeed = projectileSpeed;
-        this._guidanceRampTime = guidanceRampTime;
-        this._startTime = Time.time;
+        _projectile = projectile;
+        _maxTurnDegrees = responsiveness;
+        _projectileSpeed = projectileSpeed;
+        _guidanceRampTime = guidanceRampTime;
+        _startTime = Time.time;
         if (_controller.Status == ELockOnMode.LOCKED_ON)
-            this._lost = false;
+            _lost = false;
         else
-            this._lost = true;
+            _lost = true;
 
-        this._rigidbody = projectile.GetComponent<Rigidbody>();
+        _rigidbody = projectile.GetComponent<Rigidbody>();
 
         _randomRelativePosition = Quaternion.AngleAxis(Random.Range(0f, 360f), Vector3.forward) * new Vector3(0, 10, 100);
     }

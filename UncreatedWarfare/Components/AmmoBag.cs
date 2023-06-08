@@ -17,7 +17,7 @@ public class AmmoBagComponent : MonoBehaviour
     public int Ammo;
     public void Initialize(BarricadeDrop drop)
     {
-        this.Drop = drop;
+        Drop = drop;
         Ammo = FOBManager.Config.AmmoBagMaxUses;
         //ResuppliedPlayers = new Dictionary<ulong, int>();
     }

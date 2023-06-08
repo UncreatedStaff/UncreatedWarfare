@@ -35,7 +35,7 @@ public class XPUI : UnturnedUI
         L.LogDebug("Sending xp ui to " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");
 
         LevelData data = player.Level;
-        this.SendToPlayer(c,
+        SendToPlayer(c,
             data.Abbreviation,
             data.CurrentXP.ToString(player.Culture) + "/" + data.RequiredXP.ToString(player.Culture),
             data.NextAbbreviation,

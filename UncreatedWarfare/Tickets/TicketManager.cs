@@ -147,11 +147,11 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
         string img2 = TeamManager.Team2Faction.FlagImageURL;
         foreach (LanguageSet set in LanguageSet.All())
         {
-            string t1tickets = T.WinUIValueTickets.Translate(set.Language, this.Team1Tickets);
-            if (this.Team1Tickets <= 0)
+            string t1tickets = T.WinUIValueTickets.Translate(set.Language, Team1Tickets);
+            if (Team1Tickets <= 0)
                 t1tickets = t1tickets.Colorize("969696");
-            string t2tickets = T.WinUIValueTickets.Translate(set.Language, this.Team2Tickets);
-            if (this.Team2Tickets <= 0)
+            string t2tickets = T.WinUIValueTickets.Translate(set.Language, Team2Tickets);
+            if (Team2Tickets <= 0)
                 t2tickets = t2tickets.Colorize("969696");
             string header = T.WinUIHeaderWinner.Translate(set.Language, TeamManager.GetFactionSafe(winner)!);
             while (set.MoveNext())

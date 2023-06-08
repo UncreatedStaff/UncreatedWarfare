@@ -23,21 +23,21 @@ public readonly struct ToastMessage
     public override bool Equals(object obj) => obj is ToastMessage msg && this == msg;
     public ToastMessage(string message1, ToastMessageSeverity severity, bool resend = false)
     {
-        this._time = DateTime.UtcNow.Ticks;
-        this.Message1 = message1;
-        this.Message2 = null;
-        this.Message3 = null;
-        this.Severity = severity;
+        _time = DateTime.UtcNow.Ticks;
+        Message1 = message1;
+        Message2 = null;
+        Message3 = null;
+        Severity = severity;
         ResendText = resend;
         InstanceID = ++_lastInstId;
     }
     public ToastMessage(string message1, string message2, ToastMessageSeverity severity, bool resend = false) : this(message1, severity, resend)
     {
-        this.Message2 = message2;
+        Message2 = message2;
     }
     public ToastMessage(string message1, string message2, string message3, ToastMessageSeverity severity, bool resend = false) : this(message1, message2, severity, resend)
     {
-        this.Message3 = message3;
+        Message3 = message3;
     }
     public static void QueueMessage(UCPlayer player, ToastMessage message, bool priority = false) => QueueMessage(player.Player, message, priority);
     public static void QueueMessage(SteamPlayer player, ToastMessage message, bool priority = false) => QueueMessage(player.player, message, priority);

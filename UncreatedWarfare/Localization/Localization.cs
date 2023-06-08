@@ -1368,27 +1368,27 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     }
     public LanguageSet(string lang)
     {
-        this.Language = lang;
-        this.Players = new List<UCPlayer>(lang == L.Default ? Provider.clients.Count : 2);
-        this._index = -1;
-        this.Next = null!;
+        Language = lang;
+        Players = new List<UCPlayer>(lang == L.Default ? Provider.clients.Count : 2);
+        _index = -1;
+        Next = null!;
         IMGUI = false;
     }
     public LanguageSet(string lang, UCPlayer first)
     {
-        this.Language = lang;
-        this.Players = new List<UCPlayer>(lang == L.Default ? Provider.clients.Count : 2) { first };
-        this._index = -1;
-        this.Next = null!;
+        Language = lang;
+        Players = new List<UCPlayer>(lang == L.Default ? Provider.clients.Count : 2) { first };
+        _index = -1;
+        Next = null!;
         IMGUI = first.Save.IMGUI;
     }
-    public void Add(UCPlayer pl) => this.Players.Add(pl);
+    public void Add(UCPlayer pl) => Players.Add(pl);
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
     public bool MoveNext()
     {
-        if (_index < this.Players.Count - 1 && _index > -2)
+        if (_index < Players.Count - 1 && _index > -2)
         {
-            Next = this.Players[++_index];
+            Next = Players[++_index];
             return true;
         }
         else

@@ -69,7 +69,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     internal void Init(UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();
-        this._player = player;
+        _player = player;
         Update();
     }
     private void Update()
@@ -1751,7 +1751,7 @@ internal class ZonePlayerComponent : MonoBehaviour
 
         protected Transaction(bool @implicit)
         {
-            this.Implicit = @implicit;
+            Implicit = @implicit;
         }
         public abstract void Undo(ZonePlayerComponent component);
         public abstract void Redo(ZonePlayerComponent component);

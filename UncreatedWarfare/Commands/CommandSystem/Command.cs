@@ -24,8 +24,8 @@ public abstract class Command : IExecutableCommand
     protected Command(string command, EAdminType allowedUsers = 0, int priority = 0)
     {
         _commandName = command;
-        this._allowedUsers = allowedUsers;
-        this._priority = priority;
+        _allowedUsers = allowedUsers;
+        _priority = priority;
         Aliases = _aliases.AsReadOnly();
     }
     Task IExecutableCommand.Execute(CommandInteraction ctx, CancellationToken token) => throw new NotImplementedException();
@@ -72,10 +72,10 @@ public abstract class AsyncCommand : IExecutableCommand
     protected AsyncCommand(string command, EAdminType allowedUsers = 0, int priority = 0, bool sync = false)
     {
         _commandName = command;
-        this._allowedUsers = allowedUsers;
-        this._priority = priority;
+        _allowedUsers = allowedUsers;
+        _priority = priority;
         Aliases = _aliases.AsReadOnly();
-        this._sync = sync;
+        _sync = sync;
     }
     protected void AddAlias(string alias) => _aliases.Add(alias);
     /// <summary>Runs before <see cref="Execute"/>. Sends "no_permissions" translation to the player if it returns <see langword="false"/>. This could also be done in <see cref="Execute"/> if desired.</summary>

@@ -585,9 +585,9 @@ public class Insurgency :
             }
         }
         if (AttackingTeam == 1)
-            TicketManager.Team1Tickets += Gamemode.Config.InsurgencyTicketsCache;
+            TicketManager.Team1Tickets += Config.InsurgencyTicketsCache;
         else if (AttackingTeam == 2)
-            TicketManager.Team2Tickets += Gamemode.Config.InsurgencyTicketsCache;
+            TicketManager.Team2Tickets += Config.InsurgencyTicketsCache;
 
         TicketManager.UpdateUI(1);
         TicketManager.UpdateUI(2);

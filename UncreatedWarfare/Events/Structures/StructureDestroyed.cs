@@ -37,13 +37,13 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
     {
         this.instigator = instigator;
         this.instigatorId = instigatorId;
-        this.drop = structure;
-        this.data = structureData;
+        drop = structure;
+        data = structureData;
         this.region = region;
         this.x = x;
         this.y = y;
-        this._ragdoll = ragoll;
-        this._wasPickedUp = wasPickedUp;
+        _ragdoll = ragoll;
+        _wasPickedUp = wasPickedUp;
         _save = save;
         ListSqlConfig<SavedStructure>? m = save?.Manager;
         if (m is not null)

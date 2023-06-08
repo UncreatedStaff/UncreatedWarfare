@@ -16,10 +16,10 @@ public class ItemDropRequested : BreakablePlayerEvent
     public byte Index => _index;
     public ItemDropRequested(UCPlayer player, Item item, ItemJar jar, byte page, byte index, bool shouldAllow) : base(player)
     {
-        this._item = item;
-        this._itemJar = jar;
-        this._page = page;
-        this._index = index;
+        _item = item;
+        _itemJar = jar;
+        _page = page;
+        _index = index;
         if (!shouldAllow) Break();
     }
 }

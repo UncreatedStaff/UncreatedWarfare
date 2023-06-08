@@ -1,10 +1,9 @@
 ﻿using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
-using HarmonyLib;
-using Steamworks;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -13,12 +12,11 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Patches = Uncreated.Warfare.Harmony.Patches;
 
 namespace Uncreated.Warfare.Commands.VanillaRework;
 public class VCommand : AsyncCommand
 {
-    private const float SwapRequestDuration = 10f;
+    private const float SwapRequestDuration = 15f;
     private const string AdminSyntax = "/v <vehicle|kick|give> [player]";
     private const string Syntax = "/v <kick|give> [player]";
     private const string AdminHelp = "Spawn a vehicle in front of you or manage your requested vehicle.";
@@ -52,12 +50,12 @@ public class VCommand : AsyncCommand
                     {
                         new CommandParameter("Player", typeof(IPlayer), "Driver", "Pilot", "Turret", typeof(byte))
                         {
-                            IsOptional = true,
                             Description = "Player or seat to remove from your vehicle, optional if there is only one option."
                         },
                         new CommandParameter("Force Remove")
                         {
                             FlagName = "r",
+                            Aliases = new string[] { "k" },
                             Description = "Force the player out of the vehicle instead of just finding a different seat."
                         }
                     }
@@ -71,6 +69,7 @@ public class VCommand : AsyncCommand
                         new CommandParameter("Player", typeof(IPlayer))
                     }
                 },
+                /*
                 new CommandParameter("Enter")
                 {
                     Aliases = new string[] { "Swap", "E" },
@@ -89,7 +88,7 @@ public class VCommand : AsyncCommand
                             Description = "Deny a swap request from a fellow passenger, done automatically after a cooldown."
                         }
                     }
-                }
+                }*/
             }
         };
     }
@@ -174,7 +173,7 @@ public class VCommand : AsyncCommand
                     throw ctx.Reply(T.VehicleLinkedVehicleNotOwnedByCaller, pl);
                 }
 
-                owned = false;
+                owned = ctx.Caller.OnDuty();
             }
 
             // vehicle give <player>
@@ -187,7 +186,7 @@ public class VCommand : AsyncCommand
                 VehicleComponent.TryAddOwnerToHistory(vehicleTarget, onlinePlayer.Steam64);
                 if (Gamemode.Config.EffectUnlockVehicle.ValidReference(out EffectAsset effect))
                     F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicleTarget.transform.position);
-                onlinePlayer.SendChat(T.VehicleGivenDm, vehicleTarget.asset, onlinePlayer);
+                onlinePlayer.SendChat(T.VehicleGivenDm, vehicleTarget.asset, ctx.Caller);
                 throw ctx.Reply(T.VehicleGiven, vehicleTarget.asset, onlinePlayer);
             }
 
@@ -202,11 +201,11 @@ public class VCommand : AsyncCommand
                     Passenger turret = vehicleTarget.turrets[i];
                     if (turret.player != null)
                     {
-                        if (seatIndex == 255)
+                        if (seatIndex == -1)
                             seatIndex = turret.turret.seatIndex;
                         else
                         {
-                            seatIndex = 255;
+                            seatIndex = -1;
                             break;
                         }
                     }
@@ -251,7 +250,7 @@ public class VCommand : AsyncCommand
 
             if (vehicleTarget.passengers.Length <= seatIndex)
                 throw ctx.Reply(T.VehicleSeatNotValidOutOfRange, seatIndex + 1);
-            else if (seatIndex == -1)
+            if (seatIndex == -1)
                 throw ctx.Reply(T.VehicleSeatNotValidText, ctx.Get(1)!);
 
             Passenger targetSeat = vehicleTarget.passengers[seatIndex];
@@ -264,65 +263,61 @@ public class VCommand : AsyncCommand
                 if (target is not { IsOnline: true })
                     throw ctx.Reply(T.VehicleSeatNotOccupied, seatIndex + 1);
                 
-                bool wantsFullKick = ctx.MatchFlag("r") && (vehicleTarget.asset.engine is not EEngine.PLANE and not EEngine.HELICOPTER ||
-                                                            Mathf.Abs(vehicleTarget.speed) <= 5f || TeamManager.IsInMain(team, vehicleTarget.transform.position));
-                if (!wantsFullKick || !UCVehicleManager.TryMovePlayerToEmptySeat(target.Player))
+                bool wantsFullKick = ctx.MatchFlag("r", "k") && (vehicleTarget.asset.engine is not EEngine.PLANE and not EEngine.HELICOPTER ||
+                                                            Mathf.Abs(vehicleTarget.speed) <= 0.15f || TeamManager.IsInMain(team, vehicleTarget.transform.position));
+                if (wantsFullKick || !UCVehicleManager.TryMovePlayerToEmptySeat(target.Player))
+                {
+                    L.LogDebug("Removing target instead of moving.");
                     VehicleManager.forceRemovePlayer(vehicleTarget, target.CSteamID);
+                }
                 vehicleTarget.lastSeat = time;
+                if (CooldownManager.IsLoaded)
+                    CooldownManager.StartCooldown(target, CooldownType.InteractVehicleSeats, 5f, vehicleTarget);
                 target.SendChat(T.VehicleOwnerKickedDM, vehicleTarget.asset, ctx.Caller, seatIndex + 1);
                 throw ctx.Reply(T.VehicleKickedPlayer, vehicleTarget.asset, target, seatIndex + 1);
             }
 
+            throw ctx.SendNotImplemented();
             // vehicle enter
             if (time - vehicleTarget.lastSeat < 1f)
             {
                 // check vehicle cooldown
                 vehicleTarget.lastSeat = time;
-                await Task.Delay(Mathf.RoundToInt(time - vehicleTarget.lastSeat * 1000), token);
-                await UCWarfare.ToUpdate(token);
-                vehicleTarget.lastSeat = time;
+                int ms = Mathf.RoundToInt(time - vehicleTarget.lastSeat * 1000);
+                if (ms > 0)
+                {
+                    await Task.Delay(ms, token);
+                    await UCWarfare.ToUpdate(token);
+                    vehicleTarget.lastSeat = time;
+                }
             }
-
-            bool twice = false;
+            
             bool isByRequest = false;
             notInVehicle:
             if (target == null || owned)
             {
                 InteractableVehicle? currentVehicle = ctx.Caller.CurrentVehicle;
                 // not in vehicle
-                if (currentVehicle == null)
+                if (currentVehicle == null && (vehicleTarget.transform.position - ctx.Caller.Position).sqrMagnitude < 12 * 12)
                 {
                     if (target != null)
                     {
-                        bool swapped;
-                        // change the seat for tryAddPlayer, change it back asap though
-                        targetSeat.player = ctx.Caller.SteamPlayer;
-                        byte targetSeatIndex = 0;
-                        try
+                        if (!UCVehicleManager.TryMovePlayerToEmptySeat(target))
                         {
-                            if (seatIndex is >= 0 and < byte.MaxValue)
-                            {
-                                targetSeatIndex = (byte)(seatIndex + 1);
-                                swapped = true;
-                            }
-                            else
-                                swapped = vehicleTarget.tryAddPlayer(out targetSeatIndex, target.Player);
-                        }
-                        finally
-                        {
-                            targetSeat.player = target;
-                        }
-                        if (swapped)
-                            swapped = UCVehicleManager.TrySwapPlayerInVehicle(ctx.Caller, targetSeatIndex, true);
-
-                        if (!swapped)
+                            L.LogDebug("Removing target instead of moving.");
                             VehicleManager.forceRemovePlayer(vehicleTarget, target.CSteamID);
+                        }
                     }
                     bool success = UCVehicleManager.TryPutPlayerInVehicle(vehicleTarget, ctx.Caller.Player, (byte)seatIndex);
+                    L.LogDebug($"Enter vehicle status: {success}.");
                     if (target != null && success)
                     {
                         if (!isByRequest)
+                        {
+                            if (CooldownManager.IsLoaded)
+                                CooldownManager.StartCooldown(target, CooldownType.InteractVehicleSeats, 5f, vehicleTarget);
                             target.SendChat(T.VehicleOwnerTookSeatDM, vehicleTarget.asset, ctx.Caller, seatIndex + 1);
+                        }
                         else
                             target.SendChat(T.VehicleSwappedSeats, ctx.Caller);
                     }
@@ -334,10 +329,15 @@ public class VCommand : AsyncCommand
                 if (currentVehicle == vehicleTarget)
                 {
                     bool success = UCVehicleManager.TrySwapPlayerInVehicle(ctx.Caller, (byte)seatIndex, true);
+                    L.LogDebug($"Swap vehicle status: {success}.");
                     if (success && target != null)
                     {
                         if (!isByRequest)
+                        {
+                            if (CooldownManager.IsLoaded)
+                                CooldownManager.StartCooldown(target, CooldownType.InteractVehicleSeats, 5f, vehicleTarget);
                             target.SendChat(T.VehicleOwnerTookSeatDM, vehicleTarget.asset, ctx.Caller, seatIndex + 1);
+                        }
                         else
                         {
                             target.SendChat(T.VehicleSwappedSeats, ctx.Caller);
@@ -347,13 +347,7 @@ public class VCommand : AsyncCommand
                     throw ctx.Reply(success ? T.VehicleEnterForceSwapped : T.VehicleEnterFailed, vehicleTarget.asset, seatIndex + 1);
                 }
 
-                // in different vehicle
-                VehicleManager.forceRemovePlayer(vehicleTarget, ctx.Caller.CSteamID);
-                if (!twice)
-                {
-                    twice = true;
-                    goto notInVehicle;
-                }
+                throw ctx.Reply(T.VehicleTooFarAway, vehicleTarget.asset);
             }
 
             // send swap request
@@ -369,21 +363,23 @@ public class VCommand : AsyncCommand
                 target.PendingVehicleSwapRequest = new VehicleSwapRequest(time, vehicleTarget, ctx.Caller, src);
                 target.SendChat(T.VehicleSentSwapRequestDm, ctx.Caller, fromSeat + 1, "/v <accept|deny>");
                 ctx.Reply(T.VehicleSwapRequestSent, target, seatIndex + 1, Mathf.CeilToInt(SwapRequestDuration));
+                CancellationToken token2 = token;
+                token2.CombineIfNeeded(src.Token);
                 try
                 {
-                    await Task.Delay(Mathf.RoundToInt(SwapRequestDuration * 1000f), token).ConfigureAwait(false);
+                    await Task.Delay(Mathf.RoundToInt(SwapRequestDuration * 1000f), token2).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException) when (src.IsCancellationRequested || token.IsCancellationRequested) { }
+                catch (OperationCanceledException) when (token2.IsCancellationRequested) { }
                 await UCWarfare.ToUpdate(token);
                 if (target.PendingVehicleSwapRequest.Vehicle == vehicleTarget)
                 {
                     bool? state = target.PendingVehicleSwapRequest.IsDenied;
                     target.PendingVehicleSwapRequest.RespondToken.Dispose();
                     target.PendingVehicleSwapRequest = default;
-                    if (state is false)
+                    if (state is true)
                         throw ctx.Reply(T.VehicleSwapRequestDeniedByTarget, target);
                     
-                    if (state is true)
+                    if (state is false)
                     {
                         ctx.Reply(T.VehicleSwapRequestAcceptedByTarget, target);
                         await Task.Delay(750, token).ConfigureAwait(false);
@@ -408,6 +404,7 @@ public class VCommand : AsyncCommand
         bool deny = ctx.MatchParameter(0, "deny", "no", "n");
         if (deny || ctx.MatchParameter(0, "accept", "yes", "y"))
         {
+            throw ctx.SendNotImplemented();
             if (ctx.Caller.PendingVehicleSwapRequest.Vehicle == null || ctx.Caller.PendingVehicleSwapRequest.IsDenied.HasValue)
                 throw ctx.Reply(T.VehicleSwapRequestNotSent);
 
@@ -417,13 +414,7 @@ public class VCommand : AsyncCommand
         }
 
         ctx.AssertPermissions(EAdminType.ADMIN_ON_DUTY);
-        if (ctx.MatchParameter(0, "-e"))
-        {
-            enter = true;
-            ++ctx.Offset;
-        }
-        else
-            enter = false;
+        enter = ctx.MatchFlag("e", "enter");
 
         ctx.AssertArgs(1, AdminSyntax);
 

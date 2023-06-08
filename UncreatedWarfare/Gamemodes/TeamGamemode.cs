@@ -381,7 +381,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
         UCWarfare.RunTask(async tkn =>
         {
             await UCWarfare.ToUpdate(tkn);
-            for (int i = 0; i < this.Singletons.Count; ++i)
+            for (int i = 0; i < Singletons.Count; ++i)
             {
                 IUncreatedSingleton singleton = Singletons[i];
                 if (singleton is IJoinedTeamListener l1)

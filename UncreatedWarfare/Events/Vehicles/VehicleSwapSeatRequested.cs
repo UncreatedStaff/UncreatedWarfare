@@ -18,6 +18,6 @@ public class VehicleSwapSeatRequested : BreakablePlayerEvent
         _vehicle = vehicle;
         if (!shouldAllow) Break();
         this.sourceSeat = sourceSeat;
-        this.finalSeat = resultSeat;
+        finalSeat = resultSeat;
     }
 }

@@ -43,9 +43,9 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
         public bool IsEligable(UCPlayer player) => true;
         public void Init(DestroyVehiclesQuest data)
         {
-            this.VehicleCount = data.VehicleCount.GetValue();
-            this.VehicleType = data.VehicleType.GetValueIntl();
-            this.VehicleIDs = data.VehicleIDs.GetValue();
+            VehicleCount = data.VehicleCount.GetValue();
+            VehicleType = data.VehicleType.GetValueIntl();
+            VehicleIDs = data.VehicleIDs.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -145,7 +145,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
     }
 }
 
-[QuestData(Quests.QuestType.DriveDistance)]
+[QuestData(QuestType.DriveDistance)]
 public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, DriveDistanceQuest.State, DriveDistanceQuest>
 {
     public DynamicIntegerValue Amount;
@@ -181,9 +181,9 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
         public bool IsEligable(UCPlayer player) => true;
         public void Init(DriveDistanceQuest data)
         {
-            this.Amount = data.Amount.GetValue();
-            this.Vehicles = data.Vehicles.GetValue();
-            this.VehicleTypes = data.VehicleType.GetValueIntl();
+            Amount = data.Amount.GetValue();
+            Vehicles = data.Vehicles.GetValue();
+            VehicleTypes = data.VehicleType.GetValueIntl();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -273,7 +273,7 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
         }
     }
 }
-[QuestData(Quests.QuestType.TransportPlayers)]
+[QuestData(QuestType.TransportPlayers)]
 public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker, TransportPlayersQuest.State, TransportPlayersQuest>
 {
     public DynamicIntegerValue Amount;
@@ -309,9 +309,9 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
         public bool IsEligable(UCPlayer player) => true;
         public void Init(TransportPlayersQuest data)
         {
-            this.Amount = data.Amount.GetValue();
-            this.Vehicles = data.Vehicles.GetValue();
-            this.VehicleTypes = data.VehicleType.GetValue();
+            Amount = data.Amount.GetValue();
+            Vehicles = data.Vehicles.GetValue();
+            VehicleTypes = data.VehicleType.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Warfare.Events;
@@ -499,6 +500,23 @@ internal static class Localization
 
         e.LocalizationArgs = args;
         EventDispatcher.InvokeOnPlayerDied(e);
+
+        if (e.WasEffectiveKill && e.Killer is { PendingCheaterDeathBan: false } &&
+            Util.IsSuspiciousDeath(e.Killer.Player, e.Cause, e.PrimaryAsset, e.SecondaryItem, e.Limb,
+                e.KillDistance, e.WasEffectiveKill, e.WasSuicide, e.WasTeamkill))
+        {
+            e.Killer.PendingCheaterDeathBan = true;
+            UCWarfare.I.StartCoroutine(BanInRandomTime(e.Killer.Steam64));
+        }
+    }
+
+    private static IEnumerator<WaitForSecondsRealtime> BanInRandomTime(ulong steam64)
+    {
+        DateTimeOffset timestamp = DateTimeOffset.UtcNow;
+        L.Log("Auto ban by anticheat: " + steam64.ToString(Data.AdminLocale) + ".", ConsoleColor.Cyan);
+        yield return new WaitForSecondsRealtime(UnityEngine.Random.Range(50f, 80f));
+        UCWarfare.RunTask(() => OffenseManager.BanPlayerAsync(steam64, 1ul, "Autoban by anti-cheat.", -1, timestamp, CancellationToken.None),
+            ctx: "Ban " + steam64 + " for suspicious kill.");
     }
     private static void Log(bool tk, string msg, PlayerDied e)
     {
@@ -901,12 +919,12 @@ public class DeathCause : IJsonReadWrite, IEquatable<DeathCause>, ICloneable
     }
     public DeathCause(EDeathCause cause)
     {
-        this.Cause = cause;
+        Cause = cause;
     }
     public DeathCause(EDeathCause cause, DeathTranslation translation) : this(cause, new DeathTranslation[] { translation }) { }
     public DeathCause(EDeathCause cause, DeathTranslation[] translations) : this(cause)
     {
-        this.Translations = translations;
+        Translations = translations;
     }
     public void ReadJson(ref Utf8JsonReader reader)
     {
@@ -1056,8 +1074,8 @@ public readonly struct DeathTranslation
     public readonly string Value;
     public DeathTranslation(DeathFlags flags, string value)
     {
-        this.Flags = flags;
-        this.Value = value;
+        Flags = flags;
+        Value = value;
     }
 }
 

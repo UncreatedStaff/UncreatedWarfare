@@ -185,6 +185,8 @@ public sealed class CommandStructure
                     return;
                 }
             }
+
+            bool anyFlags = false;
             for (int i = 0; i < paramters.Length; ++i)
             {
                 CommandParameter p = paramters[i];
@@ -192,25 +194,40 @@ public sealed class CommandStructure
                 if (string.IsNullOrEmpty(flag) || p.Permission.HasValue && !ctx.HasPermission(p.Permission.Value))
                     continue;
                 bool has = ctx.MatchFlag(flag!);
-                if (has)
+                if (!has && p.Aliases is { Length: > 0 })
+                    has = ctx.MatchFlag(p.Aliases);
+                if (anyFlags)
+                    builder.Append(", ");
+                if (!has)
                     builder.Append('[');
                 if (flag![0] != '-')
                     builder.Append('-');
-                if (ctx.MatchParameter(0, flag[0] == '-' ? flag : ("-" + flag)))
+                if (has)
                     desc = p.GetDescription(ctx.Language);
                 builder.Append(flag);
-                builder.Append(": ").Append(p.Name).Append(", ");
+                builder.Append(": ").Append(p.Name);
+                if (!has)
+                    builder.Append(']');
+                anyFlags = true;
             }
 
             // is end
             bool allIsOptional = paramters.All(x => x.IsOptional);
+            bool any = false;
             for (int i = 0; i < paramters.Length; ++i)
             {
                 CommandParameter p = paramters[i];
                 if (!string.IsNullOrEmpty(p.FlagName))
                     continue;
-                if (i == 0)
+                if (p.Permission.HasValue && !ctx.HasPermission(p.Permission.Value))
+                    continue;
+                if (!any)
+                {
+                    any = true;
+                    if (anyFlags)
+                        builder.Append(' ');
                     builder.Append(allIsOptional ? '[' : '<');
+                }
                 else
                     builder.Append('|');
 
@@ -296,13 +313,13 @@ public sealed class CommandStructure
                     if (colors)
                         builder.Append("</color></b>");
                 }
-                if (i == paramters.Length - 1)
-                    builder.Append(p.IsOptional ? ']' : '>');
-                if (paramters.Length == 1 && string.IsNullOrEmpty(paramters[0].FlagName) && builder.Length < Chat.MaxMessageSize / 2)
-                {
-                    builder.Append(' ');
-                    FormatParameters(p.Parameters, builder, ctx, out _, colors);
-                }
+            }
+            if (any)
+                builder.Append(allIsOptional ? ']' : '>');
+            if (paramters.Length == 1 && string.IsNullOrEmpty(paramters[0].FlagName) && builder.Length < Chat.MaxMessageSize / 2)
+            {
+                builder.Append(' ');
+                FormatParameters(paramters[0].Parameters, builder, ctx, out _, colors);
             }
         }
         finally

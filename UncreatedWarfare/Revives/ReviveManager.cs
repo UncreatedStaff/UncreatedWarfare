@@ -716,7 +716,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             yield return new WaitForSeconds(time);
             TellStanceNoDelay(stance);
             //L.Log("Checked stance of " + Player.Player.channel.owner.playerID.playerName + " to " + stance.ToString() + ".", ConsoleColor.DarkRed);
-            this._stance = null;
+            _stance = null;
         }
         public void TellStandDelayed(float time = 0.5f)
         {
@@ -771,7 +771,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 #endif
             if (Data.Is(out IRevives g))
             {
-                this.RevivePlayer(g, false);
+                RevivePlayer(g, false);
                 if (!isDead)
                 {
                     DamagePlayerParameters parameters = g.ReviveManager._injuredPlayers[_player.Player.channel.owner.playerID.steamID.m_SteamID].Parameters;
@@ -791,7 +791,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         public readonly float Start;
         public DownedPlayerData(DamagePlayerParameters parameters)
         {
-            this.Parameters = parameters;
+            Parameters = parameters;
             Start = Time.realtimeSinceStartup;
         }
     }

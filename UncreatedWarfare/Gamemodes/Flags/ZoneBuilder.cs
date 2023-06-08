@@ -84,7 +84,7 @@ public class ZoneBuilder
     {
         set
         {
-            this.WithRadius(value);
+            WithRadius(value);
         }
     }
     /// <summary>Sets the zone type to <see cref="RectZone"/> and sets the size of the rectangle to <see langword="value"/>: (<see cref="Vector2.x"/>, <see cref="Vector2.y"/>).</summary>
@@ -92,7 +92,7 @@ public class ZoneBuilder
     {
         set
         {
-            this.WithRectSize(value.x, value.y);
+            WithRectSize(value.x, value.y);
         }
     }
     /// <summary>Sets the zone type to <see cref="RectZone"/> and sets the size of the rectangle to value: (<see langword="value"/>.x, <see langword="value"/>.z).</summary>
@@ -100,7 +100,7 @@ public class ZoneBuilder
     {
         set
         {
-            this.WithRectSize(value.x, value.z);
+            WithRectSize(value.x, value.z);
         }
     }
     /// <summary>Sets the zone type to <see cref="PolygonZone"/> and sets the corners of the rectangle to <see langword="value"/>.</summary>
@@ -108,7 +108,7 @@ public class ZoneBuilder
     {
         set
         {
-            this.WithPoints(value);
+            WithPoints(value);
         }
     }
     internal ZoneType ZoneType = ZoneType.Invalid;
@@ -133,98 +133,98 @@ public class ZoneBuilder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithID(int id)
     {
-        this.Id = id;
+        Id = id;
         return this;
     }
     /// <summary>Set the name.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithName(string name)
     {
-        this.Name = name;
+        Name = name;
         return this;
     }
     /// <summary>Set the name and short name.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithName(string name, string shortName)
     {
-        this.Name = name;
-        this.ShortName = shortName;
+        Name = name;
+        ShortName = shortName;
         return this;
     }
     /// <summary>Set the center position, required.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithPosition(float x, float z)
     {
-        this.CenterX = x;
-        this.CenterZ = z;
+        CenterX = x;
+        CenterZ = z;
         return this;
     }
     /// <summary>Set the center position, required.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithPosition(Vector2 position)
     {
-        this.CenterX = position.x;
-        this.CenterZ = position.y;
+        CenterX = position.x;
+        CenterZ = position.y;
         return this;
     }
     /// <summary>Set the center position, required.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithPosition(Vector3 position)
     {
-        this.CenterX = position.x;
-        this.CenterZ = position.z;
+        CenterX = position.x;
+        CenterZ = position.z;
         return this;
     }
     /// <summary>Set the spawn position, required.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithSpawn(float x, float z)
     {
-        this.SpawnX = x;
-        this.SpawnZ = z;
+        SpawnX = x;
+        SpawnZ = z;
         return this;
     }
     /// <summary>Set the spawn position, required.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithSpawn(Vector2 position)
     {
-        this.SpawnX = position.x;
-        this.SpawnZ = position.y;
+        SpawnX = position.x;
+        SpawnZ = position.y;
         return this;
     }
     /// <summary>Set the spawn position, required.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithSpawn(Vector3 position)
     {
-        this.SpawnX = position.x;
-        this.SpawnZ = position.z;
+        SpawnX = position.x;
+        SpawnZ = position.z;
         return this;
     }
     /// <summary>Already default, tells the deserializer to convert the coordinates from pixel coordinates on the Map.png image.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder FromMapCoordinates()
     {
-        this.UseMapCoordinates = true;
+        UseMapCoordinates = true;
         return this;
     }
     /// <summary>Already default, tells the deserializer to leave the coordinates as-is.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder FromWorldCoordinates()
     {
-        this.UseMapCoordinates = false;
+        UseMapCoordinates = false;
         return this;
     }
     /// <summary>Default <see cref="float.NaN"/>, sets a lower limit to the Y of the zone.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithMinHeight(float minHeight)
     {
-        this.MinHeight = minHeight;
+        MinHeight = minHeight;
         return this;
     }
     /// <summary>Default <see cref="float.NaN"/>, sets an upper limit to the Y of the zone.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithMaxHeight(float maxHeight)
     {
-        this.MaxHeight = maxHeight;
+        MaxHeight = maxHeight;
         return this;
     }
     /// <summary>Removes the lower limit to the Y of the zone.</summary>
@@ -238,48 +238,48 @@ public class ZoneBuilder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ZoneBuilder WithUseCase(ZoneUseCase useCase)
     {
-        this.UseCase = useCase;
+        UseCase = useCase;
         return this;
     }
 
     /// <summary>Sets the zone type to <see cref="CircleZone"/> and sets the radius to <paramref name="radius"/>.</summary>
     public ZoneBuilder WithRadius(float radius)
     {
-        this.ZoneType = ZoneType.Circle;
-        this.ZoneData.Radius = radius;
+        ZoneType = ZoneType.Circle;
+        ZoneData.Radius = radius;
         return this;
     }
 
     /// <summary>Sets the zone type to <see cref="RectZone"/> and sets the size of the rectangle to (<paramref name="sizeX"/>, <paramref name="sizeZ"/>).</summary>
     public ZoneBuilder WithRectSize(float sizeX, float sizeZ)
     {
-        this.ZoneType = ZoneType.Rectangle;
-        this.ZoneData.SizeX = sizeX;
-        this.ZoneData.SizeZ = sizeZ;
+        ZoneType = ZoneType.Rectangle;
+        ZoneData.SizeX = sizeX;
+        ZoneData.SizeZ = sizeZ;
         return this;
     }
 
     /// <summary>Sets the zone type to <see cref="PolygonZone"/> and sets the corners of the rectangle to <paramref name="corners"/>.</summary>
     public ZoneBuilder WithPoints(params Vector2[] corners)
     {
-        this.ZoneType = ZoneType.Polygon;
+        ZoneType = ZoneType.Polygon;
         SpawnX = ZoneData.X;
         SpawnZ = ZoneData.Z;
-        this.ZoneData.Points = corners;
+        ZoneData.Points = corners;
         return this;
     }
 
     /// <summary>Declare flags that are adjacent to each other for custom flag pathing.</summary>
     public ZoneBuilder WithAdjacencies(params AdjacentFlagData[] adjacencies)
     {
-        this.Adjacencies = adjacencies;
+        Adjacencies = adjacencies;
         return this;
     }
 
     /// <summary>Declare grid objects to be used as electrical components.</summary>
     public ZoneBuilder WithGridObjects(params GridObject[] gridObjects)
     {
-        this.GridObjects = gridObjects;
+        GridObjects = gridObjects;
         return this;
     }
 

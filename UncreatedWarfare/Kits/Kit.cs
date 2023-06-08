@@ -1417,13 +1417,13 @@ public class PageItem : IItemJar, IItem, IKitItem
     
     public PageItem(Guid item, byte x, byte y, byte rotation, byte[] state, byte amount, Page page)
     {
-        this.Item = item;
-        this.X = x;
-        this.Y = y;
-        this.Rotation = rotation;
-        this.Page = page;
-        this.Amount = amount;
-        this.State = state;
+        Item = item;
+        X = x;
+        Y = y;
+        Rotation = rotation;
+        Page = page;
+        Amount = amount;
+        State = state;
     }
     public PageItem(PageItem copy)
     {
@@ -1615,9 +1615,9 @@ public class ClothingItem : IClothingJar, IBaseItem, IKitItem
     
     public ClothingItem(Guid id, ClothingType type, byte[] state)
     {
-        this.Item = id;
-        this.Type = type;
-        this.State = state ?? Array.Empty<byte>();
+        Item = id;
+        Type = type;
+        State = state ?? Array.Empty<byte>();
     }
 
     public ClothingItem(ClothingItem copy)

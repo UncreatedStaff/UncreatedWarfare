@@ -179,8 +179,8 @@ internal static class TraitSigns
                 Destroy(this);
             else
             {
-                this.Data = d;
-                this._drop = drop;
+                Data = d;
+                _drop = drop;
                 if (Data.Team is 1 or 2)
                 {
                     _team = Data.Team;

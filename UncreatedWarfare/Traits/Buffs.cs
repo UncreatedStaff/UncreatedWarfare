@@ -28,12 +28,12 @@ public abstract class Buff : Trait, IBuff
     protected virtual void Reactivate()
     {
         StartEffect(false);
-        L.LogDebug("Buff reactivated: " + this.Data.TypeName);
+        L.LogDebug("Buff reactivated: " + Data.TypeName);
     }
     protected virtual void Deactivate()
     {
         ClearEffect(false);
-        L.LogDebug("Buff deactivated: " + this.Data.TypeName);
+        L.LogDebug("Buff deactivated: " + Data.TypeName);
     }
     protected virtual void StartEffect(bool onStart)
     {

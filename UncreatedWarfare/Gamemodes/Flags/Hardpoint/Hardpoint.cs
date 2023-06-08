@@ -356,7 +356,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         if (_objIndex < 0 || _objIndex >= FlagRotation.Count || State != State.Active)
             return;
 
-        Flag f = this.Objective;
+        Flag f = Objective;
         CheckFlagForPlayerChanges(f);
         UpdateObjectiveState();
         if (EnableAMC && EveryXSeconds(Config.HardpointFlagTickSeconds))

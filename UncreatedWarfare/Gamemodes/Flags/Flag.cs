@@ -297,25 +297,25 @@ public class Flag : IDisposable, IObjective
     }
     public Flag(SqlItem<Zone> zone, IFlagRotation manager)
     {
-        this.Manager = manager;
+        Manager = manager;
         Zone? z = zone.Item;
         if (z is null)
             throw new ArgumentNullException(nameof(zone));
-        this._id = z.PrimaryKey;
-        this._x = z.Spawn.x;
-        this._y = z.Spawn3D.y;
-        this._z = z.Spawn.y;
-        this._position2d = new Vector2(_x, _z);
-        this._position = new Vector3(_x, _y, _z);
-        this._name = z.Name;
-        this._shortName = string.IsNullOrEmpty(z.ShortName) ? _name : z.ShortName!;
-        this._color = UCWarfare.GetColorHex("default");
-        this._owner = 0;
+        _id = z.PrimaryKey;
+        _x = z.Spawn.x;
+        _y = z.Spawn3D.y;
+        _z = z.Spawn.y;
+        _position2d = new Vector2(_x, _z);
+        _position = new Vector3(_x, _y, _z);
+        _name = z.Name;
+        _shortName = string.IsNullOrEmpty(z.ShortName) ? _name : z.ShortName!;
+        _color = UCWarfare.GetColorHex("default");
+        _owner = 0;
         PlayersOnFlag = new List<UCPlayer>(48);
         PlayersOnFlagTeam1 = new List<UCPlayer>(24);
         PlayersOnFlagTeam2 = new List<UCPlayer>(24);
-        this.ZoneData = zone;
-        this.Adjacencies = z.Data.Adjacencies;
+        ZoneData = zone;
+        Adjacencies = z.Data.Adjacencies;
     }
     public bool IsFriendly(SteamPlayer player) => IsFriendly(player.player.quests.groupID.m_SteamID);
     public bool IsFriendly(Player player) => IsFriendly(player.quests.groupID.m_SteamID);
@@ -558,7 +558,7 @@ public class Flag : IDisposable, IObjective
             else if (IsAnObj)
             {
                 // invoke points updated method to show contested.
-                this.LastDeltaPoints = 0;
+                LastDeltaPoints = 0;
                 OnPointsChanged?.Invoke(_points, _points, this);
             }
 

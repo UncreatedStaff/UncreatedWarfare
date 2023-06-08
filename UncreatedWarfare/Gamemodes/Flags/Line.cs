@@ -21,22 +21,22 @@ public readonly struct Line
     /// </summary>
     public Line(in Vector2 pt1, in Vector2 pt2)
     {
-        this.Point1 = pt1;
-        this.Point2 = pt2;
-        this.Slope = (pt1.y - pt2.y) / (pt1.x - pt2.x);
-        this.Intercept = -1 * (Slope * pt1.x - pt1.y);
-        this.Length = Vector2.Distance(pt1, pt2);
+        Point1 = pt1;
+        Point2 = pt2;
+        Slope = (pt1.y - pt2.y) / (pt1.x - pt2.x);
+        Intercept = -1 * (Slope * pt1.x - pt1.y);
+        Length = Vector2.Distance(pt1, pt2);
     }
     /// <summary>
     /// Create a line from two end points (order not important).
     /// </summary>
     public Line(float p1X, float p1Z, float p2X, float p2Z)
     {
-        this.Point1 = new Vector2(p1X, p1Z);
-        this.Point2 = new Vector2(p2X, p2Z);
-        this.Slope = (p1Z - p2Z) / (p1X - p2X);
-        this.Intercept = -1 * (Slope * p1X - p1Z);
-        this.Length = Vector2.Distance(this.Point1, this.Point2);
+        Point1 = new Vector2(p1X, p1Z);
+        Point2 = new Vector2(p2X, p2Z);
+        Slope = (p1Z - p2Z) / (p1X - p2X);
+        Intercept = -1 * (Slope * p1X - p1Z);
+        Length = Vector2.Distance(Point1, Point2);
     }
     /// <summary>
     /// Round to the closest spacing that can fit an exact number of points.

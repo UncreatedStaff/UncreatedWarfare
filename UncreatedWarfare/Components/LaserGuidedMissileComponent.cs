@@ -40,15 +40,15 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        this._projectile = projectile;
-        this._firer = firer;
-        this._maxTurnDegrees = responsiveness;
-        this._projectileSpeed = projectileSpeed;
-        this._aquisitionRange = aquisitionRange;
-        this._armingDistance = armingDistance;
-        this._fullGuidanceDelay = fullGuidanceDelay;
-        this._guiderDistance = 30;
-        this._turnMultiplier = 0;
+        _projectile = projectile;
+        _firer = firer;
+        _maxTurnDegrees = responsiveness;
+        _projectileSpeed = projectileSpeed;
+        _aquisitionRange = aquisitionRange;
+        _armingDistance = armingDistance;
+        _fullGuidanceDelay = fullGuidanceDelay;
+        _guiderDistance = 30;
+        _turnMultiplier = 0;
 
         _count = 0;
 

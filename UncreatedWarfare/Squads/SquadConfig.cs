@@ -87,9 +87,9 @@ public struct ClassConfig
     public JsonAssetReference<EffectAsset> SquadLeaderMarkerEffect;
     public ClassConfig(Class @class, char icon, JsonAssetReference<EffectAsset> markerEffect, JsonAssetReference<EffectAsset> squadLeaderMarkerEffect)
     {
-        this.Class = @class;
-        this.Icon = icon;
-        this.MarkerEffect = markerEffect;
-        this.SquadLeaderMarkerEffect = squadLeaderMarkerEffect ?? markerEffect;
+        Class = @class;
+        Icon = icon;
+        MarkerEffect = markerEffect;
+        SquadLeaderMarkerEffect = squadLeaderMarkerEffect ?? markerEffect;
     }
 }

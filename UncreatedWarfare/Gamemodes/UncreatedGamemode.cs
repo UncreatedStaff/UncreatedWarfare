@@ -113,16 +113,16 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public CancellationToken UnloadToken => _tokenSrc == null ? CancellationToken.None : _tokenSrc.Token;
     protected Gamemode(string name, float eventLoopSpeed)
     {
-        this.Name = name;
-        this._eventLoopSpeed = eventLoopSpeed;
-        this._useEventLoop = eventLoopSpeed > 0;
-        this.State = State.Loading;
+        Name = name;
+        _eventLoopSpeed = eventLoopSpeed;
+        _useEventLoop = eventLoopSpeed > 0;
+        State = State.Loading;
         OnStateUpdated?.Invoke();
     }
     public void SetTiming(float newSpeed)
     {
-        this._eventLoopSpeed = newSpeed;
-        this._useEventLoop = newSpeed > 0;
+        _eventLoopSpeed = newSpeed;
+        _useEventLoop = newSpeed > 0;
     }
     public void AdvanceDelays(float seconds)
     {
@@ -136,18 +136,18 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         _tokenSrc = new CancellationTokenSource();
         token.CombineIfNeeded(UnloadToken);
         await UCWarfare.ToUpdate(token);
-        if (!this.isActiveAndEnabled)
+        if (!isActiveAndEnabled)
             throw new Exception("Gamemode object has been destroyed!");
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking(Name + " Load Sequence");
 #endif
-        if (this._singletons is null)
+        if (_singletons is null)
         {
-            this._singletons = new List<IUncreatedSingleton>(16);
-            this._singletonsRl = _singletons.AsReadOnly();
+            _singletons = new List<IUncreatedSingleton>(16);
+            _singletonsRl = _singletons.AsReadOnly();
         }
         else
-            this._singletons.Clear();
+            _singletons.Clear();
         _hasOnReadyRan = false;
         _wasLevelLoadedOnStart = Level.isLoaded;
         _isPreLoading = true;
@@ -169,7 +169,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await UCWarfare.ToUpdate(token);
             ThreadUtil.assertIsGameThread();
         }
-        Type[] interfaces = this.GetType().GetInterfaces();
+        Type[] interfaces = GetType().GetInterfaces();
         for (int i = 0; i < interfaces.Length; i++)
         {
             Type intx = interfaces[i];
@@ -640,7 +640,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         {
             token.CombineIfNeeded(UnloadToken);
             ThreadUtil.assertIsGameThread();
-            this.State = State.Finished;
+            State = State.Finished;
             OnStateUpdated?.Invoke();
             L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
             await InvokeSingletonEvent<IDeclareWinListener, IDeclareWinListenerAsync>
@@ -870,7 +870,12 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             if (!onLoad)
             {
                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                    PlayerManager.OnlinePlayers[i].Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+                {
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    pl.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+                    if (pl.Player.quests.isMarkerPlaced)
+                        pl.Player.quests.replicateSetMarker(false, Vector3.zero, string.Empty);
+                }
                 if (UCPlayer.LoadingUI.IsValid)
                     UCPlayer.LoadingUI.ClearFromAllPlayers();
             }

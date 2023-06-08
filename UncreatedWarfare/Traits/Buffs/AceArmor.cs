@@ -221,8 +221,8 @@ public class AceArmor : Buff
         public AceArmor Trait;
         public AceBoost(string icon, float multiplier, float refundMultiplier, UCPlayer player, AceArmor owner) : base(icon, player)
         {
-            this._multiplier = multiplier;
-            this._refundMultiplier = refundMultiplier;
+            _multiplier = multiplier;
+            _refundMultiplier = refundMultiplier;
             Trait = owner;
         }
         float IXPBoostBuff.Multiplier => Trait != null && Trait.IsActivated ? _multiplier : 1f;

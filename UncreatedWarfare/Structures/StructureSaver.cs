@@ -598,7 +598,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
     {
         if (drop == null || drop.model == null)
             throw new ArgumentNullException(nameof(drop));
-        this.AssertLoadedIntl();
+        AssertLoadedIntl();
 
         uint id = drop.instanceID;
         bool status = true;
@@ -606,7 +606,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         await WriteWaitAsync(token).ConfigureAwait(false);
         try
         {
-            for (int i = 0; i < this.Items.Count; ++i)
+            for (int i = 0; i < Items.Count; ++i)
             {
                 SqlItem<SavedStructure> str = Items[i];
                 if (str.Item != null && str.Item.InstanceID == id && str.Item.ItemGuid == drop.asset.GUID)
@@ -646,7 +646,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
     {
         if (drop == null || drop.model == null)
             throw new ArgumentNullException(nameof(drop));
-        this.AssertLoadedIntl();
+        AssertLoadedIntl();
 
         uint id = drop.instanceID;
         bool status = true;

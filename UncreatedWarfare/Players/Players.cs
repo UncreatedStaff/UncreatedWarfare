@@ -21,35 +21,35 @@ public struct PlayerNames : IPlayer
 
     public PlayerNames(SteamPlayerID player)
     {
-        this.PlayerName = player.playerName;
-        this.CharacterName = player.characterName;
-        this.NickName = player.nickName;
-        this.Steam64 = player.steamID.m_SteamID;
+        PlayerName = player.playerName;
+        CharacterName = player.characterName;
+        NickName = player.nickName;
+        Steam64 = player.steamID.m_SteamID;
         WasFound = true;
     }
     public PlayerNames(ulong player)
     {
         string ts = player.ToString();
-        this.PlayerName = ts;
-        this.CharacterName = ts;
-        this.NickName = ts;
-        this.Steam64 = player;
+        PlayerName = ts;
+        CharacterName = ts;
+        NickName = ts;
+        Steam64 = player;
         WasFound = true;
     }
     public PlayerNames(SteamPlayer player)
     {
-        this.PlayerName = player.playerID.playerName;
-        this.CharacterName = player.playerID.characterName;
-        this.NickName = player.playerID.nickName;
-        this.Steam64 = player.playerID.steamID.m_SteamID;
+        PlayerName = player.playerID.playerName;
+        CharacterName = player.playerID.characterName;
+        NickName = player.playerID.nickName;
+        Steam64 = player.playerID.steamID.m_SteamID;
         WasFound = true;
     }
     public PlayerNames(Player player)
     {
-        this.PlayerName = player.channel.owner.playerID.playerName;
-        this.CharacterName = player.channel.owner.playerID.characterName;
-        this.NickName = player.channel.owner.playerID.nickName;
-        this.Steam64 = player.channel.owner.playerID.steamID.m_SteamID;
+        PlayerName = player.channel.owner.playerID.playerName;
+        CharacterName = player.channel.owner.playerID.characterName;
+        NickName = player.channel.owner.playerID.nickName;
+        Steam64 = player.channel.owner.playerID.steamID.m_SteamID;
         WasFound = true;
     }
     public static void Write(ByteWriter writer, PlayerNames obj)
@@ -70,7 +70,7 @@ public struct PlayerNames : IPlayer
     public override string ToString() => PlayerName;
     public static bool operator ==(PlayerNames left, PlayerNames right) => left.Steam64 == right.Steam64;
     public static bool operator !=(PlayerNames left, PlayerNames right) => left.Steam64 != right.Steam64;
-    public override bool Equals(object obj) => obj is PlayerNames pn && this.Steam64 == pn.Steam64;
+    public override bool Equals(object obj) => obj is PlayerNames pn && Steam64 == pn.Steam64;
     public override int GetHashCode() => Steam64.GetHashCode();
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags) => new OfflinePlayer(in this).Translate(language, format, target, culture, ref flags);
@@ -80,7 +80,7 @@ public sealed class UCPlayerEvents : IDisposable
     public UCPlayer Player { get; private set; }
     public UCPlayerEvents(UCPlayer player)
     {
-        this.Player = player;
+        Player = player;
         Player.Player.inventory.onDropItemRequested += OnDropItemRequested;
         Player.Player.inventory.onInventoryRemoved += OnItemRemoved;
     }
@@ -203,7 +203,7 @@ public sealed class UCPlayerKeys : IDisposable
         if (_first || !_anySubs)
         {
             for (int i = 0; i < KeyCount; ++i)
-                this._lastKeys[i] = keys[i];
+                _lastKeys[i] = keys[i];
             _first = false;
         }
         else
@@ -213,7 +213,7 @@ public sealed class UCPlayerKeys : IDisposable
                 bool st = keys[i];
                 if (EventMask[i])
                 {
-                    bool ost = this._lastKeys[i];
+                    bool ost = _lastKeys[i];
                     if (st == ost) continue;
                     if (st)
                     {
@@ -225,7 +225,7 @@ public sealed class UCPlayerKeys : IDisposable
                         EventDispatcher.OnKeyUp(Player, (PlayerKey)i, Time.realtimeSinceStartup - _keyDownTimes[i], UpEvents[i]);
                     }
                 }
-                this._lastKeys[i] = st;
+                _lastKeys[i] = st;
             }
         }
     }

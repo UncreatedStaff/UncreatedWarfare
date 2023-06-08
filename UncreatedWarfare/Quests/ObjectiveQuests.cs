@@ -31,7 +31,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
         public bool IsEligable(UCPlayer player) => true;
         public void Init(CaptureObjectivesQuest data)
         {
-            this.ObjectiveCount = data.ObjectiveCount.GetValue();
+            ObjectiveCount = data.ObjectiveCount.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -124,9 +124,9 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
         public bool IsEligable(UCPlayer player) => true;
         public void Init(XPInGamemodeQuest data)
         {
-            this.XPCount = data.XPCount.GetValue();
-            this.Gamemode = data.Gamemode.GetValueIntl();
-            this.GameCount = data.NumberOfGames.GetValue();
+            XPCount = data.XPCount.GetValue();
+            Gamemode = data.Gamemode.GetValueIntl();
+            GameCount = data.NumberOfGames.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -236,7 +236,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
         public IDynamicValue<int>.IChoice FlagValue => UseCount;
         public void Init(RallyUseQuest data)
         {
-            this.UseCount = data.UseCount.GetValue();
+            UseCount = data.UseCount.GetValue();
         }
         public bool IsEligable(UCPlayer player) => true;
 
@@ -318,8 +318,8 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
         public IDynamicValue<int>.IChoice FlagValue => Wins;
         public void Init(WinGamemodeQuest data)
         {
-            this.Gamemode = data.Gamemode.GetValueIntl();
-            this.Wins = data.WinCount.GetValue();
+            Gamemode = data.Gamemode.GetValueIntl();
+            Wins = data.WinCount.GetValue();
         }
         public bool IsEligable(UCPlayer player) => true;
 
@@ -419,7 +419,7 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
         public IDynamicValue<int>.IChoice FlagValue => Neutralizations;
         public void Init(NeutralizeFlagsQuest data)
         {
-            this.Neutralizations = data.Neutralizations.GetValue();
+            Neutralizations = data.Neutralizations.GetValue();
         }
         public bool IsEligable(UCPlayer player) => true;
 

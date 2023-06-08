@@ -3,8 +3,10 @@ using SDG.Unturned;
 using System.Collections.Generic;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -306,26 +308,56 @@ public class ZoneCommand : Command
         }
 
         Vector2 pos;
+        float yaw = ctx.Caller.Player.transform.rotation.eulerAngles.y;
         GridLocation location = default;
+        IDeployable? deployable = null;
+        LocationDevkitNode? loc = null;
         if (zone == null)
         {
             if (GridLocation.TryParse(zname, out location))
             {
                 pos = location.Center;
             }
+            else if (Data.Singletons.GetSingleton<FOBManager>() != null && FOBManager.TryFindFOB(zname, ctx.Caller.GetTeam(), out deployable))
+            {
+                pos = deployable.SpawnPosition;
+                yaw = deployable.Yaw;
+            }
+            else if (F.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes(), loc => loc.locationName, loc => loc.locationName.Length, zname) is { } location2)
+            {
+                pos = location2.transform.position;
+                yaw = location2.transform.rotation.eulerAngles.y;
+                loc = location2;
+            }
             else throw ctx.Reply(T.ZoneNoResultsName);
         }
-        else pos = zone.Center;
-
-
-        if (Physics.Raycast(new Ray(new Vector3(pos.x, Level.HEIGHT, pos.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+        else
         {
-            ctx.Caller.Player.teleportToLocationUnsafe(hit.point, 0);
+            pos = zone.Center;
+            if (zone == TeamManager.Team1Main)
+                yaw = TeamManager.Team1SpawnAngle;
+            else if (zone == TeamManager.Team2Main)
+                yaw = TeamManager.Team2SpawnAngle;
+            else if (zone == TeamManager.LobbyZone)
+                yaw = TeamManager.LobbySpawnAngle;
+        }
+
+        if (deployable != null)
+        {
+            Deployment.ForceDeploy(ctx.Caller, deployable, false, false);
+            ctx.Reply(T.DeploySuccess, deployable);
+            ctx.LogAction(ActionLogType.Teleport, deployable.Translate(L.Default, ctx.Caller.GetTeam(), FOB.FormatLocationName));
+        }
+        else if (Physics.Raycast(new Ray(new Vector3(pos.x, Level.HEIGHT, pos.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+        {
+            ctx.Caller.Player.teleportToLocationUnsafe(hit.point, yaw);
             if (zone != null)
                 ctx.Reply(T.ZoneGoSuccess, zone);
+            else if (loc != null)
+                ctx.Reply(T.ZoneGoSuccessRaw, loc.locationName);
             else
                 ctx.Reply(T.ZoneGoSuccessGridLocation, location);
-            ctx.LogAction(ActionLogType.Teleport, zone == null ? location.ToString() : zone.Name.ToUpper());
+            ctx.LogAction(ActionLogType.Teleport, loc == null ? (zone == null ? location.ToString() : zone.Name.ToUpper()) : loc.locationName);
         }
         else
         {

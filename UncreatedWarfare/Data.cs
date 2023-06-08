@@ -137,6 +137,7 @@ public static class Data
     internal static ClientStaticMethod SendMultipleBarricades;
     internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual;
     internal static ClientStaticMethod<uint, byte, byte>? SendSwapVehicleSeats;
+    internal static ClientStaticMethod<uint, byte, CSteamID>? SendEnterVehicle;
     internal static ClientInstanceMethod? SendInventory;
     internal static ClientInstanceMethod? SendScreenshotDestination;
     internal static SingletonManager Singletons;
@@ -316,6 +317,7 @@ public static class Data
         SendWearMask = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearMask");
         SendWearGlasses = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearGlasses");
         SendSwapVehicleSeats = Util.GetRPC<ClientStaticMethod<uint, byte, byte>, VehicleManager>("SendSwapVehicleSeats");
+        SendEnterVehicle = Util.GetRPC<ClientStaticMethod<uint, byte, CSteamID>, VehicleManager>("SendEnterVehicle");
         SendScreenshotDestination = Util.GetRPC<ClientInstanceMethod, Player>("SendScreenshotDestination");
         UseFastKits = true;
         if (SendWearShirt is null || SendWearPants is null || SendWearHat is null || SendWearBackpack is null || SendWearVest is null || SendWearMask is null || SendWearGlasses is null || SendInventory is null)

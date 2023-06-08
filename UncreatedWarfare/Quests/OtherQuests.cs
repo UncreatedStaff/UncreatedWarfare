@@ -35,8 +35,8 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
         public IDynamicValue<int>.IChoice FlagValue => DynamicIntegerValue.One;
         public void Init(DiscordKeySetQuest data)
         {
-            this.ItemDisplayName = data.ItemDisplayName.GetValue();
-            this.ItemKey = data.ItemKey.GetValue();
+            ItemDisplayName = data.ItemDisplayName.GetValue();
+            ItemKey = data.ItemKey.GetValue();
         }
         public bool IsEligable(UCPlayer player) => true;
 

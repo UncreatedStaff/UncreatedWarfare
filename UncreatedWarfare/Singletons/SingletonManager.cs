@@ -842,7 +842,7 @@ public class SingletonUnloadedException : Exception
     public override string ToString()
     {
         if (singletonType is not null && Message is not null)
-            return this.Message + "\n" + StackTrace;
+            return Message + "\n" + StackTrace;
         else
             return base.ToString();
     }

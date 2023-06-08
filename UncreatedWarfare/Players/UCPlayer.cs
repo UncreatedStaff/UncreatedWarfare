@@ -73,6 +73,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public volatile bool IsDownloadingXP;
     public volatile bool IsDownloadingKitData;
     public volatile bool Loading;
+    public bool PendingCheaterDeathBan;
     public bool Loaded;
     public int SuppliesUnloaded;
     public int LifeCounter;
@@ -949,8 +950,8 @@ public class UCPlayerLocale // todo implement
         Player = player;
         if (Localization.TryGetLangData(language, out string langName, out IFormatProvider format))
         {
-            this.Format = format;
-            this.Language = langName;
+            Format = format;
+            Language = langName;
         }
     }
     public UCPlayerLocale(UCPlayer player) : this(player, L.Default) { }
@@ -958,8 +959,8 @@ public class UCPlayerLocale // todo implement
     {
         if (Localization.TryGetLangData(language, out string langName, out IFormatProvider format))
         {
-            this.Format = format;
-            this.Language = langName;
+            Format = format;
+            Language = langName;
         }
     }
 }
@@ -991,11 +992,11 @@ public class PlayerSave
     public bool WasNitroBoosting;
     public PlayerSave(ulong s64)
     {
-        this.Steam64 = s64;
+        Steam64 = s64;
     }
     public PlayerSave(UCPlayer player)
     {
-        this.Steam64 = player.Steam64;
+        Steam64 = player.Steam64;
         Apply(player);
     }
     internal void Apply(UCPlayer player)

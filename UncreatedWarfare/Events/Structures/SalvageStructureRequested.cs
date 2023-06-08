@@ -15,8 +15,8 @@ public sealed class SalvageStructureRequested : SalvageRequested
     internal SalvageStructureRequested(UCPlayer instigator, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save)
         : base(instigator, region, x, y, structure.instanceID)
     {
-        this._drop = structure;
-        this._data = structureData;
+        _drop = structure;
+        _data = structureData;
         Transform = structure.model;
         StructureSave = save;
         ListSqlConfig<SavedStructure>? m = save?.Manager;

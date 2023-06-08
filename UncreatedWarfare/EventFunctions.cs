@@ -1414,9 +1414,9 @@ public static class EventFunctions
 
             EAdminType type = ucplayer.PermissionLevel;
             if ((type & EAdminType.ADMIN_ON_DUTY) == EAdminType.ADMIN_ON_DUTY)
-                Commands.DutyCommand.AdminOnToOff(ucplayer);
+                DutyCommand.AdminOnToOff(ucplayer);
             else if ((type & EAdminType.TRIAL_ADMIN_ON_DUTY) == EAdminType.TRIAL_ADMIN_ON_DUTY)
-                Commands.DutyCommand.InternOnToOff(ucplayer);
+                DutyCommand.InternOnToOff(ucplayer);
 
             StatsCoroutine.RemovePlayer(ucplayer.Steam64);
             StatsManager.DeregisterPlayer(ucplayer.Steam64);

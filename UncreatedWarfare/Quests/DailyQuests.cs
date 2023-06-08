@@ -835,8 +835,8 @@ public class DailyQuestTracker
         {
             throw new ArgumentOutOfRangeException(nameof(trackers), "Trackers should be the same length as amount of daily quests.");
         }
-        this.Player = player;
-        this.Trackers = trackers;
+        Player = player;
+        Trackers = trackers;
     }
 }
 public struct DailyQuestSave

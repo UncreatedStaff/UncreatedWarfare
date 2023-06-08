@@ -66,11 +66,11 @@ public class GridObject : IJsonReadWrite, IListItem
                 string prop = reader.GetString()!;
                 if (!reader.Read()) return;
                 if (string.Equals(prop, "flag_id", StringComparison.OrdinalIgnoreCase))
-                    this.PrimaryKey = reader.GetInt32();
+                    PrimaryKey = reader.GetInt32();
                 else if (string.Equals(prop, "instance_id", StringComparison.OrdinalIgnoreCase))
-                    this.ObjectInstanceId = reader.GetUInt32();
+                    ObjectInstanceId = reader.GetUInt32();
                 else if (string.Equals(prop, "object_guid", StringComparison.OrdinalIgnoreCase))
-                    this.Guid = reader.GetGuid();
+                    Guid = reader.GetGuid();
                 else if (string.Equals(prop, "position", StringComparison.OrdinalIgnoreCase))
                 {
                     Vector3 pos = JsonSerializer.Deserialize<Vector3>(ref reader, JsonEx.condensedSerializerSettings);

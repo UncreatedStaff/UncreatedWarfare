@@ -48,6 +48,7 @@ public static partial class Patches
                             if (!VehicleSpawner.TryGetFirstNonDriverSeat(__instance, out seat))
                             {
                                 __result = false;
+                                L.LogDebug("No driver seat.");
                                 return;
                             }
                         }
@@ -56,6 +57,7 @@ public static partial class Patches
                             if (VehicleSpawner.CountCrewmen(__instance, data) >= 2)
                             {
                                 __result = false;
+                                L.LogDebug("Too many crewmen.");
                                 return;
                             }
                         }
@@ -79,6 +81,7 @@ public static partial class Patches
                                             else
                                                 enterer.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
 
+                                            L.LogDebug("Not owner.");
                                             __result = false;
                                         }
                                     }
@@ -89,6 +92,7 @@ public static partial class Patches
                                 if (!VehicleSpawner.TryGetFirstNonCrewSeat(__instance, data, out seat))
                                 {
                                     enterer.SendChat(T.VehicleNoPassengerSeats);
+                                    L.LogDebug("No passenger seats.");
                                     __result = false;
                                 }
                             }
@@ -114,6 +118,7 @@ public static partial class Patches
                                         else
                                             enterer.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
 
+                                        L.LogDebug("Not owner 2.");
                                         __result = false;
                                     }
                                 }
@@ -127,6 +132,7 @@ public static partial class Patches
                     c.LastDriverTime = Time.realtimeSinceStartup;
                 }
             }
+            L.LogDebug($"tryAddPlayer: Seat: {seat}, result: {__result}.");
         }
     }
 }

@@ -530,7 +530,7 @@ public static class L
     }
     internal static void RunCommand(string command)
     {
-        L.Log(command, ConsoleColor.White);
+        Log(command, ConsoleColor.White);
         bool shouldExecuteCommand = true;
         try
         {
@@ -538,12 +538,12 @@ public static class L
         }
         catch (Exception ex)
         {
-            L.LogError("Plugin threw an exception from onCommandWindowInputted:");
-            L.LogError(ex);
+            LogError("Plugin threw an exception from onCommandWindowInputted:");
+            LogError(ex);
         }
         if (!shouldExecuteCommand || Commander.execute(Steamworks.CSteamID.Nil, command))
             return;
-        L.LogError($"Unable to match \"{command}\" with any built-in commands");
+        LogError($"Unable to match \"{command}\" with any built-in commands");
     }
     internal static bool IsRequestingLog = false;
     private static void AddLog(string log)

@@ -28,11 +28,11 @@ internal class GuidedMissileComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        this._projectile = projectile;
+        _projectile = projectile;
         //this._firer = firer;
-        this._maxTurnDegrees = responsiveness;
-        this._projectileSpeed = projectileSpeed;
-        this._cutoffDistance = cutoffDistance;
+        _maxTurnDegrees = responsiveness;
+        _projectileSpeed = projectileSpeed;
+        _cutoffDistance = cutoffDistance;
 
         _guiderDistance = 30; // offset the distance of the guider position so that it will always be 30m in front of the actual projectile
         // this also means you shouldn't make your projectile's hitbox long if you're still using it for client-side effects

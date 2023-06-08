@@ -172,9 +172,9 @@ public class UAV : MonoBehaviour, IBuff
             if (Gamemode.Config.GeneralUAVStartDelay > 0f)
             {
                 if (approver.Steam64 != requester.Steam64 && approver.IsOnline)
-                    approver.SendChat(T.UAVDeployedTimeMarkerCommander, loc, Gamemode.Config.GeneralUAVStartDelay, requester);
+                    approver.SendChat(T.UAVDeployedTimeMarkerCommander, loc, Mathf.CeilToInt(Gamemode.Config.GeneralUAVStartDelay), requester);
                 if (requester.IsOnline)
-                    requester.SendChat(T.UAVDeployedTimeMarker, loc, Gamemode.Config.GeneralUAVStartDelay);
+                    requester.SendChat(T.UAVDeployedTimeMarker, loc, Mathf.CeilToInt(Gamemode.Config.GeneralUAVStartDelay));
             }
             else
             {
@@ -189,9 +189,9 @@ public class UAV : MonoBehaviour, IBuff
             if (Gamemode.Config.GeneralUAVStartDelay > 0f)
             {
                 if (approver.Steam64 != requester.Steam64 && approver.IsOnline)
-                    approver.SendChat(T.UAVDeployedTimeSelfCommander, Gamemode.Config.GeneralUAVStartDelay, new GridLocation(pos), requester);
+                    approver.SendChat(T.UAVDeployedTimeSelfCommander, Mathf.CeilToInt(Gamemode.Config.GeneralUAVStartDelay), new GridLocation(pos), requester);
                 if (requester.IsOnline)
-                    requester.SendChat(T.UAVDeployedTimeSelf, Gamemode.Config.GeneralUAVStartDelay);
+                    requester.SendChat(T.UAVDeployedTimeSelf, Mathf.CeilToInt(Gamemode.Config.GeneralUAVStartDelay));
             }
             else
             {
@@ -217,13 +217,13 @@ public class UAV : MonoBehaviour, IBuff
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        this._requester = requester;
-        this._approver = approver;
+        _requester = requester;
+        _approver = approver;
         _startTime = Time.realtimeSinceStartup;
-        this._isMarker = isMarker;
+        _isMarker = isMarker;
         _deployPosition = loc;
         _deployGl = new GridLocation(_deployPosition);
-        this._team = team;
+        _team = team;
         if (team == 1)
         {
             if (_team1UAV != null)
@@ -254,7 +254,7 @@ public class UAV : MonoBehaviour, IBuff
             EffectManager.triggerEffect(p with { position = points[i] });
         }
 #endif
-        this._inited = true;
+        _inited = true;
     }
 
     [SuppressMessage(Data.SuppressCategory, Data.SuppressID)]
@@ -296,7 +296,7 @@ public class UAV : MonoBehaviour, IBuff
     [UsedImplicitly]
     private void Update()
     {
-        if (!this._inited) return;
+        if (!_inited) return;
         float time = Time.realtimeSinceStartup;
         if (!_buffAdded)
         {

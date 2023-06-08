@@ -36,8 +36,8 @@ public class BarricadeDestroyed : EventState, IBuildableDestroyedEvent
     {
         this.instigator = instigator;
         this.instigatorId = instigatorId;
-        this.drop = barricade;
-        this.data = barricadeData;
+        drop = barricade;
+        data = barricadeData;
         this.region = region;
         this.x = x;
         this.y = y;

@@ -5,7 +5,7 @@ using Uncreated.Json;
 
 namespace Uncreated.Warfare.Quests.Types;
 
-[QuestData(Quests.QuestType.RevivePlayers)]
+[QuestData(QuestType.RevivePlayers)]
 public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, RevivePlayersQuest.State, RevivePlayersQuest>
 {
     public DynamicIntegerValue ReviveCount;
@@ -27,7 +27,7 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
         public IDynamicValue<int>.IChoice FlagValue => ReviveCount;
         public void Init(RevivePlayersQuest data)
         {
-            this.ReviveCount = data.ReviveCount.GetValue();
+            ReviveCount = data.ReviveCount.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {

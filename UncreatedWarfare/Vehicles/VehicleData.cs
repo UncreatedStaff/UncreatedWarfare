@@ -531,9 +531,9 @@ public struct Delay : IJsonReadWrite
     public float Value;
     public Delay(DelayType type, float value, string? gamemode = null)
     {
-        this.Type = type;
-        this.Value = value;
-        this.Gamemode = gamemode;
+        Type = type;
+        Value = value;
+        Gamemode = gamemode;
     }
     public override string ToString() =>
         $"{Type} Delay, {(string.IsNullOrEmpty(Gamemode) ? "any" : Gamemode)} " +
@@ -686,7 +686,7 @@ public struct Delay : IJsonReadWrite
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        delay = Delay.Nil;
+        delay = Nil;
         string? gm = Data.Gamemode?.Name;
         if (delays == null || delays.Length == 0) return false;
         bool anyVal = false;

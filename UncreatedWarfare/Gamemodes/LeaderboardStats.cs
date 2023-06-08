@@ -117,8 +117,8 @@ public abstract class Leaderboard<TStats, TStatTracker> : MonoBehaviour, ILeader
     public event VoidDelegate? OnLeaderboardExpired;
     public void StartLeaderboard(ulong winner, TStatTracker tracker)
     {
-        this.Winner = winner;
-        this.Tracker = tracker;
+        Winner = winner;
+        Tracker = tracker;
         Calculate();
         SendLeaderboard();
         SecondsLeft = Gamemode.Config.GeneralLeaderboardTime;
@@ -537,7 +537,7 @@ public readonly struct LongestShot
     public readonly ulong Team;
     public LongestShot(ulong player, float distance, Guid gun, ulong team, PlayerNames name)
     {
-        this.IsValue = true;
+        IsValue = true;
         Player = player;
         Distance = distance;
         Gun = gun;

@@ -241,11 +241,11 @@ public readonly struct GridLocation : ITranslationArgument
         }
         else
             ySqr = Mathf.FloorToInt((y - bdr) / sqrSize);
-        this.X = (byte)(xSqr / SUBGRID_AMOUNT);
-        this.Y = (byte)(ySqr / SUBGRID_AMOUNT);
+        X = (byte)(xSqr / SUBGRID_AMOUNT);
+        Y = (byte)(ySqr / SUBGRID_AMOUNT);
         if (!isOut)
-            this.Index = (byte)((xSqr % SUBGRID_AMOUNT) + ((SUBGRID_AMOUNT - 1) - (ySqr % SUBGRID_AMOUNT)) * SUBGRID_AMOUNT + 1);
-        else this.Index = 0;
+            Index = (byte)((xSqr % SUBGRID_AMOUNT) + ((SUBGRID_AMOUNT - 1) - (ySqr % SUBGRID_AMOUNT)) * SUBGRID_AMOUNT + 1);
+        else Index = 0;
 
         _toStringCache = ToString(X, Y, Index);
     }

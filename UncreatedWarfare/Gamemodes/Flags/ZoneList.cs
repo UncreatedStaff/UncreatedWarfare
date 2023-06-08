@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.SQL;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
@@ -127,15 +128,15 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
 
         checkPredefs:
         if (term.Equals("lobby", StringComparison.OrdinalIgnoreCase) || term.Equals("spawn", StringComparison.OrdinalIgnoreCase))
-            return FindProxyNoLock(Teams.TeamManager.LobbyZone.PrimaryKey);
+            return FindProxyNoLock(TeamManager.LobbyZone.PrimaryKey);
         if (term.Equals("t1main", StringComparison.OrdinalIgnoreCase) || term.Equals("t1", StringComparison.OrdinalIgnoreCase))
-            return FindProxyNoLock(Teams.TeamManager.Team1Main);
+            return FindProxyNoLock(TeamManager.Team1Main);
         if (term.Equals("t2main", StringComparison.OrdinalIgnoreCase) || term.Equals("t2", StringComparison.OrdinalIgnoreCase))
-            return FindProxyNoLock(Teams.TeamManager.Team2Main);
+            return FindProxyNoLock(TeamManager.Team2Main);
         if (term.Equals("t1amc", StringComparison.OrdinalIgnoreCase))
-            return FindProxyNoLock(Teams.TeamManager.Team1AMC);
+            return FindProxyNoLock(TeamManager.Team1AMC);
         if (term.Equals("t2amc", StringComparison.OrdinalIgnoreCase))
-            return FindProxyNoLock(Teams.TeamManager.Team2AMC);
+            return FindProxyNoLock(TeamManager.Team2AMC);
         Flag? fl = null;
         if (term.Equals("obj1", StringComparison.OrdinalIgnoreCase))
         {
@@ -682,16 +683,16 @@ public sealed class ZoneList : ListSqlSingleton<Zone>, IUIListener
                 WriteWait();
                 try
                 {
-                    for (int i = 0; i < this.Items.Count; ++i)
+                    for (int i = 0; i < Items.Count; ++i)
                     {
-                        Zone? item = this.Items[i].Item;
+                        Zone? item = Items[i].Item;
                         if (item == null)
                             continue;
                         for (int j = 0; j < provider.Zones.Count; ++j)
                         {
                             if (equalityMatch(provider.Zones[j], item) == 0)
                             {
-                                provider.Zones[j].PrimaryKey = this.Items[i].PrimaryKey;
+                                provider.Zones[j].PrimaryKey = Items[i].PrimaryKey;
                                 break;
                             }
                         }

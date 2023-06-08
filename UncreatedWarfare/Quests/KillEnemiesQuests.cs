@@ -39,7 +39,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public void Init(KillEnemiesQuest data)
         {
-            this.KillThreshold = data.KillCount.GetValue(); // get value picks a random value if its a range or set, otherwise returns the constant.
+            KillThreshold = data.KillCount.GetValue(); // get value picks a random value if its a range or set, otherwise returns the constant.
         }
         public bool IsEligable(UCPlayer player) => true;
 
@@ -130,8 +130,8 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesRangeQuest data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
-            this.Range = data.Range.GetValue();
+            KillThreshold = data.KillCount.GetValue();
+            Range = data.Range.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -218,8 +218,8 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestWeapon data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
-            this.Weapon = data.Weapon.GetValue();
+            KillThreshold = data.KillCount.GetValue();
+            Weapon = data.Weapon.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -319,9 +319,9 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesRangeQuestWeapon data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
-            this.Weapon = data.Weapon.GetValue();
-            this.Range = data.Range.GetValue();
+            KillThreshold = data.KillCount.GetValue();
+            Weapon = data.Weapon.GetValue();
+            Range = data.Range.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -419,8 +419,8 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestKit data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
-            this.Kit = data.Kits.GetValue();
+            KillThreshold = data.KillCount.GetValue();
+            Kit = data.Kits.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -515,9 +515,9 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestKitRange data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
-            this.Kit = data.Kits.GetValue();
-            this.Range = data.Range.GetValue();
+            KillThreshold = data.KillCount.GetValue();
+            Kit = data.Kits.GetValue();
+            Range = data.Range.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -614,8 +614,8 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestKitClass data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
-            this.Class = data.Class.GetValueIntl();
+            KillThreshold = data.KillCount.GetValue();
+            Class = data.Class.GetValueIntl();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -713,9 +713,9 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestKitClassRange data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
-            this.Class = data.Class.GetValueIntl();
-            this.Range = data.Range.GetValue();
+            KillThreshold = data.KillCount.GetValue();
+            Class = data.Class.GetValueIntl();
+            Range = data.Range.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -812,8 +812,8 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestWeaponClass data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
-            this.Class = data.Class.GetValueIntl();
+            KillThreshold = data.KillCount.GetValue();
+            Class = data.Class.GetValueIntl();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -903,8 +903,8 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestBranch data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
-            this.Branch = data.Branch.GetValueIntl();
+            KillThreshold = data.KillCount.GetValue();
+            Branch = data.Branch.GetValueIntl();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -993,8 +993,8 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestTurret data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
-            this.Weapon = data.Turrets.GetValue();
+            KillThreshold = data.KillCount.GetValue();
+            Weapon = data.Turrets.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -1099,8 +1099,8 @@ public class KillEnemiesQuestEmplacement : BaseQuestData<KillEnemiesQuestEmplace
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestEmplacement data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
-            this.Weapon = data.Turrets.GetValue();
+            KillThreshold = data.KillCount.GetValue();
+            Weapon = data.Turrets.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -1202,7 +1202,7 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestSquad data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
+            KillThreshold = data.KillCount.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -1275,7 +1275,7 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestFullSquad data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
+            KillThreshold = data.KillCount.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -1348,7 +1348,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestDefense data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
+            KillThreshold = data.KillCount.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -1466,7 +1466,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillEnemiesQuestAttack data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
+            KillThreshold = data.KillCount.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -1584,7 +1584,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KingSlayerQuest data)
         {
-            this.KillThreshold = data.KillCount.GetValue();
+            KillThreshold = data.KillCount.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
@@ -1697,8 +1697,8 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
         public bool IsEligable(UCPlayer player) => true;
         public void Init(KillStreakQuest data)
         {
-            this.StreakCount = data.StreakCount.GetValue();
-            this.StreakLength = data.StreakLength.GetValue();
+            StreakCount = data.StreakCount.GetValue();
+            StreakLength = data.StreakLength.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {

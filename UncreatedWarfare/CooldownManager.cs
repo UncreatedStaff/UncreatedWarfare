@@ -240,5 +240,7 @@ public enum CooldownType
     [Translatable("Execute Command")]
     Command,
     [Translatable("Execute Command Portion")]
-    PortionCommand
+    PortionCommand,
+    [Translatable("Interact Vehicle Seats")]
+    InteractVehicleSeats
 }

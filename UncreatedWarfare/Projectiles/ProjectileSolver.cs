@@ -70,7 +70,7 @@ internal class ProjectileSolver : MonoBehaviour
                         GameObject obj = Instantiate(orig, obj2.transform.position, obj2.transform.rotation);
                         if (obj2.asset.useScale)
                             obj.transform.localScale = obj2.transform.localScale;
-                        Rigidbody rigidbody = this.transform.GetComponent<Rigidbody>();
+                        Rigidbody rigidbody = transform.GetComponent<Rigidbody>();
                         if (rigidbody != null)
                             Destroy(rigidbody);
 
@@ -227,15 +227,15 @@ internal class ProjectileSolver : MonoBehaviour
         public readonly float LaunchTime;
         public ProjectileData(GameObject obj, Vector3 origin, Vector3 direction, UseableGun gun, ItemMagazineAsset? ammunitionType, float launchTime, ProjectileLandingPointCalculated callback)
         {
-            this.Obj = obj;
-            this.Origin = origin;
-            this.Direction = direction;
-            this.Gun = gun;
-            this.Callback = callback;
-            this.LaunchTime = launchTime;
-            this.GunAsset = gun.equippedGunAsset;
-            this.AmmunitionType = ammunitionType;
-            this.MagazineForceMultiplier = ammunitionType != null ? ammunitionType.projectileLaunchForceMultiplier : 1f;
+            Obj = obj;
+            Origin = origin;
+            Direction = direction;
+            Gun = gun;
+            Callback = callback;
+            LaunchTime = launchTime;
+            GunAsset = gun.equippedGunAsset;
+            AmmunitionType = ammunitionType;
+            MagazineForceMultiplier = ammunitionType != null ? ammunitionType.projectileLaunchForceMultiplier : 1f;
         }
     }
 
@@ -256,7 +256,7 @@ internal class ProjectileSolver : MonoBehaviour
         {
             L.LogDebug("hit " + other.name);
 
-            if (this.IsExploded || other.isTrigger || this.IgnoreTransform != null && (other.transform == this.IgnoreTransform || other.transform.IsChildOf(this.IgnoreTransform)))
+            if (IsExploded || other.isTrigger || IgnoreTransform != null && (other.transform == IgnoreTransform || other.transform.IsChildOf(IgnoreTransform)))
                 return;
 
             IsExploded = true;

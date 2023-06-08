@@ -91,7 +91,7 @@ public abstract class BaseQuestData : ITranslationArgument
                 }
             }
 
-            this._rewardExpressions = _rewardTemp.ToArray();
+            _rewardExpressions = _rewardTemp.ToArray();
             _rewardTemp.Clear();
         }
     }
@@ -128,11 +128,11 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         public readonly IQuestReward[]? _rewards;
         public Preset(Guid key, TState state, IQuestReward[]? rewards, ulong team, ushort flag)
         {
-            this._key = key;
-            this._state = state;
-            this._team = team;
-            this._flag = flag;
-            this._rewards = rewards;
+            _key = key;
+            _state = state;
+            _team = team;
+            _flag = flag;
+            _rewards = rewards;
         }
         public Guid Key => _key;
         public IQuestState State => _state;
@@ -384,16 +384,16 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     public virtual short FlagValue => 0;
     public BaseQuestTracker(BaseQuestData data, UCPlayer? target, in IQuestState state, in IQuestPreset? preset)
     {
-        this.QuestData = data;
-        this.Preset = preset;
+        QuestData = data;
+        Preset = preset;
         if (preset is not null)
         {
-            this.PresetKey = preset.Key;
-            this.Rewards = preset.RewardOverrides ?? data.EvaluateRewards(in state);
+            PresetKey = preset.Key;
+            Rewards = preset.RewardOverrides ?? data.EvaluateRewards(in state);
         }
         else
-            this.Rewards = data.EvaluateRewards(in state);
-        this._player = target!;
+            Rewards = data.EvaluateRewards(in state);
+        _player = target!;
     }
     public virtual void Tick() { }
     protected virtual void Cleanup() { }

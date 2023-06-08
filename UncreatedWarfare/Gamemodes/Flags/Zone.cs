@@ -170,16 +170,16 @@ public abstract class Zone : IDeployable, IListItem
     /// <exception cref="InvalidOperationException">Tried to construct a zone before the level has loaded.</exception>
     internal Zone(in ZoneModel data)
     {
-        this.UseMapCoordinates = data.UseMapCoordinates;
+        UseMapCoordinates = data.UseMapCoordinates;
         if (UseMapCoordinates && !Level.isLoaded)
             throw new InvalidOperationException("Tried to construct a zone before the level has loaded.");
-        this.Data = data;
-        this.Type = data.ZoneType;
-        this.ShortName = data.ShortName;
-        this.Name = data.Name;
-        this.MinHeight = data.MinimumHeight;
-        this.MaxHeight = data.MaximumHeight;
-        this.PrimaryKey = data.Id < 0 ? PrimaryKey.NotAssigned : data.Id;
+        Data = data;
+        Type = data.ZoneType;
+        ShortName = data.ShortName;
+        Name = data.Name;
+        MinHeight = data.MinimumHeight;
+        MaxHeight = data.MaximumHeight;
+        PrimaryKey = data.Id < 0 ? PrimaryKey.NotAssigned : data.Id;
         if (data.UseMapCoordinates)
         {
             if (GridLocation.LegacyMapping)
@@ -191,18 +191,18 @@ public abstract class Zone : IDeployable, IListItem
             }
             else
             {
-                this._center = GridLocation.MapCoordsToWorldCoords(new Vector2(data.ZoneData.X, data.ZoneData.Z));
-                this.Center = new Vector2(_center.x, _center.z);
-                this._spawn = GridLocation.MapCoordsToWorldCoords(new Vector2(data.SpawnX, data.SpawnZ));
-                this.Spawn = new Vector2(_spawn.x, _spawn.z);
+                _center = GridLocation.MapCoordsToWorldCoords(new Vector2(data.ZoneData.X, data.ZoneData.Z));
+                Center = new Vector2(_center.x, _center.z);
+                _spawn = GridLocation.MapCoordsToWorldCoords(new Vector2(data.SpawnX, data.SpawnZ));
+                Spawn = new Vector2(_spawn.x, _spawn.z);
             }
         }
         else
         {
-            this._center = new Vector3(data.ZoneData.X, 0f, data.ZoneData.Z);
-            this.Center = new Vector2(_center.x, _center.z);
-            this._spawn = new Vector3(data.SpawnX, 0f, data.SpawnZ);
-            this.Spawn = new Vector2(_spawn.x, _spawn.z);
+            _center = new Vector3(data.ZoneData.X, 0f, data.ZoneData.Z);
+            Center = new Vector2(_center.x, _center.z);
+            _spawn = new Vector3(data.SpawnX, 0f, data.SpawnZ);
+            Spawn = new Vector2(_spawn.x, _spawn.z);
         }
     }
     /// <summary>Compares <see cref="Name"/></summary>

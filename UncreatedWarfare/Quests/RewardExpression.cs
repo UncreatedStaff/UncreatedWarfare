@@ -820,12 +820,12 @@ public sealed class RewardFieldAttribute : Attribute
 
     public RewardFieldAttribute(string nameOverride)
     {
-        this._name = nameOverride;
+        _name = nameOverride;
         _dvu = false;
     }
     public RewardFieldAttribute(bool disableVariableUsage)
     {
-        this._name = null;
+        _name = null;
         _dvu = disableVariableUsage;
     }
 

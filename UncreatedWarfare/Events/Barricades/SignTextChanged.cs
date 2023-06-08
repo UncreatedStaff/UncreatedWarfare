@@ -25,14 +25,14 @@ public class SignTextChanged : EventState
     public InteractableSign Sign { get; }
     internal SignTextChanged(UCPlayer? instigator, BarricadeDrop barricade, BarricadeRegion region, byte x, byte y, ushort plant, SqlItem<SavedStructure>? save) : base()
     {
-        this.Instigator = instigator;
-        this.Barricade = barricade;
+        Instigator = instigator;
+        Barricade = barricade;
         Sign = (InteractableSign)barricade.interactable;
-        this.ServersideData = barricade.GetServersideData();
-        this.Region = region;
-        this.RegionPosX = x;
-        this.RegionPosY = y;
-        this.VehicleRegionIndex = plant;
+        ServersideData = barricade.GetServersideData();
+        Region = region;
+        RegionPosX = x;
+        RegionPosY = y;
+        VehicleRegionIndex = plant;
         Save = save;
         ListSqlConfig<SavedStructure>? m = save?.Manager;
         if (m is not null)

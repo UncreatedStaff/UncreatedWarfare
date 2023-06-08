@@ -29,7 +29,7 @@ public class CommandWaiter : CustomYieldInstruction
         => new CommandWaitTask(player, commandType, timeoutMs);
     public CommandWaiter(UCPlayer player, string commandName, float timeout) : this(player, timeout)
     {
-        this.command = commandName;
+        command = commandName;
     }
     public CommandWaiter(UCPlayer player, Type commandType, float timeout) : this(player, timeout)
     {
@@ -121,7 +121,7 @@ public class CommandWaiter : CustomYieldInstruction
         {
             this.player = player;
             this.command = command;
-            this.cancel = new CancellationTokenSource(delayMs);
+            cancel = new CancellationTokenSource(delayMs);
             _awaiter = new CommandWaitTaskAwaiter(this);
             awaiters.Add(this);
             Task.Run(async () =>
@@ -134,8 +134,8 @@ public class CommandWaiter : CustomYieldInstruction
         public CommandWaitTask(UCPlayer player, Type type, int delayMs)
         {
             this.player = player;
-            this.commandType = type;
-            this.cancel = new CancellationTokenSource(delayMs);
+            commandType = type;
+            cancel = new CancellationTokenSource(delayMs);
             _awaiter = new CommandWaitTaskAwaiter(this);
             awaiters.Add(this);
             Task.Run(async () =>
@@ -149,7 +149,7 @@ public class CommandWaiter : CustomYieldInstruction
         public CommandWaitTaskAwaiter GetAwaiter() => _awaiter;
         public sealed class CommandWaitTaskAwaiter : INotifyCompletion
         {
-            public System.Action continuation;
+            public Action continuation;
             private readonly CommandWaitTask _task;
             public byte[] rtn;
             public bool IsCompleted => _isCompleted;
@@ -175,7 +175,7 @@ public class CommandWaiter : CustomYieldInstruction
                 continuation.Invoke();
                 _task.cancel.Dispose();
             }
-            public void OnCompleted(System.Action continuation)
+            public void OnCompleted(Action continuation)
             {
                 this.continuation = continuation;
             }

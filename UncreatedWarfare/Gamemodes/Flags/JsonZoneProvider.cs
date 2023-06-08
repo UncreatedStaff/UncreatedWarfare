@@ -18,14 +18,14 @@ public class JsonZoneProvider
 
     public JsonZoneProvider(FileInfo file, IEnumerable<Zone> zones)
     {
-        this._file = file;
-        this._zones = new List<Zone>(zones);
+        _file = file;
+        _zones = new List<Zone>(zones);
         Zones = _zones.AsReadOnly();
     }
     public JsonZoneProvider(FileInfo file)
     {
-        this._file = file;
-        this._zones = new List<Zone>();
+        _file = file;
+        _zones = new List<Zone>();
         Zones = _zones.AsReadOnly();
     }
     public void Reload()
@@ -120,8 +120,8 @@ public class JsonZoneProvider
                 if (!_file.Directory!.Exists)
                     _file.Directory.Create();
 
-                this._zones.Clear();
-                this._zones.AddRange(JSONMethods.DefaultZones.Select(x => x.GetZone()));
+                _zones.Clear();
+                _zones.AddRange(JSONMethods.DefaultZones.Select(x => x.GetZone()));
                 _file.Create()?.Close();
             }
 

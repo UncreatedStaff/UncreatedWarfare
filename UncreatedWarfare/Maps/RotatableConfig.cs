@@ -201,13 +201,13 @@ public class RotatableConfig<T> : IReadWrite, INotifyValueUpdate
             _isDefaulted = true;
         }
     }
-    private RotatableConfig(int current, RotatableConfig<T>.MapValue[] vals)
+    private RotatableConfig(int current, MapValue[] vals)
     {
         if (vals.Length > byte.MaxValue)
             throw new ArgumentException("You may not have more than 255 values!", nameof(vals));
         InitMain(current, vals);
     }
-    private void InitMain(int current, RotatableConfig<T>.MapValue[] vals)
+    private void InitMain(int current, MapValue[] vals)
     {
         _vals = vals;
         if (current == -1)
@@ -422,7 +422,7 @@ public class RotatableConfig<T> : IReadWrite, INotifyValueUpdate
     }
     public override int GetHashCode()
     {
-        return _isNull ? 0 : this.Value!.GetHashCode();
+        return _isNull ? 0 : Value!.GetHashCode();
     }
     public override string ToString()
     {
@@ -665,7 +665,7 @@ public class RotatableDefaults<T> : List<KeyValuePair<string, T>>
 {
     public void Add(string map, T value)
     {
-        this.Add(new KeyValuePair<string, T>(map, value));
+        Add(new KeyValuePair<string, T>(map, value));
     }
 }
 internal class RotatableConfigConverterFactory : JsonConverterFactory

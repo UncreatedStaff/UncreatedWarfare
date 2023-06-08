@@ -50,7 +50,7 @@ public class SpottedComponent : MonoBehaviour
 #endif
     public void Initialize(Spotted type, ulong ownerTeam)
     {
-        this._ownerTeam = ownerTeam;
+        _ownerTeam = ownerTeam;
         _vehicle = null;
         VehicleType = null;
 #if ENABLE_SPOTTED_BUFF

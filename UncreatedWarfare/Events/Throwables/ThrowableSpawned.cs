@@ -10,7 +10,7 @@ public class ThrowableSpawned : PlayerEvent
     public GameObject Object => _throwable;
     public ThrowableSpawned(UCPlayer player, ItemThrowableAsset asset, GameObject @object) : base(player)
     {
-        this._throwable = @object;
-        this._asset = asset;
+        _throwable = @object;
+        _asset = asset;
     }
 }

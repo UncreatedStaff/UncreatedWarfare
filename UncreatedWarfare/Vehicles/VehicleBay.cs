@@ -172,7 +172,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     /// <remarks>Thread Safe</remarks>
     public async Task AddRequestableVehicle(InteractableVehicle vehicle, CancellationToken token = default)
     {
-        this.AssertLoadedIntl();
+        AssertLoadedIntl();
         if (!UCWarfare.IsMainThread)
             await UCWarfare.ToUpdate();
 #if DEBUG
@@ -189,13 +189,13 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> RemoveRequestableVehicle(Guid vehicle, CancellationToken token = default)
     {
-        this.AssertLoadedIntl();
+        AssertLoadedIntl();
         if (!UCWarfare.IsMainThread)
             await UCWarfare.ToUpdate();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SqlItem<VehicleData>? data = await this.GetDataProxy(vehicle, token).ConfigureAwait(false);
+        SqlItem<VehicleData>? data = await GetDataProxy(vehicle, token).ConfigureAwait(false);
         if (data is not null)
         {
             await data.Delete(token).ConfigureAwait(false);

@@ -12,8 +12,8 @@ public abstract class NonTraitBuff : IBuff
     bool IBuff.Reserved => false;
     public NonTraitBuff(string icon, UCPlayer player)
     {
-        this._icon = icon;
-        this.StartTime = Time.realtimeSinceStartup;
-        this._player = player;
+        _icon = icon;
+        StartTime = Time.realtimeSinceStartup;
+        _player = player;
     }
 }
