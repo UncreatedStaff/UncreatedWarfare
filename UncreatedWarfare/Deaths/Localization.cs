@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using Uncreated.Framework;
@@ -515,7 +514,7 @@ internal static class Localization
         DateTimeOffset timestamp = DateTimeOffset.UtcNow;
         L.Log("Auto ban by anticheat: " + steam64.ToString(Data.AdminLocale) + ".", ConsoleColor.Cyan);
         yield return new WaitForSecondsRealtime(UnityEngine.Random.Range(50f, 80f));
-        UCWarfare.RunTask(() => OffenseManager.BanPlayerAsync(steam64, 1ul, "Autoban by anti-cheat.", -1, timestamp, CancellationToken.None),
+        UCWarfare.RunTask(() => OffenseManager.BanPlayerAsync(steam64, 1ul, $"Autoban by anti-cheat. Appeal at discord.gg/{UCWarfare.Config.DiscordInviteCode}.", -1, timestamp, CancellationToken.None),
             ctx: "Ban " + steam64 + " for suspicious kill.");
     }
     private static void Log(bool tk, string msg, PlayerDied e)
@@ -724,7 +723,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         rtn:
         int i = FindDeathCause(language, causes, ref args);
 
-        DeathCause cause = causes![i];
+        DeathCause cause = causes[i];
         string? val = Translate(language, cause, args);
         if (val is null)
         {

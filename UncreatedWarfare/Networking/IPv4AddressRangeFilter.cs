@@ -13,11 +13,7 @@ public sealed class IPv4AddressRangeFilter : IIPAddressFilter
     {
         Ranges = ranges;
     }
-    public bool IsFiltered(IPAddress ip)
-    {
-        byte[] ipv4 = ip.MapToIPv4().GetAddressBytes();
-        return IsFiltered(((uint)ipv4[0] << 24) | ((uint)ipv4[1] << 16) | ((uint)ipv4[2] << 8) | ipv4[3]);
-    }
+    public bool IsFiltered(IPAddress ip) => IsFiltered(OffenseManager.Pack(ip));
     public bool IsFiltered(uint ip)
     {
         IPv4Range[] ranges = Ranges;

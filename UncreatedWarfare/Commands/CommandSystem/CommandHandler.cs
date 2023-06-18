@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
 
@@ -530,7 +531,7 @@ public static class CommandHandler
         return false;
     }
 }
-public abstract class BaseCommandInteraction : Exception
+public abstract class BaseCommandInteraction : ControlException
 {
     public readonly IExecutableCommand? Command;
     public bool Responded { get; protected set; }

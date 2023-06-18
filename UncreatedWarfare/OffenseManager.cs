@@ -51,10 +51,19 @@ public static class OffenseManager
     private static readonly List<VehicleTeamkill> PendingVehicleTeamkills = new List<VehicleTeamkill>(8);
     private static readonly List<Unmute> PendingUnmutes = new List<Unmute>(8);
     private static readonly List<IPWhitelist> PendingIPWhitelists = new List<IPWhitelist>(8);
-    public static bool IsRemotePlay(IPAddress address)
+    public static IPAddress Unpack(uint address)
+    {
+        uint newAddr = address << 24 | ((address >> 8) & 0xFF) << 16 | ((address >> 16) & 0xFF) << 8 | (address >> 24);
+        return new IPAddress(newAddr);
+    }
+    public static uint Pack(IPAddress address)
     {
         byte[] ipv4 = address.MapToIPv4().GetAddressBytes();
-        return IsRemotePlay(((uint)ipv4[0] << 24) | ((uint)ipv4[1] << 16) | ((uint)ipv4[2] << 8) | ipv4[3]);
+        return ((uint)ipv4[0] << 24) | ((uint)ipv4[1] << 16) | ((uint)ipv4[2] << 8) | ipv4[3];
+    }
+    public static bool IsRemotePlay(IPAddress address)
+    {
+        return IsRemotePlay(Pack(address));
     }
     public static bool IsRemotePlay(uint address)
     {
@@ -70,8 +79,7 @@ public static class OffenseManager
     {
         foreach (IPAddress addr in addresses)
         {
-            byte[] ipv4 = addr.MapToIPv4().GetAddressBytes();
-            uint address = ((uint)ipv4[0] << 24) | ((uint)ipv4[1] << 16) | ((uint)ipv4[2] << 8) | ipv4[3];
+            uint address = Pack(addr);
             for (int i = 0; i < RemotePlayAddressFilters.Length; ++i)
             {
                 if (RemotePlayAddressFilters[i].IsFiltered(address))
@@ -166,6 +174,9 @@ public static class OffenseManager
     }
     private static async Task OnPlayerPending(PlayerPending e, CancellationToken token = default)
     {
+        if (e.PendingPlayer.playerID.GetHwids().Count() != 3)
+            throw e.Reject("Likely HWID spoofer.");
+
         List<uint> packs = new List<uint>(4);
         await Data.DatabaseManager.QueryAsync("SELECT `Packed` FROM `ip_addresses` WHERE `Steam64` = @0;", new object[] { e.Steam64 }, reader =>
         {

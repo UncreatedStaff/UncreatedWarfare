@@ -1897,6 +1897,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         if (!(await HasAccess(dequipKit, player, token)))
         {
             await GiveAccess(dequipKit, player, KitAccessType.Purchase, token).ConfigureAwait(false);
+            KitSync.OnAccessChanged(player);
             ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, fromPlayer);
         }
 
@@ -2016,6 +2017,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         
         await GiveAccess(kit, player, KitAccessType.Purchase, token).ConfigureAwait(false);
         ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + loadoutName + ", REASON: " + KitAccessType.Purchase, fromPlayer);
+        KitSync.OnAccessChanged(player);
         await UCWarfare.ToUpdate(token);
         if (UCPlayer.FromID(player) is { } pl)
             Signs.UpdateLoadoutSigns(pl);

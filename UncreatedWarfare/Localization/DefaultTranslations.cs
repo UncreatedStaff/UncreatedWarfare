@@ -1102,7 +1102,7 @@ internal static class T
     [TranslationData(SectionFOBs)]
     public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.UnityUI);
     [TranslationData(SectionFOBs)]
-    public static readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<color=#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <color=#e3c59a>{0}</color>", TranslationFlags.UnityUI, FormatUppercase);
+    public static readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<color=#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <color=#e3c59a>{0}</color></color>", TranslationFlags.UnityUI, FormatUppercase);
     [TranslationData(SectionFOBs)]
     public static readonly Translation CacheDiscoveredDefense  = new Translation("<#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT", TranslationFlags.UnityUI);
     [TranslationData(SectionFOBs)]

@@ -11,6 +11,7 @@ using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.SQL;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -851,6 +852,7 @@ public static class KitEx
                         ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
                                                                            (state ? (" GIVEN ACCESS TO " + kit + ", REASON: " + type) :
                                                                            (" DENIED ACCESS TO " + kit + ".")), admin);
+                        KitSync.OnAccessChanged(player);
                         UCPlayer? onlinePlayer = UCPlayer.FromID(player);
                         if (onlinePlayer != null && onlinePlayer.IsOnline)
                             KitManager.UpdateSigns(proxy.Item, onlinePlayer);
@@ -891,6 +893,7 @@ public static class KitEx
                         ActionLog.Add(ActionLogType.ChangeKitAccess, player.ToString(Data.AdminLocale) +
                             (state ? (" GIVEN ACCESS TO " + kit + ", REASON: " + type) :
                                 (" DENIED ACCESS TO " + kit + ".")), admin);
+                        KitSync.OnAccessChanged(player);
                         UCPlayer? onlinePlayer = UCPlayer.FromID(player);
                         if (onlinePlayer != null && onlinePlayer.IsOnline)
                             KitManager.UpdateSigns(proxy.Item, onlinePlayer);

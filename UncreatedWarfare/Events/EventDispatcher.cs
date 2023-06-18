@@ -1097,4 +1097,8 @@ public delegate void EventDelegate<in TState>(TState e) where TState : EventStat
 public delegate Task AsyncEventDelegate<in TState>(TState e, CancellationToken token = default) where TState : EventState;
 
 /// <summary>Meant purely to break execution.</summary>
-public class ControlException : Exception { }
+public class ControlException : Exception
+{
+    public ControlException() { }
+    public ControlException(string message) : base(message) { }
+}

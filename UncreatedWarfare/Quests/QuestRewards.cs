@@ -8,6 +8,7 @@ using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Sync;
 
 namespace Uncreated.Warfare.Quests;
 public static class QuestRewards
@@ -200,9 +201,12 @@ public class KitAccessReward : IQuestReward
 {
     public QuestRewardType Type { get; set; }
     public string KitId { get; private set; }
-    public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
+    public async Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
-        return string.IsNullOrEmpty(KitId) ? Task.CompletedTask : KitManager.GiveAccess(KitId, player, KitAccessType.QuestReward, token);
+        if (!string.IsNullOrEmpty(KitId))
+            await KitManager.GiveAccess(KitId, player, KitAccessType.QuestReward, token).ConfigureAwait(false);
+
+        KitSync.OnAccessChanged(player.Steam64);
     }
     public void Init(object value)
     {

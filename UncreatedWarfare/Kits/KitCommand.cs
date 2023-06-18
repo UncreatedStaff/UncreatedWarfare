@@ -13,6 +13,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -1102,6 +1103,7 @@ public sealed class KitCommand : AsyncCommand
                         return;
                     }
                     await KitManager.GiveAccess(proxy, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
+                    KitSync.OnAccessChanged(playerId);
                     ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " GIVEN ACCESS TO " + kitName + ", REASON: " + type);
 
                     await UCWarfare.ToUpdate();
@@ -1149,6 +1151,7 @@ public sealed class KitCommand : AsyncCommand
                     }
                     await KitManager.RemoveAccess(proxy, playerId, token).ConfigureAwait(false);
                     ctx.LogAction(ActionLogType.ChangeKitAccess, playerId.ToString(Data.AdminLocale) + " DENIED ACCESS TO " + kitName);
+                    KitSync.OnAccessChanged(playerId);
 
                     await UCWarfare.ToUpdate();
                     ctx.Reply(T.KitAccessRevoked, onlinePlayer as IPlayer ?? names, playerId, item);
@@ -1230,6 +1233,7 @@ public sealed class KitCommand : AsyncCommand
                     await UCWarfare.ToUpdate();
                     SqlItem<Kit> kit = await manager.AddOrUpdate(loadout, token).ConfigureAwait(false);
                     await KitManager.GiveAccess(kit, playerId, KitAccessType.Purchase, token).ConfigureAwait(false);
+                    KitSync.OnAccessChanged(playerId);
                     ctx.LogAction(ActionLogType.CreateKit, loadout.Id);
                     await UCWarfare.ToUpdate();
                     KitManager.UpdateSigns(loadout);
