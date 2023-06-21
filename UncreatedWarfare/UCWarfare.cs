@@ -264,6 +264,7 @@ public class UCWarfare : MonoBehaviour
         Solver = gameObject.AddComponent<Projectiles.ProjectileSolver>();
 
         Announcer = await Data.Singletons.LoadSingletonAsync<UCAnnouncer>(token: token);
+        await KitSync.Init();
         await ToUpdate(token);
 
         Data.ExtraPoints = JSONMethods.LoadExtraPoints();

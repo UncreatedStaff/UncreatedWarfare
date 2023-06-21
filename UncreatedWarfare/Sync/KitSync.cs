@@ -1,8 +1,6 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -18,19 +16,45 @@ public static class KitSync
     private static readonly List<int> PendingKits;
     private static readonly List<int> PendingKitDeletions;
     private static readonly List<ulong> PendingAccessChanges;
-    private static int _deleting = -1;
-    private static int _updating = -1;
+    private static readonly UCSemaphore Semaphore = new UCSemaphore();
+    private static volatile int _deleting = -1;
+    private static volatile int _updating = -1;
     private static int _version;
+#if DEBUG
+    private static void SemaphoreWaitCallback()
+    {
+        L.LogDebug("Waiting in KitSync semaphore.");
+    }
+    private static void SemaphoreReleaseCallback(int ct)
+    {
+        L.LogDebug("Released " + ct.ToString(Data.AdminLocale) + " in KitSync semaphore.");
+    }
+#endif
     static KitSync()
     {
         PendingKits = new List<int>(8);
         PendingKitDeletions = new List<int>(2);
         PendingAccessChanges = new List<ulong>(64);
-        UCWarfare.RunOnMainThread(ReadPendings);
+#if DEBUG
+        Semaphore.WaitCallback += SemaphoreWaitCallback;
+        Semaphore.ReleaseCallback += SemaphoreReleaseCallback;
+#endif
+    }
+    internal static async Task Init()
+    {
+        await Semaphore.WaitAsync();
+        try
+        {
+            await UCWarfare.ToUpdate();
+            ReadPendings();
+        }
+        finally
+        {
+            Semaphore.Release();
+        }
     }
     private static void ReadPendings()
     {
-        ThreadUtil.assertIsGameThread();
         if (File.Exists(Data.Paths.KitSync))
         {
             using FileStream stream = new FileStream(Data.Paths.KitSync, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -99,7 +123,6 @@ public static class KitSync
     }
     private static void SavePendings()
     {
-        ThreadUtil.assertIsGameThread();
         using FileStream stream = new FileStream(Data.Paths.KitSync, FileMode.Create, FileAccess.Write, FileShare.Read);
         using Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.condensedWriterOptions);
         writer.WriteStartObject();
@@ -130,64 +153,78 @@ public static class KitSync
     {
         if (_updating == kit.LastPrimaryKey.Key)
             return;
-        PendingKits.Add(kit.LastPrimaryKey);
-        if (!UCWarfare.CanUseNetCall)
-            return;
         Task.Run(async () =>
         {
-            if (!UCWarfare.CanUseNetCall)
-                return;
-            RequestResponse response = await NetCalls.MulticastKitUpdated.RequestAck(UCWarfare.I.NetClient!, kit.LastPrimaryKey);
-            if (response.Responded)
+            await Semaphore.WaitAsync();
+            try
             {
-                PendingKits.Remove(kit.LastPrimaryKey);
-                await UCWarfare.ToUpdate();
+                PendingKits.Add(kit.LastPrimaryKey);
+                if (!UCWarfare.CanUseNetCall)
+                    return;
+                RequestResponse response = await NetCalls.MulticastKitUpdated.RequestAck(UCWarfare.I.NetClient!, kit.LastPrimaryKey);
+                if (response.Responded)
+                    PendingKits.Remove(kit.LastPrimaryKey);
+                else
+                    L.LogWarning("Failed to send kit update to homebase.");
                 SavePendings();
             }
-            else
-                L.LogWarning("Failed to send kit update to homebase.");
+            finally
+            {
+                Semaphore.Release();
+            }
         });
     }
     public static void OnKitDeleted(PrimaryKey kit)
     {
         if (_deleting == kit.Key)
             return;
-        PendingKitDeletions.Add(kit);
         if (!UCWarfare.CanUseNetCall)
             return;
         Task.Run(async () =>
         {
-            if (!UCWarfare.CanUseNetCall)
-                return;
-            RequestResponse response = await NetCalls.MulticastKitDeleted.RequestAck(UCWarfare.I.NetClient!, kit);
-            if (response.Responded)
+            await Semaphore.WaitAsync();
+            try
             {
-                PendingKitDeletions.Remove(kit);
-                await UCWarfare.ToUpdate();
+                PendingKitDeletions.Add(kit);
+                if (!UCWarfare.CanUseNetCall)
+                    return;
+                RequestResponse response = await NetCalls.MulticastKitDeleted.RequestAck(UCWarfare.I.NetClient!, kit);
+                if (response.Responded)
+                    PendingKitDeletions.Remove(kit);
+                else
+                    L.LogWarning("Failed to send kit deletion to homebase.");
                 SavePendings();
             }
-            else
-                L.LogWarning("Failed to send kit deletion to homebase.");
+            finally
+            {
+                Semaphore.Release();
+            }
         });
     }
     public static void OnAccessChanged(ulong steamid)
     {
-        PendingAccessChanges.Add(steamid);
         if (!UCWarfare.CanUseNetCall)
             return;
         Task.Run(async () =>
         {
-            if (!UCWarfare.CanUseNetCall)
-                return;
-            RequestResponse response = await NetCalls.MulticastKitAccessChanged.RequestAck(UCWarfare.I.NetClient!, steamid);
-            if (response.Responded)
+            await Semaphore.WaitAsync();
+            try
             {
-                PendingAccessChanges.Remove(steamid);
+                PendingAccessChanges.Add(steamid);
+                if (!UCWarfare.CanUseNetCall)
+                    return;
+                RequestResponse response = await NetCalls.MulticastKitAccessChanged.RequestAck(UCWarfare.I.NetClient!, steamid);
+                if (response.Responded)
+                    PendingAccessChanges.Remove(steamid);
+                else
+                    L.LogWarning("Failed to send kit access change to homebase.");
                 await UCWarfare.ToUpdate();
                 SavePendings();
             }
-            else
-                L.LogWarning("Failed to send kit access change to homebase.");
+            finally
+            {
+                Semaphore.Release();
+            }
         });
     }
     public static void OnConnected()
@@ -195,81 +232,61 @@ public static class KitSync
         int v = ++_version;
         Task.Run(async () =>
         {
-            PendingKits.RemoveAll(x => PendingKitDeletions.Contains(x));
-            foreach (int update in PendingKits.ToList())
+            await Semaphore.WaitAsync();
+            try
             {
-                if (!UCWarfare.CanUseNetCall || v != _version)
-                    return;
-                RequestResponse response = await NetCalls.MulticastKitUpdated.RequestAck(UCWarfare.I.NetClient!, update);
-                if (response.Responded)
+                PendingKits.RemoveAll(x => PendingKitDeletions.Contains(x));
+                foreach (int update in PendingKits)
                 {
-                    PendingKits.Remove(update);
-                    await UCWarfare.ToUpdate();
-                    SavePendings();
+                    if (!UCWarfare.CanUseNetCall || v != _version)
+                        return;
+                    RequestResponse response = await NetCalls.MulticastKitUpdated.RequestAck(UCWarfare.I.NetClient!, update);
+                    if (response.Responded)
+                    {
+                        PendingKits.Remove(update);
+                        SavePendings();
+                    }
+                    else
+                        L.LogWarning("Failed to send kit update to homebase.");
                 }
-                else
-                    L.LogWarning("Failed to send kit update to homebase.");
+                foreach (int delete in PendingKitDeletions)
+                {
+                    if (!UCWarfare.CanUseNetCall || v != _version)
+                        return;
+                    RequestResponse response = await NetCalls.MulticastKitDeleted.RequestAck(UCWarfare.I.NetClient!, delete);
+                    if (response.Responded)
+                    {
+                        PendingKitDeletions.Remove(delete);
+                        SavePendings();
+                    }
+                    else
+                        L.LogWarning("Failed to send kit deletion to homebase.");
+                }
+                foreach (ulong access in PendingAccessChanges)
+                {
+                    if (!UCWarfare.CanUseNetCall || v != _version)
+                        return;
+                    RequestResponse response = await NetCalls.MulticastKitAccessChanged.RequestAck(UCWarfare.I.NetClient!, access);
+                    if (response.Responded)
+                    {
+                        PendingAccessChanges.Remove(access);
+                        SavePendings();
+                    }
+                    else
+                        L.LogWarning("Failed to send kit access change to homebase.");
+                }
             }
-            foreach (int delete in PendingKitDeletions.ToList())
+            finally
             {
-                if (!UCWarfare.CanUseNetCall || v != _version)
-                    return;
-                RequestResponse response = await NetCalls.MulticastKitDeleted.RequestAck(UCWarfare.I.NetClient!, delete);
-                if (response.Responded)
-                {
-                    PendingKitDeletions.Remove(delete);
-                    await UCWarfare.ToUpdate();
-                    SavePendings();
-                }
-                else
-                    L.LogWarning("Failed to send kit deletion to homebase.");
-            }
-            foreach (ulong access in PendingAccessChanges.ToList())
-            {
-                if (!UCWarfare.CanUseNetCall || v != _version)
-                    return;
-                RequestResponse response = await NetCalls.MulticastKitAccessChanged.RequestAck(UCWarfare.I.NetClient!, access);
-                if (response.Responded)
-                {
-                    PendingAccessChanges.Remove(access);
-                    await UCWarfare.ToUpdate();
-                    SavePendings();
-                }
-                else
-                    L.LogWarning("Failed to send kit access change to homebase.");
+                Semaphore.Release();
             }
         });
     }
     public static class NetCalls
     {
-        private static UCSemaphore _semaphore;
         public static readonly NetCall<int> MulticastKitUpdated = new NetCall<int>(OnForeignKitUpdated);
         public static readonly NetCall<int> MulticastKitDeleted = new NetCall<int>(OnForeignKitDeleted);
         public static readonly NetCall<ulong> MulticastKitAccessChanged = new NetCall<ulong>(OnForeignAccessUpdated);
-        private static UCSemaphore Semaphore
-        {
-            get
-            {
-                if (_semaphore != null)
-                    return _semaphore;
-                _semaphore = new UCSemaphore();
-#if DEBUG
-                _semaphore.WaitCallback += SemaphoreWaitCallback;
-                _semaphore.ReleaseCallback += SemaphoreReleaseCallback;
-#endif
-                return _semaphore;
-            }
-        }
-#if DEBUG
-        private static void SemaphoreWaitCallback()
-        {
-            L.LogDebug("Waiting in KitSync semaphore.");
-        }
-        private static void SemaphoreReleaseCallback(int ct)
-        {
-            L.LogDebug("Released " + ct.ToString(Data.AdminLocale) + " in KitSync semaphore.");
-        }
-#endif
 
         [NetCall(ENetCall.FROM_SERVER, 3008)]
         private static async Task OnForeignKitUpdated(MessageContext ctx, int pk)
