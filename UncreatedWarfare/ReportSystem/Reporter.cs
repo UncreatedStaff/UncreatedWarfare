@@ -503,6 +503,7 @@ public class Reporter : MonoBehaviour
             }
         }
     }
+    // todo this sucks
     internal void OnDestroyedStructure(ulong player, uint instId)
     {
 #if DEBUG

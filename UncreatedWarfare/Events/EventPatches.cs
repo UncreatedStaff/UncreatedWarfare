@@ -177,8 +177,6 @@ internal static class EventPatches
             yield return instruction;
         }
     }
-
-    
     private static void DestroyBarricadeInvoker(BarricadeDrop barricade, byte x, byte y, ushort plant)
     {
         if (barricade is null) return;
@@ -194,16 +192,18 @@ internal static class EventPatches
         else return;
 
         ulong destroyer;
+        EDamageOrigin origin = EDamageOrigin.Unknown;
         if (barricade.model.TryGetComponent(out DestroyerComponent comp))
         {
             destroyer = comp.Destroyer;
             float time = comp.RelevantTime;
             if (destroyer != 0 && Time.realtimeSinceStartup - time > 1f)
                 destroyer = 0ul;
+            else origin = comp.DamageOrigin;
             UnityEngine.Object.Destroy(comp);
         }
         else destroyer = 0ul;
-        EventDispatcher.InvokeOnBarricadeDestroyed(barricade, barricade.GetServersideData(), destroyer, region, x, y, plant);
+        EventDispatcher.InvokeOnBarricadeDestroyed(barricade, barricade.GetServersideData(), destroyer, region, x, y, plant, origin);
     }
     // SDG.Unturned.BarricadeManager
     /// <summary>
@@ -249,16 +249,18 @@ internal static class EventPatches
         if (!StructureManager.tryGetRegion(x, y, out StructureRegion region))
             return;
         ulong destroyer;
+        EDamageOrigin origin = EDamageOrigin.Unknown;
         if (structure.model.TryGetComponent(out DestroyerComponent comp))
         {
             destroyer = comp.Destroyer;
             float time = comp.RelevantTime;
             if (destroyer != 0 && Time.realtimeSinceStartup - time > 1f)
                 destroyer = 0ul;
+            else origin = comp.DamageOrigin;
             UnityEngine.Object.Destroy(comp);
         }
         else destroyer = 0ul;
-        EventDispatcher.InvokeOnStructureDestroyed(structure, destroyer, ragdoll, wasPickedUp, region, x, y);
+        EventDispatcher.InvokeOnStructureDestroyed(structure, destroyer, ragdoll, wasPickedUp, region, x, y, origin);
     }
     // SDG.Unturned.VehicleManager.addVehicle
     /// <summary>

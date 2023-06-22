@@ -33,7 +33,8 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
     public SqlItem<SavedStructure>? Save => _save;
     public IBuildable Buildable => _buildable ??= new UCStructure(Structure);
     object IBuildableDestroyedEvent.Region => Region;
-    internal StructureDestroyed(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, Vector3 ragoll, bool wasPickedUp) : base()
+    public EDamageOrigin DamageOrigin { get; }
+    internal StructureDestroyed(UCPlayer? instigator, ulong instigatorId, StructureDrop structure, StructureData structureData, StructureRegion region, byte x, byte y, SqlItem<SavedStructure>? save, Vector3 ragoll, bool wasPickedUp, EDamageOrigin damageOrigin) : base()
     {
         this.instigator = instigator;
         this.instigatorId = instigatorId;
@@ -46,6 +47,7 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
         _wasPickedUp = wasPickedUp;
         _save = save;
         ListSqlConfig<SavedStructure>? m = save?.Manager;
+        DamageOrigin = damageOrigin;
         if (m is not null)
         {
             m.WriteWait();

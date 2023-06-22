@@ -32,7 +32,8 @@ public class BarricadeDestroyed : EventState, IBuildableDestroyedEvent
     public IBuildable Buildable => _buildable ??= new UCBarricade(Barricade);
     public SqlItem<SavedStructure>? Save => _save;
     object IBuildableDestroyedEvent.Region => Region;
-    internal BarricadeDestroyed(UCPlayer? instigator, ulong instigatorId, BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant, SqlItem<SavedStructure>? save) : base()
+    public EDamageOrigin DamageOrigin { get; }
+    internal BarricadeDestroyed(UCPlayer? instigator, ulong instigatorId, BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant, SqlItem<SavedStructure>? save, EDamageOrigin damageOrigin) : base()
     {
         this.instigator = instigator;
         this.instigatorId = instigatorId;
@@ -43,6 +44,7 @@ public class BarricadeDestroyed : EventState, IBuildableDestroyedEvent
         this.y = y;
         this.plant = plant;
         _save = save;
+        DamageOrigin = damageOrigin;
         if (save?.Manager is not null)
         {
             save.Manager.WriteWait();
