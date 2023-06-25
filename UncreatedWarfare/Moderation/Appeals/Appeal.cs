@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Uncreated.SQL;
+using Uncreated.Warfare.Moderation.Punishments;
 
 namespace Uncreated.Warfare.Moderation.Appeals;
 [ModerationEntry(ModerationEntryType.Appeal)]
@@ -18,12 +21,34 @@ public class Appeal : ModerationEntry
     /// <summary>
     /// Punishments being appealed.
     /// </summary>
-    public PrimaryKey[] Punishments { get; set; }
+    public Punishment?[] Punishments { get; set; } = Array.Empty<Punishment>();
+
+    /// <summary>
+    /// Keys to the punishments being appealed.
+    /// </summary>
+    public PrimaryKey[] PunishmentKeys { get; set; } = Array.Empty<PrimaryKey>();
 
     /// <summary>
     /// Responses to the asked questions.
     /// </summary>
     public AppealResponse[] Responses { get; set; }
+
+    internal override async Task FillDetail(DatabaseInterface db)
+    {
+        if (Punishments.Length != PunishmentKeys.Length)
+            Punishments = new Punishment[PunishmentKeys.Length];
+        for (int i = 0; i < PunishmentKeys.Length; ++i)
+        {
+            PrimaryKey key = PunishmentKeys[i];
+            if (db.Cache.TryGet<Punishment>(key.Key, out Punishment? p, DatabaseInterface.DefaultInvalidateDuration))
+                Punishments[i] = p;
+            else
+            {
+                p = await db.ReadOne<Punishment>(key).ConfigureAwait(false);
+                Punishments[i] = p;
+            }
+        }
+    }
 }
 
 public readonly struct AppealResponse

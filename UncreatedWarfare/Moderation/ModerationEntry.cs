@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation;
@@ -49,9 +51,14 @@ public abstract class ModerationEntry
     public double Reputation { get; set; }
 
     /// <summary>
+    /// If this entry's reputation change has been applied.
+    /// </summary>
+    public bool ReputationApplied { get; set; }
+
+    /// <summary>
     /// Unique legacy ID to only this type of entry. Only will exist when <see cref="IsLegacy"/> is <see langword="true"/>.
     /// </summary>
-    public PrimaryKey? LegacyId { get; set; }
+    public uint? LegacyId { get; set; }
 
     /// <summary>
     /// Start time of <see cref="ActionLog"/>s relevant to this entry.
@@ -66,7 +73,57 @@ public abstract class ModerationEntry
     /// <summary>
     /// URL's to video/photo evidence.
     /// </summary>
-    public string[] Evidence { get; set; } = Array.Empty<string>();
+    public Evidence[] Evidence { get; set; } = Array.Empty<Evidence>();
+
+    /// <summary>
+    /// Fills any cached properties.
+    /// </summary>
+    internal virtual Task FillDetail(DatabaseInterface db) => Task.CompletedTask;
+}
+
+public class ModerationCache : Dictionary<int, ModerationEntryCacheEntry>
+{
+    public ModerationCache() { }
+    public ModerationCache(int capacity) : base(capacity) { }
+    public new ModerationEntry this[int key]
+    {
+        get => base[key].Entry;
+        set => base[key] = new ModerationEntryCacheEntry(value);
+    }
+    public void AddOrUpdate(ModerationEntry entry) => this[entry.Id.Key] = entry;
+    public bool TryGet<T>(PrimaryKey key, out T value) where T : ModerationEntry
+    {
+        if (TryGetValue(key.Key, out ModerationEntryCacheEntry entry))
+        {
+            value = (entry.Entry as T)!;
+            return value != null;
+        }
+
+        value = null!;
+        return false;
+    }
+    public bool TryGet<T>(PrimaryKey key, out T value, TimeSpan timeout) where T : ModerationEntry
+    {
+        if (timeout.Ticks > 0 && TryGetValue(key.Key, out ModerationEntryCacheEntry entry))
+        {
+            value = (entry.Entry as T)!;
+            return value != null && (DateTime.UtcNow - entry.LastRefreshed) < timeout;
+        }
+
+        value = null!;
+        return false;
+    }
+}
+public readonly struct ModerationEntryCacheEntry
+{
+    public ModerationEntry Entry { get; }
+    public DateTime LastRefreshed { get; }
+    public ModerationEntryCacheEntry(ModerationEntry entry) : this(entry, DateTime.UtcNow) { }
+    public ModerationEntryCacheEntry(ModerationEntry entry, DateTime lastRefreshed)
+    {
+        Entry = entry;
+        LastRefreshed = lastRefreshed;
+    }
 }
 
 public enum ModerationEntryType : ushort
@@ -83,5 +140,9 @@ public enum ModerationEntryType : ushort
     Appeal,
     Report,
     GreifingReport,
-    ChatAbuseReport
+    ChatAbuseReport,
+    Note,
+    Commendation,
+    BugReportAccepted,
+    PlayerReportAccepted
 }

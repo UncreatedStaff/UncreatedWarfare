@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading.Tasks;
+using Uncreated.SQL;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Reports;
 
@@ -7,14 +9,24 @@ namespace Uncreated.Warfare.Moderation.Punishments;
 public abstract class Punishment : ModerationEntry
 {
     /// <summary>
+    /// Keys for all related appeals.
+    /// </summary>
+    public PrimaryKey[] AppealKeys { get; set; } = Array.Empty<PrimaryKey>();
+
+    /// <summary>
+    /// Keys for all related reports.
+    /// </summary>
+    public PrimaryKey[] ReportKeys { get; set; } = Array.Empty<PrimaryKey>();
+
+    /// <summary>
     /// All related appeals.
     /// </summary>
-    public Appeal[] Appeals { get; set; } = Array.Empty<Appeal>();
+    public Appeal?[] Appeals { get; set; } = Array.Empty<Appeal>();
 
     /// <summary>
     /// All related reports.
     /// </summary>
-    public Report[] Reports { get; set; } = Array.Empty<Report>();
+    public Report?[] Reports { get; set; } = Array.Empty<Report>();
 
     /// <summary>
     /// Try to find a resolved appeal with a state matching the value for <paramref name="state"/> in <see cref="Appeals"/>.
@@ -26,8 +38,8 @@ public abstract class Punishment : ModerationEntry
     {
         for (int i = 0; i < Appeals.Length; ++i)
         {
-            Appeal appeal2 = Appeals[i];
-            if (appeal2.AppealState.HasValue && appeal2.AppealState.Value == state)
+            Appeal? appeal2 = Appeals[i];
+            if (appeal2 is { AppealState: not null } && appeal2.AppealState.Value == state)
             {
                 appeal = appeal2;
                 return true;
@@ -36,6 +48,35 @@ public abstract class Punishment : ModerationEntry
 
         appeal = null!;
         return false;
+    }
+    internal override async Task FillDetail(DatabaseInterface db)
+    {
+        if (Appeals.Length != AppealKeys.Length)
+            Appeals = new Appeal?[AppealKeys.Length];
+        if (Reports.Length != ReportKeys.Length)
+            Reports = new Report?[ReportKeys.Length];
+        for (int i = 0; i < AppealKeys.Length; ++i)
+        {
+            PrimaryKey key = AppealKeys[i];
+            if (db.Cache.TryGet<Appeal>(key.Key, out Appeal? appeal, DatabaseInterface.DefaultInvalidateDuration))
+                Appeals[i] = appeal;
+            else
+            {
+                appeal = await db.ReadOne<Appeal>(key).ConfigureAwait(false);
+                Appeals[i] = appeal;
+            }
+        }
+        for (int i = 0; i < ReportKeys.Length; ++i)
+        {
+            PrimaryKey key = ReportKeys[i];
+            if (db.Cache.TryGet<Report>(key.Key, out Report? report, DatabaseInterface.DefaultInvalidateDuration))
+                Reports[i] = report;
+            else
+            {
+                report = await db.ReadOne<Report>(key).ConfigureAwait(false);
+                Reports[i] = report;
+            }
+        }
     }
 }
 

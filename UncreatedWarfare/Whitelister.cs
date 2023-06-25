@@ -8,6 +8,7 @@ using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
@@ -212,7 +213,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 if (allowedCount > 0)
                 {
                     int placedCount = UCBarricadeManager.CountBarricadesWhere(b => b.GetServersideData().owner == player.Steam64 && b.asset.GUID == barricade.asset.GUID, allowedCount);
-                    if (placedCount >= allowedCount)
+                    if (placedCount >= allowedCount && allowedCount != 255)
                     {
                         StructureSaver? saver = StructureSaver.GetSingletonQuick();
                         int diff = placedCount - allowedCount + 1;
@@ -228,7 +229,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
                                 if (saver is not { IsLoaded: true } || saver.GetSaveItemSync(drop.instanceID, StructType.Barricade) is null)
                                 {
                                     --diff;
-                                    if (drop.model.TryGetComponent(out BarricadeComponent comp)) comp.LastDamager = 0;
+                                    DestroyerComponent.AddOrUpdate(drop.model.gameObject, 0ul, EDamageOrigin.VehicleDecay);
                                     BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
                                 }
                             }
@@ -290,10 +291,10 @@ public class Whitelister : ListSingleton<WhitelistItem>
 
                 if (allowedCount > 0)
                 {
-                    // todo delete old barricades not sure what happened to that system
+                    // todo delete old structures not sure what happened to that system
                     int placedCount = UCBarricadeManager.CountStructuresWhere(s => s.GetServersideData().owner == player.Steam64 && s.asset.GUID == structure.asset.GUID, allowedCount);
 
-                    if (placedCount >= allowedCount)
+                    if (placedCount >= allowedCount && allowedCount != 255)
                     {
                         shouldAllow = false;
                         player.SendChat(T.WhitelistProhibitedPlaceAmt, allowedCount, asset);
