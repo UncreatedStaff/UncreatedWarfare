@@ -104,4 +104,13 @@ public abstract class DurationPunishment : Punishment
 
         return IsPermanent ? DateTimeOffset.MaxValue : ResolvedTimestamp.Value.Add(Duration);
     }
+
+    /// <summary>
+    /// Gets the time at which the punishment expires, assuming it isn't appealed.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">This punishment hasn't been resolved (<see cref="ModerationEntry.ResolvedTimestamp"/> is <see langword="null"/>).</exception>
+    public bool IsApplied()
+    {
+        return ResolvedTimestamp.HasValue && IsPermanent || DateTime.UtcNow > GetExpiryTimestamp().UtcDateTime;
+    }
 }

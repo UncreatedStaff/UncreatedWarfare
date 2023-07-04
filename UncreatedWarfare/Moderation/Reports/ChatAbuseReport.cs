@@ -5,6 +5,7 @@ namespace Uncreated.Warfare.Moderation.Reports;
 public class ChatAbuseReport : Report
 {
     public ReportChatRecord[] Messages { get; set; } = Array.Empty<ReportChatRecord>();
+    public override string GetDisplayName() => "Chat Abuse Report";
 }
 
 public readonly struct ReportChatRecord

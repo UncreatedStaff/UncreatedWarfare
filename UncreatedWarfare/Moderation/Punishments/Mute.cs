@@ -8,4 +8,11 @@ public class Mute : DurationPunishment
     /// Which areas of communication the mute applies to.
     /// </summary>
     public MuteType Type { get; set; }
+    public override string GetDisplayName() => Type switch
+    {
+        MuteType.Text => "Text Chat Mute",
+        MuteType.Voice => "Voice Chat Mute",
+        MuteType.Both => "Chat Mute",
+        _ => "Mute"
+    };
 }

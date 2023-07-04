@@ -16,7 +16,7 @@ public class CaptureUI : UnturnedUI
     public readonly UnturnedLabel T2CountIcon = new UnturnedLabel("T2CountIcon");
     public readonly UnturnedLabel T2Count = new UnturnedLabel("T2Count");
     public readonly UnturnedLabel Status = new UnturnedLabel("Status");
-    public CaptureUI() : base(12005, Gamemode.Config.UICapture, true, false) { }
+    public CaptureUI() : base(Gamemode.Config.UICapture, reliable: false) { }
 
     public void Send(Player player, in CaptureUIParameters p)
     {

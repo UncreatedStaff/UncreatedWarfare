@@ -7,4 +7,5 @@ public class Warning : Punishment
     /// <see langword="false"/> until the player actually sees the warning. This is for when a player is warned while they're offline.
     /// </summary>
     public bool HasBeenDisplayed { get; set; }
+    public override string GetDisplayName() => "Warning";
 }

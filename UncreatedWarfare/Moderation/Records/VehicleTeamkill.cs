@@ -11,4 +11,5 @@ public class VehicleTeamkill : ModerationEntry
     public Guid? Item { get; set; }
     public string? ItemName { get; set; }
     public string DeathMessage { get; set; }
+    public override string GetDisplayName() => "Vehicle Teamkill";
 }

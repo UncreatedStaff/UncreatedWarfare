@@ -1,5 +1,6 @@
-﻿using System;
-
-namespace Uncreated.Warfare.Moderation.Punishments;
+﻿namespace Uncreated.Warfare.Moderation.Punishments;
 [ModerationEntry(ModerationEntryType.Ban)]
-public class Ban : DurationPunishment { }
+public class Ban : DurationPunishment
+{
+    public override string GetDisplayName() => "Ban";
+}

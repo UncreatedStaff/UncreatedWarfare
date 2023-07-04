@@ -311,7 +311,9 @@ public abstract class DatabaseInterface
             }
         }
 
-        query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnEvidenceLink, ColumnEvidenceMessage, ColumnEvidenceIsImage, ColumnEvidenceTimestamp, ColumnEvidenceActorId)} " +
+        query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnEvidenceId, ColumnEvidenceLink,
+            ColumnEvidenceLocalSource, ColumnEvidenceMessage, ColumnEvidenceIsImage,
+            ColumnEvidenceTimestamp, ColumnEvidenceActorId)} " +
                 $"FROM `{TableEvidence}` WHERE `{ColumnExternalPrimaryKey}` {inArg};";
 
         List<(int, List<Evidence>)> evidence = new List<(int, List<Evidence>)>();
@@ -451,11 +453,13 @@ public abstract class DatabaseInterface
     private static Evidence ReadEvidence(MySqlDataReader reader, int offset)
     {
         return new Evidence(
-            reader.GetString(offset),
-            reader.IsDBNull(1 + offset) ? null : reader.GetString(1 + offset),
-            reader.GetBoolean(2 + offset),
-            Actors.GetActor(reader.GetUInt64(4 + offset)),
-            DateTime.SpecifyKind(reader.GetDateTime(3 + offset), DateTimeKind.Utc));
+            reader.GetInt32(offset),
+            reader.GetString(1 + offset),
+            reader.IsDBNull(3 + offset) ? null : reader.GetString(3 + offset),
+            reader.IsDBNull(2 + offset) ? null : reader.GetString(2 + offset),
+            reader.GetBoolean(4 + offset),
+            Actors.GetActor(reader.GetUInt64(6 + offset)),
+            DateTime.SpecifyKind(reader.GetDateTime(5 + offset), DateTimeKind.Utc));
     }
     private static RelatedActor ReadActor(MySqlDataReader reader, int offset)
     {
@@ -489,6 +493,10 @@ public abstract class DatabaseInterface
     public const string ColumnEntriesReputation = "Reputation";
     public const string ColumnEntriesReputationApplied = "ReputationApplied";
     public const string ColumnEntriesLegacyId = "LegacyId";
+    public const string ColumnEntriesMessageId = "OffenseMessageId";
+    public const string ColumnEntriesInvalidated = "Invalidated";
+    public const string ColumnEntriesInvalidatedActor = "InvalidatedActor";
+    public const string ColumnEntriesInvalidatedTimestamp = "InvalidatedTimestamp";
     public const string ColumnEntriesRelavantLogsStartTimestamp = "RelavantLogsStartTimeUTC";
     public const string ColumnEntriesRelavantLogsEndTimestamp = "RelavantLogsEndTimeUTC";
 
@@ -497,7 +505,9 @@ public abstract class DatabaseInterface
     public const string ColumnActorsAsAdmin = "ActorAsAdmin";
     public const string ColumnActorsIndex = "ActorIndex";
 
+    public const string ColumnEvidenceId = "Id";
     public const string ColumnEvidenceLink = "EvidenceURL";
+    public const string ColumnEvidenceLocalSource = "EvidenceLocalSource";
     public const string ColumnEvidenceMessage = "EvidenceMessage";
     public const string ColumnEvidenceIsImage = "EvidenceIsImage";
     public const string ColumnEvidenceActorId = "EvidenceActor";
@@ -566,6 +576,18 @@ public abstract class DatabaseInterface
             {
                 Nullable = true
             },
+            new Schema.Column(ColumnEntriesInvalidated, SqlTypes.BOOLEAN)
+            {
+                Default = "b'0'"
+            },
+            new Schema.Column(ColumnEntriesInvalidatedActor, SqlTypes.STEAM_64)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnEntriesInvalidatedTimestamp, SqlTypes.DATETIME)
+            {
+                Nullable = true
+            },
         }, true, typeof(ModerationEntry)),
         new Schema(TableActors, new Schema.Column[]
         {
@@ -582,6 +604,11 @@ public abstract class DatabaseInterface
         }, true, typeof(RelatedActor)),
         new Schema(TableEvidence, new Schema.Column[]
         {
+            new Schema.Column(ColumnEvidenceId, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true
+            },
             new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
             {
                 ForeignKey = true,
@@ -589,6 +616,10 @@ public abstract class DatabaseInterface
                 ForeignKeyTable = TableEntries
             },
             new Schema.Column(ColumnEvidenceLink, SqlTypes.String(512)),
+            new Schema.Column(ColumnEvidenceLocalSource, SqlTypes.String(512))
+            {
+                Nullable = true
+            },
             new Schema.Column(ColumnEvidenceIsImage, SqlTypes.BOOLEAN),
             new Schema.Column(ColumnEvidenceTimestamp, SqlTypes.DATETIME),
             new Schema.Column(ColumnEvidenceActorId, SqlTypes.STEAM_64)

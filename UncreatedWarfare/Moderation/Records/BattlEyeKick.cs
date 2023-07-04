@@ -6,4 +6,7 @@ using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Moderation.Records;
 [ModerationEntry(ModerationEntryType.BattlEyeKick)]
-public class BattlEyeKick : ModerationEntry { }
+public class BattlEyeKick : ModerationEntry
+{
+    public override string GetDisplayName() => "BattlEye Kick";
+}

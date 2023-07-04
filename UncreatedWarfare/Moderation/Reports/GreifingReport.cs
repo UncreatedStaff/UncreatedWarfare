@@ -16,6 +16,7 @@ public class GreifingReport : Report
     public VehicleRequestRecord[] VehicleRequestRecord { get; set; } = Array.Empty<VehicleRequestRecord>();
     public TeamkillRecord[] TeamkillRecord { get; set; } = Array.Empty<TeamkillRecord>();
     public VehicleTeamkillRecord[] VehicleTeamkillRecord { get; set; } = Array.Empty<VehicleTeamkillRecord>();
+    public override string GetDisplayName() => "Greifing Report";
 }
 
 public readonly struct StructureDamageRecord

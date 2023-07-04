@@ -8,8 +8,10 @@ public class AssetBan : DurationPunishment
 {
     public PrimaryKey[] AssetFilter { get; set; } = Array.Empty<PrimaryKey>();
 
-    public bool IsAssetBanned(PrimaryKey assetKey)
+    public bool IsAssetBanned(PrimaryKey assetKey, bool checkStillActive = true)
     {
+        if (checkStillActive && !IsApplied())
+            return false;
         if (AssetFilter.Length == 0) return true;
         if (!assetKey.IsValid) return false;
         int key = assetKey.Key;
@@ -21,4 +23,5 @@ public class AssetBan : DurationPunishment
 
         return false;
     }
+    public override string GetDisplayName() => "Asset Ban";
 }

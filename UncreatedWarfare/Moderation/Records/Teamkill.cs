@@ -11,4 +11,5 @@ public class Teamkill : ModerationEntry
     public ELimb? Limb { get; set; }
     public float Distance { get; set; }
     public string? DeathMessage { get; set; }
+    public override string GetDisplayName() => "Player Teamkill";
 }

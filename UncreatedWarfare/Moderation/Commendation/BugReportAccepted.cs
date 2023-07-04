@@ -4,4 +4,5 @@
 public class BugReportAccepted : ModerationEntry
 {
     public string? Commit { get; set; }
+    public override string GetDisplayName() => "Bug Report Accepted";
 }

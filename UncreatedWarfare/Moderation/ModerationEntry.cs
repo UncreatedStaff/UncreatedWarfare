@@ -79,6 +79,7 @@ public abstract class ModerationEntry
     /// Fills any cached properties.
     /// </summary>
     internal virtual Task FillDetail(DatabaseInterface db) => Task.CompletedTask;
+    public virtual string GetDisplayName() => ToString();
 }
 
 public class ModerationCache : Dictionary<int, ModerationEntryCacheEntry>

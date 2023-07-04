@@ -6,4 +6,5 @@ namespace Uncreated.Warfare.Moderation.Commendation;
 public class PlayerReportAccepted : ModerationEntry
 {
     public PrimaryKey Report { get; set; }
+    public override string GetDisplayName() => "Player Report Accepted";
 }
