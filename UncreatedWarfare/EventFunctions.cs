@@ -1594,9 +1594,7 @@ public static class EventFunctions
         IconRenderer[] iconrenderers = e.Transform.GetComponents<IconRenderer>();
         foreach (IconRenderer iconRenderer in iconrenderers)
             IconManager.DeleteIcon(iconRenderer);
-
-        if (Data.Is<ISquads>(out _))
-            RallyManager.OnBarricadeDestroyed(e.Barricade);
+        
         if (e.Transform.TryGetComponent(out BarricadeComponent c))
         {
             if (c.LastDamagerTime + 10f >= Time.realtimeSinceStartup)

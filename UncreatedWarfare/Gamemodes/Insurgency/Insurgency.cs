@@ -523,6 +523,8 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (State != State.Active)
+            return;
         CachesDestroyed++;
         CachesLeft--;
 

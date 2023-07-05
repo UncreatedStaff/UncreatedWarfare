@@ -147,6 +147,8 @@ public static class KitSync
             writer.WriteNumberValue(PendingAccessChanges[i]);
         writer.WriteEndArray();
 
+        writer.WriteEndObject();
+
         writer.Flush();
     }
     public static void OnKitUpdated(SqlItem<Kit> kit)

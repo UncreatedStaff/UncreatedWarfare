@@ -2,13 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Players;
-using UnityEngine.Profiling;
 
 namespace Uncreated.Warfare.Squads;
 
@@ -40,14 +38,6 @@ public static class RallyManager
             }
         }
     }
-    public static void OnBarricadeDestroyed(BarricadeDrop drop)
-    {
-        if (drop.model.TryGetComponent(out RallyPoint rallypoint))
-        {
-            rallypoint.Deactivate();
-        }
-    }
-
     public static void OnBarricadePlaceRequested(
         Barricade barricade,
         ItemBarricadeAsset asset,
@@ -135,10 +125,12 @@ public static class RallyManager
             return Array.Empty<BarricadeDrop>();
         return UCBarricadeManager.NonPlantedBarricades.Where(b => IsRally(b.asset));
     }
-    public static bool IsRally(ItemBarricadeAsset asset) => Gamemode.Config.RallyPoints.Value.Any(r => r.MatchGuid(asset.GUID));
+    public static bool IsRally(ItemBarricadeAsset asset) => Gamemode.Config.RallyPoints != null &&
+                                                            Gamemode.Config.RallyPoints.HasValue &&
+                                                            Gamemode.Config.RallyPoints.Value.Any(r => r.MatchGuid(asset.GUID));
 }
 
-public class RallyPoint : MonoBehaviour
+public class RallyPoint : MonoBehaviour, IManualOnDestroy
 {
     public List<UCPlayer> AwaitingPlayers { get; private set; } // list of players currently waiting to teleport to the rally
     public Squad Squad { get; private set; }
@@ -226,7 +218,7 @@ public class RallyPoint : MonoBehaviour
     {
         StartCoroutine(RallyRoutine());
     }
-    private IEnumerator<WaitForSeconds> RallyRoutine()
+    private IEnumerator<WaitForSecondsRealtime> RallyRoutine()
     {
         SecondsLeft = SquadManager.Config.RallyTimer;
         IsDeploying = true;
@@ -253,7 +245,7 @@ public class RallyPoint : MonoBehaviour
             profiler.Dispose();
 #endif
 
-            yield return new WaitForSeconds(1);
+            yield return new WaitForSecondsRealtime(1);
             SecondsLeft--;
         }
 
@@ -270,13 +262,12 @@ public class RallyPoint : MonoBehaviour
     private float _timeLastTick;
     private void FixedUpdate()
     {
-        if (Time.time - _timeLastTick > 5)
+        if (Time.realtimeSinceStartup - _timeLastTick > 5)
         {
-            ulong enemyTeam = 0;
-            if (Squad.Team == TeamManager.Team1ID)
-                enemyTeam = TeamManager.Team2ID;
-            else if (Squad.Team == TeamManager.Team2ID)
-                enemyTeam = TeamManager.Team1ID;
+            _timeLastTick = Time.realtimeSinceStartup;
+            ulong enemyTeam = TeamManager.Other(Squad.Team);
+            if (enemyTeam == 0)
+                return;
 
             List<UCPlayer> enemies = PlayerManager.OnlinePlayers.Where(p =>
                 p.GetTeam() == enemyTeam &&
@@ -293,8 +284,15 @@ public class RallyPoint : MonoBehaviour
 
                 Destroy();
             }
+        }
+    }
 
-            _timeLastTick = Time.time;
+    void IManualOnDestroy.ManualOnDestroy()
+    {
+        if (this != null)
+        {
+            Deactivate();
+            Destroy(this);
         }
     }
 }
