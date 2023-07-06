@@ -174,7 +174,7 @@ public static class OffenseManager
     }
     private static async Task OnPlayerPending(PlayerPending e, CancellationToken token = default)
     {
-        if (e.PendingPlayer.playerID.GetHwids().Count() != 3)
+        if (e.PendingPlayer.playerID.GetHwids().Count() is not 3 and not 2)
             throw e.Reject("Likely HWID spoofer.");
 
         List<uint> packs = new List<uint>(4);

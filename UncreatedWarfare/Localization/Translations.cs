@@ -346,13 +346,7 @@ public class Translation
                     }
                     if (str.Length <= lastDigit + 1 || str[lastDigit + 1] != ':' || !int.TryParse(str.SubstringRange(firstDigit, lastDigit), NumberStyles.Number, Data.AdminLocale, out int argument))
                         continue;
-#if DEBUG
-                    string old = str;
-#endif
                     str = str.Substring(0, nextSign) + str.SubstringRange(lastDigit + 2, closing - (inverted ? 2 : 1)) + (closing < str.Length - 1 ? str.Substring(closing + 1) : string.Empty);
-#if DEBUG
-                    L.LogDebug($"Arg Mod {char.ToUpperInvariant(modifier)}: {old} -> {str}");
-#endif
                     index = closing - ((inverted ? 8 : 7) + (lastDigit - firstDigit));
                     WorkingPluralizers.Add(new ArgumentSpan(argument, nextSign, closing - (lastDigit + (inverted ? 3 : 2)), inverted));
                 }

@@ -37,11 +37,12 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
     public string Name { get; set; }
     float IDeployable.Yaw => _component == null ? 0 : _component.transform.rotation.eulerAngles.y;
     public BarricadeDrop Drop { get; private set; }
+    public CacheLocation Location { get; }
     public float Radius => 40;
     public bool ContainsBuildable(IBuildable buildable) => buildable.Type == StructType.Barricade && Drop != null && Drop.instanceID == buildable.InstanceId;
     public bool ContainsVehicle(InteractableVehicle vehicle) => false;
 
-    public Cache(BarricadeDrop drop, ulong team)
+    public Cache(BarricadeDrop drop, ulong team, CacheLocation location)
     {
         IsDiscovered = false;
         _component = drop.model.gameObject.AddComponent<CacheComponent>().Initialize(drop, this);
@@ -52,6 +53,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         _gc = new GridLocation(in pos);
         Team = team;
         _cl = F.GetClosestLocationName(pos, true, true);
+        Location = location;
 
         if (Data.Is(out IFlagRotation fg))
         {

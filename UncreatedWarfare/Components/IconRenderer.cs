@@ -1,13 +1,11 @@
-﻿using SDG.NetTransport;
+﻿using JetBrains.Annotations;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using JetBrains.Annotations;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Events.Structures;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
 
@@ -19,6 +17,20 @@ public static class IconManager
     static IconManager()
     {
         EventDispatcher.GroupChanged += OnGroupChanged;
+        EventDispatcher.PlayerLeft += OnPlayerLeft;
+    }
+
+    private static void OnPlayerLeft(PlayerEvent e)
+    {
+        for (int i = Icons.Count - 1; i >= 0; i--)
+        {
+            IconRenderer iconRenderer = Icons[i];
+            if (iconRenderer.Player != e.Steam64)
+                continue;
+
+            Icons.Remove(iconRenderer);
+            iconRenderer.Destroy();
+        }
     }
 
     public static void OnGamemodeReloaded()
@@ -77,7 +89,7 @@ public static class IconManager
             }
         }
     }
-    public static void AttachIcon(Guid effectGUID, Transform transform, ulong team = 0, float yOffset = 0)
+    public static void AttachIcon(Guid effectGUID, Transform transform, ulong team = 0, float yOffset = 0, ulong player = 0)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -87,13 +99,8 @@ public static class IconManager
             EffectManager.ClearEffectByGuid_AllPlayers(guid = icon.EffectGUID);
         else icon = transform.gameObject.AddComponent<IconRenderer>();
 
-        icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team);
-        
-        icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Team == 0
-                ? PlayerManager.OnlinePlayers
-                : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
-            .Select(x => x.Connection)));
-        
+        icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team, player);
+
         if (guid != Guid.Empty)
             SpawnNewIconsOfType(guid);
 
@@ -119,13 +126,17 @@ public static class IconManager
 #endif
         foreach (IconRenderer icon in Icons)
         {
-            if (icon.EffectGUID == effectGUID)
-            {
-                icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Team == 0
-                        ? PlayerManager.OnlinePlayers
-                        : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
-                    .Select(x => x.Connection)));
-            }
+            TrySpawnIcon(effectGUID, icon);
+        }
+    }
+    private static void TrySpawnIcon(Guid effectGUID, IconRenderer icon)
+    {
+        if (icon.EffectGUID == effectGUID)
+        {
+            icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Player == 0 ? (icon.Team == 0
+                    ? PlayerManager.OnlinePlayers
+                    : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team)) : (UCPlayer.FromID(icon.Player) is not { } player ? Array.Empty<UCPlayer>() : new UCPlayer[] { player }))
+                .Select(x => x.Connection)));
         }
     }
 }
@@ -136,14 +147,16 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
     public Guid EffectGUID { get; private set; }
     public EffectAsset Effect { get; private set; }
     public ulong Team { get; private set; }
+    public ulong Player { get; private set; }
     public Vector3 Point { get; private set; }
-    public void Initialize(Guid effectGUID, Vector3 point, ulong team = 0)
+    public void Initialize(Guid effectGUID, Vector3 point, ulong team = 0, ulong player = 0)
     {
         Point = point;
 
         EffectGUID = effectGUID;
 
         Team = team;
+        Player = player;
 
         if (Assets.find(EffectGUID) is EffectAsset effect)
         {

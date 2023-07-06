@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Commands;
 
 public class DevCommand : AsyncCommand
 {
-    private const string Syntax = "/dev <addcache|gencaches|addintel|quickbuild|logmeta|checkvehicle|getpos|onfob|aatest> [parameters...]";
+    private const string Syntax = "/dev <caches|addintel|quickbuild|logmeta|checkvehicle|getpos|onfob|aatest> [parameters...]";
 
     public DevCommand() : base("dev", EAdminType.VANILLA_ADMIN) { }
 
@@ -31,67 +31,11 @@ public class DevCommand : AsyncCommand
 #endif
         ctx.AssertHelpCheck(0, Syntax + " - Developer commands for config setup.");
 
-        if (ctx.MatchParameter(0, "addcache"))
+        if (ctx.MatchParameter(0, "caches", "cache"))
         {
-            ctx.AssertGamemode(out Insurgency ins);
-
-            ctx.AssertRanByPlayer();
-
-            ctx.AssertHelpCheck(1, "/dev addcache (at current location)");
-
-            if (!Gamemode.Config.BarricadeInsurgencyCache.HasValue ||
-                !Gamemode.Config.BarricadeInsurgencyCache.Value.Exists)
-                throw ctx.ReplyString("Cache GUID is not set correctly.");
-
-            if (ctx.TryGetTarget(out BarricadeDrop cache) && cache != null && cache.asset.GUID == Gamemode.Config.BarricadeInsurgencyCache.Value.Guid)
-            {
-                SerializableTransform transform = new SerializableTransform(cache.model);
-
-                ins.AddCacheSpawn(transform);
-                ctx.ReplyString("Added new cache spawn: " + transform.ToString(), "ebd491");
-                ctx.LogAction(ActionLogType.AddCache, "ADDED CACHE SPAWN AT " + transform.ToString());
-            }
-            else throw ctx.ReplyString("You must be looking at a CACHE barricade.", "c7a29f");
-        }
-        else if (ctx.MatchParameter(0, "gencaches"))
-        {
-            ctx.AssertGamemode<Insurgency>();
-
-            ctx.AssertHelpCheck(1, "/dev gencaches (generates a json file for all placed caches)");
-
-            if (!Gamemode.Config.BarricadeInsurgencyCache.HasValue ||
-                !Gamemode.Config.BarricadeInsurgencyCache.Value.Exists)
-                throw ctx.ReplyString("Cache GUID is not set correctly.");
-            Guid g = Gamemode.Config.BarricadeInsurgencyCache.Value.Guid;
-            IEnumerable<BarricadeDrop> caches = UCBarricadeManager.NonPlantedBarricades.Where(b => b.asset.GUID == g);
-
-            FileStream writer = File.Create("C" + Path.VolumeSeparatorChar + Path.DirectorySeparatorChar + Path.Combine("Users", "USER", "Desktop", "cachespanws.json"));
-
-            StringBuilder builder = new StringBuilder();
-
-            bool a = false;
-            foreach (BarricadeDrop b in caches)
-            {
-                if (!a)
-                {
-                    builder.Append(", \n");
-                    a = true;
-                }
-
-                builder.Append($"new SerializableTransform({b.model.transform.position.x.ToString(Data.AdminLocale)}f, " +
-                        $"{b.model.transform.position.y.ToString(Data.AdminLocale)}f, " +
-                        $"{b.model.transform.position.z.ToString(Data.AdminLocale)}f, " +
-                        $"{b.model.transform.eulerAngles.x.ToString(Data.AdminLocale)}f, " +
-                        $"{b.model.transform.eulerAngles.y.ToString(Data.AdminLocale)}f, " +
-                        $"{b.model.transform.eulerAngles.z.ToString(Data.AdminLocale)}f)");
-            }
-
-            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(builder.ToString());
-            writer.Write(bytes, 0, bytes.Length);
-            writer.Close();
-            writer.Dispose();
-
-            ctx.ReplyString($"Written {bytes.Length} bytes to file.");
+            ctx.AssertHelpCheck(1, CacheLocationsEditCommand.Syntax);
+            ++ctx.Offset;
+            await CacheLocationsEditCommand.Execute(ctx);
         }
         else if (ctx.MatchParameter(0, "addintel"))
         {

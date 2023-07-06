@@ -123,6 +123,9 @@ public static class KitSync
     }
     private static void SavePendings()
     {
+        string? dir = Path.GetDirectoryName(Data.Paths.KitSync);
+        if (dir != null)
+            Directory.CreateDirectory(dir);
         using FileStream stream = new FileStream(Data.Paths.KitSync, FileMode.Create, FileAccess.Write, FileShare.Read);
         using Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.condensedWriterOptions);
         writer.WriteStartObject();

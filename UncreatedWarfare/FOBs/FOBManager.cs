@@ -769,7 +769,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         SendFOBListToTeam(team);
         return fob;
     }
-    public static Cache RegisterNewCache(BarricadeDrop drop, ulong team)
+    public static Cache RegisterNewCache(BarricadeDrop drop, ulong team, CacheLocation location)
     {
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
@@ -778,7 +778,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            Cache cache = new Cache(drop, team);
+            Cache cache = new Cache(drop, team, location);
             int number;
             List<Insurgency.CacheData> caches = insurgency.ActiveCaches;
             if (caches.Count == 0)

@@ -23,7 +23,6 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -119,6 +118,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private LevelData? _level;
     private PlayerNames _cachedName;
     internal VehicleSwapRequest PendingVehicleSwapRequest;
+    internal int CacheLocationIndex = -1;
     public UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore)
     {
         Steam64 = steamID.m_SteamID;

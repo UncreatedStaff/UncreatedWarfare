@@ -19,6 +19,7 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Gamemodes.UI;
 using Uncreated.Warfare.Kits;
@@ -1135,6 +1136,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 else if (drop is StructureDrop sdrop)
                     StructureManager.destroyStructure(sdrop, x, y, Vector3.zero);
             }
+            CacheLocationsEditCommand.Drops.Clear();
             IconManager.OnLevelLoaded();
         }
         catch (Exception ex)
