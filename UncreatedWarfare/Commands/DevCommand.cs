@@ -1,16 +1,12 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Vehicles;
@@ -22,7 +18,7 @@ public class DevCommand : AsyncCommand
 {
     private const string Syntax = "/dev <caches|addintel|quickbuild|logmeta|checkvehicle|getpos|onfob|aatest> [parameters...]";
 
-    public DevCommand() : base("dev", EAdminType.VANILLA_ADMIN) { }
+    public DevCommand() : base("dev", EAdminType.ADMIN) { }
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
@@ -39,6 +35,7 @@ public class DevCommand : AsyncCommand
         }
         else if (ctx.MatchParameter(0, "addintel"))
         {
+            ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
             ctx.AssertGamemode(out Insurgency insurgency);
 
             ctx.AssertHelpCheck(1, "/dev addintel <amount>. Adds intelligence points to the attacking team.");
@@ -54,6 +51,7 @@ public class DevCommand : AsyncCommand
         }
         else if (ctx.MatchParameter(0, "quickbuild", "build", "qb"))
         {
+            ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
             ctx.AssertHelpCheck(1, "/dev <quickbuild|build|qb>. Skips digging the buildable you're looking at.");
 
             ctx.AssertRanByPlayer();
@@ -71,6 +69,7 @@ public class DevCommand : AsyncCommand
         }
         else if (ctx.MatchParameter(0, "logmeta", "logstate", "metadata"))
         {
+            ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
             ctx.AssertHelpCheck(1, "/dev <logmeta|logstate|metadata>. Logs the metadata of the barricade you're looking at in Base64.");
 
             ctx.AssertRanByPlayer();
@@ -86,6 +85,7 @@ public class DevCommand : AsyncCommand
         }
         else if (ctx.MatchParameter(0, "checkvehicle", "cv"))
         {
+            ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
             ctx.AssertGamemode<IVehicles>();
 
             ctx.AssertRanByPlayer();
@@ -129,6 +129,7 @@ public class DevCommand : AsyncCommand
         }
         else if (ctx.MatchParameter(0, "getpos", "cvc"))
         {
+            ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
             ctx.AssertRanByPlayer();
 
             ctx.AssertHelpCheck(1, "/dev <getpos|cvc>. Gets your current rotation and position (like /test zone).");
@@ -137,6 +138,7 @@ public class DevCommand : AsyncCommand
         }
         else if (ctx.MatchParameter(0, "onfob", "fob"))
         {
+            ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
             ctx.AssertGamemode<IFOBs>();
 
             ctx.AssertRanByPlayer();
@@ -150,6 +152,7 @@ public class DevCommand : AsyncCommand
         }
         else if (ctx.MatchParameter(0, "aatest", "aa"))
         {
+            ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
             ctx.AssertGamemode<IVehicles>();
 
             VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
