@@ -4,6 +4,7 @@ using SDG.Framework.Modules;
 using SDG.Unturned;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -12,6 +13,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using SDG.Framework.Utilities;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
@@ -34,7 +36,7 @@ using UnityEngine;
 namespace Uncreated.Warfare;
 
 public delegate void VoidDelegate();
-public class UCWarfare : MonoBehaviour
+public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
     public static readonly Version Version = new Version(3, 0, 1, 1);
@@ -56,6 +58,8 @@ public class UCWarfare : MonoBehaviour
     private readonly CancellationTokenSource _unloadCancellationTokenSource = UCWarfareNexus.Active ? new CancellationTokenSource() : null!;
     public readonly SemaphoreSlim PlayerJoinLock = UCWarfareNexus.Active ? new SemaphoreSlim(0, 1) : null!;
     public float LastUpdateDetected = -1f;
+    private static ConcurrentQueue<ThreadResult>? _threadRequests;
+    internal static ConcurrentQueue<ThreadResult> ThreadQueueEntries => !IsLoaded ? null! : _threadRequests ??= new ConcurrentQueue<ThreadResult>();
     public bool FullyLoaded { get; private set; }
     public static CancellationToken UnloadCancel => IsLoaded ? I._unloadCancellationTokenSource.Token : CancellationToken.None;
     public static int Season => Version.Major;
@@ -65,6 +69,7 @@ public class UCWarfare : MonoBehaviour
     [UsedImplicitly]
     private void Awake()
     {
+        ThreadQueue.Queue = this;
         if (I != null) throw new SingletonLoadException(SingletonLoadType.Load, null, new Exception("Uncreated Warfare is already loaded."));
         I = this;
         FullyLoaded = false;
@@ -437,12 +442,8 @@ public class UCWarfare : MonoBehaviour
         Data.ShowAllUI(player);
     }
 
-    private static Queue<MainThreadTask.MainThreadResult>? _threadActionRequests;
-    private static Queue<LevelLoadTask.LevelLoadResult>? _levelLoadRequests;
-    internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests => !IsLoaded ? null! : _threadActionRequests ??= new Queue<MainThreadTask.MainThreadResult>(4);
-    internal static Queue<LevelLoadTask.LevelLoadResult> LevelLoadRequests => !IsLoaded ? null! : _levelLoadRequests ??= new Queue<LevelLoadTask.LevelLoadResult>(4);
-    public static MainThreadTask ToUpdate(CancellationToken token = default) => IsMainThread ? MainThreadTask.CompletedNoSkip : new MainThreadTask(false, token);
-    public static MainThreadTask SkipFrame(CancellationToken token = default) => IsMainThread ? MainThreadTask.CompletedSkip : new MainThreadTask(true, token);
+    public static MainThreadTask ToUpdate(CancellationToken token = default) => ThreadQueue.ToMainThread(false, token);
+    public static MainThreadTask SkipFrame(CancellationToken token = default) => ThreadQueue.ToMainThread(true, token);
     public static LevelLoadTask ToLevelLoad(CancellationToken token = default) => new LevelLoadTask(token);
 
     // 'fire and forget' functions that will report errors once the task completes.
@@ -660,9 +661,13 @@ public class UCWarfare : MonoBehaviour
         }
     }
     public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
+    bool IThreadQueue.IsMainThread => Thread.CurrentThread.IsGameThread();
+    void IThreadQueue.RunOnMainThread(System.Action action) => RunOnMainThread(action, false, default);
+    void IThreadQueue.RunOnMainThread(ThreadResult action) => ThreadQueueEntries.Enqueue(action);
+    void IThreadQueueWaitOverride.SpinWaitUntil(Func<bool> condition, int millisecondsTimeout, CancellationToken token) => SpinWaitUntil(condition, millisecondsTimeout, token);
     public static bool RunOnMainThread(System.Action action) => RunOnMainThread(action, false, default);
     public static bool RunOnMainThread(System.Action action, CancellationToken token) => RunOnMainThread(action, false, token);
-    /// <param name="action">Method to be ran on the main thread in an update dequeue loop.</param>
+
     /// <param name="skipFrame">If this is called on the main thread it will queue it to be called next update or at the end of the current frame.</param>
     public static bool RunOnMainThread(System.Action action, bool skipFrame, CancellationToken token = default)
     {
@@ -673,7 +678,7 @@ public class UCWarfare : MonoBehaviour
             return false;
         }
 
-        MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask(skipFrame, token));
+        ThreadResult res = new MainThreadTask(skipFrame, token).GetAwaiter();
         res.OnCompleted(action);
         return true;
     }
@@ -704,9 +709,8 @@ public class UCWarfare : MonoBehaviour
     private void Update()
     {
         if (LastUpdateDetected > 0 && (Provider.clients.Count == 0 || (Time.realtimeSinceStartup - LastUpdateDetected) > 3600))
-        {
             StartCoroutine(ShutdownIn("Unturned Update", 0f));
-        }
+        
         ProcessQueues();
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             PlayerManager.OnlinePlayers[i].Update();
@@ -754,55 +758,33 @@ public class UCWarfare : MonoBehaviour
     }
     private static void ProcessQueues()
     {
-        if (_threadActionRequests != null)
+        if (_threadRequests != null)
         {
-            while (_threadActionRequests.Count > 0)
+            List<ThreadResult>? threads = null;
+            while (_threadRequests.TryDequeue(out ThreadResult result))
             {
-                MainThreadTask.MainThreadResult? res = null;
                 try
                 {
-                    res = _threadActionRequests.Dequeue();
-                    if (res == null)
+                    if (result.Condition != null && !result.Condition())
+                    {
+                        (threads ??= ListPool<ThreadResult>.claim()).Add(result);
                         continue;
-                    res.Task.Token.ThrowIfCancellationRequested();
-                    res.Continuation();
+                    }
+
+                    ThreadQueue.FulfillThreadTask(result);
                 }
-                catch (OperationCanceledException) { L.LogDebug("Execution on update cancelled."); }
+                catch (OperationCanceledException)
+                {
+                    L.LogDebug("Execution on update cancelled.");
+                }
                 catch (Exception ex)
                 {
-                    L.LogError("Error executing main thread operation.");
+                    L.LogError("Error executing queued thread operation.");
                     L.LogError(ex);
                 }
-                finally
-                {
-                    res?.Complete();
-                }
             }
-        }
-        if (_levelLoadRequests != null && Level.isLoaded)
-        {
-            while (_levelLoadRequests.Count > 0)
-            {
-                LevelLoadTask.LevelLoadResult? res = null;
-                try
-                {
-                    res = _levelLoadRequests.Dequeue();
-                    if (res == null)
-                        continue;
-                    res.Task.Token.ThrowIfCancellationRequested();
-                    res.continuation();
-                }
-                catch (OperationCanceledException) { L.LogDebug("Execution on level load cancelled."); }
-                catch (Exception ex)
-                {
-                    L.LogError("Error executing level load operation.");
-                    L.LogError(ex);
-                }
-                finally
-                {
-                    res?.Complete();
-                }
-            }
+            if (threads != null)
+                ListPool<ThreadResult>.release(threads);
         }
     }
     /// <exception cref="SingletonUnloadedException"/>

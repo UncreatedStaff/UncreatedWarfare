@@ -99,7 +99,10 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public readonly UnturnedLabel[] PersonalStatsLabels = UnturnedLabel.GetPattern("playerstats_{0}", 12, 0);
     public readonly UnturnedLabel[] PersonalStatsValues = UnturnedLabel.GetPattern("playerstats_{0}_v", 12, 0);
 
-    public ConventionalLeaderboardUI() : base(12007, Gamemodes.Gamemode.Config.UIConventionalLeaderboard, true, false) { }
+    public ConventionalLeaderboardUI() : base(Gamemodes.Gamemode.Config.UIConventionalLeaderboard, reliable: false)
+    {
+        IsSendReliable = true;
+    }
 
     public void UpdateTime(LanguageSet set, int secondsLeft)
     {

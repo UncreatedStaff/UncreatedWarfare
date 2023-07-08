@@ -189,7 +189,7 @@ public class KitMenuUI : UnturnedUI
     public readonly string[] ClassIconCache;
 
     public string[]? DefaultLanguageCache;
-    public KitMenuUI() : base(12014, Gamemode.Config.UIKitMenu)
+    public KitMenuUI() : base(Gamemode.Config.UIKitMenu)
     {
         DropdownButtons = new UnturnedButton[(int)ClassConverter.MaxClass + 1];
         DefaultClassCache = new string[DropdownButtons.Length];

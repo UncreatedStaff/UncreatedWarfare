@@ -302,14 +302,14 @@ public static class EventDispatcher
             TryInvoke(inv, args, nameof(VehicleSpawned));
         }
     }
-    internal static void InvokeOnBarricadeDestroyed(BarricadeDrop barricade, BarricadeData barricadeData, ulong instigator, BarricadeRegion region, byte x, byte y, ushort plant)
+    internal static void InvokeOnBarricadeDestroyed(BarricadeDrop barricade, BarricadeData barricadeData, ulong instigator, BarricadeRegion region, byte x, byte y, ushort plant, EDamageOrigin origin)
     {
         if (BarricadeDestroyed == null || Data.Gamemode is not { State: State.Active or State.Staging }) return;
         UCPlayer? player = UCPlayer.FromID(instigator);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? barricadeSave = saver?.GetSaveItemSync(barricade.instanceID, StructType.Barricade);
 
-        BarricadeDestroyed args = new BarricadeDestroyed(player, instigator, barricade, barricadeData, region, x, y, plant, barricadeSave);
+        BarricadeDestroyed args = new BarricadeDestroyed(player, instigator, barricade, barricadeData, region, x, y, plant, barricadeSave, origin);
         foreach (EventDelegate<BarricadeDestroyed> inv in BarricadeDestroyed.GetInvocationList().Cast<EventDelegate<BarricadeDestroyed>>())
         {
             if (!args.CanContinue) break;
@@ -664,7 +664,7 @@ public static class EventDispatcher
     private static void StructureDropOnSalvageRequested(StructureDrop structure, SteamPlayer instigatorClient, ref bool shouldAllow)
     {
         if (!shouldAllow) return;
-        if (instigatorClient != null) DestroyerComponent.AddOrUpdate(structure.model.gameObject, instigatorClient.playerID.steamID.m_SteamID);
+        if (instigatorClient != null) DestroyerComponent.AddOrUpdate(structure.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, EDamageOrigin.Unknown);
         else return;
 
         if (SalvageStructureRequested == null) return;
@@ -728,8 +728,13 @@ public static class EventDispatcher
     private static void BarricadeDropOnSalvageRequested(BarricadeDrop barricade, SteamPlayer instigatorClient, ref bool shouldAllow)
     {
         if (!shouldAllow) return;
-        if (instigatorClient != null) DestroyerComponent.AddOrUpdate(barricade.model.gameObject, instigatorClient.playerID.steamID.m_SteamID);
-        else return;
+        if (instigatorClient != null)
+            DestroyerComponent.AddOrUpdate(barricade.model.gameObject, instigatorClient.playerID.steamID.m_SteamID, EDamageOrigin.Unknown);
+        else
+        {
+            DestroyerComponent.AddOrUpdate(barricade.model.gameObject, 0ul, EDamageOrigin.Unknown);
+            return;
+        }
 
         if (SalvageBarricadeRequested == null) return;
         UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
@@ -791,39 +796,49 @@ public static class EventDispatcher
     private static void StructureManagerOnDamageStructureRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
         if (!shouldAllow) return;
-        if (OffenseManager.IsValidSteam64Id(instigatorSteamID))
-            DestroyerComponent.AddOrUpdate(structureTransform.gameObject, instigatorSteamID.m_SteamID);
-
-        if (DamageStructureRequested == null) return;
-        StructureDrop drop = StructureManager.FindStructureByRootTransform(structureTransform);
-        if (drop == null) return;
-        UCPlayer? player = UCPlayer.FromCSteamID(instigatorSteamID);
-        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
-        SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
-        if (!StructureManager.tryGetRegion(structureTransform, out byte x, out byte y, out StructureRegion region))
-            return;
-
-        DamageStructureRequested args = new DamageStructureRequested(player, instigatorSteamID.m_SteamID, drop, drop.GetServersideData(), region!, x, y, save, damageOrigin, pendingTotalDamage);
-        foreach (EventDelegate<DamageStructureRequested> inv in DamageStructureRequested.GetInvocationList().Cast<EventDelegate<DamageStructureRequested>>())
+        try
         {
-            if (!args.CanContinue) break;
-            TryInvoke(inv, args, nameof(DamageStructureRequested));
+            if (DamageStructureRequested == null) return;
+            StructureDrop drop = StructureManager.FindStructureByRootTransform(structureTransform);
+            if (drop == null) return;
+            UCPlayer? player = UCPlayer.FromCSteamID(instigatorSteamID);
+            StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+            SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
+            if (!StructureManager.tryGetRegion(structureTransform, out byte x, out byte y, out StructureRegion region))
+                return;
+
+            DamageStructureRequested args = new DamageStructureRequested(player, instigatorSteamID.m_SteamID, drop, drop.GetServersideData(), region!, x, y, save, damageOrigin, pendingTotalDamage);
+            foreach (EventDelegate<DamageStructureRequested> inv in DamageStructureRequested.GetInvocationList().Cast<EventDelegate<DamageStructureRequested>>())
+            {
+                if (!args.CanContinue) break;
+                TryInvoke(inv, args, nameof(DamageStructureRequested));
+            }
+            if (!args.CanContinue)
+                shouldAllow = false;
+            else
+                pendingTotalDamage = args.PendingDamage;
         }
-        if (!args.CanContinue)
-            shouldAllow = false;
-        else
-            pendingTotalDamage = args.PendingDamage;
+        finally
+        {
+            if (shouldAllow)
+            {
+                if (OffenseManager.IsValidSteam64Id(instigatorSteamID))
+                    DestroyerComponent.AddOrUpdate(structureTransform.gameObject, instigatorSteamID.m_SteamID, damageOrigin);
+                else
+                    DestroyerComponent.AddOrUpdate(structureTransform.gameObject, 0ul, EDamageOrigin.Unknown);
+            }
+        }
+
     }
 
     private static readonly List<IManualOnDestroy> WorkingOnDestroy = new List<IManualOnDestroy>(2);
-    internal static void InvokeOnStructureDestroyed(StructureDrop drop, ulong instigator, Vector3 ragdoll, bool wasPickedUp, StructureRegion region, byte x, byte y)
+    internal static void InvokeOnStructureDestroyed(StructureDrop drop, ulong instigator, Vector3 ragdoll, bool wasPickedUp, StructureRegion region, byte x, byte y, EDamageOrigin origin)
     {
         if (StructureDestroyed == null) return;
         UCPlayer? player = UCPlayer.FromID(instigator);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         SqlItem<SavedStructure>? save = saver?.GetSaveItemSync(drop.instanceID, StructType.Structure);
-
-        StructureDestroyed args = new StructureDestroyed(player, instigator, drop, drop.GetServersideData(), region, x, y, save, ragdoll, wasPickedUp);
+        StructureDestroyed args = new StructureDestroyed(player, instigator, drop, drop.GetServersideData(), region, x, y, save, ragdoll, wasPickedUp, origin);
         foreach (EventDelegate<StructureDestroyed> inv in StructureDestroyed.GetInvocationList().Cast<EventDelegate<StructureDestroyed>>())
         {
             if (!args.CanContinue) break;

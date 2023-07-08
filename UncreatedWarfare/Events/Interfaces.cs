@@ -1,4 +1,5 @@
-﻿using Uncreated.SQL;
+﻿using SDG.Unturned;
+using Uncreated.SQL;
 using Uncreated.Warfare.Structures;
 using UnityEngine;
 
@@ -16,4 +17,5 @@ public interface IBuildableDestroyedEvent
     byte RegionPosX { get; }
     byte RegionPosY { get; }
     object Region { get; }
+    EDamageOrigin DamageOrigin { get; }
 }

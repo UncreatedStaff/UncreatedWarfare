@@ -12,7 +12,20 @@ using Uncreated.Warfare.Levels;
 
 namespace Uncreated.Warfare;
 
-public class WarfareSQL : MySqlDatabase
+public interface IWarfareSql : IMySqlDatabase
+{
+    Task<PlayerNames> GetUsernamesAsync(ulong s64, CancellationToken token = default);
+    Task<ulong> GetDiscordID(ulong s64, CancellationToken token = default);
+    Task<ulong> GetSteam64(ulong discordId, CancellationToken token = default);
+    Task<(int, int)> GetCreditsAndXP(ulong player, ulong team, CancellationToken token = default);
+    Task<int> GetXP(ulong player, ulong team, CancellationToken token = default);
+    Task<int> GetCredits(ulong player, ulong team, CancellationToken token = default);
+    Task<uint> GetKills(ulong player, ulong team, CancellationToken token = default);
+    Task<uint> GetDeaths(ulong player, ulong team, CancellationToken token = default);
+    Task<uint> GetTeamkills(ulong player, ulong team, CancellationToken token = default);
+}
+
+public class WarfareSQL : MySqlDatabase, IWarfareSql
 {
     /* TABLES */
 
@@ -546,6 +559,18 @@ public class WarfareSQL : MySqlDatabase
         token.ThrowIfCancellationRequested();
         ulong tid = 0;
         await QueryAsync("SELECT `DiscordID` FROM `" + TableDiscordIds + "` WHERE `Steam64`=@0 LIMIT 1;", new object[] { s64 },
+            reader => tid = reader.GetUInt64(0), token).ConfigureAwait(false);
+        token.ThrowIfCancellationRequested();
+        return tid;
+    }
+    public async Task<ulong> GetSteam64(ulong discordId, CancellationToken token = default)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        token.ThrowIfCancellationRequested();
+        ulong tid = 0;
+        await QueryAsync("SELECT `Steam64` FROM `" + TableDiscordIds + "` WHERE `DiscordID`=@0 LIMIT 1;", new object[] { discordId },
             reader => tid = reader.GetUInt64(0), token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
         return tid;

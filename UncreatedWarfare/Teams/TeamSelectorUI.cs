@@ -44,7 +44,7 @@ public class TeamSelectorUI : UnturnedUI
     public event Action<UCPlayer, ulong>? OnTeamButtonClicked;
     public event Action<UCPlayer>? OnConfirmClicked;
     public event Action<UCPlayer>? OnOptionsBackClicked;
-    public TeamSelectorUI() : base(29000, Gamemode.Config.UITeamSelector, true, false)
+    public TeamSelectorUI() : base(Gamemode.Config.UITeamSelector, true, false)
     {
         TeamPlayers = new UnturnedLabel[][]
         {

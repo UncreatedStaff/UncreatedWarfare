@@ -52,12 +52,12 @@ public class MuteCommand : Command
         if (!ctx.HasArgs(4))
             throw ctx.SendCorrectUsage(SYNTAX);
 
-        EMuteType type = ctx.MatchParameter(0, "voice")
-            ? EMuteType.VOICE_CHAT
+        MuteType type = ctx.MatchParameter(0, "voice")
+            ? MuteType.Voice
             : (ctx.MatchParameter(0, "text")
-                ? EMuteType.TEXT_CHAT
+                ? MuteType.Text
                 : (ctx.MatchParameter(0, "both")
-                    ? EMuteType.BOTH
+                    ? MuteType.Both
                     : throw ctx.SendCorrectUsage(SYNTAX)));
 
         int duration = Util.ParseTime(ctx.Get(2)!);
@@ -84,13 +84,13 @@ public class MuteCommand : Command
 }
 [Translatable("Mute Severity")]
 [Flags]
-public enum EMuteType : byte
+public enum MuteType : byte
 {
-    NONE = 0,
+    None = 0,
     [Translatable("Voice Chat")]
-    VOICE_CHAT = 1,
+    Voice = 1,
     [Translatable("Text Chat")]
-    TEXT_CHAT = 2,
+    Text = 2,
     [Translatable("Voice and Text Chat")]
-    BOTH = 3
+    Both = Voice | Text
 }

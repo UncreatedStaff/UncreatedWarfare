@@ -329,16 +329,11 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
                 ulong oldKiller = 0ul;
                 float oldKillerTime = 0f;
-                BarricadeComponent component;
+                EDamageOrigin oldOrigin = EDamageOrigin.Unknown;
                 if (Radio.State == RadioComponent.RadioState.Alive)
                 {
                     _originalState = Util.CloneBytes(Radio.Barricade.GetServersideData().barricade.state);
-                    oldKiller = DestroyerComponent.GetDestroyer(Radio.Barricade.model.gameObject, out oldKillerTime);
-                    if ((oldKiller == 0 || Time.realtimeSinceStartup - oldKillerTime > 5f) && Radio.Barricade.model.TryGetComponent(out component))
-                    {
-                        oldKiller = component.LastDamager;
-                        oldKillerTime = component.LastDamagerTime;
-                    }
+                    oldKiller = DestroyerComponent.GetDestroyer(Radio.Barricade.model.gameObject, out oldOrigin, out oldKillerTime);
                 }
 
                 b = new Barricade(damagedFobRadio);
@@ -358,12 +353,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                     L.LogWarning($"[FOBS] [{Name}] Failed to place barricade {damagedFobRadio.itemName}.");
                     return;
                 }
-                
-                if (t.TryGetComponent(out component))
-                {
-                    component.LastDamager = oldKiller;
-                    component.LastDamagerTime = oldKillerTime;
-                }
+                DestroyerComponent.AddOrUpdate(t.gameObject, oldKiller, oldOrigin, oldKillerTime);
 
                 if (Radio != null)
                     Destroy(Radio);

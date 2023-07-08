@@ -73,6 +73,9 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="Uncreated.UI">
+      <HintPath>..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\Uncreated.UI.dll</HintPath>
+    </Reference>
     <Reference Include="UncreatedNetworking">
       <HintPath>..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\UncreatedNetworking.dll</HintPath>
     </Reference>

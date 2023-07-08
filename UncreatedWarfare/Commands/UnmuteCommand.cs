@@ -32,7 +32,7 @@ public class UnmuteCommand : Command
         {
             if (onlinePlayer is not null)
             {
-                if (onlinePlayer.MuteType == EMuteType.NONE || onlinePlayer.TimeUnmuted < DateTime.Now)
+                if (onlinePlayer.MuteType == MuteType.None || onlinePlayer.TimeUnmuted < DateTime.Now)
                 {
                     ctx.Reply(T.UnmuteNotMuted, onlinePlayer);
                     return;

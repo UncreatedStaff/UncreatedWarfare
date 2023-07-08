@@ -29,6 +29,7 @@ public class VehicleDestroyed : EventState
     public ulong LastDriverId => _lastDriverId;
     public ulong Team => _lockedTeam;
     public KeyValuePair<ulong, float>[] Assists { get; set; }
+    public EDamageOrigin DamageOrigin { get; }
     public VehicleDestroyed(InteractableVehicle vehicle, SpottedComponent? spotted)
     {
         _spotter = spotted;
@@ -53,6 +54,7 @@ public class VehicleDestroyed : EventState
             }
 
             _lastDriverId = _component.LastDriver;
+            DamageOrigin = _component.LastDamageOrigin;
         }
         else if (vehicle.passengers.Length > 0 && vehicle.passengers[0].player != null && vehicle.passengers[0].player.player != null)
         {

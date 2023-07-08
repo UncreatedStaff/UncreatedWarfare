@@ -14,8 +14,6 @@ public class BarricadeComponent : MonoBehaviour, IManualOnDestroy
     public uint EditTick;
     public Player? Player;
     public Guid BarricadeGUID;
-    public ulong LastDamager;
-    public float LastDamagerTime;
     public float CreateTime;
 
     [UsedImplicitly]

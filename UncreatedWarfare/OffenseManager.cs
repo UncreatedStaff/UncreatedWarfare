@@ -330,7 +330,7 @@ public static class OffenseManager
         string? reason = null;
         int duration = -2;
         DateTime timestamp = DateTime.MinValue;
-        EMuteType type = EMuteType.NONE;
+        MuteType type = MuteType.None;
         await Data.DatabaseManager.QueryAsync(
             "SELECT `Reason`, `Duration`, `Timestamp`, `Type` FROM `muted` WHERE `Steam64` = @0 AND `Deactivated` = 0 AND " +
             "(`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) * -1 < `Duration`) ORDER BY (TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) * -1) - `Duration` LIMIT 1;",
@@ -347,10 +347,10 @@ public static class OffenseManager
                 }
                 else if (reason is null)
                     reason = reader.GetString(0);
-                type |= (EMuteType)reader.GetByte(3);
+                type |= (MuteType)reader.GetByte(3);
             }, token
         );
-        if (type == EMuteType.NONE) return;
+        if (type == MuteType.None) return;
         DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : timestamp + TimeSpan.FromSeconds(duration);
         joining.TimeUnmuted = unmutedTime;
         joining.MuteReason = reason;
@@ -765,7 +765,7 @@ public static class OffenseManager
             Save<Warn>(3);
         }, ctx: "Warn log");
     }
-    public static void LogMutePlayer(ulong violator, ulong caller, EMuteType type, int duration, string reason, DateTimeOffset timestamp)
+    public static void LogMutePlayer(ulong violator, ulong caller, MuteType type, int duration, string reason, DateTimeOffset timestamp)
     {
         UCWarfare.RunTask(async () =>
         {
@@ -1095,7 +1095,7 @@ public static class OffenseManager
         return StandardErrorCode.Success;
     }
     /// <returns>0 for a successful mute.</returns>
-    internal static async Task<StandardErrorCode> MutePlayerAsync(ulong target, ulong admin, EMuteType type, int duration, string reason, DateTimeOffset timestamp, CancellationToken token = default)
+    internal static async Task<StandardErrorCode> MutePlayerAsync(ulong target, ulong admin, MuteType type, int duration, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1204,7 +1204,7 @@ public static class OffenseManager
                 if (onlinePlayer is not null)
                 {
                     onlinePlayer.MuteReason = null;
-                    onlinePlayer.MuteType = EMuteType.NONE;
+                    onlinePlayer.MuteType = MuteType.None;
                     onlinePlayer.TimeUnmuted = DateTime.MinValue;
                 }
                 LogUnmutePlayer(targetId, callerId, now);
@@ -1330,12 +1330,12 @@ public static class OffenseManager
     {
         public readonly ulong Violator;
         public readonly ulong Admin;
-        public readonly EMuteType MuteType;
+        public readonly MuteType MuteType;
         public readonly int Duration;
         public readonly string Reason;
         public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
-        public Mute(ulong violator, ulong admin, EMuteType muteType, int duration, string reason, DateTimeOffset timestamp)
+        public Mute(ulong violator, ulong admin, MuteType muteType, int duration, string reason, DateTimeOffset timestamp)
         {
             Violator = violator;
             Admin = admin;
@@ -1450,7 +1450,7 @@ public static class OffenseManager
         public static readonly NetCall<ulong, ulong, DateTimeOffset> SendUnbanRequest = new NetCall<ulong, ulong, DateTimeOffset>(ReceiveUnbanRequest);
         public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendKickRequest = new NetCall<ulong, ulong, string, DateTimeOffset>(ReceieveKickRequest);
         public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendWarnRequest = new NetCall<ulong, ulong, string, DateTimeOffset>(ReceiveWarnRequest);
-        public static readonly NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset> SendMuteRequest = new NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset>(ReceieveMuteRequest);
+        public static readonly NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset> SendMuteRequest = new NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset>(ReceieveMuteRequest);
         public static readonly NetCall<ulong, ulong, DateTimeOffset> SendUnmuteRequest = new NetCall<ulong, ulong, DateTimeOffset>(ReceieveUnmuteRequest);
         public static readonly NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool> SendIPWhitelistRequest = new NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool>(ReceieveIPWhitelistRequest);
         public static readonly NetCall<ulong> GrantAdminRequest = new NetCall<ulong>(ReceiveGrantAdmin);
@@ -1466,7 +1466,7 @@ public static class OffenseManager
         public static readonly NetCall<ulong, ulong, string, DateTimeOffset> SendPlayerWarned = new NetCall<ulong, ulong, string, DateTimeOffset>(1004);
         public static readonly NetCall<ulong, string, DateTimeOffset> SendPlayerBattleyeKicked = new NetCall<ulong, string, DateTimeOffset>(1005);
         public static readonly NetCall<ulong, ulong, string, string, DateTimeOffset> SendTeamkill = new NetCall<ulong, ulong, string, string, DateTimeOffset>(1006);
-        public static readonly NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset> SendPlayerMuted = new NetCall<ulong, ulong, EMuteType, int, string, DateTimeOffset>(1027);
+        public static readonly NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset> SendPlayerMuted = new NetCall<ulong, ulong, MuteType, int, string, DateTimeOffset>(1027);
         public static readonly NetCall<ulong, ushort, string, DateTimeOffset> SendVehicleTeamkilled = new NetCall<ulong, ushort, string, DateTimeOffset>(1112);
         public static readonly NetCall<ulong, ulong, DateTimeOffset> SendPlayerUnmuted = new NetCall<ulong, ulong, DateTimeOffset>(1020);
         public static readonly NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool> SendPlayerIPWhitelisted = new NetCall<ulong, ulong, DateTimeOffset, uint, byte, bool>(1025);
@@ -1493,7 +1493,7 @@ public static class OffenseManager
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1028)]
-        internal static async Task ReceieveMuteRequest(MessageContext context, ulong target, ulong admin, EMuteType type, int duration, string reason, DateTimeOffset timestamp)
+        internal static async Task ReceieveMuteRequest(MessageContext context, ulong target, ulong admin, MuteType type, int duration, string reason, DateTimeOffset timestamp)
         {
             await UCWarfare.ToUpdate();
             context.Acknowledge(await MutePlayerAsync(target, admin, type, duration, reason, timestamp));

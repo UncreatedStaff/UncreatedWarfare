@@ -83,7 +83,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public string NickName;
     public SqlItem<Kit>? ActiveKit;
     public string? MuteReason;
-    public EMuteType MuteType;
+    public MuteType MuteType;
     public EChatMode LastChatMode = EChatMode.GLOBAL;
     public DateTime TimeUnmuted;
     public Squad? Squad;

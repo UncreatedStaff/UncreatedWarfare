@@ -7,7 +7,7 @@ public class NearbyResourceUI : UnturnedUI
     public readonly UnturnedLabel BuildLabel = new UnturnedLabel("Build");
     public readonly UnturnedLabel AmmoLabel = new UnturnedLabel("Ammo");
 
-    public NearbyResourceUI() : base(12009, Gamemodes.Gamemode.Config.UINearbyResources, true, false)
+    public NearbyResourceUI() : base(Gamemodes.Gamemode.Config.UINearbyResources, reliable: false)
     {
 
     }

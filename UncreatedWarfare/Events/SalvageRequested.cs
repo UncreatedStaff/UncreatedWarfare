@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SDG.Unturned;
 using Uncreated.SQL;
 using Uncreated.Warfare.Structures;
 using UnityEngine;
@@ -28,7 +29,7 @@ public abstract class SalvageRequested : BreakablePlayerEvent, IBuildableDestroy
     UCPlayer? IBuildableDestroyedEvent.Instigator => Player;
     object IBuildableDestroyedEvent.Region => RegionObj;
     ulong IBuildableDestroyedEvent.InstigatorId => Player.Steam64;
-
+    public EDamageOrigin DamageOrigin => EDamageOrigin.Unknown;
     protected SalvageRequested(UCPlayer player, object region, byte x, byte y, uint instanceId) : base(player)
     {
         RegionObj = region;

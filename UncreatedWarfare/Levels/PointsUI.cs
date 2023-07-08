@@ -1,12 +1,11 @@
 ﻿//#define SHOW_LEVEL
 //#define SHOW_DIVISION
 
-using System;
 using SDG.NetTransport;
 using SDG.Unturned;
+using System;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Levels;
 
@@ -27,7 +26,7 @@ public class XPUI : UnturnedUI
     public readonly UnturnedUIElement DivisionBackground = new UnturnedUIElement("DivisonBkgr");
 #endif
 
-    public XPUI() : base(26969, Gamemode.Config.UIXPPanel, false) { }
+    public XPUI() : base(Gamemode.Config.UIXPPanel, reliable: false) { }
     public void SendTo(UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();

@@ -224,7 +224,7 @@ public static partial class Patches
                 return false;
             if (caller != null)
             {
-                if ((caller.MuteType & Commands.EMuteType.TEXT_CHAT) == Commands.EMuteType.TEXT_CHAT &&
+                if ((caller.MuteType & Commands.MuteType.Text) == Commands.MuteType.Text &&
                     caller.TimeUnmuted > DateTime.Now)
                 {
                     if (caller.TimeUnmuted == DateTime.MaxValue)
