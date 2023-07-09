@@ -134,16 +134,23 @@ public enum ModerationEntryType : ushort
     Kick,
     Ban,
     Mute,
+    [Translatable("Asset Ban")]
     AssetBan,
     Teamkill,
+    [Translatable("Vehicle Teamkill")]
     VehicleTeamkill,
+    [Translatable("BattlEye Kick")]
     BattlEyeKick,
     Appeal,
     Report,
+    [Translatable("Greifing Report")]
     GreifingReport,
+    [Translatable("Chat Abuse Report")]
     ChatAbuseReport,
     Note,
     Commendation,
+    [Translatable("Bug Report Accepted")]
     BugReportAccepted,
+    [Translatable("Player Report Accepted")]
     PlayerReportAccepted
 }

@@ -16,8 +16,8 @@ public class TeamSelectorUI : UnturnedUI
     public readonly UnturnedUIElement LogicConfirmToggle = new UnturnedUIElement("anim_logic_btn_confirm");
     public readonly UnturnedUIElement LogicOpenTeamMenu = new UnturnedUIElement("anim_logic_page_teams");
     public readonly UnturnedUIElement LogicOpenOptionsMenu = new UnturnedUIElement("anim_logic_page_options");
-    public readonly UnturnedUIElement[] LogicTeamToggle = UnturnedUIElement.GetPattern("anim_logic_team_{0}", 2, 1);
-    public readonly UnturnedUIElement[] LogicTeamSelectedToggle = UnturnedUIElement.GetPattern("anim_logic_team_{0}_selected", 2, 1);
+    public readonly UnturnedUIElement[] LogicTeamToggle = UnturnedUIPatterns.CreateArray<UnturnedUIElement>("anim_logic_team_{0}", 1, length: 2);
+    public readonly UnturnedUIElement[] LogicTeamSelectedToggle = UnturnedUIPatterns.CreateArray<UnturnedUIElement>("anim_logic_team_{0}_selected", 1, length: 2);
 
     public readonly UnturnedButton ButtonConfirm = new UnturnedButton("btn_confirm");
     public readonly UnturnedLabel LabelConfirm = new UnturnedLabel("lbl_confirm");
@@ -26,14 +26,14 @@ public class TeamSelectorUI : UnturnedUI
     public readonly UnturnedLabel TeamsTitle = new UnturnedLabel("lbl_title");
 
     /* TEAM SELECTORS */
-    public readonly UnturnedButton[] TeamButtons = UnturnedButton.GetPattern("btn_{0}", 2, 1);
-    public readonly UnturnedLabel[] TeamNames = UnturnedLabel.GetPattern("lbl_name_{0}", 2, 1);
-    public readonly UnturnedImage[] TeamFlags = UnturnedImage.GetPattern("img_flag_{0}", 2, 1);
-    public readonly UnturnedLabel[] TeamCounts = UnturnedLabel.GetPattern("lbl_ct_{0}", 2, 1);
-    public readonly UnturnedLabel[] TeamStatus = UnturnedLabel.GetPattern("lbl_status_{0}", 2, 1);
+    public readonly UnturnedButton[] TeamButtons = UnturnedUIPatterns.CreateArray<UnturnedButton>("btn_{0}", 1, length: 2);
+    public readonly UnturnedLabel[] TeamNames = UnturnedUIPatterns.CreateArray<UnturnedLabel>("lbl_name_{0}", 1, length: 2);
+    public readonly UnturnedImage[] TeamFlags = UnturnedUIPatterns.CreateArray<UnturnedImage>("img_flag_{0}", 1, length: 2);
+    public readonly UnturnedLabel[] TeamCounts = UnturnedUIPatterns.CreateArray<UnturnedLabel>("lbl_ct_{0}", 1, length: 2);
+    public readonly UnturnedLabel[] TeamStatus = UnturnedUIPatterns.CreateArray<UnturnedLabel>("lbl_status_{0}", 1, length: 2);
 
-    public readonly UnturnedLabel[] TeamPlayersTeam1 = UnturnedLabel.GetPattern("pl_1_{0}", PlayerListCount, 1);
-    public readonly UnturnedLabel[] TeamPlayersTeam2 = UnturnedLabel.GetPattern("pl_2_{0}", PlayerListCount, 1);
+    public readonly UnturnedLabel[] TeamPlayersTeam1 = UnturnedUIPatterns.CreateArray<UnturnedLabel>("pl_1_{0}", 1, length: PlayerListCount);
+    public readonly UnturnedLabel[] TeamPlayersTeam2 = UnturnedUIPatterns.CreateArray<UnturnedLabel>("pl_2_{0}", 1, length: PlayerListCount);
 
     public readonly UnturnedLabel[][] TeamPlayers;
 

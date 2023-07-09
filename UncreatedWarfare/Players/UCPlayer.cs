@@ -112,8 +112,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private bool _isOnline;
     private bool _lastMuted;
     private float _multCache = 1f;
-    private string? _lang;
-    private CultureInfo? _locale;
     private EAdminType? _pLvl;
     private LevelData? _level;
     private PlayerNames _cachedName;
@@ -128,7 +126,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         CSteamID = steamID;
         Save = save;
         ActiveKit = KitManager.GetSingletonQuick()?.FindKit(Save.KitName, default, true).Result;
-
+        Locale = new UCPlayerLocale(this, Localization.GetLang(Steam64));
         if (!Data.OriginalPlayerNames.TryGetValue(Steam64, out _cachedName))
             _cachedName = new PlayerNames(player);
         else Data.OriginalPlayerNames.Remove(Steam64);
@@ -204,6 +202,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         end:
         return Name.CharacterName;
     }
+    public UCPlayerLocale Locale { get; }
     public InteractableVehicle? CurrentVehicle => Player.movement.getVehicle();
     public bool IsInVehicle => CurrentVehicle != null;
     public bool IsDriver => CurrentVehicle != null && CurrentVehicle.passengers.Length > 0 && CurrentVehicle.passengers[0].player != null && CurrentVehicle.passengers[0].player.playerID.steamID.m_SteamID == Steam64;
@@ -223,8 +222,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool IsAdmin => Player.channel.owner.isAdmin;
     public bool IsTeam1 => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
     public bool IsTeam2 => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
-    public string Language => _lang ??= Localization.GetLang(Steam64);
-    public CultureInfo Culture => _locale ??= LanguageAliasSet.GetCultureInfo(Language);
+    public string Language => Locale.Language;
+    public CultureInfo Culture => Locale.Culture ?? CultureInfo.InvariantCulture;
     public bool IsTalking => !_lastMuted && _isTalking && IsOnline;
     public bool IsLeaving { get; internal set; }
     public bool IsOnline => _isOnline;
@@ -863,8 +862,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     internal void OnLanguageChanged()
     {
-        _lang = null;
-        _locale = null;
+        Locale.Update(Localization.GetLang(Steam64));
     }
 
     private class EqualityComparer : IEqualityComparer<UCPlayer>
@@ -940,19 +938,16 @@ public struct OfflinePlayer : IPlayer
         return _s64.ToString(culture ?? Data.LocalLocale);
     }
 }
-public class UCPlayerLocale // todo implement
+public class UCPlayerLocale
 {
     public UCPlayer Player { get; }
     public string Language { get; private set; }
     public IFormatProvider Format { get; private set; }
+    public CultureInfo? Culture { get; private set; }
     public UCPlayerLocale(UCPlayer player, string language)
     {
         Player = player;
-        if (Localization.TryGetLangData(language, out string langName, out IFormatProvider format))
-        {
-            Format = format;
-            Language = langName;
-        }
+        Update(language);
     }
     public UCPlayerLocale(UCPlayer player) : this(player, L.Default) { }
     internal void Update(string language)
@@ -961,6 +956,7 @@ public class UCPlayerLocale // todo implement
         {
             Format = format;
             Language = langName;
+            Culture = format as CultureInfo;
         }
     }
 }

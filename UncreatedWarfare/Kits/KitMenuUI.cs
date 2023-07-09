@@ -166,23 +166,23 @@ public class KitMenuUI : UnturnedUI
     /* ARRAYS */
 
     // kit info
-    public readonly UnturnedUIElement[] IncludedItems = UnturnedUIElement.GetPattern("kit_included_{0}", IncludedItemsCount, 0);
-    public readonly UnturnedLabel[] IncludedItemsText = UnturnedLabel.GetPattern("kit_included_text_{0}", IncludedItemsCount, 0);
-    public readonly UnturnedLabel[] IncludedItemsIcons = UnturnedLabel.GetPattern("kit_included_icon_{0}", IncludedItemsCount, 0);
-    public readonly UnturnedLabel[] IncludedItemsAmounts = UnturnedLabel.GetPattern("kit_included_amt_{0}", IncludedItemsCount, 0);
+    public readonly UnturnedUIElement[] IncludedItems = UnturnedUIPatterns.CreateArray<UnturnedUIElement>("kit_included_{0}", 0, length: IncludedItemsCount);
+    public readonly UnturnedLabel[] IncludedItemsText = UnturnedUIPatterns.CreateArray<UnturnedLabel>("kit_included_text_{0}", 0, length: IncludedItemsCount);
+    public readonly UnturnedLabel[] IncludedItemsIcons = UnturnedUIPatterns.CreateArray<UnturnedLabel>("kit_included_icon_{0}", 0, length: IncludedItemsCount);
+    public readonly UnturnedLabel[] IncludedItemsAmounts = UnturnedUIPatterns.CreateArray<UnturnedLabel>("kit_included_amt_{0}", 0, length: IncludedItemsCount);
 
     // kit list
-    public readonly UnturnedButton[] Kits = UnturnedButton.GetPattern("kit_{0}", KitListCount);
-    public readonly UnturnedLabel[] FlagLabels = UnturnedLabel.GetPattern("flag_kit_{0}", KitListCount);
-    public readonly UnturnedLabel[] NameLabels = UnturnedLabel.GetPattern("name_kit_{0}", KitListCount);
-    public readonly UnturnedLabel[] WeaponLabels = UnturnedLabel.GetPattern("weapon_kit_{0}", KitListCount);
-    public readonly UnturnedLabel[] IdLabels = UnturnedLabel.GetPattern("id_kit_{0}", KitListCount);
-    public readonly UnturnedLabel[] FavoriteLabels = UnturnedLabel.GetPattern("txt_fav_kit_{0}", KitListCount);
-    public readonly UnturnedLabel[] ClassLabels = UnturnedLabel.GetPattern("class_kit_{0}", KitListCount);
-    public readonly UnturnedLabel[] StatusLabels = UnturnedLabel.GetPattern("status_kit_{0}", KitListCount);
-    public readonly UnturnedButton[] FavoriteButtons = UnturnedButton.GetPattern("btn_fav_kit_{0}", KitListCount);
+    public readonly UnturnedButton[] Kits = UnturnedUIPatterns.CreateArray<UnturnedButton>("kit_{0}", 1, length: KitListCount);
+    public readonly UnturnedLabel[] FlagLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("flag_kit_{0}", 1, length: KitListCount);
+    public readonly UnturnedLabel[] NameLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("name_kit_{0}", 1, length: KitListCount);
+    public readonly UnturnedLabel[] WeaponLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("weapon_kit_{0}", 1, length: KitListCount);
+    public readonly UnturnedLabel[] IdLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("id_kit_{0}", 1, length: KitListCount);
+    public readonly UnturnedLabel[] FavoriteLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("txt_fav_kit_{0}", 1, length: KitListCount);
+    public readonly UnturnedLabel[] ClassLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("class_kit_{0}", 1, length: KitListCount);
+    public readonly UnturnedLabel[] StatusLabels = UnturnedUIPatterns.CreateArray<UnturnedLabel>("status_kit_{0}", 1, length: KitListCount);
+    public readonly UnturnedButton[] FavoriteButtons = UnturnedUIPatterns.CreateArray<UnturnedButton>("btn_fav_kit_{0}", 1, length: KitListCount);
 
-    public readonly UnturnedUIElement[] LogicSetTabs = UnturnedUIElement.GetPattern("anim_logic_set_tab_{0}", TabCount);
+    public readonly UnturnedUIElement[] LogicSetTabs = UnturnedUIPatterns.CreateArray<UnturnedUIElement>("anim_logic_set_tab_{0}", 1, length: TabCount);
 
     public readonly UnturnedButton[] DropdownButtons;
     public readonly string[] DefaultClassCache;
