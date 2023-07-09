@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
@@ -18,8 +19,10 @@ public class HeatSeekingMissileComponent : MonoBehaviour
     //private Player _firer;
     private GameObject _projectile;
     private HeatSeekingController _controller;
+    private Transform? _previousTarget;
     private Transform? _lastKnownTarget;
     private Vector3 _randomRelativePosition;
+    private int _allowedPathAlterations;
 
     private Rigidbody _rigidbody;
 
@@ -58,6 +61,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         _maxTurnDegrees = responsiveness;
         _projectileSpeed = projectileSpeed;
         _guidanceRampTime = guidanceRampTime;
+        _allowedPathAlterations = 1;
         _startTime = Time.time;
         if (_controller.Status == ELockOnMode.LOCKED_ON)
             _lost = false;
@@ -67,25 +71,16 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         _rigidbody = projectile.GetComponent<Rigidbody>();
 
         _randomRelativePosition = Quaternion.AngleAxis(Random.Range(0f, 360f), Vector3.forward) * new Vector3(0, 10, 100);
+
+        _controller.MissilesInFlight.Add(this);
     }
 
-    private void TrySendWarning()
+    private void OnDestroy()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (
-            _lost ||
-            _controller.LockOnTarget is null ||
-            !_controller.LockOnTarget.TryGetComponent(out VehicleComponent c) ||
-            c.Vehicle.isDead ||
-            c.Data is null)
-        {
-            return;
-        }
-
-        c.ReceiveMissileWarning(this);
+        L.Log("Missile destroyed. In flight: " + _controller.MissilesInFlight.Count);
+        _controller.MissilesInFlight.Remove(this);
     }
+    
     private float _timeOfLastLoop;
     [UsedImplicitly]
     private void FixedUpdate()
@@ -100,12 +95,36 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         }
         if (_controller.LockOnTarget != null)
         {
-            _lastKnownTarget = _controller.LockOnTarget;
+            if (_previousTarget == null)
+            {
+                L.LogDebug($"Missile {gameObject.GetInstanceID()} initial target set");
+                _previousTarget = _controller.LockOnTarget;
+            }
+                
+            if (_lastKnownTarget != null && _lastKnownTarget != _previousTarget)
+            {
+                _allowedPathAlterations--;
+                _previousTarget = _lastKnownTarget;
+                L.LogDebug($"Missile {gameObject.GetInstanceID()} detected path change. Alterations left: " + _allowedPathAlterations);
+            }
+
+            if (_allowedPathAlterations > 0)
+            {
+                L.LogDebug($"Missile {gameObject.GetInstanceID()} successfully tracking target");
+                _lastKnownTarget = _controller.LockOnTarget;
+            }
+        }
+        else
+        {
+            _lastKnownTarget = null;
         }
 
-        if (_controller.LockOnTarget != null && Vector3.Angle(_projectile.transform.forward, _controller.LockOnTarget.position - _projectile.transform.position) > 40)
+        if (_lastKnownTarget != null && Vector3.Angle(_projectile.transform.forward, _lastKnownTarget.position - _projectile.transform.position) > 40)
         {
+            L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
             _lost = true;
+            L.LogDebug($"Missile {gameObject.GetInstanceID()} lost its target");
+            L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
         }
 
         Vector3 idealDirection;
@@ -125,7 +144,14 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         if ((Time.time - _startTime) > TIMEOUT)
         {
             if (!_rigidbody.useGravity)
+            {
                 _rigidbody.useGravity = true;
+                L.LogDebug($"Missile {gameObject.GetInstanceID()} timed out");
+                L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
+                _controller.MissilesInFlight.Remove(this);
+                L.LogDebug("In flight: " + _controller.MissilesInFlight.Count);
+                
+            }
         }
         else
         {
@@ -145,8 +171,6 @@ public class HeatSeekingMissileComponent : MonoBehaviour
                 id = Gamemode.Config.EffectHeatSeekingMissileSound;
 
                 _timeOfLastLoop = Time.time;
-
-                TrySendWarning();
             }
             if (id.ValidReference(out EffectAsset effect))
             {

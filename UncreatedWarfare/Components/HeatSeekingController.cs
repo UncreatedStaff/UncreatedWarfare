@@ -1,6 +1,8 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using Uncreated.Framework;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -10,7 +12,6 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 {
     private const float AQUISITION_ANGLE = 65f;
     private const float AQUISITION_FREQUENCY = 0.25f;
-    private const float FLARE_PER_TICK_LOCK_ON_CHANCE = 0.4f;
 
 
     private float _horizontalRange = 550;
@@ -20,6 +21,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     private EffectAsset _effect;
     private UCPlayer? _lastKnownGunner;
     public List<Transform> Hardpoints { get; set; }
+    public List<HeatSeekingMissileComponent> MissilesInFlight { get; set; }
 
 
     private float _aquisitionTime;
@@ -27,6 +29,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     private float _timeOfAquisition;
     private float _timeOfLastScan;
+    private float _timeOfLastWarning;
     public int _currentHardpoint;
 
     public Transform? LockOnTarget { get; private set; }
@@ -62,6 +65,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         _timeOutTime = timeOutTime;
 
         Hardpoints = new List<Transform>();
+        MissilesInFlight = new List<HeatSeekingMissileComponent>();
         _currentHardpoint = 0;
         for (int i = 0; i < 8; i++)
         {
@@ -83,6 +87,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         _timeOutTime = timeOutTime;
 
         Hardpoints = new List<Transform>();
+        MissilesInFlight = new List<HeatSeekingMissileComponent>();
         _currentHardpoint = 0;
         for (int i = 0; i < 8; i++)
         {
@@ -157,7 +162,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         bestTarget = AQUISITION_ANGLE;
 
-        bool lockedOntoCountermeassure = LockOnTarget is not null &&
+        bool lockedOntoCountermeassure = LockOnTarget != null &&
             LockOnTarget.TryGetComponent(out Countermeasure countermeasure) &&
             countermeasure.Burning;
 
@@ -166,9 +171,6 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             foreach (Countermeasure c in Countermeasure.ActiveCountermeasures)
             {
                 if (!c.Burning)
-                    continue;
-
-                if (Random.Range(0f, 1f) > FLARE_PER_TICK_LOCK_ON_CHANCE)
                     continue;
 
                 Vector3 relativePos = transform.InverseTransformPoint(c.transform.position);
@@ -187,18 +189,24 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             }
         }
 
-        LockOn(newTarget, _lastKnownGunner);
+        LockOn(newTarget, gunner);
     }
 
     private void LockOn(Transform? newTarget, UCPlayer? gunner)
     {
-        if (newTarget is null) // no target found-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ 
+        bool noAmmo = gunner != null && gunner.Player.equipment.state[10] == 0;
+        bool reloading = gunner != null && gunner.Player.equipment.isBusy;
+        bool noActiveMissiles = MissilesInFlight.Count == 0;
+
+        if (newTarget is null || (noAmmo && noActiveMissiles) || reloading) // no target found
         {
             if (Status != ELockOnMode.IDLE)
             {
                 Status = ELockOnMode.IDLE;
+
                 if (gunner != null)
                     CancelLockOnSound(gunner);
+
                 LockOnTarget = null;
             }
             return;
@@ -221,7 +229,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             {
                 Status = ELockOnMode.LOCKED_ON;
 
-                // play warning sound?
+                if (LockOnTarget.TryGetComponent(out VehicleComponent v) && gunner != null)
+                    v.ReceiveMissileWarning();
 
                 if (Time.time - _timeOfAquisition >= _timeOutTime)
                 {
@@ -236,6 +245,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         if (_effect == null || gunner is not { IsOnline: true })
             return;
 
+        EffectManager.ClearEffectByGuid(_effect.GUID, gunner.Connection);
         EffectManager.sendUIEffect(_effect.id, (short)_effect.id, gunner.Connection, true);
     }
     private void CancelLockOnSound(UCPlayer gunner)

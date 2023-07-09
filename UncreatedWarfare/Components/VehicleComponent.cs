@@ -300,7 +300,7 @@ public class VehicleComponent : MonoBehaviour
 
         UpdateHUDFlares();
     }
-    public void ReceiveMissileWarning(HeatSeekingMissileComponent heatseeker)
+    public void ReceiveMissileWarning()
     {
         if (_warningRoutine is not null)
             StopCoroutine(_warningRoutine);
@@ -494,13 +494,13 @@ public class VehicleComponent : MonoBehaviour
     }
     private float _timeLastFlare;
     private int _flareBurst = 0;
-    const int STARTING_FLARES_ATTACKHELI = 20;
-    const int STARTING_FLARES_TRANSHELI = 26;
-    const int STARTING_FLARES_JET = 16;
-    const int FLARE_BURST_COUNT = 1;
+    const int STARTING_FLARES_ATTACKHELI = 32;
+    const int STARTING_FLARES_TRANSHELI = 48;
+    const int STARTING_FLARES_JET = 24;
+    const int FLARE_BURST_COUNT = 6;
     private void FixedUpdate()
     {
-        if (_flaresLeft > 0 && Time.time - _timeLastFlare > 0.15f)
+        if (_flaresLeft > 0 && Time.time - _timeLastFlare > 0.2f)
         {
             if (DroppingFlares || (_flareBurst > 0 && _flareBurst < FLARE_BURST_COUNT))
             {

@@ -23,7 +23,7 @@ internal class Countermeasure : MonoBehaviour
     {
         float elapsed = Time.time - _startTime;
 
-        if (elapsed > 1.5f)
+        if (elapsed > 3f)
             Burning = false;
 
         if (elapsed > 8)
