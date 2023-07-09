@@ -11,6 +11,7 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Tickets;
@@ -219,6 +220,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(460, OnPullMethod = nameof(OnUIIncomingMortarWarningUpdated))]
     [JsonPropertyName("ui_incoming_mortar_warning")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIIncomingMortarWarning { get; set; }
+
+    [Sync(461, OnPullMethod = nameof(OnUIModerationMenuUpdated))]
+    [JsonPropertyName("ui_moderation_menu")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> UIModerationMenu { get; set; }
 
     [Sync(475)]
     [JsonPropertyName("effect_spotted_marker_infantry")]
@@ -977,6 +982,7 @@ public sealed class GamemodeConfigData : JSONConfigData
     private void OnUIFlagListUpdated() => CTFUI.ListUI.LoadFromConfig(UIFlagList);
     private void OnUIXPUpdated() => Points.XPUI.LoadFromConfig(UIXPPanel);
     private void OnUICreditsUpdated() => Points.CreditsUI.LoadFromConfig(UICreditsPanel);
+    private void OnUIModerationMenuUpdated() => ModerationUI.Instance.LoadFromConfig(UICreditsPanel);
     private void OnConquestEvaluateTimeUpdated()
     {
         if (Data.Is<Flags.Conquest>())

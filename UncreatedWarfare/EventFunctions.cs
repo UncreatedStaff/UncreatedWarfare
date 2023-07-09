@@ -1574,8 +1574,6 @@ public static class EventFunctions
         IconRenderer[] iconrenderers = e.Transform.GetComponents<IconRenderer>();
         foreach (IconRenderer iconRenderer in iconrenderers)
             IconManager.DeleteIcon(iconRenderer);
-        if (Data.Is<ISquads>(out _))
-            RallyManager.OnBarricadeDestroyed(e.Barricade);
         if (e.InstigatorId != 0ul)
         {
             SteamPlayer damager = PlayerTool.getSteamPlayer(e.InstigatorId);

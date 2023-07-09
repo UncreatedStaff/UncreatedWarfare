@@ -53,9 +53,9 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private static readonly InstanceGetter<Dictionary<Buff, float>, int> VersionGetter =
         Util.GenerateInstanceGetter<Dictionary<Buff, float>, int>("version", BindingFlags.NonPublic | BindingFlags.Instance);
     public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
-    public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UIMuted, false, false);
-    public static readonly UnturnedUI LoadingUI = new UnturnedUI(15624, Gamemode.Config.UILoading, false, false, false);
-    public static readonly UnturnedUI MortarWarningUI = new UnturnedUI(15625, Gamemode.Config.UIIncomingMortarWarning, true, false, false);
+    public static readonly UnturnedUI MutedUI = new UnturnedUI(Gamemode.Config.UIMuted, hasElements: false);
+    public static readonly UnturnedUI LoadingUI = new UnturnedUI(Gamemode.Config.UILoading, hasElements: false);
+    public static readonly UnturnedUI MortarWarningUI = new UnturnedUI(Gamemode.Config.UIIncomingMortarWarning);
     /*
      * There can never be more than one semaphore per player (even if they've gone offline)
      * as this object will get reused until the finalizer runs, so don't save the semaphore outside of a sync local scope.

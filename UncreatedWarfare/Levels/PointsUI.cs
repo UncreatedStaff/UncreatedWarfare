@@ -114,7 +114,7 @@ public class CreditsUI : UnturnedUI
     public readonly UnturnedUIElement Parent = new UnturnedUIElement("Image");
     private static string? _creditsColor;
     public string CreditsColor => _creditsColor ??= UCWarfare.GetColorHex("credits");
-    public CreditsUI() : base(26971, Gamemode.Config.UICreditsPanel, false) { }
+    public CreditsUI() : base(Gamemode.Config.UICreditsPanel) { }
     public void SendTo(UCPlayer player)
     {
         L.LogDebug("Sending creds ui to " + player + " (" + Convert.ToString(player.PointsDirtyMask, 2) + ")");

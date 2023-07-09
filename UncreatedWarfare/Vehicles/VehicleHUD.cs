@@ -13,7 +13,7 @@ public class VehicleHUD : UnturnedUI
     public readonly UnturnedLabel MissileWarningDriver = new UnturnedLabel("VH_MissileWarningDriver");
     public readonly UnturnedLabel FlareCount = new UnturnedLabel("VH_FlareCount");
 
-    public VehicleHUD() : base(16052, Gamemode.Config.UIVehicleHUD)
+    public VehicleHUD() : base(Gamemode.Config.UIVehicleHUD)
     {
         
     }
