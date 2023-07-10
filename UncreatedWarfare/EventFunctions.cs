@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
@@ -1395,6 +1396,7 @@ public static class EventFunctions
         UCPlayer ucplayer = e.Player;
         try
         {
+            UnturnedUIDataSource.Instance.RemovePlayer(e.Player.CSteamID);
             if (!UCWarfare.Config.DisableDailyQuests)
                 DailyQuests.DeregisterDailyTrackers(ucplayer);
             QuestManager.DeregisterOwnedTrackers(ucplayer);

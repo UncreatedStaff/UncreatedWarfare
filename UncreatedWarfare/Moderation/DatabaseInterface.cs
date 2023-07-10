@@ -1,10 +1,12 @@
 ﻿using MySqlConnector;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.SQL;
@@ -12,14 +14,15 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Commendation;
 using Uncreated.Warfare.Moderation.Punishments;
-using Uncreated.Warfare.Moderation.Reports;
 using Uncreated.Warfare.Vehicles;
+using Report = Uncreated.Warfare.Moderation.Reports.Report;
 
 namespace Uncreated.Warfare.Moderation;
 public abstract class DatabaseInterface
 {
     public static readonly TimeSpan DefaultInvalidateDuration = TimeSpan.FromSeconds(3);
     public ModerationCache Cache { get; } = new ModerationCache(64);
+    public Dictionary<ulong, string> IconUrlCache = new Dictionary<ulong, string>(128);
     public abstract IWarfareSql Sql { get; }
     public Task VerifyTables() => Sql.VerifyTables(Schema);
     public async Task<PlayerNames> GetUsernames(ulong id, CancellationToken token = default)
@@ -56,7 +59,9 @@ public abstract class DatabaseInterface
         
         return entry as T;
     }
-    public async Task<T[]> ReadAll<T>(ulong actor, ActorRelationType type, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : ModerationEntry
+    public async Task<T[]> ReadAll<T>(ulong actor, ActorRelationType relation, DateTimeOffset? start = null, DateTimeOffset? end = null, string? orderBy = null, string? condition = null, object[]? conditionArgs = null, CancellationToken token = default) where T : ModerationEntry
+        => (T[])await ReadAll(typeof(T), actor, relation, start, end, orderBy, condition, conditionArgs, token).ConfigureAwait(false);
+    public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, DateTimeOffset? start = null, DateTimeOffset? end = null, string? orderBy = null, string? condition = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
         string query = $"SELECT {SqlTypes.ColumnList(ColumnEntriesPrimaryKey, ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
             ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
@@ -65,7 +70,7 @@ public abstract class DatabaseInterface
                        $"FROM `{TableEntries}` WHERE";
 
 
-        switch (type)
+        switch (relation)
         {
             default:
             case ActorRelationType.IsTarget:
@@ -87,10 +92,11 @@ public abstract class DatabaseInterface
             ModerationReflection.TypeInheritance.TryGetValue(typeof(T), out types);
         object[] actorArgs;
         int offset;
+        int xtraLength = (types == null ? 0 : types.Length) + (conditionArgs == null || condition == null ? 0 : conditionArgs.Length);
         if (start.HasValue && end.HasValue)
         {
             offset = 3;
-            actorArgs = new object[3 + (types == null ? 0 : types.Length)];
+            actorArgs = new object[3 + xtraLength];
             actorArgs[1] = start.Value.UtcDateTime;
             actorArgs[2] = end.Value.UtcDateTime;
             query += $" AND `{ColumnEntriesStartTimestamp}` >= @1 AND `{ColumnEntriesStartTimestamp}` <= @2";
@@ -98,21 +104,21 @@ public abstract class DatabaseInterface
         else if (start.HasValue)
         {
             offset = 2;
-            actorArgs = new object[2 + (types == null ? 0 : types.Length)];
+            actorArgs = new object[2 + xtraLength];
             actorArgs[1] = start.Value.UtcDateTime;
             query += $" AND `{ColumnEntriesStartTimestamp}` >= @1";
         }
         else if (end.HasValue)
         {
             offset = 2;
-            actorArgs = new object[2 + (types == null ? 0 : types.Length)];
+            actorArgs = new object[2 + xtraLength];
             actorArgs[1] = end.Value.UtcDateTime;
             query += $" AND `{ColumnEntriesStartTimestamp}` <= @1";
         }
         else
         {
             offset = 1;
-            actorArgs = new object[1 + (types == null ? 0 : types.Length)];
+            actorArgs = new object[1 + xtraLength];
         }
 
         actorArgs[0] = actor;
@@ -136,30 +142,50 @@ public abstract class DatabaseInterface
                 }
             }
 
-            query += ");";
+            query += ")";
         }
-        else query += ";";
+
+        if (types != null)
+            offset += types.Length;
+        if (conditionArgs != null && condition != null)
+        {
+            for (int i = 0; i < conditionArgs.Length; ++i)
+            {
+                actorArgs[offset + i] = conditionArgs[i];
+                condition = Util.QuickFormat(condition, "@" + (offset + i).ToString(CultureInfo.InvariantCulture), i);
+            }
+        }
+
+        if (condition != null)
+            query += " AND " + condition;
+
+        if (orderBy != null)
+            query += " ORDER BY " + orderBy;
+
+        query += ";";
 
 
-        List<T> entries = new List<T>(4);
+        ArrayList entries = new ArrayList(4);
         await Sql.QueryAsync(query, actorArgs, reader =>
         {
             ModerationEntry? entry = ReadEntry(reader, 1);
-            if (entry is T tsEntry)
+            if (type.IsInstanceOfType(entry))
             {
-                tsEntry.Id = reader.GetInt32(0);
-                entries.Add(tsEntry);
+                entry!.Id = reader.GetInt32(0);
+                entries.Add(entry);
             }
         }, token).ConfigureAwait(false);
 
-        T[] rtn = entries.ToArrayFast();
+        Array rtn = entries.ToArray(type);
 
         // ReSharper disable once CoVariantArrayConversion
-        await Fill(rtn, token).ConfigureAwait(false);
+        await Fill((ModerationEntry[])rtn, token).ConfigureAwait(false);
         
         return rtn;
     }
-    public async Task<T[]> ReadAll<T>(DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default) where T : ModerationEntry
+    public async Task<T[]> ReadAll<T>(DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : ModerationEntry
+        => (T[])await ReadAll(typeof(T), start, end, condition, orderBy, conditionArgs, token).ConfigureAwait(false);
+    public async Task<Array> ReadAll(Type type, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
         string query = $"SELECT {SqlTypes.ColumnList(ColumnEntriesPrimaryKey, ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
             ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
@@ -168,44 +194,51 @@ public abstract class DatabaseInterface
                        $"FROM `{TableEntries}` WHERE";
 
         ModerationEntryType[]? types = null;
-        if (typeof(T) != typeof(ModerationEntry))
-            ModerationReflection.TypeInheritance.TryGetValue(typeof(T), out types);
-
+        if (type != typeof(ModerationEntry))
+            ModerationReflection.TypeInheritance.TryGetValue(type, out types);
+        bool and = false;
         object[] args;
         int offset;
+        int xtraLength = (types == null ? 0 : types.Length) + (conditionArgs == null || condition == null ? 0 : conditionArgs.Length);
         if (start.HasValue && end.HasValue)
         {
             offset = 2;
-            args = new object[2 + (types == null ? 0 : types.Length)];
+            args = new object[2 + xtraLength];
             args[0] = start.Value.UtcDateTime;
             args[1] = end.Value.UtcDateTime;
-            query += $" AND `{ColumnEntriesStartTimestamp}` >= @1 AND `{ColumnEntriesStartTimestamp}` <= @2";
+            query += $" `{ColumnEntriesStartTimestamp}` >= @1 AND `{ColumnEntriesStartTimestamp}` <= @2";
+            and = true;
         }
         else if (start.HasValue)
         {
             offset = 1;
-            args = new object[1 + (types == null ? 0 : types.Length)];
+            args = new object[1 + xtraLength];
             args[0] = start.Value.UtcDateTime;
-            query += $" AND `{ColumnEntriesStartTimestamp}` >= @1";
+            query += $" `{ColumnEntriesStartTimestamp}` >= @1";
+            and = true;
         }
         else if (end.HasValue)
         {
             offset = 1;
-            args = new object[1 + (types == null ? 0 : types.Length)];
+            args = new object[1 + xtraLength];
             args[0] = end.Value.UtcDateTime;
-            query += $" AND `{ColumnEntriesStartTimestamp}` <= @1";
+            query += $" `{ColumnEntriesStartTimestamp}` <= @1";
+            and = true;
         }
         else
         {
             offset = 0;
-            args = new object[types == null ? 0 : types.Length];
+            args = new object[xtraLength];
         }
         
         if (types is { Length: > 0 })
         {
             for (int i = 0; i < types.Length; ++i)
                 args[offset + i] = types[i].ToString();
-            query += $" AND `{ColumnEntriesType} IN (";
+            if (and)
+                query += " AND";
+            query += $" `{ColumnEntriesType} IN (";
+            and = true;
             if (types.Length == 1)
             {
                 query += "@" + offset.ToString(CultureInfo.InvariantCulture);
@@ -221,26 +254,44 @@ public abstract class DatabaseInterface
                 }
             }
 
-            query += ");";
+            query += ")";
         }
-        else query += ";";
+
+        if (types != null)
+            offset += types.Length;
+        if (conditionArgs != null && condition != null)
+        {
+            for (int i = 0; i < conditionArgs.Length; ++i)
+            {
+                args[offset + i] = conditionArgs[i];
+                condition = Util.QuickFormat(condition, "@" + (offset + i).ToString(CultureInfo.InvariantCulture), i);
+            }
+        }
+
+        if (condition != null)
+            query += (and ? " AND " : " ") + condition;
+
+        if (orderBy != null)
+            query += " ORDER BY " + orderBy;
+
+        query += ";";
 
 
-        List<T> entries = new List<T>(4);
+        ArrayList entries = new ArrayList(4);
         await Sql.QueryAsync(query, args, reader =>
         {
             ModerationEntry? entry = ReadEntry(reader, 1);
-            if (entry is T tsEntry)
+            if (type.IsInstanceOfType(entry))
             {
-                tsEntry.Id = reader.GetInt32(0);
-                entries.Add(tsEntry);
+                entry!.Id = reader.GetInt32(0);
+                entries.Add(entry);
             }
         }, token).ConfigureAwait(false);
 
-        T[] rtn = entries.ToArrayFast();
+        Array rtn = entries.ToArray(type);
 
         // ReSharper disable once CoVariantArrayConversion
-        await Fill(rtn, token).ConfigureAwait(false);
+        await Fill((ModerationEntry[])rtn, token).ConfigureAwait(false);
         
         return rtn;
     }

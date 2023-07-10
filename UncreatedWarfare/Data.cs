@@ -29,6 +29,7 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
@@ -116,6 +117,7 @@ public static class Data
     public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = new Dictionary<ulong, UCPlayerData>();
     internal static WarfareSQL DatabaseManager;
     internal static WarfareSQL? RemoteSQL;
+    internal static DatabaseInterface ModerationSql;
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
     public static bool UseFastKits;

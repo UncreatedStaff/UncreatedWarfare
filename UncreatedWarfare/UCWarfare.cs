@@ -26,6 +26,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
@@ -150,6 +151,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         await ItemIconProvider.DownloadConfig(token).ConfigureAwait(false);
         await TeamManager.ReloadFactions(token).ConfigureAwait(false);
         await ToUpdate(token);
+        Data.ModerationSql = new WarfareDatabaseInterface();
         _ = TeamManager.Team1Faction;
         _ = TeamManager.Team2Faction;
         _ = TeamManager.AdminFaction;

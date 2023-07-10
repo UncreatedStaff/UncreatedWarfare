@@ -11,6 +11,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 

@@ -105,6 +105,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     internal byte PointsDirtyMask = 0b00111111;
     internal bool HasTicketUI = false;
     internal bool HasFOBUI = false;
+    internal bool HasModerationUI = false;
     internal int MortarWarningCount = 0;
     private readonly CancellationTokenSource _disconnectTokenSrc;
     private int _multVersion = -1;
@@ -213,7 +214,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public SteamPlayer SteamPlayer => Player.channel.owner;
     public PlayerSave Save { get; }
     public Player Player { get; internal set; }
-    public CSteamID CSteamID { get; internal set; }
+    public CSteamID CSteamID { get; }
     public ITransportConnection Connection => Player.channel.owner.transportConnection!;
     public EffectAsset? LastPing { get; internal set; }
     public ulong? ViewLens { get; set; }

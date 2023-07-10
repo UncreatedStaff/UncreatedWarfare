@@ -108,6 +108,8 @@ public class SystemConfigData : JSONConfigData
     public bool DisableAprilFools;
     [JsonPropertyName("disableKitMenu")]
     public bool DisableKitMenu;
+    [JsonPropertyName("steam_api_key")]
+    public string? SteamAPIKey;
 
     public override void SetDefaults()
     {
@@ -155,6 +157,7 @@ public class SystemConfigData : JSONConfigData
         DisableDailyRestart = false;
         DisableAprilFools = false;
         DisableKitMenu = false;
+        SteamAPIKey = null;
     }
     public class ModerationConfig
     {

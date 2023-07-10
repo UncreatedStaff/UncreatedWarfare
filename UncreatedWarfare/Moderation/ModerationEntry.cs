@@ -80,6 +80,20 @@ public abstract class ModerationEntry
     /// </summary>
     internal virtual Task FillDetail(DatabaseInterface db) => Task.CompletedTask;
     public virtual string GetDisplayName() => ToString();
+    public bool TryGetPrimaryAdmin(out RelatedActor actor)
+    {
+        for (int i = 0; i < Actors.Length; ++i)
+        {
+            if (string.Equals(Actors[i].Role, RelatedActor.RolePrimaryAdmin))
+            {
+                actor = Actors[i];
+                return true;
+            }
+        }
+
+        actor = new RelatedActor(RelatedActor.RolePrimaryAdmin, true, ConsoleActor.Instance);
+        return false;
+    }
 }
 
 public class ModerationCache : Dictionary<int, ModerationEntryCacheEntry>

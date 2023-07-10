@@ -91,6 +91,9 @@
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule">
+      <HintPath>..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnturnedDat">
       <HintPath>..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\UnturnedDat.dll</HintPath>
     </Reference>
