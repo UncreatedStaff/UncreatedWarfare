@@ -17,6 +17,7 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Singletons;
@@ -305,9 +306,9 @@ public class Insurgency :
         foreach (UCPlayer player in PlayerManager.OnlinePlayers)
         {
             if (player.GetTeam() == AttackingTeam)
-                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.CacheDiscoveredAttack, player, cache.ClosestLocation), ToastMessageSeverity.Big));
+                ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, Localization.Translate(T.CacheDiscoveredAttack, player, cache.ClosestLocation)));
             else if (player.GetTeam() == DefendingTeam)
-                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.CacheDiscoveredDefense, player), ToastMessageSeverity.Big));
+                ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, Localization.Translate(T.CacheDiscoveredDefense, player)));
         }
         for (int i = 0; i < Caches.Count; i++)
         {
@@ -388,7 +389,7 @@ public class Insurgency :
         {
             foreach (LanguageSet set in LanguageSet.OnTeam(DefendingTeam))
             {
-                ToastMessage msg = new ToastMessage(T.CacheSpawnedDefense.Translate(set.Language), ToastMessageSeverity.Big);
+                ToastMessage msg = new ToastMessage(ToastMessageStyle.Large, T.CacheSpawnedDefense.Translate(set.Language));
                 while (set.MoveNext())
                     ToastMessage.QueueMessage(set.Next, msg);
             }
@@ -465,9 +466,9 @@ public class Insurgency :
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
                 if (player.GetTeam() == AttackingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(T.CacheDestroyedAttack.Translate(player), string.Empty, ToastMessageSeverity.Big));
+                    ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, new string[] { T.CacheDestroyedAttack.Translate(player), string.Empty, string.Empty }));
                 else if (player.GetTeam() == DefendingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(T.CacheDestroyedDefense.Translate(player), string.Empty, ToastMessageSeverity.Big));
+                    ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, new string[] { T.CacheDestroyedDefense.Translate(player), string.Empty, string.Empty }));
             }
 
             if (ActiveCachesCount == 0)

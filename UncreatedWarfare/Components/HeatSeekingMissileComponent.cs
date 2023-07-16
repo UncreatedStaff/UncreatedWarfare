@@ -77,7 +77,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
 
     private void OnDestroy()
     {
-        L.Log("Missile destroyed. In flight: " + _controller.MissilesInFlight.Count);
+        L.LogDebug("Missile destroyed. In flight: " + _controller.MissilesInFlight.Count);
         _controller.MissilesInFlight.Remove(this);
     }
     

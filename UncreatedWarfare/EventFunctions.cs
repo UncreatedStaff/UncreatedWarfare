@@ -56,7 +56,10 @@ public static class EventFunctions
         if (steam64 == 0 || ItemManager.regions == null) return;
         if (Regions.tryGetCoordinate(point, out byte x, out byte y))
         {
-            ItemData newItem = ItemManager.regions[x, y].items.GetTail();
+            ItemRegion itemRegion = ItemManager.regions[x, y];
+            if (itemRegion.items.Count == 0)
+                return;
+            ItemData newItem = itemRegion.items.GetTail();
             if (DroppedItems.TryGetValue(steam64, out List<uint> items))
                 items.Add(newItem.instanceID);
             else
@@ -631,7 +634,8 @@ public static class EventFunctions
                 {
                     if (UCPlayer.LoadingUI.IsValid)
                         UCPlayer.LoadingUI.ClearFromPlayer(ucplayer.Connection);
-                    ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? T.WelcomeMessage : T.WelcomeBackMessage, ucplayer, ucplayer), ToastMessageSeverity.Info));
+                    if (isNewPlayer)
+                        ToastMessage.QueueMessage(ucplayer, ToastMessage.Popup(T.WelcomeMessageTitle.Translate(ucplayer), T.WelcomeMessage.Translate(ucplayer), T.ButtonOK.Translate(ucplayer)));
                 }
             }, token);
             ucplayer.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);

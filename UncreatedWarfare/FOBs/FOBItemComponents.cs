@@ -7,6 +7,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
@@ -181,15 +182,13 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
         try
         {
             float time = Time.realtimeSinceStartup;
-            ToastMessage msg = new ToastMessage(
-                Points.GetProgressBar(Barricade.GetServersideData().barricade.health, Barricade.asset.health, 25).Colorize("ff9966"),
-                ToastMessageSeverity.Progress);
+            ToastMessage msg = new ToastMessage(ToastMessageStyle.ProgressBar, Points.GetProgressBar(Barricade.GetServersideData().barricade.health, Barricade.asset.health, 25).Colorize("ff9966"));
             foreach (TickResponsibility responsibility in Builders)
             {
                 if (time - responsibility.LastUpdated < 5f)
                 {
-                    if (UCPlayer.FromID(responsibility.Steam64) is { } pl && pl.Player.TryGetPlayerData(out UCPlayerData component))
-                        component.QueueMessage(msg, true);
+                    if (UCPlayer.FromID(responsibility.Steam64) is { } pl)
+                        pl.Toasts.Queue(in msg);
                 }
             }
         }
@@ -494,11 +493,11 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         try
         {
             float time = Time.realtimeSinceStartup;
-            ToastMessage msg = new ToastMessage(Points.GetProgressBar(Progress, Total, 25), ToastMessageSeverity.Progress);
+            ToastMessage msg = new ToastMessage(ToastMessageStyle.ProgressBar, Points.GetProgressBar(Progress, Total, 25));
             foreach (TickResponsibility responsibility in Builders)
             {
-                if (time - responsibility.LastUpdated < 5f && UCPlayer.FromID(responsibility.Steam64) is { } pl && pl.Player.TryGetPlayerData(out UCPlayerData component))
-                    component.QueueMessage(msg, true);
+                if (time - responsibility.LastUpdated < 5f && UCPlayer.FromID(responsibility.Steam64) is { } pl)
+                    pl.Toasts.Queue(in msg);
             }
         }
         finally

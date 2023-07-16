@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -20,6 +21,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
@@ -1286,10 +1288,8 @@ public class DebugCommand : AsyncCommand
         {
             try
             {
-                Type[] types = typeof(UCWarfare).Assembly.GetTypes();
-                for (int i = 0; i < types.Length; ++i)
+                foreach (Type type in Util.GetTypesSafe())
                 {
-                    Type type = types[i];
                     if (!string.IsNullOrEmpty(typeName) && !type.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))
                         continue;
                     MethodInfo[] methods = type.GetMethods(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -1673,5 +1673,41 @@ public class DebugCommand : AsyncCommand
         string? lang = ctx.GetRange(0);
         Translation.ExportLanguage(lang, false, true);
         ctx.ReplyString((lang ?? L.Default) + " exported.");
+    }
+
+    private void zonespeedtest(CommandInteraction ctx)
+    {
+        ZoneList zl = Data.Singletons.GetSingleton<ZoneList>()!;
+        zl.WriteWait();
+        try
+        {
+            Flag[] zones = zl.Items.Where(x => x.Item != null).Select(x => new Flag(x, null!)).ToArray();
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            for (int i = 0; i < zones.Length; ++i)
+            {
+                zones[i].GetUpdatedPlayers().Release();
+            }
+
+            stopwatch.Stop();
+            ctx.ReplyString($"Time to scan {zl.Items.Count} flags * {Provider.clients.Count} players: {stopwatch.GetElapsedMilliseconds():F4} ms.");
+        }
+        finally
+        {
+            zl.WriteRelease();
+        }
+    }
+    private async Task getpfp(CommandInteraction ctx)
+    {
+        if (!ctx.TryGet(0, out ulong steam64, out _, true))
+        {
+            ctx.AssertRanByPlayer();
+            steam64 = ctx.CallerID;
+        }
+
+        IModerationActor actor = Actors.GetActor(steam64);
+        string? pfp = await actor.GetProfilePictureURL(Data.ModerationSql, AvatarSize.Full, UCWarfare.UnloadCancel);
+        ctx.ReplyString(pfp ?? "NULL");
+        if (!ctx.IsConsole)
+            L.Log("PFP URL: " + (pfp ?? "NULL"));
     }
 }

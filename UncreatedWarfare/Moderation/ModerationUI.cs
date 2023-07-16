@@ -1,15 +1,17 @@
-﻿using System;
-using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
+using System;
+using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Presets;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Moderation;
@@ -30,6 +32,8 @@ public class ModerationUI : UnturnedUI
         new LabeledButton("ButtonLogs")
     };
 
+    public LabeledButton ButtonClose { get; } = new LabeledButton("ButtonClose");
+
     public UnturnedUIElement[] PageLogic { get; } =
     {
         new UnturnedUIElement("LogicPageModeration"),
@@ -43,9 +47,9 @@ public class ModerationUI : UnturnedUI
     public UnturnedTextBox PlayerSearch { get; } = new UnturnedTextBox("ModerationPlayersInputSearch");
     public ChangeableTextBox ModerationPlayerSearch { get; } = new ChangeableTextBox("ModerationPlayersInputSearch");
     public UnturnedEnumButton<PlayerSearchMode> ModerationPlayerSearchModeButton { get; }
-        = new UnturnedEnumButton<PlayerSearchMode>(PlayerSearchMode.Any, "ModerationButtonToggleOnline", "ModerationButtonToggleOnlineLabel")
+        = new UnturnedEnumButton<PlayerSearchMode>(PlayerSearchMode.Online, "ModerationButtonToggleOnline", "ModerationButtonToggleOnlineLabel")
         {
-            TextFormatter = (v, player) => Localization.TranslateEnum(v, player.channel.owner.playerID.steamID.m_SteamID)
+            TextFormatter = (v, player) => "View - " + Localization.TranslateEnum(v, player.channel.owner.playerID.steamID.m_SteamID)
         };
 
     /* MODERATION HISTORY LIST */
@@ -118,19 +122,61 @@ public class ModerationUI : UnturnedUI
     /* ACTION CONTROLS */
     public ActionControl[] ModerationActionControls { get; } = UnturnedUIPatterns.CreateArray<ActionControl>("ModerationActionControl{1}_{0}", 1, to: 4);
 
-    public ModerationUI() : base(Gamemode.Config.UIModerationMenu) { }
+    public ModerationUI() : base(Gamemode.Config.UIModerationMenu)
+    {
+        ButtonClose.OnClicked += OnButtonCloseClicked;
+        ModerationPlayerSearchModeButton.OnValueUpdated += OnModerationPlayerSearchModeUpdated;
+        ModerationPlayerSearch.OnTextUpdated += OnModerationPlayerSearchTextUpdated;
+    }
 
-    
+    private void OnModerationPlayerSearchModeUpdated(UnturnedEnumButton<PlayerSearchMode> button, Player player, PlayerSearchMode value)
+    {
+        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        if (ucPlayer != null)
+            SendModerationPlayerList(ucPlayer);
+    }
+    private void OnModerationPlayerSearchTextUpdated(UnturnedTextBox button, Player player, string text)
+    {
+        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        if (ucPlayer != null)
+            SendModerationPlayerList(ucPlayer);
+    }
+    private void OnButtonCloseClicked(UnturnedButton button, Player player)
+    {
+        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        if (ucPlayer != null)
+            Close(ucPlayer);
+    }
+
+
     public async Task Open(UCPlayer player, CancellationToken token = default)
     {
         token.CombineIfNeeded(player.DisconnectToken);
         await UCWarfare.ToUpdate(token);
+
+        if (TeamSelector.Instance != null)
+            TeamSelector.Instance.Close(player);
+
+        player.ModalNeeded = true;
+        player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
+
         if (!player.HasModerationUI)
         {
             SendToPlayer(player.Connection);
             player.HasModerationUI = true;
             await SetPage(player, Page.Moderation, true, token).ConfigureAwait(false);
         }
+    }
+    public void Close(UCPlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
+
+        player.ModalNeeded = false;
+        player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
+        player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
+        ClearFromPlayer(player.Connection);
+        player.HasModerationUI = false;
     }
     public async Task SetPage(UCPlayer player, Page page, bool isAlreadyInView, CancellationToken token = default)
     {
@@ -153,6 +199,10 @@ public class ModerationUI : UnturnedUI
     private async Task PrepareModerationPage(UCPlayer player, CancellationToken token = default)
     {
         await UCWarfare.ToUpdate(token);
+
+        await PlayerManager.TryDownloadAllPlayerSummaries(token: token);
+        await UniTask.SwitchToMainThread(token);
+
         UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationPlayerSearch.TextBox);
         if (textBoxData != null)
             ModerationPlayerSearch.SetText(player.Connection, textBoxData.Text ?? string.Empty);
@@ -161,6 +211,7 @@ public class ModerationUI : UnturnedUI
         ModerationHistroyTypeButton.Update(player.Player, false);
         ModerationHistroySearchTypeButton.Update(player.Player, false);
         ModerationHistroySortTypeButton.Update(player.Player, false);
+
         await RefreshModerationHistory(player, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
     }
@@ -176,6 +227,7 @@ public class ModerationUI : UnturnedUI
     {
         return Task.CompletedTask;
     }
+    public ModerationData? GetModerationData(UCPlayer player) => UnturnedUIDataSource.GetData<ModerationData>(player.CSteamID, Headers[(int)Page.Moderation].Button);
     public ModerationData GetOrAddModerationData(UCPlayer player)
     {
         ModerationData? data = UnturnedUIDataSource.GetData<ModerationData>(player.CSteamID, Headers[(int)Page.Moderation].Button);
@@ -211,7 +263,71 @@ public class ModerationUI : UnturnedUI
                 UpdateModerationEntry(player, index, entries[index]);
         }
     }
+    public void SendModerationPlayerList(UCPlayer player)
+    {
+        ITransportConnection connection = player.Connection;
 
+        if (!ModerationPlayerSearchModeButton.TryGetSelection(player.Player, out PlayerSearchMode searchMode))
+            searchMode = PlayerSearchMode.Online;
+
+        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationPlayerSearch.TextBox);
+        string searchText = textBoxData?.Text ?? string.Empty;
+
+        if (searchText.Length < 3 || searchMode == PlayerSearchMode.Online)
+        {
+            int ct = Math.Min(Provider.clients.Count, ModerationPlayerList.Length);
+            for (int i = 0; i < ct; ++i)
+            {
+                try
+                {
+                    SteamPlayer steamPlayer = Provider.clients[i];
+                    UCPlayer? listPlayer = UCPlayer.FromSteamPlayer(steamPlayer);
+                    if (listPlayer == null)
+                    {
+                        PlayerListEntry entry = ModerationPlayerList[i];
+                        entry.SteamId.SetText(connection, steamPlayer.playerID.steamID.m_SteamID.ToString(CultureInfo.InvariantCulture));
+                        entry.ProfilePicture.SetImage(connection, string.Empty);
+                        entry.Name.SetText(connection, steamPlayer.playerID.playerName);
+                        entry.Root.SetVisibility(connection, true);
+                    }
+                    else UpdateModerationPlayerListEntry(player, i, listPlayer);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError(ex);
+                }
+            }
+            for (int i = ct; i < ModerationPlayerList.Length; ++i)
+            {
+                ModerationPlayerList[i].Root.SetVisibility(connection, false);
+            }
+        }
+        else
+        {
+            // todo
+        }
+    }
+    private void UpdateModerationPlayerListEntry(UCPlayer player, int index, UCPlayer listPlayer)
+    {
+        PlayerListEntry entry = ModerationPlayerList[index];
+        ITransportConnection connection = player.Connection;
+        entry.SteamId.SetText(connection, listPlayer.Steam64.ToString(CultureInfo.InvariantCulture));
+        entry.Name.SetText(connection, listPlayer.Name.PlayerName);
+        if (Data.ModerationSql.TryGetAvatar(listPlayer.Steam64, AvatarSize.Small, out string avatarUrl))
+            entry.ProfilePicture.SetImage(connection, avatarUrl);
+        else
+        {
+            entry.ProfilePicture.SetImage(connection, string.Empty);
+            UniTask.Create(async () =>
+            {
+                string? icon = await listPlayer.GetProfilePictureURL(AvatarSize.Small, player.DisconnectToken);
+                await UniTask.SwitchToMainThread(player.DisconnectToken);
+                entry.ProfilePicture.SetImage(player.Connection, icon ?? string.Empty);
+            });
+        }
+
+        entry.Root.SetVisibility(player.Connection, true);
+    }
     private void UpdateModerationEntry(UCPlayer player, int index, ModerationEntry entry)
     {
         ITransportConnection connection = player.Connection;
@@ -230,22 +346,22 @@ public class ModerationUI : UnturnedUI
             if (!actor.Actor.Async)
             {
                 ui.Admin.SetText(connection, actor.Actor.GetDisplayName(Data.ModerationSql, CancellationToken.None).Result);
-                ui.AdminProfilePicture.SetImage(connection, actor.Actor.GetProfilePictureURL(Data.ModerationSql, CancellationToken.None).Result ?? string.Empty, false);
+                ui.AdminProfilePicture.SetImage(connection, actor.Actor.GetProfilePictureURL(Data.ModerationSql, AvatarSize.Medium, CancellationToken.None).Result ?? string.Empty, false);
             }
             else
             {
                 ui.Admin.SetText(connection, string.Empty);
                 ui.AdminProfilePicture.SetImage(connection, string.Empty);
-                UCWarfare.RunTask(async (player, ui, actor, token) =>
+                UniTask.Create(async () =>
                 {
-                    ValueTask<string?> pfpTask = actor.Actor.GetProfilePictureURL(Data.ModerationSql, token);
-                    ValueTask<string> displayNameTask = actor.Actor.GetDisplayName(Data.ModerationSql, token);
+                    ValueTask<string?> pfpTask = actor.Actor.GetProfilePictureURL(Data.ModerationSql, AvatarSize.Medium, player.DisconnectToken);
+                    ValueTask<string> displayNameTask = actor.Actor.GetDisplayName(Data.ModerationSql, player.DisconnectToken);
                     string displayName = await displayNameTask.ConfigureAwait(false);
                     string? icon = await pfpTask.ConfigureAwait(false);
-                    await UCWarfare.ToUpdate(token);
+                    await UniTask.SwitchToMainThread(player.DisconnectToken);
                     ui.Admin.SetText(player.Connection, displayName ?? actor.Actor.Id.ToString());
                     ui.AdminProfilePicture.SetImage(player.Connection, icon ?? string.Empty);
-                }, player, ui, actor, player.DisconnectToken);
+                });
             }
         }
         else
@@ -354,6 +470,9 @@ public class ModerationUI : UnturnedUI
     }
     public class PlayerListEntry
     {
+        [UIPattern("", Mode = FormatMode.Format)]
+        public UnturnedUIElement Root { get; set; }
+
         [UIPattern("Name", Mode = FormatMode.Format)]
         public UnturnedLabel Name { get; set; }
 

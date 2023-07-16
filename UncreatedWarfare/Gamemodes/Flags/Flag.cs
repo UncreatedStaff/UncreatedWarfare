@@ -2,6 +2,7 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using SDG.Framework.Utilities;
 using Uncreated.Framework;
@@ -204,25 +205,30 @@ public class Flag : IDisposable, IObjective
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
             UCPlayer p = PlayerManager.OnlinePlayers[i];
-            if (p.Player.life.isDead) continue;
-            if (PlayerInRange(p.Player.transform.position))
+            if (p.Player.life.isDead || !PlayerInRange(p.Player.transform.position))
+                continue;
+
+            PlayersOnFlag.Add(p);
+            ulong team = p.Player.quests.groupID.m_SteamID switch
             {
-                PlayersOnFlag.Add(p);
-                ulong team = p.GetTeam();
-                if (team == 1)
-                {
-                    PlayersOnFlagTeam1.Add(p);
-                    Team1TotalPlayers++;
-                    if (Manager.AllowPassengersToCapture || p.Player.movement.getVehicle() == null)
-                        Team1TotalCappers++;
-                }
-                else if (team == 2)
-                {
-                    PlayersOnFlagTeam2.Add(p);
-                    Team2TotalPlayers++;
-                    if (Manager.AllowPassengersToCapture || p.Player.movement.getVehicle() == null)
-                        Team2TotalCappers++;
-                }
+                TeamManager.Team1ID => 1,
+                TeamManager.Team2ID => 2,
+                TeamManager.AdminID => 3,
+                _ => 0
+            };
+            if (team == 1)
+            {
+                PlayersOnFlagTeam1.Add(p);
+                Team1TotalPlayers++;
+                if (Manager is { AllowPassengersToCapture: true } || p.Player.movement.getVehicle() is null)
+                    Team1TotalCappers++;
+            }
+            else if (team == 2)
+            {
+                PlayersOnFlagTeam2.Add(p);
+                Team2TotalPlayers++;
+                if (Manager is { AllowPassengersToCapture: true } || p.Player.movement.getVehicle() is null)
+                    Team2TotalCappers++;
             }
         }
     }
@@ -231,16 +237,23 @@ public class Flag : IDisposable, IObjective
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer[] prevPlayers = PlayersOnFlag.ToArray();
+        Stopwatch sw = Stopwatch.StartNew();
+        UCPlayer[] prevPlayers = PlayersOnFlag.Count == 0 ? Array.Empty<UCPlayer>() : PlayersOnFlag.ToArray();
         RecalcCappers();
         PlayerChange change = PlayerChange.Claim();
+        List<Player> newPlayers = change.NewPlayers;
+        if (newPlayers.Capacity < 2)
+            newPlayers.Capacity = 2;
+        List<Player> departingPlayers = change.DepartingPlayers;
+        if (departingPlayers.Capacity < 2)
+            departingPlayers.Capacity = 2;
         for (int i = 0; i < PlayersOnFlag.Count; i++)
         {
             UCPlayer player = PlayersOnFlag[i];
             for (int j = 0; j < prevPlayers.Length; j++)
                 if (player.Steam64 == prevPlayers[j].Steam64)
                     goto done;
-            change.NewPlayers.Add(player);
+            newPlayers.Add(player);
             done:;
         }
         for (int i = 0; i < prevPlayers.Length; i++)
@@ -250,10 +263,10 @@ public class Flag : IDisposable, IObjective
                 if (player.Steam64 == PlayersOnFlag[j].Steam64)
                     goto done;
             if (player.IsOnline)
-                change.DepartingPlayers.Add(player);
+                departingPlayers.Add(player);
             done:;
         }
-
+        sw.Stop();
         return change;
     }
     public readonly ref struct PlayerChange
@@ -311,9 +324,9 @@ public class Flag : IDisposable, IObjective
         _shortName = string.IsNullOrEmpty(z.ShortName) ? _name : z.ShortName!;
         _color = UCWarfare.GetColorHex("default");
         _owner = 0;
-        PlayersOnFlag = new List<UCPlayer>(48);
-        PlayersOnFlagTeam1 = new List<UCPlayer>(24);
-        PlayersOnFlagTeam2 = new List<UCPlayer>(24);
+        PlayersOnFlag = new List<UCPlayer>(Provider.maxPlayers);
+        PlayersOnFlagTeam1 = new List<UCPlayer>(Provider.maxPlayers / 2);
+        PlayersOnFlagTeam2 = new List<UCPlayer>(Provider.maxPlayers / 2);
         ZoneData = zone;
         Adjacencies = z.Data.Adjacencies;
     }

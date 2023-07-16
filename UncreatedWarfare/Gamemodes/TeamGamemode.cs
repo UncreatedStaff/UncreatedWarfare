@@ -8,6 +8,7 @@ using Steamworks;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
@@ -167,7 +168,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
         ToastMessage.QueueMessage(player, new ToastMessage(
             T.EnteredEnemyTerritory.Translate(player, false, Mathf.RoundToInt(Config.GeneralAMCKillTime.Value).GetTimeFromSeconds(player)),
-            ToastMessageSeverity.Warning));
+            ToastMessageStyle.FlashingWarning));
         player.Player.StartCoroutine(PlayerMainCampingCoroutine(player));
     }
     private IEnumerator PlayerMainCampingCoroutine(UCPlayer player)

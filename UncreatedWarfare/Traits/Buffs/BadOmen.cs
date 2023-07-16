@@ -6,6 +6,7 @@ using System.Globalization;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Players;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Traits.Buffs;
@@ -129,7 +130,7 @@ public class BadOmen : Buff
             if (player.MortarWarningCount >= 0)
             {
                 player.MortarWarningCount = 0;
-                UCPlayer.MortarWarningUI.ClearFromPlayer(player.Connection);
+                player.Toasts.SkipExpiration(ToastMessageStyle.FlashingWarning);
             }
         }
     }
@@ -137,7 +138,7 @@ public class BadOmen : Buff
     {
         --player.MortarWarningCount;
         if (player.MortarWarningCount == -1)
-            UCPlayer.MortarWarningUI.SendToPlayer(player.Connection);
+            ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.FlashingWarning, T.MortarWarning.Translate(player)) { OverrideDuration = 25f });
     }
     private static float GetBadOmenWarn(UCPlayer player)
     {

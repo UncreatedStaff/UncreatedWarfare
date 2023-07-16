@@ -2,14 +2,34 @@
 using System.Collections;
 using System.Globalization;
 using System.Text.Json;
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Json;
 using UnityEngine.Networking;
-using UnturnedWorkshopAnalyst.Models;
 
 namespace Uncreated.Warfare.Networking;
 public sealed class SteamAPI
 {
     private const string BaseUrl = "https://api.steampowered.com/";
+
+    public static async UniTask<PlayerSummary?> GetPlayerSummary(ulong player, CancellationToken token = default)
+    {
+        try
+        {
+            PlayerSummary[] summary = await GetPlayerSummaries(new ulong[] { player }, token);
+            for (int i = 0; i < summary.Length; ++i)
+            {
+                if (summary[i].Steam64 == player)
+                    return summary[i];
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
+        }
+        return null;
+    }
     public static string MakeUrl(string @interface, int version, string method, string? query)
     {
         string url = BaseUrl + @interface + "/" + method + "/v" + version.ToString(CultureInfo.InvariantCulture) + "?key=" + UCWarfare.Config.SteamAPIKey;
@@ -18,38 +38,30 @@ public sealed class SteamAPI
         return url;
     }
 
-    public static IEnumerator GetPlayerSummaries(ulong[] players, Wrapper<PlayerSummary[]> response)
+    public static async UniTask<PlayerSummary[]> GetPlayerSummaries(ulong[] players, CancellationToken token = default)
     {
         if (string.IsNullOrEmpty(UCWarfare.Config.SteamAPIKey))
-        {
-            response.Value = Array.Empty<PlayerSummary>();
             throw new InvalidOperationException("Steam API key not present.");
-        }
-        UnityWebRequest webRequest = UnityWebRequest.Get(MakeUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + string.Join(",", players)));
-        yield return webRequest.SendWebRequest();
+
+        using UnityWebRequest webRequest = UnityWebRequest.Get(MakeUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + string.Join(",", players)));
+        await webRequest.SendWebRequest().WithCancellation(token);
+        
         if (webRequest.result != UnityWebRequest.Result.Success)
-        {
-            L.LogError($"Error getting player summaries from {webRequest.url.Replace(UCWarfare.Config.SteamAPIKey!, "API_KEY")}: {webRequest.responseCode} ({webRequest.result}).");
-            response.Value = Array.Empty<PlayerSummary>();
-            yield break;
-        }
+            throw new Exception($"Error getting player summaries from {webRequest.url.Replace(UCWarfare.Config.SteamAPIKey!, "API_KEY")}: {webRequest.responseCode} ({webRequest.result}).");
+        
         string responseText = webRequest.downloadHandler.text;
         if (string.IsNullOrEmpty(responseText))
-        {
-            response.Value = Array.Empty<PlayerSummary>();
-            yield break;
-        }
+            return Array.Empty<PlayerSummary>();
 
         try
         {
             PlayerSummariesResponse? responseData = JsonSerializer.Deserialize<PlayerSummariesResponse>(responseText, JsonEx.serializerSettings);
 
-            response.Value = responseData?.Data.Results ?? Array.Empty<PlayerSummary>();
+            return responseData?.Data.Results ?? Array.Empty<PlayerSummary>();
         }
         catch (Exception ex)
         {
-            L.LogError($"Error deserializing response from Steam API: {responseText}.");
-            L.LogError(ex);
+            throw new Exception($"Error deserializing response from Steam API: {responseText}.", ex);
         }
     }
 }

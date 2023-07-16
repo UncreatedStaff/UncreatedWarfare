@@ -147,14 +147,16 @@ public abstract class Zone : IDeployable, IListItem
     /// </summary>
     public bool IsInsideBounds(Vector2 location)
     {
-        return location.x >= Bounds.x && location.x <= Bounds.z && location.y >= Bounds.y && location.y <= Bounds.w;
+        Vector4 bounds = Bounds;
+        return location.x >= bounds.x && location.x <= bounds.z && location.y >= bounds.y && location.y <= bounds.w;
     }
     /// <summary>
     /// Check if a 3D <paramref name="location"/> is inside the zone. Takes height into account.
     /// </summary>
     public bool IsInsideBounds(Vector3 location)
     {
-        return location.x >= Bounds.x && location.x <= Bounds.z && location.z >= Bounds.y && location.z <= Bounds.w && (float.IsNaN(MinHeight) || location.y >= MinHeight) && (float.IsNaN(MaxHeight) || location.y <= MaxHeight);
+        Vector4 bounds = Bounds;
+        return location.x >= bounds.x && location.x <= bounds.z && location.z >= bounds.y && location.z <= bounds.w && (float.IsNaN(MinHeight) || location.y >= MinHeight) && (float.IsNaN(MaxHeight) || location.y <= MaxHeight);
     }
 
     protected static Vector2 LegacyMappingFromMapPos(float x, float z)

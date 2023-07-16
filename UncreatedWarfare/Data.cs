@@ -469,7 +469,7 @@ public static class Data
         Gamemode.ConfigObj = new GamemodeConfig();
         Gamemode.WinToastUI = new Gamemodes.UI.WinToastUI();
         IsInitialSyncRegistering = false;
-        if (UCWarfare.Config.EnableSync)
+        if (UCWarfare.IsLoaded && UCWarfare.Config.EnableSync)
             ConfigSync.OnInitialSyncRegisteringComplete();
     }
 

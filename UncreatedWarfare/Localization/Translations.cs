@@ -1359,7 +1359,7 @@ public class Translation
     {
         if (FormatDisplays.Count > 0)
             FormatDisplays.Clear();
-        foreach (FieldInfo field in typeof(UCWarfare).Assembly.GetTypes().SelectMany(x => x.GetFields(BindingFlags.Public | BindingFlags.Static)).Where(x => (x.IsLiteral || x.IsInitOnly) && x.FieldType == typeof(string)))
+        foreach (FieldInfo field in Util.GetTypesSafe().SelectMany(x => x.GetFields(BindingFlags.Public | BindingFlags.Static)).Where(x => (x.IsLiteral || x.IsInitOnly) && x.FieldType == typeof(string)))
         {
             foreach (FormatDisplayAttribute attr in Attribute.GetCustomAttributes(field, typeof(FormatDisplayAttribute)).OfType<FormatDisplayAttribute>())
             {

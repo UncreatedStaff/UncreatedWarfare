@@ -214,7 +214,7 @@ public class ConfigSync : MonoBehaviour
             return;
         Assembly exeAssembly = Assembly.GetExecutingAssembly();
         bool isInternal = Assembly.GetCallingAssembly() == exeAssembly;
-        foreach (Type type in exeAssembly.GetTypes())
+        foreach (Type type in Util.GetTypesSafe(exeAssembly))
         {
             if (Attribute.GetCustomAttribute(type, typeof(SyncAttribute)) is SyncAttribute typeSync && typeSync.SyncId != 0 && !RegisteredTypes.ContainsKey(typeSync.SyncId))
             {

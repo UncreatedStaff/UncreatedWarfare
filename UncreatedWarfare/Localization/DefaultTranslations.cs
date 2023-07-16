@@ -304,6 +304,9 @@ internal static class T
 
     [TranslationData(SectionPlayers, "Tells the player that they can't unlock vehicles from the vehicle bay.")]
     public static readonly Translation UnlockVehicleNotAllowed = new Translation("<#b3a6a2>You can not unlock a requested vehicle.");
+
+    [TranslationData(SectionPlayers, "Goes on the warning UI.")]
+    public static readonly Translation MortarWarning = new Translation("FRIENDLY MORTAR\nINCOMING", TranslationFlags.TMProUI);
     #endregion
 
     #region Leaderboards
@@ -771,14 +774,14 @@ internal static class T
 
     #region Toasts
     private const string SectionToasts = "Toasts";
-    [TranslationData(SectionToasts, "Sent when the player joins for the 2nd+ time.")]
-    public static readonly Translation<IPlayer> WelcomeBackMessage = new Translation<IPlayer>("Thanks for playing <#c$uncreated$>Uncreated Warfare</color>!\nWelcome back {0}.", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     [TranslationData(SectionToasts, "Sent when the player joins for the 1st time.")]
     public static readonly Translation<IPlayer> WelcomeMessage = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nCheck out our tutorial to get started (follow the signs).", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     [TranslationData(SectionToasts, "Broadcasted when a game is loading.", "Next gamemode")]
     public static readonly Translation<Gamemode> LoadingGamemode = new Translation<Gamemode>("Loading New Gamemode\n<#66ff99>{0}</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionToasts, "Broadcasted when a player joins and their data is loading.")]
     public static readonly Translation LoadingOnJoin = new Translation("Loading Player Data", TranslationFlags.TMProUI);
+    [TranslationData(SectionToasts, "Title for the welcome message.")]
+    public static readonly Translation WelcomeMessageTitle = new Translation("Welcome to Uncreated Warfare", TranslationFlags.TMProUI);
     #endregion
 
     #region KitCommand
@@ -1182,11 +1185,25 @@ internal static class T
     [TranslationData(SectionAmmo)]
     public static readonly Translation<VehicleData, int> AmmoResuppliedVehicleMain  = new Translation<VehicleData, int>("<#d1bda7>Resupplied {0}. Consumed: <#c$ammo$>{1} AMMO</color>.", VehicleData.COLORED_NAME);
     [TranslationData(SectionAmmo)]
-    public static readonly Translation AmmoVehicleCantRearm            = new Translation("<#d1bda7>You cannot ressuply this vehicle.");
+    public static readonly Translation AmmoVehicleCantRearm             = new Translation("<#d1bda7>You cannot ressuply this vehicle.");
+    [TranslationData(SectionAmmo)]
+    public static readonly Translation AmmoInVehicle                    = new Translation("<#d1bda7>You cannot ressuply this vehicle while flying, try exiting the vehicle.");
     [TranslationData(SectionAmmo)]
     public static readonly Translation<VehicleData> AmmoVehicleFullAlready          = new Translation<VehicleData>("<#b3a6a2>Your {0} does not need to be resupplied.", VehicleData.COLORED_NAME);
     [TranslationData(SectionAmmo)]
     public static readonly Translation<VehicleData> AmmoVehicleNotNearRepairStation = new Translation<VehicleData>("<#b3a6a2>Your {0} must be next to a <color=#e3d5ba>REPAIR STATION</color> in order to rearm.", VehicleData.COLORED_NAME);
+    #endregion
+
+    #region Popup
+    private const string SectionPopup = "Popup";
+    [TranslationData(SectionPopup)]
+    public static readonly Translation ButtonOK = new Translation("OK", TranslationFlags.TMProUI);
+    [TranslationData(SectionPopup)]
+    public static readonly Translation ButtonCancel = new Translation("Cancel", TranslationFlags.TMProUI);
+    [TranslationData(SectionPopup)]
+    public static readonly Translation ButtonYes = new Translation("Yes", TranslationFlags.TMProUI);
+    [TranslationData(SectionPopup)]
+    public static readonly Translation ButtonNo = new Translation("No", TranslationFlags.TMProUI);
     #endregion
 
     #region Load Command
@@ -1397,6 +1414,8 @@ internal static class T
     public static readonly Translation<IPlayer, string> WarnSuccessDM         = new Translation<IPlayer, string>("<color=#ffff00><color=#" + TeamManager.AdminColorHex + ">{0}</color> warned you for <color=#ffffff>{1}</color>.</color>", TranslationFlags.UnityUI, UCPlayer.PLAYER_NAME_FORMAT);
     [TranslationData(SectionWarn)]
     public static readonly Translation<string> WarnSuccessDMOperator          = new Translation<string>("<color=#ffff00>An operator warned you for <color=#ffffff>{0}</color>.</color>", TranslationFlags.UnityUI, UCPlayer.PLAYER_NAME_FORMAT);
+    [TranslationData(SectionWarn)]
+    public static readonly Translation WarnSuccessTitle = new Translation("<color=#ffff00>Warning", TranslationFlags.TMProUI);
     #endregion
 
     #region Mute Command
@@ -2286,9 +2305,11 @@ internal static class T
     [TranslationData(SectionReport)]
     public static readonly Translation ReportSuccessMessage2 = new Translation("<#c480d9>If possible please post evidence in <#ffffff>#player-reports</color> in our <#7483c4>Discord</color> server.");
     [TranslationData(SectionReport)]
-    public static readonly Translation<IPlayer, IPlayer, string, string> ReportNotifyAdmin = new Translation<IPlayer, IPlayer, string, string>("<#c480d9>{0} reported {1} for <#fff>{2}</color> as a <#00ffff>{3}</color> report.\nCheck <#c480d9>#player-reports</color> for more information.", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer, string, string> ReportNotifyAdmin = new Translation<IPlayer, IPlayer, string, string>("<#c480d9>{0} reported {1} for <#fff>{2}</color> as a <#00ffff>{3}</color> report. Check <#c480d9>#player-reports</color> for more information.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.CHARACTER_NAME_FORMAT);
     [TranslationData(SectionReport)]
-    public static readonly Translation<string> ReportNotifyViolatorToast = new Translation<string>("<#c480d9>You've been reported for <#00ffff>{0}</color>.\nCheck <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> ReportNotifyViolatorToast = new Translation<string>("<#c480d9>You've been reported for <#00ffff>{0}</color>.\nCheck <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.", TranslationFlags.TMProUI);
+    [TranslationData(SectionReport)]
+    public static readonly Translation ReportNotifyViolatorToastTitle = new Translation("You Were Reported", TranslationFlags.TMProUI);
     [TranslationData(SectionReport)]
     public static readonly Translation<string, string> ReportNotifyViolatorMessage1 = new Translation<string, string>("<#c480d9>You've been reported for <#00ffff>{0} - {1}</color>.");
     [TranslationData(SectionReport)]

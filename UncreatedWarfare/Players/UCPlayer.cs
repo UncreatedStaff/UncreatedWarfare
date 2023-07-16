@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
@@ -23,15 +24,19 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Ranks;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using UnityEngine;
+using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
 
 namespace Uncreated.Warfare;
 
-public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlayer>
+public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlayer>, IModerationActor
 {
     [FormatDisplay(typeof(IPlayer), "Character Name")]
     public const string CHARACTER_NAME_FORMAT = "cn";
@@ -55,7 +60,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
     public static readonly UnturnedUI MutedUI = new UnturnedUI(Gamemode.Config.UIMuted, hasElements: false);
     public static readonly UnturnedUI LoadingUI = new UnturnedUI(Gamemode.Config.UILoading, hasElements: false);
-    public static readonly UnturnedUI MortarWarningUI = new UnturnedUI(Gamemode.Config.UIIncomingMortarWarning);
     /*
      * There can never be more than one semaphore per player (even if they've gone offline)
      * as this object will get reused until the finalizer runs, so don't save the semaphore outside of a sync local scope.
@@ -155,6 +159,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         }
         Keys = new UCPlayerKeys(this);
         Events = new UCPlayerEvents(this);
+        Toasts = new ToastManager(this);
 
         try
         {
@@ -204,6 +209,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         return Name.CharacterName;
     }
     public UCPlayerLocale Locale { get; }
+    public ToastManager Toasts { get; }
     public InteractableVehicle? CurrentVehicle => Player.movement.getVehicle();
     public bool IsInVehicle => CurrentVehicle != null;
     public bool IsDriver => CurrentVehicle != null && CurrentVehicle.passengers.Length > 0 && CurrentVehicle.passengers[0].player != null && CurrentVehicle.passengers[0].player.playerID.steamID.m_SteamID == Steam64;
@@ -214,6 +220,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public SteamPlayer SteamPlayer => Player.channel.owner;
     public PlayerSave Save { get; }
     public Player Player { get; internal set; }
+    public PlayerSummary? CachedSteamProfile { get; internal set; }
     public CSteamID CSteamID { get; }
     public ITransportConnection Connection => Player.channel.owner.transportConnection!;
     public EffectAsset? LastPing { get; internal set; }
@@ -832,6 +839,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     internal void ResetPermissionLevel() => _pLvl = null;
     internal void Update()
     {
+        Toasts.Update();
+
         if (_isTalking && Time.realtimeSinceStartup - LastSpoken > 0.5f)
         {
             _isTalking = false;
@@ -876,6 +885,58 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     {
         if (original is { ViewLens: { } lens } && FromID(lens) is { IsOnline: true } vl)
             original = vl;
+    }
+
+    bool IModerationActor.Async => true;
+    ulong IModerationActor.Id => Steam64;
+    ValueTask<string> IModerationActor.GetDisplayName(DatabaseInterface database, CancellationToken token) => new ValueTask<string>(Name.CharacterName);
+    async ValueTask<string?> IModerationActor.GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token)
+    {
+        return await GetProfilePictureURL(size, token);
+    }
+    public async UniTask<PlayerSummary> GetPlayerSummary(bool allowCache = true, CancellationToken token = default)
+    {
+        if (allowCache && CachedSteamProfile != null)
+            return CachedSteamProfile;
+
+        PlayerSummary? playerSummary = await SteamAPI.GetPlayerSummary(Steam64, token);
+        if (playerSummary != null)
+            CachedSteamProfile = playerSummary;
+#if DEBUG
+        ThreadUtil.assertIsGameThread();
+#endif
+
+        if (playerSummary != null && UCWarfare.IsLoaded)
+        {
+            if (!string.IsNullOrEmpty(playerSummary.AvatarUrlSmall))
+                Data.ModerationSql.UpdateAvatar(Steam64, AvatarSize.Small, playerSummary.AvatarUrlSmall);
+            if (!string.IsNullOrEmpty(playerSummary.AvatarUrlMedium))
+                Data.ModerationSql.UpdateAvatar(Steam64, AvatarSize.Medium, playerSummary.AvatarUrlMedium);
+            if (!string.IsNullOrEmpty(playerSummary.AvatarUrlFull))
+                Data.ModerationSql.UpdateAvatar(Steam64, AvatarSize.Full, playerSummary.AvatarUrlFull);
+        }
+
+        return playerSummary ?? new PlayerSummary
+        {
+            Steam64 = Steam64,
+            PlayerName = Name.PlayerName
+        };
+    }
+    public async UniTask<string?> GetProfilePictureURL(AvatarSize size, CancellationToken token = default)
+    {
+        if (!UCWarfare.IsLoaded)
+            throw new SingletonUnloadedException(typeof(UCWarfare));
+        if (Data.ModerationSql.TryGetAvatar(Steam64, size, out string url))
+            return url;
+
+        PlayerSummary summary = await GetPlayerSummary(token: token);
+
+        return size switch
+        {
+            AvatarSize.Full => summary.AvatarUrlFull,
+            AvatarSize.Medium => summary.AvatarUrlMedium,
+            _ => summary.AvatarUrlSmall
+        };
     }
 }
 

@@ -261,6 +261,10 @@ public static class F
                 yield return client;
         }
     }
+    public static float GetTerrainHeightAt2DPoint(Vector3 position, float above = 0)
+    {
+        return LevelGround.getHeight(position) + above;
+    }
     public static float GetTerrainHeightAt2DPoint(float x, float z, float above = 0)
     {
         return LevelGround.getHeight(new Vector3(x, 0, z)) + above;

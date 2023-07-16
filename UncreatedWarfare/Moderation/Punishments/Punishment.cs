@@ -1,31 +1,40 @@
 ﻿using System;
+using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Uncreated.Encoding;
 using Uncreated.SQL;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Reports;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
 
+[JsonConverter(typeof(ModerationEntryConverter))]
 public abstract class Punishment : ModerationEntry
 {
     /// <summary>
     /// Keys for all related appeals.
     /// </summary>
+    [JsonPropertyName("appeals")]
     public PrimaryKey[] AppealKeys { get; set; } = Array.Empty<PrimaryKey>();
 
     /// <summary>
     /// Keys for all related reports.
     /// </summary>
+    [JsonPropertyName("reports")]
     public PrimaryKey[] ReportKeys { get; set; } = Array.Empty<PrimaryKey>();
 
     /// <summary>
     /// All related appeals.
     /// </summary>
+    [JsonPropertyName("appeals_detail")]
     public Appeal?[] Appeals { get; set; } = Array.Empty<Appeal>();
 
     /// <summary>
     /// All related reports.
     /// </summary>
+    [JsonPropertyName("reports_detail")]
     public Report?[] Reports { get; set; } = Array.Empty<Report>();
 
     /// <summary>
@@ -77,6 +86,51 @@ public abstract class Punishment : ModerationEntry
                 Reports[i] = report;
             }
         }
+    }
+
+    protected override void ReadIntl(ByteReader reader, ushort version)
+    {
+        base.ReadIntl(reader, version);
+        
+        AppealKeys = new PrimaryKey[reader.ReadInt32()];
+        for (int i = 0; i < AppealKeys.Length; ++i)
+            AppealKeys[i] = reader.ReadInt32();
+        ReportKeys = new PrimaryKey[reader.ReadInt32()];
+        for (int i = 0; i < ReportKeys.Length; ++i)
+            ReportKeys[i] = reader.ReadInt32();
+    }
+
+    protected override void WriteIntl(ByteWriter writer)
+    {
+        base.WriteIntl(writer);
+        
+        writer.Write(AppealKeys.Length);
+        for (int i = 0; i < AppealKeys.Length; ++i)
+            writer.Write(AppealKeys[i].Key);
+        writer.Write(ReportKeys.Length);
+        for (int i = 0; i < ReportKeys.Length; ++i)
+            writer.Write(ReportKeys[i].Key);
+    }
+
+    public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
+    {
+        base.Write(writer, options);
+
+        if (Appeals.Length > 0 && Appeals.Length == AppealKeys.Length && Appeals.All(x => x != null))
+        {
+            writer.WritePropertyName("appeals_detail");
+            JsonSerializer.Serialize(writer, Appeals, options);
+        }
+        writer.WritePropertyName("appeals");
+        JsonSerializer.Serialize(writer, AppealKeys, options);
+
+        if (Reports.Length > 0 && Reports.Length == ReportKeys.Length && Reports.All(x => x != null))
+        {
+            writer.WritePropertyName("reports_detail");
+            JsonSerializer.Serialize(writer, Reports, options);
+        }
+        writer.WritePropertyName("reports");
+        JsonSerializer.Serialize(writer, ReportKeys, options);
     }
 }
 

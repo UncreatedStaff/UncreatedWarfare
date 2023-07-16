@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Drawing;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -58,9 +59,10 @@ public readonly struct Line
     public bool IsIntersecting(float xPos, float yPos)
     {
         // if the y doesn't line up, return false.
-        if (yPos < Mathf.Min(Point1.y, Point2.y) || yPos >= Mathf.Max(Point1.y, Point2.y)) return false;
+        Vector2 pt1 = Point1, pt2 = Point2;
+        if (yPos < Mathf.Min(pt1.y, pt2.y) || yPos >= Mathf.Max(pt1.y, pt2.y)) return false;
         // if the line is completely vertical, return depending on what side of the line they're on
-        if (Point1.x == Point2.x) return Point1.x >= xPos;
+        if (pt1.x == pt2.x) return pt1.x >= xPos;
         float x = GetX(yPos);
         return x >= xPos;
     }

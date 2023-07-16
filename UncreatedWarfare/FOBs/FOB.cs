@@ -482,7 +482,14 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 }
                 if (shouldRemove)
                 {
-                    ItemManager.dropItem(item.item, pos, false, true, true);
+                    ItemPositionSyncTracker tracker = new ItemPositionSyncTracker(pos);
+
+                    ItemManager.onServerSpawningItemDrop += tracker.OnItemSpawned;
+                    ItemManager.dropItem(item.item, pos, false, true, false);
+
+                    ItemManager.onServerSpawningItemDrop -= tracker.OnItemSpawned;
+                    pos = tracker.Position;
+
                     nearestLogi.trunkItems.removeItem(nearestLogi.trunkItems.getIndex(item.x, item.y));
                     EventFunctions.SimulateRegisterLastDroppedItem(pos, delivererId);
                 }
@@ -503,6 +510,19 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             }
         }
     }
+    private struct ItemPositionSyncTracker
+    {
+        public Vector3 Position { get; private set; }
+        public ItemPositionSyncTracker(Vector3 position)
+        {
+            Position = position;
+        }
+        public void OnItemSpawned(Item item, ref Vector3 location, ref bool allow)
+        {
+            Position = location;
+        }
+    }
+
     private void TryConsumeResources()
     {
 #if DEBUG

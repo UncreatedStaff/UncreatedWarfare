@@ -6,6 +6,8 @@ using Uncreated.Framework.UI;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
@@ -44,6 +46,12 @@ public class TeamSelector : BaseSingletonComponent
     public bool IsSelecting(UCPlayer player) => player.TeamSelectorData is not null && player.TeamSelectorData.IsSelecting;
     public void ResetState(UCPlayer player)
     {
+        Close(player);
+
+        JoinSelectionMenu(player, JoinTeamBehavior.KeepTeam, rejoin: true);
+    }
+    public void Close(UCPlayer player)
+    {
         if (player.TeamSelectorData is not null)
         {
             if (player.TeamSelectorData.JoiningCoroutine != null)
@@ -57,8 +65,6 @@ public class TeamSelector : BaseSingletonComponent
                 JoinUI.ClearFromPlayer(player.Connection);
             }
         }
-
-        JoinSelectionMenu(player, JoinTeamBehavior.KeepTeam, rejoin: true);
     }
     private static void OnGamemodeStateUpdated()
     {
@@ -191,6 +197,9 @@ public class TeamSelector : BaseSingletonComponent
     }
     public void JoinSelectionMenu(UCPlayer player, JoinTeamBehavior joinBehavior = JoinTeamBehavior.NoTeam, bool rejoin = false)
     {
+        if (player.HasModerationUI)
+            ModerationUI.Instance.Close(player);
+
         bool options = false;
         if (player.TeamSelectorData is null)
         {
@@ -266,7 +275,7 @@ public class TeamSelector : BaseSingletonComponent
             player.HasUIHidden = false;
             TeamManager.TeleportToMain(player);
             CooldownManager.StartCooldown(player, CooldownType.ChangeTeams, TeamManager.TeamSwitchCooldown);
-            ToastMessage.QueueMessage(player, new ToastMessage(string.Empty, Data.Gamemode.DisplayName, ToastMessageSeverity.Big));
+            ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, new string[] { string.Empty, Data.Gamemode.DisplayName, string.Empty }));
 
             ActionLog.Add(ActionLogType.ChangeGroupWithUI, "GROUP: " + TeamManager.TranslateName(team, 0).ToUpper(), player.Steam64);
 

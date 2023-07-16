@@ -79,8 +79,14 @@
     <Reference Include="UncreatedNetworking">
       <HintPath>..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\UncreatedNetworking.dll</HintPath>
     </Reference>
+    <Reference Include="UniTask">
+      <HintPath>..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\UniTask.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\UnityEngine.CoreModule.dll</HintPath>

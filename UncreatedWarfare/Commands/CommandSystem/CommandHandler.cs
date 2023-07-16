@@ -109,7 +109,9 @@ public static class CommandHandler
         Commands.Clear();
         RegisterVanillaCommands();
         Type t = typeof(IExecutableCommand);
-        foreach (Type cmdType in Assembly.GetCallingAssembly().GetTypes().Where(x => !x.IsAbstract && !x.IsGenericType && !x.IsSpecialName && !x.IsNested && t.IsAssignableFrom(x)))
+        foreach (Type cmdType in Util
+                     .GetTypesSafe(Assembly.GetCallingAssembly(), true)
+                     .Where(x => !x.IsAbstract && !x.IsGenericType && !x.IsSpecialName && !x.IsNested && t.IsAssignableFrom(x)))
         {
             if (cmdType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance).Any(x => x.GetParameters().Length == 0))
             {

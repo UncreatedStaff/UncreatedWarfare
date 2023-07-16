@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace UnturnedWorkshopAnalyst.Models;
+namespace Uncreated.Framework;
 #nullable disable
 public class PlayerSummariesResponse
 {

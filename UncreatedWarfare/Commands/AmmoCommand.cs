@@ -15,6 +15,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -80,6 +81,38 @@ public class AmmoCommand : AsyncCommand
                 if (vehicle.lockedGroup.m_SteamID != 0 && vehicle.lockedGroup.m_SteamID != ctx.Caller.GetTeam())
                     throw ctx.Reply(T.AmmoVehicleCantRearm);
 
+                vehicle.TryGetComponent(out VehicleComponent? vcomp);
+                if (VehicleData.IsFlyingEngine(vehicle.asset.engine) && (vehicle.isDriven ||
+                    vcomp == null || Time.realtimeSinceStartup - vcomp.LastDriverTime > 1.25f) &&
+                    vehicle.transform.position.y - F.GetTerrainHeightAt2DPoint(vehicle.transform.position) > 1f)
+                {
+                    L.LogDebug("Detected in-air vehicle.");
+                    UCPlayer? lastDriver = vcomp == null ? null : UCPlayer.FromID(vcomp.LastDriver);
+                    if (lastDriver != null)
+                    {
+                        if (lastDriver.CurrentVehicle == null)
+                        {
+                            Vector3 pos = lastDriver.Position;
+                            if (pos.y - F.GetTerrainHeightAt2DPoint(pos) > 2f)
+                            {
+                                CooldownManager.StartCooldown(lastDriver, CooldownType.InteractVehicleSeats, 0.75f,
+                                    vehicle);
+                                L.LogDebug("Started cooldown after /ammoing outside flying vehicle.");
+                            }
+
+                            L.LogDebug("Starting passsenger cooldowns.");
+                            // prevent players from switching seats
+                            foreach (Passenger passenger in vehicle.passengers)
+                            {
+                                if (passenger.player != null && UCPlayer.FromSteamPlayer(passenger.player) is { } player)
+                                    CooldownManager.StartCooldown(player, CooldownType.InteractVehicleSeats, 5f, vehicle);
+                            }
+                        }
+                        else if (lastDriver.CurrentVehicle == vehicle)
+                            throw ctx.Reply(T.AmmoInVehicle);
+                    }
+                }
+
                 if (vehicleData.Items.Length == 0)
                     throw ctx.Reply(T.AmmoVehicleFullAlready);
                 if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
@@ -89,8 +122,8 @@ public class AmmoCommand : AsyncCommand
                     if (Assets.find(item) is ItemAsset a)
                         ItemManager.dropItem(new Item(a.id, true), ctx.Caller.Position, true, true, true);
 
-                if (vehicle.TryGetComponent(out VehicleComponent c))
-                    c.ReloadCountermeasures();
+                if (vcomp != null)
+                    vcomp.ReloadCountermeasures();
 
                 if (!isInMain)
                 {
@@ -185,7 +218,7 @@ public class AmmoCommand : AsyncCommand
                 }
                 else
                 {
-                    fob!.ModifyAmmo(-ammoCost);
+                    fob.ModifyAmmo(-ammoCost);
                     FOBManager.ShowResourceToast(new LanguageSet(ctx.Caller), ammo: -ammoCost, message: T.FOBResourceToastRearmPlayer.Translate(ctx.Caller));
                     ctx.LogAction(ActionLogType.RequestAmmo, "FOR KIT FROM BOX");
                     ctx.Reply(T.AmmoResuppliedKit, ammoCost, fob.AmmoSupply);

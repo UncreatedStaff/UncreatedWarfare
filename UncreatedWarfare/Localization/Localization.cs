@@ -665,8 +665,7 @@ public static class Localization
                     Directory.CreateDirectory(p);
             }
         }
-        foreach (KeyValuePair<Type, TranslatableAttribute> enumType in Assembly.GetExecutingAssembly()
-                     .GetTypes()
+        foreach (KeyValuePair<Type, TranslatableAttribute> enumType in Util.GetTypesSafe(Assembly.GetExecutingAssembly())
                      .Where(x => x.IsEnum)
                      .SelectMany(x => Attribute.GetCustomAttributes(x, typeof(TranslatableAttribute)).OfType<TranslatableAttribute>().Select(y => new KeyValuePair<Type, TranslatableAttribute>(x, y)))
                      .Where(t => t.Value != null)

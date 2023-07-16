@@ -10,6 +10,7 @@ using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.ReportSystem;
 
 namespace Uncreated.Warfare.Commands;
@@ -198,7 +199,7 @@ public class ReportCommand : AsyncCommand
         {
             if (!Data.Languages.TryGetValue(target, out string lang))
                 lang = L.Default;
-            ToastMessage.QueueMessage(targetPl, new ToastMessage(T.ReportNotifyViolatorToast.Translate(lang, typename, UCPlayer.FromID(target)), ToastMessageSeverity.Severe));
+            ToastMessage.QueueMessage(targetPl, ToastMessage.Popup(T.ReportNotifyViolatorToastTitle.Translate(lang), T.ReportNotifyViolatorToast.Translate(lang, typename, UCPlayer.FromID(target)), T.ButtonOK.Translate(lang)));
             targetPl.SendChat(T.ReportNotifyViolatorMessage1, typename, message);
             targetPl.SendChat(T.ReportNotifyViolatorMessage2);
         }
@@ -314,13 +315,6 @@ public class ReportCommand : AsyncCommand
         (await Data.DatabaseManager.GetDiscordID(player.Steam64, token).ConfigureAwait(false)) != 0;
     public void NotifyAdminsOfReport(PlayerNames violator, PlayerNames reporter, Report report, string typename)
     {
-        foreach (LanguageSet set in LanguageSet.OfPermission(EAdminType.MODERATOR))
-        {
-            string translation = T.ReportNotifyAdmin.Translate(set.Language, reporter, violator, report.Message!, typename);
-            while (set.MoveNext())
-            {
-                ToastMessage.QueueMessage(set.Next, new ToastMessage(translation, ToastMessageSeverity.Info));
-            }
-        }
+        Chat.Broadcast(LanguageSet.OfPermission(EAdminType.MODERATOR), T.ReportNotifyAdmin, reporter, violator, report.Message!, typename);
     }
 }

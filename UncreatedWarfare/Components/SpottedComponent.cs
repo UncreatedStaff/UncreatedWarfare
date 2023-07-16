@@ -7,6 +7,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Levels;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -437,7 +438,7 @@ public class SpottedComponent : MonoBehaviour
         if (IsActive)
             return;
 
-        ToastMessage.QueueMessage(spotter, new ToastMessage(T.SpottedToast.Translate(spotter), ToastMessageSeverity.Mini), true);
+        ToastMessage.QueueMessage(spotter, new ToastMessage(ToastMessageStyle.Mini, T.SpottedToast.Translate(spotter)));
 
         ulong t = spotter.GetTeam();
         Color t1 = Teams.TeamManager.GetTeamColor(t);

@@ -25,9 +25,9 @@ public static class ModerationReflection
         if (_hasReflected) return;
         _hasReflected = true;
         Assembly assembly = Assembly.GetExecutingAssembly();
-        Type[] types = assembly.GetTypes();
+        List<Type> types = Util.GetTypesSafe(assembly);
         List<Type> types2 = new List<Type>();
-        for (int i = 0; i < types.Length; ++i)
+        for (int i = 0; i < types.Count; ++i)
         {
             Type type = types[i];
             if (Types.Contains(type))

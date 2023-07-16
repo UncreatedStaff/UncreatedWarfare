@@ -1,9 +1,9 @@
-﻿using SDG.Unturned;
+﻿using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -13,8 +13,8 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Networking;
 using UnityEngine;
+using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
 
 namespace Uncreated.Warfare;
 
@@ -130,6 +130,26 @@ public static class PlayerManager
         return rtn;
     }
     public static void AddSave(PlayerSave save) => PlayerSave.WriteToSaveFile(save);
+    public static async UniTask TryDownloadAllPlayerSummaries(bool allowCache = true, CancellationToken token = default)
+    {
+        await UniTask.SwitchToMainThread(token);
+
+        List<ulong> players = new List<ulong>(OnlinePlayers.Count);
+        for (int i = 0; i < OnlinePlayers.Count; ++i)
+        {
+            if (!allowCache || OnlinePlayers[i].CachedSteamProfile == null)
+                players.Add(OnlinePlayers[i].Steam64);
+        }
+
+        PlayerSummary[] summaries = await SteamAPI.GetPlayerSummaries(players.ToArrayFast(), token);
+        for (int j = 0; j < summaries.Length; ++j)
+        {
+            PlayerSummary summary = summaries[j];
+            UCPlayer? player = FromID(summary.Steam64);
+            if (player != null)
+                player.CachedSteamProfile = summary;
+        }
+    }
     internal static UCPlayer InvokePlayerConnected(Player player, out bool newPlayer)
     {
 #if DEBUG

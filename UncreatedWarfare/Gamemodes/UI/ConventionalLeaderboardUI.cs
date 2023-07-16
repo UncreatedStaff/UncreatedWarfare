@@ -46,23 +46,23 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public readonly UnturnedLabel Team2Captures = new UnturnedLabel("2C0");
     public readonly UnturnedLabel Team2Damage = new UnturnedLabel("2T0");
 
-    public readonly UnturnedLabel[] Team1PlayerNames = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1N{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team1PlayerKills = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1K{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team1PlayerDeaths = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1D{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team1PlayerXP = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1X{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team1PlayerCredits = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1F{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team1PlayerCaptures = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1C{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team1PlayerDamage = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1T{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team1PlayerVCs = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1VC{0}", 0, to: 14);
+    public readonly UnturnedLabel[] Team1PlayerNames = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1N{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team1PlayerKills = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1K{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team1PlayerDeaths = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1D{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team1PlayerXP = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1X{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team1PlayerCredits = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1F{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team1PlayerCaptures = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1C{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team1PlayerDamage = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1T{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team1PlayerVCs = UnturnedUIPatterns.CreateArray<UnturnedLabel>("1VC{0}", 1, to: 14);
 
-    public readonly UnturnedLabel[] Team2PlayerNames = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2N{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team2PlayerKills = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2K{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team2PlayerDeaths = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2D{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team2PlayerXP = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2X{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team2PlayerCredits = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2F{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team2PlayerCaptures = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2C{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team2PlayerDamage = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2T{0}", 0, to: 14);
-    public readonly UnturnedLabel[] Team2PlayerVCs = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2VC{0}", 0, to: 14);
+    public readonly UnturnedLabel[] Team2PlayerNames = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2N{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team2PlayerKills = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2K{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team2PlayerDeaths = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2D{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team2PlayerXP = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2X{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team2PlayerCredits = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2F{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team2PlayerCaptures = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2C{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team2PlayerDamage = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2T{0}", 1, to: 14);
+    public readonly UnturnedLabel[] Team2PlayerVCs = UnturnedUIPatterns.CreateArray<UnturnedLabel>("2VC{0}", 1, to: 14);
     
     public readonly UnturnedLabel TeamStatsHeader = new UnturnedLabel("WarHeader");
 

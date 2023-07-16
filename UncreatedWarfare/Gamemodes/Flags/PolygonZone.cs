@@ -124,10 +124,12 @@ public sealed class PolygonZone : Zone
         int intersects = 0;
         for (int i = 0; i < _lines.Length; i++)
         {
-            if (_lines[i].IsIntersecting(location.x, location.y)) intersects++;
+            ref Line line = ref _lines[i];
+            if (line.IsIntersecting(location.x, location.y))
+                intersects++;
         }
-        if (intersects % 2 == 1) return true; // is odd
-        else return false;
+
+        return intersects % 2 == 1;
     }
     /// <inheritdoc/>
     public override bool IsInside(Vector3 location)
@@ -136,10 +138,12 @@ public sealed class PolygonZone : Zone
         int intersects = 0;
         for (int i = 0; i < _lines.Length; i++)
         {
-            if (_lines[i].IsIntersecting(location.x, location.z)) intersects++;
+            ref Line line = ref _lines[i];
+            if (line.IsIntersecting(location.x, location.z))
+                ++intersects;
         }
-        if (intersects % 2 == 1) return true; // is odd
-        else return false;
+
+        return intersects % 2 == 1; // is odd
     }
     /// <inheritdoc/>
     public override string ToString()
