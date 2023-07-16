@@ -123,7 +123,21 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         TeamManager.SetupConfig();
 
         OffenseManager.Init();
-
+        bool set = false;
+        FieldInfo? shouldLogBadMessagesField = typeof(Provider).Assembly.GetType("SDG.Unturned.NetMessages").GetField("shouldLogBadMessages", BindingFlags.Static | BindingFlags.NonPublic);
+        if (shouldLogBadMessagesField != null && typeof(CommandLineFlag).IsAssignableFrom(shouldLogBadMessagesField.FieldType))
+        {
+            CommandLineFlag flag = (CommandLineFlag)shouldLogBadMessagesField.GetValue(null);
+            if (flag != null)
+            {
+                flag.value = true;
+                L.Log("Set command line flag: \"-LogBadMessages\".", ConsoleColor.Magenta);
+                set = true;
+            }
+        }
+        if (!set)
+            L.LogWarning("Unable to set command line flag: \"-LogBadMessages\".");
+        
         CommandHandler.LoadCommands();
 
         DateTime loadTime = DateTime.Now;
