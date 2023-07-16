@@ -167,18 +167,6 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("ui_vehicle_hud")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIVehicleHUD { get; set; }
 
-    [Sync(450, OnPullMethod = nameof(OnUIToastUpdated))]
-    [JsonPropertyName("ui_toast_info")]
-    public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastInfo { get; set; }
-
-    [Sync(451, OnPullMethod = nameof(OnUIToastUpdated))]
-    [JsonPropertyName("ui_toast_warning")]
-    public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastWarning { get; set; }
-
-    [Sync(452, OnPullMethod = nameof(OnUIToastUpdated))]
-    [JsonPropertyName("ui_toast_severe")]
-    public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastSevere { get; set; }
-
     [Sync(453, OnPullMethod = nameof(OnUIToastUpdated))]
     [JsonPropertyName("ui_toast_xp")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastXP { get; set; }
@@ -794,16 +782,13 @@ public sealed class GamemodeConfigData : JSONConfigData
         UITickets = new JsonAssetReference<EffectAsset>("aba88eedb84448e8a30bb803a53a7236");
         UIBuffs = new JsonAssetReference<EffectAsset>("f298af0b4d34405b98a539b8d2ff0505");
         UIActionMenu = new JsonAssetReference<EffectAsset>("bf4bc4e1a6a849c29e9f7a6de3a943e4");
-        UIToastInfo = new JsonAssetReference<EffectAsset>("d75046834b324ed491914b4136ab1bc8");
-        UIToastWarning = new JsonAssetReference<EffectAsset>("5678a559695e4d999dfea9a771b6616f");
-        UIToastSevere = new JsonAssetReference<EffectAsset>("26fed6564ccf4c46aac1df01dbba0aab");
         UIToastXP = new JsonAssetReference<EffectAsset>("a213915d61ad41cebab34fb12fe6870c");
         UIToastMedium = new JsonAssetReference<EffectAsset>("5f695955f0da4d19adacac39140da797");
         UIToastLarge = new JsonAssetReference<EffectAsset>("9de82ffea13946b391090eb918bf3991");
         UIToastWin = new JsonAssetReference<EffectAsset>("1f3ce50c120042c390f5c42522bd0fcd");
         UIKitMenu = new JsonAssetReference<EffectAsset>("c0155ea486d8427d9c70541abc875e78");
         UIVehicleHUD = new JsonAssetReference<EffectAsset>("1e1762d6f01442e89d159d4cd0ae7587");
-        UIFlashingWarning = new RotatableConfig<JsonAssetReference<EffectAsset>>("6d7958eb3e2d4caea9fb5c4c4dccb75f");
+        UIFlashingWarning = new RotatableConfig<JsonAssetReference<EffectAsset>>("4f8a6ca089a7499793c6076da9807273");
         UIModerationMenu = new RotatableConfig<JsonAssetReference<EffectAsset>>("80aee6c3f43f4c7facb2f2ffbb545d20");
         UIPopup = new RotatableConfig<JsonAssetReference<EffectAsset>>("bc6bbe8ce1d2464bb828d01ba1c5d461");
         EffectSpottedMarkerInfantry = new JsonAssetReference<EffectAsset>("79add0f1b07c478f87207d30fe5a5f4f");

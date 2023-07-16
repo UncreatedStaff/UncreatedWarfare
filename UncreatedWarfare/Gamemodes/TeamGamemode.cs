@@ -162,9 +162,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     private void OnPlayerMainCamping(UCPlayer player)
     {
-        ToastMessage.QueueMessage(player, new ToastMessage(
-            T.EnteredEnemyTerritory.Translate(player, false, Mathf.RoundToInt(Config.GeneralAMCKillTime.Value).GetTimeFromSeconds(player)),
-            ToastMessageStyle.FlashingWarning));
+        ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.FlashingWarning,
+            T.EnteredEnemyTerritory.Translate(player, false, Mathf.RoundToInt(Config.GeneralAMCKillTime.Value).GetTimeFromSeconds(player))) { OverrideDuration = Config.GeneralAMCKillTime.Value } );
         player.Player.StartCoroutine(PlayerMainCampingCoroutine(player));
     }
     private IEnumerator PlayerMainCampingCoroutine(UCPlayer player)

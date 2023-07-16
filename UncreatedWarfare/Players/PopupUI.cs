@@ -24,7 +24,7 @@ public class PopupUI : UnturnedUI
     };
 
     public UnturnedImage Image { get; } = new UnturnedImage("Image");
-    public PopupUI() : base(Gamemode.Config.UIPopup, debugLogging: true)
+    public PopupUI() : base(Gamemode.Config.UIPopup)
     {
         for (int i = 0; i < Buttons.Length; ++i)
         {

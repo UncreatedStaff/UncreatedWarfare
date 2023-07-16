@@ -150,6 +150,7 @@ public sealed class ToastManager
     }
     private void Send(in ToastMessage message, ToastMessageInfo info, ToastMessageChannel channel)
     {
+        L.LogDebug($"Queued toast: {message.Style}.");
         HasToasts = true;
         channel.UpdateInfo(in message, info);
         if (info.UI != null)
