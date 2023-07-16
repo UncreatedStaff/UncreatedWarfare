@@ -1403,9 +1403,6 @@ public static class TeamManager
                 return RedirectType.LaserDesignator;
             if (Gamemode.Config.BarricadeFOBRadioDamaged.AnyMapsContainGuid(input))
                 return RedirectType.RadioDamaged;
-            if (Gamemode.Config.BarricadeZoneBlockerTeam1.AnyMapsContainGuid(input) ||
-                Gamemode.Config.BarricadeZoneBlockerTeam2.AnyMapsContainGuid(input))
-                return RedirectType.ZoneBlocker;
         }
         
         return RedirectType.None;
@@ -1534,15 +1531,6 @@ public static class TeamManager
                     rtn = rasset;
                 }
                 break;
-            case RedirectType.ZoneBlocker:
-                ItemBarricadeAsset rasset2;
-                if (Team1Faction == requesterTeam)
-                    Gamemode.Config.BarricadeZoneBlockerTeam1.ValidReference(out rasset2);
-                else if (Team2Faction == requesterTeam)
-                    Gamemode.Config.BarricadeZoneBlockerTeam2.ValidReference(out rasset2);
-                else rasset2 = null!;
-                rtn = rasset2;
-                break;
             case RedirectType.RadioDamaged:
                 rtn = Gamemode.Config.BarricadeFOBRadioDamaged.GetAsset();
                 break;
@@ -1640,13 +1628,6 @@ public static class TeamManager
             GetFaction(team).Build.ValidReference(out input);
         else if (input == AmmoSuppliesRedirect)
             GetFaction(team).Ammo.ValidReference(out input);
-        else if (input == ZoneBlockerRedirect)
-        {
-            if (team == 1)
-                Gamemode.Config.BarricadeZoneBlockerTeam1.ValidReference(out input);
-            else
-                Gamemode.Config.BarricadeZoneBlockerTeam2.ValidReference(out input);
-        }
         return input;
     }
     [Obsolete]
@@ -1661,8 +1642,6 @@ public static class TeamManager
             type = RedirectType.BuildSupply;
         else if (input == AmmoSuppliesRedirect)
             type = RedirectType.AmmoSupply;
-        else if (input == ZoneBlockerRedirect)
-            type = RedirectType.ZoneBlocker;
         else if (input == BackpackRedirect)
             type = RedirectType.Backpack;
         else if (input == ShirtRedirect)
@@ -1684,8 +1663,6 @@ public static class TeamManager
     private static readonly Guid BuildingSuppliesRedirect   = new Guid("96e27895c1b34e128121296c14dd9bf5");
     [Obsolete]
     private static readonly Guid AmmoSuppliesRedirect       = new Guid("c4cee82e290b4b26b7a6e2be9cd70df7");
-    [Obsolete]
-    private static readonly Guid ZoneBlockerRedirect        = new Guid("7959dc824a154035934049289e011a70");
 
     // clothes
     [Obsolete]

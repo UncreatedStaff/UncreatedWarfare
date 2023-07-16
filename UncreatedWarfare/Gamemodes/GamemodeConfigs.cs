@@ -76,13 +76,6 @@ public sealed class GamemodeConfigData : JSONConfigData
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> FOBRadios { get; set; }
 
     [Sync(13)]
-    [JsonPropertyName("barricade_zone_blocker_team_1")]
-    public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeZoneBlockerTeam1 { get; set; }
-
-    [Sync(14)]
-    [JsonPropertyName("barricade_zone_blocker_team_2")]
-    public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BarricadeZoneBlockerTeam2 { get; set; }
-    [Sync(15)]
     [JsonPropertyName("barricade_rallypoints")]
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> RallyPoints { get; set; }
 
@@ -774,20 +767,6 @@ public sealed class GamemodeConfigData : JSONConfigData
             "49663078b594410b98b8a51e8eff3609", // Germany
             "7720ced42dba4c1eac16d14453cd8bc4" //China
         };
-        BarricadeZoneBlockerTeam1 = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(
-            new JsonAssetReference<ItemBarricadeAsset>(Guid.Empty),
-            new RotatableDefaults<JsonAssetReference<ItemBarricadeAsset>>()
-            {
-                { MapScheduler.Nuijamaa,        "57927806-0501-4735-ab01-2f1f7adaf714" },
-                { MapScheduler.GulfOfAqaba,     "57927806-0501-4735-ab01-2f1f7adaf714" },
-            });
-        BarricadeZoneBlockerTeam2 = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(
-            new JsonAssetReference<ItemBarricadeAsset>(Guid.Empty),
-            new RotatableDefaults<JsonAssetReference<ItemBarricadeAsset>>()
-            {
-                { MapScheduler.Nuijamaa,        "b4c0a51b-7005-4ad5-b6fe-06aead982d94" },
-                { MapScheduler.GulfOfAqaba,     "b4c0a51b-7005-4ad5-b6fe-06aead982d94" },
-            });
         #endregion
 
         #region Items

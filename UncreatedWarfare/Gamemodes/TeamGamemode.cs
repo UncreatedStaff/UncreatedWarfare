@@ -1,10 +1,8 @@
 ﻿using SDG.Unturned;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Steamworks;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -20,9 +18,7 @@ namespace Uncreated.Warfare.Gamemodes;
 public abstract class TeamGamemode : Gamemode, ITeams
 {
     protected TeamSelector _teamSelector;
-    private Transform? _blockerBarricadeT1;
     private bool _shouldHaveBlockerT1;
-    private Transform? _blockerBarricadeT2;
     private bool _shouldHaveBlockerT2;
     private readonly List<ulong> _mainCampers = new List<ulong>(24);
     public TeamSelector TeamSelector { get => _teamSelector; }
@@ -193,145 +189,23 @@ public abstract class TeamGamemode : Gamemode, ITeams
     public void SpawnBlockerOnT1()
     {
         _shouldHaveBlockerT1 = true;
-        if (Config.BarricadeZoneBlockerTeam1.ValidReference(out ItemBarricadeAsset asset))
-            _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset),
-                TeamManager.Team1Main.Center3D + Vector3.up, Quaternion.Euler(BlockerSpawnRotation), 0, 0);
     }
     public void SpawnBlockerOnT2()
     {
         _shouldHaveBlockerT2 = true;
-        if (Config.BarricadeZoneBlockerTeam2.ValidReference(out ItemBarricadeAsset asset))
-            _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset),
-                TeamManager.Team2Main.Center3D, Quaternion.Euler(BlockerSpawnRotation), 0, 0);
     }
     public void DestoryBlockerOnT1()
     {
         _shouldHaveBlockerT1 = false;
-        if (_blockerBarricadeT1 != null && Regions.tryGetCoordinate(_blockerBarricadeT1.position, out byte x, out byte y))
-        {
-            BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT1);
-            if (drop != null)
-            {
-                BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
-                return;
-            }
-            _blockerBarricadeT1 = null;
-        }
-
-        if (Config.BarricadeZoneBlockerTeam1.ValidReference(out Guid g))
-        {
-            for (x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (y = 0; y < Regions.WORLD_SIZE; y++)
-                {
-                    for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
-                    {
-                        BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
-                        if (d.asset.GUID == g)
-                        {
-                            BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
-                            return;
-                        }
-                    }
-                }
-            }
-        }
     }
     public void DestoryBlockerOnT2()
     {
         _shouldHaveBlockerT2 = false;
-        if (_blockerBarricadeT2 != null && Regions.tryGetCoordinate(_blockerBarricadeT2.position, out byte x, out byte y))
-        {
-            BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT2);
-            if (drop != null)
-            {
-                BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
-                return;
-            }
-            _blockerBarricadeT2 = null;
-        }
-
-        if (Config.BarricadeZoneBlockerTeam2.ValidReference(out Guid g))
-        {
-            for (x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (y = 0; y < Regions.WORLD_SIZE; y++)
-                {
-                    for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
-                    {
-                        BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
-                        if (d.asset.GUID == g)
-                        {
-                            BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
-                            return;
-                        }
-                    }
-                }
-            }
-        }
     }
     public void DestroyBlockers()
     {
         _shouldHaveBlockerT1 = false;
         _shouldHaveBlockerT2 = false;
-        try
-        {
-            bool backup = false;
-            if (_blockerBarricadeT1 != null && Regions.tryGetCoordinate(_blockerBarricadeT1.position, out byte x, out byte y))
-            {
-                BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT1);
-                if (drop != null)
-                {
-                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
-                }
-                else
-                {
-                    backup = true;
-                }
-                _blockerBarricadeT1 = null;
-            }
-            else backup = true;
-            if (_blockerBarricadeT2 != null && Regions.tryGetCoordinate(_blockerBarricadeT2.position, out x, out y))
-            {
-                BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT2);
-                if (drop != null)
-                {
-                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
-                }
-                else
-                {
-                    backup = true;
-                }
-                _blockerBarricadeT2 = null;
-            }
-            else backup = true;
-            if (backup)
-            {
-                if (!Config.BarricadeZoneBlockerTeam1.ValidReference(out Guid g1) || !Config.BarricadeZoneBlockerTeam2.ValidReference(out Guid g2)) return;
-                bool l = false;
-                for (x = 0; x < Regions.WORLD_SIZE; x++)
-                {
-                    for (y = 0; y < Regions.WORLD_SIZE; y++)
-                    {
-                        for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
-                        {
-                            BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
-                            if (d.asset.GUID == g1 || d.asset.GUID == g2)
-                            {
-                                BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
-                                if (l) return;
-                                else l = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Failed to destroy zone blockers in gamemode " + Name);
-            L.LogError(ex);
-        }
     }
     public override void OnPlayerDeath(PlayerDied e)
     {

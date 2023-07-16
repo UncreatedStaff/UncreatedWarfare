@@ -1896,7 +1896,6 @@ public enum RedirectType : byte
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "FOB 电台")]
     [Translatable("FOB Radio")]
     Radio,
-    ZoneBlocker,
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "弹药包")]
     [Translatable("Ammo Bag")]
     AmmoBag,
