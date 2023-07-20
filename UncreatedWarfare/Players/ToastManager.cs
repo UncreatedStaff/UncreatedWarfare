@@ -272,7 +272,6 @@ public sealed class ToastManager
             HasToasts = true;
             Manager.HasToasts = true;
             ExpireTime = Time.realtimeSinceStartup + time;
-            CurrentInfo = null;
         }
         internal void HoldMessage(in ToastMessage message)
         {
