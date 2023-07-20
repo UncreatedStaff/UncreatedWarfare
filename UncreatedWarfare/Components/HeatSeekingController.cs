@@ -2,7 +2,11 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Framework;
+using Uncreated.Framework.UI;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -195,13 +199,16 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     private void LockOn(Transform? newTarget, UCPlayer? gunner)
     {
         bool noAmmo = gunner != null && gunner.Player.equipment.state[10] == 0;
-        bool reloading = gunner != null && gunner.Player.equipment.isBusy;
+
+        UseableGun? gun = gunner?.Player.equipment.useable as UseableGun;
+        bool reloading = gun != null && Data.GetUseableGunReloading(gun);
         bool noActiveMissiles = MissilesInFlight.Count == 0;
 
         if (newTarget is null || (noAmmo && noActiveMissiles) || reloading) // no target found
         {
             if (Status != ELockOnMode.IDLE)
             {
+
                 Status = ELockOnMode.IDLE;
 
                 if (gunner != null)
@@ -240,13 +247,13 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             }
         }
     }
+    private static short _lockOnEffectKey = UnturnedUIKeyPool.Claim();
     private void PlayLockOnSound(UCPlayer gunner)
     {
         if (_effect == null || gunner is not { IsOnline: true })
             return;
 
-        EffectManager.ClearEffectByGuid(_effect.GUID, gunner.Connection);
-        EffectManager.sendUIEffect(_effect.id, (short)_effect.id, gunner.Connection, true);
+        EffectManager.sendUIEffect(_effect.id, _lockOnEffectKey, gunner.Connection, true);
     }
     private void CancelLockOnSound(UCPlayer gunner)
     {
