@@ -57,9 +57,6 @@ public sealed class ToastManager
     /// <remarks>Thread Safe</remarks>
     public void SkipExpiration(int channel)
     {
-        if (channel >= Channels.Length || channel < 0)
-            throw new ArgumentOutOfRangeException(nameof(channel), channel, "Channel must be a valid and configured channel index (starting at zero).");
-
         if (UCWarfare.IsMainThread)
             SkipExpirationIntl(channel);
         else
@@ -69,6 +66,11 @@ public sealed class ToastManager
                 SkipExpirationIntl(channel);
             });
         }
+    }
+    public void BlockChannelFor(int channel, float time)
+    {
+        CheckOutOfBoundsChannel(channel);
+        Channels[channel].BlockFor(time);
     }
     public bool TryFindCurrentToastInfo(ToastMessageStyle style, out ToastMessage message)
     {
@@ -84,6 +86,11 @@ public sealed class ToastManager
     {
         if ((int)style >= ToastMessages.Length || (int)style < 0)
             throw new ArgumentOutOfRangeException(nameof(style), style, "ToastMessageStyle must be a valid and configured toast style.");
+    }
+    private void CheckOutOfBoundsChannel(int channel)
+    {
+        if (channel >= Channels.Length || channel < 0)
+            throw new ArgumentOutOfRangeException(nameof(channel), channel, "Channel must be a valid and configured channel index (starting at zero).");
     }
     internal void Update()
     {
@@ -259,6 +266,13 @@ public sealed class ToastManager
         {
             Manager = manager;
             Channel = channel;
+        }
+        internal void BlockFor(float time)
+        {
+            HasToasts = true;
+            Manager.HasToasts = true;
+            ExpireTime = Time.realtimeSinceStartup + time;
+            CurrentInfo = null;
         }
         internal void HoldMessage(in ToastMessage message)
         {
