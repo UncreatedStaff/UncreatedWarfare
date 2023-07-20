@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Moderation;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 public sealed class ModerateCommand : AsyncCommand
@@ -22,6 +21,8 @@ public sealed class ModerateCommand : AsyncCommand
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
+        throw ctx.SendNotImplemented();
+
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         
         await ModerationUI.Instance.Open(ctx.Caller, token).ConfigureAwait(false);
