@@ -148,6 +148,7 @@ public static class Data
     internal static InstanceSetter<InteractableStorage, Items> SetStorageInventory;
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
+    internal static InstanceGetter<UseableGun, bool> GetUseableGunReloading;
     internal static StaticGetter<uint> GetItemManagerInstanceCount;
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
@@ -335,6 +336,7 @@ public static class Data
             SetOwnerHasInventory = Util.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
             GetOwnerHasInventory = Util.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
             GetItemsSlots = Util.GenerateInstanceGetter<Items, bool[,]>("slots", BindingFlags.NonPublic);
+            GetUseableGunReloading = Util.GenerateInstanceGetter<UseableGun, bool>("isReloading", BindingFlags.NonPublic);
         }
         catch (Exception ex)
         {

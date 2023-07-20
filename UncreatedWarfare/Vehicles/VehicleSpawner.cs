@@ -184,7 +184,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && CanUseCountermeasures(vehicle) &&
             vehicle.transform.TryGetComponent(out VehicleComponent component))
         {
-            component.DroppingFlares = true;
+            component.TryDropFlares();
         }
     }
     private void DropFlaresStop(UCPlayer player, float timeDown, ref bool handled)
@@ -195,7 +195,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && CanUseCountermeasures(vehicle) &&
             vehicle.transform.TryGetComponent(out VehicleComponent component))
         {
-            component.DroppingFlares = false;
+            // TODO: this method isn't really needed anymore
         }
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

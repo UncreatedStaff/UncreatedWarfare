@@ -3,6 +3,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Framework;
@@ -38,7 +39,6 @@ public class VehicleComponent : MonoBehaviour
     private Dictionary<ulong, DateTime> _timeEnteredTable;
     private Dictionary<ulong, DateTime> _timeRewardedTable;
     public Dictionary<ulong, KeyValuePair<ushort, DateTime>> DamageTable;
-    public bool DroppingFlares;
     public ulong PreviousOwner;
     public Stack<ulong> OwnerHistory { get; } = new Stack<ulong>(2);
     public ulong Team => Vehicle.lockedGroup.m_SteamID.GetTeam();
@@ -132,7 +132,7 @@ public class VehicleComponent : MonoBehaviour
         VehicleHUD.FlareCount.SetVisibility(player.Connection, seat == 0);
 
         if (seat == 0)
-            VehicleHUD.FlareCount.SetText(player.Connection, "FLARES: " + _flaresLeft);
+            VehicleHUD.FlareCount.SetText(player.Connection, "FLARES: " + _totalFlaresLeft);
     }
     private void UpdateHUDFlares()
     {
@@ -141,7 +141,7 @@ public class VehicleComponent : MonoBehaviour
 
         var driver = Vehicle.passengers[0].player;
         if (driver != null)
-            VehicleHUD.FlareCount.SetText(driver.transportConnection, "FLARES: " + _flaresLeft);
+            VehicleHUD.FlareCount.SetText(driver.transportConnection, "FLARES: " + _totalFlaresLeft);
     }
     private void HideHUD(UCPlayer player)
     {
@@ -278,17 +278,17 @@ public class VehicleComponent : MonoBehaviour
             }
         }
     }
-    private int _flaresLeft;
+    private int _totalFlaresLeft;
     public void ReloadCountermeasures()
     {
         if (Data?.Item is { Type: var type })
         {
-            _flaresLeft = type switch
+            _totalFlaresLeft = type switch
             {
                 VehicleType.AttackHeli => STARTING_FLARES_ATTACKHELI,
                 VehicleType.TransportAir => STARTING_FLARES_TRANSHELI,
                 VehicleType.Jet => STARTING_FLARES_JET,
-                _ => _flaresLeft
+                _ => _totalFlaresLeft
             };
         }
 
@@ -504,16 +504,33 @@ public class VehicleComponent : MonoBehaviour
         }
     }
     private float _timeLastFlare;
+    private float _timeLastFlareDrop;
     private int _flareBurst = 0;
-    const int STARTING_FLARES_ATTACKHELI = 32;
-    const int STARTING_FLARES_TRANSHELI = 48;
-    const int STARTING_FLARES_JET = 24;
-    const int FLARE_BURST_COUNT = 6;
+    const int STARTING_FLARES_ATTACKHELI = 30;
+    const int STARTING_FLARES_TRANSHELI = 50;
+    const int STARTING_FLARES_JET = 30;
+    public const int FLARE_BURST_COUNT = 10;
+    public const int FLARE_COOLDOWN = 10;
+    public void TryDropFlares()
+    {
+        if (Time.time - _timeLastFlareDrop < FLARE_COOLDOWN || _totalFlaresLeft < 0)
+            return;
+
+        _flareBurst = FLARE_BURST_COUNT;
+        _timeLastFlareDrop = Time.time;
+
+        byte[] crewseats = Data?.Item == null ? Array.Empty<byte>() : Data.Item.CrewSeats;
+        for (byte seat = 0; seat < Vehicle.passengers.Length; seat++)
+        {
+            if (Vehicle.passengers[seat].player != null && crewseats.ArrayContains(seat))
+                EffectManager.sendUIEffect(VehicleBay.Config.CountermeasureEffectID, (short)VehicleBay.Config.CountermeasureEffectID.Id, Vehicle.passengers[seat].player.transportConnection, true);
+        }
+    }
     private void FixedUpdate()
     {
-        if (_flaresLeft > 0 && Time.time - _timeLastFlare > 0.2f)
+        if (_totalFlaresLeft > 0 && _flareBurst > 0 && Time.time - _timeLastFlare > 0.2f)
         {
-            if (DroppingFlares || (_flareBurst > 0 && _flareBurst < FLARE_BURST_COUNT))
+            if (_flareBurst > 0)
             {
                 _timeLastFlare = Time.time;
 
@@ -521,16 +538,9 @@ public class VehicleComponent : MonoBehaviour
 
                 float sideforce = Random.Range(20, 30);
 
-                int burstNumber = _flareBurst % FLARE_BURST_COUNT;
-
-                if (burstNumber % 2 == 0) sideforce = -sideforce;
-
-                if (burstNumber > FLARE_BURST_COUNT / 2) sideforce *= 0.5f;
-
-                //countermeasureVehicle.transform.Rotate(Vector3.up, angle, Space.Self);
+                if (_flareBurst % 2 == 0) sideforce = -sideforce;
 
                 Rigidbody? rigidbody = countermeasureVehicle.transform.GetComponent<Rigidbody>();
-                //Vector3 velocity = Vehicle.transform.GetComponent<Rigidbody>().velocity);
                 Vector3 velocity = Vehicle.transform.forward * Vehicle.speed * 0.9f - Vehicle.transform.up * 15 + Vehicle.transform.right * sideforce;
                 rigidbody.velocity = velocity;
 
@@ -538,19 +548,10 @@ public class VehicleComponent : MonoBehaviour
 
                 Countermeasure.ActiveCountermeasures.Add(countermeasure);
 
-                _flaresLeft--;
-                _flareBurst++;
+                _totalFlaresLeft--;
+                _flareBurst--;
                 UpdateHUDFlares();
-
-                byte[] crewseats = Data?.Item == null ? Array.Empty<byte>() : Data.Item.CrewSeats;
-                for (byte seat = 0; seat < Vehicle.passengers.Length; seat++)
-                {
-                    if (Vehicle.passengers[seat].player != null && crewseats.ArrayContains(seat))
-                        EffectManager.sendUIEffect(VehicleBay.Config.CountermeasureEffectID, (short)VehicleBay.Config.CountermeasureEffectID.Id, Vehicle.passengers[seat].player.transportConnection, true);
-                }
             }
-            else if (_flareBurst > 0)
-                _flareBurst = 0;
         }
     }
 }
