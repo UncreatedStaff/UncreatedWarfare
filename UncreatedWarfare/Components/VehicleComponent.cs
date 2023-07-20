@@ -165,16 +165,10 @@ public class VehicleComponent : MonoBehaviour
         {
             if (!Data!.Item!.IsCrewSeat(toSeat))
             {
-                if (!TransportTable.ContainsKey(player.Steam64))
-                    TransportTable.Add(player.Steam64, player.Position);
-                else
-                    TransportTable[player.Steam64] = player.Position;
+                TransportTable[player.Steam64] = player.Position;
             }
 
-            if (!_timeEnteredTable.ContainsKey(player.Steam64))
-                _timeEnteredTable.Add(player.Steam64, DateTime.UtcNow);
-            else
-                _timeEnteredTable[player.Steam64] = DateTime.UtcNow;
+            _timeEnteredTable[player.Steam64] = DateTime.UtcNow;
 
             if (_quotaLoop is null)
             {
@@ -316,16 +310,33 @@ public class VehicleComponent : MonoBehaviour
     }
     private void ToggleMissileWarning(bool enabled)
     {
-        for (byte i = 0; i < Vehicle.passengers.Length; i++)
+        if (Data is null)
+            return;
+        ListSqlConfig<VehicleData>? manager = Data.Manager;
+        if (manager is null)
+            return;
+        manager.WriteWait();
+        try
         {
-            var passenger = Vehicle.passengers[i];
-            if (passenger.player != null && Data!.Item!.IsCrewSeat(i))
+            VehicleData? data = Data.Item;
+            if (data is null)
+                return;
+            for (byte i = 0; i < Vehicle.passengers.Length; i++)
             {
-                VehicleHUD.MissileWarning.SetVisibility(passenger.player.transportConnection, enabled);
-                if (i == 0)
-                    VehicleHUD.MissileWarningDriver.SetVisibility(passenger.player.transportConnection, enabled);
+                Passenger passenger = Vehicle.passengers[i];
+                if (passenger?.player != null && data.IsCrewSeat(i))
+                {
+                    VehicleHUD.MissileWarning.SetVisibility(passenger.player.transportConnection, enabled);
+                    if (i == 0)
+                        VehicleHUD.MissileWarningDriver.SetVisibility(passenger.player.transportConnection, enabled);
+                }
             }
         }
+        finally
+        {
+            manager.WriteRelease();
+        }
+
     }
     public void StartForceLoadSupplies(UCPlayer caller, SupplyType type, int amount)
     {

@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Sync;
@@ -14,7 +13,7 @@ namespace Uncreated.Warfare.Quests;
 public static class QuestRewards
 {
     public static readonly Dictionary<QuestRewardType, Type> QuestRewardTypes = new Dictionary<QuestRewardType, Type>(8);
-    internal static void LoadTypes(Type[] types)
+    internal static void LoadTypes(List<Type> types)
     {
         foreach (Type type in types.Where(x => x != null && x.IsClass && typeof(IQuestReward).IsAssignableFrom(x)))
         {

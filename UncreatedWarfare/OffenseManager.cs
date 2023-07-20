@@ -23,6 +23,7 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Players;
 using Color = UnityEngine.Color;
 
 namespace Uncreated.Warfare;
@@ -1071,8 +1072,7 @@ public static class OffenseManager
             Chat.Broadcast(LanguageSet.AllBut(targetId), T.WarnSuccessBroadcastOperator, target);
 
             string lang = Localization.GetLang(target.Steam64);
-            ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDMOperator.Translate(T.WarnSuccessDMOperator.Translate(lang),
-                lang, reason, target, target.GetTeam(), T.WarnSuccessDMOperator.Flags | TranslationFlags.UnityUI), ToastMessageSeverity.Warning));
+            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(lang), T.WarnSuccessDMOperator.Translate(lang, reason!)));
 
             target.SendChat(T.WarnSuccessDMOperator, reason);
         }
@@ -1086,9 +1086,7 @@ public static class OffenseManager
             caller?.SendChat(T.WarnSuccessFeedback, target);
 
             string lang = Localization.GetLang(target.Steam64);
-            ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDM.Translate(T.WarnSuccessDM.Translate(lang),
-                lang, caller2, reason, target, target.GetTeam(), T.WarnSuccessDM.Flags | TranslationFlags.UnityUI), ToastMessageSeverity.Warning));
-
+            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(lang), T.WarnSuccessDM.Translate(lang, callerNames, reason!)));
             target.SendChat(T.WarnSuccessDM, caller2, reason);
         }
 

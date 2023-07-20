@@ -220,8 +220,7 @@ public class TraitData : ITranslationArgument
         {
             if (value is null)
                 throw new JsonException("Type name must not be null.");
-            Type = Assembly.GetExecutingAssembly()
-                .GetTypes()
+            Type = Util.GetTypesSafe()
                 .Where(x => !x.IsAbstract && x.IsPublic && !x.IsGenericType && !x.IsNested && typeof(Trait).IsAssignableFrom(x))
                 .FirstOrDefault(x => x.Name.Equals(value, StringComparison.OrdinalIgnoreCase))
                    ?? throw new JsonException("Type name could not be identified: \"" + value + "\".");

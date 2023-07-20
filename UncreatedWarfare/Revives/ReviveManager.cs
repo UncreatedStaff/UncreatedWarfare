@@ -236,9 +236,9 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                     }
                     else
                     {
-                        ToastMessage.QueueMessage(ucmedic, new ToastMessage(
+                        ToastMessage.QueueMessage(ucmedic, new ToastMessage(ToastMessageStyle.Mini,
                             T.XPToastGainXP.Translate(ucmedic, false, 0) + "\n" +
-                            T.XPToastHealedTeammate.Translate(ucmedic).Colorize("adadad"), ToastMessageSeverity.Mini));
+                            T.XPToastHealedTeammate.Translate(ucmedic).Colorize("adadad")));
                     }
                 }
 
@@ -360,7 +360,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 byte kteam = killer.GetTeamByte();
                 if (kteam != team)
                 {
-                    ToastMessage.QueueMessage(killer, new ToastMessage(T.XPToastEnemyInjured.Translate(killer.playerID.steamID.m_SteamID), ToastMessageSeverity.Mini));
+                    ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastEnemyInjured.Translate(killer.playerID.steamID.m_SteamID)));
                     //if (parameters.player.transform.TryGetComponent(out UCPlayerData p))
                     //{
                     //    if ((DateTime.Now - p.secondLastAttacker.Value).TotalSeconds < 30 && p.secondLastAttacker.Key != parameters.killer.m_SteamID)
@@ -395,7 +395,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                         Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s => s.Downs++, false);
                 }
                 else
-                    ToastMessage.QueueMessage(killer, new ToastMessage(T.XPToastFriendlyInjured.Translate(Localization.GetLang(killer.playerID.steamID.m_SteamID)), ToastMessageSeverity.Mini));
+                    ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastFriendlyInjured.Translate(Localization.GetLang(killer.playerID.steamID.m_SteamID))));
             }
         }
     }

@@ -18,6 +18,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
@@ -248,8 +249,8 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 string number = Localization.Translate(key, player, Math.Abs(amount));
                 ToastMessage.QueueMessage(player,
                     !string.IsNullOrEmpty(parameters.Message)
-                        ? new ToastMessage(number + "\n" + parameters.Message!.Colorize("adadad"), ToastMessageSeverity.Mini)
-                        : new ToastMessage(number, ToastMessageSeverity.Mini));
+                        ? new ToastMessage(ToastMessageStyle.Mini, number + "\n" + parameters.Message!.Colorize("adadad"))
+                        : new ToastMessage(ToastMessageStyle.Mini, number));
 
                 if (!parameters.IsPurchase && player.Player.TryGetPlayerData(out UCPlayerData c))
                 {
@@ -508,16 +509,16 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                         
                         ToastMessage.QueueMessage(player,
                             !string.IsNullOrEmpty(parameters.Message)
-                                ? new ToastMessage(number + "\n" + parameters.Message!.Colorize("adadad"), ToastMessageSeverity.Mini)
-                                : new ToastMessage(number, ToastMessageSeverity.Mini));
+                                ? new ToastMessage(ToastMessageStyle.Mini, number + "\n" + parameters.Message!.Colorize("adadad"))
+                                : new ToastMessage(ToastMessageStyle.Mini, number));
                         if (credits != 0)
                         {
                             Translation<int> key = credits < 0 ? T.XPToastLoseCredits : T.XPToastGainCredits;
 
                             number = Localization.Translate(key, player, Math.Abs(credits));
                             ToastMessage.QueueMessage(player, !string.IsNullOrEmpty(parameters.Message)
-                                    ? new ToastMessage(number + "\n" + parameters.Message!.Colorize("adadad"), ToastMessageSeverity.Mini)
-                                    : new ToastMessage(number, ToastMessageSeverity.Mini));
+                                    ? new ToastMessage(ToastMessageStyle.Mini, number + "\n" + parameters.Message!.Colorize("adadad"))
+                                    : new ToastMessage(ToastMessageStyle.Mini, number));
 
                             player.PointsDirtyMask |= 0b00001000;
                             CreditsUI.Update(player, false);
@@ -561,16 +562,14 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     if (player.Level.Level > oldLevel.Level)
                     {
                         ToastMessage.QueueMessage(player,
-                            new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Level.Name.ToUpper(),
-                                ToastMessageSeverity.Big));
+                            new ToastMessage(ToastMessageStyle.Large, new string[] { Localization.Translate(T.ToastPromoted, player), player.Level.Name.ToUpper(), string.Empty }));
                         player.PointsDirtyMask |= 0b00000010;
                         Signs.UpdateAllSigns(player);
                     }
                     else if (player.Level.Level < oldLevel.Level)
                     {
                         ToastMessage.QueueMessage(player,
-                            new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Level.Name.ToUpper(),
-                                ToastMessageSeverity.Big));
+                            new ToastMessage(ToastMessageStyle.Large, new string[] { Localization.Translate(T.ToastDemoted, player), player.Level.Name.ToUpper(), string.Empty }));
                         player.PointsDirtyMask |= 0b00000010;
                         Signs.UpdateAllSigns(player);
                     }

@@ -13,7 +13,7 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
     private readonly object sync = new object();
     private bool _regReload = false;
     private readonly int syncId;
-    private TData _data = UCWarfare.Config.EnableSync ? new TData() : null!;
+    private TData _data = UCWarfare.IsLoaded && UCWarfare.Config.EnableSync ? new TData() : null!;
     public TData Data { get => _data; }
     public virtual bool DontReplicate => Warfare.Data.IsInitialSyncRegistering;
     public string? ReloadKey { get; }
@@ -27,7 +27,7 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
             _regReload = ReloadCommand.RegisterConfigForReload(this);
         }
         File = new FileInfo(path);
-        if (UCWarfare.Config.EnableSync)
+        if (UCWarfare.IsLoaded && UCWarfare.Config.EnableSync)
         {
             if (Attribute.GetCustomAttribute(typeof(TData), typeof(SyncAttribute)) == null)
                 throw new ArgumentException("To use SyncConfig, you must apply the Sync attribute to the config data class (" + typeof(TData).Name + ") with a unique ID.", nameof(TData));
@@ -69,7 +69,7 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
         {
             using FileStream stream = new FileStream(File.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
             using Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-            if (UCWarfare.Config.EnableSync)
+            if (UCWarfare.IsLoaded && UCWarfare.Config.EnableSync)
             {
                 ConfigSync.ConfigSyncInst? data = ConfigSync.GetClassData(syncId);
                 if (data is null)
@@ -126,7 +126,7 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
                 Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
                 if (!reader.Read())
                     goto def;
-                if (UCWarfare.Config.EnableSync)
+                if (UCWarfare.IsLoaded && UCWarfare.Config.EnableSync)
                 {
                     TData? defaults = null;
                     ConfigSync.ConfigSyncInst? data = ConfigSync.GetClassData(syncId);

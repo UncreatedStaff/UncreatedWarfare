@@ -27,7 +27,6 @@ public class SquadConfigData : JSONConfigData
     public ClassConfig[] Classes;
     public JsonAssetReference<EffectAsset> EmptyMarker;
     public JsonAssetReference<EffectAsset> SquadLeaderEmptyMarker;
-    public JsonAssetReference<EffectAsset> MortarMarker;
     public JsonAssetReference<EffectAsset> InjuredMarker;
     public JsonAssetReference<EffectAsset> MedicMarker;
     public JsonAssetReference<EffectAsset> SquadMenuUI;
@@ -43,7 +42,6 @@ public class SquadConfigData : JSONConfigData
 
         EmptyMarker = "84d38753c46e4a1b8e5b26ff44787ef2";
         SquadLeaderEmptyMarker = "dc95d06e787e4a069518e0487645ed6b";
-        MortarMarker = "e608e0add55d4f3cbfbd6f5cabe091f3";
         InjuredMarker = "5edcd9bb87e240428902c04e1ba04e97";
         MedicMarker = "0d846b64766041f6b9f1a08df88a9268";
 

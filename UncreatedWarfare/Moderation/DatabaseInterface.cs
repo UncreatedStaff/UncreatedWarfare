@@ -22,9 +22,31 @@ public abstract class DatabaseInterface
 {
     public static readonly TimeSpan DefaultInvalidateDuration = TimeSpan.FromSeconds(3);
     public ModerationCache Cache { get; } = new ModerationCache(64);
-    public Dictionary<ulong, string> IconUrlCache = new Dictionary<ulong, string>(128);
+    public Dictionary<ulong, string> IconUrlCacheSmall = new Dictionary<ulong, string>(128);
+    public Dictionary<ulong, string> IconUrlCacheMedium = new Dictionary<ulong, string>(128);
+    public Dictionary<ulong, string> IconUrlCacheFull = new Dictionary<ulong, string>(128);
+    public bool TryGetAvatar(ulong steam64, AvatarSize size, out string avatar)
+    {
+        Dictionary<ulong, string> dict = size switch
+        {
+            AvatarSize.Full => IconUrlCacheFull,
+            AvatarSize.Medium => IconUrlCacheMedium,
+            _ => IconUrlCacheSmall
+        };
+        return dict.TryGetValue(steam64, out avatar);
+    }
+    public void UpdateAvatar(ulong steam64, AvatarSize size, string value)
+    {
+        Dictionary<ulong, string> dict = size switch
+        {
+            AvatarSize.Full => IconUrlCacheFull,
+            AvatarSize.Medium => IconUrlCacheMedium,
+            _ => IconUrlCacheSmall
+        };
+        dict[steam64] = value;
+    }
     public abstract IWarfareSql Sql { get; }
-    public Task VerifyTables() => Sql.VerifyTables(Schema);
+    public Task VerifyTables(CancellationToken token = default) => Sql.VerifyTables(Schema, token);
     public async Task<PlayerNames> GetUsernames(ulong id, CancellationToken token = default)
     {
         if (UCWarfare.IsLoaded)
@@ -496,7 +518,7 @@ public abstract class DatabaseInterface
         entry.Reputation = reader.GetDouble(6 + offset);
         entry.ReputationApplied = reader.GetBoolean(7 + offset);
         entry.LegacyId = reader.IsDBNull(8 + offset) ? null : reader.GetUInt32(8 + offset);
-        entry.RelevantLogsStart = reader.IsDBNull(9 + offset) ? null : DateTime.SpecifyKind(reader.GetDateTime(9 + offset), DateTimeKind.Utc);
+        entry.RelevantLogsBegin = reader.IsDBNull(9 + offset) ? null : DateTime.SpecifyKind(reader.GetDateTime(9 + offset), DateTimeKind.Utc);
         entry.RelevantLogsEnd = reader.IsDBNull(10 + offset) ? null : DateTime.SpecifyKind(reader.GetDateTime(10 + offset), DateTimeKind.Utc);
         return entry;
     }
@@ -749,11 +771,6 @@ public abstract class DatabaseInterface
                 ForeignKeyTable = TableEntries
             },
             new Schema.Column(ColumnMutesType, SqlTypes.Enum(exclude: MuteType.None))
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
         }, false, typeof(Mute)),
         new Schema(TableWarnings, new Schema.Column[]
         {

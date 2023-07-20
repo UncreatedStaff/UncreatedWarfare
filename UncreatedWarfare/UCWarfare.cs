@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using SDG.Framework.Utilities;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -27,6 +28,7 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
@@ -121,7 +123,21 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         TeamManager.SetupConfig();
 
         OffenseManager.Init();
-
+        bool set = false;
+        FieldInfo? shouldLogBadMessagesField = typeof(Provider).Assembly.GetType("SDG.Unturned.NetMessages").GetField("shouldLogBadMessages", BindingFlags.Static | BindingFlags.NonPublic);
+        if (shouldLogBadMessagesField != null && typeof(CommandLineFlag).IsAssignableFrom(shouldLogBadMessagesField.FieldType))
+        {
+            CommandLineFlag flag = (CommandLineFlag)shouldLogBadMessagesField.GetValue(null);
+            if (flag != null)
+            {
+                flag.value = true;
+                L.Log("Set command line flag: \"-LogBadMessages\".", ConsoleColor.Magenta);
+                set = true;
+            }
+        }
+        if (!set)
+            L.LogWarning("Unable to set command line flag: \"-LogBadMessages\".");
+        
         CommandHandler.LoadCommands();
 
         DateTime loadTime = DateTime.Now;
@@ -150,8 +166,10 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         await Data.LoadSQL(token).ConfigureAwait(false);
         await ItemIconProvider.DownloadConfig(token).ConfigureAwait(false);
         await TeamManager.ReloadFactions(token).ConfigureAwait(false);
-        await ToUpdate(token);
+        L.Log("Loading Moderation Data...", ConsoleColor.Magenta);
         Data.ModerationSql = new WarfareDatabaseInterface();
+        await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
+        await ToUpdate(token);
         _ = TeamManager.Team1Faction;
         _ = TeamManager.Team2Faction;
         _ = TeamManager.AdminFaction;
@@ -189,6 +207,8 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         if (!Config.DisableDailyQuests)
             Quests.DailyQuests.EarlyLoad();
+
+        ToastManager.Init();
 
         ActionLog.Add(ActionLogType.ServerStartup, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.AdminLocale)}");
     }
@@ -293,7 +313,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         Debugger.Reset();
 
-        UCPlayerData.ReloadToastIDs();
+        ToastManager.ReloadToastIds();
 
         /* BASIC CONFIGS */
         Provider.modeConfigData.Players.Lose_Items_PvP = 0;
@@ -1142,6 +1162,18 @@ public class UCWarfareNexus : IModuleNexus
         {
             Logging.LogException(ex);
         }
+
+        L.Log("Initializing UniTask...", ConsoleColor.Magenta);
+        MethodInfo? initMethod = typeof(PlayerLoopHelper).GetMethod("Init", BindingFlags.NonPublic | BindingFlags.Static);
+        if (initMethod == null)
+        {
+            L.LogError("Method not found: PlayerLoopHelper.Init.");
+            Provider.shutdown(5, "Missing UniTask.");
+            return;
+        }
+        
+        initMethod.Invoke(null, Array.Empty<object>());
+
         Level.onPostLevelLoaded += OnLevelLoaded;
         UCWarfare.Nexus = this;
         GameObject go = new GameObject("UCWarfare " + UCWarfare.Version);

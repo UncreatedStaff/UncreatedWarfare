@@ -9,6 +9,7 @@ using System.Text.Json.Serialization;
 using Uncreated.Players;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Ranks;
@@ -388,7 +389,7 @@ public static class RankManager
                 if (Assets.find(nextRank.QuestID) is QuestAsset quest)
                 {
                     e.Player.Player.quests.ServerRemoveQuest(quest);
-                    ToastMessage.QueueMessage(e.Player, new ToastMessage("Quest complete: " + quest.questName, ToastMessageSeverity.Big));
+                    ToastMessage.QueueMessage(e.Player, new ToastMessage(ToastMessageStyle.Large, "Quest complete: " + quest.questName));
                     OnPlayerJoin(e.Player);
                 }
             }

@@ -12,6 +12,7 @@ using Uncreated.Framework;
 using Uncreated.Framework.Quests;
 using Uncreated.Json;
 using Uncreated.Networking;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -387,7 +388,7 @@ public static class DailyQuests
         {
             L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.GetDisplayString() + "\"", ConsoleColor.Cyan);
         }
-        ToastMessage.QueueMessage(tracker.Player!, new ToastMessage("Daily Quest Completed!", tracker.GetDisplayString(), "good job man idk does this need filled?", ToastMessageSeverity.Progress));
+        ToastMessage.QueueMessage(tracker.Player!, new ToastMessage(ToastMessageStyle.Large, new string[] { "Daily Quest Completed!", tracker.GetDisplayString(), string.Empty }));
         tracker.TryGiveRewards();
     }
 

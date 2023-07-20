@@ -136,12 +136,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         {
             string number = (build > 0 ? T.FOBToastGainBuild : T.FOBToastLoseBuild).Translate(set.Language, Math.Abs(build), null, set.Team);
             ToastMessage msg = string.IsNullOrEmpty(message)
-                ? new ToastMessage(number, ToastMessageSeverity.Mini)
-                : new ToastMessage(number + "\n" + message!.Colorize("adadad"), ToastMessageSeverity.Mini);
+                ? new ToastMessage(ToastMessageStyle.Mini, number)
+                : new ToastMessage(ToastMessageStyle.Mini, number + "\n" + message!.Colorize("adadad"));
             while (set.MoveNext())
             {
-                if (set.Next.Player.TryGetPlayerData(out UCPlayerData data))
-                    data.QueueMessage(msg);
+                set.Next.Toasts.Queue(in msg);
             }
             set.Reset();
         }
@@ -149,12 +148,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         {
             string number = (ammo > 0 ? T.FOBToastGainAmmo : T.FOBToastLoseAmmo).Translate(set.Language, Math.Abs(ammo), null, set.Team);
             ToastMessage msg = string.IsNullOrEmpty(message)
-                ? new ToastMessage(number, ToastMessageSeverity.Mini)
-                : new ToastMessage(number + "\n" + message!.Colorize("adadad"), ToastMessageSeverity.Mini);
+                ? new ToastMessage(ToastMessageStyle.Mini, number)
+                : new ToastMessage(ToastMessageStyle.Mini, number + "\n" + message!.Colorize("adadad"));
             while (set.MoveNext())
             {
-                if (set.Next.Player.TryGetPlayerData(out UCPlayerData data))
-                    data.QueueMessage(msg);
+                set.Next.Toasts.Queue(in msg);
             }
             set.Reset();
         }

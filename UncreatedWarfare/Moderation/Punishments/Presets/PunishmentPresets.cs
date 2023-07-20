@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Moderation.Punishments.Presets;
-public static class PunishmentCategories
+public static class PunishmentPresets
 {
 
 }

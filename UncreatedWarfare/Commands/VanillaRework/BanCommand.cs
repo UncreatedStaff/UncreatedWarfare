@@ -85,7 +85,7 @@ public class BanCommand : AsyncCommand
         {
             if (ctx.IsConsole)
             {
-                ctx.ReplyString($"{name.PlayerName} ({targetId.ToString(Data.LocalLocale)} was permanently banned by an operator because: {reason!}", ConsoleColor.Cyan);
+                ctx.ReplyString($"{name.PlayerName} ({targetId.ToString(Data.LocalLocale)}) was permanently banned by an operator because: {reason!}", ConsoleColor.Cyan);
                 Chat.Broadcast(T.BanPermanentSuccessBroadcastOperator, name);
             }
             else

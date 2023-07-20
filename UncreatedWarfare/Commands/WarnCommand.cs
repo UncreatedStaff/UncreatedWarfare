@@ -2,6 +2,7 @@
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare.Commands;
 public class WarnCommand : Command
@@ -53,7 +54,7 @@ public class WarnCommand : Command
         {
             L.Log($"{targetNames.PlayerName} ({tid}) was warned for: {reason}.", ConsoleColor.Cyan);
             Chat.Broadcast(LanguageSet.AllBut(targetId), T.WarnSuccessBroadcastOperator, targetNames);
-            ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDMOperator.Translate(ctx.Caller, false, reason!), ToastMessageSeverity.Warning));
+            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(ctx.Caller), T.WarnSuccessDMOperator.Translate(ctx.Caller, false, reason!)));
             target.SendChat(T.WarnSuccessDMOperator, reason!);
         }
         else
@@ -62,7 +63,7 @@ public class WarnCommand : Command
             L.Log($"{targetNames.PlayerName} ({tid}) was warned by {callerNames.PlayerName} ({ctx.CallerID}) for: {reason}.", ConsoleColor.Cyan);
             Chat.Broadcast(LanguageSet.AllBut(targetId, ctx.CallerID), T.WarnSuccessBroadcast, targetNames, ctx.Caller);
             ctx.Reply(T.WarnSuccessFeedback, targetNames);
-            ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDM.Translate(ctx.Caller, false, callerNames, reason!), ToastMessageSeverity.Warning));
+            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(ctx.Caller), T.WarnSuccessDM.Translate(ctx.Caller, false, callerNames, reason!)));
             target.SendChat(T.WarnSuccessDM, callerNames, reason!);
         }
     }

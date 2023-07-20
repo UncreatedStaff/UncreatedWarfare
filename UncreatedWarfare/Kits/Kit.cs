@@ -743,7 +743,7 @@ public abstract class UnlockRequirement : ICloneable, IVersionableReadWrite
         if (_hasReflected)
             return;
         Types.Clear();
-        foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(typeof(UnlockRequirement).IsAssignableFrom))
+        foreach (Type type in Util.GetTypesSafe(Assembly.GetExecutingAssembly(), true).Where(typeof(UnlockRequirement).IsAssignableFrom))
         {
             if (!TypesInverse.ContainsKey(type) && Attribute.GetCustomAttribute(type, typeof(UnlockRequirementAttribute)) is UnlockRequirementAttribute att && !Types.ContainsKey(att.Type))
             {
@@ -1896,7 +1896,6 @@ public enum RedirectType : byte
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "FOB 电台")]
     [Translatable("FOB Radio")]
     Radio,
-    ZoneBlocker,
     [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "弹药包")]
     [Translatable("Ammo Bag")]
     AmmoBag,

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.SQL;
@@ -15,10 +16,10 @@ public static class ListSync
     private static bool _reflected;
     private static void GetAllSyncTypes()
     {
-        Type[] types = Assembly.GetExecutingAssembly().GetTypes();
+        List<Type> types = Util.GetTypesSafe(Assembly.GetExecutingAssembly(), true);
         L.Log("[LIST SYNC] Searching for sync types:");
         using IDisposable indent = L.IndentLog(1);
-        for (int i = 0; i < types.Length; ++i)
+        for (int i = 0; i < types.Count; ++i)
         {
             Type type = types[i];
             if (SyncIds.ContainsKey(type))

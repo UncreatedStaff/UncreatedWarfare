@@ -28,6 +28,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
@@ -616,8 +617,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         }
         else if (pl != null)
         {
-            ToastMessage msg = new ToastMessage(T.AbandonCompensationToastTransferred.Translate(pl).Colorize("adadad"), ToastMessageSeverity.Mini);
-            ToastMessage.QueueMessage(pl, msg, false);
+            ToastMessage.QueueMessage(pl, new ToastMessage(ToastMessageStyle.Mini, T.AbandonCompensationToastTransferred.Translate(pl).Colorize("adadad")));
         }
 
         DeleteVehicle(vehicle);

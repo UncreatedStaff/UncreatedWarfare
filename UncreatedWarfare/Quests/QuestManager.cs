@@ -378,15 +378,7 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Type[] types;
-        try
-        {
-            types = Assembly.GetExecutingAssembly().GetTypes();
-        }
-        catch (ReflectionTypeLoadException e)
-        {
-            types = e.Types;
-        }
+        List<Type> types = Util.GetTypesSafe(Assembly.GetExecutingAssembly());
 
         foreach (Type type in types.Where(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {

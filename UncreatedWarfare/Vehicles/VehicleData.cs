@@ -146,6 +146,7 @@ public class VehicleData : ITranslationArgument, IListItem
     public static bool IsAircraft(VehicleType type) => type is VehicleType.TransportAir or VehicleType.AttackHeli or VehicleType.Jet;
     public static bool IsAssaultAircraft(VehicleType type) => type is VehicleType.AttackHeli or VehicleType.Jet;
     public static bool IsEmplacement(VehicleType type) => type is VehicleType.HMG or VehicleType.ATGM or VehicleType.AA or VehicleType.Mortar;
+    public static bool IsFlyingEngine(EEngine engine) => engine is EEngine.BLIMP or EEngine.PLANE or EEngine.HELICOPTER;
     public bool HasDelayType(DelayType type) => Delay.HasDelayType(Delays, type);
     public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
     public bool IsCrewSeat(byte seat)

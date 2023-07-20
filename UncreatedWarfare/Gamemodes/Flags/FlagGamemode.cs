@@ -1,16 +1,20 @@
-﻿using SDG.Unturned;
+﻿//#define TIME_FLAG_CHECK
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using SDG.Framework.Utilities;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
+#if TIME_FLAG_CHECK
+using System.Diagnostics;
+using Uncreated.Framework;
+#endif
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
@@ -84,11 +88,18 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     }
     protected virtual void FlagCheck()
     {
+#if DEBUG && TIME_FLAG_CHECK
+        Stopwatch stopwatch = Stopwatch.StartNew();
+#endif
         for (int i = 0; i < FlagRotation.Count; i++)
         {
             Flag f = FlagRotation[i];
             if (f != null) CheckFlagForPlayerChanges(f);
         }
+#if DEBUG && TIME_FLAG_CHECK
+        stopwatch.Stop();
+        L.LogDebug($"Time to scan {FlagRotation.Count} flags * {Provider.clients.Count} players: {stopwatch.GetElapsedMilliseconds():F4} ms.");
+#endif
         if (TimeToEvaluatePoints())
         {
             EvaluatePoints();
@@ -100,22 +111,26 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     protected void CheckFlagForPlayerChanges(Flag f)
     {
         Flag.PlayerChange change = f.GetUpdatedPlayers();
-
-        List<Player> list = change.DepartingPlayers;
-        for (int j = 0; j < list.Count; j++)
+        try
         {
-            Player player = list[j];
-            RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, f);
-        }
+            List<Player> list = change.DepartingPlayers;
+            for (int j = 0; j < list.Count; j++)
+            {
+                Player player = list[j];
+                RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, f);
+            }
 
-        list = change.NewPlayers;
-        for (int j = 0; j < list.Count; j++)
+            list = change.NewPlayers;
+            for (int j = 0; j < list.Count; j++)
+            {
+                Player player = list[j];
+                AddPlayerOnFlag(player, f);
+            }
+        }
+        finally
         {
-            Player player = list[j];
-            AddPlayerOnFlag(player, f);
+            change.Release();
         }
-
-        change.Release();
     }
     protected void ConvertFlags()
     {

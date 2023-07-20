@@ -1,13 +1,6 @@
 ﻿using JetBrains.Annotations;
 using SDG.Unturned;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Components.HeatSeekingController;
 using Random = UnityEngine.Random;
@@ -77,7 +70,7 @@ public class HeatSeekingMissileComponent : MonoBehaviour
 
     private void OnDestroy()
     {
-        L.Log("Missile destroyed. In flight: " + _controller.MissilesInFlight.Count);
+        L.LogDebug("Missile destroyed. In flight: " + _controller.MissilesInFlight.Count);
         _controller.MissilesInFlight.Remove(this);
     }
     
