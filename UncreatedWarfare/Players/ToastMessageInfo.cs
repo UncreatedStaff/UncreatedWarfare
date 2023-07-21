@@ -36,6 +36,7 @@ public sealed class ToastMessageInfo
     public string[] ResendNames { get; set; } = Array.Empty<string>();
     public bool CanResend { get; }
     public bool RequiresResend { get; }
+    public int ClearableSlots { get; set; }
     public float Duration
     {
         get => _duration;

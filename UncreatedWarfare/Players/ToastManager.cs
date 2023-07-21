@@ -24,6 +24,63 @@ public sealed class ToastManager
         for (int i = 0; i < Channels.Length; ++i)
             Channels[i] = new ToastMessageChannel(this, i);
     }
+    internal static void Init()
+    {
+        ToastMessageStyle[] vals = (ToastMessageStyle[])typeof(ToastMessageStyle).GetEnumValues();
+        int len = vals.Length == 0 ? 0 : (int)vals.Max() + 1;
+
+        ToastMessages = new ToastMessageInfo[len];
+        ToastMessages[(int)ToastMessageStyle.GameOver] = new ToastMessageInfo(ToastMessageStyle.GameOver, 0, Gamemode.WinToastUI, WinToastUI.SendToastCallback)
+        {
+            ResendNames = new string[] { "Header", "Team1Tickets", "Team2Tickets", "Team1Image", "Team2Image" },
+            ClearableSlots = 3
+        };
+        ToastMessages[(int)ToastMessageStyle.Large] = new ToastMessageInfo(ToastMessageStyle.Large, 0, Gamemode.Config.UIToastLarge, canResend: true)
+        {
+            ResendNames = new string[] { "Top", "Middle", "Bottom" },
+            ClearableSlots = 3
+        };
+        ToastMessages[(int)ToastMessageStyle.Medium] = new ToastMessageInfo(ToastMessageStyle.Medium, 0, Gamemode.Config.UIToastMedium, canResend: true)
+        {
+            ResendNames = new string[] { "Middle" },
+            ClearableSlots = 1
+        };
+        ToastMessages[(int)ToastMessageStyle.Mini] = new ToastMessageInfo(ToastMessageStyle.Mini, 1, Gamemode.Config.UIToastXP, canResend: true)
+        {
+            ResendNames = new string[] { "Text" },
+            ClearableSlots = 1
+        };
+        ToastMessages[(int)ToastMessageStyle.ProgressBar] = new ToastMessageInfo(ToastMessageStyle.ProgressBar, 2, Gamemode.Config.UIToastProgress, inturrupt: true, canResend: true)
+        {
+            ResendNames = new string[] { "Progress", "Bar" },
+            ClearableSlots = 1
+        };
+        ToastMessages[(int)ToastMessageStyle.Tip] = new ToastMessageInfo(ToastMessageStyle.Tip, 0, Gamemode.Config.UIToastTip, canResend: true)
+        {
+            ResendNames = new string[] { "Text" },
+            ClearableSlots = 1
+        };
+        ToastMessages[(int)ToastMessageStyle.Popup] = new ToastMessageInfo(ToastMessageStyle.Popup, 3, PopupUI.Instance, PopupUI.SendToastCallback, requiresClearing: true)
+        {
+            Duration = 300,
+            DisableFlags = EPluginWidgetFlags.ShowCenterDot | EPluginWidgetFlags.ShowInteractWithEnemy,
+            EnableFlags = EPluginWidgetFlags.ForceBlur | EPluginWidgetFlags.Modal
+        };
+        // todo update UI mod to fix the requireResend: true
+        ToastMessages[(int)ToastMessageStyle.FlashingWarning] = new ToastMessageInfo(ToastMessageStyle.FlashingWarning, 4, Gamemode.Config.UIFlashingWarning, requiresClearing: true, canResend: true, requiresResend: true)
+        {
+            ResendNames = new string[] { "Text" },
+            ClearableSlots = 1
+        };
+        int maxChannel = -1;
+        for (int i = 0; i < len; ++i)
+        {
+            if (ToastMessages[i].Channel > maxChannel)
+                maxChannel = ToastMessages[i].Channel;
+        }
+
+        _channelCount = maxChannel + 1;
+    }
     /// <remarks>Thread Safe</remarks>
     public void Queue(in ToastMessage message)
     {
@@ -148,7 +205,6 @@ public sealed class ToastManager
     }
     private void Send(in ToastMessage message, ToastMessageInfo info, ToastMessageChannel channel)
     {
-        L.LogDebug($"Queued toast: {message.Style}.");
         HasToasts = true;
         channel.UpdateInfo(in message, info);
         if (info.UI != null)
@@ -158,8 +214,21 @@ public sealed class ToastManager
         }
         else if (message.Argument != null)
         {
-            L.LogDebug($"Sent text: {message.Argument}, {info.Id}, {info.Key}, duration: {info.Duration}.");
-            EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Argument);
+            switch (info.ClearableSlots)
+            {
+                case <= 1:
+                    EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Argument);
+                    break;
+                case 2:
+                    EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Argument, string.Empty);
+                    break;
+                case 3:
+                    EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Argument, string.Empty, string.Empty);
+                    break;
+                default:
+                    EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Argument, string.Empty, string.Empty, string.Empty);
+                    break;
+            }
 
             Resend(in message, info);
         }
@@ -168,13 +237,46 @@ public sealed class ToastManager
             switch (message.Arguments.Length)
             {
                 case 1:
-                    EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0]);
+                    switch (info.ClearableSlots)
+                    {
+                        case <= 1:
+                            EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0]);
+                            break;
+                        case 2:
+                            EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], string.Empty);
+                            break;
+                        case 3:
+                            EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], string.Empty, string.Empty);
+                            break;
+                        default:
+                            EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], string.Empty, string.Empty, string.Empty);
+                            break;
+                    }
                     break;
                 case 2:
-                    EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1]);
+                    switch (info.ClearableSlots)
+                    {
+                        case <= 2:
+                            EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1]);
+                            break;
+                        case 3:
+                            EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], string.Empty);
+                            break;
+                        default:
+                            EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], string.Empty, string.Empty);
+                            break;
+                    }
                     break;
                 case 3:
-                    EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], message.Arguments[2]);
+                    switch (info.ClearableSlots)
+                    {
+                        case <= 3:
+                            EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], message.Arguments[2]);
+                            break;
+                        default:
+                            EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], message.Arguments[2], string.Empty);
+                            break;
+                    }
                     break;
                 default:
                     EffectManager.sendUIEffect(info.Id, info.Key, Player.Connection, info.Reliable, message.Arguments[0], message.Arguments[1], message.Arguments[2], message.Arguments[3]);
@@ -218,56 +320,6 @@ public sealed class ToastManager
         ToastMessages[(int)ToastMessageStyle.Tip].UpdateAsset(Gamemode.Config.UIToastTip);
         ToastMessages[(int)ToastMessageStyle.Popup].UpdateAsset(Gamemode.Config.UIPopup);
         ToastMessages[(int)ToastMessageStyle.FlashingWarning].UpdateAsset(Gamemode.Config.UIFlashingWarning);
-    }
-    internal static void Init()
-    {
-        ToastMessageStyle[] vals = (ToastMessageStyle[])typeof(ToastMessageStyle).GetEnumValues();
-        int len = vals.Length == 0 ? 0 : (int)vals.Max() + 1;
-
-        ToastMessages = new ToastMessageInfo[len];
-        ToastMessages[(int)ToastMessageStyle.GameOver] = new ToastMessageInfo(ToastMessageStyle.GameOver, 0, Gamemode.WinToastUI, WinToastUI.SendToastCallback)
-        {
-            ResendNames = new string[] { "Header", "Team1Tickets", "Team2Tickets", "Team1Image", "Team2Image" }
-        };
-        ToastMessages[(int)ToastMessageStyle.Large] = new ToastMessageInfo(ToastMessageStyle.Large, 0, Gamemode.Config.UIToastLarge, canResend: true)
-        {
-            ResendNames = new string[] { "Top", "Middle", "Bottom" }
-        };
-        ToastMessages[(int)ToastMessageStyle.Medium] = new ToastMessageInfo(ToastMessageStyle.Medium, 0, Gamemode.Config.UIToastMedium, canResend: true)
-        {
-            ResendNames = new string[] { "Middle" }
-        };
-        ToastMessages[(int)ToastMessageStyle.Mini] = new ToastMessageInfo(ToastMessageStyle.Mini, 1, Gamemode.Config.UIToastXP, canResend: true)
-        {
-            ResendNames = new string[] { "Text" }
-        };
-        ToastMessages[(int)ToastMessageStyle.ProgressBar] = new ToastMessageInfo(ToastMessageStyle.ProgressBar, 2, Gamemode.Config.UIToastProgress, inturrupt: true, canResend: true)
-        {
-            ResendNames = new string[] { "Progress", "Bar" }
-        };
-        ToastMessages[(int)ToastMessageStyle.Tip] = new ToastMessageInfo(ToastMessageStyle.Tip, 0, Gamemode.Config.UIToastTip, canResend: true)
-        {
-            ResendNames = new string[] { "Text" }
-        };
-        ToastMessages[(int)ToastMessageStyle.Popup] = new ToastMessageInfo(ToastMessageStyle.Popup, 3, PopupUI.Instance, PopupUI.SendToastCallback, requiresClearing: true)
-        {
-            Duration = 300,
-            DisableFlags = EPluginWidgetFlags.ShowCenterDot | EPluginWidgetFlags.ShowInteractWithEnemy,
-            EnableFlags = EPluginWidgetFlags.ForceBlur | EPluginWidgetFlags.Modal
-        };
-        // todo update UI mod to fix the requireResend: true
-        ToastMessages[(int)ToastMessageStyle.FlashingWarning] = new ToastMessageInfo(ToastMessageStyle.FlashingWarning, 4, Gamemode.Config.UIFlashingWarning, requiresClearing: true, canResend: true, requiresResend: true)
-        {
-            ResendNames = new string[] { "Text" }
-        };
-        int maxChannel = -1;
-        for (int i = 0; i < len; ++i)
-        {
-            if (ToastMessages[i].Channel > maxChannel)
-                maxChannel = ToastMessages[i].Channel;
-        }
-
-        _channelCount = maxChannel + 1;
     }
     private void EnableFlags(ToastMessageInfo info)
     {
