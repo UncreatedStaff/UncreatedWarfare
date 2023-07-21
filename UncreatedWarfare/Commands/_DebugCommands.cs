@@ -1642,12 +1642,12 @@ public class DebugCommand : AsyncCommand
         ctx.ReplyString("Check console.");
     }
 
-    private void exportlang(CommandInteraction ctx)
+    private async Task exportlang(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
 
         string? lang = ctx.GetRange(0);
-        Translation.ExportLanguage(lang, false, true);
+        await Translation.ExportLanguage(lang, false, true, token).ConfigureAwait(false);
         ctx.ReplyString((lang ?? L.Default) + " exported.");
     }
 

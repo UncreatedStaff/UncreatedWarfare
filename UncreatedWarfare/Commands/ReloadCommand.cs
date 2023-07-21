@@ -11,7 +11,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 
@@ -66,7 +65,8 @@ public class ReloadCommand : AsyncCommand
 
         if (module.Equals("translations", StringComparison.OrdinalIgnoreCase) || module.Equals("lang", StringComparison.OrdinalIgnoreCase))
         {
-            ReloadTranslations();
+            await ReloadTranslations(token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             ctx.Reply(T.ReloadedTranslations);
             ctx.LogAction(ActionLogType.ReloadComponent, "TRANSLATIONS");
         }
@@ -169,8 +169,9 @@ public class ReloadCommand : AsyncCommand
             }
         }
     }
-    internal static void ReloadTranslations()
+    internal static async Task ReloadTranslations(CancellationToken token = default)
     {
+        await UCWarfare.ToUpdate(token);
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -183,6 +184,7 @@ public class ReloadCommand : AsyncCommand
             Deaths.Localization.Reload();
             Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
             OnTranslationsReloaded?.Invoke();
+            await Data.LanguageDataStore.ReloadCache(token).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

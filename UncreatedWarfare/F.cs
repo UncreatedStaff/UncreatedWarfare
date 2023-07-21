@@ -1282,37 +1282,37 @@ public static class F
     public static Schema GetListSchema<T>(string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, bool hasPk = false, bool oneToOne = false, int length = -1, bool nullable = false, bool unique = false, string pkName = "pk")
     {
         Type type = typeof(T);
-        string typestr;
+        string typeStr;
         if (type == typeof(Guid))
-            typestr = SqlTypes.GUID;
+            typeStr = SqlTypes.GUID;
         else if (type == typeof(ulong))
-            typestr = SqlTypes.ULONG;
+            typeStr = SqlTypes.ULONG;
         else if (type == typeof(byte[]))
-            typestr = length < 1 ? SqlTypes.BYTES_255 : "binary(" + length + ")";
+            typeStr = length < 1 ? SqlTypes.BYTES_255 : "binary(" + length + ")";
         else if (type == typeof(string))
-            typestr = length < 1 ? SqlTypes.STRING_255 : "varchar(" + length + ")";
+            typeStr = length < 1 ? SqlTypes.STRING_255 : "varchar(" + length + ")";
         else if (type == typeof(float))
-            typestr = SqlTypes.FLOAT;
+            typeStr = SqlTypes.FLOAT;
         else if (type == typeof(double))
-            typestr = SqlTypes.DOUBLE;
+            typeStr = SqlTypes.DOUBLE;
         else if (type == typeof(long))
-            typestr = SqlTypes.LONG;
+            typeStr = SqlTypes.LONG;
         else if (type == typeof(uint))
-            typestr = SqlTypes.UINT;
+            typeStr = SqlTypes.UINT;
         else if (type == typeof(int))
-            typestr = SqlTypes.INT;
+            typeStr = SqlTypes.INT;
         else if (type == typeof(short))
-            typestr = SqlTypes.SHORT;
+            typeStr = SqlTypes.SHORT;
         else if (type == typeof(ushort))
-            typestr = SqlTypes.USHORT;
+            typeStr = SqlTypes.USHORT;
         else if (type == typeof(byte))
-            typestr = SqlTypes.BYTE;
+            typeStr = SqlTypes.BYTE;
         else if (type == typeof(sbyte))
-            typestr = SqlTypes.SBYTE;
+            typeStr = SqlTypes.SBYTE;
         else if (type == typeof(bool))
-            typestr = SqlTypes.BOOLEAN;
+            typeStr = SqlTypes.BOOLEAN;
         else if (type == typeof(PrimaryKey))
-            typestr = SqlTypes.INCREMENT_KEY;
+            typeStr = SqlTypes.INCREMENT_KEY;
         else
         {
             MethodInfo? info = type.GetMethod("GetDefaultSchema", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
@@ -1361,6 +1361,11 @@ public static class F
             }
             throw new ArgumentException(nameof(T), type.Name + " is not a valid type for GetListSchema<T>(...).");
         }
+
+        return GetListSchema(typeStr, tableName, pkColumn, valueColumn, primaryTableName, primaryTablePkColumn, typeof(T), hasPk, oneToOne, nullable, unique, pkName);
+    }
+    public static Schema GetListSchema(string typeStr, string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, Type? type, bool hasPk = false, bool oneToOne = false, bool nullable = false, bool unique = false, string pkName = "pk")
+    {
         Schema.Column[] columns = new Schema.Column[hasPk ? 3 : 2];
         int index = 0;
         if (hasPk)
@@ -1380,7 +1385,7 @@ public static class F
             ForeignKeyColumn = primaryTablePkColumn,
             ForeignKeyTable = primaryTableName
         };
-        columns[++index] = new Schema.Column(valueColumn, typestr)
+        columns[++index] = new Schema.Column(valueColumn, typeStr)
         {
             Nullable = nullable,
             UniqueKey = unique

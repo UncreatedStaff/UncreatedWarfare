@@ -122,7 +122,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private PlayerNames _cachedName;
     internal VehicleSwapRequest PendingVehicleSwapRequest;
     internal int CacheLocationIndex = -1;
-    public UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore)
+    internal UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore, PendingAsyncData data)
     {
         Steam64 = steamID.m_SteamID;
         PurchaseSync = semaphore;
@@ -131,7 +131,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         CSteamID = steamID;
         Save = save;
         ActiveKit = KitManager.GetSingletonQuick()?.FindKit(Save.KitName, default, true).Result;
-        Locale = new UCPlayerLocale(this, Localization.GetLang(Steam64));
+        Locale = new UCPlayerLocale(this, data.LanguagePreferences);
         if (!Data.OriginalPlayerNames.TryGetValue(Steam64, out _cachedName))
             _cachedName = new PlayerNames(player);
         else Data.OriginalPlayerNames.Remove(Steam64);
@@ -872,7 +872,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     internal void OnLanguageChanged()
     {
-        Locale.Update(Localization.GetLang(Steam64));
+        // todo
     }
 
     private class EqualityComparer : IEqualityComparer<UCPlayer>
@@ -1004,22 +1004,24 @@ public class UCPlayerLocale
 {
     public UCPlayer Player { get; }
     public string Language { get; private set; }
-    public IFormatProvider Format { get; private set; }
+    public IFormatProvider Formatter { get; private set; }
     public CultureInfo? Culture { get; private set; }
-    public UCPlayerLocale(UCPlayer player, string language)
+    public UCPlayerLocale(UCPlayer player, PlayerLanguagePreferences preferences)
     {
         Player = player;
-        Update(language);
-    }
-    public UCPlayerLocale(UCPlayer player) : this(player, L.Default) { }
-    internal void Update(string language)
-    {
-        if (Localization.TryGetLangData(language, out string langName, out IFormatProvider format))
-        {
-            Format = format;
-            Language = langName;
-            Culture = format as CultureInfo;
-        }
+
+        LanguageInfo? info = Data.LanguageDataStore.GetInfoCached(preferences.Language) ?? Data.LanguageDataStore.GetInfoCached(L.Default);
+
+        Language = info?.LanguageCode ?? L.Default;
+
+        if (preferences.CultureCode != null && Localization.TryGetCultureInfo(preferences.CultureCode, out CultureInfo culture))
+            Culture = culture;
+        else if (info is { DefaultCultureCode: { } defaultCultureName } && Localization.TryGetCultureInfo(defaultCultureName, out culture))
+            Culture = culture;
+        else
+            Culture = Data.LocalLocale;
+
+        Formatter = Culture;
     }
 }
 

@@ -991,6 +991,19 @@ public static class Localization
     {
         return LanguageAliasSet.GetCultureInfo(language);
     }
+    public static bool TryGetCultureInfo(string code, out CultureInfo cultureInfo)
+    {
+        try
+        {
+            cultureInfo = CultureInfo.GetCultureInfo(code);
+            return true;
+        }
+        catch (CultureNotFoundException)
+        {
+            cultureInfo = null!;
+            return false;
+        }
+    }
     internal static LanguageAliasSet? FindLanguageSet(string language, bool keyOnly = false, bool exact = false)
     {
         if (language.Equals(L.Default, StringComparison.OrdinalIgnoreCase) && _defaultSet != null)

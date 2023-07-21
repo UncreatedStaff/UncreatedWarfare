@@ -168,7 +168,10 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         await TeamManager.ReloadFactions(token).ConfigureAwait(false);
         L.Log("Loading Moderation Data...", ConsoleColor.Magenta);
         Data.ModerationSql = new WarfareDatabaseInterface();
+        Data.LanguageDataStore = new WarfareLanguageDataStore();
         await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
+        await Data.LanguageDataStore.VerifyTables(token).ConfigureAwait(false);
+        await Data.LanguageDataStore.ReloadCache(token).ConfigureAwait(false);
         await ToUpdate(token);
         _ = TeamManager.Team1Faction;
         _ = TeamManager.Team2Faction;
@@ -355,7 +358,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 #endif
         Data.Gamemode?.Subscribe();
         StatsManager.LoadEvents();
-        
+        Data.LanguageDataStore?.Subscribe();
         GameUpdateMonitor.OnGameUpdateDetected += EventFunctions.OnGameUpdateDetected;
         EventDispatcher.PlayerJoined += EventFunctions.OnPostPlayerConnected;
         EventDispatcher.PlayerLeaving += EventFunctions.OnPlayerDisconnected;
@@ -403,7 +406,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 #endif
         Data.Gamemode?.Unsubscribe();
         EventDispatcher.UnsubscribeFromAll();
-        
+        Data.LanguageDataStore?.Unsubscribe();
         GameUpdateMonitor.OnGameUpdateDetected -= EventFunctions.OnGameUpdateDetected;
         ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
         EventDispatcher.PlayerJoined -= EventFunctions.OnPostPlayerConnected;

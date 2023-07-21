@@ -305,67 +305,71 @@ public sealed class TranslationListConverter : JsonConverter<TranslationList>
 
 public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
 {
-    public const string ENGLISH = "en-us";
-    public const string RUSSIAN = "ru-ru";
-    public const string SPANISH = "es-es";
-    public const string GERMAN = "de-de";
-    public const string ARABIC = "ar-sa";
-    public const string FRENCH = "fr-fr";
-    public const string POLISH = "pl-pl";
-    public const string PORTUGUESE = "pt-pt";
-    public const string FILIPINO = "fil";
-    public const string NORWEGIAN = "nb-no";
-    public const string ROMANIAN = "ro-ro";
-    public const string DUTCH = "nl-nl";
-    public const string SWEDISH = "sv-se";
-    public const string CHINESE_SIMPLIFIED = "zh-cn";
-    public const string CHINESE_TRADITIONAL = "zh-tw";
-    public static readonly CultureInfo ENGLISH_C = new CultureInfo("en-US");
-    public static readonly CultureInfo RUSSIAN_C = new CultureInfo("ru-RU");
-    public static readonly CultureInfo SPANISH_C = new CultureInfo("es-ES");
-    public static readonly CultureInfo GERMAN_C = new CultureInfo("de-DE");
-    public static readonly CultureInfo ARABIC_C = new CultureInfo("ar-SA");
-    public static readonly CultureInfo FRENCH_C = new CultureInfo("fr-FR");
-    public static readonly CultureInfo POLISH_C = new CultureInfo("pl-PL");
-    public static readonly CultureInfo PORTUGUESE_C = new CultureInfo("pt-PT");
-    public static readonly CultureInfo FILIPINO_C = new CultureInfo("fil-PH");
-    public static readonly CultureInfo NORWEGIAN_C = new CultureInfo("nb-NO");
-    public static readonly CultureInfo ROMANIAN_C = new CultureInfo("ro-RO");
-    public static readonly CultureInfo DUTCH_C = new CultureInfo("nl-NL");
-    public static readonly CultureInfo CHINESE_C = new CultureInfo("zh-CN");
-    public static readonly CultureInfo SWEDISH_C = new CultureInfo("sv-SE");
+    public const string EnglishUS = "en-us";
+    public const string Russian = "ru-ru";
+    public const string Spanish = "es-es";
+    public const string German = "de-de";
+    public const string Arabic = "ar-sa";
+    public const string French = "fr-fr";
+    public const string Polish = "pl-pl";
+    public const string PortugueseBrazil = "pt-br";
+    public const string PortuguesePortugal = "pt-br";
+    public const string Filipino = "fil";
+    public const string Norwegian = "nb-no";
+    public const string Romanian = "ro-ro";
+    public const string Dutch = "nl-nl";
+    public const string Swedish = "sv-se";
+    public const string ChineseSimplified = "zh-cn";
+    public const string ChineseTraditional = "zh-tw";
+    public static readonly CultureInfo CultureEnglishUS = new CultureInfo("en-US");
+    public static readonly CultureInfo CultureRussian = new CultureInfo("ru-RU");
+    public static readonly CultureInfo CultureSpanish = new CultureInfo("es-ES");
+    public static readonly CultureInfo CultureGerman = new CultureInfo("de-DE");
+    public static readonly CultureInfo CultureArabic = new CultureInfo("ar-SA");
+    public static readonly CultureInfo CultureFrench = new CultureInfo("fr-FR");
+    public static readonly CultureInfo CulturePolish = new CultureInfo("pl-PL");
+    public static readonly CultureInfo CulturePortugueseBrazil = new CultureInfo("pt-BR");
+    public static readonly CultureInfo CulturePortuguesePortugal = new CultureInfo("pt-BR");
+    public static readonly CultureInfo CultureFilipino = new CultureInfo("fil-PH");
+    public static readonly CultureInfo CultureNorwegian = new CultureInfo("nb-NO");
+    public static readonly CultureInfo CultureRomanian = new CultureInfo("ro-RO");
+    public static readonly CultureInfo CultureDutch = new CultureInfo("nl-NL");
+    public static readonly CultureInfo CultureChinese = new CultureInfo("zh-CN");
+    public static readonly CultureInfo CultureSwedish = new CultureInfo("sv-SE");
 
     public static CultureInfo GetCultureInfo(string? language)
     {
         if (language is not null)
         {
-            if (language.Equals(ENGLISH, StringComparison.Ordinal))
-                return ENGLISH_C;
-            if (language.Equals(RUSSIAN, StringComparison.Ordinal))
-                return RUSSIAN_C;
-            if (language.Equals(SPANISH, StringComparison.Ordinal))
-                return SPANISH_C;
-            if (language.Equals(GERMAN, StringComparison.Ordinal))
-                return GERMAN_C;
-            if (language.Equals(ARABIC, StringComparison.Ordinal))
-                return ARABIC_C;
-            if (language.Equals(FRENCH, StringComparison.Ordinal))
-                return FRENCH_C;
-            if (language.Equals(POLISH, StringComparison.Ordinal))
-                return POLISH_C;
-            if (language.Equals(PORTUGUESE, StringComparison.Ordinal))
-                return PORTUGUESE_C;
-            if (language.Equals(NORWEGIAN, StringComparison.Ordinal))
-                return NORWEGIAN_C;
-            if (language.Equals(ROMANIAN, StringComparison.Ordinal))
-                return ROMANIAN_C;
-            if (language.Equals(DUTCH, StringComparison.Ordinal))
-                return DUTCH_C;
-            if (language.Equals(SWEDISH, StringComparison.Ordinal))
-                return SWEDISH_C;
-            if (language.Equals(CHINESE_SIMPLIFIED, StringComparison.Ordinal) ||
-                language.Equals(CHINESE_TRADITIONAL, StringComparison.Ordinal))
-                return CHINESE_C;
+            if (language.Equals(EnglishUS, StringComparison.Ordinal))
+                return CultureEnglishUS;
+            if (language.Equals(Russian, StringComparison.Ordinal))
+                return CultureRussian;
+            if (language.Equals(Spanish, StringComparison.Ordinal))
+                return CultureSpanish;
+            if (language.Equals(German, StringComparison.Ordinal))
+                return CultureGerman;
+            if (language.Equals(Arabic, StringComparison.Ordinal))
+                return CultureArabic;
+            if (language.Equals(French, StringComparison.Ordinal))
+                return CultureFrench;
+            if (language.Equals(Polish, StringComparison.Ordinal))
+                return CulturePolish;
+            if (language.Equals(PortugueseBrazil, StringComparison.Ordinal))
+                return CulturePortugueseBrazil;
+            if (language.Equals(PortuguesePortugal, StringComparison.Ordinal))
+                return CulturePortuguesePortugal;
+            if (language.Equals(Norwegian, StringComparison.Ordinal))
+                return CultureNorwegian;
+            if (language.Equals(Romanian, StringComparison.Ordinal))
+                return CultureRomanian;
+            if (language.Equals(Dutch, StringComparison.Ordinal))
+                return CultureDutch;
+            if (language.Equals(Swedish, StringComparison.Ordinal))
+                return CultureSwedish;
+            if (language.Equals(ChineseSimplified, StringComparison.Ordinal) ||
+                language.Equals(ChineseTraditional, StringComparison.Ordinal))
+                return CultureChinese;
         }
 
         return Data.LocalLocale;
