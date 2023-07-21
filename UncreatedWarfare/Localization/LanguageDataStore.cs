@@ -169,7 +169,7 @@ public abstract class LanguageDataStore
         {
             List<LanguageInfo> newList = _langs ?? new List<LanguageInfo>();
 
-            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(ColumnLanguageKey, ColumnLanguageDisplayName, ColumnLanguageCode, ColumnLanguageDefaultCulture)} FROM `{TableLanguages}` ORDER BY `{ColumnLanguageKey}`;", null,
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(ColumnLanguageKey, ColumnLanguageDisplayName, ColumnLanguageCode, ColumnLanguageDefaultCulture, ColumnLanguageHasTranslationSupport)} FROM `{TableLanguages}` ORDER BY `{ColumnLanguageKey}`;", null,
                 reader =>
                 {
                     string code = reader.GetString(2);
@@ -181,9 +181,10 @@ public abstract class LanguageDataStore
                     }
 
                     existing.PrimaryKey = reader.GetInt32(0);
-                    existing.LanguageCode = code;
                     existing.DisplayName = reader.GetString(1);
+                    existing.LanguageCode = code;
                     existing.DefaultCultureCode = reader.IsDBNull(3) ? null : reader.GetString(3);
+                    existing.HasTranslationSupport = reader.GetBoolean(4);
                 }, token).ConfigureAwait(false);
 
             List<KeyValuePair<int, string>> tempList = new List<KeyValuePair<int, string>>(32);
@@ -257,6 +258,7 @@ public abstract class LanguageDataStore
     public const string ColumnLanguageDisplayName = "DisplayName";
     public const string ColumnLanguageCode = "Code";
     public const string ColumnLanguageDefaultCulture = "DefaultCultureCode";
+    public const string ColumnLanguageHasTranslationSupport = "HasTranslationSupport";
 
     public const string ColumnAliasesValue = "Alias";
     public const string ColumnAvailableCulturesValue = "CultureCode";
@@ -280,6 +282,10 @@ public abstract class LanguageDataStore
             new Schema.Column(ColumnLanguageDefaultCulture, SqlTypes.String(16))
             {
                 Nullable = true
+            },
+            new Schema.Column(ColumnLanguageHasTranslationSupport, SqlTypes.BOOLEAN)
+            {
+                Default = "b'0'"
             }
         }, true, typeof(LanguageInfo)),
         F.GetListSchema<string>(TableLanguagesAliases, ColumnLanguageKeyExternal, ColumnAliasesValue, TableLanguages, ColumnLanguageKey, length: 64),
