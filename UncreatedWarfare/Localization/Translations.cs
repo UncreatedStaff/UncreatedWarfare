@@ -12,6 +12,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
@@ -936,7 +938,7 @@ public class Translation
         if ((flags & TranslationFlags.NoPlural) == TranslationFlags.NoPlural || word.Length < 3 || (flags & TranslationFlags.Plural) == 0)
             return word;
         //culture ??= LanguageAliasSet.GetCultureInfo(language);
-        if (language.Equals(LanguageAliasSet.ENGLISH))
+        if (language.Equals(LanguageAliasSet.EnglishUS))
         {
             if (word.Equals("is", StringComparison.InvariantCulture))
                 return "are";
@@ -1754,10 +1756,11 @@ Also notice the `{n}` formatting placeholders. These are replaced by translation
 # Other
 Please leave in-game terms such as **FOB**, **Rally**, **Build**, **Ammo**, and other item names in English."
 );
-    public static void ExportLanguage(string? language, bool missingOnly, bool excludeNonPrioritized)
+    public static async Task ExportLanguage(string? language, bool missingOnly, bool excludeNonPrioritized, CancellationToken token = default)
     {
         language ??= L.Default;
-        ReloadCommand.ReloadTranslations();
+        await ReloadCommand.ReloadTranslations(token).ConfigureAwait(false);
+        await UCWarfare.ToUpdate(token);
 
         DirectoryInfo dir = new DirectoryInfo(Path.Combine(Data.Paths.LangStorage, "Export"));
         if (dir.Exists)

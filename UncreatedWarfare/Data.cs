@@ -105,9 +105,9 @@ public static class Data
     public static readonly Regex NameRichTextReplaceFilter = new Regex("<.*>");
     public static readonly Regex PluginKeyMatch = new Regex(@"\<plugin_\d\/\>", RegexOptions.IgnoreCase);
     [Obsolete("Choose between LocalLocale and AdminLocale")]
-    public static CultureInfo Locale = LanguageAliasSet.ENGLISH_C;
-    public static CultureInfo LocalLocale = LanguageAliasSet.ENGLISH_C; // todo set from config
-    public static readonly CultureInfo AdminLocale = LanguageAliasSet.ENGLISH_C;
+    public static CultureInfo Locale = LanguageAliasSet.CultureEnglishUS;
+    public static CultureInfo LocalLocale = LanguageAliasSet.CultureEnglishUS; // todo set from config
+    public static readonly CultureInfo AdminLocale = LanguageAliasSet.CultureEnglishUS;
     public static Dictionary<string, Color> Colors;
     public static Dictionary<string, string> ColorsHex;
     public static Dictionary<string, Vector3> ExtraPoints;
@@ -119,6 +119,7 @@ public static class Data
     internal static WarfareSQL DatabaseManager;
     internal static WarfareSQL? RemoteSQL;
     internal static DatabaseInterface ModerationSql;
+    internal static WarfareLanguageDataStore LanguageDataStore;
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
     public static bool UseFastKits;

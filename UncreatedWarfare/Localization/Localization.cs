@@ -675,8 +675,7 @@ public static class Localization
         {
             if (EnumTranslations.ContainsKey(enumType.Key)) continue;
             Dictionary<string, Dictionary<string, string>> k = new Dictionary<string, Dictionary<string, string>>();
-            Dictionary<string, List<TranslatableAttribute>>? a = null;
-            if (!EnumTranslationAttributes.TryGetValue(enumType.Key, out a))
+            if (!EnumTranslationAttributes.TryGetValue(enumType.Key, out Dictionary<string, List<TranslatableAttribute>>? a))
             {
                 a = new Dictionary<string, List<TranslatableAttribute>>(8) { { EnumNamePlaceholder, new List<TranslatableAttribute>(2) } };
                 EnumTranslationAttributes.Add(enumType.Key, a);
@@ -975,6 +974,19 @@ public static class Localization
     internal static IFormatProvider GetLocale(string language)
     {
         return LanguageAliasSet.GetCultureInfo(language);
+    }
+    public static bool TryGetCultureInfo(string code, out CultureInfo cultureInfo)
+    {
+        try
+        {
+            cultureInfo = CultureInfo.GetCultureInfo(code);
+            return true;
+        }
+        catch (CultureNotFoundException)
+        {
+            cultureInfo = null!;
+            return false;
+        }
     }
     internal static LanguageAliasSet? FindLanguageSet(string language, bool keyOnly = false, bool exact = false)
     {

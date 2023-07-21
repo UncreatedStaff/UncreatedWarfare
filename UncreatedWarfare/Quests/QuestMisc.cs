@@ -22,23 +22,23 @@ namespace Uncreated.Warfare.Quests;
 public enum WeaponClass : byte
 {
     Unknown,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "突击步枪")]
+    [Translatable(LanguageAliasSet.ChineseSimplified, "突击步枪")]
     AssaultRifle,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "战斗步枪")]
+    [Translatable(LanguageAliasSet.ChineseSimplified, "战斗步枪")]
     BattleRifle,
     MarksmanRifle,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "狙击步枪")]
+    [Translatable(LanguageAliasSet.ChineseSimplified, "狙击步枪")]
     SniperRifle,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "机枪")]
+    [Translatable(LanguageAliasSet.ChineseSimplified, "机枪")]
     MachineGun,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "手枪")]
+    [Translatable(LanguageAliasSet.ChineseSimplified, "手枪")]
     Pistol,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "霰弹枪")]
+    [Translatable(LanguageAliasSet.ChineseSimplified, "霰弹枪")]
     Shotgun,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "火箭筒")]
+    [Translatable(LanguageAliasSet.ChineseSimplified, "火箭筒")]
     [Translatable("Rocket Launcher")]
     Rocket,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "冲锋枪")]
+    [Translatable(LanguageAliasSet.ChineseSimplified, "冲锋枪")]
     [Translatable("SMG")]
     SMG
 }
