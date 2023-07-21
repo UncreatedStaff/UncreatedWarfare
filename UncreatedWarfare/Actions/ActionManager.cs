@@ -426,6 +426,7 @@ public class ActionManager : BaseSingleton
             p.IsInSameSquadAs(caller));
 
         IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
+            p.CurrentVehicle != null &&
             (p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsArmor) &&
             p.Player != caller);
 

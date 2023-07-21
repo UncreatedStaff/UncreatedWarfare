@@ -1164,15 +1164,7 @@ public class UCWarfareNexus : IModuleNexus
         }
 
         L.Log("Initializing UniTask...", ConsoleColor.Magenta);
-        MethodInfo? initMethod = typeof(PlayerLoopHelper).GetMethod("Init", BindingFlags.NonPublic | BindingFlags.Static);
-        if (initMethod == null)
-        {
-            L.LogError("Method not found: PlayerLoopHelper.Init.");
-            Provider.shutdown(5, "Missing UniTask.");
-            return;
-        }
-        
-        initMethod.Invoke(null, Array.Empty<object>());
+        PlayerLoopHelper.Init();
 
         Level.onPostLevelLoaded += OnLevelLoaded;
         UCWarfare.Nexus = this;

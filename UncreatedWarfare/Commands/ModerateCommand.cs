@@ -21,8 +21,8 @@ public sealed class ModerateCommand : AsyncCommand
 
     public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
-        throw ctx.SendNotImplemented();
-
+        ctx.AssertOnDuty();
+        
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
         
         await ModerationUI.Instance.Open(ctx.Caller, token).ConfigureAwait(false);

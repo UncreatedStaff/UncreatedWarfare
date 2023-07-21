@@ -401,6 +401,7 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
 
     public bool Shovel(UCPlayer shoveler)
     {
+        // todo add repairing
         if (State == BuildableState.Foundation && shoveler.GetTeam() == Team)
         {
             if (FOB == null && !IsFloating)

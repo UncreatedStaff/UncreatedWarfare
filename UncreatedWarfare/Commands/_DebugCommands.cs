@@ -22,6 +22,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
@@ -31,6 +32,7 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
@@ -1709,5 +1711,10 @@ public class DebugCommand : AsyncCommand
         ctx.ReplyString(pfp ?? "NULL");
         if (!ctx.IsConsole)
             L.Log("PFP URL: " + (pfp ?? "NULL"));
+    }
+
+    private void progress(CommandInteraction ctx)
+    {
+        ctx.Caller.Toasts.Queue(new ToastMessage(ToastMessageStyle.ProgressBar, "test"));
     }
 }

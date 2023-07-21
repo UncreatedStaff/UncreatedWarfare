@@ -33,6 +33,9 @@ public sealed class ToastMessageInfo
     public SendToastWithCustomUI? SendCallback { get; }
     public EPluginWidgetFlags DisableFlags { get; set; } = EPluginWidgetFlags.None;
     public EPluginWidgetFlags EnableFlags { get; set; } = EPluginWidgetFlags.None;
+    public string[] ResendNames { get; set; } = Array.Empty<string>();
+    public bool CanResend { get; }
+    public bool RequiresResend { get; }
     public float Duration
     {
         get => _duration;
@@ -51,22 +54,23 @@ public sealed class ToastMessageInfo
         RequiresClearing = requiresClearing;
         Inturrupt = inturrupt;
         Key = UI.Key;
+        CanResend = false;
         UpdateAsset(ui.Asset);
     }
-    public ToastMessageInfo(ToastMessageStyle style, int channel, JsonAssetReference<EffectAsset> asset, bool requiresClearing = false, bool inturrupt = false)
-        : this(style, channel, requiresClearing, inturrupt)
+    public ToastMessageInfo(ToastMessageStyle style, int channel, JsonAssetReference<EffectAsset> asset, bool requiresClearing = false, bool inturrupt = false, bool canResend = false, bool requiresResend = false)
+        : this(style, channel, requiresClearing, inturrupt, canResend, requiresResend)
     {
         UpdateAsset(asset);
     }
-    public ToastMessageInfo(ToastMessageStyle style, int channel, bool requiresClearing = false, bool inturrupt = false)
+    public ToastMessageInfo(ToastMessageStyle style, int channel, bool requiresClearing = false, bool inturrupt = false, bool canResend = false, bool requiresResend = false)
     {
         Style = style;
         Channel = channel;
         RequiresClearing = requiresClearing;
         Inturrupt = inturrupt;
-        if (requiresClearing || inturrupt)
-            Key = UnturnedUIKeyPool.Claim();
-        else Key = -1;
+        CanResend = canResend;
+        RequiresResend = requiresResend && canResend;
+        Key = requiresClearing || inturrupt || canResend ? UnturnedUIKeyPool.Claim() : (short)-1;
     }
     public void UpdateAsset(JsonAssetReference<EffectAsset> asset)
     {

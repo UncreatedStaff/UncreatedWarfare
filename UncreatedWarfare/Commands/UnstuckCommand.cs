@@ -33,8 +33,6 @@ public class UnstuckCommand : Command
             t.TeamSelector?.ResetState(ctx.Caller);
             ctx.ReplyString("Reset lobby state.");
         }
-        else throw ctx.SendUnknownError();
-
-        ctx.Defer();
+        else ctx.ReplyString("You're not in the lobby.");
     }
 }

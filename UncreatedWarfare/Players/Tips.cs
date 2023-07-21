@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Uncreated.Players;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
@@ -70,7 +71,7 @@ public class Tips : BaseSingleton
     }
     private static void GiveTip(UCPlayer player, string translation)
     {
-        ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Tip, translation));
+        ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Tip, translation) { Resend = Data.PluginKeyMatch.IsMatch(translation) });
     }
 }
 public class Tip
