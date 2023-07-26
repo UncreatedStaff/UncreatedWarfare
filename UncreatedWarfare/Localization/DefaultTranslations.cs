@@ -2858,7 +2858,7 @@ internal static class T
     [TranslationData(SectionHeal, IsPrioritizedTranslation = false)]
     public static readonly Translation<IPlayer> HealPlayer = new Translation<IPlayer>("<#ff9966>You healed {0}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     [TranslationData(SectionHeal)]
-    public static readonly Translation HealSelf = new Translation("<#ff9966>You we're healed.");
+    public static readonly Translation HealSelf = new Translation("<#ff9966>You were healed.");
     #endregion
 
     #region God Command
