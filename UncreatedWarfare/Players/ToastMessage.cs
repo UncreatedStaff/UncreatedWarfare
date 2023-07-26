@@ -9,6 +9,7 @@ public struct ToastMessage
     public string[]? Arguments { get; }
     public object? State { get; }
     public float? OverrideDuration { get; set; }
+    public bool Resend { get; set; }
     public ToastMessage(ToastMessageStyle style)
     {
         Style = style;

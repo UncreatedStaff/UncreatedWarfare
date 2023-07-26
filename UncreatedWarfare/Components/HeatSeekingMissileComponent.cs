@@ -1,4 +1,7 @@
-﻿using JetBrains.Annotations;
+﻿#if DEBUG
+using System;
+#endif
+using JetBrains.Annotations;
 using SDG.Unturned;
 using Uncreated.Warfare.Gamemodes;
 using UnityEngine;

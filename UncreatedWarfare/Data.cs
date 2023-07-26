@@ -101,8 +101,9 @@ public static class Data
     internal static readonly IUncreatedSingleton[] GamemodeListeners = new IUncreatedSingleton[1];
     public const string SuppressCategory = "Microsoft.Performance";
     public const string SuppressID = "IDE0051";
-    public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/]\W{0,}[il1\|\!]\W{0,}[gqb96](?!h|(?:an))\W{0,}[gqb96]{0,}\W{0,}[gqb96]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:f\W{0,}a\W{0,}g{1,}\W{0,}o{0,}\W{0,}t{0,1})");
+    public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/]\W{0,}[il1\|\!]\W{0,}[gqb96](?!h|(?:an)|(?:[e|a]t))\W{0,}[gqb96]{0,}\W{0,}[gqb96]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:f\W{0,}a\W{0,}g{1,}\W{0,}o{0,}\W{0,}t{0,1})", RegexOptions.IgnoreCase);
     public static readonly Regex NameRichTextReplaceFilter = new Regex("<.*>");
+    public static readonly Regex PluginKeyMatch = new Regex(@"\<plugin_\d\/\>", RegexOptions.IgnoreCase);
     [Obsolete("Choose between LocalLocale and AdminLocale")]
     public static CultureInfo Locale = LanguageAliasSet.ENGLISH_C;
     public static CultureInfo LocalLocale = LanguageAliasSet.ENGLISH_C; // todo set from config
