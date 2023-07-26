@@ -83,7 +83,7 @@ public class VehicleComponent : MonoBehaviour
         foreach (var passenger in Vehicle.turrets)
         {
             if (VehicleBay.Config.GroundAAWeapons.HasID(passenger.turret.itemID))
-                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(550, 1000, Gamemode.Config.EffectLockOn1, 2, 15.5f);
+                passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(700, 1500, Gamemode.Config.EffectLockOn1, 0.7f, 14.6f);
             if (VehicleBay.Config.AirAAWeapons.HasID(passenger.turret.itemID))
                 passenger.turretAim.gameObject.AddComponent<HeatSeekingController>().Initialize(600, Gamemode.Config.EffectLockOn2, 1, 11);
         }
@@ -510,7 +510,7 @@ public class VehicleComponent : MonoBehaviour
     const int STARTING_FLARES_TRANSHELI = 50;
     const int STARTING_FLARES_JET = 30;
     public const int FLARE_BURST_COUNT = 10;
-    public const int FLARE_COOLDOWN = 12;
+    public const int FLARE_COOLDOWN = 14;
     public void TryDropFlares()
     {
         if (Time.time - _timeLastFlareDrop < FLARE_COOLDOWN || _totalFlaresLeft < 0)
