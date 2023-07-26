@@ -18,8 +18,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
     private const float AQUISITION_FREQUENCY = 0.25f;
 
 
-    private float _horizontalRange = 550;
-    private float? _verticalRange = 800;
+    private float _horizontalRange = 700;
+    private float? _verticalRange = 1500;
 
     private InteractableVehicle _vehicle;
     private EffectAsset _effect;
@@ -33,7 +33,6 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     private float _timeOfAquisition;
     private float _timeOfLastScan;
-    private float _timeOfLastWarning;
     public int _currentHardpoint;
 
     public Transform? LockOnTarget { get; private set; }
@@ -177,17 +176,21 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
                 if (!c.Burning)
                     continue;
 
-                Vector3 relativePos = transform.InverseTransformPoint(c.transform.position);
-
-                float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
-                float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
-                if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
+                if (IsInRange(c.transform.position))
                 {
-                    bool raySuccess = Physics.Linecast(transform.position, c.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
-                    if (!raySuccess)
+                    Vector3 relativePos = transform.InverseTransformPoint(c.transform.position);
+                    relativePos = new Vector3(Mathf.Abs(relativePos.x), Mathf.Abs(relativePos.y), 0);
+
+                    float lockOnDistance = new Vector2(relativePos.x, relativePos.y).sqrMagnitude;
+                    float angleBetween = Vector3.Angle(c.transform.position - transform.position, transform.forward);
+                    if (angleBetween < 90 && new Vector2(relativePos.x, relativePos.y).sqrMagnitude < Mathf.Pow(bestTarget, 2))
                     {
-                        bestTarget = lockOnDistance;
-                        newTarget = c.transform;
+                        bool raySuccess = Physics.Linecast(transform.position, c.transform.position, out _, RayMasks.GROUND | RayMasks.LARGE | RayMasks.MEDIUM);
+                        if (!raySuccess)
+                        {
+                            bestTarget = lockOnDistance;
+                            newTarget = c.transform;
+                        }
                     }
                 }
             }
