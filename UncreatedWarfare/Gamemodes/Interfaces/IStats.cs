@@ -10,9 +10,13 @@ public interface IPVPModeStats : IStats
     int Kills { get; }
     int Deaths { get; }
     float DamageDone { get; }
+    int VehicleKills { get; }
+    int AircraftKills { get; }
     float KDR { get; }
     void AddKill();
     void AddDeath();
+    void AddVehicleKill();
+    void AddAircraftKill();
     void AddDamage(float amount);
 }
 public interface ITeamPVPModeStats : IPVPModeStats

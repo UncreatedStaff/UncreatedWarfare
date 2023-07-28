@@ -18,9 +18,9 @@ public class InsurgencyLeaderboard : ConventionalLeaderboard<InsurgencyPlayerSta
            new StatValue(T.InsurgencyHeader0, (_, b, l) => b!.Kills.ToString(l)),
            new StatValue(T.InsurgencyHeader1, (_, b, l) => b!.Deaths.ToString(l)),
            new StatValue(T.InsurgencyHeader2, (_, b, l) => b!.XPGained.ToString(l)),
-           new StatValue(T.InsurgencyHeader3, (_, b, l) => b!.Credits.ToString(l)),
-           new StatValue(T.InsurgencyHeader4, (_, b, l) => b!.Deaths == 0 ? b.Kills.ToString(l) : (b.Kills / (float)b.Deaths).ToString(ConventionalLeaderboardUI.StatFormatPrecisionFloat, l)),
-           new StatValue(T.InsurgencyHeader5, (_, b, l) => b!.DamageDone.ToString(l))
+           new StatValue(T.InsurgencyHeader3, (_, b, l) => b!.Deaths == 0 ? b.Kills.ToString(l) : (b.Kills / (float)b.Deaths).ToString(ConventionalLeaderboardUI.StatFormatPrecisionFloat, l)),
+           new StatValue(T.InsurgencyHeader4, (_, b, l) => b!.VehicleKills.ToString(l)),
+           new StatValue(T.InsurgencyHeader5, (_, b, l) => b!.AircraftKills.ToString(l))
         };
         PlayerStatOverrides = new StatValue[]
         {
@@ -114,6 +114,8 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
             if (team == 1)
             {
                 totalT1.kills += stat.kills;
+                totalT1.vehicleKills += stat.vehicleKills;
+                totalT1.aircraftKills += stat.aircraftKills;
                 totalT1.deaths += stat.deaths;
                 totalT1.AddXP(stat.XPGained);
                 totalT1.AddCredits(stat.Credits);
@@ -124,6 +126,8 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
             else if (team == 2)
             {
                 totalT2.kills += stat.kills;
+                totalT2.vehicleKills += stat.vehicleKills;
+                totalT2.aircraftKills += stat.aircraftKills;
                 totalT2.deaths += stat.deaths;
                 totalT2.AddXP(stat.XPGained);
                 totalT2.AddCredits(stat.Credits);

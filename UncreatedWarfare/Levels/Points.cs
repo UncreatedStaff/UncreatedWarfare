@@ -16,6 +16,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
@@ -1056,6 +1057,17 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                                 {
                                     e.Spotter.OnTargetKilled(reward);
                                     Destroy(e.Spotter);
+                                }
+
+                                if (attacker.Player.TryGetPlayerData(out UCPlayerData c))
+                                {
+                                    if (c.Stats is IPVPModeStats kd)
+                                    {
+                                        if (VehicleData.IsGroundVehicle(e.VehicleData.Type))
+                                            kd.AddVehicleKill();
+                                        else if (VehicleData.IsAircraft(e.VehicleData.Type))
+                                            kd.AddAircraftKill();
+                                    }
                                 }
                             }
                             else if (responsibleness > 0.1F)

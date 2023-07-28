@@ -446,14 +446,20 @@ public abstract class FFAPlayerStats : BasePlayerStats, IPVPModeStats
 {
     public int kills;
     public int deaths;
+    public int vehicleKills;
+    public int aircraftKills;
     public float damage;
     public int Kills => kills;
     public int Deaths => deaths;
+    public int VehicleKills => vehicleKills;
+    public int AircraftKills => aircraftKills;
     public float DamageDone => damage;
     public float KDR => deaths == 0 ? kills : kills / (float)deaths;
     public void AddDamage(float amount) => damage += amount;
     public void AddDeath() => deaths++;
     public void AddKill() => kills++;
+    public void AddVehicleKill() => vehicleKills++;
+    public void AddAircraftKill() => aircraftKills++;
     protected FFAPlayerStats(UCPlayer player) : base(player) { }
     protected FFAPlayerStats(ulong player) : base(player) { }
     public override void Reset()
@@ -461,6 +467,8 @@ public abstract class FFAPlayerStats : BasePlayerStats, IPVPModeStats
         base.Reset();
         kills = 0;
         deaths = 0;
+        vehicleKills = 0;
+        aircraftKills = 0;
         damage = 0;
     }
 }
@@ -471,6 +479,8 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats, ITea
     public int onlineCount2;
     public int kills;
     public int deaths;
+    public int vehicleKills;
+    public int aircraftKills;
     public int teamkills;
     public float damage;
     public float timeonpoint;
@@ -481,6 +491,8 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats, ITea
     public int Teamkills => teamkills;
     public int Kills => kills;
     public int Deaths => deaths;
+    public int VehicleKills => vehicleKills;
+    public int AircraftKills => aircraftKills;
     public float DamageDone => damage;
     public float KDR => deaths == 0 ? kills : kills / (float)deaths;
     public int OnlineTicksT1 => onlineCount1;
@@ -488,6 +500,8 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats, ITea
     public void AddDamage(float amount) => damage += amount;
     public void AddDeath() => deaths++;
     public void AddKill() => kills++;
+    public void AddVehicleKill() => vehicleKills++;
+    public void AddAircraftKill() => aircraftKills++;
     public void AddTeamkill() => teamkills++;
     public virtual void Update(float dt)
     {
@@ -511,6 +525,8 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats, ITea
         onlineCount2 = 0;
         kills = 0;
         deaths = 0;
+        vehicleKills = 0;
+        aircraftKills = 0;
         damage = 0;
         teamkills = 0;
         timeonpoint = 0;
