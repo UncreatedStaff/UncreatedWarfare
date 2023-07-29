@@ -11,5 +11,5 @@ public class LanguageInfo : IListItem
     public string? DefaultCultureCode { get; set; }
     public string[] Aliases { get; set; } = Array.Empty<string>();
     public string[] AvailableCultureCodes { get; set; } = Array.Empty<string>();
-
+    public ulong[] Credits { get; set; } = Array.Empty<ulong>();
 }
