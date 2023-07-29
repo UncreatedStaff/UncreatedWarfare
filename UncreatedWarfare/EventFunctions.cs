@@ -412,18 +412,6 @@ public static class EventFunctions
                 pendingTotalDamage = (ushort)Mathf.RoundToInt(pendingTotalDamage * 0.13f);
             }
 
-            if (damageOrigin == EDamageOrigin.Useable_Gun)
-            {
-                if ((vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && pendingTotalDamage > vehicle.health && pendingTotalDamage > 200)
-                {
-                    canRepair = false;
-                }
-
-                VehicleDamageCalculator.ApplyAdvancedDamage(vehicle, ref pendingTotalDamage);
-            }
-            //if (damageOrigin == EDamageOrigin.Rocket_Explosion)
-            //    VehicleDamageCalculator.ApplyAdvancedDamage(vehicle, ref pendingTotalDamage);
-
             if (!vehicle.TryGetComponent(out VehicleComponent c))
             {
                 c = vehicle.gameObject.AddComponent<VehicleComponent>();
@@ -524,6 +512,18 @@ public static class EventFunctions
                     }
                 }
             }
+
+            if (damageOrigin == EDamageOrigin.Useable_Gun)
+            {
+                if ((vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && pendingTotalDamage > vehicle.health && pendingTotalDamage > 200)
+                {
+                    canRepair = false;
+                }
+
+                VehicleDamageCalculator.ApplyAdvancedDamage(vehicle, ref pendingTotalDamage);
+            }
+            if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+                VehicleDamageCalculator.ApplyAdvancedDamage(vehicle, ref pendingTotalDamage);
         }
     }
 
