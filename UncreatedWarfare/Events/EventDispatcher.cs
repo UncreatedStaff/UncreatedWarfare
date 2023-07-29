@@ -515,9 +515,9 @@ public static class EventDispatcher
 
             c.GunID = gun.equippedGunAsset.GUID;
             c.Owner = gun.player.channel.owner.playerID.steamID.m_SteamID;
-            if (ProjectileSpawned == null) return;
+            if (ProjectileSpawned == null) continue;
             UCPlayer? owner = UCPlayer.FromPlayer(gun.player);
-            if (owner is null) return;
+            if (owner is null) continue;
             ProjectileSpawned args = new ProjectileSpawned(owner, gun.equippedGunAsset, rocket.gameObject, rocket);
             foreach (EventDelegate<ProjectileSpawned> inv in ProjectileSpawned.GetInvocationList().Cast<EventDelegate<ProjectileSpawned>>())
             {
@@ -531,7 +531,7 @@ public static class EventDispatcher
         InteractableVehicle vehicle = other.GetComponentInParent<InteractableVehicle>();
 
         if (vehicle != null)
-            VehicleDamageCalculator.RegisterForAdvancedDamage(vehicle, VehicleDamageCalculator.GetDamageMultiplier(projectileComponent, other));
+            VehicleDamageCalculator.RegisterForAdvancedDamage(vehicle, VehicleDamageCalculator.GetComponentDamageMultiplier(projectileComponent, other));
 
         if (ProjectileExploded == null) return;
         UCPlayer? owner = UCPlayer.FromID(projectileComponent.Owner);
@@ -550,7 +550,7 @@ public static class EventDispatcher
         //L.Log("     Bullet Forward: " + bullet.);
 
         if (input.vehicle != null)
-            VehicleDamageCalculator.RegisterForAdvancedDamage(input.vehicle, VehicleDamageCalculator.GetDamageMultiplier(input));
+            VehicleDamageCalculator.RegisterForAdvancedDamage(input.vehicle, VehicleDamageCalculator.GetComponentDamageMultiplier(input));
     }
     internal static void InvokeOnLandmineExploding(UCPlayer? owner, BarricadeDrop barricade, InteractableTrap trap, UCPlayer triggerer, GameObject triggerObject, ref bool shouldExplode)
     {
