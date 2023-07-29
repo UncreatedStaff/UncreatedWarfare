@@ -418,13 +418,13 @@ internal static class T
     public static readonly Translation CTFHeader2 = new Translation("XP",      TranslationFlags.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFHeader3 = new Translation("Credits", TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader3 = new Translation("Caps", TranslationFlags.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFHeader4 = new Translation("Caps",    TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader4 = new Translation("Vehicles\nDestr.",    TranslationFlags.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation CTFHeader5 = new Translation("Damage",  TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader5 = new Translation("Aircraft\nDestr.",  TranslationFlags.UnityUI);
     #endregion
 
     #region Insurgency
@@ -513,13 +513,13 @@ internal static class T
     public static readonly Translation InsurgencyHeader2 = new Translation("XP",      TranslationFlags.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyHeader3 = new Translation("Credits", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader3 = new Translation("KDR", TranslationFlags.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyHeader4 = new Translation("KDR",     TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader4 = new Translation("Vehicles\nDestr.",     TranslationFlags.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation InsurgencyHeader5 = new Translation("Damage",  TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader5 = new Translation("Aircraft\nDestr.",  TranslationFlags.UnityUI);
     #endregion
 
     #region Conquest
@@ -607,13 +607,13 @@ internal static class T
     public static readonly Translation ConquestHeader2 = new Translation("XP",      TranslationFlags.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestHeader3 = new Translation("Credits", TranslationFlags.UnityUI);
+    public static readonly Translation ConquestHeader3 = new Translation("Captures", TranslationFlags.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestHeader4 = new Translation("KDR",     TranslationFlags.UnityUI);
+    public static readonly Translation ConquestHeader4 = new Translation("Vehicles\nDestr.",     TranslationFlags.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation ConquestHeader5 = new Translation("Damage",  TranslationFlags.UnityUI);
+    public static readonly Translation ConquestHeader5 = new Translation("Aircraft\nDestr.",  TranslationFlags.UnityUI);
     #endregion
 
     #region Hardpoint
@@ -701,13 +701,13 @@ internal static class T
     public static readonly Translation HardpointHeader2 = new Translation("XP",       TranslationFlags.UnityUI);
 
     [TranslationData(SectionLeaderboard)]                                             
-    public static readonly Translation HardpointHeader3 = new Translation("Credits",  TranslationFlags.UnityUI);
+    public static readonly Translation HardpointHeader3 = new Translation("Cap Seconds",  TranslationFlags.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointHeader4 = new Translation("Cap Seconds", TranslationFlags.UnityUI);
+    public static readonly Translation HardpointHeader4 = new Translation("Vehicles\nDestr.", TranslationFlags.UnityUI);
     
     [TranslationData(SectionLeaderboard)]
-    public static readonly Translation HardpointHeader5 = new Translation("Damage",  TranslationFlags.UnityUI);
+    public static readonly Translation HardpointHeader5 = new Translation("Aircraft\nDestr.",  TranslationFlags.UnityUI);
     #endregion
 
     #endregion

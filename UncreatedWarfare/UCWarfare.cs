@@ -35,6 +35,7 @@ using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using UnityEngine.LowLevel;
 
 namespace Uncreated.Warfare;
 
@@ -1164,7 +1165,8 @@ public class UCWarfareNexus : IModuleNexus
         }
 
         L.Log("Initializing UniTask...", ConsoleColor.Magenta);
-        PlayerLoopHelper.Init();
+        var loop = PlayerLoop.GetCurrentPlayerLoop();
+        PlayerLoopHelper.Initialize(ref loop);
 
         Level.onPostLevelLoaded += OnLevelLoaded;
         UCWarfare.Nexus = this;

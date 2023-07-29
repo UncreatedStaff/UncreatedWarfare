@@ -16,9 +16,9 @@ public class BaseCTFLeaderboard<Stats, StatTracker> : ConventionalLeaderboard<St
             new StatValue(T.CTFHeader0, (_, b, l) => b!.Kills.ToString(l)),
             new StatValue(T.CTFHeader1, (_, b, l) => b!.Deaths.ToString(l)),
             new StatValue(T.CTFHeader2, (_, b, l) => b!.XPGained.ToString(l)),
-            new StatValue(T.CTFHeader3, (_, b, l) => b!.Credits.ToString(l)),
-            new StatValue(T.CTFHeader4, (_, b, l) => b!.Captures.ToString(l)),
-            new StatValue(T.CTFHeader5, (_, b, l) => b!.DamageDone.ToString(l))
+            new StatValue(T.CTFHeader3, (_, b, l) => b!.Captures.ToString(l)),
+            new StatValue(T.CTFHeader4, (_, b, l) => b!.VehicleKills.ToString(l)),
+            new StatValue(T.CTFHeader5, (_, b, l) => b!.AircraftKills.ToString(l))
         };
         PlayerStatOverrides = new StatValue[]
         {
@@ -150,6 +150,8 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracke
             if (team == 1)
             {
                 totalT1.kills += stat.kills;
+                totalT1.vehicleKills += stat.vehicleKills;
+                totalT1.aircraftKills += stat.aircraftKills;
                 totalT1.deaths += stat.deaths;
                 totalT1.AddXP(stat.XPGained);
                 totalT1.AddCredits(stat.Credits);
@@ -161,6 +163,8 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracke
             else if (team == 2)
             {
                 totalT2.kills += stat.kills;
+                totalT2.vehicleKills += stat.vehicleKills;
+                totalT2.aircraftKills += stat.aircraftKills;
                 totalT2.deaths += stat.deaths;
                 totalT2.AddXP(stat.XPGained);
                 totalT2.AddCredits(stat.Credits);

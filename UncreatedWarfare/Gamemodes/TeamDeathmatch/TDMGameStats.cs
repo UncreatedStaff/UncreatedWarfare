@@ -273,12 +273,16 @@ public class TDMPlayerStats : IStats, ITeamPVPModeStats, IRevivesStats, IExperie
     public ulong Steam64 => id;
     public int kills;
     public int deaths;
+    public int vehicleKills;
+    public int aircraftKills;
     public float KDR { get => deaths == 0 ? kills : (float)kills / deaths; }
     public int xpgained;
     public int creditsgained;
     public TimeSpan TimeDeployed { get => TimeSpan.FromSeconds(timeDeployedCounter); }
     public int Teamkills => teamkills;
     public int Kills => kills;
+    public int VehicleKills => vehicleKills;
+    public int AircraftKills => aircraftKills;
     public int Deaths => deaths;
     public float DamageDone => damagedone;
     public int Revives => revives;
@@ -306,6 +310,8 @@ public class TDMPlayerStats : IStats, ITeamPVPModeStats, IRevivesStats, IExperie
     public void Reset()
     {
         kills = 0;
+        vehicleKills = 0;
+        aircraftKills = 0;
         deaths = 0;
         timeDeployedCounter = 0;
         captures = 0;
@@ -322,6 +328,14 @@ public class TDMPlayerStats : IStats, ITeamPVPModeStats, IRevivesStats, IExperie
     public void AddKill()
     {
         kills++;
+    }
+    public void AddVehicleKill()
+    {
+        vehicleKills++;
+    }
+    public void AddAircraftKill()
+    {
+        aircraftKills++;
     }
     public void AddDeath() => deaths++;
     public void AddTeamkill() => teamkills++;
