@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -189,54 +190,48 @@ public abstract class LanguageDataStore
 
             List<KeyValuePair<int, string>> tempList = new List<KeyValuePair<int, string>>(32);
 
-            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(ColumnLanguageKeyExternal, ColumnAliasesValue)} FROM `{TableLanguagesAliases}`;", null,
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(ColumnLanguageKeyExternal, ColumnAliasesValue)} FROM `{TableLanguagesAliases}` ORDER BY `{ColumnLanguageKeyExternal}`;", null,
                 reader =>
                 {
                     tempList.Add(new KeyValuePair<int, string>(reader.GetInt32(0), reader.GetString(1)));
                 }, token).ConfigureAwait(false);
 
-            tempList.Sort((a, b) => a.Key.CompareTo(b.Key));
-            int last = -1;
-            string[] arr;
-            for (int i = 0; i < tempList.Count; i++)
+            F.ApplyQueriedList(tempList, (key, arr) =>
             {
-                KeyValuePair<int, string> val = tempList[i];
-                if (i > 0 && tempList[i - 1].Key != val.Key)
-                {
-                    last = i - 1;
-                    arr = new string[i - last];
-                    for (int j = 0; j < arr.Length; ++j)
-                        arr[j] = tempList[last + j + 1].Value;
-                }
-            }
-            arr = new string[tempList.Count - 1 - last];
-            for (int j = 0; j < arr.Length; ++j)
-                arr[j] = tempList[last + j + 1].Value;
+                LanguageInfo? info = newList.FirstOrDefault(x => x.PrimaryKey.Key == key);
+                if (info != null)
+                    info.Aliases = arr;
+            }, false);
 
             tempList.Clear();
 
-            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(ColumnLanguageKeyExternal, ColumnAvailableCulturesValue)} FROM `{TableLanguagesAvailableCultures}`;", null,
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(ColumnLanguageKeyExternal, ColumnAvailableCulturesValue)} FROM `{TableLanguagesAvailableCultures}` ORDER BY `{ColumnLanguageKeyExternal}`;", null,
                 reader =>
                 {
                     tempList.Add(new KeyValuePair<int, string>(reader.GetInt32(0), reader.GetString(1)));
                 }, token).ConfigureAwait(false);
 
-            tempList.Sort((a, b) => a.Key.CompareTo(b.Key));
-            last = -1;
-            for (int i = 0; i < tempList.Count; i++)
+            F.ApplyQueriedList(tempList, (key, arr) =>
             {
-                KeyValuePair<int, string> val = tempList[i];
-                if (i > 0 && tempList[i - 1].Key != val.Key)
+                LanguageInfo? info = newList.FirstOrDefault(x => x.PrimaryKey.Key == key);
+                if (info != null)
+                    info.AvailableCultureCodes = arr;
+            }, false);
+
+            List<KeyValuePair<int, ulong>> tempList2 = new List<KeyValuePair<int, ulong>>(32);
+
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(ColumnLanguageKeyExternal, ColumnCreditsValue)} FROM `{TableLanguageCredits}` ORDER BY `{ColumnLanguageKeyExternal}`;", null,
+                reader =>
                 {
-                    last = i - 1;
-                    arr = new string[i - last];
-                    for (int j = 0; j < arr.Length; ++j)
-                        arr[j] = tempList[last + j + 1].Value;
-                }
-            }
-            arr = new string[tempList.Count - 1 - last];
-            for (int j = 0; j < arr.Length; ++j)
-                arr[j] = tempList[last + j + 1].Value;
+                    tempList2.Add(new KeyValuePair<int, ulong>(reader.GetInt32(0), reader.GetUInt64(1)));
+                }, token).ConfigureAwait(false);
+
+            F.ApplyQueriedList(tempList2, (key, arr) =>
+            {
+                LanguageInfo? info = newList.FirstOrDefault(x => x.PrimaryKey.Key == key);
+                if (info != null)
+                    info.Credits = arr;
+            }, false);
 
             _langs = newList;
             Languages = newList.AsReadOnly();
@@ -250,6 +245,7 @@ public abstract class LanguageDataStore
     public const string TableLanguages = "lang_info";
     public const string TableLanguagesAliases = "lang_aliases";
     public const string TableLanguagesAvailableCultures = "lang_cultures";
+    public const string TableLanguageCredits = "lang_credits";
     public const string TableLanguagePreferences = "lang_preferences";
 
     public const string ColumnLanguageKeyExternal = "Language";
@@ -262,6 +258,7 @@ public abstract class LanguageDataStore
 
     public const string ColumnAliasesValue = "Alias";
     public const string ColumnAvailableCulturesValue = "CultureCode";
+    public const string ColumnCreditsValue = "Contributor";
 
     public const string ColumnPreferencesSteam64 = "Steam64";
     public const string ColumnPreferencesLanguage = "Language";
@@ -290,6 +287,7 @@ public abstract class LanguageDataStore
         }, true, typeof(LanguageInfo)),
         F.GetListSchema<string>(TableLanguagesAliases, ColumnLanguageKeyExternal, ColumnAliasesValue, TableLanguages, ColumnLanguageKey, length: 64),
         F.GetListSchema<string>(TableLanguagesAvailableCultures, ColumnLanguageKeyExternal, ColumnAvailableCulturesValue, TableLanguages, ColumnLanguageKey, length: 16),
+        F.GetListSchema<ulong>(TableLanguageCredits, ColumnLanguageKeyExternal, ColumnCreditsValue, TableLanguages, ColumnLanguageKey),
         new Schema(TableLanguagePreferences, new Schema.Column[]
         {
             new Schema.Column(ColumnPreferencesSteam64, SqlTypes.STEAM_64)

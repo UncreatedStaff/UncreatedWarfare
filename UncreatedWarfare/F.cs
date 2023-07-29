@@ -1899,4 +1899,36 @@ public static class F
             return list;
         return new List<T>(enumerable);
     }
+    public static void ApplyQueriedList<T>(List<KeyValuePair<int, T>> list, Action<int, T[]> action, bool sort = true)
+    {
+        if (list.Count == 0) return;
+
+        if (sort && list.Count != 1)
+            list.Sort((a, b) => a.Key.CompareTo(b.Key));
+
+        T[] arr;
+        int key;
+        int last = -1;
+        for (int i = 0; i < list.Count; i++)
+        {
+            KeyValuePair<int, T> val = list[i];
+            if (i <= 0 || list[i - 1].Key == val.Key)
+                continue;
+
+            arr = new T[i - last];
+            last = i - 1;
+            for (int j = 0; j < arr.Length; ++j)
+                arr[j] = list[last + j + 1].Value;
+
+            key = list[i - 1].Key;
+            action(key, arr);
+        }
+
+        arr = new T[list.Count - 1 - last];
+        for (int j = 0; j < arr.Length; ++j)
+            arr[j] = list[last + j + 1].Value;
+
+        key = list[list.Count - 1].Key;
+        action(key, arr);
+    }
 }

@@ -314,7 +314,7 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
     public const string Polish = "pl-pl";
     public const string PortugueseBrazil = "pt-br";
     public const string PortuguesePortugal = "pt-br";
-    public const string Filipino = "fil";
+    public const string Filipino = "fl-ph";
     public const string Norwegian = "nb-no";
     public const string Romanian = "ro-ro";
     public const string Dutch = "nl-nl";
