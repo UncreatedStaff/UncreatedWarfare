@@ -207,7 +207,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         bool reloading = gun != null && Data.GetUseableGunReloading(gun);
         bool noActiveMissiles = MissilesInFlight.Count == 0;
 
-        if (newTarget is null || (noAmmo && noActiveMissiles) || reloading) // no target found
+        if (newTarget is null || (noActiveMissiles && (noAmmo || reloading))) // no target found
         {
             if (Status != ELockOnMode.IDLE)
             {
