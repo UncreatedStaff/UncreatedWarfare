@@ -1,20 +1,18 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Framework;
+using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Levels;
-using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
@@ -25,7 +23,6 @@ using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
-using Uncreated.Networking;
 
 namespace Uncreated.Warfare;
 internal static class T
@@ -273,7 +270,7 @@ internal static class T
     public static readonly Translation MarkerNotInSquad = new Translation("<#fa9e9e>Only your squad can see markers. Create a squad with <#cedcde>/squad create</color> to use this feature.");
     
     [TranslationData(SectionPlayers, "Sent on a SEVERE toast when the player enters enemy territory.", "Seconds until death")]
-    public static readonly Translation<string> EnteredEnemyTerritory = new Translation<string>("ENEMY HQ PROXIMITY\nLEAVE IMMEDIATELY\nDEAD IN <upper>{0}</upper>", TranslationFlags.UnityUI);
+    public static readonly Translation<string> EnteredEnemyTerritory = new Translation<string>("ENEMY HQ PROXIMITY\nLEAVE IMMEDIATELY\nDEAD IN <uppercase>{0}</uppercase>", TranslationFlags.UnityUI);
     
     [TranslationData(SectionPlayers, "Sent 2 times before a player is kicked for inactivity.", "Time code")]
     public static readonly Translation<string> InactivityWarning = new Translation<string>("<#fa9e9e>You will be AFK-Kicked in <#cedcde>{0}</color> if you don't move.</color>");
@@ -1015,7 +1012,7 @@ internal static class T
     [TranslationData(SectionRallies)]
     public static readonly Translation RallyEnemiesNearbyTp = new Translation("<#9e7a6c>There are enemies near your RALLY. Deployment is no longer possible.");
     [TranslationData(SectionRallies)]
-    public static readonly Translation<int> RallyToast = new Translation<int>("<#959c8c><#c$rally$>RALLY</color> IN <#ffe4b5>{0}</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int> RallyToast = new Translation<int>("<#959c8c><#c$rally$>RALLY</color> IN <#ffe4b5>{0}</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionRallies, IsPrioritizedTranslation = false)]
     public static readonly Translation<string> RallyUI = new Translation<string>("<#c$rally$>RALLY</color> {0}", TranslationFlags.UnityUI);
     [TranslationData(SectionRallies, IsPrioritizedTranslation = false)]
@@ -1101,15 +1098,15 @@ internal static class T
     [TranslationData(SectionFOBs, IsPrioritizedTranslation = false)]
     public static readonly Translation<IDeployable, GridLocation, string> FOBUI    = new Translation<IDeployable, GridLocation, string>("{0}  <color=#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.FormatNameColored);
     [TranslationData(SectionFOBs)]
-    public static readonly Translation CacheDestroyedAttack    = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationFlags.UnityUI);
+    public static readonly Translation CacheDestroyedAttack    = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationFlags.TMProUI);
     [TranslationData(SectionFOBs)]
-    public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.TMProUI);
     [TranslationData(SectionFOBs)]
-    public static readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<color=#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <color=#e3c59a>{0}</color></color>", TranslationFlags.UnityUI, FormatUppercase);
+    public static readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<color=#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <color=#e3c59a>{0}</color></color>", TranslationFlags.TMProUI, FormatUppercase);
     [TranslationData(SectionFOBs)]
-    public static readonly Translation CacheDiscoveredDefense  = new Translation("<#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT", TranslationFlags.UnityUI);
+    public static readonly Translation CacheDiscoveredDefense  = new Translation("<#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT", TranslationFlags.TMProUI);
     [TranslationData(SectionFOBs)]
-    public static readonly Translation CacheSpawnedDefense     = new Translation("<#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE", TranslationFlags.UnityUI);
+    public static readonly Translation CacheSpawnedDefense     = new Translation("<#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE", TranslationFlags.TMProUI);
     #endregion
 
     #region Deploy
@@ -1411,9 +1408,9 @@ internal static class T
     [TranslationData(SectionWarn)]
     public static readonly Translation<IPlayer> WarnSuccessBroadcastOperator  = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was warned by an operator.", UCPlayer.CHARACTER_NAME_FORMAT);
     [TranslationData(SectionWarn)]
-    public static readonly Translation<IPlayer, string> WarnSuccessDM         = new Translation<IPlayer, string>("<color=#ffff00><color=#" + TeamManager.AdminColorHex + ">{0}</color> warned you for <color=#ffffff>{1}</color>.</color>", TranslationFlags.UnityUI, UCPlayer.PLAYER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, string> WarnSuccessDM         = new Translation<IPlayer, string>("<color=#ffff00><color=#" + TeamManager.AdminColorHex + ">{0}</color> warned you for <color=#ffffff>{1}</color>.</color>", TranslationFlags.TMProUI, UCPlayer.PLAYER_NAME_FORMAT);
     [TranslationData(SectionWarn)]
-    public static readonly Translation<string> WarnSuccessDMOperator          = new Translation<string>("<color=#ffff00>An operator warned you for <color=#ffffff>{0}</color>.</color>", TranslationFlags.UnityUI, UCPlayer.PLAYER_NAME_FORMAT);
+    public static readonly Translation<string> WarnSuccessDMOperator          = new Translation<string>("<color=#ffff00>An operator warned you for <color=#ffffff>{0}</color>.</color>", TranslationFlags.TMProUI, UCPlayer.PLAYER_NAME_FORMAT);
     [TranslationData(SectionWarn)]
     public static readonly Translation WarnSuccessTitle = new Translation("<color=#ffff00>Warning", TranslationFlags.TMProUI);
     #endregion
@@ -2129,98 +2126,98 @@ internal static class T
     #region Phases
     private const string SectionPhases = "Phases";
     [TranslationData(SectionPhases)]
-    public static readonly Translation PhaseBriefing                      = new Translation("BRIEFING PHASE", TranslationFlags.UnityUI);
+    public static readonly Translation PhaseBriefing                      = new Translation("BRIEFING PHASE", TranslationFlags.TMProUI);
     [TranslationData(SectionPhases)]
-    public static readonly Translation PhasePreparation                   = new Translation("PREPARATION PHASE", TranslationFlags.UnityUI);
+    public static readonly Translation PhasePreparation                   = new Translation("PREPARATION PHASE", TranslationFlags.TMProUI);
     [TranslationData(SectionPhases)]
-    public static readonly Translation PhaseBreifingInvasionAttack        = new Translation("BRIEFING PHASE", TranslationFlags.UnityUI);
+    public static readonly Translation PhaseBreifingInvasionAttack        = new Translation("BRIEFING PHASE", TranslationFlags.TMProUI);
     [TranslationData(SectionPhases)]
-    public static readonly Translation<Flag> PhaseBreifingInvasionDefense = new Translation<Flag>("PREPARATION PHASE\nFORTIFY {0}", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<Flag> PhaseBreifingInvasionDefense = new Translation<Flag>("PREPARATION PHASE\nFORTIFY {0}", TranslationFlags.TMProUI, Flag.COLOR_SHORT_NAME_FORMAT);
     #endregion
 
     #region XP Toasts
     private const string SectionXPCreditsToast = "XP / Credit / Supply Toast Messages";
     [TranslationData(SectionXPCreditsToast, "XP or credits given from the console.")]
-    public static readonly Translation XPToastFromOperator = new Translation("FROM OPERATOR", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFromOperator = new Translation("FROM OPERATOR", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast, "XP or credits given by an admin.")]
-    public static readonly Translation XPToastFromPlayer = new Translation("FROM ADMIN", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFromPlayer = new Translation("FROM ADMIN", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastHealedTeammate = new Translation("HEALED TEAMMATE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastHealedTeammate = new Translation("HEALED TEAMMATE", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastEnemyInjured = new Translation("<color=#e3e3e3>DOWNED</color>", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastEnemyInjured = new Translation("<color=#e3e3e3>DOWNED</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFriendlyInjured = new Translation("<color=#e3e3e3>DOWNED FRIENDLY</color>", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFriendlyInjured = new Translation("<color=#e3e3e3>DOWNED FRIENDLY</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastEnemyKilled = new Translation("KILLED ENEMY", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastEnemyKilled = new Translation("KILLED ENEMY", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastKillAssist = new Translation("ASSIST", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastKillAssist = new Translation("ASSIST", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastKillVehicleAssist = new Translation("VEHICLE ASSIST", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastKillVehicleAssist = new Translation("VEHICLE ASSIST", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastKillDriverAssist = new Translation("DRIVER ASSIST", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastKillDriverAssist = new Translation("DRIVER ASSIST", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastSpotterAssist = new Translation("SPOTTER", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastSpotterAssist = new Translation("SPOTTER", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFriendlyKilled = new Translation("TEAMKILLED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFriendlyKilled = new Translation("TEAMKILLED", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastSuicide = new Translation("SUICIDE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastSuicide = new Translation("SUICIDE", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFOBDestroyed = new Translation("FOB DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFOBDestroyed = new Translation("FOB DESTROYED", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFriendlyFOBDestroyed = new Translation("FRIENDLY FOB DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFriendlyFOBDestroyed = new Translation("FRIENDLY FOB DESTROYED", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastBunkerDestroyed = new Translation("BUNKER DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastBunkerDestroyed = new Translation("BUNKER DESTROYED", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFriendlyBunkerDestroyed = new Translation("FRIENDLY BUNKER DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFriendlyBunkerDestroyed = new Translation("FRIENDLY BUNKER DESTROYED", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFOBUsed = new Translation("FOB IN USE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFOBUsed = new Translation("FOB IN USE", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastSuppliesUnloaded = new Translation("RESUPPLIED FOB", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastSuppliesUnloaded = new Translation("RESUPPLIED FOB", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastResuppliedTeammate = new Translation("RESUPPLIED TEAMMATE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastResuppliedTeammate = new Translation("RESUPPLIED TEAMMATE", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastRepairedVehicle = new Translation("REPAIRED VEHICLE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastRepairedVehicle = new Translation("REPAIRED VEHICLE", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFOBRepairedVehicle = new Translation("FOB REPAIRED VEHICLE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFOBRepairedVehicle = new Translation("FOB REPAIRED VEHICLE", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation<VehicleType> XPToastVehicleDestroyed = new Translation<VehicleType>("{0} DESTROYED", TranslationFlags.UnityUI, FormatUppercase);
+    public static readonly Translation<VehicleType> XPToastVehicleDestroyed = new Translation<VehicleType>("{0} DESTROYED", TranslationFlags.TMProUI, FormatUppercase);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation<VehicleType> XPToastAircraftDestroyed = new Translation<VehicleType>("{0} SHOT DOWN", TranslationFlags.UnityUI, FormatUppercase);
+    public static readonly Translation<VehicleType> XPToastAircraftDestroyed = new Translation<VehicleType>("{0} SHOT DOWN", TranslationFlags.TMProUI, FormatUppercase);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation<VehicleType> XPToastFriendlyVehicleDestroyed = new Translation<VehicleType>("FRIENDLY {0} DESTROYED", TranslationFlags.UnityUI, FormatUppercase);
+    public static readonly Translation<VehicleType> XPToastFriendlyVehicleDestroyed = new Translation<VehicleType>("FRIENDLY {0} DESTROYED", TranslationFlags.TMProUI, FormatUppercase);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation<VehicleType> XPToastFriendlyAircraftDestroyed = new Translation<VehicleType>("FRIENDLY {0} SHOT DOWN", TranslationFlags.UnityUI, FormatUppercase);
+    public static readonly Translation<VehicleType> XPToastFriendlyAircraftDestroyed = new Translation<VehicleType>("FRIENDLY {0} SHOT DOWN", TranslationFlags.TMProUI, FormatUppercase);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastTransportingPlayers = new Translation("TRANSPORTING PLAYERS", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastTransportingPlayers = new Translation("TRANSPORTING PLAYERS", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastAceArmorRefund = new Translation("ACE ARMOR SHARE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastAceArmorRefund = new Translation("ACE ARMOR SHARE", TranslationFlags.TMProUI);
 
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFlagCaptured = new Translation("FLAG CAPTURED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFlagCaptured = new Translation("FLAG CAPTURED", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFlagNeutralized = new Translation("FLAG NEUTRALIZED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFlagNeutralized = new Translation("FLAG NEUTRALIZED", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFlagAttackTick = new Translation("ATTACK", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFlagAttackTick = new Translation("ATTACK", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFlagDefenseTick = new Translation("DEFENSE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFlagDefenseTick = new Translation("DEFENSE", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastCacheDestroyed = new Translation("CACHE DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastCacheDestroyed = new Translation("CACHE DESTROYED", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastFriendlyCacheDestroyed = new Translation("FRIENDLY CACHE DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFriendlyCacheDestroyed = new Translation("FRIENDLY CACHE DESTROYED", TranslationFlags.TMProUI);
 
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastSquadBonus = new Translation("SQUAD BONUS", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastSquadBonus = new Translation("SQUAD BONUS", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation XPToastOnDuty = new Translation("ON DUTY", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastOnDuty = new Translation("ON DUTY", TranslationFlags.TMProUI);
 
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> FOBToastGainBuild = new Translation<int>("<color=#c$build$>+{0} BUILD</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int> FOBToastGainBuild = new Translation<int>("<color=#c$build$>+{0} BUILD</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> FOBToastLoseBuild = new Translation<int>("<color=#c$build$>-{0} BUILD</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int> FOBToastLoseBuild = new Translation<int>("<color=#c$build$>-{0} BUILD</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> FOBToastGainAmmo = new Translation<int>("<color=#c$ammo$>+{0} AMMO</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int> FOBToastGainAmmo = new Translation<int>("<color=#c$ammo$>+{0} AMMO</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> FOBToastLoseAmmo = new Translation<int>("<color=#c$ammo$>-{0} AMMO</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int> FOBToastLoseAmmo = new Translation<int>("<color=#c$ammo$>-{0} AMMO</color>", TranslationFlags.TMProUI);
 
     [TranslationData(SectionXPCreditsToast)]
     public static readonly Translation FOBResourceToastLoadSupplies = new Translation("LOAD SUPPLIES");
@@ -2232,26 +2229,26 @@ internal static class T
     public static readonly Translation FOBResourceToastRepairVehicle = new Translation("REPAIR");
 
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> XPToastGainXP = new Translation<int>("+{0} XP", TranslationFlags.UnityUI);
+    public static readonly Translation<int> XPToastGainXP = new Translation<int>("+{0} XP", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> XPToastLoseXP = new Translation<int>("-{0} XP", TranslationFlags.UnityUI);
+    public static readonly Translation<int> XPToastLoseXP = new Translation<int>("-{0} XP", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> XPToastGainCredits = new Translation<int>("+{0} <color=#c$credits$>C</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int> XPToastGainCredits = new Translation<int>("+{0} <color=#c$credits$>C</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> XPToastPurchaseCredits = new Translation<int>("-{0} <color=#c$credits$>C</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int> XPToastPurchaseCredits = new Translation<int>("-{0} <color=#c$credits$>C</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast, IsPrioritizedTranslation = false)]
-    public static readonly Translation<int> XPToastLoseCredits = new Translation<int>("-{0} <color=#d69898>C</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int> XPToastLoseCredits = new Translation<int>("-{0} <color=#d69898>C</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation ToastPromoted = new Translation("YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO", TranslationFlags.UnityUI);
+    public static readonly Translation ToastPromoted = new Translation("YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO", TranslationFlags.TMProUI);
     [TranslationData(SectionXPCreditsToast)]
-    public static readonly Translation ToastDemoted = new Translation("YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO", TranslationFlags.UnityUI);
+    public static readonly Translation ToastDemoted = new Translation("YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO", TranslationFlags.TMProUI);
     #endregion
 
     #region Injured UI
     [TranslationData(SectionRevives)]
-    public static readonly Translation InjuredUIHeader = new Translation("You are injured", TranslationFlags.UnityUI);
+    public static readonly Translation InjuredUIHeader = new Translation("You are injured", TranslationFlags.TMProUI);
     [TranslationData(SectionRevives)]
-    public static readonly Translation InjuredUIGiveUp = new Translation("Press <color=#cecece><b><plugin_2/></b></color> to give up.", TranslationFlags.UnityUI);
+    public static readonly Translation InjuredUIGiveUp = new Translation("Press <color=#cecece><b><plugin_2/></b></color> to give up.", TranslationFlags.TMProUI);
     [TranslationData(SectionRevives)]
     public static readonly Translation InjuredUIGiveUpChat = new Translation("<#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.");
     #endregion
@@ -2343,9 +2340,9 @@ internal static class T
     [TranslationData(SectionAbandon, "Sent when a player abandons a vehicle.")]
     public static readonly Translation<InteractableVehicle> AbandonSuccess = new Translation<InteractableVehicle>("<#a0ad8e>Your <#cedcde>{0}</color> was returned to the yard.");
     [TranslationData(SectionAbandon, "Credits toast for returning a vehicle soon after requesting it.")]
-    public static readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationFlags.UnityUI);
+    public static readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationFlags.TMProUI);
     [TranslationData(SectionAbandon, "Credits toast for returning a vehicle soon after requesting it, but not getting anything because the vehicle was transferred.")]
-    public static readonly Translation AbandonCompensationToastTransferred = new Translation("+0 <color=#c$credits$>C</color> [GIVEN]\nRETURNED VEHICLE", TranslationFlags.UnityUI);
+    public static readonly Translation AbandonCompensationToastTransferred = new Translation("+0 <color=#c$credits$>C</color> [GIVEN]\nRETURNED VEHICLE", TranslationFlags.TMProUI);
     #endregion
     
     #region DailyQuests
@@ -2359,23 +2356,23 @@ internal static class T
     #region Tips
     private const string SectionTips = "In-game Tips";
     [TranslationData(SectionTips)]
-    public static readonly Translation<IPlayer> TipUAVRequest = new Translation<IPlayer>("<#d9c69a>{0} Requested a UAV!", TranslationFlags.UnityUI, UCPlayer.COLOR_NICK_NAME_FORMAT);
+    public static readonly Translation<IPlayer> TipUAVRequest = new Translation<IPlayer>("<#d9c69a>{0} Requested a UAV!", TranslationFlags.TMProUI, UCPlayer.COLOR_NICK_NAME_FORMAT);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipPlaceRadio = new Translation("Place a <#ababab>FOB RADIO</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation TipPlaceRadio = new Translation("Place a <#ababab>FOB RADIO</color>.", TranslationFlags.TMProUI);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipPlaceBunker = new Translation("Build a <#a5c3d9>FOB BUNKER</color> so that your team can spawn.", TranslationFlags.UnityUI);
+    public static readonly Translation TipPlaceBunker = new Translation("Build a <#a5c3d9>FOB BUNKER</color> so that your team can spawn.", TranslationFlags.TMProUI);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipUnloadSupplies = new Translation("<#d9c69a>DROP SUPPLIES</color> onto the FOB.", TranslationFlags.UnityUI);
+    public static readonly Translation TipUnloadSupplies = new Translation("<#d9c69a>DROP SUPPLIES</color> onto the FOB.", TranslationFlags.TMProUI);
     [TranslationData(SectionTips)]
-    public static readonly Translation<IPlayer> TipHelpBuild = new Translation<IPlayer>("<#d9c69a>{0} needs help building!", TranslationFlags.UnityUI, UCPlayer.COLOR_NICK_NAME_FORMAT);
+    public static readonly Translation<IPlayer> TipHelpBuild = new Translation<IPlayer>("<#d9c69a>{0} needs help building!", TranslationFlags.TMProUI, UCPlayer.COLOR_NICK_NAME_FORMAT);
     [TranslationData(SectionTips)]
-    public static readonly Translation<VehicleType> TipLogisticsVehicleResupplied = new Translation<VehicleType>("Your <#009933>{0}</color> has been auto resupplied.", TranslationFlags.UnityUI, FormatUppercase);
+    public static readonly Translation<VehicleType> TipLogisticsVehicleResupplied = new Translation<VehicleType>("Your <#009933>{0}</color> has been auto resupplied.", TranslationFlags.TMProUI, FormatUppercase);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipActionMenu = new Translation("Press <#a5c3d9><plugin_1/></color> for field actions", TranslationFlags.UnityUI);
+    public static readonly Translation TipActionMenu = new Translation("Press <#a5c3d9><plugin_1/></color> for field actions", TranslationFlags.TMProUI);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipActionMenuSl = new Translation("Press <#a5c3d9><plugin_1/></color> for <#85c996>squad actions</color>", TranslationFlags.UnityUI);
+    public static readonly Translation TipActionMenuSl = new Translation("Press <#a5c3d9><plugin_1/></color> for <#85c996>squad actions</color>", TranslationFlags.TMProUI);
     [TranslationData(SectionTips)]
-    public static readonly Translation TipCallMedic = new Translation("You are hurt. Press <#d9a5bb><plugin_1/></color> to call for a medic.", TranslationFlags.UnityUI);
+    public static readonly Translation TipCallMedic = new Translation("You are hurt. Press <#d9a5bb><plugin_1/></color> to call for a medic.", TranslationFlags.TMProUI);
     #endregion
 
     #region Zone Command
@@ -2705,19 +2702,19 @@ internal static class T
     [TranslationData(SectionTeams)]
     public static readonly Translation<Cooldown> TeamsCooldown = new Translation<Cooldown>("<#ff8c69>You can't use /teams for another {0}.", Cooldown.FormatTimeLong);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIHeader = new Translation("Choose a Team", TranslationFlags.UnityUI);
+    public static readonly Translation TeamsUIHeader = new Translation("Choose a Team", TranslationFlags.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIClickToJoin = new Translation("CLICK TO JOIN", TranslationFlags.UnityUI);
+    public static readonly Translation TeamsUIClickToJoin = new Translation("CLICK TO JOIN", TranslationFlags.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIJoined = new Translation("JOINED", TranslationFlags.UnityUI);
+    public static readonly Translation TeamsUIJoined = new Translation("JOINED", TranslationFlags.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIFull = new Translation("<#bf6363>FULL", TranslationFlags.UnityUI);
+    public static readonly Translation TeamsUIFull = new Translation("<#bf6363>FULL", TranslationFlags.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIConfirm = new Translation("CONFIRM", TranslationFlags.UnityUI);
+    public static readonly Translation TeamsUIConfirm = new Translation("CONFIRM", TranslationFlags.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIBack = new Translation("BACK", TranslationFlags.UnityUI);
+    public static readonly Translation TeamsUIBack = new Translation("BACK", TranslationFlags.TMProUI);
     [TranslationData(SectionTeams)]
-    public static readonly Translation TeamsUIJoining = new Translation("<#999999>JOINING...", TranslationFlags.UnityUI);
+    public static readonly Translation TeamsUIJoining = new Translation("<#999999>JOINING...", TranslationFlags.TMProUI);
     [TranslationData(SectionTeams)]
     public static readonly Translation TeamsShuffleQueued = new Translation("Teams will be SHUFFLED next game.");
     #endregion
@@ -2725,7 +2722,7 @@ internal static class T
     #region Spotting
     private const string SectionSpotting = "Spotting";
     [TranslationData(SectionSpotting)]
-    public static readonly Translation SpottedToast = new Translation("<#b9ffaa>SPOTTED", TranslationFlags.UnityUI);
+    public static readonly Translation SpottedToast = new Translation("<#b9ffaa>SPOTTED", TranslationFlags.TMProUI);
     [TranslationData(SectionSpotting, FormattingDescriptions = new string[] { "Team color of the speaker.", "Target" })]
     public static readonly Translation<Color, string> SpottedMessage = new Translation<Color, string>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Enemy {1} spotted!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionSpotting)]
@@ -2741,64 +2738,64 @@ internal static class T
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> NeedMedicChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need a medic here!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> NeedMedicToast = new Translation<string>("<#a1998d>{0} needs healing.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> NeedMedicToast = new Translation<string>("<#a1998d>{0} needs healing.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> NeedAmmoChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need some ammo here!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> NeedAmmoToast = new Translation<string>("<#a1998d>{0} needs ammunition.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> NeedAmmoToast = new Translation<string>("<#a1998d>{0} needs ammunition.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> NeedRideChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Hey, I need a ride!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> NeedRideToast = new Translation<string>("<#a1998d>{0} needs a ride.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> NeedRideToast = new Translation<string>("<#a1998d>{0} needs a ride.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> NeedSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: I need help over here!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> NeedSupportToast = new Translation<string>("<#a1998d>{0} needs help.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> NeedSupportToast = new Translation<string>("<#a1998d>{0} needs help.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> HeliPickupChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting helicopter transport!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> HeliPickupToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs transport.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> HeliPickupToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs transport.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> HeliDropoffChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting drop off at this position!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> HeliDropoffToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> is requesting drop off.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> HeliDropoffToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> is requesting drop off.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> SuppliesBuildChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting FOB building supplies!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> SuppliesBuildToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs FOB supplies.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> SuppliesBuildToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs FOB supplies.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> SuppliesAmmoChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting FOB ammunition supplies!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> SuppliesAmmoToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs FOB ammunition.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> SuppliesAmmoToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs FOB ammunition.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> AirSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting close air support!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> AirSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs air support.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> AirSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs air support.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> ArmorSupportChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Requesting armor support!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation<string> ArmorSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs armor support.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> ArmorSupportToast = new Translation<string>("<#a1998d><#dbb67f>{0}</color> needs armor support.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> ThankYouChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Thank you!", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
     public static readonly Translation<Color> SorryChat = new Translation<Color>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Sorry.", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionActions)]
-    public static readonly Translation AttackToast = new Translation("<#a1998d>Attack the marked position.", TranslationFlags.UnityUI);
+    public static readonly Translation AttackToast = new Translation("<#a1998d>Attack the marked position.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation DefendToast = new Translation("<#a1998d>Defend the marked position.", TranslationFlags.UnityUI);
+    public static readonly Translation DefendToast = new Translation("<#a1998d>Defend the marked position.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation MoveToast = new Translation("<#a1998d>Move to the marked position.", TranslationFlags.UnityUI);
+    public static readonly Translation MoveToast = new Translation("<#a1998d>Move to the marked position.", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation BuildToast = new Translation("<#a1998d>Build near the marked position.", TranslationFlags.UnityUI);
+    public static readonly Translation BuildToast = new Translation("<#a1998d>Build near the marked position.", TranslationFlags.TMProUI);
 
     [TranslationData(SectionActions)]
-    public static readonly Translation ActionErrorInMain = new Translation("<#9e7d7d>Unavailable in main", TranslationFlags.UnityUI);
+    public static readonly Translation ActionErrorInMain = new Translation("<#9e7d7d>Unavailable in main", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation ActionErrorNoMarker = new Translation("<#9e7d7d>Place a MARKER first", TranslationFlags.UnityUI);
+    public static readonly Translation ActionErrorNoMarker = new Translation("<#9e7d7d>Place a MARKER first", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation ActionErrorNotInHeli = new Translation("<#9e7d7d>You are not inside a HELICOPTER", TranslationFlags.UnityUI);
+    public static readonly Translation ActionErrorNotInHeli = new Translation("<#9e7d7d>You are not inside a HELICOPTER", TranslationFlags.TMProUI);
     [TranslationData(SectionActions)]
-    public static readonly Translation ActionErrorInVehicle = new Translation("<#9e7d7d>Unavailable in vehicle", TranslationFlags.UnityUI);
+    public static readonly Translation ActionErrorInVehicle = new Translation("<#9e7d7d>Unavailable in vehicle", TranslationFlags.TMProUI);
     #endregion
 
     #region Teleport

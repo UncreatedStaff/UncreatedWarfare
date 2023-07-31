@@ -15,7 +15,7 @@ public static class ConquestUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (player == null) return;
+        if (player == null || player.HasUIHidden) return;
         ulong team = player.GetTeam();
         if (team < 1 || team > 3) return;
         if (Data.Is(out IFlagRotation gm))
@@ -103,6 +103,7 @@ public static class ConquestUI
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                if (pl.HasUIHidden) continue;
                 ulong team = pl.GetTeam();
                 int i2 = team == 2 ? indt2 : index;
                 CTFUI.ListUI.Names[i2].SetText(pl.Connection, name);

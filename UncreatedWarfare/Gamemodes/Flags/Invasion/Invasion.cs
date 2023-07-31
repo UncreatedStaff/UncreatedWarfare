@@ -374,6 +374,9 @@ public class Invasion :
             flag.SetOwner(0);
         UpdateFlag(flag);
     }
+
+    protected override float GetCaptureXPMultiplier() => base.GetCaptureXPMultiplier() * 1.25f;
+
     protected override void InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
         base.InvokeOnFlagCaptured(flag, capturedTeam, lostTeam);

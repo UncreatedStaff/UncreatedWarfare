@@ -367,17 +367,6 @@ public static class F
         }
         return sb.ToString();
     }
-    public static void TriggerEffectReliable(EffectAsset asset, ITransportConnection connection, Vector3 position)
-    {
-        ThreadUtil.assertIsGameThread();
-        TriggerEffectParameters p = new TriggerEffectParameters(asset)
-        {
-            position = position,
-            reliable = true
-        };
-        p.SetRelevantPlayer(connection);
-        EffectManager.triggerEffect(p);
-    }
     public static bool ArrayContains(this byte[] array, byte value)
     {
         for (int i = 0; i < array.Length; ++i)
@@ -404,6 +393,17 @@ public static class F
         if ((type is SupplyType.Build ? Gamemode.Config.EffectUnloadBuild : Gamemode.Config.EffectUnloadAmmo).ValidReference(out EffectAsset effect))
             TriggerEffectReliable(effect, EffectManager.MEDIUM, position);
     }
+    public static void TriggerEffectReliable(EffectAsset asset, ITransportConnection connection, Vector3 position)
+    {
+        ThreadUtil.assertIsGameThread();
+        TriggerEffectParameters p = new TriggerEffectParameters(asset)
+        {
+            position = position,
+            reliable = true
+        };
+        p.SetRelevantPlayer(connection);
+        EffectManager.triggerEffect(p);
+    }
     public static void TriggerEffectReliable(EffectAsset asset, float range, Vector3 position)
         => TriggerEffectReliable(asset, Provider.GatherRemoteClientConnectionsWithinSphere(position, range), position);
     public static void TriggerEffectReliable(EffectAsset asset, PooledTransportConnectionList connection, Vector3 position)
@@ -413,6 +413,30 @@ public static class F
         {
             position = position,
             reliable = true
+        };
+        p.SetRelevantTransportConnections(connection);
+        EffectManager.triggerEffect(p);
+    }
+    public static void TriggerEffectUnreliable(EffectAsset asset, ITransportConnection connection, Vector3 position)
+    {
+        ThreadUtil.assertIsGameThread();
+        TriggerEffectParameters p = new TriggerEffectParameters(asset)
+        {
+            position = position,
+            reliable = false
+        };
+        p.SetRelevantPlayer(connection);
+        EffectManager.triggerEffect(p);
+    }
+    public static void TriggerEffectUnreliable(EffectAsset asset, float range, Vector3 position)
+        => TriggerEffectUnreliable(asset, Provider.GatherRemoteClientConnectionsWithinSphere(position, range), position);
+    public static void TriggerEffectUnreliable(EffectAsset asset, PooledTransportConnectionList connection, Vector3 position)
+    {
+        ThreadUtil.assertIsGameThread();
+        TriggerEffectParameters p = new TriggerEffectParameters(asset)
+        {
+            position = position,
+            reliable = false
         };
         p.SetRelevantTransportConnections(connection);
         EffectManager.triggerEffect(p);

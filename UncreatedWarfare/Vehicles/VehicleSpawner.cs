@@ -677,7 +677,12 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
                 }
             }
         }
-        vehicle.trunkItems?.clear();
+        if (vehicle.trunkItems != null)
+        {
+            int ct = vehicle.trunkItems.getItemCount();
+            for (int i = ct - 1; i >= 0; --i)
+                vehicle.trunkItems.removeItem((byte)i);
+        }
         for (int i = 0; i < vehicle.passengers.Length; ++i)
         {
             SteamPlayer? pl = vehicle.passengers[i].player;

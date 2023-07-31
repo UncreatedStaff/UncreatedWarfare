@@ -1,84 +1,188 @@
-﻿using Uncreated.Framework.UI;
+﻿using SDG.NetTransport;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Uncreated.Framework.UI;
 
 namespace Uncreated.Warfare.FOBs.UI;
 public class FOBListUI : UnturnedUI
 {
-    public readonly UnturnedUIElement FOBParent0 = new UnturnedUIElement("0");
-    public readonly UnturnedUIElement FOBParent1 = new UnturnedUIElement("1");
-    public readonly UnturnedUIElement FOBParent2 = new UnturnedUIElement("2");
-    public readonly UnturnedUIElement FOBParent3 = new UnturnedUIElement("3");
-    public readonly UnturnedUIElement FOBParent4 = new UnturnedUIElement("4");
-    public readonly UnturnedUIElement FOBParent5 = new UnturnedUIElement("5");
-    public readonly UnturnedUIElement FOBParent6 = new UnturnedUIElement("6");
-    public readonly UnturnedUIElement FOBParent7 = new UnturnedUIElement("7");
-    public readonly UnturnedUIElement FOBParent8 = new UnturnedUIElement("8");
-    public readonly UnturnedUIElement FOBParent9 = new UnturnedUIElement("9");
-
-    public readonly UnturnedLabel FOBName0 = new UnturnedLabel("N0");
-    public readonly UnturnedLabel FOBName1 = new UnturnedLabel("N1");
-    public readonly UnturnedLabel FOBName2 = new UnturnedLabel("N2");
-    public readonly UnturnedLabel FOBName3 = new UnturnedLabel("N3");
-    public readonly UnturnedLabel FOBName4 = new UnturnedLabel("N4");
-    public readonly UnturnedLabel FOBName5 = new UnturnedLabel("N5");
-    public readonly UnturnedLabel FOBName6 = new UnturnedLabel("N6");
-    public readonly UnturnedLabel FOBName7 = new UnturnedLabel("N7");
-    public readonly UnturnedLabel FOBName8 = new UnturnedLabel("N8");
-    public readonly UnturnedLabel FOBName9 = new UnturnedLabel("N9");
-
-    public readonly UnturnedLabel FOBResources0 = new UnturnedLabel("R0");
-    public readonly UnturnedLabel FOBResources1 = new UnturnedLabel("R1");
-    public readonly UnturnedLabel FOBResources2 = new UnturnedLabel("R2");
-    public readonly UnturnedLabel FOBResources3 = new UnturnedLabel("R3");
-    public readonly UnturnedLabel FOBResources4 = new UnturnedLabel("R4");
-    public readonly UnturnedLabel FOBResources5 = new UnturnedLabel("R5");
-    public readonly UnturnedLabel FOBResources6 = new UnturnedLabel("R6");
-    public readonly UnturnedLabel FOBResources7 = new UnturnedLabel("R7");
-    public readonly UnturnedLabel FOBResources8 = new UnturnedLabel("R8");
-    public readonly UnturnedLabel FOBResources9 = new UnturnedLabel("R9");
-
-    public readonly UnturnedUIElement[] FOBParents;
-    public readonly UnturnedLabel[] FOBNames;
-    public readonly UnturnedLabel[] FOBResources;
-    public FOBListUI() : base(Gamemodes.Gamemode.Config.UIFOBList)
+    public readonly FOBListElement[] FOBs = UnturnedUIPatterns.CreateArray<FOBListElement>("{0}", 0, to: 9);
+    public FOBListUI() : base(Gamemodes.Gamemode.Config.UIFOBList) { }
+    public struct FOBListElement
     {
-        FOBParents = new UnturnedUIElement[]
-        {
-            FOBParent0,
-            FOBParent1,
-            FOBParent2,
-            FOBParent3,
-            FOBParent4,
-            FOBParent5,
-            FOBParent6,
-            FOBParent7,
-            FOBParent8,
-            FOBParent9
-        };
-        FOBNames = new UnturnedLabel[]
-        {
-            FOBName0,
-            FOBName1,
-            FOBName2,
-            FOBName3,
-            FOBName4,
-            FOBName5,
-            FOBName6,
-            FOBName7,
-            FOBName8,
-            FOBName9
-        };
-        FOBResources = new UnturnedLabel[]
-        {
-            FOBResources0,
-            FOBResources1,
-            FOBResources2,
-            FOBResources3,
-            FOBResources4,
-            FOBResources5,
-            FOBResources6,
-            FOBResources7,
-            FOBResources8,
-            FOBResources9
-        };
+        [UIPattern("", Mode = FormatMode.Prefix)]
+        public UnturnedUIElement Root { get; set; }
+
+        [UIPattern("N", Mode = FormatMode.Prefix)]
+        public UnturnedLabel Name { get; set; }
+
+        [UIPattern("R", Mode = FormatMode.Prefix)]
+        public UnturnedLabel Resources { get; set; }
     }
+    public void Hide(UCPlayer player)
+    {
+        if (!player.HasFOBUI)
+            return;
+
+        player.HasFOBUI = false;
+        ClearFromPlayer(player.Connection);
+    }
+    public void Update(FOBManager manager, ulong team = 0, bool resourcesOnly = false)
+    {
+        if (team is 0ul or 1ul)
+        {
+            UpdateFor(LanguageSet.OnTeam(1ul), manager.Team1ListEntries, -1, resourcesOnly);
+        }
+        if (team is 0ul or 2ul)
+        {
+            UpdateFor(LanguageSet.OnTeam(2ul), manager.Team2ListEntries, -1, resourcesOnly);
+        }
+        if (team is not 1ul and not 2ul)
+        {
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == 3ul && x.HasFOBUI))
+            {
+                player.HasFOBUI = false;
+                ClearFromPlayer(player.Connection);
+            }
+        }
+    }
+    public void UpdatePast(FOBManager manager, int startIndex, ulong team = 0, bool resourcesOnly = false)
+    {
+        if (team is 0ul or 1ul)
+        {
+            UpdatePastFor(LanguageSet.OnTeam(1ul), manager.Team1ListEntries, startIndex);
+        }
+        if (team is 0ul or 2ul)
+        {
+            UpdatePastFor(LanguageSet.OnTeam(2ul), manager.Team2ListEntries, startIndex);
+        }
+        if (team is not 1ul and not 2ul)
+        {
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+            {
+                UCPlayer player = PlayerManager.OnlinePlayers[i];
+                if (player.GetTeam() == 3ul && player.HasFOBUI)
+                {
+                    player.HasFOBUI = false;
+                    ClearFromPlayer(player.Connection);
+                }
+            }
+        }
+    }
+    public void UpdatePastFor(IEnumerable<LanguageSet> set, IReadOnlyList<IFOB?> listEntries, int startIndex)
+    {
+        foreach (LanguageSet lang in set)
+        {
+            UpdateFor(lang, listEntries, -1, false, startIndex);
+        }
+    }
+    public void UpdateFor(IEnumerable<LanguageSet> set, IReadOnlyList<IFOB?> listEntries, int index = -1, bool resourcesOnly = false)
+    {
+        foreach (LanguageSet lang in set)
+        {
+            UpdateFor(lang, listEntries, index, resourcesOnly);
+        }
+    }
+    public void UpdateFor(FOBManager manager, UCPlayer player, int index = -1, bool resourcesOnly = false, int startIndex = 0)
+    {
+        ulong team = player.GetTeam();
+        if (team is 1ul or 2ul && !player.HasUIHidden)
+            UpdateFor(new LanguageSet(player), team == 1ul ? manager.Team1ListEntries : manager.Team2ListEntries, index, resourcesOnly, startIndex);
+        else if (player.HasFOBUI)
+        {
+            player.HasFOBUI = false;
+            ClearFromPlayer(player.Connection);
+        }
+    }
+    public void UpdateFor(LanguageSet set, IReadOnlyList<IFOB?> listEntries, int index = -1, bool resourcesOnly = false, int startIndex = 0)
+    {
+        int count = Math.Min(listEntries.Count, FOBs.Length);
+        if (index != -1 && index < count)
+        {
+            ref FOBListElement element = ref FOBs[index];
+            IFOB? fob = listEntries[index];
+            if (fob == null)
+            {
+                if (resourcesOnly)
+                    return;
+                while (set.MoveNext())
+                {
+                    if (set.Next.HasFOBUI)
+                        element.Root.SetVisibility(set.Next.Connection, false);
+                }
+                return;
+            }
+            UpdateOneFOB(ref set, in element, fob, resourcesOnly);
+            return;
+        }
+        bool isClearing = false;
+        for (int i = startIndex; i < count; ++i)
+        {
+            ref FOBListElement element = ref FOBs[i];
+            IFOB? fob = listEntries[i];
+            if (!isClearing)
+                isClearing = fob == null;
+            if (isClearing)
+            {
+                if (resourcesOnly)
+                    break;
+                while (set.MoveNext())
+                {
+                    if (set.Next.HasFOBUI)
+                        element.Root.SetVisibility(set.Next.Connection, false);
+                }
+                set.Reset();
+                continue;
+            }
+
+            UpdateOneFOB(ref set, in element, fob!, resourcesOnly);
+        }
+    }
+
+    private void UpdateOneFOB(ref LanguageSet set, in FOBListElement element, IFOB fob, bool resourcesOnly = false)
+    {
+        IResourceFOB? rscFob = fob as IResourceFOB;
+        if (resourcesOnly)
+        {
+            if (rscFob == null)
+                return;
+            string txt = rscFob.UIResourceString;
+            while (set.MoveNext())
+            {
+                if (!set.Next.HasFOBUI)
+                {
+                    if (set.Next.HasUIHidden)
+                        continue;
+                    SendToPlayer(set.Next.Connection);
+                    set.Next.HasFOBUI = true;
+                    element.Root.SetVisibility(set.Next.Connection, true);
+                    element.Name.SetText(set.Next.Connection, GetFOBUIText(in set, fob));
+                }
+                element.Resources.SetText(set.Next.Connection, txt);
+            }
+            set.Reset();
+            return;
+        }
+
+        string name = GetFOBUIText(in set, fob);
+        string resources = rscFob?.UIResourceString ?? string.Empty;
+        while (set.MoveNext())
+        {
+            ITransportConnection connection = set.Next.Connection;
+            if (!set.Next.HasFOBUI)
+            {
+                if (set.Next.HasUIHidden)
+                    continue;
+                SendToPlayer(connection);
+                set.Next.HasFOBUI = true;
+            }
+            element.Root.SetVisibility(connection, true);
+            element.Resources.SetText(connection, resources);
+            element.Name.SetText(connection, name);
+        }
+        set.Reset();
+    }
+
+    private static string GetFOBUIText(in LanguageSet set, IFOB fob) => T.FOBUI.Translate(set.Language, fob, fob.GridLocation, fob.ClosestLocation, team: set.Team, target: set.Players.Count == 1 ? set.Players[0] : null);
 }

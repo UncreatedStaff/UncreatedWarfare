@@ -822,7 +822,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
             ThreadUtil.assertIsGameThread();
             CooldownManager.OnGameStarting();
-            IconManager.OnGamemodeReloaded();
+            IconManager.OnGamemodeReloaded(onLoad);
             L.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
             State = State.Active;
             GameID = DateTime.UtcNow.Ticks;
@@ -1016,8 +1016,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     public virtual void ShowStagingUI(UCPlayer player)
     {
-        CTFUI.StagingUI.SendToPlayer(player.Connection);
-        CTFUI.StagingUI.Top.SetText(player.Connection, Localization.Translate(T.PhaseBriefing, player));
+        TimeSpan timeleft = TimeSpan.FromSeconds(StagingSeconds);
+        CTFUI.StagingUI.SendToPlayer(player.Connection, Localization.Translate(T.PhaseBriefing, player), $"{timeleft.Minutes}:{timeleft.Seconds:D2}");
     }
     public void ClearStagingUI(UCPlayer player)
     {
@@ -1137,7 +1137,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     StructureManager.destroyStructure(sdrop, x, y, Vector3.zero);
             }
             CacheLocationsEditCommand.Drops.Clear();
-            IconManager.OnLevelLoaded();
+            IconManager.DeleteAllIcons();
+            IconManager.CheckExistingBuildables();
         }
         catch (Exception ex)
         {

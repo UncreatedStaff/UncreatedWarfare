@@ -1165,8 +1165,7 @@ public class UCWarfareNexus : IModuleNexus
         }
 
         L.Log("Initializing UniTask...", ConsoleColor.Magenta);
-        var loop = PlayerLoop.GetCurrentPlayerLoop();
-        PlayerLoopHelper.Initialize(ref loop);
+        PlayerLoopHelper.Init();
 
         Level.onPostLevelLoaded += OnLevelLoaded;
         UCWarfare.Nexus = this;

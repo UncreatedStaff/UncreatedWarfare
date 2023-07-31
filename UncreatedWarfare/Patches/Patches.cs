@@ -453,7 +453,7 @@ public static partial class Patches
         }
 
         private static readonly List<IShovelable> WorkingShovelable = new List<IShovelable>(3);
-        // SDG.Unturned.UseableGun
+        // SDG.Unturned.UseableMelee
         /// <summary>
         /// prefix of <see cref="UseableMelee.fire()"/> to determine hits with the Entrenching Tool.
         /// </summary>
@@ -467,7 +467,7 @@ public static partial class Patches
 #endif
             ItemWeaponAsset weaponAsset = ((ItemWeaponAsset)__instance.player.equipment.asset);
 
-            RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), weaponAsset.range, RayMasks.BARRICADE, __instance.player);
+            RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), weaponAsset.range, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE, __instance.player);
             if (info.transform != null)
             {
                 UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);
@@ -482,7 +482,7 @@ public static partial class Patches
                     {
                         for (int i = 0; i < WorkingShovelable.Count; ++i)
                         {
-                            if (WorkingShovelable[i].Shovel(builder))
+                            if (WorkingShovelable[i].Shovel(builder, info.point))
                                 break;
                         }
                     }
@@ -504,7 +504,7 @@ public static partial class Patches
                         {
                             for (int i = 0; i < WorkingShovelable.Count; ++i)
                             {
-                                if (WorkingShovelable[i].Shovel(builder))
+                                if (WorkingShovelable[i].Shovel(builder, info.point))
                                     break;
                             }
                         }
@@ -513,27 +513,23 @@ public static partial class Patches
                             WorkingShovelable.Clear();
                         }
                     }
-                    else
+                    else if (info.vehicle != null)
                     {
-                        InteractableVehicle? vehicle = DamageTool.getVehicle(info.transform);
-                        if (vehicle != null)
-                        {
-                            if (builder.GetTeam() != vehicle.lockedGroup.m_SteamID.GetTeam())
-                                return;
+                        if (builder.GetTeam() != info.vehicle.lockedGroup.m_SteamID.GetTeam())
+                            return;
 
-                            vehicle.GetComponents(WorkingShovelable);
-                            try
+                        info.vehicle.gameObject.GetComponents(WorkingShovelable);
+                        try
+                        {
+                            for (int i = 0; i < WorkingShovelable.Count; ++i)
                             {
-                                for (int i = 0; i < WorkingShovelable.Count; ++i)
-                                {
-                                    if (WorkingShovelable[i].Shovel(builder))
-                                        break;
-                                }
+                                if (WorkingShovelable[i].Shovel(builder, info.point))
+                                    break;
                             }
-                            finally
-                            {
-                                WorkingShovelable.Clear();
-                            }
+                        }
+                        finally
+                        {
+                            WorkingShovelable.Clear();
                         }
                     }
                 }

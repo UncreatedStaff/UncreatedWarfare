@@ -12,6 +12,7 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Flags.UI;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Singletons;
@@ -22,6 +23,7 @@ using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using XPReward = Uncreated.Warfare.Quests.XPReward;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
@@ -125,6 +127,15 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         {
             PickObjective(_objIndex == -1);
             Chat.Broadcast(T.HardpointObjectiveChanged, Objective, _nextObjectivePickTime - Time.realtimeSinceStartup);
+        }
+
+        if (State == State.Active && EveryXSeconds(20f))
+        {
+            Flag flag = Objective;
+            for (int i = 0; i < flag.PlayersOnFlag.Count; ++i)
+            {
+                Points.AwardXP(flag.PlayersOnFlag[i], Levels.XPReward.AttackingFlag, 0.75f);
+            }
         }
         base.EventLoopAction();
     }
@@ -399,7 +410,9 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         string s2 = obj ? $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Config.UIIconAttack}</color>" : string.Empty;
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            ITransportConnection c = PlayerManager.OnlinePlayers[i].Connection;
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
+            if (player.HasUIHidden) continue;
+            ITransportConnection c = player.Connection;
             CTFUI.ListUI.Names[index].SetText(c, s1);
             CTFUI.ListUI.Icons[index].SetText(c, s2);
             CTFUI.ListUI.Parents[index].SetVisibility(c, true);

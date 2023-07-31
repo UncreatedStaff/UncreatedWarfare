@@ -64,7 +64,23 @@ public static class Localization
                 flags |= TranslationFlags.Team2;
                 break;
         }
-        return translatable.Translate(language, fmt, null, GetLocale(language) as CultureInfo, ref flags);
+        return translatable.Translate(language, fmt, null, GetLocale(language), ref flags);
+    }
+    public static string Translate(this ITranslationArgument translatable, string language, ulong team, CultureInfo culture, string? fmt = null, bool imgui = false)
+    {
+        TranslationFlags flags = TranslationFlags.ForChat;
+        if (imgui)
+            flags |= TranslationFlags.UseUnityRichText;
+        switch (team)
+        {
+            case 1:
+                flags |= TranslationFlags.Team1;
+                break;
+            case 2:
+                flags |= TranslationFlags.Team2;
+                break;
+        }
+        return translatable.Translate(language, fmt, null, culture ?? GetLocale(language), ref flags);
     }
     public static string Translate(this ITranslationArgument translatable, UCPlayer player, string? fmt = null)
     {
@@ -675,8 +691,7 @@ public static class Localization
         {
             if (EnumTranslations.ContainsKey(enumType.Key)) continue;
             Dictionary<string, Dictionary<string, string>> k = new Dictionary<string, Dictionary<string, string>>();
-            Dictionary<string, List<TranslatableAttribute>>? a = null;
-            if (!EnumTranslationAttributes.TryGetValue(enumType.Key, out a))
+            if (!EnumTranslationAttributes.TryGetValue(enumType.Key, out Dictionary<string, List<TranslatableAttribute>>? a))
             {
                 a = new Dictionary<string, List<TranslatableAttribute>>(8) { { EnumNamePlaceholder, new List<TranslatableAttribute>(2) } };
                 EnumTranslationAttributes.Add(enumType.Key, a);
@@ -969,10 +984,10 @@ public static class Localization
         writer.Dispose();
     }
     internal static string GetLang(ulong player) => Data.Languages.TryGetValue(player, out string lang) ? lang : L.Default;
-    internal static IFormatProvider GetLocale(CommandInteraction ctx) => ctx.IsConsole ? Data.AdminLocale : GetLocale(GetLang(ctx.CallerID));
-    internal static IFormatProvider GetLocale(IPlayer player) => GetLocale(GetLang(player.Steam64));
-    internal static IFormatProvider GetLocale(ulong player) => GetLocale(GetLang(player));
-    internal static IFormatProvider GetLocale(string language)
+    internal static CultureInfo GetLocale(CommandInteraction ctx) => ctx.IsConsole ? Data.AdminLocale : GetLocale(GetLang(ctx.CallerID));
+    internal static CultureInfo GetLocale(IPlayer player) => GetLocale(GetLang(player.Steam64));
+    internal static CultureInfo GetLocale(ulong player) => GetLocale(GetLang(player));
+    internal static CultureInfo GetLocale(string language)
     {
         return LanguageAliasSet.GetCultureInfo(language);
     }
