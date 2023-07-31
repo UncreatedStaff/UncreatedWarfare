@@ -730,14 +730,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         int squadsCount = Squads.Count(x => x.Team == team);
 
         return squadsCount >= ListUI.Squads.Length;
-
-        float friendlyCount = PlayerManager.OnlinePlayers.Count(p => p.GetTeam() == team);
-        int maxSquads = Mathf.CeilToInt((friendlyCount + 3) / Squad.SQUAD_MAX_MEMBERS);
-
-        int requiredTeammatesForMoreSquads = Squad.SQUAD_MAX_MEMBERS * maxSquads - 3 + 1;
-
-        if (squadsCount >= maxSquads)
-            throw ctx.Reply(T.SquadsTooManyPlayerCount, requiredTeammatesForMoreSquads);
     }
     public static bool AreSquadLimited(ulong team, out int requiredTeammatesForMoreSquads)
     {

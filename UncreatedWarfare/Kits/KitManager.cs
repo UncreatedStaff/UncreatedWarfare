@@ -2245,18 +2245,14 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 
             if (kit.Class == Class.Squadleader)
             {
-                if (kit.Class == Class.Squadleader)
-                {
-                    if (SquadManager.MaxSquadsReached(team))
-                        throw ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
+                if (SquadManager.MaxSquadsReached(team))
+                    throw ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
 
-                    if (SquadManager.AreSquadLimited(team, out int requiredTeammatesForMoreSquads))
-                        throw ctx.Reply(T.SquadsTooManyPlayerCount, requiredTeammatesForMoreSquads);
-                }
-                else
-                    TryCreateKitOnRequestSquadleaderKit(ctx);
+                if (SquadManager.AreSquadLimited(team, out int requiredTeammatesForMoreSquads))
+                    throw ctx.Reply(T.SquadsTooManyPlayerCount, requiredTeammatesForMoreSquads);
+
+                TryCreateKitOnRequestSquadleaderKit(ctx);
             }
-                
         }
         finally
         {

@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using SDG.Framework.Utilities;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes;
@@ -307,6 +308,15 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         }
 
         InitAwake();
+        if (State == BuildableState.Foundation && TeamManager.IsInMain(Team, Position) && UCPlayer.FromID(Owner) is { IsOnline: true } pl)
+        {
+            TimeUtility.InvokeAfterDelay(() =>
+            {
+                if (pl.IsOnline)
+                    QuickShovel(pl);
+            }, 1.25f);
+        }
+        
         return;
         destroy:
         Destroy(this);

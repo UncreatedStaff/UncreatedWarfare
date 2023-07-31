@@ -367,8 +367,10 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     internal bool ValidateFloatingPlacement(BuildableData buildable, UCPlayer player, Vector3 point, IFOBItem? ignoreFoundation)
     {
-        if (buildable.Type is BuildableType.RepairStation or BuildableType.AmmoCrate or BuildableType.Bunker
-            or BuildableType.Radio)
+        if (player.OnDuty() && buildable.Type is BuildableType.RepairStation or BuildableType.AmmoCrate)
+            return true;
+        
+        if (buildable.Type is BuildableType.RepairStation or BuildableType.AmmoCrate or BuildableType.Bunker or BuildableType.Radio)
         {
             player.SendChat(T.BuildNoRadio, buildable.Type == BuildableType.Bunker ? Config.FOBBuildPickupRadiusNoBunker : Config.FOBBuildPickupRadius);
             return false;
@@ -382,6 +384,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         }
         ulong team = player.GetTeam();
         int limit = kit.CountItems(buildable.Foundation.Value.Guid);
+        int count = 0;
         for (int i = 0; i < _floatingItems.Count; ++i)
         {
             IFOBItem item = _floatingItems[i];
@@ -390,8 +393,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             BuildableData? b = item.Buildable;
             if (b != null && item.Team == team && item.Owner == player.Steam64 && b.Foundation == buildable.Foundation && (item is not ShovelableComponent sh || sh.ActiveVehicle == null || !sh.ActiveVehicle.isDead))
             {
-                --limit;
-                if (limit <= 0)
+                ++count;
+                if (count >= limit)
                 {
                     player.SendChat(T.RegionalBuildLimitReached, limit, buildable);
                     return false;
@@ -411,8 +414,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 {
                     if (_floatingItems[i] is IDisposable d)
                         d.Dispose();
-                    _floatingItems[i] = (IFOBItem)Activator.CreateInstance(item.GetType());
-                    return _floatingItems[i];
+                    IFOBItem newItem = (IFOBItem)Activator.CreateInstance(item.GetType());
+                    if (newItem.Icon.ValidReference(out Guid icon))
+                        IconManager.AttachIcon(icon, newObj, newItem.Team, newItem.IconOffset);
+                    _floatingItems[i] = newItem;
+                    return newItem;
                 }
             }
 
@@ -423,9 +429,14 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         {
             if (_floatingItems[i] is MonoBehaviour mb && mb == itemMb)
             {
-                _floatingItems[i] = (IFOBItem)newObj.gameObject.AddComponent(item.GetType());
+                IFOBItem newItem = (IFOBItem)newObj.gameObject.AddComponent(item.GetType());
+                _floatingItems[i] = newItem;
+                if (newItem.Icon.ValidReference(out Guid icon))
+                    IconManager.AttachIcon(icon, newObj, newItem.Team, newItem.IconOffset);
+                if (itemMb is IDisposable d)
+                    d.Dispose();
                 Object.Destroy(itemMb);
-                return _floatingItems[i];
+                return newItem;
             }
         }
 
