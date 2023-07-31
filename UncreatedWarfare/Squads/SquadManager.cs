@@ -14,6 +14,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads.Commander;
 using Uncreated.Warfare.Squads.UI;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Squads;
 
@@ -723,6 +724,23 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         ActionLog.Add(value ? ActionLogType.LockedSquad : ActionLogType.UnlockedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
         squad.IsLocked = value;
         ReplicateLockSquad(squad);
+    }
+    public static bool MaxSquadsReached(ulong team)
+    {
+        int squadsCount = Squads.Count(x => x.Team == team);
+
+        return squadsCount >= ListUI.Squads.Length;
+    }
+    public static bool AreSquadLimited(ulong team, out int requiredTeammatesForMoreSquads)
+    {
+        int squadsCount = Squads.Count(x => x.Team == team);
+
+        float friendlyCount = PlayerManager.OnlinePlayers.Count(p => p.GetTeam() == team);
+        int maxSquads = Mathf.CeilToInt((friendlyCount + 3) / Squad.SQUAD_MAX_MEMBERS);
+
+        requiredTeammatesForMoreSquads = Squad.SQUAD_MAX_MEMBERS * maxSquads - 3 + 1;
+
+        return squadsCount >= maxSquads;
     }
     void IUIListener.HideUI(UCPlayer player)
     {
