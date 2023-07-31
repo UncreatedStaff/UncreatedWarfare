@@ -92,7 +92,7 @@ internal class VehicleDamageCalculator
             damageRegister.Remove(vehicle);
             //L.LogDebug($"Successfully applied {multiplier}x damage: {finalDamage}");
         }
-        else if (!IgnoreArmorMultiplier.Contains(vehicleComponent.LastItem))
+        else if (!IgnoreArmorMultiplier.Contains(vehicleComponent.LastItem) && !vehicleComponent.IsEmplacement)
         {
             finalDamage = (ushort)Mathf.RoundToInt(finalDamage * 0.1f);
             //L.LogDebug($"No direct hit, applied 0.1x damage: {finalDamage}");
