@@ -18,15 +18,12 @@ internal class ProjectileComponent : MonoBehaviour
     private bool _isExploded;
     public float LaunchTime;
     private static readonly MethodInfo? ExplodeMethod = typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.NonPublic | BindingFlags.Instance);
-    public bool IgnoreArmor { get; private set; }
     [UsedImplicitly]
     private void Awake()
     {
         UnityInstanceID = gameObject.GetInstanceID();
         RocketComponent = GetComponent<Rocket>();
         _isExploded = false;
-
-        IgnoreArmor = transform.Find("IgnoreArmor") != null;
     }
     [UsedImplicitly]
     private void Start()

@@ -32,12 +32,16 @@ internal class VehicleDamageCalculator
         //new Guid("229d2003673d41949cfed6bdb07c9c5a"), // Eurocopter gun
         //new Guid("61423656d457489fb7f6928e907c03b3"), // Z-10 gun
     };
+    private static readonly List<Guid> IgnoreArmorMultiplier = new List<Guid>()
+    {
+        new Guid("06cdbbf06436409b9c3ba9237cc486aa"), // F-15 bombs
+        new Guid("8b61f77fa7194baaba65d1ec0a5c0e87"), // Su-34 bombs
+        new Guid("433ea5249699420eb7adb67791a98134"), // F-15 laser guided
+        new Guid("3754ca2527ee40e2ad0951c8930efb07"), // Su-34 laser guided
+    };
 
     public static float GetComponentDamageMultiplier(ProjectileComponent projectileComponent, Collider vehicleCollider)
     {
-        if (projectileComponent.IgnoreArmor)
-            return 1;
-
         float multiplier = 1;
 
         if (vehicleCollider.name.StartsWith("damage_"))
@@ -72,12 +76,12 @@ internal class VehicleDamageCalculator
     }
     public static void ApplyAdvancedDamage(InteractableVehicle vehicle, ref ushort finalDamage)
     {
+        VehicleComponent? vehicleComponent = vehicle.transform.GetComponentInChildren<VehicleComponent>();
+
         //L.LogDebug("Attempting to apply damage...");
         if (damageRegister.TryGetValue(vehicle, out float multiplier))
         {
             finalDamage = (ushort)Mathf.RoundToInt(finalDamage * multiplier);
-
-            VehicleComponent? vehicleComponent = vehicle.transform.GetComponentInChildren<VehicleComponent>();
 
             if (AirAttackOnly.Contains(vehicleComponent.LastItem) && !vehicleComponent.IsAircraft)
                 finalDamage = (ushort)Mathf.RoundToInt(finalDamage * 0.1f);
@@ -88,7 +92,7 @@ internal class VehicleDamageCalculator
             damageRegister.Remove(vehicle);
             //L.LogDebug($"Successfully applied {multiplier}x damage: {finalDamage}");
         }
-        else
+        else if (!IgnoreArmorMultiplier.Contains(vehicleComponent.LastItem))
         {
             finalDamage = (ushort)Mathf.RoundToInt(finalDamage * 0.1f);
             //L.LogDebug($"No direct hit, applied 0.1x damage: {finalDamage}");
