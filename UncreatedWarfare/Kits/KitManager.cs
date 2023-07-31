@@ -2234,7 +2234,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             // recheck limits to make sure people can't request at the same time to avoid limits.
             if (kit.IsLimited(out _, out allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
                 throw ctx.Reply(T.RequestKitLimited, allowedPlayers);
-            
+
             ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
 
             if (!await GrantKitRequest(ctx, proxy, token).ConfigureAwait(false))
@@ -2244,7 +2244,19 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             }
 
             if (kit.Class == Class.Squadleader)
-                TryCreateKitOnRequestSquadleaderKit(ctx);
+            {
+                if (kit.Class == Class.Squadleader)
+                {
+                    if (SquadManager.MaxSquadsReached(team))
+                        throw ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
+
+                    if (SquadManager.AreSquadLimited(team, out int requiredTeammatesForMoreSquads))
+                        throw ctx.Reply(T.SquadsTooManyPlayerCount, requiredTeammatesForMoreSquads);
+                }
+                else
+                    TryCreateKitOnRequestSquadleaderKit(ctx);
+            }
+                
         }
         finally
         {
