@@ -1,20 +1,19 @@
 ﻿#define USE_DEBUGGER
+using Cysharp.Threading.Tasks;
 using JetBrains.Annotations;
 using SDG.Framework.Modules;
+using SDG.Framework.Utilities;
 using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
-using SDG.Framework.Utilities;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
@@ -35,7 +34,6 @@ using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using UnityEngine.LowLevel;
 
 namespace Uncreated.Warfare;
 
@@ -43,7 +41,7 @@ public delegate void VoidDelegate();
 public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
-    public static readonly Version Version = new Version(3, 0, 1, 1);
+    public static readonly Version Version = new Version(3, 2, 5, 0);
     private readonly SystemConfig _config = UCWarfareNexus.Active ? new SystemConfig() : null!;
     private readonly List<UCTask> _tasks = UCWarfareNexus.Active ? new List<UCTask>(16) : null!;
     public static UCWarfare I;

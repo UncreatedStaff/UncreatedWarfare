@@ -386,7 +386,7 @@ public static class DailyQuests
 #endif
         if (tracker.QuestData != null)
         {
-            L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.GetDisplayString() + "\"", ConsoleColor.Cyan);
+            L.Log($"[{tracker.Player!.Steam64}] Daily quest {tracker.QuestData.QuestType} completed: \"{Util.RemoveRichText(tracker.GetDisplayString())}\"", ConsoleColor.Cyan);
         }
         ToastMessage.QueueMessage(tracker.Player!, new ToastMessage(ToastMessageStyle.Large, new string[] { "Daily Quest Completed!", tracker.GetDisplayString(), string.Empty }));
         tracker.TryGiveRewards();
