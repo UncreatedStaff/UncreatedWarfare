@@ -1,8 +1,8 @@
-﻿using SDG.NetTransport;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -47,11 +47,15 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     private static readonly FOBConfig ConfigFile = new FOBConfig(); 
     public static readonly FOBListUI ListUI = new FOBListUI();
     public static readonly NearbyResourceUI ResourceUI = new NearbyResourceUI();
+    private readonly IFOB?[] _team1List = new IFOB?[ListUI.FOBs.Length * 2];
+    private readonly IFOB?[] _team2List = new IFOB?[ListUI.FOBs.Length * 2];
 
     public static FOBConfigData Config => ConfigFile.Data;
     public static bool Loaded => _singleton.IsLoaded();
     public IReadOnlyList<IFOBItem> FloatingItems { get; private set; }
     public IReadOnlyList<IFOB> FOBs { get; private set; }
+    public IReadOnlyList<IFOB?> Team1ListEntries { get; private set; }
+    public IReadOnlyList<IFOB?> Team2ListEntries { get; private set; }
 
     public override void Load()
     {
@@ -63,6 +67,17 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         _fobs = new List<IFOB>(24);
         FloatingItems = _floatingItems.AsReadOnly();
         FOBs = _fobs.AsReadOnly();
+        Team1ListEntries = new ReadOnlyCollection<IFOB?>(_team1List);
+        Team2ListEntries = new ReadOnlyCollection<IFOB?>(_team2List);
+        int ct = Math.Max(_team1List.Length, _team2List.Length);
+        for (int i = 0; i < ct; ++i)
+        {
+            if (i < _team1List.Length)
+                _team1List[i] = null;
+            if (i < _team2List.Length)
+                _team2List[i] = null;
+        }
+        ListUI.Update(this);
         for (int i = 0; i < Config.Buildables.Count; ++i)
         {
             BuildableData data = Config.Buildables[i];
@@ -116,19 +131,17 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     private void AddFOB(IFOB fob)
     {
+        AddFOBToList(fob.Team, fob);
         for (int i = 0; i < _fobs.Count; ++i)
         {
             if (GetFOBPriority(_fobs[i]) > GetFOBPriority(fob))
             {
                 _fobs.Insert(i, fob);
-                for (int j = i; j < _fobs.Count; ++j)
-                    UpdateFOBListForTeam(_fobs[j].Team, _fobs[j]);
                 return;
             }
         }
 
         _fobs.Add(fob);
-        UpdateFOBListForTeam(fob.Team, fob);
     }
     public static void ShowResourceToast(LanguageSet set, int build = 0, int ammo = 0, string? message = null)
     {
@@ -246,7 +259,12 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     internal static void EnsureDisposed(IFOB fob)
     {
-        _singleton?._fobs.Remove(fob);
+        if (_singleton == null)
+            return;
+        if (_singleton._fobs.Remove(fob))
+        {
+            _singleton.RemoveFOBFromList(fob.Team, fob);
+        }
     }
     public static InteractableVehicle SpawnEmplacement(VehicleAsset asset, Vector3 position, Quaternion rotation, ulong owner, ulong group)
     {
@@ -414,7 +432,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         return null;
     }
 
-    void IJoinedTeamListener.OnJoinTeam(UCPlayer player, ulong team) => SendFOBList(player);
+    void IJoinedTeamListener.OnJoinTeam(UCPlayer player, ulong team) => ListUI.UpdateFor(this, player);
     void ILevelStartListener.OnLevelReady()
     {
 #if DEBUG
@@ -436,8 +454,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     void IGameStartListener.OnGameStarting(bool isOnLoad)
     {
-        SendFOBListToTeam(1);
-        SendFOBListToTeam(2);
+        ListUI.Update(this);
     }
     void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
     {
@@ -591,6 +608,13 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 int c = 0;
                 float rad = Config.FOBBuildPickupRadius * 2;
                 float sqrRad = rad * rad;
+                int uiSpace = GetUIRemainingSpace(team);
+                if (uiSpace < 1)
+                {
+                    e.OriginalPlacer?.SendChat(T.BuildMaxFOBsHit);
+                    e.Break();
+                    return;
+                }
                 for (int i = 0; i < _fobs.Count; ++i)
                 {
                     IFOB f = _fobs[i];
@@ -645,7 +669,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 Tips.TryGiveTip(e.Owner, 3, T.TipPlaceBunker);
                 StatsManager.ModifyStats(e.Owner.Steam64, s => ++s.FobsBuilt, false);
             }
-            SendFOBListToTeam(fob.Team);
             return;
         }
 
@@ -699,7 +722,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 }
                 else return;
 
-                SendFOBListToTeam(team);
+                ListUI.Update(this, team);
             }
         }
         else if (e.Transform.TryGetComponent(out Cache.CacheComponent c))
@@ -757,45 +780,45 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         fob = null!;
         return false;
     }
-    public static SpecialFOB RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string color, bool disappearAroundEnemies)
+    public SpecialFOB RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string color, bool disappearAroundEnemies)
     {
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
         SpecialFOB fob = new SpecialFOB(name, point, team, color, disappearAroundEnemies);
         _singleton.AddFOB(fob);
 
-        SendFOBListToTeam(team);
         return fob;
     }
     public static Cache RegisterNewCache(BarricadeDrop drop, ulong team, CacheLocation location)
     {
         ThreadUtil.assertIsGameThread();
         _singleton.AssertLoaded();
+        
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        Cache cache = new Cache(drop, team, location);
+        int number;
         if (Data.Is(out Insurgency insurgency))
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            Cache cache = new Cache(drop, team, location);
-            int number;
             List<Insurgency.CacheData> caches = insurgency.ActiveCaches;
             if (caches.Count == 0)
                 number = insurgency.CachesDestroyed + 1;
             else
                 number = caches.Last().Number + 1;
-
-            cache.Number = number;
-            cache.Name = "CACHE" + number;
-
-            _singleton.AddFOB(cache);
-
-            if (Gamemode.Config.EffectMarkerCacheDefend.ValidReference(out Guid effectGuid))
-                IconManager.AttachIcon(effectGuid, drop.model, insurgency.DefendingTeam, 3.25f);
-
-            return cache;
         }
-        
-        return null!;
+        else number = 0;
+
+        cache.Number = number;
+        cache.Name = number == 0 ? "CACHE" : ("CACHE" + number);
+
+        _singleton.AddFOB(cache);
+
+        if (Data.Is(out IAttackDefense atk) && Gamemode.Config.EffectMarkerCacheDefend.ValidReference(out Guid effectGuid))
+            IconManager.AttachIcon(effectGuid, drop.model, atk.DefendingTeam, 3.25f);
+
+        return cache;
+
     }
     public void DeleteFOB(IFOB fob, ulong instigator = 0)
     {
@@ -808,11 +831,14 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         UCPlayer? killer = UCPlayer.FromID(instigator);
         fob.Instigator = killer;
-
-        _fobs.RemoveAll(x => x.Equals(fob));
         
         if (fob is FOB f2)
             f2.Destroy();
+        else
+        {
+            RemoveFOBFromList(team, fob);
+            _fobs.RemoveAll(x => x.Equals(fob));
+        }
         if (fob is IDisposable d)
             d.Dispose();
 
@@ -860,8 +886,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
                 }
             }
         }
-
-        SendFOBListToTeam(team);
     }
     
     public static bool TryFindFOB(string name, ulong team, out IDeployable fob)
@@ -901,146 +925,164 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         fob = null!;
         return false;
     }
-    public static void UpdateFOBListForTeam(ulong team, IFOB? fob = null, bool resourcesOnly = false)
+    private void OnGroupChanged(GroupChanged e)
     {
-        ThreadUtil.assertIsGameThread();
-        if (_singleton is { IsUnloading: false })
-            _singleton.AssertLoaded();
-        if (Data.Gamemode is not { State: State.Active or State.Staging })
-            return;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        List<IFOB> list = _singleton._fobs;
-
-        if (fob != null)
+        ListUI.UpdateFor(this, e.Player);
+    }
+    internal int UpdateFOBInList(ulong team, IFOB fob, bool resourcesOnly = false)
+    {
+        IFOB?[] fobs = team switch
         {
-            bool teams = Data.Is<ITeams>();
-            if (teams && team == 0) return;
-
-            int max = ListUI.FOBNames.Length;
-            int index = -1;
-            bool found = false;
-            int i = 0;
-            for (; i < list.Count && index < max; ++i)
+            1ul => _team1List,
+            2ul => _team2List,
+            _ => throw new ArgumentOutOfRangeException(nameof(team))
+        };
+        int index = -1;
+        for (int i = 0; i < fobs.Length; ++i)
+        {
+            IFOB? fob2 = fobs[i];
+            if (fob2 != fob)
             {
-                if (!teams || list[i].Team != team) continue;
-                ++index;
-                if (list[i].Equals(fob))
+                if (fob2 == null)
+                    break;
+                continue;
+            }
+
+            index = i;
+            break;
+        }
+
+        if (index == -1)
+            return -1;
+
+        L.LogDebug($"[FOBS] [{fob.Name.ToUpper()}] Updating fob list.");
+        ListUI.UpdateFor(LanguageSet.OnTeam(team), fobs, index, resourcesOnly);
+        return index;
+    }
+    // sorted by priority
+    internal int AddFOBToList(ulong team, IFOB fob)
+    {
+        IFOB?[] fobs = team switch
+        {
+            1ul => _team1List,
+            2ul => _team2List,
+            _ => throw new ArgumentOutOfRangeException(nameof(team))
+        };
+        int index = -1;
+        int priority = GetFOBPriority(fob);
+        for (int i = 0; i < fobs.Length; ++i)
+        {
+            IFOB? fob2 = fobs[i];
+            if (fob2 == null)
+            {
+                index = i;
+                break;
+            }
+            int priority2 = GetFOBPriority(fob2);
+            if (priority2 <= priority)
+                continue;
+            index = i;
+            break;
+        }
+
+        return AddFOBToList(team, fob, index);
+    }
+    internal int AddFOBToList(ulong team, IFOB fob, int index)
+    {
+        IFOB?[] fobs = team switch
+        {
+            1ul => _team1List,
+            2ul => _team2List,
+            _ => throw new ArgumentOutOfRangeException(nameof(team))
+        };
+        if (index >= fobs.Length)
+            index = fobs.Length - 1;
+        if (index < 0)
+        {
+            for (int i = 0; i < fobs.Length; ++i)
+            {
+                if (fobs[i] == null)
                 {
-                    found = true;
+                    index = i;
                     break;
                 }
             }
+        }
 
-            if (found && index < max)
+        if (index < 0)
+            return -1;
+
+        for (int i = fobs.Length - 1; i > index; --i)
+        {
+            if (fobs[i - 1] == null)
+                break;
+            fobs[i] = fobs[i - 1];
+        }
+
+        fobs[index] = fob;
+        ListUI.UpdatePast(this, index, team);
+        L.LogDebug($"[FOBS] [{fob.Name.ToUpper()}] Adding to fob list.");
+        return index;
+    }
+    internal bool RemoveFOBFromList(ulong team, IFOB fob)
+    {
+        IFOB?[] fobs = team switch
+        {
+            1ul => _team1List,
+            2ul => _team2List,
+            _ => throw new ArgumentOutOfRangeException(nameof(team))
+        };
+
+        int index = -1;
+
+        for (int i = 0; i < fobs.Length; ++i)
+        {
+            if (fobs[i] == fob)
             {
-                IFOB f = list[i];
-                foreach (LanguageSet set in LanguageSet.OnTeam(team))
-                {
-                    string? resx = (f as IResourceFOB)?.UIResourceString;
-                    string? txt = resourcesOnly ? null : T.FOBUI.Translate(set.Language, f, f.GridLocation, f.ClosestLocation, null, set.Team);
-                    while (set.MoveNext())
-                    {
-                        if (!set.Next.HasFOBUI)
-                            SendFOBList(set.Next);
-                        else
-                        {
-                            if (set.Next.HasUIHidden)
-                                continue;
-                            if (txt is not null)
-                                ListUI.FOBNames[index].SetText(set.Next.Connection, txt);
-                            if (resx is not null)
-                                ListUI.FOBResources[index].SetText(set.Next.Connection, resx);
-                        }
-                    }
-                }
-                return;
+                index = i;
+                break;
             }
         }
-        SendFOBListToTeam(team);
-    }
-    public static void SendFOBListToTeam(ulong team)
-    {
-        ThreadUtil.assertIsGameThread();
-        if (Data.Gamemode is not { State: State.Active or State.Staging })
-            return;
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        bool teams = Data.Is<ITeams>();
-        if (teams && team == 0) return;
 
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-        {
-            UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            if (!teams || pl.GetTeam() == team)
-                SendFOBList(PlayerManager.OnlinePlayers[i]);
-        }
-    }
-
-    public static void HideFOBList(UCPlayer player)
-    {
-        ThreadUtil.assertIsGameThread();
-        ListUI.ClearFromPlayer(player.Player.channel.owner.transportConnection);
-        player.HasFOBUI = false;
-    }
-    public static void SendFOBList(UCPlayer player)
-    {
-        if (player.HasUIHidden || Data.Gamemode is not { State: State.Active or State.Staging })
-        {
-            if (player.HasFOBUI)
-                HideFOBList(player);
-            return;
-        }
-        ulong team = player.GetTeam();
-        if (team is not 1 and not 2)
-        {
-            HideFOBList(player);
-            return;
-        }
-
-        if (_singleton is { IsUnloading: false })
-            _singleton.AssertLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ITransportConnection connection = player.Connection;
+        if (index == -1)
+            return false;
         
-        ListUI.SendToPlayer(connection);
-        player.HasFOBUI = true;
+        for (int i = index; i < fobs.Length - 1; ++i)
+        {
+            fobs[i] = fobs[i + 1];
+            if (fobs[i] == null)
+                break;
+        }
 
-        List<IFOB> fobs = _singleton._fobs;
-        int max = ListUI.FOBParents.Length;
-        int i2 = 0;
-        for (int i = 0; i < fobs.Count && i2 < max; ++i)
-        {
-            if (fobs[i].Team != team)
-                continue;
-            IFOB fob = fobs[i];
-            ListUI.FOBParents[i2].SetVisibility(connection, true);
-            ListUI.FOBNames[i2].SetText(connection, T.FOBUI.Translate(player, false, fob, fob.GridLocation, fob.ClosestLocation));
-            ListUI.FOBResources[i2].SetText(connection, fob is IResourceFOB r ? r.UIResourceString : string.Empty);
-            i2++;
-        }
-        for (; i2 < max; i2++)
-        {
-            ListUI.FOBParents[i2].SetVisibility(connection, false);
-        }
+        L.LogDebug($"[FOBS] [{fob.Name.ToUpper()}] Removed from fob list.");
+        ListUI.UpdatePast(this, index, team);
+        return true;
     }
-    private static void OnGroupChanged(GroupChanged e)
+    internal int GetUIRemainingSpace(ulong team)
     {
-        if (e.NewGroup.GetTeam() is > 0 and < 3)
-            SendFOBList(e.Player);
+        IFOB?[] fobs = team switch
+        {
+            1ul => _team1List,
+            2ul => _team2List,
+            _ => throw new ArgumentOutOfRangeException(nameof(team))
+        };
+        int ct = Math.Min(fobs.Length, ListUI.FOBs.Length);
+        for (int i = 0; i < ct; ++i)
+        {
+            if (fobs[i] == null)
+                return ct - i;
+        }
+
+        return 0;
     }
     void IUIListener.HideUI(UCPlayer player)
     {
-        HideFOBList(player);
+        ListUI.Hide(player);
         ResourceUI.ClearFromPlayer(player.Connection);
     }
     void IUIListener.ShowUI(UCPlayer player)
     {
-        SendFOBList(player);
+        ListUI.UpdateFor(this, player);
         for (int i = 0; i < _fobs.Count; ++i)
         {
             if (_fobs[i] is FOB fob && fob.FriendliesNearby.Contains(player))
@@ -1053,7 +1095,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     void IUIListener.UpdateUI(UCPlayer player)
     {
-        SendFOBList(player);
+        ListUI.UpdateFor(this, player);
         for (int i = 0; i < _fobs.Count; ++i)
         {
             if (_fobs[i] is FOB fob && fob.FriendliesNearby.Contains(player))
@@ -1077,6 +1119,7 @@ public class FOBConfigData : JSONConfigData
     public int TicketsFOBRadioLost;
     public float BaseFOBRepairHits;
     public float SalvageRefundPercentage;
+    public float RepairBuildDiscountPercentage;
 
     public float AmmoCommandCooldown;
     public ushort AmmoCrateRequiredBuild;
@@ -1121,6 +1164,7 @@ public class FOBConfigData : JSONConfigData
         // amount of hits it takes to full repair a radio. 30 dmg x 20 = 600 total hp
         BaseFOBRepairHits = 20;
         SalvageRefundPercentage = 75f;
+        RepairBuildDiscountPercentage = 20f; // 20% off
 
         AmmoCrateRequiredBuild = 2;
         AmmoCommandCooldown = 120f;

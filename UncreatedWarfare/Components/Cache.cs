@@ -162,11 +162,13 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
     }
     internal void OnAttackerEntered(UCPlayer player)
     {
-        FOBManager.UpdateFOBListForTeam(Team, this);
+        if (Data.Singletons.TryGetSingleton(out FOBManager fobManager))
+            fobManager.UpdateFOBInList(Team, this);
     }
     internal void OnAttackerLeft(UCPlayer player)
     {
-        FOBManager.UpdateFOBListForTeam(Team, this);
+        if (Data.Singletons.TryGetSingleton(out FOBManager fobManager))
+            fobManager.UpdateFOBInList(Team, this);
     }
 
     public override string ToString()
@@ -222,7 +224,7 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
         }
         public void SpawnAttackIcon()
         {
-            if (Data.Is(out Insurgency ins) && Gamemode.Config.EffectMarkerCacheAttack.ValidReference(out Guid effect))
+            if (Data.Is(out IAttackDefense ins) && Gamemode.Config.EffectMarkerCacheAttack.ValidReference(out Guid effect))
             {
                 IconManager.AttachIcon(effect, _structure.model, ins.AttackingTeam, 30F);
             }

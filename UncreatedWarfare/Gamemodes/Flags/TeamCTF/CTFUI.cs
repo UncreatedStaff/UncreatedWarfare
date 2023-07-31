@@ -204,7 +204,7 @@ public static class CTFUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (player == null) return;
+        if (player == null || player.HasUIHidden) return;
         ulong team = player.GetTeam();
         if (team < 1 || team > 3) return;
         if (Data.Is(out IFlagRotation gm))
@@ -297,7 +297,7 @@ public static class CTFUI
             {
                 UCPlayer player = PlayerManager.OnlinePlayers[i];
                 ulong team = player.GetTeam();
-                if (team < 1 || team > 3) continue;
+                if (team < 1 || team > 3 || player.HasUIHidden) continue;
                 if (!flag.Discovered(team)) continue;
                 ITransportConnection c = player.Player.channel.owner.transportConnection;
                 int i3 = team == 2 ? rotation.Count - index - 1 : index;

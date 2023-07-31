@@ -10,6 +10,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Singletons;
@@ -22,6 +23,7 @@ using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
+using XPReward = Uncreated.Warfare.Quests.XPReward;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 public sealed partial class Conquest :
@@ -169,6 +171,21 @@ public sealed partial class Conquest :
         PrintFlagRotation();
         EvaluatePoints();
     }
+
+    protected override void EventLoopAction()
+    {
+        if (State == State.Active && EveryXSeconds(20f))
+        {
+            for (int j = 0; j < FlagRotation.Count; ++j)
+            {
+                Flag flag = FlagRotation[j];
+                for (int i = 0; i < flag.PlayersOnFlag.Count; ++i)
+                    Points.AwardXP(flag.PlayersOnFlag[i], flag.PlayersOnFlag[i].GetTeam() == flag.Owner ? Levels.XPReward.DefendingFlag : Levels.XPReward.AttackingFlag, 0.75f);
+            }
+        }
+        base.EventLoopAction();
+    }
+
     public override void InitFlag(Flag flag)
     {
         base.InitFlag(flag);
@@ -231,14 +248,18 @@ public sealed partial class Conquest :
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Chat.Broadcast(T.FlagNeutralized, flag);
-        if (neutralizingTeam == 1)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.Steam64).ToArray(), neutralizingTeam);
-        else if (neutralizingTeam == 2)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.Steam64).ToArray(), neutralizingTeam);
         for (int i = 0; i < Singletons.Count; ++i)
         {
             if (Singletons[i] is IFlagNeutralizedListener f)
                 f.OnFlagNeutralized(flag, neutralizingTeam, lostTeam);
+        }
+        List<UCPlayer> playerList = neutralizingTeam == 1ul ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2;
+        QuestManager.OnFlagNeutralized(playerList.Select(x => x.Steam64).ToArray(), neutralizingTeam);
+
+        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(neutralizingTeam, 0) + " NEUTRALIZED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam, 0));
+        foreach (UCPlayer player in playerList)
+        {
+            Points.AwardXP(player, Levels.XPReward.FlagNeutralized, 0.25f);
         }
     }
     private void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
@@ -256,8 +277,16 @@ public sealed partial class Conquest :
             if (Singletons[i] is IFlagCapturedListener f)
                 f.OnFlagCaptured(flag, capturedTeam, lostTeam);
         }
-        QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
-            .Select(x => x.Steam64).ToArray());
+
+        List<UCPlayer> playerList = capturedTeam == 1ul ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2;
+        if (capturedTeam != 0)
+            QuestManager.OnObjectiveCaptured(playerList.Select(x => x.Steam64).ToArray());
+
+        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(capturedTeam, 0) + " CAPTURED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam, 0));
+        foreach (UCPlayer player in playerList)
+        {
+            Points.AwardXP(player, Levels.XPReward.FlagCaptured, 0.25f);
+        }
     }
     private void UpdateFlag(Flag flag)
     {

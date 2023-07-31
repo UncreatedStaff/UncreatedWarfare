@@ -634,8 +634,6 @@ public static class EventFunctions
                 {
                     if (UCPlayer.LoadingUI.IsValid)
                         UCPlayer.LoadingUI.ClearFromPlayer(ucplayer.Connection);
-                    if (isNewPlayer)
-                        ToastMessage.QueueMessage(ucplayer, ToastMessage.Popup(T.WelcomeMessageTitle.Translate(ucplayer), T.WelcomeMessage.Translate(ucplayer), T.ButtonOK.Translate(ucplayer)));
                 }
             }, token);
             ucplayer.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);

@@ -320,7 +320,7 @@ public class Insurgency :
             }
         }
 
-        FOBManager.UpdateFOBListForTeam(DefendingTeam, cache);
+        FOBManager.UpdateFOBInList(DefendingTeam, cache);
 
         cache.SpawnAttackIcon();
 
@@ -466,9 +466,9 @@ public class Insurgency :
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
                 if (player.GetTeam() == AttackingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, new string[] { T.CacheDestroyedAttack.Translate(player), string.Empty, string.Empty }));
+                    ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, T.CacheDestroyedAttack.Translate(player)));
                 else if (player.GetTeam() == DefendingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, new string[] { T.CacheDestroyedDefense.Translate(player), string.Empty, string.Empty }));
+                    ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, T.CacheDestroyedDefense.Translate(player)));
             }
 
             if (ActiveCachesCount == 0)

@@ -1037,6 +1037,24 @@ public class DeathCause : IJsonReadWrite, IEquatable<DeathCause>, ICloneable
     }
 
     public override bool Equals(object obj) => obj is DeathCause c && Equals(c);
+
+    // ReSharper disable NonReadonlyMemberInGetHashCode
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            int hashCode = Cause.GetHashCode();
+            hashCode = (hashCode * 397) ^ ItemCause.GetHashCode();
+            hashCode = (hashCode * 397) ^ VehicleCause.GetHashCode();
+            hashCode = (hashCode * 397) ^ (CustomKey != null ? CustomKey.GetHashCode() : 0);
+            hashCode = (hashCode * 397) ^ Translations.GetHashCode();
+            return hashCode;
+        }
+    }
+    // ReSharper restore NonReadonlyMemberInGetHashCode
+
+    public static bool operator ==(DeathCause? left, DeathCause? right) => Equals(left, right);
+    public static bool operator !=(DeathCause? left, DeathCause? right) => !(left == right);
     public object Clone()
     {
         DeathTranslation[] newTranslations = new DeathTranslation[Translations.Length];

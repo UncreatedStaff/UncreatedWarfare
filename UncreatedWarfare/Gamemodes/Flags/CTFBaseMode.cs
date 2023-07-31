@@ -26,7 +26,7 @@ using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
-public delegate void ObjectiveChangedDelegate(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj);
+public delegate void ObjectiveChangedDelegate(Flag oldObjective, Flag newObjective, ulong team, int oldObjectiveIndex, int newObjectiveIndex);
 public delegate void FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
 public delegate void FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
 public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvider> :
@@ -269,32 +269,35 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 
         if (EveryXSeconds(20f))
         {
+            float mult = GetCaptureXPMultiplier();
             for (int i = 0; i < FlagRotation.Count; i++)
             {
                 Flag flag = FlagRotation[i];
                 if (flag.LastDeltaPoints > 0 && flag.Owner != 1)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam1[j], XPReward.AttackingFlag);
+                        Points.AwardXP(flag.PlayersOnFlagTeam1[j], XPReward.AttackingFlag, mult);
                 }
                 else if (flag.LastDeltaPoints < 0 && flag.Owner != 2)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam2[j], XPReward.AttackingFlag);
+                        Points.AwardXP(flag.PlayersOnFlagTeam2[j], XPReward.AttackingFlag, mult);
                 }
                 else if (flag.Owner == 1 && flag.IsObj(2) && flag.Team2TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam1[j], XPReward.DefendingFlag);
+                        Points.AwardXP(flag.PlayersOnFlagTeam1[j], XPReward.DefendingFlag, mult);
                 }
                 else if (flag.Owner == 2 && flag.IsObj(1) && flag.Team1TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam2[j], XPReward.DefendingFlag);
+                        Points.AwardXP(flag.PlayersOnFlagTeam2[j], XPReward.DefendingFlag, mult);
                 }
             }
         }
     }
+
+    protected virtual float GetCaptureXPMultiplier() => 1f;
     protected virtual void InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
 #if DEBUG
@@ -306,9 +309,16 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             if (Singletons[i] is IFlagCapturedListener f)
                 f.OnFlagCaptured(flag, capturedTeam, lostTeam);
         }
-        QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
-            .Select(x => x.Steam64).ToArray());
-        
+        List<UCPlayer> playerList = capturedTeam == 1ul ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2;
+        if (capturedTeam != 0)
+            QuestManager.OnObjectiveCaptured(playerList.Select(x => x.Steam64).ToArray());
+
+        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(capturedTeam, 0) + " CAPTURED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam, 0));
+        float mult = GetCaptureXPMultiplier();
+        foreach (UCPlayer player in playerList)
+        {
+            Points.AwardXP(player, XPReward.FlagCaptured, mult);
+        }
     }
     protected virtual void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
@@ -321,6 +331,13 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             if (Singletons[i] is IFlagNeutralizedListener f)
                 f.OnFlagNeutralized(flag, capturedTeam, lostTeam);
         }
+        List<UCPlayer> playerList = capturedTeam == 1ul ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2;
+        QuestManager.OnFlagNeutralized(playerList.Select(x => x.Steam64).ToArray(), capturedTeam);
+
+        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(capturedTeam, 0) + " NEUTRALIZED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam, 0));
+        float mult = GetCaptureXPMultiplier();
+        foreach (UCPlayer player in playerList)
+            Points.AwardXP(player, XPReward.FlagNeutralized, mult);
     }
     protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
     {

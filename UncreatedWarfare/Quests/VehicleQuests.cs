@@ -4,6 +4,7 @@ using System.Text.Json;
 using Uncreated.Json;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -260,11 +261,11 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
             if (Vehicles.Behavior == ChoiceBehavior.Inclusive && Vehicles.ValueType == DynamicValueType.Wildcard)
             {
                 if (VehicleType.Behavior == ChoiceBehavior.Inclusive && VehicleType.ValueType == DynamicValueType.Wildcard)
-                    return QuestData!.Translate(forAsset, _player, _travelled, Distance, "any vehicle");
-                return QuestData!.Translate(forAsset, _player, _travelled, Distance, translationCache1);
+                    return QuestData!.Translate(forAsset, _player, Mathf.RoundToInt(_travelled), Distance, "any vehicle");
+                return QuestData!.Translate(forAsset, _player, Mathf.RoundToInt(_travelled), Distance, translationCache1);
             }
             
-            return QuestData!.Translate(forAsset, _player, _travelled, Distance, translationCache2);
+            return QuestData!.Translate(forAsset, _player, Mathf.RoundToInt(_travelled), Distance, translationCache2);
         }
         public override void ManualComplete()
         {
@@ -379,7 +380,7 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
                 }
             }
         }
-        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _travelled, Distance, Vehicles.GetCommaList());
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, Mathf.RoundToInt(_travelled), Distance, Vehicles.GetCommaList());
         public override void ManualComplete()
         {
             _travelled = Distance;

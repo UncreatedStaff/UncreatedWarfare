@@ -54,11 +54,17 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         {
             if (ReferenceEquals(_bunker, value))
                 return;
+            BunkerComponent? old = _bunker;
             _bunker = value;
             Radius = value == null || value.State != ShovelableComponent.BuildableState.Full
                 ? FOBManager.Config.FOBBuildPickupRadiusNoBunker
                 : FOBManager.Config.FOBBuildPickupRadius;
-            FOBManager.UpdateFOBListForTeam(Team, this);
+            if (((old == null || old.State != ShovelableComponent.BuildableState.Full) && value != null && value.State == ShovelableComponent.BuildableState.Full ||
+                 (value == null || value.State != ShovelableComponent.BuildableState.Full) && old != null && old.State == ShovelableComponent.BuildableState.Full) &&
+                Data.Singletons.TryGetSingleton(out FOBManager fobManager))
+            {
+                fobManager.UpdateFOBInList(Team, this);
+            }
             L.LogDebug($"[FOBS] [{Name}] Radius Updated: {Radius}m.");
         }
     }
@@ -263,14 +269,14 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         if (item is BunkerComponent b)
         {
             Bunker = b;
-            FOBManager.UpdateFOBListForTeam(Team, this);
             L.LogDebug($"[FOBS] [{Name}] Registered bunker: {item.Buildable}.");
             return;
         }
         if (item is RadioComponent c)
         {
+            if (Radio != null && Data.Singletons.TryGetSingleton(out FOBManager fobManager))
+                fobManager.UpdateFOBInList(Team, this);
             Radio = c;
-            FOBManager.UpdateFOBListForTeam(Team, this);
             L.LogDebug($"[FOBS] [{Name}] Registered radio: {item.Buildable}.");
             return;
         }
@@ -650,8 +656,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 UpdateResourceUI(false, true, false);
                 update = true;
             }
-            if (update)
-                FOBManager.UpdateFOBListForTeam(Team, this, true);
+            if (update && Data.Singletons.TryGetSingleton(out FOBManager fobManager))
+                fobManager.UpdateFOBInList(Team, this, true);
         }
         finally
         {
@@ -664,8 +670,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         ThreadUtil.assertIsGameThread();
         if (!build && !ammo)
             return;
-        if (foblist)
-            FOBManager.UpdateFOBListForTeam(Team, this, true);
+        if (foblist && Data.Singletons.TryGetSingleton(out FOBManager fobManager))
+            fobManager.UpdateFOBInList(Team, this, true);
         for (int i = 0; i < FriendliesNearby.Count; ++i)
         {
             UCPlayer player = FriendliesNearby[i];
@@ -759,7 +765,6 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         {
             Bunker = newObj.gameObject.AddComponent<BunkerComponent>();
             Bunker.FOB = this;
-            FOBManager.UpdateFOBListForTeam(Team, this);
             Destroy(b);
             if (Bunker.Icon.ValidReference(out Guid icon))
                 IconManager.AttachIcon(icon, newObj, Bunker.Team, Bunker.IconOffset);
@@ -878,8 +883,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         float oldProxyScore = ProxyScore;
         ProxyScore = proxyScore;
 
-        if (oldProxyScore < 1 && proxyScore >= 1 || oldProxyScore >= 1 && proxyScore < 1)
-            FOBManager.UpdateFOBListForTeam(Team, this);
+        if ((oldProxyScore < 1 && proxyScore >= 1 || oldProxyScore >= 1 && proxyScore < 1) && Data.Singletons.TryGetSingleton(out FOBManager fobManager))
+            fobManager.UpdateFOBInList(Team, this);
 
         if (Data.Gamemode.EverySecond)
         {

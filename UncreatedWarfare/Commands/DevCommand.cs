@@ -56,16 +56,15 @@ public class DevCommand : AsyncCommand
 
             ctx.AssertRanByPlayer();
 
-            if (ctx.TryGetTarget(out BarricadeDrop drop))
+            RaycastInfo cast = DamageTool.raycast(new Ray(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward), 4f, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE, ctx.Caller.Player);
+            if (cast.transform == null)
+                throw ctx.ReplyString("You are not looking at a barricade, structure, or vehicle.", "c7a29f");
+            if (cast.transform.TryGetComponent(out IShovelable shovelable))
             {
-                if (drop.model.TryGetComponent(out IShovelable shovelable))
-                {
-                    shovelable.QuickShovel(ctx.Caller);
-                    ctx.ReplyString($"Successfully built {drop.asset.itemName}", "ebd491");
-                }
-                else throw ctx.ReplyString($"This barricade ({drop.asset.itemName}) is not buildable.", "c7a29f");
+                shovelable.QuickShovel(ctx.Caller);
+                ctx.ReplyString($"Successfully built or repaired {cast.transform.name}", "ebd491");
             }
-            else throw ctx.ReplyString($"You are not looking at a barricade.", "c7a29f");
+            else throw ctx.ReplyString($"This {cast.transform.tag.ToLowerInvariant()} ({cast.transform.name}) is not buildable.", "c7a29f");
         }
         else if (ctx.MatchParameter(0, "logmeta", "logstate", "metadata"))
         {

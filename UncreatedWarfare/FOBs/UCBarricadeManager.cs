@@ -326,6 +326,21 @@ public static class UCBarricadeManager
             }
         }
     }
+    public static IEnumerable<StructureDrop> AllStructures
+    {
+        get
+        {
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    StructureRegion region = StructureManager.regions[x, y];
+                    foreach (StructureDrop structure in region.drops)
+                        yield return structure;
+                }
+            }
+        }
+    }
     public static List<BarricadeDrop> GetBarricadesWhere(Predicate<BarricadeDrop> predicate)
     {
 #if DEBUG

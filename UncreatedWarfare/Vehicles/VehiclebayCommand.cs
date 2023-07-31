@@ -827,7 +827,7 @@ public class VehicleBayCommand : AsyncCommand
     }
 
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
-    private async Task<SqlItem<VehicleData>?> GetVehicleTarget(CommandInteraction ctx, VehicleBay bay, VehicleSpawner spawner, CancellationToken token = default)
+    public static async Task<SqlItem<VehicleData>?> GetVehicleTarget(CommandInteraction ctx, VehicleBay bay, VehicleSpawner spawner, CancellationToken token = default)
     {
         if (ctx.TryGetTarget(out InteractableVehicle vehicle))
         {
@@ -847,7 +847,7 @@ public class VehicleBayCommand : AsyncCommand
         return null;
     }
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
-    private SqlItem<VehicleSpawn>? GetBayTarget(CommandInteraction ctx, VehicleSpawner spawner)
+    public static SqlItem<VehicleSpawn>? GetBayTarget(CommandInteraction ctx, VehicleSpawner spawner)
     {
         if (ctx.TryGetTarget(out InteractableVehicle vehicle) && spawner.TryGetSpawn(vehicle, out SqlItem<VehicleSpawn> spawn))
         {
@@ -864,7 +864,7 @@ public class VehicleBayCommand : AsyncCommand
         return null;
     }
     /// <summary>Sign barricade >> Spawner barricade >> Spawner structure >> Linked Vehicle</summary>
-    private BarricadeDrop? GetSignTarget(CommandInteraction ctx, VehicleSpawner spawner, out SqlItem<VehicleSpawn> spawn)
+    public static BarricadeDrop? GetSignTarget(CommandInteraction ctx, VehicleSpawner spawner, out SqlItem<VehicleSpawn> spawn)
     {
         if (ctx.TryGetTarget(out BarricadeDrop drop) && spawner.TryGetSpawn(drop, out spawn))
         {

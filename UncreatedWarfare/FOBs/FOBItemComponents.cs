@@ -137,7 +137,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
         Destroyed
     }
 
-    public bool Shovel(UCPlayer shoveler)
+    public bool Shovel(UCPlayer shoveler, Vector3 point)
     {
         if (shoveler.GetTeam() != Team) return false;
         if (State is RadioState.Bleeding or RadioState.Alive)
@@ -149,7 +149,7 @@ public class RadioComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IShovel
             if (amt == 0)
                 return true;
             BarricadeManager.repair(Barricade.model, amt, 1, shoveler.CSteamID);
-            FOBManager.TriggerBuildEffect(transform.position);
+            FOBManager.TriggerBuildEffect(point);
             Builders.Increment(shoveler.Steam64, amt);
             UpdateHitsUI();
 
@@ -204,6 +204,8 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     private bool _destroyed;
     private int _buildRemoved;
     private float _progressToBuild;
+    private float _progressToRepair;
+    private int _repairBuildRemoved;
     public FOB? FOB { get; set; }
     public BuildableType Type { get; private set; }
     public BuildableState State { get; private set; }
@@ -287,8 +289,10 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         {
             Total = Buildable.RequiredHits;
             State = BuildableState.Foundation;
-            if (Buildable.RequiredHits > 15)
+            if (Buildable.RequiredHits > 8)
                 Icon = Gamemode.Config.EffectMarkerBuildable;
+            if (IconOffset == 0)
+                IconOffset = 1.5f;
         }
         else
         {
@@ -399,10 +403,9 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
     protected virtual void InitStart() { }
     protected virtual void Destroy() { }
 
-    public bool Shovel(UCPlayer shoveler)
+    public bool Shovel(UCPlayer shoveler, Vector3 point)
     {
-        // todo add repairing
-        if (State == BuildableState.Foundation && shoveler.GetTeam() == Team)
+        if (State is BuildableState.Foundation or BuildableState.Full && shoveler.GetTeam() == Team)
         {
             if (FOB == null && !IsFloating)
             {
@@ -416,53 +419,171 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             }
 
             float amount = FOBManager.GetBuildIncrementMultiplier(shoveler);
-
-            L.LogDebug($"[FOBS] [{FOB?.Name ?? "FLOATING"}] Incrementing build: {shoveler} ({Progress} + {amount} = {Progress + amount} / {Total}).");
-            Progress += amount;
-            
-            FOBManager.TriggerBuildEffect(transform.position);
-            
-            Builders.Increment(shoveler.Steam64, amount);
-
-
-            if (FOB != null)
+            float build;
+            if (State == BuildableState.Foundation)
             {
-                float build = (float)Buildable.RequiredBuild / (float)Buildable.RequiredHits * amount;
-                _progressToBuild += build;
-                int build2 = Mathf.FloorToInt(_progressToBuild);
-                L.LogDebug($"[FOBS] [{FOB.Name ?? "FLOATING"}]  Removing build: {build:F4} (rounded to: {build2}) {_progressToBuild:F4}/{FOB.BuildSupply}.");
-                if (FOB.BuildSupply < _progressToBuild && Mathf.Abs(_progressToBuild - FOB.BuildSupply) >= 0.05)
-                {
-                    shoveler.SendChat(T.BuildMissingSupplies, FOB.BuildSupply, Buildable.RequiredBuild - _buildRemoved);
-                    return true;
-                }
-                if (build2 > 0)
-                {
-                    _progressToBuild -= build2;
-                    _buildRemoved += build2;
-                    SendBuildToastToBuilders(-build2);
-                    FOB.ModifyBuild(-build2);
-                }
-            }
+                Progress += amount;
 
-            UpdateHitsUI();
-            if (Progress >= Total || Mathf.Abs(Progress - Total) < 0.05)
-            {
-                int buildRemaining = Buildable.RequiredBuild - _buildRemoved;
-                _progressToBuild = 0;
-                if (FOB != null && buildRemaining > 0)
+                Builders.Increment(shoveler.Steam64, amount);
+
+
+                if (FOB != null)
                 {
-                    if (FOB.BuildSupply < buildRemaining)
+                    build = (float)Buildable.RequiredBuild / (float)Buildable.RequiredHits * amount;
+                    _progressToBuild += build;
+                    int build2 = Mathf.FloorToInt(_progressToBuild);
+                    if (FOB.BuildSupply < _progressToBuild && Mathf.Abs(_progressToBuild - FOB.BuildSupply) >= 0.05)
                     {
                         shoveler.SendChat(T.BuildMissingSupplies, FOB.BuildSupply, Buildable.RequiredBuild - _buildRemoved);
                         return true;
                     }
-
-                    L.LogDebug($"[FOBS] [{FOB.Name ?? "FLOATING"}]  Removing build: {buildRemaining:F4}.");
-                    SendBuildToastToBuilders(-buildRemaining);
-                    FOB?.ModifyBuild(-buildRemaining);
+                    if (build2 > 0)
+                    {
+                        _progressToBuild -= build2;
+                        _buildRemoved += build2;
+                        SendBuildToastToBuilders(-build2);
+                        FOB.ModifyBuild(-build2);
+                    }
                 }
-                Build();
+
+                FOBManager.TriggerBuildEffect(point);
+
+                UpdateHitsUI();
+                if (Progress >= Total || Mathf.Abs(Progress - Total) < 0.05)
+                {
+                    int buildRemaining = Buildable.RequiredBuild - _buildRemoved;
+                    _progressToBuild = 0;
+                    if (FOB != null && buildRemaining > 0)
+                    {
+                        if (FOB.BuildSupply < buildRemaining)
+                        {
+                            shoveler.SendChat(T.BuildMissingSupplies, FOB.BuildSupply, Buildable.RequiredBuild - _buildRemoved);
+                            return true;
+                        }
+                        
+                        SendBuildToastToBuilders(-buildRemaining);
+                        FOB.ModifyBuild(-buildRemaining);
+                    }
+                    Build();
+                    Progress = Total;
+                }
+
+                return true;
+            }
+            
+            ushort maxHealth;
+            ushort health;
+            if (ActiveStructure == null || ActiveStructure.Drop is not BarricadeDrop and not StructureDrop)
+            {
+                if (ActiveVehicle == null)
+                    return false;
+
+                health = ActiveVehicle.health;
+                maxHealth = ActiveVehicle.asset.health;
+            }
+            else
+            {
+                maxHealth = ActiveStructure?.Drop switch
+                {
+                    BarricadeDrop barricade => barricade.asset.health,
+                    StructureDrop structure => structure.asset.health,
+                    _ => 0
+                };
+                health = ActiveStructure!.Drop switch
+                {
+                    BarricadeDrop barricade => barricade.GetServersideData().barricade.health,
+                    _ => ((StructureDrop)ActiveStructure.Drop).GetServersideData().structure.health,
+                };
+            }
+
+            float amt = maxHealth / (float)Buildable.RequiredHits * FOBManager.GetBuildIncrementMultiplier(shoveler);
+            if (health + amt > maxHealth)
+                amt = maxHealth - health;
+            if (amt <= 0)
+                return false;
+
+            build = Buildable.RequiredBuild * (amt / maxHealth) * (1f - FOBManager.Config.RepairBuildDiscountPercentage / 100f);
+            float hits = (float)Buildable.RequiredHits / maxHealth * amt;
+            _progressToRepair += build;
+            int floor = Mathf.FloorToInt(_progressToRepair);
+            int dif = floor - _repairBuildRemoved;
+            bool chargedFob = false;
+            if (dif > 0)
+            {
+                _repairBuildRemoved = floor;
+                if (FOB != null)
+                {
+                    if (FOB.BuildSupply < dif)
+                    {
+                        shoveler.SendChat(T.BuildMissingSupplies, FOB.BuildSupply, dif);
+                        return true;
+                    }
+
+                    Builders.Increment(shoveler.Steam64, hits);
+                    chargedFob = true;
+
+                    SendBuildToastToBuilders(-dif);
+                    FOB.ModifyBuild(-dif);
+                }
+            }
+            else if (FOB != null && FOB.BuildSupply <= 0)
+            {
+                shoveler.SendChat(T.BuildMissingSupplies, 0, dif);
+                return true;
+            }
+
+            if (!chargedFob)
+            {
+                Builders.Increment(shoveler.Steam64, hits);
+            }
+
+            if (ActiveStructure != null)
+            {
+                if (ActiveStructure.Type == StructType.Barricade)
+                    BarricadeManager.repair(ActiveStructure!.Model, amt, 1, shoveler.CSteamID);
+                else
+                    StructureManager.repair(ActiveStructure!.Model, amt, 1, shoveler.CSteamID);
+            }
+            else
+                VehicleManager.repair(ActiveVehicle!, amt, 1, shoveler.CSteamID);
+
+            ushort newHealth;
+            if (ActiveStructure == null || ActiveStructure.Drop is not BarricadeDrop and not StructureDrop)
+            {
+                newHealth = ActiveVehicle!.health;
+            }
+            else
+            {
+                newHealth = ActiveStructure!.Drop switch
+                {
+                    BarricadeDrop barricade => barricade.GetServersideData().barricade.health,
+                    _ => ((StructureDrop)ActiveStructure.Drop).GetServersideData().structure.health,
+                };
+            }
+
+            FOBManager.TriggerBuildEffect(point);
+            Builders.Increment(shoveler.Steam64, amt);
+            UpdateRepairUI(newHealth, maxHealth);
+
+            if (Base != null)
+            {
+                float percent = (float)newHealth / maxHealth;
+                if (percent > 0.9f)
+                    percent = 1f;
+                if (Base.Type == StructType.Barricade)
+                {
+                    maxHealth = (ushort)Mathf.Clamp(Mathf.RoundToInt(percent * ((ItemBarricadeAsset)Base.Asset).health), 0, ushort.MaxValue);
+                    health = ((BarricadeDrop)Base.Drop).GetServersideData().barricade.health;
+                    if (maxHealth > health)
+                        BarricadeManager.repair(Base!.Model, maxHealth - health, 1, shoveler.CSteamID);
+                }
+                else
+                {
+                    maxHealth = (ushort)Mathf.Clamp(Mathf.RoundToInt(percent * ((ItemBarricadeAsset)Base.Asset).health), 0, ushort.MaxValue);
+                    health = ((StructureDrop)Base.Drop).GetServersideData().structure.health;
+                    if (maxHealth > health)
+                        StructureManager.repair(Base!.Model, maxHealth - health, 1, shoveler.CSteamID);
+                }
             }
 
             return true;
@@ -486,6 +607,72 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
             if (Progress >= Total)
                 Build();
         }
+        else if (State != BuildableState.Destroyed)
+        {
+            FOBManager.TriggerBuildEffect(transform.position);
+
+            ushort maxHealth;
+            ushort health;
+            if (ActiveStructure == null || ActiveStructure.Drop is not BarricadeDrop and not StructureDrop)
+            {
+                if (ActiveVehicle == null)
+                    return;
+
+                health = ActiveVehicle.health;
+                maxHealth = ActiveVehicle.asset.health;
+            }
+            else
+            {
+                maxHealth = ActiveStructure?.Drop switch
+                {
+                    BarricadeDrop barricade => barricade.asset.health,
+                    StructureDrop structure => structure.asset.health,
+                    _ => 0
+                };
+                health = ActiveStructure!.Drop switch
+                {
+                    BarricadeDrop barricade => barricade.GetServersideData().barricade.health,
+                    _ => ((StructureDrop)ActiveStructure.Drop).GetServersideData().structure.health,
+                };
+            }
+
+            float amt = maxHealth - health;
+            if (health + amt > maxHealth)
+                amt = maxHealth - health;
+            if (amt <= 0)
+                return;
+
+            if (ActiveStructure != null)
+            {
+                if (ActiveStructure.Type == StructType.Barricade)
+                    BarricadeManager.repair(ActiveStructure!.Model, amt, 1, shoveler.CSteamID);
+                else
+                    StructureManager.repair(ActiveStructure!.Model, amt, 1, shoveler.CSteamID);
+            }
+            else
+                VehicleManager.repair(ActiveVehicle!, amt, 1, shoveler.CSteamID);
+
+            UpdateRepairUI(1, 1);
+            Builders.Increment(shoveler.Steam64, amt);
+            FOBManager.TriggerBuildEffect(transform.position);
+            if (Base != null)
+            {
+                if (Base.Type == StructType.Barricade)
+                {
+                    maxHealth = ((ItemBarricadeAsset)Base.Asset).health;
+                    health = ((BarricadeDrop)Base.Drop).GetServersideData().barricade.health;
+                    if (maxHealth > health)
+                        BarricadeManager.repair(Base!.Model, maxHealth - health, 1, shoveler.CSteamID);
+                }
+                else
+                {
+                    maxHealth = ((ItemBarricadeAsset)Base.Asset).health;
+                    health = ((BarricadeDrop)Base.Drop).GetServersideData().barricade.health;
+                    if (maxHealth > health)
+                        StructureManager.repair(Base!.Model, maxHealth - health, 1, shoveler.CSteamID);
+                }
+            }
+        }
     }
 
     private void UpdateHitsUI()
@@ -495,6 +682,24 @@ public class ShovelableComponent : MonoBehaviour, IManualOnDestroy, IFOBItem, IS
         {
             float time = Time.realtimeSinceStartup;
             ToastMessage msg = new ToastMessage(ToastMessageStyle.ProgressBar, Points.GetProgressBar(Progress, Total, 25));
+            foreach (TickResponsibility responsibility in Builders)
+            {
+                if (time - responsibility.LastUpdated < 5f && UCPlayer.FromID(responsibility.Steam64) is { } pl)
+                    pl.Toasts.Queue(in msg);
+            }
+        }
+        finally
+        {
+            Builders.ReturnLock();
+        }
+    }
+    private void UpdateRepairUI(ushort health, ushort maxHealth)
+    {
+        Builders.RetrieveLock();
+        try
+        {
+            float time = Time.realtimeSinceStartup;
+            ToastMessage msg = new ToastMessage(ToastMessageStyle.ProgressBar, Points.GetProgressBar(health, maxHealth, 25).Colorize("ff9966"));
             foreach (TickResponsibility responsibility in Builders)
             {
                 if (time - responsibility.LastUpdated < 5f && UCPlayer.FromID(responsibility.Steam64) is { } pl)
@@ -768,7 +973,7 @@ public class RepairStationComponent : ShovelableComponent
                     for (int i = 0; i < WorkingVehicles.Count; i++)
                     {
                         InteractableVehicle vehicle = WorkingVehicles[i];
-                        if (vehicle.lockedGroup.m_SteamID.GetTeam() != Team || vehicle.isDead)
+                        if (vehicle.lockedGroup.m_SteamID.GetTeam() != Team || vehicle.isDead || vehicle.TryGetComponent<IFOBItem>(out _))
                             continue;
 
                         if (vehicle.asset.engine is not EEngine.PLANE and not EEngine.HELICOPTER &&
@@ -891,7 +1096,7 @@ public class RepairStationComponent : ShovelableComponent
 public interface IShovelable
 {
     TickResponsibilityCollection Builders { get; }
-    bool Shovel(UCPlayer shoveler);
+    bool Shovel(UCPlayer shoveler, Vector3 point);
     void QuickShovel(UCPlayer shoveler);
 }
 

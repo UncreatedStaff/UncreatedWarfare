@@ -3,6 +3,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.SQL;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
@@ -19,6 +21,11 @@ public class AmmoBagComponent : MonoBehaviour
     {
         Drop = drop;
         Ammo = FOBManager.Config.AmmoBagMaxUses;
+        
+        if (Gamemode.Config.EffectMarkerAmmo.ValidReference(out Guid guid))
+        {
+            IconManager.AttachIcon(guid, drop.model, drop.GetServersideData().group.GetTeam(), 1f);
+        }
         //ResuppliedPlayers = new Dictionary<ulong, int>();
     }
     public async Task ResupplyPlayer(UCPlayer player, SqlItem<Kit> kit, int ammoCost, CancellationToken token = default)

@@ -4,8 +4,10 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SDG.Framework.Utilities;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
 
@@ -13,13 +15,16 @@ namespace Uncreated.Warfare.Components;
 
 public static class IconManager
 {
+    private const float FullTickLoopTime = 0.25f;
     private static readonly List<IconRenderer> Icons = new List<IconRenderer>();
+    private static int _tickIndex;
+    private static float _tickIndexProgress;
     static IconManager()
     {
         EventDispatcher.GroupChanged += OnGroupChanged;
         EventDispatcher.PlayerLeft += OnPlayerLeft;
+        TimeUtility.updated += OnUpdate;
     }
-
     private static void OnPlayerLeft(PlayerEvent e)
     {
         for (int i = Icons.Count - 1; i >= 0; i--)
@@ -28,37 +33,67 @@ public static class IconManager
             if (iconRenderer.Player != e.Steam64)
                 continue;
 
-            Icons.Remove(iconRenderer);
+            Icons.RemoveAt(i);
             iconRenderer.Destroy();
         }
     }
 
-    public static void OnGamemodeReloaded()
+    public static void OnGamemodeReloaded(bool onLoad)
+    {
+        if (!onLoad)
+            return;
+
+        DeleteAllIcons();
+        CheckExistingBuildables();
+    }
+    public static void DeleteAllIcons()
     {
         for (int i = Icons.Count - 1; i >= 0; i--)
         {
             IconRenderer iconRenderer = Icons[i];
             DeleteIcon(iconRenderer);
         }
-
-        OnLevelLoaded();
     }
-    public static void OnLevelLoaded()
-    {
-        foreach (BarricadeDrop barricade in UCBarricadeManager.NonPlantedBarricades)
-            OnBarricadePlaced(barricade);
-    }
-    public static void OnBarricadePlaced(BarricadeDrop drop, bool isFOBRadio = false)
+    public static void CheckExistingBuildables()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (drop.model == null || drop.model.TryGetComponent(out IconRenderer _))
-            return;
-        
-        // ammo bag
-        if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerAmmo.ValidReference(out Guid guid))
-            AttachIcon(guid, drop.model, drop.GetServersideData().group.GetTeam(), 1f);
+        foreach (BarricadeDrop barricade in UCBarricadeManager.NonPlantedBarricades)
+        {
+            ulong team = barricade.GetServersideData().group.GetTeam();
+            if (team is not 1ul and not 2ul)
+                continue;
+
+            CheckBuildable(barricade.asset, barricade.model, team);
+        }
+        foreach (StructureDrop structure in UCBarricadeManager.AllStructures)
+        {
+            ulong team = structure.GetServersideData().group.GetTeam();
+            if (team is not 1ul and not 2ul)
+                continue;
+
+            CheckBuildable(structure.asset, structure.model, team);
+        }
+
+        void CheckBuildable(Asset asset, Transform transform, ulong team)
+        {
+            BuildableData? buildableData = FOBManager.FindBuildable(asset);
+            if (buildableData == null || !buildableData.FullBuildable.MatchGuid(asset.GUID))
+                return;
+            L.LogDebug($"[ICONS] [{asset.FriendlyName}] Found existing buildable, try-applying marker type: {buildableData.Type}.");
+            switch (buildableData.Type)
+            {
+                case BuildableType.AmmoCrate:
+                    if (Gamemode.Config.EffectMarkerAmmo.ValidReference(out Guid guid))
+                        AttachIcon(guid, transform, team, 1.75f);
+                    break;
+                case BuildableType.RepairStation:
+                    if (Gamemode.Config.EffectMarkerRepair.ValidReference(out guid))
+                        AttachIcon(guid, transform, team, 4.5f);
+                    break;
+            }
+        }
     }
     private static void OnGroupChanged(GroupChanged e)
     {
@@ -90,70 +125,118 @@ public static class IconManager
         }
     }
     public static void AttachIcon(Guid effectGUID, Transform transform, ulong team = 0, float yOffset = 0, ulong player = 0)
+        => AttachIcon(effectGUID, transform, new Vector3(0f, yOffset, 0f), team, player);
+    public static void AttachIcon(Guid effectGUID, Transform transform, Vector3 offset, ulong team = 0, ulong player = 0)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Guid guid = Guid.Empty;
         if (transform.gameObject.TryGetComponent(out IconRenderer icon))
-            EffectManager.ClearEffectByGuid_AllPlayers(guid = icon.EffectGUID);
-        else icon = transform.gameObject.AddComponent<IconRenderer>();
+            DeleteIcon(icon);
+        
+        icon = transform.gameObject.AddComponent<IconRenderer>();
+        icon.Initialize(effectGUID, offset, team, player);
 
-        icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team, player);
+        SpawnIcons(icon);
 
-        if (guid != Guid.Empty)
-            SpawnNewIconsOfType(guid);
-
-        if (!Icons.Contains(icon))
-            Icons.Add(icon);
+        Icons.Add(icon);
+        L.LogDebug($"[ICONS] [{icon.Effect?.name}] Icon attached.");
     }
     public static void DeleteIcon(IconRenderer icon, bool destroy = true)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (!Icons.Contains(icon))
+            return;
         EffectManager.ClearEffectByGuid_AllPlayers(icon.EffectGUID);
         Icons.Remove(icon);
         if (destroy)
             icon.Destroy();
 
         SpawnNewIconsOfType(icon.EffectGUID);
+        L.LogDebug($"[ICONS] [{icon.Effect?.name}] Icon deleted.");
     }
-    private static void SpawnNewIconsOfType(Guid effectGUID)
+    public static void DrawNewIconsOfType(Guid effectGUID)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        EffectManager.ClearEffectByGuid_AllPlayers(effectGUID);
+        SpawnNewIconsOfType(effectGUID);
+    }
+    public static void SpawnNewIconsOfType(Guid effectGUID)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         foreach (IconRenderer icon in Icons)
         {
-            TrySpawnIcon(effectGUID, icon);
+            if (icon.EffectGUID == effectGUID)
+                SpawnIcons(icon);
         }
     }
-    private static void TrySpawnIcon(Guid effectGUID, IconRenderer icon)
+    public static void SpawnIcons(IconRenderer icon)
     {
-        if (icon.EffectGUID == effectGUID)
+        icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Player == 0 ? (icon.Team == 0
+                ? PlayerManager.OnlinePlayers
+                : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team)) : (UCPlayer.FromID(icon.Player) is not { } player ? Array.Empty<UCPlayer>() : new UCPlayer[] { player }))
+            .Select(x => x.Connection)));
+    }
+    private static void OnUpdate()
+    {
+        if (Icons.Count == 0) return;
+        float tickAmount = Time.deltaTime * Icons.Count / FullTickLoopTime;
+        _tickIndexProgress += tickAmount;
+        int newTickIndex = Mathf.FloorToInt(_tickIndexProgress);
+        if (newTickIndex < Icons.Count)
         {
-            icon.SpawnNewIcon(Data.GetPooledTransportConnectionList((icon.Player == 0 ? (icon.Team == 0
-                    ? PlayerManager.OnlinePlayers
-                    : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team)) : (UCPlayer.FromID(icon.Player) is not { } player ? Array.Empty<UCPlayer>() : new UCPlayer[] { player }))
-                .Select(x => x.Connection)));
+            if (newTickIndex == _tickIndex)
+                return;
+            for (int i = _tickIndex; i < newTickIndex; ++i)
+            {
+                IconRenderer renderer = Icons[i];
+                renderer.Tick();
+            }
         }
+        else
+        {
+            newTickIndex %= Icons.Count;
+            for (int i = _tickIndex; i < Icons.Count; ++i)
+            {
+                IconRenderer renderer = Icons[i];
+                renderer.Tick();
+            }
+            for (int i = 0; i < newTickIndex; ++i)
+            {
+                IconRenderer renderer = Icons[i];
+                renderer.Tick();
+            }
+        }
+
+        _tickIndex = newTickIndex;
+        _tickIndexProgress = newTickIndex;
     }
 }
 
 
 public class IconRenderer : MonoBehaviour, IManualOnDestroy
 {
+    private float _lastBroadcast;
+    private Vector3 _lastPosition;
     public Guid EffectGUID { get; private set; }
     public EffectAsset Effect { get; private set; }
     public ulong Team { get; private set; }
     public ulong Player { get; private set; }
-    public Vector3 Point { get; private set; }
-    public void Initialize(Guid effectGUID, Vector3 point, ulong team = 0, ulong player = 0)
+    public Vector3 Point => _lastPosition;
+    public Vector3 Offset { get; private set; }
+    public float Lifetime { get; private set; }
+    public bool LifetimeCheck { get; private set; }
+    public void Initialize(Guid effectGUID, Vector3 offset, ulong team = 0, ulong player = 0)
     {
-        Point = point;
-
         EffectGUID = effectGUID;
+
+        Offset = offset;
 
         Team = team;
         Player = player;
@@ -161,16 +244,44 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
         if (Assets.find(EffectGUID) is EffectAsset effect)
         {
             Effect = effect;
+            Lifetime = effect.lifetime;
+            if (effect.lifetimeSpread != 0)
+                L.LogWarning($"[{effect.name}] Effect " + ActionLog.AsAsset(effect) + " has a non-zero lifetime spread.", method: "ICONS");
+            LifetimeCheck = Lifetime != 0;
+            if (!LifetimeCheck)
+                L.LogWarning($"[{effect.name}] Effect " + ActionLog.AsAsset(effect) + " has a zero lifetime.", method: "ICONS");
         }
         else
-            L.LogWarning("IconSpawner could not start: Effect asset not found: " + effectGUID);
+            L.LogWarning($"IconSpawner could not start: Effect asset not found: " + effectGUID.ToString("N") + ".", method: "ICONS");
     }
 
     [UsedImplicitly]
     void OnDestroy()
     {
         IconManager.DeleteIcon(this, false);
-        L.LogDebug($"Icon destroyed: {Effect?.FriendlyName ?? EffectGUID.ToString("N")}");
+        L.LogDebug($"[ICONS] [{Effect?.name}] Icon destroyed: {Effect?.FriendlyName ?? EffectGUID.ToString("N")}");
+    }
+    public void Tick()
+    {
+        bool drew = false;
+        if (LifetimeCheck)
+        {
+            float time = Time.realtimeSinceStartup;
+            if (_lastBroadcast + Lifetime * 0.95f < time)
+            {
+                IconManager.DrawNewIconsOfType(EffectGUID);
+                drew = true;
+            }
+        }
+        if (!drew && isActiveAndEnabled)
+        {
+            Vector3 position = transform.position;
+            if (!_lastPosition.AlmostEquals(position))
+            {
+                IconManager.DrawNewIconsOfType(EffectGUID);
+                _lastPosition = position;
+            }
+        }
     }
     public void Destroy()
     {
@@ -180,13 +291,19 @@ public class IconRenderer : MonoBehaviour, IManualOnDestroy
     {
         if (Effect == null)
             return;
-        F.TriggerEffectReliable(Effect, player, Point);
+        _lastPosition = transform.position;
+        F.TriggerEffectUnreliable(Effect, player, _lastPosition + Offset);
+        _lastBroadcast = Time.realtimeSinceStartup;
+        L.LogDebug($"[ICONS] [{Effect.name}] Spawning icon for {player.GetAddressString(true)}.");
     }
     public void SpawnNewIcon(PooledTransportConnectionList players)
     {
         if (Effect == null)
             return;
-        F.TriggerEffectReliable(Effect, players, Point);
+        _lastPosition = transform.position;
+        F.TriggerEffectUnreliable(Effect, players, _lastPosition + Offset);
+        _lastBroadcast = Time.realtimeSinceStartup;
+        L.LogDebug($"[ICONS] [{Effect.name}] Spawning icon for {players.Count} player(s).");
     }
 
     void IManualOnDestroy.ManualOnDestroy()

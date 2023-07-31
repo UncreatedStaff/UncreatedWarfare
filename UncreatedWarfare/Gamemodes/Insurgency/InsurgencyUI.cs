@@ -11,7 +11,7 @@ public static class InsurgencyUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!Data.Is(out Insurgency gm) || gm.Caches == null) return;
+        if (!Data.Is(out Insurgency gm) || gm.Caches == null || player.HasUIHidden) return;
         ITransportConnection c = player.Player.channel.owner.transportConnection;
         CTFUI.ListUI.SendToPlayer(c);
         CTFUI.ListUI.Header.SetVisibility(c, true);
@@ -40,7 +40,8 @@ public static class InsurgencyUI
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
             UCPlayer player = PlayerManager.OnlinePlayers[i];
-            CTFUI.ListUI.Names[index].SetText(player.Connection, GetCacheLabel(cache, player, gm));
+            if (!player.HasUIHidden)
+                CTFUI.ListUI.Names[index].SetText(player.Connection, GetCacheLabel(cache, player, gm));
         }
     }
     public static string GetCacheLabel(Insurgency.CacheData cache, UCPlayer player, Insurgency insurgency)

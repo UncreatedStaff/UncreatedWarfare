@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -32,8 +33,9 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
+using Debug = System.Diagnostics.Debug;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 // ReSharper disable UnusedMember.Local
@@ -1114,49 +1116,22 @@ public class DebugCommand : AsyncCommand
         {
             SquadManager.CreateSquad(ctx.Caller, team);
         }
-        
-        if (Data.Is(out IVehicles vgm))
+
+        if (Data.Gamemode.State == State.Staging)
         {
-            SqlItem<Vehicles.VehicleSpawn>? logi;
-            await vgm.VehicleBay.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                await vgm.VehicleSpawner.WaitAsync(token).ConfigureAwait(false);
-                await UCWarfare.ToUpdate(token);
-                try
-                {
-                    vgm.VehicleSpawner.WriteWait();
-                    try
-                    {
-                        Vector3 pos = ctx.Caller.Position;
-                        logi = vgm.VehicleBay.Items
-                            .Where(x => x.Item != null && (x.Item.Team == team || x.Item.Team == 0) && x.Item.Type is VehicleType.LogisticsGround or VehicleType.TransportAir)
-                            .SelectMany(x => vgm.VehicleSpawner.Items
-                                .Where(y => y.Item?.Vehicle?.Item is { } v && v.VehicleID == x.Item!.VehicleID && y.Item.HasLinkedVehicle(out _)))
-                            .OrderBy(x => (pos - x.Item!.Sign!.Item!.Buildable!.Model.position).sqrMagnitude)
-                            .FirstOrDefault();
-                    }
-                    finally
-                    {
-                        vgm.VehicleSpawner.WriteRelease();
-                    }
-                }
-                finally
-                {
-                    vgm.VehicleSpawner.Release();
-                }
-            }
-            finally
-            {
-                vgm.VehicleBay.Release();
-            }
-            if (logi?.Item is null)
+            Data.Gamemode.SkipStagingPhase();
+        }
+
+        if (Data.Is(out IVehicles vehicleGm))
+        {
+            SqlItem<VehicleSpawn>? vehicle = VehicleBayCommand.GetBayTarget(ctx, vehicleGm.VehicleSpawner);
+            if (vehicle?.Item is null)
             {
                 ctx.ReplyString("No logistics vehicle nearby to request.", Color.red);
             }
-            else if (logi.Item.HasLinkedVehicle(out InteractableVehicle veh))
+            else if (vehicle.Item.HasLinkedVehicle(out InteractableVehicle veh))
             {
-                SqlItem<VehicleData>? data = logi.Item.Vehicle;
+                SqlItem<VehicleData>? data = vehicle.Item.Vehicle;
                 if (data?.Item == null)
                 {
                     await UCWarfare.ToUpdate();
@@ -1176,12 +1151,11 @@ public class DebugCommand : AsyncCommand
                     }
                 }
             }
+            else
+                ctx.ReplyString("Logistics vehicle not available.", Color.red);
         }
-        else throw ctx.SendGamemodeError();
-        if (Data.Gamemode.State == State.Staging)
-        {
-            Data.Gamemode.SkipStagingPhase();
-        }
+
+        ctx.Defer();
     }
     private void effect(CommandInteraction ctx)
     {
@@ -1713,8 +1687,43 @@ public class DebugCommand : AsyncCommand
             L.Log("PFP URL: " + (pfp ?? "NULL"));
     }
 
-    private void progress(CommandInteraction ctx)
+    private void damage(CommandInteraction ctx)
     {
-        ctx.Caller.Toasts.Queue(new ToastMessage(ToastMessageStyle.ProgressBar, "test"));
+        ctx.AssertPermissions(EAdminType.ADMIN_ON_DUTY | EAdminType.VANILLA_ADMIN);
+        ctx.AssertRanByPlayer();
+
+        ctx.AssertArgs(1, "/test damage <amount>[%] [-r]");
+        string arg = ctx.Get(0)!;
+        bool percent = arg.Length > 0 && arg[arg.Length - 1] == '%';
+        bool remaining = percent && ctx.MatchFlag("r");
+        if (percent)
+            arg = arg.Substring(0, arg.Length - 1);
+        if (!float.TryParse(arg, NumberStyles.Number, ctx.GetLocale(), out float damage))
+            throw ctx.SendCorrectUsage("/test damage <amount>[%] [-r]");
+
+        RaycastInfo cast = DamageTool.raycast(new Ray(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward), 4f, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE, ctx.Caller.Player);
+        if (cast.transform == null)
+            throw ctx.SendCorrectUsage("/test damage <amount>[%] while looking at a barricade, structure, or vehicle.");
+
+        if (BarricadeManager.FindBarricadeByRootTransform(cast.transform) is { } barricade)
+        {
+            damage = percent ? (remaining ? barricade.GetServersideData().barricade.health : barricade.asset.health) * (damage / 100f) : damage;
+            BarricadeManager.damage(barricade.model, damage, 1f, false, ctx.CallerCSteamID, EDamageOrigin.Unknown);
+            ctx.ReplyString($"Damaged barricade {barricade.asset.FriendlyName} by {damage.ToString(ctx.GetLocale())} points.");
+        }
+        else if (StructureManager.FindStructureByRootTransform(cast.transform) is { } structure)
+        {
+            damage = percent ? (remaining ? structure.GetServersideData().structure.health : structure.asset.health) * (damage / 100f) : damage;
+            StructureManager.damage(structure.model, ctx.Caller.Player.look.aim.forward, damage, 1f, false, ctx.CallerCSteamID, EDamageOrigin.Unknown);
+            ctx.ReplyString($"Damaged structure {structure.asset.FriendlyName} by {damage.ToString(ctx.GetLocale())} points.");
+        }
+        else if (cast.vehicle != null)
+        {
+            damage = percent ? (remaining ? cast.vehicle.health : cast.vehicle.asset.health) * (damage / 100f) : damage;
+            VehicleManager.damage(cast.vehicle, damage, 1f, false, ctx.CallerCSteamID, EDamageOrigin.Unknown);
+            ctx.ReplyString($"Damaged vehicle {cast.vehicle.asset.FriendlyName} by {damage.ToString(ctx.GetLocale())} points.");
+        }
+        else
+            throw ctx.SendCorrectUsage("/test damage <amount>[%] while looking at a barricade, structure, or vehicle.");
     }
 }
