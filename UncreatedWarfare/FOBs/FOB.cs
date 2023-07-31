@@ -8,6 +8,7 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
@@ -897,6 +898,13 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 {
                     const ushort loss = 10;
                     BarricadeManager.damage(Radio.Barricade.model, loss, 1, false, default, EDamageOrigin.Useable_Melee);
+                    if (Radio.Barricade.GetServersideData().barricade.isDead && Data.Is(out ITickets tickets))
+                    {
+                        if (Team == 1ul)
+                            tickets.TicketManager.Team1Tickets -= FOBManager.Config.TicketsFOBRadioLost;
+                        else if (Team == 2ul)
+                            tickets.TicketManager.Team2Tickets -= FOBManager.Config.TicketsFOBRadioLost;
+                    }
                 }
                 else if (Radio.NeedsRestock && Time.realtimeSinceStartup - Radio.LastRestock > 60f)
                     Restock();

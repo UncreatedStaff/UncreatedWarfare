@@ -1171,7 +1171,7 @@ public class FOBConfigData : JSONConfigData
         FOBBuildPickupRadius = 80;
         FOBBuildPickupRadiusNoBunker = 30;
         FobLimit = 10;
-        TicketsFOBRadioLost = -40;
+        TicketsFOBRadioLost = 20;
         // amount of hits it takes to full repair a radio. 30 dmg x 20 = 600 total hp
         BaseFOBRepairHits = 20;
         SalvageRefundPercentage = 75f;
