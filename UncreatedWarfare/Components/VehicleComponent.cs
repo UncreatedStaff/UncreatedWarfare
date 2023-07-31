@@ -510,7 +510,7 @@ public class VehicleComponent : MonoBehaviour
     const int STARTING_FLARES_TRANSHELI = 50;
     const int STARTING_FLARES_JET = 30;
     public const int FLARE_BURST_COUNT = 10;
-    public const int FLARE_COOLDOWN = 14;
+    public const int FLARE_COOLDOWN = 11;
     public void TryDropFlares()
     {
         if (Time.time - _timeLastFlareDrop < FLARE_COOLDOWN || _totalFlaresLeft < 0)
