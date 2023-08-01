@@ -962,6 +962,7 @@ internal static class T
     public static readonly Translation<int> SquadsTooManyPlayerCount = new Translation<int>("<#a89791>There are too many squads right now. More squads are unlocked once your team reaches {0} ${p:0:member}.");
     [TranslationData(SectionSquads)]
     public static readonly Translation<Squad> SquadWarningNoMembers = new Translation<Squad>("<#a89791>Your squad will be DISBANDED unless others join", Squad.FormatColorName);
+    [TranslationData(SectionSquads)]
     public static readonly Translation<Squad> SquadWarningWrongKit = new Translation<Squad>("<#a89791>You must request a SQUADLEADER kit", Squad.FormatColorName);
 
 
