@@ -1000,12 +1000,16 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     internal int AddFOBToList(ulong team, IFOB fob, int index)
     {
-        IFOB?[] fobs = team switch
+        IFOB?[]? fobs = team switch
         {
             1ul => _team1List,
             2ul => _team2List,
-            _ => throw new ArgumentOutOfRangeException(nameof(team))
+            _ => null
         };
+
+        if (fobs == null)
+            return -1;
+
         if (index >= fobs.Length)
             index = fobs.Length - 1;
         if (index < 0)
@@ -1037,12 +1041,14 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     internal bool RemoveFOBFromList(ulong team, IFOB fob)
     {
-        IFOB?[] fobs = team switch
+        IFOB?[]? fobs = team switch
         {
             1ul => _team1List,
             2ul => _team2List,
-            _ => throw new ArgumentOutOfRangeException(nameof(team))
+            _ => null
         };
+        if (fobs == null)
+            return false;
 
         int index = -1;
 

@@ -898,7 +898,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
                 {
                     const ushort loss = 10;
                     BarricadeManager.damage(Radio.Barricade.model, loss, 1, false, default, EDamageOrigin.Useable_Melee);
-                    if (Radio.Barricade.GetServersideData().barricade.isDead && Data.Is(out ITickets tickets))
+                    if (Radio != null && Radio.Barricade != null && Radio.Barricade.GetServersideData().barricade.isDead && Data.Is(out ITickets tickets))
                     {
                         if (Team == 1ul)
                             tickets.TicketManager.Team1Tickets -= FOBManager.Config.TicketsFOBRadioLost;
