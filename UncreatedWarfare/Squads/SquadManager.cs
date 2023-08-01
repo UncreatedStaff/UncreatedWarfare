@@ -11,6 +11,7 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads.Commander;
 using Uncreated.Warfare.Squads.UI;
@@ -18,7 +19,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Squads;
 
-public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDeclareWinListener, IJoinedTeamListener, IUIListener
+public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDeclareWinListener, IJoinedTeamListener, IUIListener, IGameTickListener
 {
     public SquadManager() : base("squad") { }
 
@@ -760,6 +761,49 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 player.Squad.RallyPoint!.ShowUIForPlayer(player);
         }
     }
+
+    private float _timeSinceSquadCheck = 0;
+    public void Tick()
+    {
+        if (Time.time - _timeSinceSquadCheck > 30)
+        {
+            foreach (var squad in Squads)
+            {
+                bool wrongKit = !(squad.Leader.KitClass == Class.Squadleader ||
+                    squad.Leader.KitClass == Class.Crewman ||
+                    squad.Leader.KitClass == Class.Pilot);
+
+                bool noSquadMates = squad.Members.Count == 1;
+
+                if (wrongKit! || noSquadMates)
+                {
+                    squad.DisbandStrikes++;
+                }
+                else
+                    squad.DisbandStrikes = 0;
+
+                if (squad.DisbandStrikes == 3)
+                {
+                    DisbandSquad(squad);
+                    break;
+                }
+
+                ToastMessage toast;
+                if (wrongKit)
+                {
+                    toast = new ToastMessage(ToastMessageStyle.Tip, T.SquadWarningWrongKit.Translate(squad.Leader));
+                    ToastMessage.QueueMessage(squad.Leader, in toast);
+                }
+                else if (noSquadMates)
+                {
+                    toast = new ToastMessage(ToastMessageStyle.Tip, T.SquadWarningNoMembers.Translate(squad.Leader));
+                    ToastMessage.QueueMessage(squad.Leader, in toast);
+                }
+            }
+
+            _timeSinceSquadCheck = Time.time;
+        }
+    }
 }
 
 public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
@@ -772,6 +816,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     public List<UCPlayer> Members;
     public bool Disbanded;
     public RallyPoint? RallyPoint;
+    public int DisbandStrikes;
     public bool HasRally => RallyPoint != null;
     /// <summary><see langword="true"/> if this <see cref="Squad"/>'s <seealso cref="Leader"/> is a commander.</summary>
     public bool IsCommandingSquad
@@ -796,6 +841,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
         Leader = leader;
         IsLocked = false;
         Members = new List<UCPlayer>(6) { leader };
+        DisbandStrikes = 0;
     }
 
     public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();
