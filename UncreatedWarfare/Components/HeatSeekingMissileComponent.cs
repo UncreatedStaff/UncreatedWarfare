@@ -69,6 +69,8 @@ public class HeatSeekingMissileComponent : MonoBehaviour
         _randomRelativePosition = Quaternion.AngleAxis(Random.Range(0f, 360f), Vector3.forward) * new Vector3(0, 10, 100);
 
         _controller.MissilesInFlight.Add(this);
+
+        L.LogDebug($"    AA:     Missile launched - {_controller.Status}");
     }
 
     private void OnDestroy()

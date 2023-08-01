@@ -135,7 +135,10 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         if (gunner != null)
             _lastKnownGunner = gunner;
         else if (_lastKnownGunner != null) // gunner exited the vehicle
+        {
             CancelLockOnSound(_lastKnownGunner);
+            _lastKnownGunner = null;
+        }
 
         float bestTarget = AQUISITION_ANGLE;
 
@@ -209,6 +212,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
         if (newTarget is null || (noActiveMissiles && (noAmmo || reloading))) // no target found
         {
+            //(reloading && noActiveMissiles) || (noAmmo && noActiveMissiles)
             if (Status != ELockOnMode.IDLE)
             {
 
@@ -228,6 +232,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             _timeOfAquisition = Time.time;
             Status = ELockOnMode.ACQUIRING;
 
+            L.LogDebug($"     AA: acquriing...");
+
             if (gunner != null)
                 PlayLockOnSound(gunner);
         }
@@ -237,6 +243,9 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
             if (timeSinceAquisition >= _aquisitionTime)
             {
+                if (Status != ELockOnMode.LOCKED_ON)
+                    L.LogDebug($"     AA: LOCKED");
+
                 Status = ELockOnMode.LOCKED_ON;
 
                 if (LockOnTarget.TryGetComponent(out VehicleComponent v) && gunner != null)
@@ -256,6 +265,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
         if (_effect == null || gunner is not { IsOnline: true })
             return;
 
+        L.LogDebug($"            tone: playing...");
+
         EffectManager.sendUIEffect(_effect.id, _lockOnEffectKey, gunner.Connection, true);
     }
     private void CancelLockOnSound(UCPlayer gunner)
@@ -264,6 +275,7 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
             return;
 
         EffectManager.ClearEffectByGuid(_effect.GUID, gunner.Connection);
+        L.LogDebug($"            tone: cancelled");
     }
 
     public bool IsInRange(Vector3 target)
