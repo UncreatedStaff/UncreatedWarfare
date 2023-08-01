@@ -960,6 +960,10 @@ internal static class T
     public static readonly Translation<int> SquadsTooMany           = new Translation<int>("<#a89791>There can not be more than {0} ${p:0:squad} on a team at once.");
     [TranslationData(SectionSquads)]
     public static readonly Translation<int> SquadsTooManyPlayerCount = new Translation<int>("<#a89791>There are too many squads right now. More squads are unlocked once your team reaches {0} ${p:0:member}.");
+    [TranslationData(SectionSquads)]
+    public static readonly Translation<Squad> SquadWarningNoMembers = new Translation<Squad>("<#a89791>Your squad will be DISBANDED unless others join", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadWarningWrongKit = new Translation<Squad>("<#a89791>You must request a SQUADLEADER kit", Squad.FormatColorName);
+
 
     [TranslationData(SectionSquads, IsPrioritizedTranslation = false)]
     public static readonly Translation<Squad, int, int> SquadsUIHeaderPlayerCount    = new Translation<Squad, int, int>("<#bd6b5b>{0}</color> {1}/{2}", TranslationFlags.UnityUI, Squad.FormatName);
