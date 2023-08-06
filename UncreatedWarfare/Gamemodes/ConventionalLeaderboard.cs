@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using SDG.NetTransport;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
@@ -68,7 +69,6 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (_vcStateT1 is null || _vcStateT2 is null) return;
-        float rt = Time.realtimeSinceStartup;
         int num = Math.Min(LeaderboardUI.Team1PlayerVCs.Length + 1, StatsTeam1!.Count);
         for (int i = 1; i < num; i++)
         {
@@ -119,8 +119,8 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        IFormatProvider locale = Localization.GetLocale(set.Language);
-        string lang = set.Language;
+        CultureInfo culture = set.CultureInfo;
+        LanguageInfo lang = set.Language;
         int len = 47;
         if (StatsTeam1 is not null)
             len += Math.Min(StatsTeam1.Count, LeaderboardUI.Team1PlayerNames.Length + 1) * 7;
@@ -134,59 +134,59 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
             T.StartingSoon.Translate(lang) :
             T.NextGameShutdown.Translate(lang, ShuttingDownMessage);
 
-        values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("mm\\:ss", locale);
+        values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("mm\\:ss", culture);
         values[3] = new string(Gamemode.Config.UICircleFontCharacters[0], 1);
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
-        values[5] = WarStatOverrides[0].Translate(lang);
-        values[6] = WarStatOverrides[1].Translate(lang);
-        values[7] = WarStatOverrides[2].Translate(lang);
-        values[8] = WarStatOverrides[3].Translate(lang);
-        values[9] = WarStatOverrides[4].Translate(lang);
-        values[10] = WarStatOverrides[5].Translate(lang);
-        values[11] = WarStatOverrides[6].Translate(lang);
-        values[12] = WarStatOverrides[7].Translate(lang);
-        values[13] = WarStatOverrides[8].Translate(lang);
-        values[14] = WarStatOverrides[9].Translate(lang);
-        values[15] = WarStatOverrides[10].Translate(lang);                                 // longest shot
-        values[16] = WarStatOverrides.Length > 11 ? WarStatOverrides[11].Translate(lang) : T.CTFWarStats11.Translate(lang);
+        values[5] = WarStatOverrides[0].Translate(lang, culture);
+        values[6] = WarStatOverrides[1].Translate(lang, culture);
+        values[7] = WarStatOverrides[2].Translate(lang, culture);
+        values[8] = WarStatOverrides[3].Translate(lang, culture);
+        values[9] = WarStatOverrides[4].Translate(lang, culture);
+        values[10] = WarStatOverrides[5].Translate(lang, culture);
+        values[11] = WarStatOverrides[6].Translate(lang, culture);
+        values[12] = WarStatOverrides[7].Translate(lang, culture);
+        values[13] = WarStatOverrides[8].Translate(lang, culture);
+        values[14] = WarStatOverrides[9].Translate(lang, culture);
+        values[15] = WarStatOverrides[10].Translate(lang, culture);                                 // longest shot
+        values[16] = WarStatOverrides.Length > 11 ? WarStatOverrides[11].Translate(lang, culture) : T.CTFWarStats11.Translate(lang, culture);
 
-        values[17] = PlayerStatOverrides[0].Translate(lang);
-        values[18] = PlayerStatOverrides[1].Translate(lang);
-        values[19] = PlayerStatOverrides[2].Translate(lang);
-        values[20] = PlayerStatOverrides[3].Translate(lang);
-        values[21] = PlayerStatOverrides[4].Translate(lang);
-        values[22] = PlayerStatOverrides[5].Translate(lang);
-        values[23] = PlayerStatOverrides[6].Translate(lang);
-        values[24] = PlayerStatOverrides[7].Translate(lang);
-        values[25] = PlayerStatOverrides[8].Translate(lang);
-        values[26] = PlayerStatOverrides[9].Translate(lang);
-        values[27] = PlayerStatOverrides[10].Translate(lang);
-        values[28] = PlayerStatOverrides[11].Translate(lang);
+        values[17] = PlayerStatOverrides[0].Translate(lang, culture);
+        values[18] = PlayerStatOverrides[1].Translate(lang, culture);
+        values[19] = PlayerStatOverrides[2].Translate(lang, culture);
+        values[20] = PlayerStatOverrides[3].Translate(lang, culture);
+        values[21] = PlayerStatOverrides[4].Translate(lang, culture);
+        values[22] = PlayerStatOverrides[5].Translate(lang, culture);
+        values[23] = PlayerStatOverrides[6].Translate(lang, culture);
+        values[24] = PlayerStatOverrides[7].Translate(lang, culture);
+        values[25] = PlayerStatOverrides[8].Translate(lang, culture);
+        values[26] = PlayerStatOverrides[9].Translate(lang, culture);
+        values[27] = PlayerStatOverrides[10].Translate(lang, culture);
+        values[28] = PlayerStatOverrides[11].Translate(lang, culture);
 
-        values[41] = LeaderboardOverrides[0].Translate(lang);
-        values[42] = LeaderboardOverrides[1].Translate(lang);
-        values[43] = LeaderboardOverrides[2].Translate(lang);
-        values[44] = LeaderboardOverrides[3].Translate(lang);
-        values[45] = LeaderboardOverrides[4].Translate(lang);
-        values[46] = LeaderboardOverrides[5].Translate(lang);
+        values[41] = LeaderboardOverrides[0].Translate(lang, culture);
+        values[42] = LeaderboardOverrides[1].Translate(lang, culture);
+        values[43] = LeaderboardOverrides[2].Translate(lang, culture);
+        values[44] = LeaderboardOverrides[3].Translate(lang, culture);
+        values[45] = LeaderboardOverrides[4].Translate(lang, culture);
+        values[46] = LeaderboardOverrides[5].Translate(lang, culture);
 
         if (Tracker is not null)
         {
-            values[29] = WarStatOverrides[0].GetValue(Tracker, null, locale);
-            values[30] = WarStatOverrides[1].GetValue(Tracker, null, locale);
-            values[31] = WarStatOverrides[2].GetValue(Tracker, null, locale);
-            values[32] = WarStatOverrides[3].GetValue(Tracker, null, locale);
-            values[33] = WarStatOverrides[4].GetValue(Tracker, null, locale);
-            values[34] = WarStatOverrides[5].GetValue(Tracker, null, locale);
-            values[35] = WarStatOverrides[6].GetValue(Tracker, null, locale);
-            values[36] = WarStatOverrides[7].GetValue(Tracker, null, locale);
-            values[37] = WarStatOverrides[8].GetValue(Tracker, null, locale);
-            values[38] = WarStatOverrides[9].GetValue(Tracker, null, locale);
-            values[39] = WarStatOverrides[10].GetValue(Tracker, null, locale);
+            values[29] = WarStatOverrides[0].GetValue(Tracker, null, culture);
+            values[30] = WarStatOverrides[1].GetValue(Tracker, null, culture);
+            values[31] = WarStatOverrides[2].GetValue(Tracker, null, culture);
+            values[32] = WarStatOverrides[3].GetValue(Tracker, null, culture);
+            values[33] = WarStatOverrides[4].GetValue(Tracker, null, culture);
+            values[34] = WarStatOverrides[5].GetValue(Tracker, null, culture);
+            values[35] = WarStatOverrides[6].GetValue(Tracker, null, culture);
+            values[36] = WarStatOverrides[7].GetValue(Tracker, null, culture);
+            values[37] = WarStatOverrides[8].GetValue(Tracker, null, culture);
+            values[38] = WarStatOverrides[9].GetValue(Tracker, null, culture);
+            values[39] = WarStatOverrides[10].GetValue(Tracker, null, culture);
             if (WarStatOverrides.Length > 11)
             {
-                values[40] = WarStatOverrides[11].GetValue(Tracker, null, locale);
+                values[40] = WarStatOverrides[11].GetValue(Tracker, null, culture);
             }
             else
             {
@@ -212,14 +212,13 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
                 PlayerNames names = stats.Player == null
                     ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
                     : stats.Player.Name;
-                values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : names.CharacterName;
-                values[++index] = LeaderboardOverrides[0].GetValue(null, stats, locale);
-                values[++index] = LeaderboardOverrides[1].GetValue(null, stats, locale);
-                values[++index] = LeaderboardOverrides[2].GetValue(null, stats, locale);
-                values[++index] = LeaderboardOverrides[3].GetValue(null, stats, locale);
-                values[++index] = LeaderboardOverrides[4].GetValue(null, stats, locale);
-                values[++index] = LeaderboardOverrides[5].GetValue(null, stats, locale);
+                values[++index] = i == 0 ? TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : names.CharacterName;
+                values[++index] = LeaderboardOverrides[0].GetValue(null, stats, culture);
+                values[++index] = LeaderboardOverrides[1].GetValue(null, stats, culture);
+                values[++index] = LeaderboardOverrides[2].GetValue(null, stats, culture);
+                values[++index] = LeaderboardOverrides[3].GetValue(null, stats, culture);
+                values[++index] = LeaderboardOverrides[4].GetValue(null, stats, culture);
+                values[++index] = LeaderboardOverrides[5].GetValue(null, stats, culture);
             }
         }
 
@@ -232,14 +231,13 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
                 PlayerNames names = stats.Player == null
                     ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
                     : stats.Player.Name;
-                values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : names.CharacterName;
-                values[++index] = LeaderboardOverrides[0].GetValue(null, stats, locale);
-                values[++index] = LeaderboardOverrides[1].GetValue(null, stats, locale);
-                values[++index] = LeaderboardOverrides[2].GetValue(null, stats, locale);
-                values[++index] = LeaderboardOverrides[3].GetValue(null, stats, locale);
-                values[++index] = LeaderboardOverrides[4].GetValue(null, stats, locale);
-                values[++index] = LeaderboardOverrides[5].GetValue(null, stats, locale);
+                values[++index] = i == 0 ? TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : names.CharacterName;
+                values[++index] = LeaderboardOverrides[0].GetValue(null, stats, culture);
+                values[++index] = LeaderboardOverrides[1].GetValue(null, stats, culture);
+                values[++index] = LeaderboardOverrides[2].GetValue(null, stats, culture);
+                values[++index] = LeaderboardOverrides[3].GetValue(null, stats, culture);
+                values[++index] = LeaderboardOverrides[4].GetValue(null, stats, culture);
+                values[++index] = LeaderboardOverrides[5].GetValue(null, stats, culture);
             }
         }
 
@@ -285,7 +283,7 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
             {
                 LeaderboardUI.PlayerStatsHeader.SetText(c, T.PlayerstatsHeader.Translate(lang, pl, Tracker is not null ? Tracker.GetPresence(stats) : 0f));
                 for (int i = 0; i < 12; ++i)
-                    LeaderboardUI.PersonalStatsValues[i].SetText(c, PlayerStatOverrides[i].GetValue(null, stats, locale));
+                    LeaderboardUI.PersonalStatsValues[i].SetText(c, PlayerStatOverrides[i].GetValue(null, stats, culture));
             }
             else
             {
@@ -421,14 +419,16 @@ public abstract class ConventionalLeaderboard<TStats, TTracker> : Leaderboard<TS
             Team = team;
         }
 
-        public string Translate(string lang)
+        public string Translate(LanguageInfo? language, CultureInfo? culture)
         {
+            language ??= Localization.GetDefaultLanguage();
+            culture ??= Localization.GetCultureInfo(language);
             if (Label is Translation<FactionInfo> teamTranslation && Team is 1 or 2)
             {
-                return teamTranslation.Translate(lang, TeamManager.GetFaction(Team));
+                return teamTranslation.Translate(language, culture, TeamManager.GetFaction(Team), null, 0ul);
             }
 
-            return Label.Translate(lang);
+            return Label.Translate(language, culture);
         }
     }
 }

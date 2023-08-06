@@ -1999,8 +1999,9 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
             }
             return _value!;
         }
-        public string GetKitNames(ulong player = 0)
+        public string GetKitNames(LanguageInfo language)
         {
+            language ??= Localization.GetDefaultLanguage();
             if (_isKitSelector)
             {
                 if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
@@ -2011,13 +2012,13 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
                         Kit? item = find?.Item;
                         if (item != null)
                         {
-                            _kitName = GetKitName(item, player);
+                            _kitName = item.GetDisplayName(language);
                             // adds the faction name so kits named 'Rifleman #1', etc show the right team
                             if (item.Type == KitType.Public && item.Faction is { } faction)
                                 _kitName = faction.ShortName + " " + _kitName;
                         }
                         else _kitName = _value;
-                        _kitName = find?.Item != null ? GetKitName(find.Item, player) : _value!;
+                        _kitName = find?.Item is { } kit ? kit.GetDisplayName(language) : _value!;
                     }
                     else _kitName = _value!;
                     return _kitName;
@@ -2041,7 +2042,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
                                 Kit? item = find?.Item;
                                 if (item != null)
                                 {
-                                    _kitNames[i] = GetKitName(item, player);
+                                    _kitNames[i] = item.GetDisplayName(language);
                                     if (item.Type == KitType.Public && item.Faction is { } faction)
                                         _kitNames[i] = faction.ShortName + " " + _kitNames[i];
                                 }
@@ -2077,12 +2078,6 @@ public readonly struct DynamicStringValue : IDynamicValue<string>, IEquatable<Dy
             }
 
             return ToString();
-        }
-        private static string GetKitName(Kit kit, ulong player)
-        {
-            if (player == 0 || !Data.Languages.TryGetValue(player, out string language))
-                language = L.Default;
-            return kit.GetDisplayName(language);
         }
     }
 }
@@ -2979,12 +2974,12 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
         public readonly override string ToString()
         {
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
-                return Localization.TranslateEnum(_value, 0).ToLower();
+                return Localization.TranslateEnum(_value).ToLower();
             if (_type == DynamicValueType.Range)
-                return Localization.TranslateEnum(_minVal, 0).ToLower() + " to " + Localization.TranslateEnum(_maxVal, 0).ToLower();
+                return Localization.TranslateEnum(_minVal).ToLower() + " to " + Localization.TranslateEnum(_maxVal).ToLower();
             
             if (_type == DynamicValueType.Wildcard)
-                return "any " + Localization.TranslateEnumName(typeof(TEnum), 0).ToLower();
+                return "any " + Localization.TranslateEnumName(typeof(TEnum)).ToLower();
 
             if (_type == DynamicValueType.Set)
             {
@@ -2992,17 +2987,17 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
                 for (int i = 0; i < _values.Length; i++)
                 {
                     if (i != 0) sb.Append(", ");
-                    sb.Append(Localization.TranslateEnum(_values[i], 0).ToLower());
+                    sb.Append(Localization.TranslateEnum(_values[i]).ToLower());
                 }
                 return sb.ToString();
             }
             return _value.ToString();
         }
-        public string GetCommaList(ulong player)
+        public string GetCommaList(LanguageInfo language)
         {
             if (_type == DynamicValueType.Constant || _behavior == ChoiceBehavior.Selective)
             {
-                return Localization.TranslateEnum(_value, player);
+                return Localization.TranslateEnum(_value, language);
             }
             if (_type == DynamicValueType.Wildcard)
             {
@@ -3023,12 +3018,12 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum>, IEquatabl
                             builder.Append(" " + (_behavior == ChoiceBehavior.Selective ? "or" : "and") + " ");
                     }
 
-                    builder.Append(Localization.TranslateEnum(_values[i], player));
+                    builder.Append(Localization.TranslateEnum(_values[i], language));
                 }
 
                 return builder.ToString();
             }
-            return Localization.TranslateEnum(_value, player);
+            return Localization.TranslateEnum(_value, language);
         }
     }
 }

@@ -180,11 +180,14 @@ public class ReloadCommand : AsyncCommand
             Data.LanguageAliases = JSONMethods.LoadLangAliases();
             Data.Languages = JSONMethods.LoadLanguagePreferences();
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-            Translation.ReadTranslations();
             Deaths.Localization.Reload();
             Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
+            await Translation.ReadTranslations(token);
+            await Data.ReloadLanguageDataStore(false, token).ConfigureAwait(false);
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers.ToArray())
+                player.Locale.Preferences = await Data.LanguageDataStore.GetLanguagePreferences(player.Steam64, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             OnTranslationsReloaded?.Invoke();
-            await Data.LanguageDataStore.ReloadCache(token).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

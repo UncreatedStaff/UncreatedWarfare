@@ -2,7 +2,6 @@
 using SDG.Unturned;
 using Steamworks;
 using System;
-using System.Collections.Generic;
 using Uncreated.Framework;
 using UnityEngine;
 
@@ -80,7 +79,7 @@ public static class Chat
         if (player is not { IsOnline: true })
             return;
         string value = translation.Translate(player, out Color textColor, true);
-        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
+        CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
@@ -92,8 +91,8 @@ public static class Chat
     {
         if (player is not { IsOnline: true })
             return;
-        string value = translation.Translate(player.Language, arg0, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
-        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Locale.LanguageInfo, arg0, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
@@ -105,8 +104,8 @@ public static class Chat
     {
         if (player is not { IsOnline: true })
             return;
-        string value = translation.Translate(player.Language, arg0, arg1, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
-        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Locale.LanguageInfo, arg0, arg1, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
@@ -118,8 +117,8 @@ public static class Chat
     {
         if (player is not { IsOnline: true })
             return;
-        string value = translation.Translate(player.Language, arg0, arg1, arg2, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
-        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Locale.LanguageInfo, arg0, arg1, arg2, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
@@ -131,8 +130,8 @@ public static class Chat
     {
         if (player is not { IsOnline: true })
             return;
-        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
-        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Locale.LanguageInfo, arg0, arg1, arg2, arg3, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
@@ -144,8 +143,8 @@ public static class Chat
     {
         if (player is not { IsOnline: true })
             return;
-        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
-        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Locale.LanguageInfo, arg0, arg1, arg2, arg3, arg4, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
@@ -157,8 +156,8 @@ public static class Chat
     {
         if (player is not { IsOnline: true })
             return;
-        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, arg5, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
-        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Locale.LanguageInfo, arg0, arg1, arg2, arg3, arg4, arg5, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
@@ -170,8 +169,8 @@ public static class Chat
     {
         if (player is not { IsOnline: true })
             return;
-        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
-        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Locale.LanguageInfo, arg0, arg1, arg2, arg3, arg4, arg5, arg6, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
@@ -183,8 +182,8 @@ public static class Chat
     {
         if (player is not { IsOnline: true })
             return;
-        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
-        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Locale.LanguageInfo, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
@@ -196,8 +195,8 @@ public static class Chat
     {
         if (player is not { IsOnline: true })
             return;
-        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
-        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Locale.LanguageInfo, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
@@ -209,14 +208,14 @@ public static class Chat
     {
         if (player is not { IsOnline: true })
             return;
-        string value = translation.Translate(player.Language, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
-        CheckTranslationLength(player.Language, ref value, translation, ref textColor, player.Save.IMGUI);
+        string value = translation.Translate(player.Locale.LanguageInfo, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color textColor, player, player.GetTeam(), player.Save.IMGUI, TranslationFlags.ForChat);
+        CheckTranslationLength(player.Locale.LanguageInfo, ref value, translation, ref textColor, player.Save.IMGUI);
         SendTranslationChat(value, translation, textColor, player);
     }
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast(LanguageSet set, Translation translation)
     {
-        GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
+        GetBroadcastTranslationData(in set, translation, out string value, out LanguageInfo lang, out Color textColor);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
@@ -224,7 +223,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0>(LanguageSet set, Translation<T0> translation, T0 arg0)
     {
-        GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
+        GetBroadcastTranslationData(in set, translation, out string value, out LanguageInfo lang, out Color textColor);
         value = translation.Translate(value, lang, arg0, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
@@ -233,7 +232,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1>(LanguageSet set, Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
-        GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
+        GetBroadcastTranslationData(in set, translation, out string value, out LanguageInfo lang, out Color textColor);
         value = translation.Translate(value, lang, arg0, arg1, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
@@ -242,7 +241,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2>(LanguageSet set, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
-        GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
+        GetBroadcastTranslationData(in set, translation, out string value, out LanguageInfo lang, out Color textColor);
         value = translation.Translate(value, lang, arg0, arg1, arg2, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
@@ -251,7 +250,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3>(LanguageSet set, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
-        GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
+        GetBroadcastTranslationData(in set, translation, out string value, out LanguageInfo lang, out Color textColor);
         value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
@@ -260,7 +259,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4>(LanguageSet set, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
-        GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
+        GetBroadcastTranslationData(in set, translation, out string value, out LanguageInfo lang, out Color textColor);
         value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
@@ -269,7 +268,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4, T5>(LanguageSet set, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
-        GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
+        GetBroadcastTranslationData(in set, translation, out string value, out LanguageInfo lang, out Color textColor);
         value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, arg5, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
@@ -278,7 +277,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4, T5, T6>(LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
-        GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
+        GetBroadcastTranslationData(in set, translation, out string value, out LanguageInfo lang, out Color textColor);
         value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
@@ -287,7 +286,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
-        GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
+        GetBroadcastTranslationData(in set, translation, out string value, out LanguageInfo lang, out Color textColor);
         value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
@@ -296,7 +295,7 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
-        GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
+        GetBroadcastTranslationData(in set, translation, out string value, out LanguageInfo lang, out Color textColor);
         value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
@@ -305,74 +304,74 @@ public static class Chat
     /// <remarks>Thread Safe</remarks>
     public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(LanguageSet set, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
-        GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
+        GetBroadcastTranslationData(in set, translation, out string value, out LanguageInfo lang, out Color textColor);
         value = translation.Translate(value, lang, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, set.Team, TranslationFlags.ForChat, set.IMGUI);
         CheckTranslationLength(lang, ref value, translation, ref textColor, set.IMGUI);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void Broadcast(IEnumerable<LanguageSet> sets, Translation translation)
+    public static void Broadcast(LanguageSet.LanguageSetEnumerator sets, Translation translation)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void Broadcast<T0>(IEnumerable<LanguageSet> sets, Translation<T0> translation, T0 arg0)
+    public static void Broadcast<T0>(LanguageSet.LanguageSetEnumerator sets, Translation<T0> translation, T0 arg0)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation, arg0);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void Broadcast<T0, T1>(IEnumerable<LanguageSet> sets, Translation<T0, T1> translation, T0 arg0, T1 arg1)
+    public static void Broadcast<T0, T1>(LanguageSet.LanguageSetEnumerator sets, Translation<T0, T1> translation, T0 arg0, T1 arg1)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation, arg0, arg1);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void Broadcast<T0, T1, T2>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
+    public static void Broadcast<T0, T1, T2>(LanguageSet.LanguageSetEnumerator sets, Translation<T0, T1, T2> translation, T0 arg0, T1 arg1, T2 arg2)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation, arg0, arg1, arg2);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void Broadcast<T0, T1, T2, T3>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+    public static void Broadcast<T0, T1, T2, T3>(LanguageSet.LanguageSetEnumerator sets, Translation<T0, T1, T2, T3> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation, arg0, arg1, arg2, arg3);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void Broadcast<T0, T1, T2, T3, T4>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    public static void Broadcast<T0, T1, T2, T3, T4>(LanguageSet.LanguageSetEnumerator sets, Translation<T0, T1, T2, T3, T4> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void Broadcast<T0, T1, T2, T3, T4, T5>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    public static void Broadcast<T0, T1, T2, T3, T4, T5>(LanguageSet.LanguageSetEnumerator sets, Translation<T0, T1, T2, T3, T4, T5> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6>(LanguageSet.LanguageSetEnumerator sets, Translation<T0, T1, T2, T3, T4, T5, T6> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7>(LanguageSet.LanguageSetEnumerator sets, Translation<T0, T1, T2, T3, T4, T5, T6, T7> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8>(LanguageSet.LanguageSetEnumerator sets, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
     /// <remarks>Thread Safe</remarks>
-    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(IEnumerable<LanguageSet> sets, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    public static void Broadcast<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(LanguageSet.LanguageSetEnumerator sets, Translation<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         foreach (LanguageSet set in sets)
             Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
@@ -663,7 +662,7 @@ public static class Chat
                 Broadcast(set, translation, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
         }
     }
-    private static void GetBroadcastTranslationData(in LanguageSet set, Translation translation, out string value, out string lang, out Color textColor)
+    private static void GetBroadcastTranslationData(in LanguageSet set, Translation translation, out string value, out LanguageInfo lang, out Color textColor)
     {
         if (translation is null) throw new ArgumentNullException(nameof(translation));
         lang = set.Language;
@@ -676,18 +675,18 @@ public static class Chat
         else
             UCWarfare.RunOnMainThread(() => SendSingleMessage(value, textColor, EChatMode.SAY, null, (translation.Flags & TranslationFlags.NoRichText) == 0, player.SteamPlayer));
     }
-    private static void CheckTranslationLength(string lang, ref string value, Translation translation, ref Color textColor, bool imgui)
+    private static void CheckTranslationLength(LanguageInfo lang, ref string value, Translation translation, ref Color textColor, bool imgui)
     {
         if (System.Text.Encoding.UTF8.GetByteCount(value) > MaxMessageSize)
         {
-            value = translation.Translate((string?)null, out textColor, imgui);
+            value = translation.Translate((LanguageInfo?)null, out textColor, imgui);
             if (System.Text.Encoding.UTF8.GetByteCount(value) > MaxMessageSize)
             {
                 value = translation.Key;
-                L.LogWarning(lang + " and default translation for {" + value + "} is too large for chat.");
+                L.LogWarning(lang + " and default translation for {" + value + "} is too large for chat.", method: "CHAT");
             }
             else
-                L.LogWarning(lang + " translation for {" + translation.Key + "} is too large for chat, falling back to default.");
+                L.LogWarning(lang + " translation for {" + translation.Key + "} is too large for chat, falling back to default.", method: "CHAT");
         }
     }
 }

@@ -9,6 +9,7 @@ using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -232,6 +233,15 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable, IR
             throw new NotSupportedException("One-to-one only rn");
         return F.GetTranslationListSchema(tableName, fkColumn, mainTable, mainPkColumn, DefaultCharLength);
     }
+    public string Translate(LanguageInfo language, string @default) => Translate(language) ?? @default;
+    public string? Translate(LanguageInfo language)
+    {
+        language ??= Localization.GetDefaultLanguage();
+        if (TryGetValue(language.LanguageCode, out string value) || !language.IsDefault && TryGetValue(L.Default, out value))
+            return value;
+
+        return Count > 0 ? Values.ElementAt(0) : null;
+    }
 
     public object Clone() => new TranslationList(this);
     public void Read(ByteReader reader)
@@ -423,7 +433,7 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
     public const string FormatDisplayName = "d";
     [FormatDisplay("Key Code")]
     public const string FormatKey = "k";
-    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null && format.Equals(FormatKey, StringComparison.Ordinal))

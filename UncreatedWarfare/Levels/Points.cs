@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -16,7 +17,6 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Players;
@@ -188,11 +188,11 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         return (float)(xp - strt) / (GetNextLevelXP(lvl) - strt);
     }
     public static void AwardCredits<T0>(UCPlayer player, int amount, Translation<T0> message, T0 arg0, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
-        AwardCredits(player, amount, Localization.Translate(message, player, arg0), redmessage, isPurchase, @lock);
+        AwardCredits(player, amount, message.Translate(player, arg0), redmessage, isPurchase, @lock);
     public static void AwardCredits<T0, T1>(UCPlayer player, int amount, Translation<T0, T1> message, T0 arg0, T1 arg1, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
-        AwardCredits(player, amount, Localization.Translate(message, player, arg0, arg1), redmessage, isPurchase, @lock);
+        AwardCredits(player, amount, message.Translate(player, arg0, arg1), redmessage, isPurchase, @lock);
     public static Task AwardCreditsAsync(UCPlayer player, int amount, Translation message, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default) =>
-        AwardCreditsAsync(player, amount, Localization.Translate(message, player), redmessage, isPurchase, @lock, token);
+        AwardCreditsAsync(player, amount, message.Translate(player), redmessage, isPurchase, @lock, token);
     public static async Task AwardCreditsAsync(CreditsParameters parameters, CancellationToken token = default, bool @lock = true)
     {
         token.CombineIfNeeded(UCWarfare.UnloadCancel);
@@ -243,11 +243,9 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             {
                 Translation<int> key = T.XPToastGainCredits;
                 if (amount < 0)
-                {
                     key = redmessage ? T.XPToastLoseCredits : T.XPToastPurchaseCredits;
-                }
 
-                string number = Localization.Translate(key, player, Math.Abs(amount));
+                string number = key.Translate(player, Math.Abs(amount));
                 ToastMessage.QueueMessage(player,
                     !string.IsNullOrEmpty(parameters.Message)
                         ? new ToastMessage(ToastMessageStyle.Mini, number + "\n" + parameters.Message!.Colorize("adadad"))
@@ -277,9 +275,9 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             await remote.ConfigureAwait(false);
     }
     public static Task AwardCreditsAsync<T0>(UCPlayer player, int amount, Translation<T0> message, T0 arg0, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default) =>
-        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg0), redmessage, isPurchase, @lock, token);
+        AwardCreditsAsync(player, amount, message.Translate(player, arg0), redmessage, isPurchase, @lock, token);
     public static Task AwardCreditsAsync<T0, T1>(UCPlayer player, int amount, Translation<T0, T1> message, T0 arg0, T1 arg1, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default) =>
-        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg0, arg1), redmessage, isPurchase, @lock, token);
+        AwardCreditsAsync(player, amount, message.Translate(player, arg0, arg1), redmessage, isPurchase, @lock, token);
     public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false, bool @lock = true)
     {
         CreditsParameters parameters = new CreditsParameters(player, player.GetTeam(), amount, message, redmessage)
@@ -305,7 +303,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         AwardXP(new XPParameters(player, 0, amount)
         {
             Reward = reward,
-            Message = PointsConfig.GetDefaultTranslation(player.Language, reward)
+            Message = PointsConfig.GetDefaultTranslation(player.Locale.LanguageInfo, player.Locale.CultureInfo, reward)
         });
     }
     public static void AwardXP(UCPlayer player, XPReward reward, float multiplier = 1f)
@@ -313,7 +311,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         AwardXP(new XPParameters(player, 0, reward)
         {
             Multiplier = multiplier,
-            Message = PointsConfig.GetDefaultTranslation(player.Language, reward)
+            Message = PointsConfig.GetDefaultTranslation(player.Locale.LanguageInfo, player.Locale.CultureInfo, reward)
         });
     }
     public static void AwardXP(UCPlayer player, XPReward reward, Translation translation, float multiplier = 1f)
@@ -504,7 +502,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     // toasts
                     if (player.IsOnline && !player.HasUIHidden && !Data.Gamemode.LeaderboardUp())
                     {
-                        string number = Localization.Translate(amtXp >= 0 ? T.XPToastGainXP : T.XPToastLoseXP, player, Math.Abs(amtXp));
+                        string number = (amtXp >= 0 ? T.XPToastGainXP : T.XPToastLoseXP).Translate(player, Math.Abs(amtXp));
 
                         number = number.Colorize(amtXp > 0 ? "e3e3e3" : "d69898");
                         
@@ -516,7 +514,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                         {
                             Translation<int> key = credits < 0 ? T.XPToastLoseCredits : T.XPToastGainCredits;
 
-                            number = Localization.Translate(key, player, Math.Abs(credits));
+                            number = key.Translate(player, Math.Abs(credits));
                             ToastMessage.QueueMessage(player, !string.IsNullOrEmpty(parameters.Message)
                                     ? new ToastMessage(ToastMessageStyle.Mini, number + "\n" + parameters.Message!.Colorize("adadad"))
                                     : new ToastMessage(ToastMessageStyle.Mini, number));
@@ -563,14 +561,14 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     if (player.Level.Level > oldLevel.Level)
                     {
                         ToastMessage.QueueMessage(player,
-                            new ToastMessage(ToastMessageStyle.Large, new string[] { Localization.Translate(T.ToastPromoted, player), player.Level.Name.ToUpper(), string.Empty }));
+                            new ToastMessage(ToastMessageStyle.Large, new string[] { T.ToastPromoted.Translate(player), player.Level.Name.ToUpper(), string.Empty }));
                         player.PointsDirtyMask |= 0b00000010;
                         Signs.UpdateAllSigns(player);
                     }
                     else if (player.Level.Level < oldLevel.Level)
                     {
                         ToastMessage.QueueMessage(player,
-                            new ToastMessage(ToastMessageStyle.Large, new string[] { Localization.Translate(T.ToastDemoted, player), player.Level.Name.ToUpper(), string.Empty }));
+                            new ToastMessage(ToastMessageStyle.Large, new string[] { T.ToastDemoted.Translate(player), player.Level.Name.ToUpper(), string.Empty }));
                         player.PointsDirtyMask |= 0b00000010;
                         Signs.UpdateAllSigns(player);
                     }
@@ -1363,11 +1361,11 @@ public class PointsConfig : JSONConfigData
 
         return true;
     }
-    internal static string GetDefaultTranslation(string language, XPReward reward)
+    internal static string GetDefaultTranslation(LanguageInfo language, CultureInfo culture, XPReward reward)
     {
         if (TryGetVehicleType(reward, out VehicleType vtype))
         {
-            return T.XPToastVehicleDestroyed.Translate(language, vtype);
+            return T.XPToastVehicleDestroyed.Translate(language, culture, vtype);
         }
         Translation? t = reward switch
         {
@@ -1396,7 +1394,7 @@ public class PointsConfig : JSONConfigData
         };
         if (t == null)
             return "{" + reward.ToString().ToUpperInvariant() + "}";
-        return t.Translate(language);
+        return t.Translate(language, culture);
     }
 
     public sealed class XPRewardData

@@ -203,7 +203,6 @@ public static class OffenseManager
     {
         byte[][] bytes = (e.Player.SteamPlayer.playerID.GetHwids() as byte[][])!;
         int[] update = new int[bytes.Length];
-        int updates = 0;
         ulong s64 = e.Steam64;
         uint packed = e.Player.SteamPlayer.transportConnection.TryGetIPv4Address(out uint ip) ? ip : 0u;
         Task.Run(async () =>
@@ -228,7 +227,6 @@ public static class OffenseManager
                                     if (b[x] != buffer[x])
                                         goto cont;
                                 update[i] = id;
-                                ++updates;
                                 break;
                                 cont:;
                             }
@@ -286,7 +284,7 @@ public static class OffenseManager
 
                 uint? id = null;
                 await Data.DatabaseManager.QueryAsync("SELECT `Id` FROM `ip_addresses` WHERE `Steam64` = @0 AND `Packed` = @1 LIMIT 1;", new object[] { s64, packed },
-                    R => id = R.GetUInt32(0));
+                    reader => id = reader.GetUInt32(0));
                 if (id.HasValue)
                     await Data.DatabaseManager.NonQueryAsync(
                         $"UPDATE `{WarfareSQL.TableIPAddresses}` SET " +
@@ -949,16 +947,16 @@ public static class OffenseManager
         }
         else
         {
-            string time = duration.GetTimeFromSeconds(L.Default);
+            string time = Localization.GetTimeFromSeconds(duration);
             if (callerId == 0)
             {
                 L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by an operator because {reason}.", ConsoleColor.Cyan);
                 bool f = false;
                 foreach (LanguageSet set in LanguageSet.All())
                 {
-                    if (f || !set.Language.Equals(L.Default, StringComparison.Ordinal))
+                    if (f || !set.Language.IsDefault)
                     {
-                        time = duration.GetTimeFromSeconds(set.Language);
+                        time = Localization.GetTimeFromSeconds(duration, set.Language, set.CultureInfo);
                         f = true;
                     }
                     Chat.Broadcast(set, T.BanSuccessBroadcastOperator, target as IPlayer ?? name, time);
@@ -970,17 +968,15 @@ public static class OffenseManager
                 bool f = false;
                 foreach (LanguageSet set in LanguageSet.AllBut(callerId))
                 {
-                    if (f || !set.Language.Equals(L.Default, StringComparison.Ordinal))
+                    if (f || !set.Language.IsDefault)
                     {
-                        time = duration.GetTimeFromSeconds(set.Language);
+                        time = Localization.GetTimeFromSeconds(duration, set.Language, set.CultureInfo);
                         f = true;
                     }
                     Chat.Broadcast(set, T.BanSuccessBroadcast, target as IPlayer ?? name, caller as IPlayer ?? callerName, time);
                 }
                 if (f)
-                    time = duration.GetTimeFromSeconds(callerId);
-                else if (Data.Languages.TryGetValue(callerId, out string lang) && !lang.Equals(L.Default, StringComparison.Ordinal))
-                    time = duration.GetTimeFromSeconds(lang);
+                    time = Localization.GetTimeFromSeconds(duration, caller);
                 caller?.SendChat(T.BanSuccessFeedback, target as IPlayer ?? name, time);
             }
         }
@@ -1001,7 +997,7 @@ public static class OffenseManager
         if (callerId == 0)
         {
             L.Log($"{names.PlayerName} ({targetId}) was kicked by an operator because {reason}.", ConsoleColor.Cyan);
-            Chat.Broadcast(T.KickSuccessBroadcastOperator, target as IPlayer);
+            Chat.Broadcast(T.KickSuccessBroadcastOperator, target);
         }
         else
         {
@@ -1070,9 +1066,8 @@ public static class OffenseManager
         {
             L.Log($"{targetNames.PlayerName} ({targetId}) was warned by an operator because {reason}.", ConsoleColor.Cyan);
             Chat.Broadcast(LanguageSet.AllBut(targetId), T.WarnSuccessBroadcastOperator, target);
-
-            string lang = Localization.GetLang(target.Steam64);
-            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(lang), T.WarnSuccessDMOperator.Translate(lang, reason!)));
+            
+            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(target, false), T.WarnSuccessDMOperator.Translate(target, false, reason)));
 
             target.SendChat(T.WarnSuccessDMOperator, reason);
         }
@@ -1084,9 +1079,8 @@ public static class OffenseManager
             IPlayer caller2 = caller as IPlayer ?? callerNames;
             Chat.Broadcast(LanguageSet.AllBut(callerId, targetId), T.WarnSuccessBroadcast, target, caller2);
             caller?.SendChat(T.WarnSuccessFeedback, target);
-
-            string lang = Localization.GetLang(target.Steam64);
-            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(lang), T.WarnSuccessDM.Translate(lang, callerNames, reason!)));
+            
+            ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(target, false), T.WarnSuccessDM.Translate(target, false, callerNames, reason)));
             target.SendChat(T.WarnSuccessDM, caller2, reason);
         }
 
@@ -1116,7 +1110,7 @@ public static class OffenseManager
 
         LogMutePlayer(target, admin, type, duration, reason, DateTime.Now);
 
-        string dur = duration == -1 ? "PERMANENT" : duration.GetTimeFromSeconds(0);
+        string dur = duration == -1 ? "PERMANENT" : Localization.GetTimeFromSeconds(duration);
         ActionLog.Add(ActionLogType.MutePlayer, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur, admin);
 
         if (admin == 0)
@@ -1193,7 +1187,7 @@ public static class OffenseManager
                 if (caller is not null)
                     caller.SendChat(T.UnmuteNotMuted, names);
                 else if (callerId == 0)
-                    L.Log(Util.RemoveRichText(T.UnmuteNotMuted.Translate(L.Default, names, out Color color)), Util.GetClosestConsoleColor(color));
+                    L.Log(Util.RemoveRichText(T.UnmuteNotMuted.Translate(Localization.GetDefaultLanguage(), names, out Color color)), Util.GetClosestConsoleColor(color));
                 return StandardErrorCode.GenericError;
             }
             else
@@ -1230,7 +1224,7 @@ public static class OffenseManager
             if (caller is not null)
                 caller.SendChat(T.PlayerNotFound);
             else if (callerId == 0)
-                L.Log(Util.RemoveRichText(T.PlayerNotFound.Translate(L.Default, out Color color)), Util.GetClosestConsoleColor(color));
+                L.Log(Util.RemoveRichText(T.PlayerNotFound.Translate(Localization.GetDefaultLanguage(), out Color color)), Util.GetClosestConsoleColor(color));
             return StandardErrorCode.NotFound;
         }
     }

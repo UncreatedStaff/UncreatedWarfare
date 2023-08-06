@@ -1,4 +1,5 @@
-﻿using SDG.NetTransport;
+﻿using Cysharp.Threading.Tasks;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -11,7 +12,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
@@ -183,7 +183,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         NickName,
         PlayerName
     }
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is null) goto end;
@@ -230,8 +230,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool IsAdmin => Player.channel.owner.isAdmin;
     public bool IsTeam1 => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
     public bool IsTeam2 => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
-    public string Language => Locale.Language;
-    public CultureInfo Culture => Locale.Culture ?? CultureInfo.InvariantCulture;
     public bool IsTalking => !_lastMuted && _isTalking && IsOnline;
     public bool IsLeaving { get; internal set; }
     public bool IsOnline => _isOnline;
@@ -972,7 +970,7 @@ public struct OfflinePlayer : IPlayer
             _names = pl.Name;
         return _names.HasValue;
     }
-    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         UCPlayer? pl = UCPlayer.FromID(Steam64);
@@ -1002,26 +1000,106 @@ public struct OfflinePlayer : IPlayer
 }
 public class UCPlayerLocale
 {
+    public static event Action<UCPlayer>? OnLocaleUpdated;
+
+    private PlayerLanguagePreferences _preferences;
+    private readonly bool _init;
+
     public UCPlayer Player { get; }
-    public string Language { get; private set; }
-    public IFormatProvider Formatter { get; private set; }
-    public CultureInfo? Culture { get; private set; }
+    public string Language => LanguageInfo.LanguageCode;
+    public CultureInfo CultureInfo { get; private set; }
+    public PlayerLanguagePreferences Preferences
+    {
+        get => _preferences;
+        set
+        {
+            LanguageInfo info = Data.LanguageDataStore.GetInfoCached(value.Language) ?? Localization.GetDefaultLanguage();
+            bool updated = false;
+
+            IsDefaultLanguage = info.LanguageCode.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
+
+            if (!(value.CultureCode != null && Localization.TryGetCultureInfo(value.CultureCode, out CultureInfo culture)) &&
+                !(info is { DefaultCultureCode: { } defaultCultureName } && Localization.TryGetCultureInfo(defaultCultureName, out culture)))
+            {
+                culture = Data.LocalLocale;
+            }
+
+            if (_init && (CultureInfo == null || !CultureInfo.Name.Equals(culture.Name, StringComparison.Ordinal)))
+            {
+                L.Log($"Updated culture for {Player}: {CultureInfo?.DisplayName ?? "null"} -> {culture.DisplayName}.");
+                updated = true;
+            }
+
+            CultureInfo = culture;
+
+            if (_init && LanguageInfo != info)
+            {
+                L.Log($"Updated language for {Player}: {LanguageInfo?.DisplayName ?? "null"} -> {info.DisplayName}.");
+                updated = true;
+            }
+
+            LanguageInfo = info;
+
+            IsDefaultCulture = CultureInfo.Name.Equals(Data.LocalLocale.Name, StringComparison.Ordinal);
+
+            _preferences = value;
+
+            if (updated)
+                InvokeOnLocaleUpdated(Player);
+        }
+    }
+
+    public LanguageInfo LanguageInfo { get; private set; }
+    public bool IsDefaultLanguage { get; private set; }
+    public bool IsDefaultCulture { get; private set; }
     public UCPlayerLocale(UCPlayer player, PlayerLanguagePreferences preferences)
     {
         Player = player;
+        Preferences = preferences;
+        _init = true;
+    }
+    internal Task Update(string? language, CultureInfo? culture, CancellationToken token = default)
+    {
+        bool save = false;
+        if (culture != null && !culture.Name.Equals(CultureInfo.Name, StringComparison.Ordinal))
+        {
+            L.Log($"Updated culture for {Player}: {CultureInfo.DisplayName} -> {culture.DisplayName}.");
+            ActionLog.Add(ActionLogType.ChangeCulture, CultureInfo.Name + " >> " + culture.Name, Player);
+            CultureInfo = culture;
+            Preferences.CultureCode = culture.Name;
+            IsDefaultCulture = culture.Name.Equals(Data.LocalLocale.Name, StringComparison.Ordinal);
+            save = true;
+        }
 
-        LanguageInfo? info = Data.LanguageDataStore.GetInfoCached(preferences.Language) ?? Data.LanguageDataStore.GetInfoCached(L.Default);
+        if (language != null && Data.LanguageDataStore.GetInfoCached(language) is { } languageInfo && !languageInfo.LanguageCode.Equals(LanguageInfo.LanguageCode, StringComparison.Ordinal))
+        {
+            L.Log($"Updated language for {Player}: {LanguageInfo.DisplayName} -> {languageInfo.DisplayName}.");
+            ActionLog.Add(ActionLogType.ChangeLanguage, LanguageInfo.LanguageCode + " >> " + languageInfo.LanguageCode, Player);
+            Preferences.Language = languageInfo.PrimaryKey;
+            IsDefaultLanguage = languageInfo.LanguageCode.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
+            LanguageInfo = languageInfo;
+            save = true;
+        }
 
-        Language = info?.LanguageCode ?? L.Default;
+        if (save)
+        {
+            Preferences.LastUpdated = DateTimeOffset.UtcNow;
+            Task task = Data.LanguageDataStore.UpdateLanguagePreferences(Preferences, token);
+            InvokeOnLocaleUpdated(Player);
+            return task;
+        }
 
-        if (preferences.CultureCode != null && Localization.TryGetCultureInfo(preferences.CultureCode, out CultureInfo culture))
-            Culture = culture;
-        else if (info is { DefaultCultureCode: { } defaultCultureName } && Localization.TryGetCultureInfo(defaultCultureName, out culture))
-            Culture = culture;
-        else
-            Culture = Data.LocalLocale;
+        return Task.CompletedTask;
+    }
 
-        Formatter = Culture;
+    private static void InvokeOnLocaleUpdated(UCPlayer player)
+    {
+        if (OnLocaleUpdated == null)
+            return;
+        // ReSharper disable once ConstantConditionalAccessQualifier
+        if (UCWarfare.IsMainThread)
+            OnLocaleUpdated.Invoke(player);
+        else UCWarfare.RunOnMainThread(() => OnLocaleUpdated?.Invoke(player));
     }
 }
 

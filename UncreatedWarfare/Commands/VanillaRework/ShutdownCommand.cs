@@ -126,8 +126,8 @@ public class ShutdownCommand : Command
         bool a = false;
         foreach (LanguageSet set in LanguageSet.AllBut(instigator))
         {
-            time = seconds.GetTimeFromSeconds(set.Language);
-            if (set.Language.Equals(L.Default))
+            time = Localization.GetTimeFromSeconds(seconds, in set);
+            if (!a && set.IsDefault)
             {
                 a = true;
                 L.Log($"A shutdown has been scheduled in {time} by {instigator} because: {reason}.", ConsoleColor.Cyan);
@@ -137,7 +137,7 @@ public class ShutdownCommand : Command
         }
         if (!a)
         {
-            time = seconds.GetTimeFromSeconds(L.Default);
+            time = Localization.GetTimeFromSeconds(seconds);
             L.Log($"A shutdown has been scheduled in {time} by {instigator} because: {reason}.", ConsoleColor.Cyan);
             ActionLog.Add(ActionLogType.ShutdownServer, "IN " + time.ToUpper() + ": " + reason, instigator);
         }

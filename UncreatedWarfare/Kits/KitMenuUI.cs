@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Uncreated.Framework.UI;
@@ -214,7 +215,7 @@ public class KitMenuUI : UnturnedUI
         DropdownButtons[(int)Class.Squadleader] = BtnDropdownSquadleader;
         for (int i = 0; i < DropdownButtons.Length; ++i)
         {
-            DefaultClassCache[i] = Localization.TranslateEnum((Class)i, L.Default);
+            DefaultClassCache[i] = Localization.TranslateEnum((Class)i, null);
             ClassIconCache[i] = ((Class)i).GetIcon().ToString();
             if (DropdownButtons[i] is not { } btn)
                 L.LogWarning("DropdownButtons[" + i + "] was not initialized (class: " + (Class)i + ").", method: "KIT MENU UI");
@@ -299,10 +300,10 @@ public class KitMenuUI : UnturnedUI
         if (!player.KitMenuData.IsAlive)
         {
             SendToPlayer(c);
-            if (player.Language.Equals(L.Default, StringComparison.Ordinal))
+            if (player.Locale.LanguageInfo.IsDefault)
                 SetCachedValues(c);
             else
-                SetCachedValuesToOther(c, player.Language);
+                SetCachedValuesToOther(c, player.Locale.LanguageInfo, player.Locale.CultureInfo);
             LogicSetTabs[0].SetVisibility(c, true);
             SwitchToTab(player, 2);
         }
@@ -317,10 +318,10 @@ public class KitMenuUI : UnturnedUI
     private string TranslateClass(Class @class, UCPlayer player)
     {
         int cl = (int)@class;
-        if (player.Language.Equals(L.Default, StringComparison.Ordinal) && DefaultClassCache.Length > cl)
+        if (player.Locale.LanguageInfo.IsDefault && DefaultClassCache.Length > cl)
             return DefaultClassCache[cl];
 
-        return Localization.TranslateEnum(@class, player.Steam64);
+        return Localization.TranslateEnum(@class, player.Locale.LanguageInfo);
     }
     private void OnReload()
     {
@@ -329,10 +330,10 @@ public class KitMenuUI : UnturnedUI
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
             if (pl.KitMenuData.IsAlive)
             {
-                if (pl.Language.Equals(L.Default, StringComparison.Ordinal))
+                if (pl.Locale.LanguageInfo.IsDefault)
                     SetCachedValues(pl.Connection);
                 else
-                    SetCachedValuesToOther(pl.Connection, pl.Language);
+                    SetCachedValuesToOther(pl.Connection, pl.Locale.LanguageInfo, pl.Locale.CultureInfo);
                 if (pl.KitMenuData.IsOpen)
                 {
                     LogicSetTabs[pl.KitMenuData.Tab].SetVisibility(pl.Connection, true);
@@ -341,35 +342,35 @@ public class KitMenuUI : UnturnedUI
             }
         }
     }
-    private void SetCachedValuesToOther(ITransportConnection c, string lang)
+    private void SetCachedValuesToOther(ITransportConnection c, LanguageInfo language, CultureInfo culture)
     {
-        LblTabBaseKits.SetText(c, T.KitMenuUITabBaseKits.Translate(lang));
-        LblTabEliteKits.SetText(c, T.KitMenuUITabEliteKits.Translate(lang));
-        LblTabLoadouts.SetText(c, T.KitMenuUITabLoadouts.Translate(lang));
-        LblTabSpecialKits.SetText(c, T.KitMenuUITabSpecialKits.Translate(lang));
+        LblTabBaseKits.SetText(c, T.KitMenuUITabBaseKits.Translate(language, culture));
+        LblTabEliteKits.SetText(c, T.KitMenuUITabEliteKits.Translate(language, culture));
+        LblTabLoadouts.SetText(c, T.KitMenuUITabLoadouts.Translate(language, culture));
+        LblTabSpecialKits.SetText(c, T.KitMenuUITabSpecialKits.Translate(language, culture));
 
-        LblFilterTitle.SetText(c, T.KitMenuUIFilterLabel.Translate(lang));
-        LblInfoFaction.SetText(c, T.KitMenuUIFactionLabel.Translate(lang));
-        LblInfoClass.SetText(c, T.KitMenuUIClassLabel.Translate(lang));
-        LblInfoIncludedItems.SetText(c, T.KitMenuUIIncludedItemsLabel.Translate(lang));
+        LblFilterTitle.SetText(c, T.KitMenuUIFilterLabel.Translate(language, culture));
+        LblInfoFaction.SetText(c, T.KitMenuUIFactionLabel.Translate(language, culture));
+        LblInfoClass.SetText(c, T.KitMenuUIClassLabel.Translate(language, culture));
+        LblInfoIncludedItems.SetText(c, T.KitMenuUIIncludedItemsLabel.Translate(language, culture));
 
-        LblStatsPlaytime.SetText(c, T.KitMenuUIPlaytimeLabel.Translate(lang));
-        LblStatsKills.SetText(c, T.KitMenuUIKillsLabel.Translate(lang));
-        LblStatsDeaths.SetText(c, T.KitMenuUIDeathsLabel.Translate(lang));
-        LblStatsPrimaryKills.SetText(c, T.KitMenuUIPrimaryKillsLabel.Translate(lang));
-        LblStatsPrimaryAverageDistance.SetText(c, T.KitMenuUIPrimaryAvgDstLabel.Translate(lang));
-        LblStatsSecondaryKills.SetText(c, T.KitMenuUISecondaryKillsLabel.Translate(lang));
-        LblStatsDBNO.SetText(c, T.KitMenuUIDBNOLabel.Translate(lang));
-        LblStatsDistanceTraveled.SetText(c, T.KitMenuUIDistanceTraveledLabel.Translate(lang));
-        LblStatsTicketsLost.SetText(c, T.KitMenuUITicketsLostLabel.Translate(lang));
-        LblStatsTicketsGained.SetText(c, T.KitMenuUITicketsGainedLabel.Translate(lang));
+        LblStatsPlaytime.SetText(c, T.KitMenuUIPlaytimeLabel.Translate(language, culture));
+        LblStatsKills.SetText(c, T.KitMenuUIKillsLabel.Translate(language, culture));
+        LblStatsDeaths.SetText(c, T.KitMenuUIDeathsLabel.Translate(language, culture));
+        LblStatsPrimaryKills.SetText(c, T.KitMenuUIPrimaryKillsLabel.Translate(language, culture));
+        LblStatsPrimaryAverageDistance.SetText(c, T.KitMenuUIPrimaryAvgDstLabel.Translate(language, culture));
+        LblStatsSecondaryKills.SetText(c, T.KitMenuUISecondaryKillsLabel.Translate(language, culture));
+        LblStatsDBNO.SetText(c, T.KitMenuUIDBNOLabel.Translate(language, culture));
+        LblStatsDistanceTraveled.SetText(c, T.KitMenuUIDistanceTraveledLabel.Translate(language, culture));
+        LblStatsTicketsLost.SetText(c, T.KitMenuUITicketsLostLabel.Translate(language, culture));
+        LblStatsTicketsGained.SetText(c, T.KitMenuUITicketsGainedLabel.Translate(language, culture));
 
-        LblStatsTitle.SetText(c, T.KitMenuUIStatsLabel.Translate(lang));
-        LblActionsTitle.SetText(c, T.KitMenuUIActionsLabel.Translate(lang));
+        LblStatsTitle.SetText(c, T.KitMenuUIStatsLabel.Translate(language, culture));
+        LblActionsTitle.SetText(c, T.KitMenuUIActionsLabel.Translate(language, culture));
 
         int len = Math.Min(DefaultClassCache.Length, ClassLabels.Length);
         for (int i = 0; i < len; ++i)
-            ClassLabels[i].SetText(c, Localization.TranslateEnum((Class)i, lang));
+            ClassLabels[i].SetText(c, Localization.TranslateEnum((Class)i, language));
     }
     private void SetCachedValues(ITransportConnection c)
     {
@@ -438,15 +439,13 @@ public class KitMenuUI : UnturnedUI
         L.LogDebug("Opening kit: " + kit.Id);
         FactionInfo? plFaction = TeamManager.GetFactionSafe(player.GetTeam());
         ITransportConnection c = player.Connection;
-        string lang = player.Language;
-        LblInfoTitle.SetText(c, kit.GetDisplayName(lang).Replace('\n', ' ').Replace("\r", string.Empty));
+        LblInfoTitle.SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
         FactionInfo? faction = kit.Faction;
-        ValInfoFaction.SetText(c, faction?.GetShortName(lang) ?? (
-            DefaultLanguageCache != null &&
-            player.Language.Equals(L.Default, StringComparison.Ordinal)
+
+        ValInfoFaction.SetText(c, faction?.GetShortName(player.Locale.LanguageInfo) ?? (DefaultLanguageCache != null && player.Locale.LanguageInfo.IsDefault
                 ? DefaultLanguageCache[29]
-                : T.KitMenuUINoFaction.Translate(player)
-                ));
+                : T.KitMenuUINoFaction.Translate(player)));
+
         LblInfoFactionFlag.SetText(c, faction.GetFlagIcon());
         ValInfoClass.SetText(c, TranslateClass(kit.Class, player));
         LblInfoClassIcon.SetText(c, kit.Class.GetIcon().ToString());
@@ -546,7 +545,6 @@ public class KitMenuUI : UnturnedUI
             kit.ClothingSetCache = clothSet;
         }
         int index = 0;
-        IFormatProvider locale = Localization.GetLocale(lang);
         for (int i = 0; i < groups.Count; ++i)
         {
             if (index >= IncludedItemsCount)
@@ -592,7 +590,7 @@ public class KitMenuUI : UnturnedUI
             else if (grp.Key.Value != RedirectType.None)
             {
                 icon = ItemIconProvider.GetIcon(grp.Key.Value, RichIcons, true);
-                name = Localization.TranslateEnum(grp.Key.Value, lang);
+                name = Localization.TranslateEnum(grp.Key.Value, player.Locale.LanguageInfo);
             }
             else if (grp.Value == 255)
             {
@@ -600,7 +598,7 @@ public class KitMenuUI : UnturnedUI
                 if (kit.ClothingSetCache != null)
                     name = kit.ClothingSetCache + " Set";
                 else if (faction != null)
-                    name = "Default " + faction.GetAbbreviation(lang) + " Set.";
+                    name = "Default " + faction.GetAbbreviation(player.Locale.LanguageInfo) + " Set.";
                 else
                     name = "Default Set";
                 amt = 1;
@@ -611,7 +609,7 @@ public class KitMenuUI : UnturnedUI
             IncludedItemsText[index].SetText(c, name);
             IncludedItemsAmounts[index].SetVisibility(c, amt != 1);
             if (amt != 1)
-                IncludedItemsAmounts[index].SetText(c, "x" + amt.ToString(locale));
+                IncludedItemsAmounts[index].SetText(c, "x" + amt.ToString(player.Locale.CultureInfo));
             ++index;
         }
         for (; index < IncludedItemsText.Length; ++index)
@@ -622,10 +620,10 @@ public class KitMenuUI : UnturnedUI
         WarfareStats? stats = StatsManager.OnlinePlayers.FirstOrDefault(x => x.Steam64 == player.Steam64);
         if (stats != null && stats.Kits.FirstOrDefault(x => x.KitID.Equals(kit.Id, StringComparison.Ordinal)) is { } kitStats)
         {
-            ValStatsKills.SetText(c, kitStats.Kills.ToString(locale));
-            ValStatsDeaths.SetText(c, kitStats.Deaths.ToString(locale));
-            ValStatsPrimaryAverageDistance.SetText(c, kitStats.AverageGunKillDistance.ToString("0.#", locale) + " m");
-            ValStatsPlaytime.SetText(c, ((int)kitStats.PlaytimeMinutes).GetTimeFromMinutes(lang));
+            ValStatsKills.SetText(c, kitStats.Kills.ToString(player.Locale.CultureInfo));
+            ValStatsDeaths.SetText(c, kitStats.Deaths.ToString(player.Locale.CultureInfo));
+            ValStatsPrimaryAverageDistance.SetText(c, kitStats.AverageGunKillDistance.ToString("0.#", player.Locale.CultureInfo) + " m");
+            ValStatsPlaytime.SetText(c, Localization.GetTimeFromMinutes(((int)kitStats.PlaytimeMinutes), player));
         }
 
         if (TeamManager.IsInMain(player) && Data.Is<IKitRequests>())
@@ -640,7 +638,7 @@ public class KitMenuUI : UnturnedUI
     }
     private string GetTypeString(UCPlayer player, KitType type)
     {
-        if (DefaultLanguageCache != null && player.Language.Equals(L.Default, StringComparison.Ordinal))
+        if (DefaultLanguageCache != null && player.Locale.LanguageInfo.IsDefault)
             return DefaultLanguageCache[
                 type switch { KitType.Public => 8, KitType.Elite => 9, KitType.Loadout => 10, _ => 11 }
             ];
@@ -650,7 +648,7 @@ public class KitMenuUI : UnturnedUI
             KitType.Elite   => T.KitMenuUIKitTypeLabelElite,
             KitType.Loadout => T.KitMenuUIKitTypeLabelLoadout,
             _               => T.KitMenuUIKitTypeLabelSpecial
-        }).Translate(player.Language);
+        }).Translate(player.Locale.LanguageInfo);
     }
     private void RefreshList(UCPlayer player)
     {
@@ -677,7 +675,7 @@ public class KitMenuUI : UnturnedUI
             FavoriteLabels[index].SetText(c, favorited ? "<#fd0>¼" : "¼");
         WeaponLabels[index].SetText(c, kit.WeaponText ?? string.Empty);
         IdLabels[index].SetText(c, kit.Id);
-        NameLabels[index].SetText(c, kit.GetDisplayName(player.Language).Replace('\n', ' ').Replace("\r", string.Empty));
+        NameLabels[index].SetText(c, kit.GetDisplayName(player.Locale.LanguageInfo).Replace('\n', ' ').Replace("\r", string.Empty));
         StatusLabels[index].SetText(c, hasAccess ? Gamemode.Config.UIIconPlayer.ToString() : string.Empty);
         ClassLabels[index].SetText(c, kit.Class.GetIcon().ToString());
         FlagLabels[index].SetText(c, kit.Faction.GetFlagIcon());
@@ -687,45 +685,47 @@ public class KitMenuUI : UnturnedUI
     }
     private void CacheLanguages()
     {
+        LanguageInfo lang = Localization.GetDefaultLanguage();
+
         const int length = 30;
         if (DefaultLanguageCache is not { Length: length })
             DefaultLanguageCache = new string[length];
         for (int i = 0; i < DefaultClassCache.Length; ++i)
-            DefaultClassCache[i] = Localization.TranslateEnum((Class)i, L.Default);
+            DefaultClassCache[i] = Localization.TranslateEnum((Class)i, lang);
         
-        DefaultLanguageCache[0]  = T.KitMenuUITabBaseKits.Translate(L.Default);
-        DefaultLanguageCache[1]  = T.KitMenuUITabEliteKits.Translate(L.Default);
-        DefaultLanguageCache[2]  = T.KitMenuUITabLoadouts.Translate(L.Default);
-        DefaultLanguageCache[3]  = T.KitMenuUITabSpecialKits.Translate(L.Default);
+        DefaultLanguageCache[0]  = T.KitMenuUITabBaseKits.Translate(lang);
+        DefaultLanguageCache[1]  = T.KitMenuUITabEliteKits.Translate(lang);
+        DefaultLanguageCache[2]  = T.KitMenuUITabLoadouts.Translate(lang);
+        DefaultLanguageCache[3]  = T.KitMenuUITabSpecialKits.Translate(lang);
                                  
-        DefaultLanguageCache[4]  = T.KitMenuUIFilterLabel.Translate(L.Default);
-        DefaultLanguageCache[5]  = T.KitMenuUIFactionLabel.Translate(L.Default);
-        DefaultLanguageCache[6]  = T.KitMenuUIClassLabel.Translate(L.Default);
-        DefaultLanguageCache[7]  = T.KitMenuUIIncludedItemsLabel.Translate(L.Default);
-        DefaultLanguageCache[8]  = T.KitMenuUIKitTypeLabelPublic.Translate(L.Default);
-        DefaultLanguageCache[9]  = T.KitMenuUIKitTypeLabelElite.Translate(L.Default);
-        DefaultLanguageCache[10] = T.KitMenuUIKitTypeLabelSpecial.Translate(L.Default);
-        DefaultLanguageCache[11] = T.KitMenuUIKitTypeLabelLoadout.Translate(L.Default);
+        DefaultLanguageCache[4]  = T.KitMenuUIFilterLabel.Translate(lang);
+        DefaultLanguageCache[5]  = T.KitMenuUIFactionLabel.Translate(lang);
+        DefaultLanguageCache[6]  = T.KitMenuUIClassLabel.Translate(lang);
+        DefaultLanguageCache[7]  = T.KitMenuUIIncludedItemsLabel.Translate(lang);
+        DefaultLanguageCache[8]  = T.KitMenuUIKitTypeLabelPublic.Translate(lang);
+        DefaultLanguageCache[9]  = T.KitMenuUIKitTypeLabelElite.Translate(lang);
+        DefaultLanguageCache[10] = T.KitMenuUIKitTypeLabelSpecial.Translate(lang);
+        DefaultLanguageCache[11] = T.KitMenuUIKitTypeLabelLoadout.Translate(lang);
 
-        DefaultLanguageCache[12] = T.KitMenuUIPlaytimeLabel.Translate(L.Default);
-        DefaultLanguageCache[13] = T.KitMenuUIKillsLabel.Translate(L.Default);
-        DefaultLanguageCache[14] = T.KitMenuUIDeathsLabel.Translate(L.Default);
-        DefaultLanguageCache[15] = T.KitMenuUIPrimaryKillsLabel.Translate(L.Default);
-        DefaultLanguageCache[16] = T.KitMenuUIPrimaryAvgDstLabel.Translate(L.Default);
-        DefaultLanguageCache[17] = T.KitMenuUISecondaryKillsLabel.Translate(L.Default);
-        DefaultLanguageCache[18] = T.KitMenuUIDBNOLabel.Translate(L.Default);
-        DefaultLanguageCache[19] = T.KitMenuUIDistanceTraveledLabel.Translate(L.Default);
-        DefaultLanguageCache[20] = T.KitMenuUITicketsLostLabel.Translate(L.Default);
-        DefaultLanguageCache[21] = T.KitMenuUITicketsGainedLabel.Translate(L.Default);
+        DefaultLanguageCache[12] = T.KitMenuUIPlaytimeLabel.Translate(lang);
+        DefaultLanguageCache[13] = T.KitMenuUIKillsLabel.Translate(lang);
+        DefaultLanguageCache[14] = T.KitMenuUIDeathsLabel.Translate(lang);
+        DefaultLanguageCache[15] = T.KitMenuUIPrimaryKillsLabel.Translate(lang);
+        DefaultLanguageCache[16] = T.KitMenuUIPrimaryAvgDstLabel.Translate(lang);
+        DefaultLanguageCache[17] = T.KitMenuUISecondaryKillsLabel.Translate(lang);
+        DefaultLanguageCache[18] = T.KitMenuUIDBNOLabel.Translate(lang);
+        DefaultLanguageCache[19] = T.KitMenuUIDistanceTraveledLabel.Translate(lang);
+        DefaultLanguageCache[20] = T.KitMenuUITicketsLostLabel.Translate(lang);
+        DefaultLanguageCache[21] = T.KitMenuUITicketsGainedLabel.Translate(lang);
 
-        DefaultLanguageCache[22] = T.KitMenuUIStatsLabel.Translate(L.Default);
-        DefaultLanguageCache[23] = T.KitMenuUIActionsLabel.Translate(L.Default);
-        DefaultLanguageCache[24] = T.KitMenuUIActionRequestKitLabel.Translate(L.Default);
-        DefaultLanguageCache[25] = T.KitMenuUIActionNotInMainKitLabel.Translate(L.Default);
-        DefaultLanguageCache[26] = T.KitMenuUIActionGiveKitLabel.Translate(L.Default);
-        DefaultLanguageCache[27] = T.KitMenuUIActionEditKitLabel.Translate(L.Default);
-        DefaultLanguageCache[28] = T.KitMenuUIActionSetLoadoutItemsLabel.Translate(L.Default);
-        DefaultLanguageCache[29] = T.KitMenuUINoFaction.Translate(L.Default);
+        DefaultLanguageCache[22] = T.KitMenuUIStatsLabel.Translate(lang);
+        DefaultLanguageCache[23] = T.KitMenuUIActionsLabel.Translate(lang);
+        DefaultLanguageCache[24] = T.KitMenuUIActionRequestKitLabel.Translate(lang);
+        DefaultLanguageCache[25] = T.KitMenuUIActionNotInMainKitLabel.Translate(lang);
+        DefaultLanguageCache[26] = T.KitMenuUIActionGiveKitLabel.Translate(lang);
+        DefaultLanguageCache[27] = T.KitMenuUIActionEditKitLabel.Translate(lang);
+        DefaultLanguageCache[28] = T.KitMenuUIActionSetLoadoutItemsLabel.Translate(lang);
+        DefaultLanguageCache[29] = T.KitMenuUINoFaction.Translate(lang);
     }
     private void OnClassButtonClicked(UnturnedButton button, Player player)
     {
@@ -746,13 +746,9 @@ public class KitMenuUI : UnturnedUI
             }
 
             // update dropdown text to translated value
-            string lang = Localization.GetLang(player.channel.owner.playerID.steamID.m_SteamID);
-            if (lang.Equals(L.Default, StringComparison.Ordinal))
-                lang = DefaultClassCache[(int)@class];
-            else
-                lang = Localization.TranslateEnum(@class, lang);
+            string text = ucp.Locale.LanguageInfo.IsDefault ? DefaultClassCache[(int)@class] : Localization.TranslateEnum(@class, ucp.Locale.LanguageInfo);
 
-            DropdownSelectedName.SetText(tc, lang);
+            DropdownSelectedName.SetText(tc, text);
             DropdownSelectedClass.SetText(tc, new string(@class.GetIcon(), 1));
         }
     }
@@ -875,7 +871,7 @@ public sealed class KitMenuUIData : IPlayerComponent
                 .OrderByDescending(x => FavoriteKits?.Contains(x.LastPrimaryKey))
                 .ThenBy(x =>
                 {
-                    string dn = x.Item?.GetDisplayName(L.Default) ?? x.PrimaryKey.Key.ToString();
+                    string dn = x.Item?.GetDisplayName(null) ?? x.PrimaryKey.Key.ToString();
                     if (dn.Length <= 0 || char.IsDigit(dn[0]))
                         dn = "ZZ" + dn;
                     return dn;
@@ -908,9 +904,4 @@ public sealed class KitMenuUIData : IPlayerComponent
            (Player.OnDuty() && kit.Creator == Player.Steam64 || KitManager.HasAccessQuick(x, Player));
     private bool KitListSpecialPredicate(SqlItem<Kit> x)
         => x.Item is { Type: KitType.Special } kit && (Filter == Class.None || kit.Class == Filter) && kit.IsRequestable(_faction) && (Player.OnDuty() || KitManager.HasAccessQuick(x, Player));
-
-    void OnDestroy()
-    {
-
-    }
 }

@@ -242,11 +242,12 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
 
         return true;
     }
-    public string GetDisplayName(string language = L.Default, bool removeNewLine = true)
+    public string GetDisplayName(LanguageInfo? language = null, bool removeNewLine = true)
     {
         if (SignText is null) return Id;
         string rtn;
-        if (SignText.TryGetValue(language, out string val))
+        language ??= Localization.GetDefaultLanguage();
+        if (SignText.TryGetValue(language.LanguageCode, out string val))
             rtn = val ?? Id;
         else if (SignText.Count > 0)
             rtn = SignText.FirstOrDefault().Value ?? Id;
@@ -441,7 +442,7 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
     public const string DisplayNameFormat = "d";
     [FormatDisplay("Class (" + nameof(Kits.Class) + ")")]
     public const string ClassFormat = "c";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null)
@@ -646,7 +647,8 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
 
     [FormatDisplay("No Level")]
     public const string FormatNoLevel = "nl";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         string b = Speciality switch
         {

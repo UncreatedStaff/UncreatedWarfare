@@ -1,7 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
@@ -11,7 +10,6 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Singletons;
@@ -625,7 +623,8 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         }
         for (int i = 0; i < Singleton.Count; ++i)
         {
-            if (Singleton[i].NameTranslations.Translate(L.Default).IndexOf(trait, StringComparison.OrdinalIgnoreCase) != -1)
+            string? name = Singleton[i].NameTranslations.Translate(Localization.GetDefaultLanguage());
+            if (name != null && name.IndexOf(trait, StringComparison.OrdinalIgnoreCase) != -1)
                 return Singleton[i];
         }
 
@@ -651,11 +650,10 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
     {
         TraitSigns.TimeSync();
     }
-    public static void WriteTraitLocalization(string language, string path, bool writeMising)
+    public static void WriteTraitLocalization(LanguageInfo language, string path, bool writeMising)
     {
         if (Singleton == null)
             return;
-        language ??= L.Default;
 
         using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
         using StreamWriter writer = new StreamWriter(str, System.Text.Encoding.UTF8);
@@ -668,9 +666,8 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                 writer.WriteLine();
         }
     }
-    private static bool WriteTraitIntl(TraitData trait, string language, StreamWriter writer, bool writeMising)
+    private static bool WriteTraitIntl(TraitData trait, LanguageInfo language, StreamWriter writer, bool writeMising)
     {
-        bool isDefault = language.IsDefault();
         TraitData? defaultFaction = Array.Find(DefaultTraits, x => x.Type == trait.Type);
 
         GetValue(trait.NameTranslations, defaultFaction?.NameTranslations, out string? nameValue, out bool isNameValueDefault);
@@ -679,18 +676,18 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         if (!writeMising && isNameValueDefault && isDescValueDefault)
             return false;
 
-        writer.WriteLine("# " + trait.NameTranslations.Translate(L.Default).Replace("\r", string.Empty).Replace('\n', ' ') + " (ID: " + trait.TypeName + ")");
+        writer.WriteLine("# " + trait.NameTranslations.Translate(Localization.GetDefaultLanguage(), trait.TypeName).Replace("\r", string.Empty).Replace('\n', ' ') + " (ID: " + trait.TypeName + ")");
 
         if (writeMising || !isNameValueDefault)
         {
             if (!isNameValueDefault)
-                writer.WriteLine("# Default: " + trait.NameTranslations.Translate(L.Default));
+                writer.WriteLine("# Default: " + trait.NameTranslations.Translate(Localization.GetDefaultLanguage()));
             writer.WriteLine("Name: " + (nameValue?.Replace("\r", string.Empty).Replace("\n", "<br>") ?? trait.TypeName));
         }
         if (writeMising || !isDescValueDefault)
         {
             if (!isNameValueDefault)
-                writer.WriteLine("# Default: " + trait.DescriptionTranslations.Translate(L.Default));
+                writer.WriteLine("# Default: " + trait.DescriptionTranslations.Translate(Localization.GetDefaultLanguage()));
             writer.WriteLine("Description: " + (descValue?.Replace("\r", string.Empty).Replace("\n", "<br>") ?? string.Empty));
         }
 
@@ -700,13 +697,13 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
             value = null;
             if (loaded != null)
             {
-                if (loaded.TryGetValue(language, out value))
-                    isDefaultValue = isDefault;
-                else if (!isDefault && loaded.TryGetValue(L.Default, out value))
+                if (loaded.TryGetValue(language.LanguageCode, out value))
+                    isDefaultValue = language.IsDefault;
+                else if (!language.IsDefault && loaded.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
-                else if (@default != null && @default.TryGetValue(language, out value))
-                    isDefaultValue = isDefault;
-                else if (@default != null && !isDefault && @default.TryGetValue(L.Default, out value))
+                else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+                    isDefaultValue = language.IsDefault;
+                else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
                 else
                 {
@@ -714,9 +711,9 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                     isDefaultValue = true;
                 }
             }
-            else if (@default != null && @default.TryGetValue(language, out value))
-                isDefaultValue = isDefault;
-            else if (@default != null && !isDefault && @default.TryGetValue(L.Default, out value))
+            else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+                isDefaultValue = language.IsDefault;
+            else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                 isDefaultValue = true;
             else
                 isDefaultValue = true;

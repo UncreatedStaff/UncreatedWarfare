@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using UnityEngine;
 
@@ -73,7 +72,7 @@ internal static class StatsCoroutine
                             }
                             else if (afk.Time == Afk.Clamp(n + 1)) // one cycle left
                             {
-                                ucplayer.SendChat(T.InactivityWarning, UCWarfare.Config.StatsInterval.GetTimeFromMinutes(ucplayer.Steam64));
+                                ucplayer.SendChat(T.InactivityWarning, Localization.GetTimeFromMinutes(UCWarfare.Config.StatsInterval, ucplayer.Locale.LanguageInfo, ucplayer.Locale.CultureInfo));
                             }
                         }
                         else

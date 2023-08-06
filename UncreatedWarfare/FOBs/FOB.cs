@@ -677,16 +677,16 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         {
             UCPlayer player = FriendliesNearby[i];
             if (build)
-                FOBManager.ResourceUI.BuildLabel.SetText(player.Connection, BuildSupply.ToString(player.Culture));
+                FOBManager.ResourceUI.BuildLabel.SetText(player.Connection, BuildSupply.ToString(player.Locale.CultureInfo));
             if (ammo)
-                FOBManager.ResourceUI.AmmoLabel.SetText(player.Connection, AmmoSupply.ToString(player.Culture));
+                FOBManager.ResourceUI.AmmoLabel.SetText(player.Connection, AmmoSupply.ToString(player.Locale.CultureInfo));
         }
     }
     public void ShowResourceUI(UCPlayer player)
     {
         FOBManager.ResourceUI.SendToPlayer(player.Connection);
-        FOBManager.ResourceUI.BuildLabel.SetText(player.Connection, BuildSupply.ToString(player.Culture));
-        FOBManager.ResourceUI.AmmoLabel.SetText(player.Connection, AmmoSupply.ToString(player.Culture));
+        FOBManager.ResourceUI.BuildLabel.SetText(player.Connection, BuildSupply.ToString(player.Locale.CultureInfo));
+        FOBManager.ResourceUI.AmmoLabel.SetText(player.Connection, AmmoSupply.ToString(player.Locale.CultureInfo));
     }
     public void HideResourceUI(UCPlayer player)
     {
@@ -837,7 +837,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     }
     void IDeployable.OnDeploy(UCPlayer player, bool chat)
     {
-        ActionLog.Add(ActionLogType.DeployToLocation, "FOB BUNKER " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
+        ActionLog.Add(ActionLogType.DeployToLocation, "FOB BUNKER " + Name + " TEAM " + TeamManager.TranslateName(Team), player);
         if (chat)
             player.SendChat(T.DeploySuccess, this);
 
@@ -936,7 +936,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     public const string FormatGridLocation = "g";
     [FormatDisplay(typeof(IDeployable), "Name")]
     public const string FormatName = "n";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (format is not null)
         {

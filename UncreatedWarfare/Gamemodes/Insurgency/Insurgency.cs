@@ -306,9 +306,9 @@ public class Insurgency :
         foreach (UCPlayer player in PlayerManager.OnlinePlayers)
         {
             if (player.GetTeam() == AttackingTeam)
-                ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, Localization.Translate(T.CacheDiscoveredAttack, player, cache.ClosestLocation)));
+                ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, T.CacheDiscoveredAttack.Translate(player, cache.ClosestLocation)));
             else if (player.GetTeam() == DefendingTeam)
-                ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, Localization.Translate(T.CacheDiscoveredDefense, player)));
+                ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, T.CacheDiscoveredDefense.Translate(player)));
         }
         for (int i = 0; i < Caches.Count; i++)
         {
@@ -455,7 +455,7 @@ public class Insurgency :
             .Where(x => x.GetTeam() == _attackTeam && (x.player.transform.position - cache.Position).sqrMagnitude < 10000f)
             .Select(x => x.playerID.steamID.m_SteamID).ToArray());
 
-        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(AttackingTeam, 0) + " DESTROYED CACHE");
+        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(AttackingTeam) + " DESTROYED CACHE");
 
         if (CachesLeft == 0)
         {

@@ -225,7 +225,7 @@ public class VehicleData : ITranslationArgument, IListItem
     public const string COLORED_NAME = "cn";
     [FormatDisplay("Vehicle Name")]
     public const string NAME = "n";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         string name = Assets.find(VehicleID) is VehicleAsset va ? va.vehicleName : VehicleID.ToString("N");

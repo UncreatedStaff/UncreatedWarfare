@@ -277,7 +277,7 @@ public class TeamSelector : BaseSingletonComponent
             CooldownManager.StartCooldown(player, CooldownType.ChangeTeams, TeamManager.TeamSwitchCooldown);
             ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.Large, new string[] { string.Empty, Data.Gamemode.DisplayName, string.Empty }));
 
-            ActionLog.Add(ActionLogType.ChangeGroupWithUI, "GROUP: " + TeamManager.TranslateName(team, 0).ToUpper(), player.Steam64);
+            ActionLog.Add(ActionLogType.ChangeGroupWithUI, "GROUP: " + TeamManager.TranslateName(team).ToUpper(), player.Steam64);
 
             if (Data.Gamemode is IJoinedTeamListener tl)
                 tl.OnJoinTeam(player, team);
@@ -315,8 +315,8 @@ public class TeamSelector : BaseSingletonComponent
         else
             JoinUI.LogicOpenTeamMenu.SetVisibility(c, true);
         JoinUI.TeamsTitle.SetText(c, T.TeamsUIHeader.Translate(player));
-        JoinUI.TeamNames[0].SetText(c, TeamManager.Team1Faction.GetShortName(player.Language));
-        JoinUI.TeamNames[1].SetText(c, TeamManager.Team2Faction.GetShortName(player.Language));
+        JoinUI.TeamNames[0].SetText(c, TeamManager.Team1Faction.GetShortName(player.Locale.LanguageInfo));
+        JoinUI.TeamNames[1].SetText(c, TeamManager.Team2Faction.GetShortName(player.Locale.LanguageInfo));
         string status = T.TeamsUIClickToJoin.Translate(player);
         JoinUI.TeamStatus[0].SetText(c, status);
         JoinUI.TeamStatus[1].SetText(c, status);
@@ -479,8 +479,8 @@ public class TeamSelector : BaseSingletonComponent
             if (pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting)
             {
                 ITransportConnection c = pl.Connection;
-                JoinUI.TeamCounts[0].SetText(c, t1Ct.ToString(pl.Culture));
-                JoinUI.TeamCounts[1].SetText(c, t2Ct.ToString(pl.Culture));
+                JoinUI.TeamCounts[0].SetText(c, t1Ct.ToString(pl.Locale.CultureInfo));
+                JoinUI.TeamCounts[1].SetText(c, t2Ct.ToString(pl.Locale.CultureInfo));
                 if (pl.TeamSelectorData.SelectedTeam is 1)
                 {
                     JoinUI.LogicTeamSelectedToggle[0].SetVisibility(c, true);

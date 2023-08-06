@@ -15,7 +15,6 @@ using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
-using Uncreated.Warfare.Configuration;
 using UnityEngine;
 using Version = System.Version;
 
@@ -1230,7 +1229,7 @@ public sealed class PropertyValue : IReadWrite
         ConfigSync.ConfigSyncInst.Property? propData = ConfigSync.GetPropertyData(ParentSyncId, SyncId, out ConfigSync.ConfigSyncInst? parent);
         return
             $"Property: {parent?.Type.Name ?? "<unknown-type>"}.{propData?.PropertyInfo.Name ?? "<unknown-property>"}, Timestamp: {Timestamp:G} UTC, " +
-            $"Value: {(Value is null ? "{null}" : Translation.ToString(Value, L.Default, null, null, TranslationFlags.NoColorOptimization))}";
+            $"Value: {(Value is null ? "{null}" : Translation.ToString(Value, Localization.GetDefaultLanguage(), Data.LocalLocale, null, null, TranslationFlags.NoColorOptimization))}";
     }
 }
 

@@ -116,7 +116,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             }
             else
             {
-                player.SendChat(T.TraitSelfReviveCooldown, sr.Data, Mathf.CeilToInt(tl).GetTimeFromSeconds(player));
+                player.SendChat(T.TraitSelfReviveCooldown, sr.Data, Localization.GetTimeFromSeconds(Mathf.CeilToInt(tl), player));
             }
         }
     }
@@ -288,8 +288,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 #endif
         if (!_injuredPlayers.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DownedPlayerData p))
         {
-            SteamPlayer? killer = PlayerTool.getSteamPlayer(parameters.killer);
-            if (killer != null && _injuredPlayers.ContainsKey(killer.playerID.steamID.m_SteamID))
+            UCPlayer? killer = UCPlayer.FromCSteamID(parameters.killer);
+            if (killer != null && _injuredPlayers.ContainsKey(killer.Steam64))
             {
                 shouldAllow = false;
                 return;
@@ -316,7 +316,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             shouldAllow = false;
         }
     }
-    internal void InjurePlayer(in DamagePlayerParameters parameters, SteamPlayer? killer)
+    internal void InjurePlayer(in DamagePlayerParameters parameters, UCPlayer? killer)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -331,15 +331,18 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         ulong team = parameters.player.GetTeam();
         parameters.player.movement.sendPluginSpeedMultiplier(0.35f);
         parameters.player.movement.sendPluginJumpMultiplier(0);
+
+        UCPlayer? player = UCPlayer.FromPlayer(parameters.player);
+
         short key = unchecked((short)Gamemode.Config.UIInjured.Value.Id);
         if (key != 0)
         {
-            EffectManager.sendUIEffect(Gamemode.Config.UIInjured.Value, key, parameters.player.channel.owner.transportConnection, true, T.InjuredUIHeader.Translate(parameters.player.channel.owner.playerID.steamID.m_SteamID), string.Empty);
-            EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", T.InjuredUIGiveUp.Translate(parameters.player.channel.owner.playerID.steamID.m_SteamID));
+            EffectManager.sendUIEffect(Gamemode.Config.UIInjured.Value, key, parameters.player.channel.owner.transportConnection, true, T.InjuredUIHeader.Translate(player), string.Empty);
+            EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", T.InjuredUIGiveUp.Translate(player));
         }
         parameters.player.SendChat(T.InjuredUIGiveUpChat);
 
-        ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.playerID.steamID.m_SteamID.ToString(Data.AdminLocale)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
+        ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.Steam64.ToString(Data.AdminLocale)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
 
         _injuredPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, new DownedPlayerData(parameters));
         SpawnInjuredMarker(parameters.player.transform.position, team);
@@ -352,27 +355,20 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 
         if (killer != null)
         {
-            if (killer.player.TryGetPlayerData(out UCPlayerData c))
-                c.TryUpdateAttackers(killer.playerID.steamID.m_SteamID);
+            if (killer.Player.TryGetPlayerData(out UCPlayerData c))
+                c.TryUpdateAttackers(killer.Steam64);
 
-            if (killer.playerID.steamID.m_SteamID != parameters.player.channel.owner.playerID.steamID.m_SteamID) // suicide
+            if (killer.Steam64 != parameters.player.channel.owner.playerID.steamID.m_SteamID) // suicide
             {
-                byte kteam = killer.GetTeamByte();
+                byte kteam = killer.SteamPlayer.GetTeamByte();
                 if (kteam != team)
                 {
-                    ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastEnemyInjured.Translate(killer.playerID.steamID.m_SteamID)));
-                    //if (parameters.player.transform.TryGetComponent(out UCPlayerData p))
-                    //{
-                    //    if ((DateTime.Now - p.secondLastAttacker.Value).TotalSeconds < 30 && p.secondLastAttacker.Key != parameters.killer.m_SteamID)
-                    //    {
-                    //        ToastMessage.QueueMessage(killer, new ToastMessage(Translation.Translate("xp_assist_enemy_downed", killer), EToastMessageSeverity.MINI));
-                    //    }
-                    //}
+                    ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastEnemyInjured.Translate(killer)));
 
                     Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
                     if (UCPlayer.FromSteamPlayer(killer) is { ActiveKit.Item: { } kit })
                     {
-                        Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s =>
+                        Stats.StatsManager.ModifyStats(killer.Steam64, s =>
                         {
                             s.Downs++;
                             Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Id && k.Team == kteam);
@@ -392,10 +388,10 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                         }
                     }
                     else
-                        Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s => s.Downs++, false);
+                        Stats.StatsManager.ModifyStats(killer.Steam64, s => s.Downs++, false);
                 }
                 else
-                    ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastFriendlyInjured.Translate(Localization.GetLang(killer.playerID.steamID.m_SteamID))));
+                    ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastFriendlyInjured.Translate(killer)));
             }
         }
     }

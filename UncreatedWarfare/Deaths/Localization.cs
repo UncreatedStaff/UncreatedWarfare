@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
@@ -421,7 +422,7 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Bleeding, "{0} bled out after being mauled by a zombie.")
             }
         },
-        new DeathCause()
+        new DeathCause
         {
             CustomKey = "maincamp",
             Translations = new DeathTranslation[]
@@ -436,7 +437,7 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.NoDistance | DeathFlags.Bleeding | DeathFlags.Item | DeathFlags.Killer, "{0} bled out trying to main-camp {1} with a {3}."),
             }
         },
-        new DeathCause()
+        new DeathCause
         {
             CustomKey = "maindeath",
             Translations = new DeathTranslation[]
@@ -444,7 +445,7 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.None, "{0} died trying to enter their enemy's base.")
             }
         },
-        new DeathCause()
+        new DeathCause
         {
             CustomKey = "explosive-consumable",
             Translations = new DeathTranslation[]
@@ -454,7 +455,7 @@ internal static class Localization
                 new DeathTranslation(DeathFlags.Item | DeathFlags.Killer, "{0} suicide bombed {1} with a {3}.") // tested
             }
         },
-        new DeathCause() // mortar override
+        new DeathCause // mortar override
         {
             ItemCause = new DynamicAssetValue<ItemAsset>(new Guid("d6424d034309417dbc5f17814af905a8")).GetValue(),
             Translations = new DeathTranslation[]
@@ -482,8 +483,8 @@ internal static class Localization
         Color color = UCWarfare.GetColor(tk ? "death_background_teamkill" : "death_background");
         foreach (LanguageSet set in LanguageSet.All())
         {
-            string msg = TranslateMessage(set.Language, args);
-            if (!sentInConsole && set.Language.Equals(L.Default, StringComparison.Ordinal))
+            string msg = TranslateMessage(set.Language, set.CultureInfo, args);
+            if (!sentInConsole && set.Language.IsDefault && set.CultureInfo.Name.Equals(Data.AdminLocale.Name, StringComparison.Ordinal))
             {
                 Log(tk, msg, e);
                 sentInConsole = true;
@@ -495,7 +496,9 @@ internal static class Localization
         }
 
         if (!sentInConsole)
-            Log(tk, TranslateMessage(L.Default, args), e);
+        {
+            Log(tk, TranslateMessage(Warfare.Localization.GetDefaultLanguage(), Data.AdminLocale, args), e);
+        }
 
         e.LocalizationArgs = args;
         EventDispatcher.InvokeOnPlayerDied(e);
@@ -578,9 +581,8 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
 */
 
 ";
-    public static void Write(string? path, string? language, bool writeMissing)
+    public static void Write(string? path, LanguageInfo language, bool writeMissing)
     {
-        language ??= L.Default;
         if (path == null)
         {
             path = Path.Combine(Data.Paths.LangStorage, L.Default);
@@ -590,7 +592,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             path = Path.Combine(path, "deaths.json");
         }
 
-        if (!DeathTranslations.TryGetValue(language, out DeathCause[] causes) && (language.IsDefault() || !DeathTranslations.TryGetValue(L.Default, out causes)))
+        if (!DeathTranslations.TryGetValue(language.LanguageCode, out DeathCause[] causes) && (language.IsDefault || !DeathTranslations.TryGetValue(L.Default, out causes)))
             causes = DefaultValues;
         List<DeathCause> causesFull = new List<DeathCause>(causes);
         if (causes != DefaultValues && writeMissing)
@@ -704,15 +706,14 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             }
         }
     }
-    public static string TranslateMessage(string language, DeathMessageArgs args)
+    public static string TranslateMessage(LanguageInfo language, CultureInfo culture, DeathMessageArgs args)
     {
-        language ??= L.Default;
         if (string.IsNullOrEmpty(args.ItemName)) args.Flags &= ~DeathFlags.Item;
         if (string.IsNullOrEmpty(args.Item2Name)) args.Flags &= ~DeathFlags.Item2;
         if (string.IsNullOrEmpty(args.KillerName)) args.Flags &= ~DeathFlags.Killer;
         if (string.IsNullOrEmpty(args.Player3Name)) args.Flags &= ~DeathFlags.Player3;
         bool isDefault = false;
-        if (DeathTranslations.Count == 0 || (!DeathTranslations.TryGetValue(language, out DeathCause[] causes) && (L.Default.Equals(language) || !DeathTranslations.TryGetValue(L.Default, out causes))))
+        if (DeathTranslations.Count == 0 || (!DeathTranslations.TryGetValue(language.LanguageCode, out DeathCause[] causes) && (L.Default.Equals(language) || !DeathTranslations.TryGetValue(L.Default, out causes))))
         {
             isDefault = true;
             causes = DefaultValues;
@@ -724,7 +725,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         int i = FindDeathCause(language, causes, ref args);
 
         DeathCause cause = causes[i];
-        string? val = Translate(language, cause, args);
+        string? val = Translate(language, culture, cause, args);
         if (val is null)
         {
             if (isDefault)
@@ -736,7 +737,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         return val;
     }
 
-    private static int FindDeathCause(string lang, DeathCause[] causes, ref DeathMessageArgs args)
+    private static int FindDeathCause(LanguageInfo language, DeathCause[] causes, ref DeathMessageArgs args)
     {
         while (true)
         {
@@ -778,9 +779,9 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                 DeathCause cause = causes[i];
                 if (cause.Cause.HasValue && cause.Cause == cause2) return i;
             }
-            if (!L.Default.Equals(lang) && DeathTranslations.TryGetValue(L.Default, out causes))
+            if (!language.IsDefault && DeathTranslations.TryGetValue(L.Default, out causes))
             {
-                lang = L.Default;
+                language = Warfare.Localization.GetDefaultLanguage();
                 continue;
             }
             if (causes != DefaultValues)
@@ -793,7 +794,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         }
     }
 
-    private static string? Translate(string language, DeathCause cause, DeathMessageArgs args)
+    private static string? Translate(LanguageInfo language, CultureInfo culture, DeathCause cause, DeathMessageArgs args)
     {
         DeathFlags flags = args.Flags;
     redo:
@@ -801,9 +802,9 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
         {
             ref DeathTranslation d = ref cause.Translations[i];
             if (d.Flags == flags)
-                return args.Translate(d.Value, language);
+                return args.Translate(d.Value, language, culture);
         }
-        L.LogWarning("Exact match not found for " + flags.ToString());
+        L.LogWarning("Exact match not found for " + flags + ".");
         if ((flags & DeathFlags.NoDistance) == DeathFlags.NoDistance)
         {
             flags &= ~DeathFlags.NoDistance;
@@ -825,7 +826,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Killer)
-                    return args.Translate(d.Value, language);
+                    return args.Translate(d.Value, language, culture);
             }
         }
         else if ((flags & DeathFlags.Suicide) == DeathFlags.Suicide)
@@ -834,7 +835,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Suicide)
-                    return args.Translate(d.Value, language);
+                    return args.Translate(d.Value, language, culture);
             }
         }
         else if ((flags & DeathFlags.Player3) == DeathFlags.Player3)
@@ -843,14 +844,14 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
             {
                 ref DeathTranslation d = ref cause.Translations[i];
                 if (d.Flags == DeathFlags.Player3)
-                    return args.Translate(d.Value, language);
+                    return args.Translate(d.Value, language, culture);
             }
         }
         for (int i = 0; i < cause.Translations.Length; ++i)
         {
             ref DeathTranslation d = ref cause.Translations[i];
             if (d.Flags == DeathFlags.None)
-                return args.Translate(d.Value, language);
+                return args.Translate(d.Value, language, culture);
         }
 
         return null;
@@ -875,14 +876,14 @@ public struct DeathMessageArgs
     public string? Item2Name;
     public DeathFlags Flags;
     public bool IsTeamkill;
-    internal string Translate(string template, string language)
+    internal string Translate(string template, LanguageInfo language, CultureInfo culture)
     {
         object[] format = new object[7];
         format[0] = DeadPlayerName.Colorize(TeamManager.GetTeamHexColor(DeadPlayerTeam));
         format[1] = KillerName is null ? string.Empty : KillerName.Colorize(TeamManager.GetTeamHexColor(KillerTeam));
         format[2] = Warfare.Localization.TranslateEnum(Limb, language);
         format[3] = ItemName is null ? string.Empty : (ItemName.EndsWith(" Built", StringComparison.Ordinal) ? ItemName.Substring(0, ItemName.Length - 6) : ItemName);
-        format[4] = KillDistance.ToString("F0", Warfare.Localization.GetLocale(language));
+        format[4] = KillDistance.ToString("F0", culture);
         format[5] = Player3Name is null ? string.Empty : Player3Name.Colorize(TeamManager.GetTeamHexColor(Player3Team));
         format[6] = Item2Name ?? string.Empty;
         try
@@ -891,8 +892,8 @@ public struct DeathMessageArgs
         }
         catch (FormatException)
         {
-            L.LogWarning("Formatting error for template: \"" + template + "\" (" + Warfare.Localization.TranslateEnum(DeathCause, L.Default) + ":"
-                         + Warfare.Localization.TranslateEnum(Flags, L.Default) + ":" + language.ToUpper() + ").");
+            L.LogWarning("Formatting error for template: \"" + template + "\" (" + Warfare.Localization.TranslateEnum(DeathCause, Warfare.Localization.GetDefaultLanguage()) + ":"
+                         + Warfare.Localization.TranslateEnum(Flags, Warfare.Localization.GetDefaultLanguage()) + ":" + language.LanguageCode.ToUpper() + ").");
             return template.Replace("{0}", (string)format[0]);
         }
     }

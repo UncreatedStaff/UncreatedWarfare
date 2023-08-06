@@ -741,30 +741,30 @@ internal static class T
     public static readonly Translation LanguageRefreshed                 = new Translation("<#f53b3b>Refreshed all signs and UI.");
     
     [TranslationData(SectionLanguages, "Output from /lang current, tells the player their selected language.", "Current Language")]
-    public static readonly Translation<LanguageAliasSet> LanguageCurrent = new Translation<LanguageAliasSet>("<#f53b3b>Current language: <#e6e3d5>{0}</color>.", LanguageAliasSet.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> LanguageCurrent = new Translation<LanguageInfo>("<#f53b3b>Current language: <#e6e3d5>{0}</color>.", LanguageInfo.FormatDisplayName);
     
     [TranslationData(SectionLanguages, "Output from /lang <language>, tells the player their new language.", "New Language")]
-    public static readonly Translation<LanguageAliasSet> ChangedLanguage = new Translation<LanguageAliasSet>("<#f53b3b>Changed your language to <#e6e3d5>{0}</color>.", LanguageAliasSet.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> ChangedLanguage = new Translation<LanguageInfo>("<#f53b3b>Changed your language to <#e6e3d5>{0}</color>.", LanguageInfo.FormatDisplayName);
     
     [TranslationData(SectionLanguages, "Output from /lang <language> when the player is using already that language.", "Current Language")]
-    public static readonly Translation<LanguageAliasSet> LangAlreadySet  = new Translation<LanguageAliasSet>("<#ff8c69>You are already set to <#e6e3d5>{0}</color>.", LanguageAliasSet.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> LangAlreadySet  = new Translation<LanguageInfo>("<#ff8c69>You are already set to <#e6e3d5>{0}</color>.", LanguageInfo.FormatDisplayName);
     
     [TranslationData(SectionLanguages, "Output from /lang reset, tells the player their language changed to the default language.", "Default Language")]
-    public static readonly Translation<LanguageAliasSet> ResetLanguage   = new Translation<LanguageAliasSet>("<#f53b3b>Reset your language to <#e6e3d5>{0}</color>.", LanguageAliasSet.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> ResetLanguage   = new Translation<LanguageInfo>("<#f53b3b>Reset your language to <#e6e3d5>{0}</color>.", LanguageInfo.FormatDisplayName);
     
     [TranslationData(SectionLanguages, "Output from /lang reset when the player is using already that language.", "Default Language")]
-    public static readonly Translation<LanguageAliasSet> ResetCurrent    = new Translation<LanguageAliasSet>("<#ff8c69>You are already on the default language: <#e6e3d5>{0}</color>.", LanguageAliasSet.FormatDisplayName);
+    public static readonly Translation<LanguageInfo> ResetCurrent    = new Translation<LanguageInfo>("<#ff8c69>You are already on the default language: <#e6e3d5>{0}</color>.", LanguageInfo.FormatDisplayName);
     
     [TranslationData(SectionLanguages, "Output from /lang <language> when the language isn't found.", "Input language")]
     public static readonly Translation<string> LanguageNotFound          = new Translation<string>("<#dd1111>We don't have translations for <#e6e3d5>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations.", LanguageAliasSet.FormatDisplayName);
 
     [TranslationData(SectionLanguages, "Tells the player that IMGUI is recommended for this language and how to enable it (part 1).", "Language id")]
-    public static readonly Translation<LanguageAliasSet> IMGUITip1       = new Translation<LanguageAliasSet>("<#f53b3b>{0} recommends using IMGUI mode. do <#fff>/options imgui true</color>...");
+    public static readonly Translation<LanguageInfo> IMGUITip1       = new Translation<LanguageInfo>("<#f53b3b>{0} recommends using IMGUI mode. do <#fff>/options imgui true</color>...", LanguageInfo.FormatDisplayName);
     [TranslationData(SectionLanguages, "Tells the player that IMGUI is recommended for this language and how to enable it (part 2).")]
     public static readonly Translation IMGUITip2                         = new Translation("<#f53b3b>... go to your steam launch options and add <#fff>-Glazier IMGUI</color> to them.");
 
     [TranslationData(SectionLanguages, "Tells the player that IMGUI is not recommended for this language and how to enable it (part 1).", "Language id")]
-    public static readonly Translation<LanguageAliasSet> NoIMGUITip1     = new Translation<LanguageAliasSet>("<#f53b3b>{0} recommends not using IMGUI mode. do <#fff>/options imgui false</color>...");
+    public static readonly Translation<LanguageInfo> NoIMGUITip1     = new Translation<LanguageInfo>("<#f53b3b>{0} recommends not using IMGUI mode. do <#fff>/options imgui false</color>...", LanguageInfo.FormatDisplayName);
     [TranslationData(SectionLanguages, "Tells the player that IMGUI is not recommended for this language and how to enable it (part 2).")]
     public static readonly Translation NoIMGUITip2 = new Translation("<#f53b3b>... go to your steam launch options and remove <#fff>-Glazier IMGUI</color>.");
     #endregion
@@ -961,9 +961,9 @@ internal static class T
     [TranslationData(SectionSquads)]
     public static readonly Translation<int> SquadsTooManyPlayerCount = new Translation<int>("<#a89791>There are too many squads right now. More squads are unlocked once your team reaches {0} ${p:0:member}.");
     [TranslationData(SectionSquads)]
-    public static readonly Translation<Squad> SquadWarningNoMembers = new Translation<Squad>("<#a89791>Your squad will be DISBANDED unless others join", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadWarningNoMembers = new Translation<Squad>("<#a89791>Your squad will be DISBANDED unless others join", TranslationFlags.TMProUI, Squad.FormatColorName);
     [TranslationData(SectionSquads)]
-    public static readonly Translation<Squad> SquadWarningWrongKit = new Translation<Squad>("<#a89791>You must request a SQUADLEADER kit", Squad.FormatColorName);
+    public static readonly Translation<Squad> SquadWarningWrongKit = new Translation<Squad>("<#a89791>You must request a SQUADLEADER kit", TranslationFlags.TMProUI, Squad.FormatColorName);
 
 
     [TranslationData(SectionSquads, IsPrioritizedTranslation = false)]
@@ -3296,33 +3296,19 @@ internal static class T
             }
         }
     }
-    public static string Translate(this TranslationList list, ulong player) => TryTranslate(list, player, out string local) ? local : string.Empty;
-    public static string Translate(this TranslationList list, UCPlayer player) => TryTranslate(list, player.Steam64, out string local) ? local : string.Empty;
-    public static string Translate(this TranslationList list, string language) => TryTranslate(list, language, out string local) ? local : string.Empty;
-    public static bool TryTranslate(this TranslationList list, UCPlayer player, out string local) => TryTranslate(list, player.Steam64, out local);
-    public static bool TryTranslate(this TranslationList list, ulong player, out string local)
+    public static string Translate(this TranslationList list, UCPlayer player) => TryTranslate(list, player.Locale.LanguageInfo, out string local) ? local : string.Empty;
+    public static string Translate(this TranslationList list, LanguageInfo language) => TryTranslate(list, language, out string local) ? local : string.Empty;
+    public static bool TryTranslate(this TranslationList list, UCPlayer player, out string local) => TryTranslate(list, player.Locale.LanguageInfo, out local);
+    public static bool TryTranslate(this TranslationList list, LanguageInfo language, out string local)
     {
         if (list is null)
         {
             local = null!;
             return false;
         }
-        if (player == 0ul || !Data.Languages.TryGetValue(player, out string lang))
-            lang = L.Default;
-        if (list.TryGetValue(lang, out local) || (!lang.Equals(L.Default, StringComparison.Ordinal) && list.TryGetValue(L.Default, out local)))
-            return true;
-        return (local = list.Values.FirstOrDefault()!) != null;
-    }
-    public static bool TryTranslate(this TranslationList list, string language, out string local)
-    {
-        if (list is null)
-        {
-            local = null!;
-            return false;
-        }
-        if (string.IsNullOrEmpty(language))
-            language = L.Default;
-        if (list.TryGetValue(language, out local) || (!language.Equals(L.Default, StringComparison.Ordinal) && list.TryGetValue(L.Default, out local)))
+
+        language ??= Localization.GetDefaultLanguage();
+        if (list.TryGetValue(language.LanguageCode, out local) || (!language.IsDefault && list.TryGetValue(L.Default, out local)))
             return true;
         return (local = list.Values.FirstOrDefault()!) != null;
     }

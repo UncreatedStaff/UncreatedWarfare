@@ -32,9 +32,8 @@ public static class KitEx
     public const int WeaponTextMaxCharLimit = 128;
     public const int SignTextMaxCharLimit = 50;
     public const int MaxStateArrayLimit = 18;
-    public static void WriteKitLocalization(string language, string path, bool writeMising)
+    public static void WriteKitLocalization(LanguageInfo language, string path, bool writeMising)
     {
-        language ??= L.Default;
         KitManager? manager = KitManager.GetSingletonQuick();
         if (manager == null)
             return;
@@ -62,15 +61,14 @@ public static class KitEx
             manager.WriteRelease();
         }
     }
-    private static bool WriteKitIntl(Kit kit, string language, StreamWriter writer, bool writeMising)
+    private static bool WriteKitIntl(Kit kit, LanguageInfo language, TextWriter writer, bool writeMising)
     {
-        bool isDefault = language.IsDefault();
         bool isDefaultValue = false;
         string? value = null;
         if (kit.SignText != null)
         {
-            isDefaultValue = !kit.SignText.TryGetValue(language, out value);
-            if (isDefaultValue && !isDefault && writeMising)
+            isDefaultValue = !kit.SignText.TryGetValue(language.LanguageCode, out value);
+            if (isDefaultValue && !language.IsDefault && writeMising)
                 kit.SignText.TryGetValue(L.Default, out value);
         }
         if (value == null)
@@ -86,14 +84,14 @@ public static class KitEx
         if (@default != null)
             @default = @default.Replace("\r", string.Empty).Replace("\n", "<br>");
         value = value.Replace("\r", string.Empty).Replace("\n", "<br>");
-        writer.WriteLine("# " + kit.GetDisplayName(L.Default) + " (ID: " + kit.Id + ")");
+        writer.WriteLine("# " + kit.GetDisplayName(Localization.GetDefaultLanguage()) + " (ID: " + kit.Id + ")");
         if (kit.WeaponText != null)
             writer.WriteLine("#  Weapons: " + kit.WeaponText);
-        writer.WriteLine("#  Class:   " + Localization.TranslateEnum(kit.Class, L.Default));
-        writer.WriteLine("#  Type:    " + Localization.TranslateEnum(kit.Type, L.Default));
+        writer.WriteLine("#  Class:   " + Localization.TranslateEnum(kit.Class, Localization.GetDefaultLanguage()));
+        writer.WriteLine("#  Type:    " + Localization.TranslateEnum(kit.Type, Localization.GetDefaultLanguage()));
         FactionInfo? factionInfo = kit.Faction;
         if (factionInfo != null)
-            writer.WriteLine("#  Faction: " + factionInfo.GetName(L.Default));
+            writer.WriteLine("#  Faction: " + factionInfo.GetName(Localization.GetDefaultLanguage()));
         if (!isDefaultValue && @default != null)
         {
             writer.WriteLine("# Default: \"" + @default + "\".");

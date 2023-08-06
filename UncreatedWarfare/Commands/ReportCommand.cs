@@ -174,7 +174,7 @@ public class ReportCommand : AsyncCommand
             return;
         }
 
-        SteamPlayer? targetPl = PlayerTool.getSteamPlayer(target);
+        UCPlayer? targetPl = UCPlayer.FromID(target);
         await Data.DatabaseManager.AddReport(report, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate();
         string typename = GetName(type);
@@ -195,11 +195,9 @@ public class ReportCommand : AsyncCommand
         RequestResponse res = await Reporter.NetCalls.SendReportInvocation.Request(
             Reporter.NetCalls.ReceiveInvocationResponse, UCWarfare.I.NetClient!, report, targetPl != null);
         await UCWarfare.ToUpdate();
-        if (targetPl != null && targetPl.player != null)
+        if (targetPl is { IsOnline: true })
         {
-            if (!Data.Languages.TryGetValue(target, out string lang))
-                lang = L.Default;
-            ToastMessage.QueueMessage(targetPl, ToastMessage.Popup(T.ReportNotifyViolatorToastTitle.Translate(lang), T.ReportNotifyViolatorToast.Translate(lang, typename, UCPlayer.FromID(target)), T.ButtonOK.Translate(lang)));
+            ToastMessage.QueueMessage(targetPl, ToastMessage.Popup(T.ReportNotifyViolatorToastTitle.Translate(targetPl), T.ReportNotifyViolatorToast.Translate(targetPl, typename), T.ButtonOK.Translate(targetPl)));
             targetPl.SendChat(T.ReportNotifyViolatorMessage1, typename, message);
             targetPl.SendChat(T.ReportNotifyViolatorMessage2);
         }

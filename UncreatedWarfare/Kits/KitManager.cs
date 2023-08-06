@@ -2108,7 +2108,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 ctx.Reply(T.RequestKitLimited, allowedPlayers);
                 return;
             }
-            ctx.LogAction(ActionLogType.RequestKit, $"Loadout #{loadoutId}: {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
+            ctx.LogAction(ActionLogType.RequestKit, $"Loadout #{loadoutId}: {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class)}");
 
             if (!await GrantKitRequest(ctx, loadout, token).ConfigureAwait(false))
             {
@@ -2235,7 +2235,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             if (kit.IsLimited(out _, out allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
                 throw ctx.Reply(T.RequestKitLimited, allowedPlayers);
 
-            ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
+            ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class)}");
 
             if (!await GrantKitRequest(ctx, proxy, token).ConfigureAwait(false))
             {

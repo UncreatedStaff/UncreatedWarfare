@@ -78,7 +78,7 @@ public class ZoneBuilder
     public AdjacentFlagData[]? Adjacencies;
     /// <summary>Declare grid objects to be used as electrical components.</summary>
     public GridObject[]? GridObjects;
-    internal ZoneModel.Data ZoneData;
+    internal ZoneModel.ModelData ZoneData;
     /// <summary>Sets the zone type to <see cref="CircleZone"/> and sets the radius to <see langword="value"/>.</summary>
     public float Radius
     {

@@ -1,8 +1,8 @@
-﻿using SDG.NetTransport;
+﻿using JetBrains.Annotations;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using JetBrains.Annotations;
+using System.Globalization;
 using Uncreated.Framework;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Kits;
@@ -16,12 +16,11 @@ internal static class TraitSigns
 {
     internal static string TranslateTraitSign(TraitData trait, UCPlayer player)
     {
-        string str = Localization.GetLang(player.Steam64);
         ulong team = trait.Team is 1 or 2 ? trait.Team : player.GetTeam();
-        str = TranslateTraitSign(trait, str, team, out bool fmt);
-        return fmt ? FormatTraitSign(trait, str, player, team) : str;
+        string str = TranslateTraitSign(player.Locale.LanguageInfo, player.Locale.CultureInfo, trait, team, out bool fmt);
+        return fmt ? FormatTraitSign(player, trait, str) : str;
     }
-    public static string FormatTraitSign(TraitData trait, string tr2, UCPlayer player, ulong team)
+    public static string FormatTraitSign(UCPlayer player, TraitData trait, string translated)
     {
         UCPlayer.TryApplyViewLens(ref player);
         for (int i = 0; i < player.ActiveTraits.Count; ++i)
@@ -29,11 +28,11 @@ internal static class TraitSigns
             if (player.ActiveTraits[i].Data.Type == trait.Type)
             {
                 if (trait.LastsUntilDeath)
-                    return Util.QuickFormat(tr2, T.TraitSignAlreadyActiveDeath.Translate(player));
+                    return Util.QuickFormat(translated, T.TraitSignAlreadyActiveDeath.Translate(player));
                 else
                 {
                     int secs = Mathf.CeilToInt(trait.EffectDuration - (Time.realtimeSinceStartup - player.ActiveTraits[i].StartTime));
-                    return Util.QuickFormat(tr2, T.TraitSignAlreadyActiveTime.Translate(player, false, secs / 60, secs % 60));
+                    return Util.QuickFormat(translated, T.TraitSignAlreadyActiveTime.Translate(player, false, secs / 60, secs % 60));
                 }
             }
         }
@@ -48,7 +47,7 @@ internal static class TraitSigns
                 goto next;
 
             int secs = Mathf.CeilToInt(cooldown.SecondsLeft);
-            return Util.QuickFormat(tr2, T.TraitSignCooldown.Translate(player, false, secs / 60, secs % 60));
+            return Util.QuickFormat(translated, T.TraitSignCooldown.Translate(player, false, secs / 60, secs % 60));
         }
         next:
         if (trait.UnlockRequirements is not null)
@@ -57,7 +56,7 @@ internal static class TraitSigns
             {
                 UnlockRequirement req = trait.UnlockRequirements[i];
                 if (!req.CanAccess(player))
-                    return Util.QuickFormat(tr2, req.GetSignText(player));
+                    return Util.QuickFormat(translated, req.GetSignText(player));
             }
         }
 
@@ -66,57 +65,47 @@ internal static class TraitSigns
             if (!trait.CanClassUse(player.KitClass))
             {
                 if (trait.ClassListIsBlacklist || trait.ClassList.Length > 2 || trait.ClassList.Length == 0)
-                    return Util.QuickFormat(tr2, T.TraitSignClassBlacklisted.Translate(player, false, player.KitClass));
+                    return Util.QuickFormat(translated, T.TraitSignClassBlacklisted.Translate(player, false, player.KitClass));
                 if (trait.ClassList.Length == 2)
-                    return Util.QuickFormat(tr2, T.TraitSignClassWhitelisted2.Translate(player, false, trait.ClassList[0], trait.ClassList[1]));
-                return Util.QuickFormat(tr2, T.TraitSignClassWhitelisted1.Translate(player, false, trait.ClassList[0]));
+                    return Util.QuickFormat(translated, T.TraitSignClassWhitelisted2.Translate(player, false, trait.ClassList[0], trait.ClassList[1]));
+                return Util.QuickFormat(translated, T.TraitSignClassWhitelisted1.Translate(player, false, trait.ClassList[0]));
             }
         }
         else
-            return Util.QuickFormat(tr2, T.TraitSignNoKit.Translate(player));
+            return Util.QuickFormat(translated, T.TraitSignNoKit.Translate(player));
         if (player.Squad is null)
         {
             if (trait.RequireSquadLeader)
-                return Util.QuickFormat(tr2, T.TraitSignRequiresSquadLeader.Translate(player));
+                return Util.QuickFormat(translated, T.TraitSignRequiresSquadLeader.Translate(player));
             else if (trait.RequireSquad)
-                return Util.QuickFormat(tr2, T.TraitSignRequiresSquad.Translate(player));
+                return Util.QuickFormat(translated, T.TraitSignRequiresSquad.Translate(player));
         }
         else if (trait.RequireSquadLeader && player.Squad.Leader.Steam64 != player.Steam64)
-            return Util.QuickFormat(tr2, T.TraitSignRequiresSquadLeader.Translate(player));
+            return Util.QuickFormat(translated, T.TraitSignRequiresSquadLeader.Translate(player));
 
-        return Util.QuickFormat(tr2, string.Empty /* T.TraitSignUnlocked.Translate(player) */);
+        return Util.QuickFormat(translated, string.Empty /* T.TraitSignUnlocked.Translate(player) */);
     }
-    internal static string TranslateTraitSign(TraitData trait, string language, ulong team, out bool fmt)
+    internal static string TranslateTraitSign(LanguageInfo language, CultureInfo culture, TraitData trait, ulong team, out bool fmt)
     {
-        bool keepline = false;
-        string name = trait.NameTranslations.Translate(language);
-        for (int i = 0; i < name.Length; ++i)
-        {
-            if (name[i] == '\n')
-            {
-                keepline = true;
-                break;
-            }
-        }
-        name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
+        string name = "<b>" + trait.NameTranslations.Translate(language, trait.TypeName).ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
 
-        string cost = trait.CreditCost > 0 ? T.KitCreditCost.Translate(language, trait.CreditCost) : T.TraitSignFree.Translate(language);
+        string cost = trait.CreditCost > 0 ? T.KitCreditCost.Translate(language, culture, trait.CreditCost) : T.TraitSignFree.Translate(language, culture);
 
-        if (!keepline) cost = "\n" + cost;
+        if (name.IndexOf('\n') == -1) cost = "\n" + cost;
 
         string? req = null;
 
         if (!trait.CanGamemodeUse())
-            req = T.TraitGamemodeBlacklisted.Translate(language);
+            req = T.TraitGamemodeBlacklisted.Translate(language, culture);
         else if (trait.Delays != null && trait.Delays.Length > 0 && Delay.IsDelayed(trait.Delays, out Delay delay, team))
-            req = Localization.GetDelaySignText(in delay, language, team);
+            req = Localization.GetDelaySignText(in delay, language, culture, team);
 
         fmt = req is null;
         return
             name + "\n" +
             cost + "\n" +
             (fmt ? "{0}\n" : (req + "\n")) +
-            trait.DescriptionTranslations.Translate(language).ColorizeTMPro(UCWarfare.GetColorHex("trait_desc"));
+            trait.DescriptionTranslations.Translate(language, string.Empty).ColorizeTMPro(UCWarfare.GetColorHex("trait_desc"));
     }
     public static void InitTraitSign(TraitData d, BarricadeDrop drop)
     {
@@ -166,13 +155,7 @@ internal static class TraitSigns
         private ulong _team;
         private readonly Dictionary<ulong, TraitSignState> _states = new Dictionary<ulong, TraitSignState>(Provider.maxPlayers);
         private TraitSignState GetState(ulong pl) => _state < TraitSignState.Ready ? _state : (_states.TryGetValue(pl, out TraitSignState st) ? st : _state);
-        private void SetState(ulong pl, TraitSignState st)
-        {
-            if (_states.ContainsKey(pl))
-                _states[pl] = st;
-            else
-                _states.Add(pl, st);
-        }
+        private void SetState(ulong pl, TraitSignState st) => _states[pl] = st;
         public void Init(TraitData d, BarricadeDrop drop)
         {
             if (!Regions.tryGetCoordinate(drop.model.transform.position, out _x, out _y))

@@ -230,7 +230,7 @@ public abstract class Zone : IDeployable, IListItem
 
     bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx) => true;
     bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat) => true;
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null && (format.Equals(Flag.SHORT_NAME_FORMAT, StringComparison.Ordinal) ||
@@ -252,7 +252,7 @@ public abstract class Zone : IDeployable, IListItem
     {
         if (Data.UseCase is ZoneUseCase.Team1Main or ZoneUseCase.Team2Main)
         {
-            ActionLog.Add(ActionLogType.DeployToLocation, "MAIN BASE " + TeamManager.TranslateName(Data.UseCase == ZoneUseCase.Team1Main ? 1ul : 2ul, 0), player);
+            ActionLog.Add(ActionLogType.DeployToLocation, "MAIN BASE " + TeamManager.TranslateName(Data.UseCase == ZoneUseCase.Team1Main ? 1ul : 2ul), player);
             if (chat)
                 player.SendChat(T.DeploySuccess, this);
         }

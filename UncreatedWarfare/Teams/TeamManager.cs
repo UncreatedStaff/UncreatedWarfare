@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using HarmonyLib;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -12,8 +13,6 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using HarmonyLib;
-using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
@@ -1121,33 +1120,29 @@ public static class TeamManager
     {
         return LobbyZone.IsInside(player) || Team1Main.IsInside(player) || Team2Main.IsInside(player) || Team1AMC.IsInside(player) || Team2AMC.IsInside(player);
     }
-    public static string TranslateName(ulong team, SteamPlayer player, bool colorize = false) => TranslateName(team, player.playerID.steamID.m_SteamID, colorize);
-    public static string TranslateName(ulong team, Player player, bool colorize = false) => TranslateName(team, player.channel.owner.playerID.steamID.m_SteamID, colorize);
-    public static string TranslateName(ulong team, CSteamID player, bool colorize = false) => TranslateName(team, player.m_SteamID, colorize);
-    public static string TranslateName(ulong team, UCPlayer player, bool colorize = false) => TranslateName(team, player.Steam64, colorize);
-    public static string TranslateName(ulong team, ulong player, bool colorize = false) => TranslateName(team, Localization.GetLang(player), colorize);
-    public static string TranslateName(ulong team, IPlayer player, bool colorize = false) => TranslateName(team, player.Steam64, colorize);
-    public static string TranslateName(ulong team, string language, bool colorize = false)
+    public static string TranslateName(ulong team, bool colorize = false) => TranslateName(team, (LanguageInfo?)null, colorize);
+    public static string TranslateName(ulong team, UCPlayer? player, bool colorize = false) => TranslateName(team, player?.Locale.LanguageInfo, colorize);
+    public static string TranslateName(ulong team, LanguageInfo? language, bool colorize = false)
     {
         string uncolorized;
         if (team == 1) uncolorized = Team1Faction.GetName(language);
         else if (team == 2) uncolorized = Team2Faction.GetName(language);
         else if (team == 3) uncolorized = AdminFaction.GetName(language);
         else if (team == 0) uncolorized = T.Neutral.Translate(language);
-        else uncolorized = team.ToString(Localization.GetLocale(language));
+        else uncolorized = team.ToString(Localization.GetCultureInfo(language));
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
     }
-    public static string TranslateShortName(ulong team, ulong player, bool colorize = false) => TranslateShortName(team, Localization.GetLang(player), colorize);
-    public static string TranslateShortName(ulong team, IPlayer player, bool colorize = false) => TranslateShortName(team, player.Steam64, colorize);
-    public static string TranslateShortName(ulong team, string language, bool colorize = false)
+    public static string TranslateShortName(ulong team, bool colorize = false) => TranslateShortName(team, (LanguageInfo?)null, colorize);
+    public static string TranslateShortName(ulong team, UCPlayer? player, bool colorize = false) => TranslateShortName(team, player?.Locale.LanguageInfo, colorize);
+    public static string TranslateShortName(ulong team, LanguageInfo? language, bool colorize = false)
     {
         string uncolorized;
         if (team == 1) uncolorized = Team1Faction.GetName(language);
         else if (team == 2) uncolorized = Team2Faction.GetName(language);
         else if (team == 3) uncolorized = AdminFaction.GetName(language);
         else if (team == 0) uncolorized = T.Neutral.Translate(language);
-        else uncolorized = team.ToString(Localization.GetLocale(language));
+        else uncolorized = team.ToString(Localization.GetCultureInfo(language));
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
     }
@@ -1315,14 +1310,14 @@ public static class TeamManager
     private static void InvokeOnLeftMain(UCPlayer player, ulong team)
     {
         player.SendChat(T.LeftMain, GetFaction(team));
-        ActionLog.Add(ActionLogType.LeftMain, "Team: " + TranslateName(player.GetTeam(), L.Default) + ", Base: " + TranslateName(team, L.Default) + 
+        ActionLog.Add(ActionLogType.LeftMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) + 
                                                    ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
         OnPlayerLeftMainBase?.Invoke(player, team);
     }
     private static void InvokeOnEnterMain(UCPlayer player, ulong team)
     {
         player.SendChat(T.EnteredMain, GetFaction(team));
-        ActionLog.Add(ActionLogType.EnterMain, "Team: " + TranslateName(player.GetTeam(), L.Default) + ", Base: " + TranslateName(team, L.Default) + 
+        ActionLog.Add(ActionLogType.EnterMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) + 
                                                     ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
         OnPlayerEnteredMainBase?.Invoke(player, team);
     }
@@ -1683,10 +1678,8 @@ public static class TeamManager
         }
         return FactionInfo.DownloadFactions(Data.AdminSql, _factions, token);
     }
-    public static void WriteFactionLocalization(string language, string path, bool writeMising)
+    public static void WriteFactionLocalization(LanguageInfo language, string path, bool writeMising)
     {
-        language ??= L.Default;
-        
         using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
         using StreamWriter writer = new StreamWriter(str, System.Text.Encoding.UTF8);
         writer.WriteLine("# Kit Name Translations");
@@ -1698,9 +1691,8 @@ public static class TeamManager
                 writer.WriteLine();
         }
     }
-    private static bool WriteFactionIntl(FactionInfo faction, string language, StreamWriter writer, bool writeMising)
+    private static bool WriteFactionIntl(FactionInfo faction, LanguageInfo language, StreamWriter writer, bool writeMising)
     {
-        bool isDefault = language.IsDefault();
         FactionInfo? defaultFaction = Array.Find(DefaultFactions, x => x.PrimaryKey.Key == faction.PrimaryKey.Key);
 
         GetValue(faction.NameTranslations, defaultFaction?.NameTranslations, out string? nameValue, out bool isNameValueDefault);
@@ -1710,7 +1702,7 @@ public static class TeamManager
         if (!writeMising && isNameValueDefault && isShortNameValueDefault && isAbbreviationNameValueDefault)
             return false;
 
-        writer.WriteLine("# " + faction.GetName(L.Default) + " (ID: " + faction.FactionId + ", #" + faction.PrimaryKey.Key.ToString(CultureInfo.InvariantCulture) + ")");
+        writer.WriteLine("# " + faction.GetName(null) + " (ID: " + faction.FactionId + ", #" + faction.PrimaryKey.Key.ToString(CultureInfo.InvariantCulture) + ")");
         if (faction.Name != null)
             writer.WriteLine("#  Name:         " + faction.Name);
         if (faction.ShortName != null)
@@ -1723,19 +1715,19 @@ public static class TeamManager
         if (writeMising || !isNameValueDefault)
         {
             if (!isNameValueDefault)
-                writer.WriteLine("# Default: " + faction.GetName(L.Default));
+                writer.WriteLine("# Default: " + faction.GetName(null));
             writer.WriteLine("Name: " + (nameValue ?? faction.Name ?? defaultFaction?.Name ?? faction.FactionId));
         }
         if (writeMising || !isShortNameValueDefault)
         {
             if (!isShortNameValueDefault)
-                writer.WriteLine("# Default: " + faction.GetShortName(L.Default));
+                writer.WriteLine("# Default: " + faction.GetShortName(null));
             writer.WriteLine("ShortName: " + (shortNameValue ?? faction.ShortName ?? defaultFaction?.ShortName ?? faction.FactionId));
         }
         if (writeMising || !isAbbreviationNameValueDefault)
         {
             if (!isAbbreviationNameValueDefault)
-                writer.WriteLine("# Default: " + faction.GetAbbreviation(L.Default));
+                writer.WriteLine("# Default: " + faction.GetAbbreviation(null));
             writer.WriteLine("Abbreviation: " + (abbreviationValue ?? faction.Abbreviation ?? defaultFaction?.Abbreviation ?? faction.FactionId));
         }
         return true;
@@ -1745,13 +1737,13 @@ public static class TeamManager
             value = null;
             if (loaded != null)
             {
-                if (loaded.TryGetValue(language, out value))
-                    isDefaultValue = isDefault;
-                else if (!isDefault && loaded.TryGetValue(L.Default, out value))
+                if (loaded.TryGetValue(language.LanguageCode, out value))
+                    isDefaultValue = language.IsDefault;
+                else if (!language.IsDefault && loaded.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
-                else if (@default != null && @default.TryGetValue(language, out value))
-                    isDefaultValue = isDefault;
-                else if (@default != null && !isDefault && @default.TryGetValue(L.Default, out value))
+                else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+                    isDefaultValue = language.IsDefault;
+                else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
                 else
                 {
@@ -1759,9 +1751,9 @@ public static class TeamManager
                     isDefaultValue = true;
                 }
             }
-            else if (@default != null && @default.TryGetValue(language, out value))
-                isDefaultValue = isDefault;
-            else if (@default != null && !isDefault && @default.TryGetValue(L.Default, out value))
+            else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+                isDefaultValue = language.IsDefault;
+            else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                 isDefaultValue = true;
             else
                 isDefaultValue = true;
@@ -1887,7 +1879,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     [FormatDisplay("Colored Abbreviation")]
     public const string FormatColorAbbreviation = "ac";
 
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null)
@@ -1903,7 +1895,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             if (format.Equals(FormatColorAbbreviation, StringComparison.Ordinal))
                 return Localization.Colorize(HexColor, GetAbbreviation(language), flags);
             if (format.Equals(FormatId, StringComparison.Ordinal) ||
-                     format.Equals(FormatColorId, StringComparison.Ordinal))
+                format.Equals(FormatColorId, StringComparison.Ordinal))
             {
                 ulong team = 0;
                 if (TeamManager.Team1Faction == this)
@@ -1913,33 +1905,33 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                 else if (TeamManager.AdminFaction == this)
                     team = 3;
                 if (format.Equals(FormatId, StringComparison.Ordinal))
-                    return team.ToString(Localization.GetLocale(language));
+                    return team.ToString(culture ?? Data.LocalLocale);
 
-                return Localization.Colorize(HexColor, team.ToString(Localization.GetLocale(language)), flags);
+                return Localization.Colorize(HexColor, team.ToString(culture ?? Data.LocalLocale), flags);
             }
         }
         return GetName(language);
     }
-    public string GetName(string? language)
+    public string GetName(LanguageInfo? language)
     {
-        if (language is null || language.Equals(L.Default, StringComparison.OrdinalIgnoreCase) || NameTranslations is null || !NameTranslations.TryGetValue(language, out string val))
+        if (language is null || language.IsDefault || NameTranslations is null || !NameTranslations.TryGetValue(language.LanguageCode, out string val))
             return Name;
         return val;
     }
-    public string GetShortName(string? language)
+    public string GetShortName(LanguageInfo? language)
     {
-        if (language is null || language.Equals(L.Default, StringComparison.OrdinalIgnoreCase))
+        if (language is null || language.IsDefault)
             return ShortName ?? Name;
-        if (ShortNameTranslations is null || !ShortNameTranslations.TryGetValue(language, out string val))
+        if (ShortNameTranslations is null || !ShortNameTranslations.TryGetValue(language.LanguageCode, out string val))
         {
-            if (NameTranslations is null || !NameTranslations.TryGetValue(language, out val))
+            if (NameTranslations is null || !NameTranslations.TryGetValue(language.LanguageCode, out val))
                 return ShortName ?? Name;
         }
         return val;
     }
-    public string GetAbbreviation(string? language)
+    public string GetAbbreviation(LanguageInfo? language)
     {
-        if (language is null || language.Equals(L.Default, StringComparison.OrdinalIgnoreCase) || AbbreviationTranslations is null || !AbbreviationTranslations.TryGetValue(language, out string val))
+        if (language is null || language.IsDefault || AbbreviationTranslations is null || !AbbreviationTranslations.TryGetValue(language.LanguageCode, out string val))
             return Abbreviation;
         return val;
     }

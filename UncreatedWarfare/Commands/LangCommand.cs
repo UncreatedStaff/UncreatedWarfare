@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class LangCommand : Command
+public class LangCommand : AsyncCommand
 {
     private const string Syntax = "/lang [current|reset|*language*]";
     private const string Help = "Switch your language to some of our supported languages.";
-    public static event LanguageChanged? OnPlayerChangedLanguage;
 
     public LangCommand() : base("lang", EAdminType.MEMBER)
     {
@@ -37,13 +37,13 @@ public class LangCommand : Command
         };
     }
 
-    public override void Execute(CommandInteraction ctx)
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ctx.AssertHelpCheck(0, Syntax + " - " + Help);
-
+        
         if (ctx.HasArgsExact(0))
         {
             StringBuilder sb = new StringBuilder();
@@ -69,52 +69,45 @@ public class LangCommand : Command
         else if (ctx.MatchParameter(0, "current"))
         {
             ctx.AssertRanByPlayer();
-            
-            ctx.Reply(T.LanguageCurrent, Localization.FindLanguageSet(Localization.GetLang(ctx.CallerID))!);
+
+            LanguageInfo info = await Localization.GetLanguage(ctx.CallerID, token).ConfigureAwait(false);
+            ctx.Reply(T.LanguageCurrent, info);
         }
         else if (ctx.MatchParameter(0, "reset"))
         {
             ctx.AssertRanByPlayer();
+            
+            if (ctx.Caller.Locale.IsDefaultLanguage)
+                throw ctx.Reply(T.LangAlreadySet, ctx.Caller.Locale.LanguageInfo);
 
-            LanguageAliasSet set = Localization.DefaultSet;
+            LanguageInfo defaultInfo = Localization.GetDefaultLanguage();
 
-            if (Data.Languages.TryGetValue(ctx.CallerID, out string oldLang))
-            {
-                LanguageAliasSet oldSet = Localization.FindLanguageSet(oldLang) ?? new LanguageAliasSet(oldLang, oldLang, Array.Empty<string>());
-
-                if (oldSet.key.Equals(L.Default, StringComparison.Ordinal))
-                    throw ctx.Reply(T.LangAlreadySet, set);
-
-                InvokePlayerChangedLanguage(ctx, set, oldSet);
-                ctx.Reply(T.ResetLanguage, set);
-            }
-            else throw ctx.Reply(T.LangAlreadySet, set);
+            await ctx.Caller.Locale.Update(defaultInfo.LanguageCode, Data.LocalLocale, token).ConfigureAwait(false);
+            ctx.Reply(T.ResetLanguage, defaultInfo);
+            CheckIMGUIRequirements(ctx, defaultInfo);
         }
         else if (ctx.TryGetRange(0, out string input) && !string.IsNullOrWhiteSpace(input))
         {
             ctx.AssertRanByPlayer();
-            
-            string oldLang = Localization.GetLang(ctx.CallerID);
-            LanguageAliasSet oldSet = Localization.FindLanguageSet(oldLang) ?? new LanguageAliasSet(oldLang, oldLang, Array.Empty<string>());
 
-            LanguageAliasSet? newSet = Localization.FindLanguageSet(input);
+            LanguageInfo? newSet = Data.LanguageDataStore.GetInfoCached(input, false);
 
-            if (newSet != null)
-            {
-                if (newSet.key.Equals(oldLang, StringComparison.OrdinalIgnoreCase))
-                    throw ctx.Reply(T.LangAlreadySet, oldSet);
-                
-                InvokePlayerChangedLanguage(ctx, newSet, oldSet);
-                ctx.Reply(T.ChangedLanguage, newSet);
-            }
-            else throw ctx.Reply(T.LanguageNotFound, input);
+            if (newSet == null)
+                throw ctx.Reply(T.LanguageNotFound, input);
+
+            LanguageInfo oldSet = await Localization.GetLanguage(ctx.CallerID, token).ConfigureAwait(false);
+            if (newSet == oldSet)
+                throw ctx.Reply(T.LangAlreadySet, oldSet);
+
+            await ctx.Caller.Locale.Update(newSet.LanguageCode, null, token).ConfigureAwait(false);
+            CheckIMGUIRequirements(ctx, newSet);
+            ctx.Reply(T.ChangedLanguage, newSet);
         }
         else throw ctx.Reply(T.ResetLanguageHow);
     }
-    private static void InvokePlayerChangedLanguage(CommandInteraction ctx, LanguageAliasSet newSet, LanguageAliasSet oldSet)
+    private static void CheckIMGUIRequirements(CommandInteraction ctx, LanguageInfo newSet)
     {
-        JSONMethods.SetLanguage(ctx.CallerID, newSet.key);
-        ctx.LogAction(ActionLogType.ChangeLanguage, oldSet.key + " >> " + newSet.key);
+        JSONMethods.SetLanguage(ctx.CallerID, newSet.LanguageCode);
         if (ctx.Caller.Save.IMGUI && !newSet.RequiresIMGUI)
         {
             ctx.Reply(T.NoIMGUITip1, newSet);
@@ -125,7 +118,6 @@ public class LangCommand : Command
             ctx.Reply(T.IMGUITip1, newSet);
             ctx.Reply(T.IMGUITip2);
         }
-        OnPlayerChangedLanguage?.Invoke(ctx.Caller, newSet, oldSet);
     }
 }
 public delegate void LanguageChanged(UCPlayer player, LanguageAliasSet newLanguage, LanguageAliasSet oldLanguage);

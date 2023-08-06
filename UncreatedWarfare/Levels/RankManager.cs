@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Players;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Players;
@@ -384,7 +383,7 @@ public static class RankManager
             if (value)
             {
                 status.IsCompelete = true;
-                L.LogDebug("Finished rank " + nextRank.GetName(0));
+                L.LogDebug("Finished rank " + nextRank.GetName(null, null));
                 WriteRankData(e.Player, e.Player.RankData);
                 if (Assets.find(nextRank.QuestID) is QuestAsset quest)
                 {
@@ -530,43 +529,25 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
             res[i] = Guid.TryParse(strings[i], out Guid guid) ? guid : Guid.Empty;
         return res;
     }
-    public string GetName(ulong player)
+    public string GetName(LanguageInfo? lang, CultureInfo? culture)
     {
-        if (!Data.Languages.TryGetValue(player, out string lang))
-            lang = L.Default;
-        if (NameTranslations == null) return "L" + Order.ToString(Localization.GetLocale(lang));
-        if (NameTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.Default, StringComparison.Ordinal) && NameTranslations.TryGetValue(L.Default, out rtn)))
+        lang ??= Localization.GetDefaultLanguage();
+        culture ??= Localization.GetCultureInfo(lang);
+        if (NameTranslations == null) return "L" + Order.ToString(culture);
+        if (NameTranslations.TryGetValue(lang.LanguageCode, out string rtn) || (!lang.IsDefault && NameTranslations.TryGetValue(L.Default, out rtn)))
             return rtn;
-        return NameTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Localization.GetLocale(lang)));
+        return NameTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(culture));
     }
-    public string GetName(string lang)
+    public string ColorizedName(LanguageInfo? lang, CultureInfo? culture) => "<color=#" + Color + ">" + GetName(lang, culture) + "</color>";
+    public string ColorizedAbbreviation(LanguageInfo? lang, CultureInfo? culture) => "<color=#" + Color + ">" + GetAbbreviation(lang, culture) + ".</color>";
+    public string GetAbbreviation(LanguageInfo? lang, CultureInfo? culture)
     {
-        lang ??= L.Default;
-        if (NameTranslations == null) return "L" + Order.ToString(Localization.GetLocale(lang));
-        if (NameTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.Default, StringComparison.Ordinal) && NameTranslations.TryGetValue(L.Default, out rtn)))
+        lang ??= Localization.GetDefaultLanguage();
+        culture ??= Localization.GetCultureInfo(lang);
+        if (AbbreviationTranslations == null) return "L" + Order.ToString(culture);
+        if (AbbreviationTranslations.TryGetValue(lang.LanguageCode, out string rtn) || (!lang.IsDefault && AbbreviationTranslations.TryGetValue(L.Default, out rtn)))
             return rtn;
-        return NameTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Localization.GetLocale(lang)));
-    }
-    public string ColorizedName(string lang) => "<color=#" + Color + ">" + GetName(lang) + "</color>";
-    public string ColorizedName(ulong player) => "<color=#" + Color + ">" + GetName(player) + "</color>";
-    public string ColorizedAbbreviation(string lang) => "<color=#" + Color + ">" + GetAbbreviation(lang) + ".</color>";
-    public string ColorizedAbbreviation(ulong player) => "<color=#" + Color + ">" + GetAbbreviation(player) + ".</color>";
-    public string GetAbbreviation(ulong player)
-    {
-        if (!Data.Languages.TryGetValue(player, out string lang))
-            lang = L.Default;
-        if (AbbreviationTranslations == null) return "L" + Order.ToString(Localization.GetLocale(lang));
-        if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.Default, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(L.Default, out rtn)))
-            return rtn;
-        return AbbreviationTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Localization.GetLocale(lang)));
-    }
-    public string GetAbbreviation(string lang)
-    {
-        lang ??= L.Default;
-        if (AbbreviationTranslations == null) return "L" + Order.ToString(Localization.GetLocale(lang));
-        if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.Default, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(L.Default, out rtn)))
-            return rtn;
-        return AbbreviationTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Localization.GetLocale(lang)));
+        return AbbreviationTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(culture));
     }
     public int CompareTo(RankData other) => Order.CompareTo(other.Order);
     public override bool Equals(object? obj) => obj is RankData data && Order == data.Order;
@@ -620,12 +601,7 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
                                 {
                                     string? value = reader.GetString();
                                     if (value != null)
-                                    {
-                                        if (names.ContainsKey(key))
-                                            names[key] = value;
-                                        else
-                                            names.Add(key, value);
-                                    }
+                                        names[key] = value;
                                 }
                             }
                         }
@@ -641,12 +617,7 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
                                 {
                                     string? value = reader.GetString();
                                     if (value != null)
-                                    {
-                                        if (abbreviations.ContainsKey(key))
-                                            abbreviations[key] = value;
-                                        else
-                                            abbreviations.Add(key, value);
-                                    }
+                                        abbreviations[key] = value;
                                 }
                             }
                         }
@@ -722,27 +693,26 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
     public const string FormatOrderLevel = "lo";
     [FormatDisplay("Colored Order with L-Prefix")]
     public const string FormatColorOrderLevel = "lco";
-    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
-        ref TranslationFlags flags)
+    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
     {
         if (format is not null && !format.Equals(FormatName, StringComparison.Ordinal))
         {
             if (format.Equals(FormatColorName, StringComparison.Ordinal))
-                return Localization.Colorize(Color, GetName(language), flags);
+                return Localization.Colorize(Color, GetName(language, culture), flags);
             if (format.Equals(FormatAbbreviation, StringComparison.Ordinal))
-                return GetAbbreviation(language);
+                return GetAbbreviation(language, culture);
             if (format.Equals(FormatColorAbbreviation, StringComparison.Ordinal))
-                return Localization.Colorize(Color, GetAbbreviation(language), flags);
+                return Localization.Colorize(Color, GetAbbreviation(language, culture), flags);
             if (format.Equals(FormatOrder, StringComparison.Ordinal))
-                return Order.ToString(Localization.GetLocale(language));
+                return Order.ToString(culture ?? Localization.GetCultureInfo(language));
             if (format.Equals(FormatOrder, StringComparison.Ordinal))
-                return Localization.Colorize(Color, Order.ToString(Localization.GetLocale(language)), flags);
+                return Localization.Colorize(Color, Order.ToString(culture ?? Localization.GetCultureInfo(language)), flags);
             if (format.Equals(FormatOrderLevel, StringComparison.Ordinal))
-                return "L " + Order.ToString(Localization.GetLocale(language));
+                return "L " + Order.ToString(culture ?? Localization.GetCultureInfo(language));
             if (format.Equals(FormatColorOrderLevel, StringComparison.Ordinal))
-                return "L " + Localization.Colorize(Color, Order.ToString(Localization.GetLocale(language)), flags);
+                return "L " + Localization.Colorize(Color, Order.ToString(culture ?? Localization.GetCultureInfo(language)), flags);
         }
 
-        return GetName(language);
+        return GetName(language, culture);
     }
 }

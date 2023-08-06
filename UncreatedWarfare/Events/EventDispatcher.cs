@@ -158,7 +158,7 @@ public static class EventDispatcher
         {
             if (mainThread && !UCWarfare.IsMainThread)
             {
-                await UCWarfare.ToUpdate();
+                await UCWarfare.ToUpdate(token);
                 ThreadUtil.assertIsGameThread();
             }
 
@@ -891,7 +891,6 @@ public static class EventDispatcher
         PlayerSave.TryReadSaveFile(s64, out PlayerSave? save);
 
         PendingAsyncData data = new PendingAsyncData(player);
-        PlayerPending args = new PlayerPending(player, save, data, true, string.Empty);
         CancellationTokenSource? src = null;
 
         for (int i = 0; i < PlayerManager.PlayerConnectCancellationTokenSources.Count; ++i)
@@ -903,7 +902,7 @@ public static class EventDispatcher
                 break;
             }
         }
-
+        PlayerPending args = new PlayerPending(player, save, data, true, string.Empty);
         Task task = InvokePrePlayerConnectAsync(args, src == null ? CancellationToken.None : src.Token);
         if (task.IsCompleted)
         {
@@ -936,7 +935,10 @@ public static class EventDispatcher
             await UCWarfare.ToUpdate(token);
 
             if (args.CanContinue)
+            {
                 EventPatches.ContinueSendingVerifyPacket(args.PendingPlayer);
+                _pending = args.AsyncData;
+            }
             else
                 EventPatches.RemovePlayer(args.PendingPlayer, args.Rejection, args.RejectReason ?? "An unknown error occured.");
         }

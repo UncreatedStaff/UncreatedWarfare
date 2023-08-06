@@ -62,7 +62,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     private StatTracker _gameStats;
     protected Transform? _blockerBarricadeT1 = null;
     protected Transform? _blockerBarricadeT2 = null;
-    private bool _isScreenUp = false;
+    private bool _isScreenUp;
     public int ObjectiveT1Index => _objectiveT1Index;
     public int ObjectiveT2Index => _objectiveT2Index;
     public Flag? ObjectiveTeam1 => _objectiveT1Index >= 0 && _objectiveT1Index < FlagRotation.Count ? FlagRotation[_objectiveT1Index] : null;
@@ -313,7 +313,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         if (capturedTeam != 0)
             QuestManager.OnObjectiveCaptured(playerList.Select(x => x.Steam64).ToArray());
 
-        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(capturedTeam, 0) + " CAPTURED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam, 0));
+        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(capturedTeam) + " CAPTURED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam));
         float mult = GetCaptureXPMultiplier();
         foreach (UCPlayer player in playerList)
         {
@@ -334,27 +334,27 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         List<UCPlayer> playerList = capturedTeam == 1ul ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2;
         QuestManager.OnFlagNeutralized(playerList.Select(x => x.Steam64).ToArray(), capturedTeam);
 
-        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(capturedTeam, 0) + " NEUTRALIZED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam, 0));
+        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(capturedTeam) + " NEUTRALIZED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam));
         float mult = GetCaptureXPMultiplier();
         foreach (UCPlayer player in playerList)
             Points.AwardXP(player, XPReward.FlagNeutralized, mult);
     }
-    protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
+    protected override void PlayerEnteredFlagRadius(Flag flag, UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
+        L.LogDebug("Player " + player.Name.PlayerName + " entered flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
     }
-    protected override void PlayerLeftFlagRadius(Flag flag, Player player)
+    protected override void PlayerLeftFlagRadius(Flag flag, UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ITransportConnection channel = player.channel.owner.transportConnection;
-        L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
+        ITransportConnection channel = player.Connection;
+        L.LogDebug("Player " + player.Name.PlayerName + " left flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.LeftCaptureRadius, flag);
         CTFUI.ClearCaptureUI(channel);
         UpdateFlag(flag);
@@ -366,33 +366,33 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #endif
         CaptureUIParameters t1 = default;
         CaptureUIParameters t2 = default;
-        CaptureUIParameters t1v = default;
-        CaptureUIParameters t2v = default;
+        CaptureUIParameters t1V = default;
+        CaptureUIParameters t2V = default;
         if (flag.Team1TotalCappers > 0)
             t1 = CTFUI.RefreshStaticUI(1, flag, false);
         if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
-            t1v = CTFUI.RefreshStaticUI(1, flag, true);
+            t1V = CTFUI.RefreshStaticUI(1, flag, true);
         if (flag.Team2TotalCappers > 0)
             t2 = CTFUI.RefreshStaticUI(2, flag, false);
         if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
-            t2v = CTFUI.RefreshStaticUI(2, flag, true);
+            t2V = CTFUI.RefreshStaticUI(2, flag, true);
         for (int i = 0; i < flag.PlayersOnFlag.Count; i++)
         {
-            Player capper = flag.PlayersOnFlag[i];
+            UCPlayer capper = flag.PlayersOnFlag[i];
             ulong t = capper.GetTeam();
             if (t == 1)
             {
-                if (capper.movement.getVehicle() == null)
+                if (!capper.IsInVehicle)
                     CTFUI.CaptureUI.Send(capper, in t1);
                 else
-                    CTFUI.CaptureUI.Send(capper, in t1v);
+                    CTFUI.CaptureUI.Send(capper, in t1V);
             }
             else if (t == 2)
             {
-                if (capper.movement.getVehicle() == null)
+                if (!capper.IsInVehicle)
                     CTFUI.CaptureUI.Send(capper, in t2);
                 else
-                    CTFUI.CaptureUI.Send(capper, in t2v);
+                    CTFUI.CaptureUI.Send(capper, in t2V);
             }
         }
     }
@@ -403,7 +403,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #endif
         if (newOwner == 1)
         {
-            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(1, 0));
+            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(1));
             if (_objectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
             {
                 UCWarfare.RunTask(Data.Gamemode.DeclareWin, 1ul, default, ctx: "Lose game, flags fully captured by team 1.");
@@ -424,7 +424,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         }
         else if (newOwner == 2)
         {
-            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(2, 0));
+            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(2));
             if (_objectiveT2Index < 1) // if t2 just capped the last flag
             {
                 UCWarfare.RunTask(Data.Gamemode.DeclareWin, 2ul, default, ctx: "Lose game, flags fully captured by team 2.");

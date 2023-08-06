@@ -113,17 +113,17 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         Flag.PlayerChange change = f.GetUpdatedPlayers();
         try
         {
-            List<Player> list = change.DepartingPlayers;
+            List<UCPlayer> list = change.DepartingPlayers;
             for (int j = 0; j < list.Count; j++)
             {
-                Player player = list[j];
-                RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, f);
+                UCPlayer player = list[j];
+                RemovePlayerFromFlag(player.Steam64, player, f);
             }
 
             list = change.NewPlayers;
             for (int j = 0; j < list.Count; j++)
             {
-                Player player = list[j];
+                UCPlayer player = list[j];
                 AddPlayerOnFlag(player, f);
             }
         }
@@ -203,7 +203,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         }
         FlagRotation.Clear();
     }
-    protected virtual void RemovePlayerFromFlag(ulong playerId, Player? player, Flag flag)
+    protected virtual void RemovePlayerFromFlag(ulong playerId, UCPlayer? player, Flag flag)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -217,26 +217,26 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
                 flag.ExitPlayer(player);
         }
     }
-    public virtual void AddPlayerOnFlag(Player player, Flag flag)
+    public virtual void AddPlayerOnFlag(UCPlayer player, Flag flag)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (OnFlagDict.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out int fid))
+        if (OnFlagDict.TryGetValue(player.Steam64, out int fid))
         {
             if (fid != flag.ID)
             {
                 Flag? oldFlag = FlagRotation.FirstOrDefault(f => f.ID == fid);
-                if (oldFlag == null) OnFlagDict.Remove(player.channel.owner.playerID.steamID.m_SteamID);
-                else RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, oldFlag); // remove the player from their old flag first in the case of teleporting from one flag to another.
-                OnFlagDict.Add(player.channel.owner.playerID.steamID.m_SteamID, flag.ID);
+                if (oldFlag == null) OnFlagDict.Remove(player.Steam64);
+                else RemovePlayerFromFlag(player.Steam64, player, oldFlag); // remove the player from their old flag first in the case of teleporting from one flag to another.
+                OnFlagDict.Add(player.Steam64, flag.ID);
             }
         }
-        else OnFlagDict.Add(player.channel.owner.playerID.steamID.m_SteamID, flag.ID);
+        else OnFlagDict.Add(player.Steam64, flag.ID);
         flag.EnterPlayer(player);
     }
-    protected abstract void PlayerEnteredFlagRadius(Flag flag, Player player);
-    protected abstract void PlayerLeftFlagRadius(Flag flag, Player player);
+    protected abstract void PlayerEnteredFlagRadius(Flag flag, UCPlayer player);
+    protected abstract void PlayerLeftFlagRadius(Flag flag, UCPlayer player);
     protected abstract void FlagOwnerChanged(ulong oldOwner, ulong newOwner, Flag flag);
     protected abstract void FlagPointsChanged(float newPts, float oldPts, Flag flag);
     public abstract bool IsAttackSite(ulong team, Flag flag);
