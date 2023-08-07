@@ -1029,8 +1029,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         for (int i = fobs.Length - 1; i > index; --i)
         {
-            if (fobs[i - 1] == null)
-                break;
             fobs[i] = fobs[i - 1];
         }
 
