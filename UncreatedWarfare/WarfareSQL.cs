@@ -787,7 +787,7 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
         if (ttlx >= 0)
         {
             await NonQueryAsync(
-                "INSERT INTO `" + TableLevels + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, 0, " + (xp < 0 ? "0" : "@2") + ") ON DUPLICATE KEY UPDATE `Credits` = 0, `Experience` = `Experience` + @3;",
+                "INSERT INTO `" + TableLevels + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, 0, " + (xp < 0 ? "0" : "@2") + ") ON DUPLICATE KEY UPDATE `Credits` = 0, `Experience` = `Experience` + @2;",
                 new object[] { player, team, xp }, token).ConfigureAwait(false);
             return (0, ttlx);
         }
