@@ -470,7 +470,8 @@ public static class Data
     }
     public static async Task ReloadLanguageDataStore(bool init, CancellationToken token = default)
     {
-        await LanguageDataStore.Initialize(token).ConfigureAwait(false);
+        if (init)
+            await LanguageDataStore.Initialize(token).ConfigureAwait(false);
         await LanguageDataStore.ReloadCache(token).ConfigureAwait(false);
 
         if (LanguageDataStore.GetInfoCached(L.Default) is { } defaultLang)

@@ -55,10 +55,11 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
                 BuffUI.SendBuffs(player);
         }
 
-
-
         KitManager.OnKitChanged += OnKitChanged;
         EventDispatcher.GroupChanged += OnGroupChanged;
+
+        Localization.ClearSection(TranslationSection.Traits);
+
     }
     public override void Unload()
     {

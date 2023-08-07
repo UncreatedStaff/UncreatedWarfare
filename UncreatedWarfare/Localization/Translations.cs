@@ -148,7 +148,7 @@ public class Translation
         L.Log($"Key: {Key}");
         L.Log($"Id: {Id}");
         L.Log($"Flags: {Flags}");
-        L.Log($"Default:");
+        L.Log("Default:");
         void DumpVal(TranslationValue val)
         {
             L.Log("Language: " + (val.Language ?? Localization.GetDefaultLanguage()));
@@ -1505,6 +1505,7 @@ public class Translation
 
             WriteLanguage(languageInfo, null, writeAll: isDefault);
             L.Log("Loaded " + amt + " translations for " + lang + ".", ConsoleColor.Magenta);
+            languageInfo.IncrementSection(TranslationSection.Primary, amt);
             amt = 0;
         }
 

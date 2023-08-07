@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using Uncreated.Framework;
@@ -652,6 +653,9 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     }
     internal static void Reload()
     {
+        Warfare.Localization.ClearSection(TranslationSection.Deaths);
+        Warfare.Localization.IncrementSection(TranslationSection.Deaths, Mathf.CeilToInt(DeathTranslations.SelectMany(x => x.Value).Count() / 3f));
+        int ct = 0;
         string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
 
         F.CheckDir(Data.Paths.LangStorage + L.Default, out bool folderIsThere);
@@ -672,14 +676,16 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                 writer.WriteEndArray();
                 writer.Dispose();
             }
+            List<DeathCause> causes = new List<DeathCause>(DefaultValues.Length);
             foreach (string folder in langDirs)
             {
                 DirectoryInfo directoryInfo = new DirectoryInfo(folder);
                 string lang = directoryInfo.Name;
                 FileInfo[] langFiles = directoryInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
+                LanguageInfo? language = Data.LanguageDataStore.GetInfoCached(lang);
                 foreach (FileInfo info in langFiles)
                 {
-                    if (info.Name == "deaths.json")
+                    if (info.Name.Equals("deaths.json", StringComparison.InvariantCultureIgnoreCase))
                     {
                         if (DeathTranslations.ContainsKey(lang)) continue;
                         using FileStream stream = info.OpenRead();
@@ -688,7 +694,6 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                         byte[] bytes = new byte[stream.Length];
                         stream.Read(bytes, 0, bytes.Length);
                         Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                        List<DeathCause> causes = new List<DeathCause>(DefaultValues.Length);
                         while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                         {
                             if (reader.TokenType == JsonTokenType.StartObject)
@@ -700,7 +705,9 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
                         }
 
                         DeathTranslations.Add(lang, causes.ToArray());
+                        language?.IncrementSection(TranslationSection.Deaths, causes.Count);
                         causes.Clear();
+                        break;
                     }
                 }
             }

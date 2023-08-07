@@ -28,20 +28,22 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     private bool isInited = false;
     public delegate void CustomSerializer(T obj, Utf8JsonWriter writer);
     public delegate T CustomDeserializer(ref Utf8JsonReader reader);
-    public JSONSaver(string _directory, bool loadNow = true) : base()
+
+    protected JSONSaver(string directory, bool loadNow = true)
     {
-        directory = Path.GetDirectoryName(_directory);
-        file = _directory;
+        this.directory = Path.GetDirectoryName(directory) ?? string.Empty;
+        file = directory;
 
         useSerializer = false;
         useDeserializer = false;
         if (loadNow)
             Init();
     }
-    public JSONSaver(string _directory, CustomSerializer? serializer, CustomDeserializer? deserializer, bool loadNow = true) : base()
+
+    protected JSONSaver(string directory, CustomSerializer? serializer, CustomDeserializer? deserializer, bool loadNow = true)
     {
-        directory = Path.GetDirectoryName(_directory);
-        file = _directory;
+        this.directory = Path.GetDirectoryName(directory) ?? string.Empty;
+        file = directory;
 
         _serializer = serializer;
         useSerializer = serializer is not null;

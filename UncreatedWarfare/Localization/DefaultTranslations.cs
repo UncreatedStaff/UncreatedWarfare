@@ -2103,7 +2103,7 @@ internal static class T
     [TranslationData(SectionReload, IsPrioritizedTranslation = false)]
     public static readonly Translation ReloadedAll = new Translation("<#e6e3d5>Reloaded all Uncreated Warfare components.");
     [TranslationData(SectionReload, IsPrioritizedTranslation = false)]
-    public static readonly Translation ReloadedTranslations = new Translation("<#e6e3d5>Reloaded all translation files.");
+    public static readonly Translation<int> ReloadedTranslations = new Translation<int>("<#e6e3d5>Reloaded all translation files. {0} total translation points.");
     [TranslationData(SectionReload, IsPrioritizedTranslation = false)]
     public static readonly Translation ReloadedFlags = new Translation("<#e6e3d5>Reloaded flag data.");
     [TranslationData(SectionReload, IsPrioritizedTranslation = false)]
@@ -3251,6 +3251,7 @@ internal static class T
         Translations = new Translation[fields.Length];
         int i2 = -1;
         int signCt = 0;
+        int publicTranslations = 0;
         for (int i = 0; i < fields.Length; ++i)
         {
             FieldInfo field = fields[i];
@@ -3263,6 +3264,8 @@ internal static class T
                     tr.Key = field.Name;
                     tr.Id = i2;
                     tr.AttributeData = Attribute.GetCustomAttribute(field, typeof(TranslationDataAttribute)) as TranslationDataAttribute;
+                    if (tr.AttributeData.IsPrioritizedTranslation)
+                        ++publicTranslations;
                     tr.Init();
                     if (tr.AttributeData is not null)
                     {
@@ -3295,6 +3298,8 @@ internal static class T
                     Signs.Add(tr.AttributeData.SignId!, tr);
             }
         }
+
+        Localization.IncrementSection(TranslationSection.Primary, publicTranslations);
     }
     public static string Translate(this TranslationList list, UCPlayer player) => TryTranslate(list, player.Locale.LanguageInfo, out string local) ? local : string.Empty;
     public static string Translate(this TranslationList list, LanguageInfo language) => TryTranslate(list, language, out string local) ? local : string.Empty;

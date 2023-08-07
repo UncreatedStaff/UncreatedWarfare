@@ -33,6 +33,7 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using Debug = System.Diagnostics.Debug;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 using XPReward = Uncreated.Warfare.Levels.XPReward;

@@ -67,8 +67,8 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
             if (lang != null)
                 return lang;
 
-            string[] inSplits = name.Split(F.SpaceSplit);
-            lang = _langs.Find(x => inSplits.All(l => x.Aliases.Any(x => F.RoughlyEquals(l, x))));
+            string[] words = name.Split(F.SpaceSplit);
+            lang = _langs.Find(x => words.All(l => x.Aliases.Any(x => F.RoughlyEquals(l, x))));
             if (lang != null)
                 return lang;
 
@@ -76,11 +76,19 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
             if (lang != null)
                 return lang;
 
-            lang = _langs.Find(x => inSplits.All(l => x.DisplayName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1));
+            lang = _langs.Find(x => words.All(l => x.DisplayName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1));
             if (lang != null)
                 return lang;
 
-            lang = _langs.Find(x => inSplits.All(l => x.Aliases.Any(x => x.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1)));
+            lang = _langs.Find(x => x.NativeName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1);
+            if (lang != null)
+                return lang;
+
+            lang = _langs.Find(x => words.All(l => x.NativeName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1));
+            if (lang != null)
+                return lang;
+
+            lang = _langs.Find(x => words.All(l => x.Aliases.Any(x => x.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1)));
             return lang;
         }
         finally
@@ -133,6 +141,7 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
                     lang.FallbackTranslationLanguageCode = info.FallbackTranslationLanguageCode;
                     lang.SteamLanguageName = info.SteamLanguageName;
                     lang.Credits = info.Credits;
+                    lang.NativeName = info.NativeName;
                     _langs![index] = info;
                 }
             }
@@ -145,8 +154,20 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
                     info.PrimaryKey.IsValid, ColumnLanguageKeyExternal,
                     new string[] { TableLanguagesAliases, TableLanguagesAvailableCultures, TableLanguageCredits },
                     ColumnLanguageDisplayName, ColumnLanguageCode, ColumnLanguageDefaultCulture, ColumnLanguageHasTranslationSupport,
-                    ColumnLanguageRequiresIMGUI, ColumnLanguageFallbackTranslationLanguageCode, ColumnLanguageSteamLanguageName),
-                new object[] { info.DisplayName, info.LanguageCode, (object?)info.DefaultCultureCode ?? DBNull.Value, info.HasTranslationSupport, info.RequiresIMGUI, (object?)info.FallbackTranslationLanguageCode ?? DBNull.Value, (object?)info.SteamLanguageName ?? DBNull.Value, info.PrimaryKey.Key },
+                    ColumnLanguageRequiresIMGUI, ColumnLanguageFallbackTranslationLanguageCode, ColumnLanguageSteamLanguageName, ColumnLanguageNativeName),
+                new object[]
+                {
+                    info.DisplayName,
+                    info.LanguageCode,
+                    (object?)info.DefaultCultureCode ?? DBNull.Value,
+                    info.HasTranslationSupport,
+                    info.RequiresIMGUI,
+                    (object?)info.FallbackTranslationLanguageCode ?? DBNull.Value,
+                    (object?)info.SteamLanguageName ?? DBNull.Value,
+                    info.NativeName.Equals(info.DisplayName, StringComparison.Ordinal) ? DBNull.Value : info.NativeName,
+                    
+                    info.PrimaryKey.Key
+                },
                 reader =>
                 {
                     info.PrimaryKey = reader.GetInt32(0);
@@ -280,7 +301,7 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
     {
         await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(ColumnLanguageKey, ColumnLanguageDisplayName, ColumnLanguageCode,
             ColumnLanguageDefaultCulture, ColumnLanguageHasTranslationSupport, ColumnLanguageRequiresIMGUI,
-            ColumnLanguageFallbackTranslationLanguageCode, ColumnLanguageSteamLanguageName)} FROM `{TableLanguages}` ORDER BY `{ColumnLanguageKey}`;", null,
+            ColumnLanguageFallbackTranslationLanguageCode, ColumnLanguageSteamLanguageName, ColumnLanguageNativeName)} FROM `{TableLanguages}` ORDER BY `{ColumnLanguageKey}`;", null,
             reader =>
             {
                 string code = reader.GetString(2);
@@ -297,6 +318,7 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
                 existing.RequiresIMGUI = reader.GetBoolean(5);
                 existing.FallbackTranslationLanguageCode = reader.IsDBNull(6) ? null : reader.GetString(6);
                 existing.SteamLanguageName = reader.IsDBNull(7) ? null : reader.GetString(7);
+                existing.NativeName = reader.IsDBNull(8) ? existing.DisplayName : reader.GetString(8);
             }, token).ConfigureAwait(false);
 
         List<PrimaryKeyPair<string>> tempList = new List<PrimaryKeyPair<string>>(32);
@@ -355,6 +377,7 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
 
     public const string ColumnLanguageKey = "pk";
     public const string ColumnLanguageDisplayName = "DisplayName";
+    public const string ColumnLanguageNativeName = "NativeName";
     public const string ColumnLanguageCode = "Code";
     public const string ColumnLanguageDefaultCulture = "DefaultCultureCode";
     public const string ColumnLanguageHasTranslationSupport = "HasTranslationSupport";
@@ -381,6 +404,10 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
                 AutoIncrement = true
             },
             new Schema.Column(ColumnLanguageDisplayName, SqlTypes.String(64)),
+            new Schema.Column(ColumnLanguageNativeName, SqlTypes.String(64))
+            {
+                Nullable = true
+            },
             new Schema.Column(ColumnLanguageCode, "char(5)"),
             new Schema.Column(ColumnLanguageDefaultCulture, SqlTypes.String(16))
             {

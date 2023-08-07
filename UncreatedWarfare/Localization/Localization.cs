@@ -29,16 +29,53 @@ namespace Uncreated.Warfare;
 
 public static class Localization
 {
+    private static int _totalDefaultTranslations;
+    private static readonly Dictionary<TranslationSection, int> TotalSectionedDefaultTranslations = new Dictionary<TranslationSection, int>(6);
+    internal static void IncrementSection(TranslationSection section, int amt)
+    {
+        if (amt <= 0)
+            return;
+        if (TotalSectionedDefaultTranslations.TryGetValue(section, out int value))
+            TotalSectionedDefaultTranslations[section] = value + amt;
+        else TotalSectionedDefaultTranslations.Add(section, amt);
+        _totalDefaultTranslations += amt;
+    }
+    internal static void ClearSection(TranslationSection section)
+    {
+        TotalSectionedDefaultTranslations.Remove(section);
+        _totalDefaultTranslations = 0;
+        if (Data.LanguageDataStore == null) return;
+        foreach (LanguageInfo language in Data.LanguageDataStore.Languages)
+            language.ClearSection(section);
+    }
+
+    internal static int TotalDefaultTranslations
+    {
+        get
+        {
+            if (_totalDefaultTranslations == 0)
+            {
+                foreach (int val in TotalSectionedDefaultTranslations.Values)
+                    _totalDefaultTranslations += val;
+            }
+            return _totalDefaultTranslations;
+        }
+        set => _totalDefaultTranslations = value;
+    }
+
     private const string EnumNamePlaceholder = "%NAME%";
 
     private static readonly string EnumTranslationFileName = "Enums" + Path.DirectorySeparatorChar;
     private static readonly Dictionary<Type, Dictionary<string, Dictionary<string, string>>> EnumTranslations = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>(16);
     private static readonly Dictionary<Type, Dictionary<string, List<TranslatableAttribute>>> EnumTranslationAttributes = new Dictionary<Type, Dictionary<string, List<TranslatableAttribute>>>(16);
+    private static CultureInfo[]? _allCultures;
 
     public const string UnityRichTextColorBaseStart = "<color=#";
     public const string RichTextColorEnd = ">";
     public const string TMProRichTextColorBase = "<#";
     public const string RichTextColorClosingTag = "</color>";
+
+    public static CultureInfo[] AllCultures => _allCultures ??= CultureInfo.GetCultures(CultureTypes.AllCultures);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string Colorize(string hex, string inner, TranslationFlags flags)
@@ -515,6 +552,8 @@ public static class Localization
     public static string TranslateEnumName<TEnum>(LanguageInfo? language) where TEnum : struct, Enum => TranslateEnumName(typeof(TEnum), language);
     public static void ReadEnumTranslations(List<KeyValuePair<Type, string?>> extEnumTypes)
     {
+        ClearSection(TranslationSection.Enums);
+        int publicTranslations = 0;
         EnumTranslations.Clear();
         string def = Path.Combine(Data.Paths.LangStorage, L.Default) + Path.DirectorySeparatorChar;
         if (!Directory.Exists(def))
@@ -542,6 +581,7 @@ public static class Localization
         {
             if (EnumTranslations.ContainsKey(enumType.Key)) continue;
             Dictionary<string, Dictionary<string, string>> k = new Dictionary<string, Dictionary<string, string>>();
+            bool isPriorityType = true;
             if (!EnumTranslationAttributes.TryGetValue(enumType.Key, out Dictionary<string, List<TranslatableAttribute>>? a))
             {
                 a = new Dictionary<string, List<TranslatableAttribute>>(8) { { EnumNamePlaceholder, new List<TranslatableAttribute>(2) } };
@@ -549,6 +589,7 @@ public static class Localization
             }
             else if (a.TryGetValue(EnumNamePlaceholder, out List<TranslatableAttribute> nameList))
             {
+                isPriorityType = nameList.All(x => x.IsPrioritizedTranslation);
                 if (!nameList.Exists(x => x.Language.Equals(enumType.Value.Language, StringComparison.OrdinalIgnoreCase)))
                 {
                     if (enumType.Value.Language.IsDefault())
@@ -563,7 +604,7 @@ public static class Localization
             FieldInfo[] fields = enumType.Key.GetFields(BindingFlags.Public | BindingFlags.Static);
             for (int i = 0; i < fields.Length; ++i)
             {
-                if (Attribute.IsDefined(fields[i], typeof(JsonIgnoreAttribute)))
+                if (Attribute.IsDefined(fields[i], typeof(JsonIgnoreAttribute)) || fields[i].IsIgnored())
                     continue;
                 string name = fields[i].GetValue(null).ToString();
                 Attribute[] attrs = Attribute.GetCustomAttributes(fields[i]);
@@ -574,17 +615,27 @@ public static class Localization
                     a.Add(name, list);
                 }
 
+                bool isPriority = isPriorityType;
                 for (int j = 0; j < attrs.Length; ++j)
                 {
-                    if (attrs[j] is TranslatableAttribute t && !list.Exists(x => x.Language.Equals(t.Language, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        if (t.Language.IsDefault())
-                            list.Insert(0, t);
-                        else
-                            list.Add(t);
-                    }
+                    if (attrs[j] is not TranslatableAttribute t)
+                        continue;
+
+                    isPriority &= t.IsPrioritizedTranslation;
+                    if (list.Exists(x => x.Language.Equals(t.Language, StringComparison.OrdinalIgnoreCase)))
+                        continue;
+
+                    if (t.Language.IsDefault())
+                        list.Insert(0, t);
+                    else
+                        list.Add(t);
                 }
+
+                if (isPriority)
+                    ++publicTranslations;
             }
+            if (isPriorityType)
+                ++publicTranslations; // name
             if (!File.Exists(fn))
             {
                 Dictionary<string, string> k2 = new Dictionary<string, string>(fields.Length + 1);
@@ -602,6 +653,7 @@ public static class Localization
                 fn = Path.Combine(dir.FullName, EnumTranslationFileName, enumType.Key.FullName + ".json");
                 if (!File.Exists(fn)) continue;
                 Dictionary<string, string> k2 = new Dictionary<string, string>(fields.Length + 1);
+                LanguageInfo? language = Data.LanguageDataStore.GetInfoCached(dir.Name);
                 using (FileStream stream = new FileStream(fn, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     if (stream.Length > int.MaxValue)
@@ -623,7 +675,17 @@ public static class Localization
                                 {
                                     string? value = reader.GetString();
                                     if (value != null)
+                                    {
                                         k2.Add(key, value);
+                                        if (isPriorityType && language is { IsDefault: false } &&
+                                            EnumTranslationAttributes.TryGetValue(enumType.Key, out Dictionary<string, List<TranslatableAttribute>> fieldAttributeTable) &&
+                                            fieldAttributeTable.TryGetValue(key, out List<TranslatableAttribute> attributes)
+                                            && attributes.All(x => x.IsPrioritizedTranslation)
+                                            )
+                                        {
+                                            language.IncrementSection(TranslationSection.Enums, 1);
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -637,6 +699,8 @@ public static class Localization
                         defaultLangs.RemoveAll(x => x.Key == enumType.Key);
                 }
                 k.Add(dir.Name, k2);
+                if (Data.LanguageDataStore.GetInfoCached(dir.Name) is { } langInfo)
+                    langInfo.IncrementSection(TranslationSection.Enums, 1);
             }
         }
         for (int i = 0; i < defaultLangs.Count; ++i)
@@ -673,6 +737,8 @@ public static class Localization
                 }
             }
         }
+
+        IncrementSection(TranslationSection.Enums, publicTranslations);
     }
     private static void GetOtherLangList(List<KeyValuePair<Type, List<string>>> otherlangs, FieldInfo[] fields, KeyValuePair<Type, TranslatableAttribute> enumType)
     {
@@ -999,10 +1065,11 @@ public static class Localization
     }
     public static void SendDelayRequestText(in Delay delay, UCPlayer player, ulong team, DelayTarget target)
     {
+        InitDelayResponses();
         DelayResponses res = target switch
         {
-            DelayTarget.Trait => TraitDelayResponses,
-            _ => VehicleDelayResponses,
+            DelayTarget.Trait => TraitDelayResponses!,
+            _ => VehicleDelayResponses!
         };
         if (delay.Type == DelayType.OutOfStaging &&
             (delay.Gamemode is null ||
@@ -1137,8 +1204,13 @@ public static class Localization
         Trait
     }
 
-    private static readonly DelayResponses VehicleDelayResponses = new DelayResponses(DelayTarget.VehicleBay);
-    private static readonly DelayResponses TraitDelayResponses = new DelayResponses(DelayTarget.Trait);
+    private static DelayResponses? VehicleDelayResponses;
+    private static DelayResponses? TraitDelayResponses;
+    private static void InitDelayResponses()
+    {
+        VehicleDelayResponses = new DelayResponses(DelayTarget.VehicleBay);
+        TraitDelayResponses = new DelayResponses(DelayTarget.Trait);
+    }
     private class DelayResponses
     {
         public readonly Translation<string> UnknownDelay;
@@ -1687,6 +1759,16 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         Array.Clear(_languages!, 0, len + 1);
         return rtn;
     }
+}
+
+public enum TranslationSection
+{
+    Primary,
+    Kits,
+    Traits,
+    Enums,
+    Factions,
+    Deaths
 }
 
 [AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface, Inherited = false, AllowMultiple = true)]

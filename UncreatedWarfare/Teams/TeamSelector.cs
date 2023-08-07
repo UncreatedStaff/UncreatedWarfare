@@ -1,8 +1,12 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
+using System;
 using System.Collections;
+using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using Uncreated.Framework.UI;
+using Uncreated.Players;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
@@ -15,6 +19,8 @@ namespace Uncreated.Warfare.Teams;
 
 public class TeamSelector : BaseSingletonComponent
 {
+    private static readonly DateTime NewOptionsExpire = new DateTime(2023, 08, 20, 00, 00, 00, DateTimeKind.Utc);
+
     public static TeamSelector Instance;
     public static readonly TeamSelectorUI JoinUI = new TeamSelectorUI();
     public static event PlayerDelegate? OnPlayerSelecting;
@@ -31,9 +37,17 @@ public class TeamSelector : BaseSingletonComponent
         EventDispatcher.PlayerLeft += OnPlayerDisconnect;
         Gamemode.OnStateUpdated += OnGamemodeStateUpdated;
         JoinUI.OnOptionsBackClicked += OnOptionsBackClicked;
+        JoinUI.OnLanguageSearch += OnLanguageSearch;
+        JoinUI.OnCultureSearch += OnCultureSearch;
+        JoinUI.OnLanguageApply += OnLanguageApply;
+        JoinUI.OnCultureApply += OnCultureApply;
     }
     public override void Unload()
     {
+        JoinUI.OnCultureApply -= OnCultureApply;
+        JoinUI.OnLanguageApply -= OnLanguageApply;
+        JoinUI.OnCultureSearch -= OnCultureSearch;
+        JoinUI.OnLanguageSearch -= OnLanguageSearch;
         JoinUI.OnOptionsBackClicked -= OnOptionsBackClicked;
         Gamemode.OnStateUpdated -= OnGamemodeStateUpdated;
         EventDispatcher.PlayerLeft -= OnPlayerDisconnect;
@@ -305,7 +319,111 @@ public class TeamSelector : BaseSingletonComponent
             player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
             player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Default);
         }
+        SendOptionsMenuValues(player);
         JoinUI.LogicOpenOptionsMenu.SetVisibility(player.Connection, true);
+    }
+    private static void SendOptionsMenuValues(UCPlayer player)
+    {
+        ITransportConnection c = player.Connection;
+        JoinUI.OptionsIMGUICheckToggle.SetVisibility(c, player.Save.IMGUI);
+        JoinUI.OptionsTrackQuestsCheckToggle.SetVisibility(c, player.Save.TrackQuests);
+
+        JoinUI.LanguageSearchBox.SetText(c, player.Locale.LanguageInfo.LanguageCode);
+        JoinUI.CultureSearchBox.SetText(c, player.Locale.CultureInfo.Name);
+
+        for (int i = 1; i < JoinUI.Languages.Length; ++i)
+            JoinUI.Languages[i].Root.SetVisibility(c, false);
+        for (int i = 1; i < JoinUI.Cultures.Length; ++i)
+            JoinUI.Cultures[i].Root.SetVisibility(c, false);
+
+        JoinUI.NoLanguagesLabel.SetVisibility(c, false);
+        JoinUI.NoCulturesLabel.SetVisibility(c, false);
+
+        JoinUI.Languages[0].Root.SetVisibility(c, true);
+        JoinUI.Cultures[0].Root.SetVisibility(c, true);
+
+        JoinUI.NewOptionsLabel.SetVisibility(c, DateTime.UtcNow < NewOptionsExpire);
+
+        SetLanguage(JoinUI.Languages[0], player, player.Locale.LanguageInfo, true);
+        SetCulture(JoinUI.Cultures[0], player, player.Locale.CultureInfo, true);
+    }
+    private static void SetLanguage(TeamSelectorUI.LanguageBox box, UCPlayer player, LanguageInfo language, bool selected)
+    {
+        string name = language.DisplayName;
+        if (!language.DisplayName.Equals(language.NativeName, StringComparison.Ordinal))
+            name += " <#444>(<#eeb>" + language.NativeName + "</color>)";
+        ITransportConnection c = player.Connection;
+        box.Name.SetText(c, name);
+
+        string details = language.LanguageCode + " <#444>|</color> Support: <#fff>" + language.Support.ToString("P0", player.Locale.CultureInfo);
+        if (selected)
+            details += "<#0f0>selected</color> <#444>|</color> ";
+        box.Details.SetText(c, details);
+
+        box.Contributors.SetText(c, string.Empty);
+
+        UCWarfare.RunTask(async token =>
+        {
+            token.CombineIfNeeded(UCWarfare.UnloadCancel);
+            PlayerNames[] names = await Data.AdminSql.GetUsernamesAsync(language.Credits, token).ConfigureAwait(false);
+            box.Contributors.SetText(c, string.Join(Environment.NewLine, names.Select(PlayerNames.SelectPlayerName)));
+        }, player.DisconnectToken);
+
+        box.ApplyState.SetVisibility(c, !selected);
+        box.ApplyLabel.SetText(c, selected ? "Applied" : "Apply");
+
+        box.Root.SetVisibility(c, true);
+    }
+    private static void SetCulture(TeamSelectorUI.CultureBox box, UCPlayer player, CultureInfo culture, bool selected)
+    {
+        ITransportConnection c = player.Connection;
+        box.Name.SetText(c, culture.EnglishName);
+        string details = culture.Name;
+        if (selected)
+            details += "<#0f0>selected</color> <#444>|</color> ";
+        box.Details.SetText(c, details);
+
+        box.ApplyState.SetVisibility(c, !selected);
+        box.ApplyLabel.SetText(c, selected ? "Applied" : "Apply");
+
+        box.Root.SetVisibility(c, true);
+    }
+    private void OnCultureApply(UCPlayer player, int arg2)
+    {
+        throw new System.NotImplementedException();
+    }
+
+    private void OnLanguageApply(UCPlayer player, int arg2)
+    {
+        throw new System.NotImplementedException();
+    }
+
+    private void OnCultureSearch(UCPlayer player, string arg2)
+    {
+        if (string.IsNullOrWhiteSpace(arg2))
+        {
+            for (int i = 1; i < JoinUI.Cultures.Length; ++i)
+                JoinUI.Cultures[i].Root.SetVisibility(player.Connection, false);
+
+            SetCulture(JoinUI.Cultures[0], player, player.Locale.CultureInfo, true);
+            return;
+        }
+        CultureInfo[] cultures = Localization.AllCultures;
+        // todo
+    }
+    private void OnLanguageSearch(UCPlayer player, string arg2)
+    {
+        LanguageInfo?[] results = new LanguageInfo[JoinUI.Languages.Length];
+        int index = -1;
+        Data.LanguageDataStore.WriteWait();
+        try
+        {
+            // todo
+        }
+        finally
+        {
+            Data.LanguageDataStore.WriteRelease();
+        }
     }
     private static void SendSelectionMenu(UCPlayer player, bool optionsAlreadyOpen, ulong team)
     {
@@ -375,7 +493,7 @@ public class TeamSelector : BaseSingletonComponent
         JoinUI.TeamCounts[0].SetText(c, t1Ct.ToString(Data.LocalLocale));
         JoinUI.TeamCounts[1].SetText(c, t2Ct.ToString(Data.LocalLocale));
 
-        JoinUI.OptionsIMGUICheckToggle.SetVisibility(c, player.Save.IMGUI);
+        SendOptionsMenuValues(player);
         JoinUI.LogicTeamSettings.SetVisibility(player.Connection, true);
     }
     private static void SetButtonState(UCPlayer player, ulong team, bool hasSpace)

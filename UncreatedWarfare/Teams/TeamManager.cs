@@ -2223,6 +2223,10 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     }
     public static async Task DownloadFactions(MySqlDatabase sql, List<FactionInfo> list, CancellationToken token = default)
     {
+        if (UCWarfare.IsLoaded)
+            Localization.ClearSection(TranslationSection.Factions);
+
+        int ct = 0;
         int[] vals = await sql.VerifyTables(SCHEMAS, token).ConfigureAwait(false);
         if (vals[0] == 3)
         {
@@ -2314,7 +2318,12 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         TMProSpriteIndex = spriteIndex,
                         Emoji = emoji,
                     });
+                ct += 3;
         }, token).ConfigureAwait(false);
+        if (UCWarfare.IsLoaded)
+        {
+            Localization.IncrementSection(TranslationSection.Factions, ct);
+        }
         await sql.QueryAsync(
             $"SELECT `{COLUMN_EXT_PK}`,`{COLUMN_ASSETS_SUPPLY_AMMO}`,`{COLUMN_ASSETS_SUPPLY_BUILD}`," +
             $"`{COLUMN_ASSETS_RALLY_POINT}`,`{COLUMN_ASSETS_FOB_RADIO}`,`{COLUMN_ASSETS_DEFAULT_BACKPACK}`," +
@@ -2413,6 +2422,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         else if (faction.NameTranslations.ContainsKey(lang))
                             break;
                         faction.NameTranslations.Add(lang, reader.GetString(2));
+                        TryIncrement(lang);
                         break;
                     }
                 }
@@ -2432,6 +2442,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         else if (faction.ShortNameTranslations.ContainsKey(lang))
                             break;
                         faction.ShortNameTranslations.Add(lang, reader.GetString(2));
+                        TryIncrement(lang);
                         break;
                     }
                 }
@@ -2451,10 +2462,17 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         else if (faction.AbbreviationTranslations.ContainsKey(lang))
                             break;
                         faction.AbbreviationTranslations.Add(lang, reader.GetString(2));
+                        TryIncrement(lang);
                         break;
                     }
                 }
             }, token).ConfigureAwait(false);
+
+        void TryIncrement(string lang)
+        {
+            if (UCWarfare.IsLoaded && Data.LanguageDataStore.GetInfoCached(lang) is { } language)
+                language.IncrementSection(TranslationSection.Factions, 1);
+        }
     }
 
     public object Clone()

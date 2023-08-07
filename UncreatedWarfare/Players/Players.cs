@@ -74,6 +74,10 @@ public struct PlayerNames : IPlayer
     public override int GetHashCode() => Steam64.GetHashCode();
     string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags) => new OfflinePlayer(in this).Translate(language, format, target, culture, ref flags);
+
+    public static string SelectPlayerName(PlayerNames names) => names.PlayerName;
+    public static string SelectCharacterName(PlayerNames names) => names.CharacterName;
+    public static string SelectNickName(PlayerNames names) => names.NickName;
 }
 public sealed class UCPlayerEvents : IDisposable
 {

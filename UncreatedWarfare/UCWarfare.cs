@@ -164,14 +164,14 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         new PermissionSaver();
         await Data.LoadSQL(token).ConfigureAwait(false);
+        Data.LanguageDataStore = new WarfareMySqlLanguageDataStore();
+        await Data.ReloadLanguageDataStore(true, token).ConfigureAwait(false);
         await ItemIconProvider.DownloadConfig(token).ConfigureAwait(false);
         await TeamManager.ReloadFactions(token).ConfigureAwait(false);
         L.Log("Loading Moderation Data...", ConsoleColor.Magenta);
         Data.ModerationSql = new WarfareDatabaseInterface();
-        Data.LanguageDataStore = new WarfareMySqlLanguageDataStore();
         await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
 
-        await Data.ReloadLanguageDataStore(true, token).ConfigureAwait(false);
 
         await ToUpdate(token);
         _ = TeamManager.Team1Faction;
@@ -187,6 +187,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
         await Translation.ReadTranslations(token).ConfigureAwait(false);
         await ToUpdate(token);
+        L.Log($" Done, {Localization.TotalDefaultTranslations} total translations.", ConsoleColor.Magenta);
 
         CommandWindow.shouldLogDeaths = false;
 
@@ -602,7 +603,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         try
         {
             L.LogDebug("Running task " + (ctx ?? member) + ".");
-            t = task(default);
+            t = task(token);
             RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
         }
         catch (Exception e)

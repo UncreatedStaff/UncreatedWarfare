@@ -67,7 +67,7 @@ public class ReloadCommand : AsyncCommand
         {
             await ReloadTranslations(token).ConfigureAwait(false);
             await UCWarfare.ToUpdate(token);
-            ctx.Reply(T.ReloadedTranslations);
+            ctx.Reply(T.ReloadedTranslations, Localization.TotalDefaultTranslations);
             ctx.LogAction(ActionLogType.ReloadComponent, "TRANSLATIONS");
         }
         else if (module.Equals("flags", StringComparison.OrdinalIgnoreCase))

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using Uncreated.SQL;
@@ -6,6 +7,12 @@ using Uncreated.SQL;
 namespace Uncreated.Warfare;
 public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
 {
+    [JsonIgnore]
+    private int _totalDefaultTranslations;
+    [JsonIgnore]
+    private Dictionary<TranslationSection, int>? _totalSectionedDefaultTranslations;
+
+
     [JsonPropertyName("code")]
     public string LanguageCode { get; }
 
@@ -14,6 +21,9 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
 
     [JsonPropertyName("display_name")]
     public string DisplayName { get; set; }
+
+    [JsonPropertyName("native_name")]
+    public string NativeName { get; set; }
 
     [JsonPropertyName("has_translation_support")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -48,12 +58,22 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
     public bool IsDefault { get; }
 
     [JsonIgnore]
-    [FormatDisplay("Display Name")]
-    public const string FormatDisplayName = "d";
+    internal float Support => IsDefault ? 1f : ((float)TotalDefaultTranslations / Localization.TotalDefaultTranslations);
 
     [JsonIgnore]
-    [FormatDisplay("Key Code")]
-    public const string FormatKey = "k";
+    internal int TotalDefaultTranslations
+    {
+        get
+        {
+            if (_totalDefaultTranslations == 0 && _totalSectionedDefaultTranslations != null)
+            {
+                foreach (int val in _totalSectionedDefaultTranslations.Values)
+                    _totalDefaultTranslations += val;
+            }
+            return _totalDefaultTranslations;
+        }
+        set => _totalDefaultTranslations = value;
+    }
 
     [JsonConstructor]
     public LanguageInfo(PrimaryKey primaryKey, string languageCode)
@@ -63,6 +83,14 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
         IsDefault = L.Default.Equals(languageCode, StringComparison.OrdinalIgnoreCase);
     }
 
+
+    [JsonIgnore]
+    [FormatDisplay("Display Name")]
+    public const string FormatDisplayName = "d";
+
+    [JsonIgnore]
+    [FormatDisplay("Key Code")]
+    public const string FormatKey = "k";
     public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
     {
         if (format is not null && format.Equals(FormatKey, StringComparison.Ordinal))
@@ -80,6 +108,22 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
     public override bool Equals(object? obj) => obj is LanguageInfo info && Equals(info);
     // ReSharper disable once NonReadonlyMemberInGetHashCode
     public override int GetHashCode() => PrimaryKey.Key;
+    internal void IncrementSection(TranslationSection section, int amt)
+    {
+        if (IsDefault || amt <= 0)
+            return;
+        _totalSectionedDefaultTranslations ??= new Dictionary<TranslationSection, int>(6);
+        if (_totalSectionedDefaultTranslations.TryGetValue(section, out int value))
+            _totalSectionedDefaultTranslations[section] = value + amt;
+        else _totalSectionedDefaultTranslations.Add(section, amt);
+        _totalDefaultTranslations += amt;
+    }
+    internal void ClearSection(TranslationSection section)
+    {
+        if (IsDefault) return;
+        _totalSectionedDefaultTranslations?.Remove(section);
+        _totalDefaultTranslations = 0;
+    }
     public static bool operator ==(LanguageInfo? left, LanguageInfo? right) => Equals(left, right);
     public static bool operator !=(LanguageInfo? left, LanguageInfo? right) => !Equals(left, right);
 }
