@@ -1205,7 +1205,6 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        L.Log(JsonSerializer.Serialize(ParseInfo, JsonEx.serializerSettings));
         return float.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value) && (allowNonNumeric || !float.IsNaN(value) && !float.IsInfinity(value));
     }
     public bool TryGet(int parameter, out double value, bool allowNonNumeric = false)

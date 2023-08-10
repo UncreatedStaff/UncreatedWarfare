@@ -70,7 +70,7 @@ public class ShutdownCommand : Command
         {
 #if RELEASE
             // use this to keep the panel from auto-restarting it.
-            if (Data.Gamemode.ShouldShutdownAfterGame)
+            if (Data.Gamemode != null && Data.Gamemode.ShouldShutdownAfterGame)
             {
                 throw ctx.ReplyString("Already shutting down.");
             }
