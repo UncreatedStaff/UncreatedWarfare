@@ -13,6 +13,7 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Players;
 using UnityEngine;
 using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
 
@@ -150,7 +151,7 @@ public static class PlayerManager
                 player.CachedSteamProfile = summary;
         }
     }
-    internal static UCPlayer InvokePlayerConnected(Player player, out bool newPlayer)
+    internal static UCPlayer InvokePlayerConnected(Player player, PendingAsyncData asyncData, out bool newPlayer)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -207,7 +208,8 @@ public static class PlayerManager
                 save.IsOtherDonator,
                 src ?? new CancellationTokenSource(),
                 save,
-                semaphore
+                semaphore,
+                asyncData
             );
 
             Data.OriginalPlayerNames.Remove(ucplayer.Steam64);

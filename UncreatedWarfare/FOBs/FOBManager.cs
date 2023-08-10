@@ -1513,7 +1513,8 @@ public class BuildableData : ITranslationArgument
     [JsonPropertyName("dontAutoWhitelist")]
     public bool DontAutoWhitelist;
 
-    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (Emplacement is not null && Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vasset))
         {
@@ -1567,7 +1568,7 @@ public class BuildableData : ITranslationArgument
     public override string ToString()
     {
         TranslationFlags flags = TranslationFlags.NoRichText;
-        return Translate(L.Default, null, null, Data.LocalLocale, ref flags);
+        return Translate(Localization.GetDefaultLanguage(), null, null, Data.LocalLocale, ref flags);
     }
 }
 

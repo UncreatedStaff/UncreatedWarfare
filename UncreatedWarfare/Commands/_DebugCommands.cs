@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -23,7 +24,6 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Moderation;
-using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
@@ -378,7 +378,7 @@ public class DebugCommand : AsyncCommand
             killer = player == ctx.Caller ? Steamworks.CSteamID.Nil : player.CSteamID,
             times = 1f
         };
-        revive.ReviveManager.InjurePlayer(in p, player == ctx.Caller ? null : player.SteamPlayer);
+        revive.ReviveManager.InjurePlayer(in p, player == ctx.Caller ? null : player);
         ctx.ReplyString($"Injured {(player == ctx.Caller ? "you" : player.CharacterName)}.");
     }
     private void clearui(CommandInteraction ctx)
@@ -1209,7 +1209,7 @@ public class DebugCommand : AsyncCommand
                 }
             }
             F.TriggerEffectReliable(asset, ctx.Caller.Connection, ctx.Caller.Position);
-            throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you at {ctx.Caller.Position.ToString("0.##", Localization.GetLocale(ctx))}." + (ctx.HasArg(1) ? " To spawn as UI instead, the effect must have the \"UI\" tag in unity." : string.Empty));
+            throw ctx.ReplyString($"<#9fa1a6>Sent {asset.name} to you at {ctx.Caller.Position.ToString("0.##", ctx.CultureInfo)}." + (ctx.HasArg(1) ? " To spawn as UI instead, the effect must have the \"UI\" tag in unity." : string.Empty));
         }
         throw ctx.ReplyString($"<#ff8c69>{asset.name}'s effect property hasn't been set. Possibly the effect was set up incorrectly.");
     }
@@ -1425,7 +1425,7 @@ public class DebugCommand : AsyncCommand
 
             if (T.Translations.FirstOrDefault(x => x.Key.Equals(name, StringComparison.Ordinal)) is { } translation)
             {
-                string val = translation.Translate(ctx.Caller?.Language, out Color color, ctx.HasArg(1) ? imgui : (ctx.Caller?.Save.IMGUI ?? false));
+                string val = translation.Translate(ctx.Caller?.Locale.LanguageInfo, out Color color, ctx.HasArg(1) ? imgui : (ctx.Caller?.Save.IMGUI ?? false));
                 L.Log($"Translation: {translation.Id}... {name}.");
                 L.Log($"Type: {translation.GetType()}");
                 L.Log($"Args: {string.Join(", ", translation.GetType().GetGenericArguments().Select(x => x.Name))}");
@@ -1547,7 +1547,7 @@ public class DebugCommand : AsyncCommand
             if (field != null)
             {
                 field.SetValue(null, holiday);
-                ctx.ReplyString("Set active holiday to " + Localization.TranslateEnum(holiday, ctx.Language));
+                ctx.ReplyString("Set active holiday to " + Localization.TranslateEnum(holiday, ctx.LanguageInfo));
                 field = typeof(Provider).GetField("authorityHoliday", BindingFlags.Static | BindingFlags.NonPublic);
                 if (holiday == ENPCHoliday.NONE)
                 {
@@ -1578,7 +1578,7 @@ public class DebugCommand : AsyncCommand
         
         UCInventoryManager.GiveItems(ctx.Caller, items, true);
 
-        ctx.ReplyString("Given " + items.Length + " default item" + items.Length.S() + " for a " + Localization.TranslateEnum(@class, ctx.CallerID) + " loadout.");
+        ctx.ReplyString("Given " + items.Length + " default item" + items.Length.S() + " for a " + Localization.TranslateEnum(@class, ctx.LanguageInfo) + " loadout.");
     }
 
     private async Task viewlens(CommandInteraction ctx, CancellationToken token)
@@ -1610,7 +1610,7 @@ public class DebugCommand : AsyncCommand
             {
                 PlayerNames names = await F.GetPlayerOriginalNamesAsync(s64, token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate(token);
-                ctx.ReplyString("Set view lens to " + names.PlayerName + " (" + s64.ToString(ctx.GetLocale()) + ")'s perspective. Clear with <#fff>/test viewlens clear</color>.");
+                ctx.ReplyString("Set view lens to " + names.PlayerName + " (" + s64.ToString(ctx.CultureInfo) + ")'s perspective. Clear with <#fff>/test viewlens clear</color>.");
             }
 
             UCWarfare.I.UpdateLangs(ctx.Caller, false);
@@ -1642,13 +1642,14 @@ public class DebugCommand : AsyncCommand
         ctx.ReplyString("Check console.");
     }
 
-    private void exportlang(CommandInteraction ctx)
+    private async Task exportlang(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
-
-        string? lang = ctx.GetRange(0);
-        Translation.ExportLanguage(lang, false, true);
-        ctx.ReplyString((lang ?? L.Default) + " exported.");
+        ctx.AssertHelpCheck(0, "/text exportlang [lang]");
+        string? input = ctx.GetRange(0);
+        LanguageInfo lang = (input == null ? null : Data.LanguageDataStore.GetInfoCached(input, true)) ?? Localization.GetDefaultLanguage();
+        await Translation.ExportLanguage(lang, false, true, token).ConfigureAwait(false);
+        ctx.ReplyString(lang + " exported.");
     }
 
     private void zonespeedtest(CommandInteraction ctx)
@@ -1698,7 +1699,7 @@ public class DebugCommand : AsyncCommand
         bool remaining = percent && ctx.MatchFlag("r");
         if (percent)
             arg = arg.Substring(0, arg.Length - 1);
-        if (!float.TryParse(arg, NumberStyles.Number, ctx.GetLocale(), out float damage))
+        if (!float.TryParse(arg, NumberStyles.Number, ctx.CultureInfo, out float damage))
             throw ctx.SendCorrectUsage("/test damage <amount>[%] [-r]");
 
         RaycastInfo cast = DamageTool.raycast(new Ray(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward), 4f, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE, ctx.Caller.Player);
@@ -1709,21 +1710,55 @@ public class DebugCommand : AsyncCommand
         {
             damage = percent ? (remaining ? barricade.GetServersideData().barricade.health : barricade.asset.health) * (damage / 100f) : damage;
             BarricadeManager.damage(barricade.model, damage, 1f, false, ctx.CallerCSteamID, EDamageOrigin.Unknown);
-            ctx.ReplyString($"Damaged barricade {barricade.asset.FriendlyName} by {damage.ToString(ctx.GetLocale())} points.");
+            ctx.ReplyString($"Damaged barricade {barricade.asset.FriendlyName} by {damage.ToString(ctx.CultureInfo)} points.");
         }
         else if (StructureManager.FindStructureByRootTransform(cast.transform) is { } structure)
         {
             damage = percent ? (remaining ? structure.GetServersideData().structure.health : structure.asset.health) * (damage / 100f) : damage;
             StructureManager.damage(structure.model, ctx.Caller.Player.look.aim.forward, damage, 1f, false, ctx.CallerCSteamID, EDamageOrigin.Unknown);
-            ctx.ReplyString($"Damaged structure {structure.asset.FriendlyName} by {damage.ToString(ctx.GetLocale())} points.");
+            ctx.ReplyString($"Damaged structure {structure.asset.FriendlyName} by {damage.ToString(ctx.CultureInfo)} points.");
         }
         else if (cast.vehicle != null)
         {
             damage = percent ? (remaining ? cast.vehicle.health : cast.vehicle.asset.health) * (damage / 100f) : damage;
             VehicleManager.damage(cast.vehicle, damage, 1f, false, ctx.CallerCSteamID, EDamageOrigin.Unknown);
-            ctx.ReplyString($"Damaged vehicle {cast.vehicle.asset.FriendlyName} by {damage.ToString(ctx.GetLocale())} points.");
+            ctx.ReplyString($"Damaged vehicle {cast.vehicle.asset.FriendlyName} by {damage.ToString(ctx.CultureInfo)} points.");
         }
         else
             throw ctx.SendCorrectUsage("/test damage <amount>[%] while looking at a barricade, structure, or vehicle.");
+    }
+
+    [Obsolete]
+    private async Task migratelangs(CommandInteraction ctx, CancellationToken token)
+    {
+        ctx.AssertRanByConsole();
+
+        string[] columns =
+        {
+            MySqlLanguageDataStore.ColumnPreferencesLastUpdated, MySqlLanguageDataStore.ColumnPreferencesSteam64,
+            MySqlLanguageDataStore.ColumnPreferencesLanguage, MySqlLanguageDataStore.ColumnPreferencesCulture
+        };
+
+        StringBuilder query = new StringBuilder(F.StartBuildOtherInsertQueryNoUpdate(MySqlLanguageDataStore.TableLanguagePreferences, columns));
+
+        List<object> parameters = new List<object>(Data.Languages.Count * 3 + 1);
+
+        int c = 0;
+        parameters.Add(DateTime.UtcNow);
+        foreach (KeyValuePair<ulong, string> languagePair in Data.Languages)
+        {
+            if (Data.LanguageDataStore.GetInfoCached(languagePair.Value) is not { } lang)
+                continue;
+            parameters.Add(languagePair.Key);
+            parameters.Add(lang.PrimaryKey.Key);
+            parameters.Add(Languages.GetCultureInfo(languagePair.Value).Name);
+            F.AppendPropertyList(query, c * 3 + 1, 3, c, 1);
+            ++c;
+        }
+
+        query.Append($" ON DUPLICATE KEY UPDATE `{columns[0]}` = VALUES(`{columns[0]}`), `{columns[2]}` = VALUES(`{columns[2]}`), `{columns[3]}` = VALUES(`{columns[3]}`);");
+
+        int ct = await Data.LanguageDataStore.Sql.NonQueryAsync(query.ToString(), parameters.ToArray(), token).ConfigureAwait(false);
+        ctx.ReplyString($"Migrated {ct} rows.");
     }
 }

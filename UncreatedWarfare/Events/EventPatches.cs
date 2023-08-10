@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using SDG.NetTransport;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -61,8 +62,9 @@ internal static class EventPatches
                 new Action<StructureDrop, byte, byte, Vector3, bool>(StructureManager.destroyStructure)), ref _fail,
             transpiler: PatchUtil.GetMethodInfo(DestroyStructureTranspiler));
 
-        PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(new Action<SteamPending>(Provider.accept)), ref _fail,
-            prefix: PatchUtil.GetMethodInfo(OnAcceptingPlayer));
+        PatchUtil.PatchMethod(typeof(SteamPending).GetMethod("sendVerifyPacket",
+                BindingFlags.Instance | BindingFlags.Public, null, CallingConventions.Any, Array.Empty<Type>(), null),
+            prefix: PatchUtil.GetMethodInfo(OnVerifyingPlayer));
 
         if (MthdRemoveItem != null)
         {
@@ -596,19 +598,55 @@ internal static class EventPatches
     /// <summary>
     /// Allows us to defer accepting a player to check stuff with async calls.
     /// </summary>
-    internal static readonly List<ulong> Accepted = new List<ulong>(8);
+    private static readonly List<ulong> PendingPlayers = new List<ulong>();
+    private static bool _isSendVerifyPacketContinuation;
+
+    internal delegate void StartVerifying(SteamPending player, ref bool shouldDeferContinuation);
+    internal static event StartVerifying? OnStartVerifying;
 
     internal static ulong Accept = 0ul;
-    private static bool OnAcceptingPlayer(SteamPending player)
+    private static bool OnVerifyingPlayer(SteamPending __instance)
     {
-        if (Accept == player.playerID.steamID.m_SteamID)
-            return true;
-        if (Accepted.Contains(player.playerID.steamID.m_SteamID))
+        ActionLog.Add(ActionLogType.TryConnect, $"Steam Name: {__instance.playerID.playerName}, Public Name: {__instance.playerID.characterName}, Private Name: {__instance.playerID.nickName}, Character ID: {__instance.playerID.characterID}.", __instance.playerID.steamID.m_SteamID);
+        if (OnStartVerifying == null) return true;
+
+        // this method could be recalled while the verify event is running if another player gets verified.
+        if (PendingPlayers.Contains(__instance.playerID.steamID.m_SteamID))
             return false;
-        if (!EventDispatcher.InvokeOnAsyncPrePlayerConnect(player))
+
+        if (_isSendVerifyPacketContinuation)
             return true;
-        Accepted.Add(player.playerID.steamID.m_SteamID);
-        return false;
+
+        // stops the method invocation and queues it to be called after the async event is done
+        bool shouldDeferContinuation = false;
+        OnStartVerifying.Invoke(__instance, ref shouldDeferContinuation);
+        if (shouldDeferContinuation)
+            PendingPlayers.Add(__instance.playerID.steamID.m_SteamID);
+        return !shouldDeferContinuation;
+    }
+    internal static void RemovePlayer(SteamPending pending, ESteamRejection rejection, string reason)
+    {
+        PendingPlayers.Remove(pending.playerID.steamID.m_SteamID);
+        
+        Provider.reject(pending.transportConnection, rejection, reason);
+    }
+    internal static void ContinueSendingVerifyPacket(SteamPending player)
+    {
+        PendingPlayers.Remove(player.playerID.steamID.m_SteamID);
+
+        // disconnected
+        if (!player.transportConnection.TryGetIPv4Address(out _))
+            return;
+
+        _isSendVerifyPacketContinuation = true;
+        try
+        {
+            player.sendVerifyPacket();
+        }
+        finally
+        {
+            _isSendVerifyPacketContinuation = false;
+        }
     }
 
     private static bool OnCalculatingPower(InteractablePower __instance, ref bool __result)

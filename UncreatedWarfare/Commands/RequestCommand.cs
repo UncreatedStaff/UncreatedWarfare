@@ -116,7 +116,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                                 UCPlayer.TryApplyViewLens(ref pl);
                                 proxy = KitManager.GetLoadoutQuick(pl, loadoutId);
                                 if (proxy?.Item is not { Id: { } kitId2 })
-                                    throw ctx.Reply(T.KitNotFound, "#" + loadoutId.ToString(ctx.GetLocale()));
+                                    throw ctx.Reply(T.KitNotFound, "#" + loadoutId.ToString(ctx.CultureInfo));
                                 kitId = kitId2;
                             }
                         }

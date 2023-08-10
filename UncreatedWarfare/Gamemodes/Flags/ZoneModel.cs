@@ -23,9 +23,9 @@ internal struct ZoneModel : IListItem
     internal ZoneUseCase UseCase = ZoneUseCase.Other;
     internal AdjacentFlagData[] Adjacencies;
     internal GridObject[] GridObjects;
-    internal Data ZoneData = new Data();
+    internal ModelData ZoneData = new ModelData();
     PrimaryKey IListItem.PrimaryKey { get => Id; set => Id = value; }
-    internal struct Data
+    internal struct ModelData
     {
         internal Vector2[] Points = null!;
         internal float SizeX = float.NaN;
@@ -33,15 +33,15 @@ internal struct ZoneModel : IListItem
         internal float Radius = float.NaN;
         internal float X = float.NaN;
         internal float Z = float.NaN;
-        public Data() { }
+        public ModelData() { }
     }
     internal bool IsValid = false;
     internal static readonly PropertyData[] ValidProperties = new PropertyData[]
     {
-        new PropertyData("size-x", ZoneType.Rectangle, (PropertyData.ModData<float>)    ((ref Data d, float v)     => d.SizeX  = v)),
-        new PropertyData("size-z", ZoneType.Rectangle, (PropertyData.ModData<float>)    ((ref Data d, float v)     => d.SizeZ  = v)),
-        new PropertyData("radius", ZoneType.Circle,    (PropertyData.ModData<float>)    ((ref Data d, float v)     => d.Radius = v)),
-        new PropertyData("points", ZoneType.Polygon,   (PropertyData.ModData<Vector2[]>)((ref Data d, Vector2[] v) => d.Points = v))
+        new PropertyData("size-x", ZoneType.Rectangle, (PropertyData.ModData<float>)    ((ref ModelData d, float v)     => d.SizeX  = v)),
+        new PropertyData("size-z", ZoneType.Rectangle, (PropertyData.ModData<float>)    ((ref ModelData d, float v)     => d.SizeZ  = v)),
+        new PropertyData("radius", ZoneType.Circle,    (PropertyData.ModData<float>)    ((ref ModelData d, float v)     => d.Radius = v)),
+        new PropertyData("points", ZoneType.Polygon,   (PropertyData.ModData<Vector2[]>)((ref ModelData d, Vector2[] v) => d.Points = v))
     };
     internal readonly struct PropertyData
     {
@@ -55,7 +55,7 @@ internal struct ZoneModel : IListItem
             Modifier = modifier;
         }
 
-        public delegate void ModData<in T>(ref Data d, T v);
+        public delegate void ModData<in T>(ref ModelData d, T v);
     }
     public ZoneModel()
     {

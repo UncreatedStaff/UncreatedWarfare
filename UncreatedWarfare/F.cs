@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -36,7 +37,7 @@ namespace Uncreated.Warfare;
 public static class F
 {
     private static readonly char[] ignore = { '.', ',', '&', '-', '_' };
-    private static readonly char[] splits = { ' ' };
+    internal static readonly char[] SpaceSplit = { ' ' };
     public const string COLUMN_LANGUAGE = "Language";
     public const string COLUMN_VALUE = "Value";
     public static bool IsMono { get; } = Type.GetType("Mono.Runtime") != null;
@@ -616,8 +617,8 @@ public static class F
         flag = null!;
         return false;
     }
+    public static string Colorize(this string inner, string colorhex, bool imgui) => imgui ? Colorize(inner, colorhex) : ColorizeTMPro(inner, colorhex);
     public static string Colorize(this string inner, string colorhex) => "<color=#" + colorhex + ">" + inner + "</color>";
-
     public static string ColorizeTMPro(this string inner, string colorhex, bool endTag = true) =>
         endTag ? "<#" +colorhex + ">" + inner + "</color>" : "<#" + colorhex + ">" + inner;
     public static string ColorizeName(string innerText, ulong team)
@@ -1282,37 +1283,37 @@ public static class F
     public static Schema GetListSchema<T>(string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, bool hasPk = false, bool oneToOne = false, int length = -1, bool nullable = false, bool unique = false, string pkName = "pk")
     {
         Type type = typeof(T);
-        string typestr;
+        string typeStr;
         if (type == typeof(Guid))
-            typestr = SqlTypes.GUID;
+            typeStr = SqlTypes.GUID;
         else if (type == typeof(ulong))
-            typestr = SqlTypes.ULONG;
+            typeStr = SqlTypes.ULONG;
         else if (type == typeof(byte[]))
-            typestr = length < 1 ? SqlTypes.BYTES_255 : "binary(" + length + ")";
+            typeStr = length < 1 ? SqlTypes.BYTES_255 : "binary(" + length + ")";
         else if (type == typeof(string))
-            typestr = length < 1 ? SqlTypes.STRING_255 : "varchar(" + length + ")";
+            typeStr = length < 1 ? SqlTypes.STRING_255 : "varchar(" + length + ")";
         else if (type == typeof(float))
-            typestr = SqlTypes.FLOAT;
+            typeStr = SqlTypes.FLOAT;
         else if (type == typeof(double))
-            typestr = SqlTypes.DOUBLE;
+            typeStr = SqlTypes.DOUBLE;
         else if (type == typeof(long))
-            typestr = SqlTypes.LONG;
+            typeStr = SqlTypes.LONG;
         else if (type == typeof(uint))
-            typestr = SqlTypes.UINT;
+            typeStr = SqlTypes.UINT;
         else if (type == typeof(int))
-            typestr = SqlTypes.INT;
+            typeStr = SqlTypes.INT;
         else if (type == typeof(short))
-            typestr = SqlTypes.SHORT;
+            typeStr = SqlTypes.SHORT;
         else if (type == typeof(ushort))
-            typestr = SqlTypes.USHORT;
+            typeStr = SqlTypes.USHORT;
         else if (type == typeof(byte))
-            typestr = SqlTypes.BYTE;
+            typeStr = SqlTypes.BYTE;
         else if (type == typeof(sbyte))
-            typestr = SqlTypes.SBYTE;
+            typeStr = SqlTypes.SBYTE;
         else if (type == typeof(bool))
-            typestr = SqlTypes.BOOLEAN;
+            typeStr = SqlTypes.BOOLEAN;
         else if (type == typeof(PrimaryKey))
-            typestr = SqlTypes.INCREMENT_KEY;
+            typeStr = SqlTypes.INCREMENT_KEY;
         else
         {
             MethodInfo? info = type.GetMethod("GetDefaultSchema", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
@@ -1361,6 +1362,11 @@ public static class F
             }
             throw new ArgumentException(nameof(T), type.Name + " is not a valid type for GetListSchema<T>(...).");
         }
+
+        return GetListSchema(typeStr, tableName, pkColumn, valueColumn, primaryTableName, primaryTablePkColumn, typeof(T), hasPk, oneToOne, nullable, unique, pkName);
+    }
+    public static Schema GetListSchema(string typeStr, string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, Type? type, bool hasPk = false, bool oneToOne = false, bool nullable = false, bool unique = false, string pkName = "pk")
+    {
         Schema.Column[] columns = new Schema.Column[hasPk ? 3 : 2];
         int index = 0;
         if (hasPk)
@@ -1380,7 +1386,7 @@ public static class F
             ForeignKeyColumn = primaryTablePkColumn,
             ForeignKeyTable = primaryTableName
         };
-        columns[++index] = new Schema.Column(valueColumn, typestr)
+        columns[++index] = new Schema.Column(valueColumn, typeStr)
         {
             Nullable = nullable,
             UniqueKey = unique
@@ -1559,7 +1565,7 @@ public static class F
                     return i;
             }
 
-            string[] inSplits = input.Split(splits);
+            string[] inSplits = input.Split(SpaceSplit);
             for (int i = 0; i < collection.Count; ++i)
             {
                 string? name = selector(collection[i]);
@@ -1570,6 +1576,10 @@ public static class F
 
         return -1;
     }
+
+    public static bool RoughlyEquals(string? a, string? b) => string.Compare(a, b, CultureInfo.InvariantCulture,
+        CompareOptions.IgnoreCase | CompareOptions.IgnoreKanaType | CompareOptions.IgnoreNonSpace |
+        CompareOptions.IgnoreSymbols) == 0;
     public static T? StringFind<T>(IReadOnlyList<T> collection, Func<T, string?> selector, string input, bool equalsOnly = false)
     {
         if (input == null)
@@ -1589,7 +1599,7 @@ public static class F
                     return collection[i];
             }
 
-            string[] inSplits = input.Split(splits);
+            string[] inSplits = input.Split(SpaceSplit);
             for (int i = 0; i < collection.Count; ++i)
             {
                 string? name = selector(collection[i]);
@@ -1620,7 +1630,7 @@ public static class F
                     return buffer[i];
             }
 
-            string[] inSplits = input.Split(splits);
+            string[] inSplits = input.Split(SpaceSplit);
             for (int i = 0; i < buffer.Length; i++)
             {
                 string? name = selector(buffer[i]);
@@ -1653,7 +1663,7 @@ public static class F
                     return buffer[i];
             }
 
-            string[] inSplits = input.Split(splits);
+            string[] inSplits = input.Split(SpaceSplit);
             for (int i = 0; i < buffer.Length; i++)
             {
                 string? name = selector(buffer[i]);
@@ -1683,7 +1693,7 @@ public static class F
                     output.Add(collection[i]);
             }
 
-            string[] inSplits = input.Split(splits);
+            string[] inSplits = input.Split(SpaceSplit);
             for (int i = 0; i < collection.Count; ++i)
             {
                 string? name = selector(collection[i]);
@@ -1706,25 +1716,37 @@ public static class F
         ClothingType.Glasses => EItemType.GLASSES,
         _ => throw new ArgumentOutOfRangeException(nameof(type))
     };
-    public static T[] CloneArray<T>(T[] source) where T : ICloneable
+    public static T[] CloneArray<T>(T[] source, int index = 0, int length = -1) where T : ICloneable
     {
         if (source == null)
             return null!;
         if (source.Length == 0)
             return Array.Empty<T>();
-        T[] result = new T[source.Length];
-        for (int i = 0; i < result.Length; ++i)
-            result[i] = (T)source[i].Clone();
+        if (index >= source.Length)
+            index = source.Length - 1;
+        if (length < 0 || length + index > source.Length)
+            length = source.Length - index;
+        if (length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[length];
+        for (int i = 0; i < length; ++i)
+            result[i] = (T)source[i + index].Clone();
         return result;
     }
-    public static T[] CloneStructArray<T>(T[] source) where T : struct
+    public static T[] CloneStructArray<T>(T[] source, int index = 0, int length = -1) where T : struct
     {
         if (source == null)
             return null!;
         if (source.Length == 0)
             return Array.Empty<T>();
-        T[] result = new T[source.Length];
-        Array.Copy(source, result, source.Length);
+        if (index >= source.Length)
+            index = source.Length - 1;
+        if (length < 0 || length + index > source.Length)
+            length = source.Length - index;
+        if (length == 0)
+            return Array.Empty<T>();
+        T[] result = new T[length];
+        Array.Copy(source, index, result, 0, length);
         return result;
     }
     public static bool ServerTrackQuest(this UCPlayer player, QuestAsset quest)
@@ -1918,4 +1940,49 @@ public static class F
             return list;
         return new List<T>(enumerable);
     }
+    public static void ApplyQueriedList<T>(List<PrimaryKeyPair<T>> list, Action<int, T[]> action, bool sort = true)
+    {
+        if (list.Count == 0) return;
+
+        if (sort && list.Count != 1)
+            list.Sort((a, b) => a.Key.CompareTo(b.Key));
+
+        T[] arr;
+        int key;
+        int last = -1;
+        for (int i = 0; i < list.Count; i++)
+        {
+            PrimaryKeyPair<T> val = list[i];
+            if (i <= 0 || list[i - 1].Key == val.Key)
+                continue;
+
+            arr = new T[i - 1 - last];
+            for (int j = 0; j < arr.Length; ++j)
+                arr[j] = list[last + j + 1].Value;
+            last = i - 1;
+
+            key = list[i - 1].Key;
+            action(key, arr);
+        }
+
+        arr = new T[list.Count - 1 - last];
+        for (int j = 0; j < arr.Length; ++j)
+            arr[j] = list[last + j + 1].Value;
+
+        key = list[list.Count - 1].Key;
+        action(key, arr);
+    }
+}
+
+public readonly struct PrimaryKeyPair<T>
+{
+    public int Key { get; }
+    public T Value { get; }
+    public PrimaryKeyPair(int key, T value)
+    {
+        Key = key;
+        Value = value;
+    }
+
+    public override string ToString() => $"({{{Key}}}, {(Value is null ? "NULL" : Value.ToString())})";
 }

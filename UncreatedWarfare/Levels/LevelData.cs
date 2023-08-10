@@ -66,7 +66,7 @@ public readonly struct LevelData : ITranslationArgument
     public const string FormatAbbreviation = "a";
     [FormatDisplay("Name")]
     public const string FormatName = "n";
-    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null)

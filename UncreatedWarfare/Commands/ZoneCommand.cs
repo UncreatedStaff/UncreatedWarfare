@@ -346,7 +346,7 @@ public class ZoneCommand : Command
         {
             Deployment.ForceDeploy(ctx.Caller, deployable, false, false);
             ctx.Reply(T.DeploySuccess, deployable);
-            ctx.LogAction(ActionLogType.Teleport, deployable.Translate(L.Default, ctx.Caller.GetTeam(), FOB.FormatLocationName));
+            ctx.LogAction(ActionLogType.Teleport, deployable.Translate(Localization.GetDefaultLanguage(), ctx.Caller.GetTeam(), FOB.FormatLocationName));
         }
         else if (Physics.Raycast(new Ray(new Vector3(pos.x, Level.HEIGHT, pos.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
         {

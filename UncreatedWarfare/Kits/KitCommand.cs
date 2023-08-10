@@ -995,7 +995,7 @@ public sealed class KitCommand : AsyncCommand
                                 proxy.Item.UpdateLastEdited(ctx.CallerID);
                                 await proxy.SaveItem(token).ConfigureAwait(false);
                                 await UCWarfare.ToUpdate(token);
-                                ctx.Reply(T.KitPropertySet, "faction", proxy.Item, faction?.GetName(L.Default)!);
+                                ctx.Reply(T.KitPropertySet, "faction", proxy.Item, faction?.GetName(Localization.GetDefaultLanguage())!);
                                 ctx.LogAction(ActionLogType.SetKitProperty, kitName + ": FACTION >> " +
                                                                                (faction?.Name.ToUpper() ?? Translation.Null(TranslationFlags.NoRichText)));
                                 KitManager.UpdateSigns(proxy.Item);
@@ -1325,9 +1325,9 @@ public sealed class KitCommand : AsyncCommand
                     }
                     throw ctx.Reply(T.KitInvalidSkillsetLevel, specialty switch
                     {
-                        EPlayerSpeciality.DEFENSE => Localization.TranslateEnum((EPlayerDefense)skillset, ctx.CallerID),
-                        EPlayerSpeciality.OFFENSE => Localization.TranslateEnum((EPlayerOffense)skillset, ctx.CallerID),
-                        EPlayerSpeciality.SUPPORT => Localization.TranslateEnum((EPlayerSupport)skillset, ctx.CallerID),
+                        EPlayerSpeciality.DEFENSE => Localization.TranslateEnum((EPlayerDefense)skillset, ctx.LanguageInfo),
+                        EPlayerSpeciality.OFFENSE => Localization.TranslateEnum((EPlayerOffense)skillset, ctx.LanguageInfo),
+                        EPlayerSpeciality.SUPPORT => Localization.TranslateEnum((EPlayerSupport)skillset, ctx.LanguageInfo),
                         _ => skillset.ToString()
                     }, level);
                 }

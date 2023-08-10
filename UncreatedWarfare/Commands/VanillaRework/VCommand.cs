@@ -223,7 +223,7 @@ public class VCommand : AsyncCommand
                         break;
                     }
                 }
-                if (st >= 0 && int.TryParse(val.Substring(st), NumberStyles.Number, ctx.GetLocale(), out int seat))
+                if (st >= 0 && int.TryParse(val.Substring(st), NumberStyles.Number, ctx.CultureInfo, out int seat))
                 {
                     if (seat > 0)
                         --seat;

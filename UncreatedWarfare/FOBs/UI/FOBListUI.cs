@@ -70,14 +70,14 @@ public class FOBListUI : UnturnedUI
             }
         }
     }
-    public void UpdatePastFor(IEnumerable<LanguageSet> set, IReadOnlyList<IFOB?> listEntries, int startIndex)
+    public void UpdatePastFor(LanguageSet.LanguageSetEnumerator set, IReadOnlyList<IFOB?> listEntries, int startIndex)
     {
         foreach (LanguageSet lang in set)
         {
             UpdateFor(lang, listEntries, -1, false, startIndex);
         }
     }
-    public void UpdateFor(IEnumerable<LanguageSet> set, IReadOnlyList<IFOB?> listEntries, int index = -1, bool resourcesOnly = false)
+    public void UpdateFor(LanguageSet.LanguageSetEnumerator set, IReadOnlyList<IFOB?> listEntries, int index = -1, bool resourcesOnly = false)
     {
         foreach (LanguageSet lang in set)
         {

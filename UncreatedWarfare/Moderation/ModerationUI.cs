@@ -49,7 +49,7 @@ public class ModerationUI : UnturnedUI
     public UnturnedEnumButton<PlayerSearchMode> ModerationPlayerSearchModeButton { get; }
         = new UnturnedEnumButton<PlayerSearchMode>(PlayerSearchMode.Online, "ModerationButtonToggleOnline", "ModerationButtonToggleOnlineLabel")
         {
-            TextFormatter = (v, player) => "View - " + Localization.TranslateEnum(v, player.channel.owner.playerID.steamID.m_SteamID)
+            TextFormatter = (v, player) => "View - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
         };
 
     /* MODERATION HISTORY LIST */
@@ -62,17 +62,17 @@ public class ModerationUI : UnturnedUI
     public UnturnedEnumButton<ModerationEntryType> ModerationHistroyTypeButton { get; }
         = new UnturnedEnumButton<ModerationEntryType>(ModerationEntryType.None, "ModerationButtonToggleType", "ModerationButtonToggleTypeLabel")
         {
-            TextFormatter = (v, player) => v == ModerationEntryType.None ? "Type - Any" : ("Type - " + Localization.TranslateEnum(v, player.channel.owner.playerID.steamID.m_SteamID))
+            TextFormatter = (v, player) => v == ModerationEntryType.None ? "Type - Any" : ("Type - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo))
         };
     public UnturnedEnumButton<ModerationHistorySearchMode> ModerationHistroySearchTypeButton { get; }
         = new UnturnedEnumButton<ModerationHistorySearchMode>(ModerationHistorySearchMode.Message, "ModerationButtonToggleSearchMode", "ModerationButtonToggleSearchModeLabel")
         {
-            TextFormatter = (v, player) => "Search - " + Localization.TranslateEnum(v, player.channel.owner.playerID.steamID.m_SteamID)
+            TextFormatter = (v, player) => "Search - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
         };
     public UnturnedEnumButton<ModerationHistorySortMode> ModerationHistroySortTypeButton { get; }
         = new UnturnedEnumButton<ModerationHistorySortMode>(ModerationHistorySortMode.Latest, "ModerationButtonToggleSortType", "ModerationButtonToggleSortTypeLabel")
         {
-            TextFormatter = (v, player) => "Sort - " + Localization.TranslateEnum(v, player.channel.owner.playerID.steamID.m_SteamID)
+            TextFormatter = (v, player) => "Sort - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
         };
 
     /* MODERATION HISTORY LIST */
@@ -245,7 +245,7 @@ public class ModerationUI : UnturnedUI
         data.HistoryPage = page;
         int pgCt = data.PageCount;
         int offset = page * ModerationHistoryLength;
-        ModerationHistoryPage.SetText(player.Connection, page.ToString(player.Culture));
+        ModerationHistoryPage.SetText(player.Connection, page.ToString(player.Locale.CultureInfo));
         if (page > 0)
             ModerationHistoryBackButton.Enable(player.Connection);
         else
@@ -338,8 +338,8 @@ public class ModerationUI : UnturnedUI
         ui.Message.SetText(connection, string.IsNullOrWhiteSpace(entry.Message) ? "== No Message ==" : entry.Message!);
         ui.Reputation.SetText(connection, Math.Abs(entry.Reputation) < 0.01 ? "0" : 
             entry.Reputation < 0
-                ? $"<#{NegativeReputationColor}>-{(-entry.Reputation).ToString("0.#", player.Culture)}</color>"
-                : $"<#{PositiveReputationColor}>{entry.Reputation.ToString("0.#", player.Culture)}</color>");
+                ? $"<#{NegativeReputationColor}>-{(-entry.Reputation).ToString("0.#", player.Locale.CultureInfo)}</color>"
+                : $"<#{PositiveReputationColor}>{entry.Reputation.ToString("0.#", player.Locale.CultureInfo)}</color>");
         ui.Timestamp.SetText(connection, (entry.ResolvedTimestamp ?? entry.StartedTimestamp).ToString(DateTimeFormat));
         if (entry.TryGetPrimaryAdmin(out RelatedActor actor))
         {
@@ -388,7 +388,7 @@ public class ModerationUI : UnturnedUI
         if (text is { Length: > 0 })
         {
             if (searchMode is ModerationHistorySearchMode.Before or ModerationHistorySearchMode.After
-                && DateTimeOffset.TryParse(text, player.Culture, DateTimeStyles.AssumeUniversal, out DateTimeOffset offset))
+                && DateTimeOffset.TryParse(text, player.Locale.CultureInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset offset))
             {
                 if (searchMode == ModerationHistorySearchMode.Before)
                     end = offset;
@@ -402,7 +402,7 @@ public class ModerationUI : UnturnedUI
             }
             else if (searchMode == ModerationHistorySearchMode.Admin)
             {
-                if (ulong.TryParse(text, NumberStyles.Number, player.Culture, out ulong steam64) && Util.IsValidSteam64Id(steam64))
+                if (ulong.TryParse(text, NumberStyles.Number, player.Locale.CultureInfo, out ulong steam64) && Util.IsValidSteam64Id(steam64))
                 {
                     condition = $"(SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
                                  $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `{DatabaseInterface.ColumnEntriesPrimaryKey}` " +

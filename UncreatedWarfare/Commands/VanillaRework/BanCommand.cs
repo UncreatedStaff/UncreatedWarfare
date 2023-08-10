@@ -97,16 +97,16 @@ public class BanCommand : AsyncCommand
         }
         else
         {
-            string time = duration.GetTimeFromSeconds(L.Default);
+            string time = Localization.GetTimeFromSeconds(duration);
             if (ctx.IsConsole)
             {
                 L.Log($"{name.PlayerName} ({targetId.ToString(Data.AdminLocale)}) was banned by an operator for {time} because: {reason}.", ConsoleColor.Cyan);
                 bool f = false;
                 foreach (LanguageSet set in LanguageSet.All())
                 {
-                    if (f || !set.Language.Equals(L.Default, StringComparison.Ordinal))
+                    if (f || !set.IsDefault)
                     {
-                        time = duration.GetTimeFromSeconds(set.Language);
+                        time = Localization.GetTimeFromSeconds(duration, set.Language, set.CultureInfo);
                         f = true;
                     }
                     Chat.Broadcast(set, T.BanSuccessBroadcastOperator, name, time);
@@ -118,17 +118,15 @@ public class BanCommand : AsyncCommand
                 bool f = false;
                 foreach (LanguageSet set in LanguageSet.AllBut(ctx.CallerID))
                 {
-                    if (f || !set.Language.Equals(L.Default, StringComparison.Ordinal))
+                    if (f || !set.IsDefault)
                     {
-                        time = duration.GetTimeFromSeconds(set.Language);
+                        time = Localization.GetTimeFromSeconds(duration, set.Language, set.CultureInfo);
                         f = true;
                     }
                     Chat.Broadcast(set, T.BanSuccessBroadcast, name, callerName, time);
                 }
                 if (f)
-                    time = duration.GetTimeFromSeconds(ctx.CallerID);
-                else if (Data.Languages.TryGetValue(ctx.CallerID, out string lang) && !lang.Equals(L.Default, StringComparison.Ordinal))
-                    time = duration.GetTimeFromSeconds(lang);
+                    time = Localization.GetTimeFromSeconds(duration, ctx.LanguageInfo, ctx.CultureInfo);
                 ctx.Reply(T.BanSuccessFeedback, name, time);
             }
         }

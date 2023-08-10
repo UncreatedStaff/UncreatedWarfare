@@ -79,7 +79,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
             VehicleCount = questState.VehicleCount.InsistValue();
             VehicleType = questState.VehicleType;
             VehicleIDs = questState.VehicleIDs;
-            translationCache1 = VehicleType.GetCommaList(_player == null ? 0 : _player.Steam64);
+            translationCache1 = VehicleType.GetCommaList(Localization.GetDefaultLanguage());
             translationCache2 = VehicleIDs.GetCommaList();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
@@ -218,7 +218,7 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
             Distance = questState.Amount.InsistValue();
             Vehicles = questState.Vehicles;
             VehicleType = questState.VehicleTypes;
-            translationCache1 = VehicleType.GetCommaList(_player == null ? 0 : _player.Steam64);
+            translationCache1 = VehicleType.GetCommaList(Localization.GetDefaultLanguage());
             translationCache2 = Vehicles.GetCommaList();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)

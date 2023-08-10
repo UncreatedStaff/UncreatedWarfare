@@ -328,7 +328,7 @@ public class StructureCommand : AsyncCommand
                 {
                     FactionInfo? info = TeamManager.GetFactionSafe(s64);
                     if (info != null)
-                        str64 = ctx.IMGUI ? info.GetName(ctx.Caller.Language).Colorize(info.HexColor) : info.GetName(ctx.Caller.Language).ColorizeTMPro(info.HexColor);
+                        str64 = info.GetName(ctx.Caller.Locale.LanguageInfo).Colorize(info.HexColor, ctx.IMGUI);
                 }
                 ctx.Reply(T.StructureSaveSetProperty!, grp ? "Group" : "Owner", asset, str64);
             }

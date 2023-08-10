@@ -26,6 +26,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Flags.UI;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
@@ -39,7 +40,6 @@ using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 #pragma warning disable IDE0060 // Remove unused parameter
@@ -128,7 +128,7 @@ public static class EventFunctions
     internal static void OnStructurePlaced(StructureRegion region, StructureDrop drop)
     {
         StructureData data = drop.GetServersideData();
-        ActionLog.Add(ActionLogType.PlaceStructure, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", data.owner);
+        ActionLog.Add(ActionLogType.PlaceStructure, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam())}, ID: {drop.instanceID}", data.owner);
     }
     internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeDrop drop)
     {
@@ -143,7 +143,7 @@ public static class EventFunctions
         owner.Player = player?.player;
         owner.BarricadeGUID = data.barricade.asset.GUID;
 
-        ActionLog.Add(ActionLogType.PlaceBarricade, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", data.owner);
+        ActionLog.Add(ActionLogType.PlaceBarricade, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam())}, ID: {drop.instanceID}", data.owner);
 
         RallyManager.OnBarricadePlaced(drop, region);
 
@@ -349,7 +349,6 @@ public static class EventFunctions
             {
                 shouldAllow = false;
                 player.SendChat(T.WhitelistProhibitedPlace, barricade.asset);
-                return;
             }
         }
         catch (Exception ex)
@@ -539,7 +538,6 @@ public static class EventFunctions
             ucplayer.Loading = true;
             if (UCPlayer.LoadingUI.IsValid)
                 UCPlayer.LoadingUI.SendToPlayer(ucplayer.Connection, T.LoadingOnJoin.Translate(ucplayer));
-            bool isNewPlayer = e.IsNewPlayer;
             if (Data.Gamemode.LeaderboardUp(out ILeaderboard lb))
             {
                 L.LogDebug("Joining leaderboard...");
@@ -1004,7 +1002,7 @@ public static class EventFunctions
 
         if (Data.Is<IFlagRotation>(out _) && e.Player.Player.IsOnFlag(out Flag flag))
         {
-            CaptureUIParameters p = CTFUI.RefreshStaticUI(e.Player.GetTeam(), flag, true);
+            CaptureUI.CaptureUIParameters p = CTFUI.RefreshStaticUI(e.Player.GetTeam(), flag, true);
             CTFUI.CaptureUI.Send(e.Player, in p);
         }
     }
@@ -1124,17 +1122,7 @@ public static class EventFunctions
         {
             allowed = false;
             ucplayer?.SendChat(T.MarkerNotInSquad);
-            return;
         }
-        //if (!isBeingPlaced)
-        //{
-        //    ClearPlayerMarkerForSquad(ucplayer);
-        //    return;
-        //}
-        //if (ucplayer.Squad != null)
-        //    overrideText = ucplayer.Squad.Name.ToUpper();
-        //Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
-        //PlaceMarker(ucplayer, effectposition, true, false);
     }
     internal static void OnPlayerGestureRequested(Player player, EPlayerGesture gesture, ref bool allow)
     {
@@ -1426,7 +1414,7 @@ public static class EventFunctions
             if (gotptcomp)
             {
                 c!.Stats = null!;
-                ActionLog.Add(ActionLogType.Disconnect, "PLAYED FOR " + Mathf.RoundToInt(Time.realtimeSinceStartup - c.JoinTime).GetTimeFromSeconds(0).ToUpper(), ucplayer.Steam64);
+                ActionLog.Add(ActionLogType.Disconnect, "PLAYED FOR " + Localization.GetTimeFromSeconds(Mathf.RoundToInt(Time.realtimeSinceStartup - c.JoinTime)).ToUpper(), ucplayer.Steam64);
                 Data.PlaytimeComponents.Remove(ucplayer.Steam64);
                 UnityEngine.Object.Destroy(c);
             }
@@ -1440,118 +1428,104 @@ public static class EventFunctions
             L.LogError(ex);
         }
     }
-    internal static void LangCommand_OnPlayerChangedLanguage(UCPlayer player, LanguageAliasSet oldSet, LanguageAliasSet newSet)
+    internal static void OnLocaleUpdated(UCPlayer player)
         => UCWarfare.I.UpdateLangs(player, false);
-    internal static void OnPrePlayerConnect(ValidateAuthTicketResponse_t ticket, ref bool isValid, ref string explanation)
+    internal static async Task OnPrePlayerConnect(PlayerPending e, CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SteamPending? player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == ticket.m_SteamID.m_SteamID);
-        if (player == null) return;
         try
         {
-            ActionLog.Add(ActionLogType.TryConnect, $"Steam Name: {player.playerID.playerName}, Public Name: {player.playerID.characterName}, Private Name: {player.playerID.nickName}, Character ID: {player.playerID.characterID}.", ticket.m_SteamID.m_SteamID);
             bool kick = false;
             string? cn = null;
             string? nn = null;
-            Match match = Data.ChatFilter.Match(player.playerID.playerName);
+            Match match = Data.ChatFilter.Match(e.PendingPlayer.playerID.playerName);
             if (match.Success && match.Length > 0)
             {
-                isValid = false;
-                explanation = T.NameProfanityPlayerNameKickMessage.Translate(Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang) ? lang : L.Default,
-                    match.Value);
-                ActionLog.Add(ActionLogType.ChatFilterViolation, "PLAYER NAME: " + player.playerID.playerName, player.playerID.steamID.m_SteamID);
-                return;
+                LanguageInfo langInfo = await Localization.GetLanguage(e.PendingPlayer.playerID.steamID.m_SteamID, token).ConfigureAwait(false);
+                ActionLog.Add(ActionLogType.ChatFilterViolation, "PLAYER NAME: " + e.PendingPlayer.playerID.playerName, e.PendingPlayer.playerID.steamID.m_SteamID);
+                throw e.Reject(T.NameProfanityPlayerNameKickMessage.Translate(langInfo, match.Value));
             }
-            match = Data.ChatFilter.Match(player.playerID.characterName);
+            match = Data.ChatFilter.Match(e.PendingPlayer.playerID.characterName);
             if (match.Success && match.Length > 0)
             {
-                isValid = false;
-                explanation = T.NameProfanityCharacterNameKickMessage.Translate(Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang) ? lang : L.Default,
-                    match.Value);
-                ActionLog.Add(ActionLogType.ChatFilterViolation, "CHARACTER NAME: " + player.playerID.characterName, player.playerID.steamID.m_SteamID);
-                return;
+                LanguageInfo langInfo = await Localization.GetLanguage(e.PendingPlayer.playerID.steamID.m_SteamID, token).ConfigureAwait(false);
+                ActionLog.Add(ActionLogType.ChatFilterViolation, "CHARACTER NAME: " + e.PendingPlayer.playerID.characterName, e.PendingPlayer.playerID.steamID.m_SteamID);
+                throw e.Reject(T.NameProfanityCharacterNameKickMessage.Translate(langInfo, match.Value));
             }
-            match = Data.ChatFilter.Match(player.playerID.nickName);
+            match = Data.ChatFilter.Match(e.PendingPlayer.playerID.nickName);
             if (match.Success && match.Length > 0)
             {
-                isValid = false;
-                explanation = T.NameProfanityNickNameKickMessage.Translate(Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang) ? lang : L.Default,
-                    match.Value);
-                ActionLog.Add(ActionLogType.ChatFilterViolation, "NICK NAME: " + player.playerID.nickName, player.playerID.steamID.m_SteamID);
-                return;
+                LanguageInfo langInfo = await Localization.GetLanguage(e.PendingPlayer.playerID.steamID.m_SteamID, token).ConfigureAwait(false);
+                ActionLog.Add(ActionLogType.ChatFilterViolation, "NICK NAME: " + e.PendingPlayer.playerID.nickName, e.PendingPlayer.playerID.steamID.m_SteamID);
+                throw e.Reject(T.NameProfanityNickNameKickMessage.Translate(langInfo, match.Value));
             }
-            if (string.IsNullOrWhiteSpace(player.playerID.characterName))
+            if (string.IsNullOrWhiteSpace(e.PendingPlayer.playerID.characterName))
             {
-                player.playerID.characterName = player.playerID.steamID.m_SteamID.ToString(Data.LocalLocale);
-                if (player.playerID.nickName.Length == 0)
+                e.PendingPlayer.playerID.characterName = e.PendingPlayer.playerID.steamID.m_SteamID.ToString(Data.LocalLocale);
+                if (e.PendingPlayer.playerID.nickName.Length == 0)
                 {
-                    player.playerID.nickName = player.playerID.steamID.m_SteamID.ToString(Data.LocalLocale);
+                    e.PendingPlayer.playerID.nickName = e.PendingPlayer.playerID.steamID.m_SteamID.ToString(Data.LocalLocale);
                 }
                 else
                 {
-                    kick = F.FilterName(player.playerID.characterName, out cn);
-                    kick |= F.FilterName(player.playerID.nickName, out nn);
+                    kick = F.FilterName(e.PendingPlayer.playerID.characterName, out cn);
+                    kick |= F.FilterName(e.PendingPlayer.playerID.nickName, out nn);
                 }
             }
-            else if (string.IsNullOrWhiteSpace(player.playerID.nickName))
+            else if (string.IsNullOrWhiteSpace(e.PendingPlayer.playerID.nickName))
             {
-                player.playerID.nickName = player.playerID.steamID.m_SteamID.ToString(Data.LocalLocale);
-                if (player.playerID.characterName.Length == 0)
+                e.PendingPlayer.playerID.nickName = e.PendingPlayer.playerID.steamID.m_SteamID.ToString(Data.LocalLocale);
+                if (e.PendingPlayer.playerID.characterName.Length == 0)
                 {
-                    player.playerID.characterName = player.playerID.steamID.m_SteamID.ToString(Data.LocalLocale);
+                    e.PendingPlayer.playerID.characterName = e.PendingPlayer.playerID.steamID.m_SteamID.ToString(Data.LocalLocale);
                 }
                 else
                 {
-                    kick = F.FilterName(player.playerID.characterName, out cn);
-                    kick |= F.FilterName(player.playerID.nickName, out nn);
+                    kick = F.FilterName(e.PendingPlayer.playerID.characterName, out cn);
+                    kick |= F.FilterName(e.PendingPlayer.playerID.nickName, out nn);
                 }
             }
             else
             {
-                kick = F.FilterName(player.playerID.characterName, out cn);
-                kick |= F.FilterName(player.playerID.nickName, out nn);
+                kick = F.FilterName(e.PendingPlayer.playerID.characterName, out cn);
+                kick |= F.FilterName(e.PendingPlayer.playerID.nickName, out nn);
             }
             if (kick)
             {
-                isValid = false;
-                explanation = T.NameFilterKickMessage.Translate(Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang) ? lang : L.Default,
-                    UCWarfare.Config.MinAlphanumericStringLength);
-                return;
+                LanguageInfo langInfo = await Localization.GetLanguage(e.PendingPlayer.playerID.steamID.m_SteamID, token).ConfigureAwait(false);
+                throw e.Reject(T.NameFilterKickMessage.Translate(langInfo, UCWarfare.Config.MinAlphanumericStringLength));
             }
 
-            player.playerID.characterName = Data.NameRichTextReplaceFilter.Replace(cn!, string.Empty);
-            player.playerID.nickName = Data.NameRichTextReplaceFilter.Replace(nn!, string.Empty);
+            e.PendingPlayer.playerID.characterName = Data.NameRichTextReplaceFilter.Replace(cn!, string.Empty);
+            e.PendingPlayer.playerID.nickName = Data.NameRichTextReplaceFilter.Replace(nn!, string.Empty);
 
-            if (player.playerID.characterName.Length < 3 && player.playerID.nickName.Length < 3)
+            if (e.PendingPlayer.playerID.characterName.Length < 3 && e.PendingPlayer.playerID.nickName.Length < 3)
             {
-                isValid = false;
-                explanation = T.NameFilterKickMessage.Translate(Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang) ? lang : L.Default,
-                    UCWarfare.Config.MinAlphanumericStringLength);
-                return;
+                LanguageInfo langInfo = await Localization.GetLanguage(e.PendingPlayer.playerID.steamID.m_SteamID, token).ConfigureAwait(false);
+                throw e.Reject(T.NameFilterKickMessage.Translate(langInfo, UCWarfare.Config.MinAlphanumericStringLength));
             }
-            if (player.playerID.characterName.Length < 3)
+            if (e.PendingPlayer.playerID.characterName.Length < 3)
             {
-                player.playerID.characterName = player.playerID.nickName;
+                e.PendingPlayer.playerID.characterName = e.PendingPlayer.playerID.nickName;
             }
-            if (player.playerID.nickName.Length < 3)
+            else if (e.PendingPlayer.playerID.nickName.Length < 3)
             {
-                player.playerID.nickName = player.playerID.characterName;
+                e.PendingPlayer.playerID.nickName = e.PendingPlayer.playerID.characterName;
             }
 
-            PlayerNames names = new PlayerNames(player.playerID);
+            PlayerNames names = new PlayerNames(e.PendingPlayer.playerID);
 
-            Data.OriginalPlayerNames[player.playerID.steamID.m_SteamID] = names;
+            Data.OriginalPlayerNames[e.Steam64] = names;
 
-            L.Log("PN: \"" + player.playerID.playerName + "\", CN: \"" + player.playerID.characterName + "\", NN: \"" + player.playerID.nickName + "\" (" + player.playerID.steamID.m_SteamID.ToString(Data.LocalLocale) + ") trying to connect.", ConsoleColor.Cyan);
+            L.Log("PN: \"" + e.PendingPlayer.playerID.playerName + "\", CN: \"" + e.PendingPlayer.playerID.characterName + "\", NN: \"" + e.PendingPlayer.playerID.nickName + "\" (" + e.PendingPlayer.playerID.steamID.m_SteamID.ToString(Data.LocalLocale) + ") trying to connect.", ConsoleColor.Cyan);
         }
         catch (Exception ex)
         {
-            L.LogError($"Error accepting {player.playerID.playerName} in OnPrePlayerConnect:");
+            L.LogError($"Error accepting {e.PendingPlayer.playerID.playerName} in OnPrePlayerConnect:");
             L.LogError(ex);
-            isValid = false;
-            explanation = "Uncreated Network was unable to connect you to to the server, try again later or contact a Director if this keeps happening (discord.gg/" + UCWarfare.Config.DiscordInviteCode + ").";
+            e.Reject("Uncreated Network was unable to connect you to to the server, try again later or contact a Director if this keeps happening (discord.gg/" + UCWarfare.Config.DiscordInviteCode + ").");
         }
     }
     internal static void OnStructureDestroyed(StructureDestroyed e)
@@ -1564,7 +1538,7 @@ public static class EventFunctions
             SteamPlayer damager = PlayerTool.getSteamPlayer(e.InstigatorId);
             ActionLog.Add(ActionLogType.DestroyStructure, 
                 $"{e.Structure.asset.itemName} / {e.Structure.asset.id} / {e.Structure.asset.GUID:N} " +
-                $"- Owner: {e.ServersideData.owner}, Team: {TeamManager.TranslateName(e.ServersideData.group.GetTeam(), 0)}, ID: {e.Structure.instanceID}, Origin: {e.DamageOrigin}",
+                $"- Owner: {e.ServersideData.owner}, Team: {TeamManager.TranslateName(e.ServersideData.group.GetTeam())}, ID: {e.Structure.instanceID}, Origin: {e.DamageOrigin}",
                 e.InstigatorId);
             if (Data.Reporter is not null && damager != null && e.ServersideData.group.GetTeam() == damager.GetTeam())
                 Data.Reporter.OnDestroyedStructure(e.InstigatorId, e.InstanceID);
@@ -1581,7 +1555,7 @@ public static class EventFunctions
         if (e.InstigatorId != 0ul)
         {
             SteamPlayer damager = PlayerTool.getSteamPlayer(e.InstigatorId);
-            ActionLog.Add(ActionLogType.DestroyBarricade, $"{e.Barricade.asset.itemName} / {e.Barricade.asset.id} / {e.Barricade.asset.GUID:N} - Owner: {e.Barricade.GetServersideData().owner}, Team: {TeamManager.TranslateName(e.ServersideData.group.GetTeam(), 0)}, ID: {e.Barricade.instanceID}, Origin: {e.DamageOrigin}", e.InstigatorId);
+            ActionLog.Add(ActionLogType.DestroyBarricade, $"{e.Barricade.asset.itemName} / {e.Barricade.asset.id} / {e.Barricade.asset.GUID:N} - Owner: {e.Barricade.GetServersideData().owner}, Team: {TeamManager.TranslateName(e.ServersideData.group.GetTeam())}, ID: {e.Barricade.instanceID}, Origin: {e.DamageOrigin}", e.InstigatorId);
             if (Data.Reporter is not null && damager != null && e.ServersideData.group.GetTeam() == damager.GetTeam())
                 Data.Reporter.OnDestroyedStructure(e.InstigatorId, e.InstanceID);
         }

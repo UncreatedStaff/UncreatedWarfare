@@ -21,6 +21,8 @@ namespace Uncreated.Warfare.Squads;
 
 public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDeclareWinListener, IJoinedTeamListener, IUIListener, IGameTickListener
 {
+    public const int SQUAD_MAX_MEMBERS = 6;
+    
     public SquadManager() : base("squad") { }
 
     public new static SquadConfigData Config => _singleton.IsLoaded() ? _singleton.ConfigurationFile.Data : null!;
@@ -465,7 +467,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         UpdateUIMemberCount(team);
 
-        ActionLog.Add(ActionLogType.CreatedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(team, 0), leader);
+        ActionLog.Add(ActionLogType.CreatedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(team), leader);
 
         return squad;
     }
@@ -503,7 +505,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         UpdateMemberList(squad);
         UpdateUIMemberCount(squad.Team);
 
-        ActionLog.Add(ActionLogType.JoinedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + squad.Leader.Steam64.ToString(Data.AdminLocale), player);
+        ActionLog.Add(ActionLogType.JoinedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team) + " owned by " + squad.Leader.Steam64.ToString(Data.AdminLocale), player);
 
         if (squad.HasRally)
             squad.RallyPoint!.ShowUIForSquad();
@@ -553,7 +555,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
             UpdateUIMemberCount(squad.Team);
 
-            ActionLog.Add(ActionLogType.DisbandedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), player);
+            ActionLog.Add(ActionLogType.DisbandedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team), player);
 
             if (squad.HasRally)
             {
@@ -566,7 +568,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
             return;
         }
 
-        ActionLog.Add(ActionLogType.JoinedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.AdminLocale)), player);
+        ActionLog.Add(ActionLogType.JoinedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.AdminLocale)), player);
 
         if (willNeedNewLeader)
         {
@@ -604,7 +606,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         Squads.Remove(squad);
         squad.Disbanded = true;
 
-        ActionLog.Add(ActionLogType.DisbandedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
+        ActionLog.Add(ActionLogType.DisbandedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team), squad.Leader);
 
         Traits.TraitManager.OnSquadDisbanded(squad);
 
@@ -722,7 +724,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ActionLog.Add(value ? ActionLogType.LockedSquad : ActionLogType.UnlockedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
+        ActionLog.Add(value ? ActionLogType.LockedSquad : ActionLogType.UnlockedSquad, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team), squad.Leader);
         squad.IsLocked = value;
         ReplicateLockSquad(squad);
     }
@@ -737,9 +739,9 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         int squadsCount = Squads.Count(x => x.Team == team);
 
         float friendlyCount = PlayerManager.OnlinePlayers.Count(p => p.GetTeam() == team);
-        int maxSquads = Mathf.CeilToInt((friendlyCount + 3) / Squad.SQUAD_MAX_MEMBERS);
+        int maxSquads = Mathf.CeilToInt((friendlyCount + 3) / SQUAD_MAX_MEMBERS);
 
-        requiredTeammatesForMoreSquads = Squad.SQUAD_MAX_MEMBERS * maxSquads - 3 + 1;
+        requiredTeammatesForMoreSquads = SQUAD_MAX_MEMBERS * maxSquads - 3 + 1;
 
         return squadsCount >= maxSquads;
     }
@@ -762,12 +764,12 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         }
     }
 
-    private float _timeSinceSquadCheck = 0;
+    private float _timeSinceSquadCheck;
     public void Tick()
     {
         if (Time.time - _timeSinceSquadCheck > 30)
         {
-            foreach (var squad in Squads)
+            foreach (Squad squad in Squads)
             {
                 bool wrongKit = !(squad.Leader.KitClass == Class.Squadleader ||
                     squad.Leader.KitClass == Class.Crewman ||
@@ -775,7 +777,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
                 bool noSquadMates = squad.Members.Count == 1;
 
-                if (wrongKit! || noSquadMates)
+                if (wrongKit || noSquadMates)
                 {
                     squad.DisbandStrikes++;
                 }
@@ -788,15 +790,14 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                     break;
                 }
 
-                ToastMessage toast;
                 if (wrongKit)
                 {
-                    toast = new ToastMessage(ToastMessageStyle.Tip, T.SquadWarningWrongKit.Translate(squad.Leader));
+                    ToastMessage toast = new ToastMessage(ToastMessageStyle.Tip, T.SquadWarningWrongKit.Translate(squad.Leader));
                     ToastMessage.QueueMessage(squad.Leader, in toast);
                 }
                 else if (noSquadMates)
                 {
-                    toast = new ToastMessage(ToastMessageStyle.Tip, T.SquadWarningNoMembers.Translate(squad.Leader));
+                    ToastMessage toast = new ToastMessage(ToastMessageStyle.Tip, T.SquadWarningNoMembers.Translate(squad.Leader));
                     ToastMessage.QueueMessage(squad.Leader, in toast);
                 }
             }
@@ -845,8 +846,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     }
 
     public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();
-    public const int SQUAD_MAX_MEMBERS = 6;
-    public bool IsFull() => Members.Count >= SQUAD_MAX_MEMBERS;
+    public bool IsFull() => Members.Count >= SquadManager.SQUAD_MAX_MEMBERS;
     public bool IsNotSolo() => Members.Count > 1;
     public bool ContainsMember(IPlayer player)
     {
@@ -871,7 +871,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     [FormatDisplay("Squad Name")]
     public const string FormatName = "n";
 
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags) =>
         FormatColorName.Equals(format, StringComparison.Ordinal)
             ? Localization.Colorize(Teams.TeamManager.GetTeamHexColor(Team), Name, flags)

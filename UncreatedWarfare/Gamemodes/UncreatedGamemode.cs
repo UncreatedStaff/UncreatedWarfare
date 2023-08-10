@@ -621,7 +621,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         float time = Time.realtimeSinceStartup;
         InvokeSingletonEvent<ITimeSyncListener>(x => x.TimeSync(time));
     }
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags) => DisplayName;
     public void ShutdownAfterGame(string reason, ulong player)
     {
@@ -643,7 +643,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             ThreadUtil.assertIsGameThread();
             State = State.Finished;
             OnStateUpdated?.Invoke();
-            L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
+            L.Log(TeamManager.TranslateName(winner) + " just won the game!", ConsoleColor.Cyan);
             await InvokeSingletonEvent<IDeclareWinListener, IDeclareWinListenerAsync>
                 (x => x.OnWinnerDeclared(winner), x => x.OnWinnerDeclared(winner, token), token)
                 .ConfigureAwait(false);
@@ -652,7 +652,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
             QuestManager.OnGameOver(winner);
 
-            ActionLog.Add(ActionLogType.TeamWon, TeamManager.TranslateName(winner, 0));
+            ActionLog.Add(ActionLogType.TeamWon, TeamManager.TranslateName(winner));
 
             Chat.Broadcast(T.TeamWin, TeamManager.GetFaction(winner));
 
@@ -1017,7 +1017,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public virtual void ShowStagingUI(UCPlayer player)
     {
         TimeSpan timeleft = TimeSpan.FromSeconds(StagingSeconds);
-        CTFUI.StagingUI.SendToPlayer(player.Connection, Localization.Translate(T.PhaseBriefing, player), $"{timeleft.Minutes}:{timeleft.Seconds:D2}");
+        CTFUI.StagingUI.SendToPlayer(player.Connection, T.PhaseBriefing.Translate(player), $"{timeleft.Minutes}:{timeleft.Seconds:D2}");
     }
     public void ClearStagingUI(UCPlayer player)
     {

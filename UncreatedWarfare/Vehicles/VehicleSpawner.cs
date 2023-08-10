@@ -11,7 +11,6 @@ using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using MySqlConnector;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Players;
@@ -189,6 +188,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
     }
     private void DropFlaresStop(UCPlayer player, float timeDown, ref bool handled)
     {
+#if false
         InteractableVehicle? vehicle = player.Player.movement.getVehicle();
         if (vehicle != null &&
             player.Player.movement.getSeat() == 0 &&
@@ -197,6 +197,7 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
         {
             // TODO: this method isn't really needed anymore
         }
+#endif
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsDriver(UCPlayer player) => IsInSeat(player, 0);
@@ -1703,7 +1704,7 @@ public class VehicleSpawn : IListItem
         FactionInfo? faction = TeamManager.GetFactionSafe(team) ?? TeamManager.GetFactionInfo(data.Faction);
         foreach (LanguageSet set in LanguageSet.All(players))
         {
-            string val = Localization.TranslateVBS(spawn, data, set.Language, faction);
+            string val = Localization.TranslateVBS(spawn, data, set.Language, set.CultureInfo, faction);
             NetId id = drop.interactable.GetNetId();
             while (set.MoveNext())
             {
@@ -1719,12 +1720,10 @@ public class VehicleSpawn : IListItem
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         VehicleData? data = spawn.Vehicle?.Item;
-        if (data == null)
+        if (data == null || UCPlayer.FromSteamPlayer(player) is not { } pl)
             return;
-        string lang = Localization.GetLang(player.playerID.steamID.m_SteamID);
-        ulong team = player.GetTeam();
-        string val = Localization.TranslateVBS(spawn, data, lang, TeamManager.GetFactionSafe(team) ?? TeamManager.GetFactionInfo(data.Faction));
-        UCPlayer? pl = UCPlayer.FromSteamPlayer(player);
+        ulong team = pl.GetTeam();
+        string val = Localization.TranslateVBS(spawn, data, pl.Locale.LanguageInfo, pl.Locale.CultureInfo, TeamManager.GetFactionSafe(team) ?? TeamManager.GetFactionInfo(data.Faction));
         string val2 = Util.QuickFormat(val, pl == null ? string.Empty : data.GetCostLine(pl));
         Data.SendChangeText.Invoke(drop.interactable.GetNetId(), ENetReliability.Unreliable, player.transportConnection, val2);
     }

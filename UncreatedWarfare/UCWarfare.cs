@@ -164,11 +164,15 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 
         new PermissionSaver();
         await Data.LoadSQL(token).ConfigureAwait(false);
+        Data.LanguageDataStore = new WarfareMySqlLanguageDataStore();
+        await Data.ReloadLanguageDataStore(true, token).ConfigureAwait(false);
         await ItemIconProvider.DownloadConfig(token).ConfigureAwait(false);
         await TeamManager.ReloadFactions(token).ConfigureAwait(false);
         L.Log("Loading Moderation Data...", ConsoleColor.Magenta);
         Data.ModerationSql = new WarfareDatabaseInterface();
         await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
+
+
         await ToUpdate(token);
         _ = TeamManager.Team1Faction;
         _ = TeamManager.Team2Faction;
@@ -178,10 +182,13 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         L.Log("Loading Localization and Color Data...", ConsoleColor.Magenta);
         Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
         Deaths.Localization.Reload();
+#pragma warning disable CS0618
         Data.Languages = JSONMethods.LoadLanguagePreferences();
-        Data.LanguageAliases = JSONMethods.LoadLangAliases();
+#pragma warning restore CS0618
         Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
-        Translation.ReadTranslations();
+        await Translation.ReadTranslations(token).ConfigureAwait(false);
+        await ToUpdate(token);
+        L.Log($" Done, {Localization.TotalDefaultTranslations} total translations.", ConsoleColor.Magenta);
 
         CommandWindow.shouldLogDeaths = false;
 
@@ -355,13 +362,13 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 #endif
         Data.Gamemode?.Subscribe();
         StatsManager.LoadEvents();
-        
+        Data.LanguageDataStore?.Subscribe();
         GameUpdateMonitor.OnGameUpdateDetected += EventFunctions.OnGameUpdateDetected;
         EventDispatcher.PlayerJoined += EventFunctions.OnPostPlayerConnected;
         EventDispatcher.PlayerLeaving += EventFunctions.OnPlayerDisconnected;
-        Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
+        EventDispatcher.PlayerPendingAsync += EventFunctions.OnPrePlayerConnect;
         Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
-        LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
+        UCPlayerLocale.OnLocaleUpdated += EventFunctions.OnLocaleUpdated;
         ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
         BarricadeManager.onDeployBarricadeRequested += EventFunctions.OnBarricadeTryPlaced;
         UseableGun.onBulletSpawned += EventFunctions.BulletSpawned;
@@ -403,14 +410,14 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 #endif
         Data.Gamemode?.Unsubscribe();
         EventDispatcher.UnsubscribeFromAll();
-        
+        Data.LanguageDataStore?.Unsubscribe();
         GameUpdateMonitor.OnGameUpdateDetected -= EventFunctions.OnGameUpdateDetected;
         ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
         EventDispatcher.PlayerJoined -= EventFunctions.OnPostPlayerConnected;
         EventDispatcher.PlayerLeaving -= EventFunctions.OnPlayerDisconnected;
-        Provider.onCheckValidWithExplanation -= EventFunctions.OnPrePlayerConnect;
+        EventDispatcher.PlayerPendingAsync -= EventFunctions.OnPrePlayerConnect;
         Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
-        LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
+        UCPlayerLocale.OnLocaleUpdated -= EventFunctions.OnLocaleUpdated;
         BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
         UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
@@ -597,7 +604,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         try
         {
             L.LogDebug("Running task " + (ctx ?? member) + ".");
-            t = task(default);
+            t = task(token);
             RunTask(t, ctx, member, fp, awaitOnUnload, timeout);
         }
         catch (Exception e)

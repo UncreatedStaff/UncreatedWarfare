@@ -33,7 +33,7 @@ namespace Uncreated.Warfare.Kits;
 // todo add delays to kits
 public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync, IGameTickListener, IPlayerDisconnectListener, ITCPConnectedListener
 {
-    private static int _v = 0;
+    private static int _v;
     public static readonly KitMenuUI MenuUI = new KitMenuUI();
     private readonly List<Kit> _kitListTemp = new List<Kit>(64);
     public override bool AwaitLoad => true;
@@ -110,6 +110,30 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     }
     private void OnItemsRefreshedIntl()
     {
+        Localization.ClearSection(TranslationSection.Kits);
+        WriteWait();
+        try
+        {
+            int ct = 0;
+            foreach (SqlItem<Kit> kit in Items)
+            {
+                Kit? item = kit.Item;
+                if (item is { Type: KitType.Public or KitType.Elite, Requestable: true })
+                {
+                    ++ct;
+                    foreach (string language in item.SignText.Keys)
+                    {
+                        if (Data.LanguageDataStore.GetInfoCached(language) is { } langInfo)
+                            langInfo.IncrementSection(TranslationSection.Kits, 1);
+                    }
+                }
+            }
+            Localization.IncrementSection(TranslationSection.Kits, ct);
+        }
+        finally
+        {
+            WriteRelease();
+        }
         UCWarfare.RunTask(async () =>
         {
             bool needsT1Unarmed = false, needsT2Unarmed = false, needsDefault = false;
@@ -2108,7 +2132,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
                 ctx.Reply(T.RequestKitLimited, allowedPlayers);
                 return;
             }
-            ctx.LogAction(ActionLogType.RequestKit, $"Loadout #{loadoutId}: {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
+            ctx.LogAction(ActionLogType.RequestKit, $"Loadout #{loadoutId}: {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class)}");
 
             if (!await GrantKitRequest(ctx, loadout, token).ConfigureAwait(false))
             {
@@ -2235,7 +2259,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             if (kit.IsLimited(out _, out allowedPlayers, team) || kit.Type == KitType.Loadout && kit.IsClassLimited(out _, out allowedPlayers, team))
                 throw ctx.Reply(T.RequestKitLimited, allowedPlayers);
 
-            ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
+            ctx.LogAction(ActionLogType.RequestKit, $"Kit {kit.Id}, Team {team}, Class: {Localization.TranslateEnum(kit.Class)}");
 
             if (!await GrantKitRequest(ctx, proxy, token).ConfigureAwait(false))
             {
@@ -2580,12 +2604,13 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
     }
     async Task ITCPConnectedListener.OnConnected(CancellationToken token)
     {
-        int v = _v;
         if (PlayerManager.OnlinePlayers.Count < 1)
             return;
+        int v = _v;
+        Interlocked.Increment(ref _v);
         CheckLoaded();
 
-        await UCWarfare.ToUpdate();
+        await UCWarfare.ToUpdate(token);
         CheckLoaded();
 
         ulong[] players = new ulong[PlayerManager.OnlinePlayers.Count];
