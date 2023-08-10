@@ -1603,8 +1603,8 @@ public class DebugCommand : AsyncCommand
             }
             else if (onlinePlayer != null)
             {
-                ctx.ReplyString("Set view lens to " + onlinePlayer.Translate(ctx, UCPlayer.COLOR_PLAYER_NAME_FORMAT) +
-                                " (" + onlinePlayer.Translate(ctx, UCPlayer.COLOR_STEAM_64_FORMAT) + ")'s perspective. Clear with <#fff>/test viewlens clear</color>.");
+                ctx.ReplyString("Set view lens to " + onlinePlayer.Translate(ctx, UCPlayer.FormatColoredPlayerName) +
+                                " (" + onlinePlayer.Translate(ctx, UCPlayer.FormatColoredSteam64) + ")'s perspective. Clear with <#fff>/test viewlens clear</color>.");
             }
             else
             {

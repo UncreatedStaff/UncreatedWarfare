@@ -39,21 +39,21 @@ namespace Uncreated.Warfare;
 public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlayer>, IModerationActor
 {
     [FormatDisplay(typeof(IPlayer), "Character Name")]
-    public const string CHARACTER_NAME_FORMAT = "cn";
+    public const string FormatCharacterName = "cn";
     [FormatDisplay(typeof(IPlayer), "Nick Name")]
-    public const string NICK_NAME_FORMAT = "nn";
+    public const string FormatNickName = "nn";
     [FormatDisplay(typeof(IPlayer), "Player Name")]
-    public const string PLAYER_NAME_FORMAT = "pn";
+    public const string FormatPlayerName = "pn";
     [FormatDisplay(typeof(IPlayer), "Steam64 ID")]
-    public const string STEAM_64_FORMAT = "64";
+    public const string FormatSteam64 = "64";
     [FormatDisplay(typeof(IPlayer), "Colored Character Name")]
-    public const string COLOR_CHARACTER_NAME_FORMAT = "ccn";
+    public const string FormatColoredCharacterName = "ccn";
     [FormatDisplay(typeof(IPlayer), "Colored Nick Name")]
-    public const string COLOR_NICK_NAME_FORMAT = "cnn";
+    public const string FormatColoredNickName = "cnn";
     [FormatDisplay(typeof(IPlayer), "Colored Player Name")]
-    public const string COLOR_PLAYER_NAME_FORMAT = "cpn";
+    public const string FormatColoredPlayerName = "cpn";
     [FormatDisplay(typeof(IPlayer), "Colored Steam64 ID")]
-    public const string COLOR_STEAM_64_FORMAT = "c64";
+    public const string FormatColoredSteam64 = "c64";
 
     private static readonly InstanceGetter<Dictionary<Buff, float>, int> VersionGetter =
         Util.GenerateInstanceGetter<Dictionary<Buff, float>, int>("version", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -129,6 +129,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         Squad = null;
         Player = player;
         CSteamID = steamID;
+        AccountId = steamID.GetAccountID().m_AccountID;
         Save = save;
         ActiveKit = KitManager.GetSingletonQuick()?.FindKit(Save.KitName, default, true).Result;
         Locale = new UCPlayerLocale(this, Localization.GetLang(Steam64));
@@ -187,23 +188,23 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         ref TranslationFlags flags)
     {
         if (format is null) goto end;
-        if (format.Equals(CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(FormatCharacterName, StringComparison.Ordinal))
             return Name.CharacterName;
-        if (format.Equals(NICK_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(FormatNickName, StringComparison.Ordinal))
             return Name.NickName;
-        if (format.Equals(PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(FormatPlayerName, StringComparison.Ordinal))
             return Name.PlayerName;
-        if (format.Equals(STEAM_64_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(FormatSteam64, StringComparison.Ordinal))
             return Steam64.ToString(Data.LocalLocale);
 
         string hex = TeamManager.GetTeamHexColor(this.GetTeam());
-        if (format.Equals(COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(FormatColoredCharacterName, StringComparison.Ordinal))
             return Localization.Colorize(hex, Name.CharacterName, flags);
-        if (format.Equals(COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(FormatColoredNickName, StringComparison.Ordinal))
             return Localization.Colorize(hex, Name.NickName, flags);
-        if (format.Equals(COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(FormatColoredPlayerName, StringComparison.Ordinal))
             return Localization.Colorize(hex, Name.PlayerName, flags);
-        if (format.Equals(COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(FormatColoredSteam64, StringComparison.Ordinal))
             return Localization.Colorize(hex, Steam64.ToString(Data.LocalLocale), flags);
         end:
         return Name.CharacterName;
@@ -216,12 +217,13 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool HasKit => ActiveKit?.Item is not null;
     public Class KitClass => ActiveKit?.Item is { } kit ? kit.Class : Class.None;
     public Branch Branch => ActiveKit?.Item is { } kit ? kit.Branch : Branch.Default;
-    bool IEquatable<UCPlayer>.Equals(UCPlayer other) => other == this || other.Steam64 == Steam64; 
+    bool IEquatable<UCPlayer>.Equals(UCPlayer other) => other != null && ((object?)other == this || other.Steam64 == Steam64); 
     public SteamPlayer SteamPlayer => Player.channel.owner;
     public PlayerSave Save { get; }
     public Player Player { get; internal set; }
     public PlayerSummary? CachedSteamProfile { get; internal set; }
     public CSteamID CSteamID { get; }
+    public uint AccountId { get; }
     public ITransportConnection Connection => Player.channel.owner.transportConnection!;
     public EffectAsset? LastPing { get; internal set; }
     public ulong? ViewLens { get; set; }
@@ -327,7 +329,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     {
         get
         {
-            if (SquadManager.Config.Classes == null || SquadManager.Config.Classes.Length == 0)
+            if (SquadManager.Config?.Classes == null || SquadManager.Config.Classes.Length == 0)
                 return '±';
             for (int i = 0; i < SquadManager.Config.Classes.Length; ++i)
             {
@@ -347,7 +349,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         get
         {
             EffectAsset asset;
-            if (SquadManager.Config.Classes == null || SquadManager.Config.Classes.Length == 0)
+            if (SquadManager.Config?.Classes == null || SquadManager.Config.Classes.Length == 0)
                 return Assets.find<EffectAsset>(new Guid("28b4d205725c42be9a816346200ba1d8"));
             for (int i = 0; i < SquadManager.Config.Classes.Length; ++i)
             {
@@ -370,7 +372,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         get
         {
             EffectAsset asset;
-            if (SquadManager.Config.Classes == null || SquadManager.Config.Classes.Length == 0)
+            if (SquadManager.Config?.Classes == null || SquadManager.Config.Classes.Length == 0)
                 return Assets.find<EffectAsset>(new Guid("28b4d205725c42be9a816346200ba1d8"));
             for (int i = 0; i < SquadManager.Config.Classes.Length; ++i)
             {
@@ -881,11 +883,15 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         int IEqualityComparer<UCPlayer>.GetHashCode(UCPlayer obj) => obj.Steam64.GetHashCode();
     }
 
+    public override bool Equals(object? obj) => obj == this || obj is IPlayer player && player.Steam64 == this.Steam64;
+    public override int GetHashCode() => unchecked((int)AccountId);
     public static void TryApplyViewLens(ref UCPlayer original)
     {
         if (original is { ViewLens: { } lens } && FromID(lens) is { IsOnline: true } vl)
             original = vl;
     }
+    public static bool operator ==(UCPlayer? left, IPlayer? right) => left is null ? right is null : left.Equals(right);
+    public static bool operator !=(UCPlayer? left, IPlayer? right) => left is null ? right is not null : !left.Equals(right);
 
     bool IModerationActor.Async => true;
     ulong IModerationActor.Id => Steam64;
@@ -979,22 +985,22 @@ public struct OfflinePlayer : IPlayer
         if (format is null || !_names.HasValue) goto end;
         PlayerNames names = _names.Value;
 
-        if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(UCPlayer.FormatCharacterName, StringComparison.Ordinal))
             return names.CharacterName;
-        if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(UCPlayer.FormatNickName, StringComparison.Ordinal))
             return names.NickName;
-        if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(UCPlayer.FormatPlayerName, StringComparison.Ordinal))
             return names.PlayerName;
-        if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(UCPlayer.FormatSteam64, StringComparison.Ordinal))
             goto end;
         string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (PlayerSave.TryReadSaveFile(_s64, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
-        if (format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(UCPlayer.FormatColoredCharacterName, StringComparison.Ordinal))
             return Localization.Colorize(hex, names.CharacterName, flags);
-        if (format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(UCPlayer.FormatColoredNickName, StringComparison.Ordinal))
             return Localization.Colorize(hex, names.NickName, flags);
-        if (format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(UCPlayer.FormatColoredPlayerName, StringComparison.Ordinal))
             return Localization.Colorize(hex, names.PlayerName, flags);
-        if (format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(UCPlayer.FormatColoredSteam64, StringComparison.Ordinal))
             return Localization.Colorize(hex, _s64.ToString(culture ?? Data.LocalLocale), flags);
         end:
         return _s64.ToString(culture ?? Data.LocalLocale);

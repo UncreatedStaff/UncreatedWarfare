@@ -700,6 +700,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     void IGameTickListener.Tick()
     {
+        if (Data.Gamemode.State is not State.Active and not State.Staging) return;
         for (int i = 0; i < _fobs.Count; ++i)
         {
             if (_fobs[i] is IGameTickListener ticker)

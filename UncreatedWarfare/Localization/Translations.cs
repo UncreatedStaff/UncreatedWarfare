@@ -609,21 +609,21 @@ public class Translation
             PlayerNames names = pl is null ? new PlayerNames(player) : pl.Name;
             if (format is not null)
             {
-                if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatCharacterName, StringComparison.Ordinal))
                     return names.CharacterName;
-                if (format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatColoredCharacterName, StringComparison.Ordinal))
                     return Localization.Colorize(TeamManager.GetTeamHexColor(player.GetTeam()), names.CharacterName, flags);
-                if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatNickName, StringComparison.Ordinal))
                     return names.NickName;
-                if (format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatColoredNickName, StringComparison.Ordinal))
                     return Localization.Colorize(TeamManager.GetTeamHexColor(player.GetTeam()), names.NickName, flags);
-                if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatPlayerName, StringComparison.Ordinal))
                     return names.PlayerName;
-                if (format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatColoredPlayerName, StringComparison.Ordinal))
                     return Localization.Colorize(TeamManager.GetTeamHexColor(player.GetTeam()), names.PlayerName, flags);
-                if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatSteam64, StringComparison.Ordinal))
                     return player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.AdminLocale);
-                if (format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatColoredSteam64, StringComparison.Ordinal))
                     return Localization.Colorize(TeamManager.GetTeamHexColor(player.GetTeam()), player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.AdminLocale), flags);
             }
             return names.CharacterName;
@@ -636,13 +636,13 @@ public class Translation
 
             if (format is not null)
             {
-                if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatCharacterName, StringComparison.Ordinal) || format.Equals(UCPlayer.FormatColoredCharacterName, StringComparison.Ordinal))
                     return player.characterName;
-                if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatNickName, StringComparison.Ordinal) || format.Equals(UCPlayer.FormatColoredNickName, StringComparison.Ordinal))
                     return player.nickName;
-                if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatPlayerName, StringComparison.Ordinal) || format.Equals(UCPlayer.FormatColoredPlayerName, StringComparison.Ordinal))
                     return player.playerName;
-                if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.FormatSteam64, StringComparison.Ordinal) || format.Equals(UCPlayer.FormatColoredSteam64, StringComparison.Ordinal))
                     return player.steamID.m_SteamID.ToString(Data.AdminLocale);
             }
             return player.characterName;
