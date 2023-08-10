@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -67,6 +68,13 @@ public class ShutdownCommand : Command
 
         if (ctx.ArgumentCount == 0)
         {
+#if RELEASE
+            // use this to keep the panel from auto-restarting it.
+            if (Data.Gamemode.ShouldShutdownAfterGame)
+            {
+                throw ctx.ReplyString("Already shutting down.");
+            }
+#endif
             ActionLog.AddPriority(ActionLogType.ShutdownServer, "INSTANT", ctx.CallerID);
             UCWarfare.ShutdownNow("None specified", ctx.CallerID);
             throw ctx.Defer();
@@ -107,6 +115,9 @@ public class ShutdownCommand : Command
                 Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
                 NetCalls.SendShuttingDownAfter.NetInvoke(0UL, reason);
                 ctx.Defer();
+#if RELEASE
+                Console.WriteLine("shutdown");
+#endif
             }
             else throw ctx.SendCorrectUsage("/shutdown after <reason>");
         }
@@ -117,6 +128,9 @@ public class ShutdownCommand : Command
                 throw ctx.Reply(T.InvalidTime, time);
             ShutdownIn(secs, reason, ctx.CallerID);
             ctx.Defer();
+#if RELEASE
+            Console.WriteLine("shutdown");
+#endif
         }
         else throw ctx.SendCorrectUsage(Syntax + " - " + Help);
     }

@@ -9,7 +9,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -42,7 +41,7 @@ public delegate void VoidDelegate();
 public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
-    public static readonly Version Version = new Version(3, 2, 5, 1);
+    public static readonly Version Version = new Version(3, 2, 6, 0);
     private readonly SystemConfig _config = UCWarfareNexus.Active ? new SystemConfig() : null!;
     private readonly List<UCTask> _tasks = UCWarfareNexus.Active ? new List<UCTask>(16) : null!;
     public static UCWarfare I;
