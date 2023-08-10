@@ -182,8 +182,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         L.Log("Loading Localization and Color Data...", ConsoleColor.Magenta);
         Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
         Deaths.Localization.Reload();
+#pragma warning disable CS0618
         Data.Languages = JSONMethods.LoadLanguagePreferences();
-        Data.LanguageAliases = JSONMethods.LoadLangAliases();
+#pragma warning restore CS0618
         Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
         await Translation.ReadTranslations(token).ConfigureAwait(false);
         await ToUpdate(token);

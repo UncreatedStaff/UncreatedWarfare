@@ -38,12 +38,12 @@ public static class TeamManager
             PrimaryKey = 0,
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Russian, "Администрация" },
-                { LanguageAliasSet.ChineseSimplified, "管理员" }
+                { Languages.Russian, "Администрация" },
+                { Languages.ChineseSimplified, "管理员" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ChineseSimplified, "管理员" }
+                { Languages.ChineseSimplified, "管理员" }
             },
             TMProSpriteIndex = 0
         },
@@ -63,19 +63,19 @@ public static class TeamManager
             DefaultMask = "3a7ff1898393450187e970abfc3efbf1",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Russian, "США" },
-                { LanguageAliasSet.Romanian, "Statele Unite ale Americi" },
-                { LanguageAliasSet.Swedish, "Förenta Staterna" },
-                { LanguageAliasSet.ChineseSimplified, "美利坚合众国" }
+                { Languages.Russian, "США" },
+                { Languages.Romanian, "Statele Unite ale Americi" },
+                { Languages.Swedish, "Förenta Staterna" },
+                { Languages.ChineseSimplified, "美利坚合众国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ChineseSimplified, "美利坚" }
+                { Languages.ChineseSimplified, "美利坚" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Russian, "США" },
-                { LanguageAliasSet.ChineseSimplified, "美国" }
+                { Languages.Russian, "США" },
+                { Languages.ChineseSimplified, "美国" }
             },
             TMProSpriteIndex = 1,
             Emoji = "🇺🇸"
@@ -95,23 +95,23 @@ public static class TeamManager
             DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Russian, "РОССИЯ" },
-                { LanguageAliasSet.Romanian, "Rusia" },
-                { LanguageAliasSet.Swedish, "Ryssland" },
-                { LanguageAliasSet.ChineseSimplified, "俄罗斯联邦" }
+                { Languages.Russian, "РОССИЯ" },
+                { Languages.Romanian, "Rusia" },
+                { Languages.Swedish, "Ryssland" },
+                { Languages.ChineseSimplified, "俄罗斯联邦" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Russian, "РОССИЯ" },
-                { LanguageAliasSet.Romanian, "Rusia" },
-                { LanguageAliasSet.Swedish, "Ryssland" },
-                { LanguageAliasSet.ChineseSimplified, "俄罗斯" }
+                { Languages.Russian, "РОССИЯ" },
+                { Languages.Romanian, "Rusia" },
+                { Languages.Swedish, "Ryssland" },
+                { Languages.ChineseSimplified, "俄罗斯" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Russian, "РФ" },
-                { LanguageAliasSet.Swedish, "RY" },
-                { LanguageAliasSet.ChineseSimplified, "俄国" }
+                { Languages.Russian, "РФ" },
+                { Languages.Swedish, "RY" },
+                { Languages.ChineseSimplified, "俄国" }
             },
             TMProSpriteIndex = 2,
             Emoji = "🇷🇺"
@@ -132,19 +132,19 @@ public static class TeamManager
             Emoji = "938653900913901598|938654469518950410",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Coalitia Orientului Mijlociu" },
-                { LanguageAliasSet.Swedish, "Mellanöstern Koalition" },
-                { LanguageAliasSet.ChineseSimplified, "中东联盟" },
+                { Languages.Romanian, "Coalitia Orientului Mijlociu" },
+                { Languages.Swedish, "Mellanöstern Koalition" },
+                { Languages.ChineseSimplified, "中东联盟" },
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "MK" },
-                { LanguageAliasSet.ChineseSimplified, "中东国" }
+                { Languages.Swedish, "MK" },
+                { Languages.ChineseSimplified, "中东国" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "MK" },
-                { LanguageAliasSet.ChineseSimplified, "中东" }
+                { Languages.Swedish, "MK" },
+                { Languages.ChineseSimplified, "中东" }
             },
         },
         new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/91Apxc5.png")
@@ -163,20 +163,20 @@ public static class TeamManager
             Emoji = "🇩🇪",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Germania" },
-                { LanguageAliasSet.Swedish, "Tyskland" },
-                { LanguageAliasSet.ChineseSimplified, "德意志联邦共和国" }
+                { Languages.Romanian, "Germania" },
+                { Languages.Swedish, "Tyskland" },
+                { Languages.ChineseSimplified, "德意志联邦共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Germania" },
-                { LanguageAliasSet.Swedish, "Tyskland" },
-                { LanguageAliasSet.ChineseSimplified, "德意志国" }
+                { Languages.Romanian, "Germania" },
+                { Languages.Swedish, "Tyskland" },
+                { Languages.ChineseSimplified, "德意志国" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "TY" },
-                { LanguageAliasSet.ChineseSimplified, "德国" }
+                { Languages.Swedish, "TY" },
+                { Languages.ChineseSimplified, "德国" }
             }
         },
         new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "chunarmed", @"https://i.imgur.com/Yns89Yk.png")
@@ -196,18 +196,18 @@ public static class TeamManager
             Emoji = "🇨🇳",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "Kina" },
-                { LanguageAliasSet.ChineseSimplified, "中华人民共和国" }
+                { Languages.Swedish, "Kina" },
+                { Languages.ChineseSimplified, "中华人民共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "Kina" },
-                { LanguageAliasSet.ChineseSimplified, "中国" }
+                { Languages.Swedish, "Kina" },
+                { Languages.ChineseSimplified, "中国" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "KN" },
-                { LanguageAliasSet.ChineseSimplified, "中国" }
+                { Languages.Swedish, "KN" },
+                { Languages.ChineseSimplified, "中国" }
             }
         },
         new FactionInfo(FactionInfo.USMC, "US Marine Corps", "USMC", "U.S.M.C.", "004481", null, @"https://i.imgur.com/MO9nPmf.png")
@@ -224,18 +224,18 @@ public static class TeamManager
             Emoji = "989069549817171978|989032657834885150",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "US Marinkår" },
-                { LanguageAliasSet.ChineseSimplified, "美利坚合众国海军陆战队" }
+                { Languages.Swedish, "US Marinkår" },
+                { Languages.ChineseSimplified, "美利坚合众国海军陆战队" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "U.S.M." },
-                { LanguageAliasSet.ChineseSimplified, "海军陆战队" }
+                { Languages.Swedish, "U.S.M." },
+                { Languages.ChineseSimplified, "海军陆战队" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "USM" },
-                { LanguageAliasSet.ChineseSimplified, "海军陆战队" }
+                { Languages.Swedish, "USM" },
+                { Languages.ChineseSimplified, "海军陆战队" }
             }
         },
         new FactionInfo(FactionInfo.Soviet, "Soviet", "SOV", "Soviet", "cc0000", null, @"https://i.imgur.com/vk8gBBm.png")
@@ -250,20 +250,20 @@ public static class TeamManager
             Emoji = "989037438972334091|989037438972334091",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Sovietic" },
-                { LanguageAliasSet.Swedish, "Sovjet" },
-                { LanguageAliasSet.ChineseSimplified, "苏维埃社会主义共和国联盟" }
+                { Languages.Romanian, "Sovietic" },
+                { Languages.Swedish, "Sovjet" },
+                { Languages.ChineseSimplified, "苏维埃社会主义共和国联盟" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Sovietic" },
-                { LanguageAliasSet.Swedish, "Sovjet" },
-                { LanguageAliasSet.ChineseSimplified, "苏联" }
+                { Languages.Romanian, "Sovietic" },
+                { Languages.Swedish, "Sovjet" },
+                { Languages.ChineseSimplified, "苏联" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "SOV" },
-                { LanguageAliasSet.ChineseSimplified, "苏联" }
+                { Languages.Swedish, "SOV" },
+                { Languages.ChineseSimplified, "苏联" }
             }
         },
         new FactionInfo(FactionInfo.Poland, "Poland", "PL", "Poland", "dc143c", null, @"https://i.imgur.com/fu3nCS3.png")
@@ -279,20 +279,20 @@ public static class TeamManager
             Emoji = "🇵🇱",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Polonia" },
-                { LanguageAliasSet.Swedish, "Polen" },
-                { LanguageAliasSet.ChineseSimplified, "波兰共和国" }
+                { Languages.Romanian, "Polonia" },
+                { Languages.Swedish, "Polen" },
+                { Languages.ChineseSimplified, "波兰共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Polonia" },
-                { LanguageAliasSet.Swedish, "Polen" },
-                { LanguageAliasSet.ChineseSimplified, "波兰" }
+                { Languages.Romanian, "Polonia" },
+                { Languages.Swedish, "Polen" },
+                { Languages.ChineseSimplified, "波兰" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "PL" },
-                { LanguageAliasSet.ChineseSimplified, "波兰" }
+                { Languages.Swedish, "PL" },
+                { Languages.ChineseSimplified, "波兰" }
             }
         },
         new FactionInfo(FactionInfo.Militia, "Militia", "MIL", "Militia", "526257", null)
@@ -301,19 +301,19 @@ public static class TeamManager
             TMProSpriteIndex = 9,
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Militie" },
-                { LanguageAliasSet.Swedish, "Milis" },
-                { LanguageAliasSet.ChineseSimplified, "民兵组织" }
+                { Languages.Romanian, "Militie" },
+                { Languages.Swedish, "Milis" },
+                { Languages.ChineseSimplified, "民兵组织" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Militie" },
-                { LanguageAliasSet.Swedish, "Milis" },
-                { LanguageAliasSet.ChineseSimplified, "民兵" }
+                { Languages.Romanian, "Militie" },
+                { Languages.Swedish, "Milis" },
+                { Languages.ChineseSimplified, "民兵" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ChineseSimplified, "民兵" }
+                { Languages.ChineseSimplified, "民兵" }
             }
         },
         new FactionInfo(FactionInfo.Israel, "Israel Defense Forces", "IDF", "IDF", "005eb8", null, @"https://i.imgur.com/Wzdspd3.png")
@@ -329,20 +329,20 @@ public static class TeamManager
             Emoji = "🇮🇱",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Forta de aparare a Israelului" },
-                { LanguageAliasSet.Swedish, "Israelsk Försvarsmakt" },
-                { LanguageAliasSet.ChineseSimplified, "以色列国防军" }
+                { Languages.Romanian, "Forta de aparare a Israelului" },
+                { Languages.Swedish, "Israelsk Försvarsmakt" },
+                { Languages.ChineseSimplified, "以色列国防军" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "IDF" },
-                { LanguageAliasSet.Swedish, "IF" },
-                { LanguageAliasSet.ChineseSimplified, "以色列" }
+                { Languages.Romanian, "IDF" },
+                { Languages.Swedish, "IF" },
+                { Languages.ChineseSimplified, "以色列" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "IF" },
-                { LanguageAliasSet.ChineseSimplified, "以色列" }
+                { Languages.Swedish, "IF" },
+                { Languages.ChineseSimplified, "以色列" }
             }
         },
         new FactionInfo(FactionInfo.France, "France", "FR", "France", "002654", null, @"https://i.imgur.com/TYY0kwp.png")
@@ -357,20 +357,20 @@ public static class TeamManager
             Emoji = "🇫🇷",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Franta" },
-                { LanguageAliasSet.Swedish, "Frankrike" },
-                { LanguageAliasSet.ChineseSimplified, "法兰西共和国" }
+                { Languages.Romanian, "Franta" },
+                { Languages.Swedish, "Frankrike" },
+                { Languages.ChineseSimplified, "法兰西共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Franta" },
-                { LanguageAliasSet.Swedish, "Frankrike" },
-                { LanguageAliasSet.ChineseSimplified, "法兰西" }
+                { Languages.Romanian, "Franta" },
+                { Languages.Swedish, "Frankrike" },
+                { Languages.ChineseSimplified, "法兰西" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "FR" },
-                { LanguageAliasSet.ChineseSimplified, "法国" }
+                { Languages.Swedish, "FR" },
+                { Languages.ChineseSimplified, "法国" }
             }
         },
         new FactionInfo(FactionInfo.Canada, "Canadian Armed Forces", "CAF", "Canada", "d80621", null, @"https://i.imgur.com/zs81UMe.png")
@@ -386,20 +386,20 @@ public static class TeamManager
             Emoji = "🇨🇦",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Forta armata canadiene" },
-                { LanguageAliasSet.Swedish, "Kanadas Försvarsmakt" },
-                { LanguageAliasSet.ChineseSimplified, "加拿大军队" }
+                { Languages.Romanian, "Forta armata canadiene" },
+                { Languages.Swedish, "Kanadas Försvarsmakt" },
+                { Languages.ChineseSimplified, "加拿大军队" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Canada" },
-                { LanguageAliasSet.Swedish, "Kanada" },
-                { LanguageAliasSet.ChineseSimplified, "加拿大" }
+                { Languages.Romanian, "Canada" },
+                { Languages.Swedish, "Kanada" },
+                { Languages.ChineseSimplified, "加拿大" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "KF" },
-                { LanguageAliasSet.ChineseSimplified, "加拿大" }
+                { Languages.Swedish, "KF" },
+                { Languages.ChineseSimplified, "加拿大" }
             }
         },
         new FactionInfo(FactionInfo.SouthAfrica, "South Africa", "ZA", "S. Africa", "007749", null, @"https://i.imgur.com/2orfzTh.png")
@@ -415,19 +415,19 @@ public static class TeamManager
             Emoji = "🇿🇦",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Africa de Sud" },
-                { LanguageAliasSet.Swedish, "Sydafrika" },
-                { LanguageAliasSet.ChineseSimplified, "南非共和国" }
+                { Languages.Romanian, "Africa de Sud" },
+                { Languages.Swedish, "Sydafrika" },
+                { Languages.ChineseSimplified, "南非共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "S. Africa" },
-                { LanguageAliasSet.Swedish, "S. Afrika" },
-                { LanguageAliasSet.ChineseSimplified, "南非" }
+                { Languages.Romanian, "S. Africa" },
+                { Languages.Swedish, "S. Afrika" },
+                { Languages.ChineseSimplified, "南非" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ChineseSimplified, "南非" }
+                { Languages.ChineseSimplified, "南非" }
             }
         },
         new FactionInfo(FactionInfo.Mozambique, "Mozambique", "MZ", "Mozambique", "ffd100", null, @"https://i.imgur.com/9nXhlMH.png")
@@ -442,20 +442,20 @@ public static class TeamManager
             Emoji = "🇲🇿",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Mozambic" },
-                { LanguageAliasSet.Swedish, "Mocambique" },
-                { LanguageAliasSet.ChineseSimplified, "莫桑比克共和国" }
+                { Languages.Romanian, "Mozambic" },
+                { Languages.Swedish, "Mocambique" },
+                { Languages.ChineseSimplified, "莫桑比克共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Romanian, "Mozambic" },
-                { LanguageAliasSet.Swedish, "Mocambique" },
-                { LanguageAliasSet.ChineseSimplified, "莫桑比克" }
+                { Languages.Romanian, "Mozambic" },
+                { Languages.Swedish, "Mocambique" },
+                { Languages.ChineseSimplified, "莫桑比克" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.Swedish, "MC" },
-                { LanguageAliasSet.ChineseSimplified, "莫桑比克" }
+                { Languages.Swedish, "MC" },
+                { Languages.ChineseSimplified, "莫桑比克" }
             }
         }
     };
@@ -738,7 +738,7 @@ public static class TeamManager
         get
         {
             if (_lobbySpawn == default && (Data.ExtraPoints == null || !Data.ExtraPoints.TryGetValue("lobby_spawn", out _lobbySpawn)))
-                _lobbySpawn = JSONMethods.DefaultExtraPoints.FirstOrDefault(x => x.name == "lobby_spawn").Vector3;
+                _lobbySpawn = JSONMethods.DefaultExtraPoints.FirstOrDefault(x => x.Name == "lobby_spawn").Vector3;
             return _lobbySpawn;
         }
     }

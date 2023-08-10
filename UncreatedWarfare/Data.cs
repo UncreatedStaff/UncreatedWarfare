@@ -105,16 +105,16 @@ public static class Data
     public static readonly Regex NameRichTextReplaceFilter = new Regex("<.*>");
     public static readonly Regex PluginKeyMatch = new Regex(@"\<plugin_\d\/\>", RegexOptions.IgnoreCase);
     [Obsolete("Choose between LocalLocale and AdminLocale")]
-    public static CultureInfo Locale = LanguageAliasSet.CultureEnglishUS;
-    public static CultureInfo LocalLocale = LanguageAliasSet.CultureEnglishUS; // todo set from config
-    public static readonly CultureInfo AdminLocale = LanguageAliasSet.CultureEnglishUS;
+    public static CultureInfo Locale = Warfare.Languages.CultureEnglishUS;
+    public static CultureInfo LocalLocale = Warfare.Languages.CultureEnglishUS; // todo set from config
+    public static readonly CultureInfo AdminLocale = Warfare.Languages.CultureEnglishUS;
     public static Dictionary<string, Color> Colors;
     public static Dictionary<string, string> ColorsHex;
     public static Dictionary<string, Vector3> ExtraPoints;
     public static Dictionary<ulong, string> DefaultPlayerNames;
+    [Obsolete("Use UCPlayer.Locale")]
     public static Dictionary<ulong, string> Languages;
     public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
-    public static List<LanguageAliasSet> LanguageAliases;
     public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = new Dictionary<ulong, UCPlayerData>();
     internal static WarfareSQL DatabaseManager;
     internal static WarfareSQL? RemoteSQL;

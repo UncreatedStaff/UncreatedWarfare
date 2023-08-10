@@ -6,9 +6,11 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
@@ -569,7 +571,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public bool UseCultureToParse { get; }
     public LanguageInfo LanguageInfo { get; }
     public CultureInfo CultureInfo { get; }
-    public CultureInfo ParseCulture { get; }
+    public NumberFormatInfo ParseInfo { get; }
     public float? CommandCooldownTime { get; set; }
     public bool ShouldGiveCommandCooldown => CommandCooldownTime is > 0f;
     public float? PortionCommandCooldownTime { get; set; }
@@ -579,6 +581,8 @@ public sealed class CommandInteraction : BaseCommandInteraction
     public CommandInteraction(ContextData ctx, IExecutableCommand? cmd)
         : base(cmd, ctx.IsConsole ? ("Console Command: " + ctx.OriginalMessage) : ("Command ran by " + ctx.CallerID + ": " + ctx.OriginalMessage))
     {
+        _ctx = ctx;
+
         IMGUI = _ctx.Caller is { Save.IMGUI: true };
         if (_ctx.Caller != null)
         {
@@ -593,9 +597,8 @@ public sealed class CommandInteraction : BaseCommandInteraction
             UseCultureToParse = true;
         }
 
-        ParseCulture = UseCultureToParse ? CultureInfo : Warfare.Data.LocalLocale;
+        ParseInfo = UseCultureToParse ? CultureInfo.NumberFormat : Warfare.Data.LocalLocale.NumberFormat;
 
-        _ctx = ctx;
         _offset = 0;
     }
     public static CommandInteraction CreateTemporary(UCPlayer player)
@@ -1054,7 +1057,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return int.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out value);
+        return int.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
     }
     public bool TryGet(int parameter, out byte value)
     {
@@ -1064,7 +1067,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out value);
+        return byte.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
     }
     public bool TryGet(int parameter, out short value)
     {
@@ -1074,7 +1077,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return short.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out value);
+        return short.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
     }
     public bool TryGet(int parameter, out sbyte value)
     {
@@ -1084,7 +1087,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out value);
+        return sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
     }
     public bool TryGet(int parameter, out Guid value)
     {
@@ -1104,7 +1107,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out value);
+        return uint.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
     }
     public bool TryGet(int parameter, out ushort value)
     {
@@ -1114,7 +1117,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out value);
+        return ushort.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
     }
     public bool TryGet(int parameter, out ulong value)
     {
@@ -1124,7 +1127,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out value);
+        return ulong.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
     }
     public bool TryGet(int parameter, out bool value)
     {
@@ -1169,7 +1172,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         }
 
         string p = GetParamForParse(parameter);
-        if (ulong.TryParse(p, NumberStyles.Number, ParseCulture, out value))
+        if (ulong.TryParse(p, NumberStyles.Any, ParseInfo, out value))
         {
             return value is > 0 and < 4;
         }
@@ -1194,7 +1197,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
         value = 0ul;
         return false;
     }
-    public bool TryGet(int parameter, out float value)
+    public bool TryGet(int parameter, out float value, bool allowNonNumeric = false)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1202,9 +1205,10 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return float.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out value) && !float.IsNaN(value) && !float.IsInfinity(value);
+        L.Log(JsonSerializer.Serialize(ParseInfo, JsonEx.serializerSettings));
+        return float.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value) && (allowNonNumeric || !float.IsNaN(value) && !float.IsInfinity(value));
     }
-    public bool TryGet(int parameter, out double value)
+    public bool TryGet(int parameter, out double value, bool allowNonNumeric = false)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1212,7 +1216,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return double.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out value);
+        return double.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value) && (allowNonNumeric || !double.IsNaN(value) && !double.IsInfinity(value));
     }
     public bool TryGet(int parameter, out decimal value)
     {
@@ -1222,7 +1226,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        return decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out value);
+        return decimal.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out value);
     }
     // the ref ones are so you can count on your already existing variable not being overwritten
     public bool TryGetRef<TEnum>(int parameter, ref TEnum value) where TEnum : unmanaged, Enum
@@ -1248,7 +1252,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (int.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out int value2))
+        if (int.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out int value2))
         {
             value = value2;
             return true;
@@ -1263,7 +1267,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out byte value2))
+        if (byte.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out byte value2))
         {
             value = value2;
             return true;
@@ -1278,7 +1282,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out sbyte value2))
+        if (sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out sbyte value2))
         {
             value = value2;
             return true;
@@ -1308,7 +1312,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out uint value2))
+        if (uint.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out uint value2))
         {
             value = value2;
             return true;
@@ -1323,7 +1327,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out ushort value2))
+        if (ushort.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out ushort value2))
         {
             value = value2;
             return true;
@@ -1338,14 +1342,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out ulong value2))
+        if (ulong.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out ulong value2))
         {
             value = value2;
             return true;
         }
         return false;
     }
-    public bool TryGetRef(int parameter, ref float value)
+    public bool TryGetRef(int parameter, ref float value, bool allowNonNumeric = false)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1353,14 +1357,14 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (float.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out float value2) && !float.IsNaN(value2) && !float.IsInfinity(value2))
+        if (float.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out float value2) && (allowNonNumeric || !float.IsNaN(value2) && !float.IsInfinity(value2)))
         {
             value = value2;
             return true;
         }
         return false;
     }
-    public bool TryGetRef(int parameter, ref double value)
+    public bool TryGetRef(int parameter, ref double value, bool allowNonNumeric = false)
     {
         parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.NonFlagArgumentCount)
@@ -1368,7 +1372,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (double.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out double value2) && !double.IsNaN(value2) && !double.IsInfinity(value2))
+        if (double.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out double value2) && (allowNonNumeric || !double.IsNaN(value2) && !double.IsInfinity(value2)))
         {
             value = value2;
             return true;
@@ -1383,7 +1387,7 @@ public sealed class CommandInteraction : BaseCommandInteraction
             value = 0;
             return false;
         }
-        if (decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, ParseCulture, out decimal value2))
+        if (decimal.TryParse(GetParamForParse(parameter), NumberStyles.Any, ParseInfo, out decimal value2))
         {
             value = value2;
             return true;

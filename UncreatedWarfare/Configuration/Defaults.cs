@@ -434,35 +434,6 @@ partial class JSONMethods
         { "vbs_active", "ff9933" },
         { "vbs_ready", "33cc33" },
     };
-    public static readonly List<LanguageAliasSet> DefaultLanguageAliasSets = new List<LanguageAliasSet>
-    {
-        new LanguageAliasSet(LanguageAliasSet.EnglishUS, "English", new string[] { "english", "enus", "en", "us", "inglés", "inglesa", "ingles",
-            "en-au", "en-bz", "en-ca", "en-cb", "en-ie", "en-jm", "en-nz", "en-ph", "en-tt", "en-za", "en-zw",
-            "enau", "enbz", "enca", "encb", "enie", "enjm", "ennz", "enph", "entt", "enza", "enzw" } ),
-        new LanguageAliasSet(LanguageAliasSet.Russian, "Russian", new string[] { "russian", "ruru", "ru", "russia", "cyrillic", "русский", "russkiy", "российский" } ),
-        new LanguageAliasSet(LanguageAliasSet.Spanish, "Spanish", new string[] { "spanish", "español", "española", "espanol", "espanola", "es", "eses",
-            "es-ar", "es-bo", "es-cl", "es-co", "es-cr", "es-do", "es-ec", "es-gt", "es-hn", "es-mx", "es-ni", "es-pa", "es-pe", "es-pr", "es-py", "es-sv", "es-uy", "es-ve",
-            "esar", "esbo", "escl", "esco", "escr", "esdo", "esec", "esgt", "eshn", "esmx", "esni", "espa", "espe", "espr", "espy", "essv", "esuy", "esve" } ),
-        new LanguageAliasSet(LanguageAliasSet.German, "German", new string[] { "german", "deutsche", "de", "de-at", "de-ch", "de-li", "de-lu", "deat", "dech", "deli", "delu", "dede" } ),
-        new LanguageAliasSet(LanguageAliasSet.Arabic, "Arabic", new string[] { "arabic", "ar", "arab", "عربى", "eurbaa",
-            "ar-ae", "ar-bh", "ar-dz", "ar-eg", "ar-iq", "ar-jo", "ar-kw", "ar-lb", "ar-ly", "ar-ma", "ar-om", "ar-qa", "ar-sy", "ar-tn", "ar-ye",
-            "arae", "arbh", "ardz", "areg", "ariq", "arjo", "arkw", "arlb", "arly", "arma", "arom", "arqa", "arsy", "artn", "arye"}),
-        new LanguageAliasSet(LanguageAliasSet.French, "French", new string[] { "french", "fr", "française", "français", "francaise", "francais",
-            "fr-be", "fr-ca", "fr-ch", "fr-lu", "fr-mc",
-            "frbe", "frca", "frch", "frlu", "frmc" }),
-        new LanguageAliasSet(LanguageAliasSet.Polish, "Polish", new string[] { "polish", "plpl", "polskie", "pol", "pl" }),
-        new LanguageAliasSet(LanguageAliasSet.ChineseSimplified, "Chinese (Simplified)", new string[] { "chinese", "simplified chinese", "chinese simplified", "simple chinese", "chinese simple",
-            "zh", "zh-s", "s-zh", "zh-hk", "zh-mo", "zh-sg", "中国人", "zhōngguó rén", "zhongguo ren", "简体中文", "jiǎntǐ zhōngwén", "jianti zhongwen", "中国人", "zhōngguó rén", "zhongguo ren",
-            "zhs", "szh", "zhhk", "zhmo", "zhsg", }),
-        new LanguageAliasSet(LanguageAliasSet.ChineseTraditional, "Chinese (Traditional)", new string[] { "traditional chinese", "chinese traditional",
-            "zhtw", "zh-t", "t-zh", "zht", "tzh", "中國傳統的", "zhōngguó chuántǒng de", "zhongguo chuantong de", "繁體中文", "fántǐ zhōngwén", "fanti zhongwen", "中國人" }),
-        new LanguageAliasSet(LanguageAliasSet.PortugueseBrazil, "Portuguese", new string[] { "portuguese", "pt", "pt-pt", "pt-br", "ptbr", "ptpt", "português", "a língua portuguesa", "o português" }),
-        new LanguageAliasSet(LanguageAliasSet.Filipino, "Filipino", new string[] { "pilipino", "fil", "pil", "tagalog", "filipino", "tl", "tl-ph", "fil-ph", "pil-ph" }),
-        new LanguageAliasSet(LanguageAliasSet.Norwegian, "Norwegian", new string[] { "norwegian", "norway", "bokmål", "bokmal", "norsk", "nb-no", "nb", "no", "nbno" }),
-        new LanguageAliasSet(LanguageAliasSet.Dutch, "Dutch", new string[] { "dutch", "nederlands", "nl-nl", "nl", "dutch", "nlnl" }),
-        new LanguageAliasSet(LanguageAliasSet.Swedish, "Swedish", new string[] { "swedish", "sw", "sweedish", "se", "svenska", "svensk" }),
-        new LanguageAliasSet(LanguageAliasSet.Romanian, "Romanian", new string[] { "română", "romanian", "ro", "roro", "ro-ro", "romania" })
-    };
 }
 public class Base64Converter : JsonConverter<byte[]>
 {

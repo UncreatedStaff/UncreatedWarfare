@@ -359,12 +359,12 @@ public static class CTFUI
 public enum EFlagStatus
 {
     [Translatable("CAPTURING", Description = "Shown when your team is capturing the flag.")]
-    [Translatable(LanguageAliasSet.ChineseSimplified, "占领中")]
+    [Translatable(Languages.ChineseSimplified, "占领中")]
     CAPTURING,
-    [Translatable(LanguageAliasSet.ChineseSimplified, "失去中")]
+    [Translatable(Languages.ChineseSimplified, "失去中")]
     [Translatable("LOSING", Description = "Shown when your team is losing the flag because the other team has more players.")]
     LOSING,
-    [Translatable(LanguageAliasSet.ChineseSimplified, "保护")]
+    [Translatable(Languages.ChineseSimplified, "保护")]
     [Translatable("SECURED", Description = "Shown when your team is holding the flag after it has been captured.")]
     SECURED,
     [Translatable("NEUTRALIZED", Description = "Shown when the flag has not been captured by either team.")]
@@ -373,17 +373,17 @@ public enum EFlagStatus
     LOST,
     [Translatable("CONTESTED", Description = "Shown when your team and the other team have the same amount of people on the flag.")]
     CONTESTED,
-    [Translatable(LanguageAliasSet.ChineseSimplified, "不是目标点")]
+    [Translatable(Languages.ChineseSimplified, "不是目标点")]
     [Translatable("INEFFECTIVE", Description = "Shown when you're on a flag but it's not the objective.")]
     INEFFECTIVE,
-    [Translatable(LanguageAliasSet.ChineseSimplified, "清理中")]
+    [Translatable(Languages.ChineseSimplified, "清理中")]
     [Translatable("CLEARING", Description = "Shown when your team is capturing a flag still owned by the other team.")]
     CLEARING,
     [Translatable("", Description = "Leave blank.", IsPrioritizedTranslation = false)]
     BLANK,
     [Translatable("", Description = "Leave blank.", IsPrioritizedTranslation = false)]
     DONT_DISPLAY,
-    [Translatable(LanguageAliasSet.ChineseSimplified, "在载具中")]
+    [Translatable(Languages.ChineseSimplified, "在载具中")]
     [Translatable("IN VEHICLE", Description = "Shown when you're trying to capture a flag while in a vehicle.")]
     IN_VEHICLE,
     [Translatable("LOCKED", Description = "Shown in Invasion when a flag has already been captured by attackers and can't be recaptured.")]

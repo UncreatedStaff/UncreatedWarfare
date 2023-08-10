@@ -10,10 +10,12 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
+using Uncreated.Json;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
@@ -1009,6 +1011,7 @@ public class UCPlayerLocale
     public string Language => LanguageInfo.LanguageCode;
     public CultureInfo CultureInfo { get; private set; }
     internal bool PreferencesIsDirty { get; set; }
+    public NumberFormatInfo ParseFormat { get; set; }
     public PlayerLanguagePreferences Preferences
     {
         get => _preferences;
@@ -1032,7 +1035,8 @@ public class UCPlayerLocale
             }
 
             CultureInfo = culture;
-
+            ParseFormat = value.UseCultureForCommandInput ? culture.NumberFormat : Data.LocalLocale.NumberFormat;
+            
             if (_init && LanguageInfo != info)
             {
                 L.Log($"Updated language for {Player}: {LanguageInfo?.DisplayName ?? "null"} -> {info.DisplayName}.");
@@ -1075,6 +1079,7 @@ public class UCPlayerLocale
             CultureInfo = culture;
             Preferences.CultureCode = culture.Name;
             IsDefaultCulture = culture.Name.Equals(Data.LocalLocale.Name, StringComparison.Ordinal);
+            ParseFormat = Preferences.UseCultureForCommandInput ? culture.NumberFormat : Data.LocalLocale.NumberFormat;
             save = true;
         }
 

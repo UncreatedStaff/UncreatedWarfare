@@ -48,15 +48,22 @@ public class LangCommand : AsyncCommand
         {
             StringBuilder sb = new StringBuilder();
             int i = -1;
-            foreach (LanguageAliasSet setData in Data.LanguageAliases)
+            Data.LanguageDataStore.WriteWait();
+            try
             {
-                // only show languages with translations
-                if (!T.AllLanguages.Exists(x => x.Equals(setData.key, StringComparison.OrdinalIgnoreCase)))
-                    continue;
+                foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
+                {
+                    if (!info.HasTranslationSupport)
+                        continue;
 
-                if (++i != 0) sb.Append(", ");
-                sb.Append(setData.key);
-                sb.Append(" : ").Append(setData.display_name);
+                    if (++i != 0) sb.Append(", ");
+                    sb.Append(info.LanguageCode);
+                    sb.Append(" : ").Append(info.DisplayName);
+                }
+            }
+            finally
+            {
+                Data.LanguageDataStore.WriteRelease();
             }
             ctx.Reply(T.LanguageList, sb.ToString());
         }
@@ -107,7 +114,6 @@ public class LangCommand : AsyncCommand
     }
     private static void CheckIMGUIRequirements(CommandInteraction ctx, LanguageInfo newSet)
     {
-        JSONMethods.SetLanguage(ctx.CallerID, newSet.LanguageCode);
         if (ctx.Caller.Save.IMGUI && !newSet.RequiresIMGUI)
         {
             ctx.Reply(T.NoIMGUITip1, newSet);
@@ -120,4 +126,3 @@ public class LangCommand : AsyncCommand
         }
     }
 }
-public delegate void LanguageChanged(UCPlayer player, LanguageAliasSet newLanguage, LanguageAliasSet oldLanguage);

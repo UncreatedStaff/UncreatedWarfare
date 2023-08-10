@@ -381,24 +381,34 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
             details = "<#0f0>selected</color> <#444>|</color> " + details;
         box.Details.SetText(c, details);
 
+        box.ApplyState.SetVisibility(c, !selected);
+        box.ApplyLabel.SetText(c, selected ? "Applied" : "Apply");
 
-        box.Contributors.SetText(c, language.IsDefault ? "Uncreated Warfare Developers" : string.Empty);
-        if (language is { IsDefault: false, Credits.Length: > 0 })
+        if (index == 0)
+            ToggleNoLanguages(player.Connection, false);
+
+        if (language.IsDefault)
+        {
+            box.ContributorsLabel.SetVisibility(c, true);
+            box.Contributors.SetText(c, "Uncreated Warfare Developers");
+        }
+        else if (language.Credits.Length > 0)
         {
             UCWarfare.RunTask(async token =>
             {
                 token.CombineIfNeeded(UCWarfare.UnloadCancel);
                 PlayerNames[] names = await Data.AdminSql.GetUsernamesAsync(language.Credits, token).ConfigureAwait(false);
                 box.Contributors.SetText(c, string.Join(Environment.NewLine, names.Select(PlayerNames.SelectPlayerName)));
+                box.ContributorsLabel.SetVisibility(c, true);
             }, player.DisconnectToken);
         }
-
-        box.ApplyState.SetVisibility(c, !selected);
-        box.ApplyLabel.SetText(c, selected ? "Applied" : "Apply");
-
-        if (index == 0)
-            ToggleNoLanguages(player.Connection, false);
         else
+        {
+            box.ContributorsLabel.SetVisibility(c, false);
+            box.Contributors.SetText(c, string.Empty);
+        }
+
+        if (index != 0)
             box.Root.SetVisibility(c, true);
 
         if (player.TeamSelectorData == null) return;
@@ -672,7 +682,6 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
         {
             CancellationToken token = player.DisconnectToken;
             List<LanguageInfo> results = new List<LanguageInfo>(JoinUI.Languages.Length);
-            
             await Data.LanguageDataStore.WriteWaitAsync(token).ConfigureAwait(false);
             try
             {
@@ -681,54 +690,54 @@ public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
                     string[] words = text.Split(F.SpaceSplit);
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (F.RoughlyEquals(info.DisplayName, text))
+                        if (info.HasTranslationSupport && F.RoughlyEquals(info.DisplayName, text))
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (!results.Contains(info) && F.RoughlyEquals(info.NativeName, text))
+                        if (info.HasTranslationSupport && !results.Contains(info) && F.RoughlyEquals(info.NativeName, text))
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (!results.Contains(info) && info.DisplayName.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        if (info.HasTranslationSupport && !results.Contains(info) && info.DisplayName.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) != -1)
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (!results.Contains(info) && info.NativeName.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        if (info.HasTranslationSupport && !results.Contains(info) && info.NativeName.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) != -1)
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (!results.Contains(info) && words.Any(l => info.Aliases.Any(x => F.RoughlyEquals(l, x))))
+                        if (info.HasTranslationSupport && !results.Contains(info) && words.Any(l => info.Aliases.Any(x => F.RoughlyEquals(l, x))))
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (!results.Contains(info) && words.Any(l => info.Aliases.Any(x => F.RoughlyEquals(l, x))))
+                        if (info.HasTranslationSupport && !results.Contains(info) && words.Any(l => info.Aliases.Any(x => F.RoughlyEquals(l, x))))
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (!results.Contains(info) && words.Any(l => info.DisplayName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                        if (info.HasTranslationSupport && !results.Contains(info) && words.Any(l => info.DisplayName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();
                     foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
                     {
-                        if (!results.Contains(info) && words.Any(l => info.NativeName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                        if (info.HasTranslationSupport && !results.Contains(info) && words.Any(l => info.NativeName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
                             results.Add(info);
                     }
                     token.ThrowIfCancellationRequested();
                 }
-                else results.AddRange(Data.LanguageDataStore.Languages);
+                else results.AddRange(Data.LanguageDataStore.Languages.Where(x => x.HasTranslationSupport));
             }
             finally
             {

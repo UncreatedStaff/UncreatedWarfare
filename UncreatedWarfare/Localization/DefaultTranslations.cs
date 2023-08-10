@@ -756,7 +756,7 @@ internal static class T
     public static readonly Translation<LanguageInfo> ResetCurrent    = new Translation<LanguageInfo>("<#ff8c69>You are already on the default language: <#e6e3d5>{0}</color>.", LanguageInfo.FormatDisplayName);
     
     [TranslationData(SectionLanguages, "Output from /lang <language> when the language isn't found.", "Input language")]
-    public static readonly Translation<string> LanguageNotFound          = new Translation<string>("<#dd1111>We don't have translations for <#e6e3d5>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations.", LanguageAliasSet.FormatDisplayName);
+    public static readonly Translation<string> LanguageNotFound          = new Translation<string>("<#dd1111>We don't have translations for <#e6e3d5>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations.");
 
     [TranslationData(SectionLanguages, "Tells the player that IMGUI is recommended for this language and how to enable it (part 1).", "Language id")]
     public static readonly Translation<LanguageInfo> IMGUITip1       = new Translation<LanguageInfo>("<#f53b3b>{0} recommends using IMGUI mode. do <#fff>/options imgui true</color>...", LanguageInfo.FormatDisplayName);

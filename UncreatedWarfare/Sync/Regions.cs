@@ -20,11 +20,11 @@ public static class ServerRegion
         },
         new Schema.Column("DefaultTranslationLanguageCode", "char(5)")
         {
-            Default = "'" + LanguageAliasSet.EnglishUS + "'"
+            Default = "'" + Languages.EnglishUS + "'"
         },
         new Schema.Column("DefaultCultureCode", "varchar(16)")
         {
-            Default = "'" +LanguageAliasSet.CultureEnglishUS + "'"
+            Default = "'" +Languages.CultureEnglishUS + "'"
         },
         new Schema.Column("HostCountryCode", "char(2)")
         {

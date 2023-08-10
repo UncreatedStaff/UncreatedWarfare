@@ -178,9 +178,10 @@ public class ReloadCommand : AsyncCommand
         try
         {
             await Data.ReloadLanguageDataStore(false, token).ConfigureAwait(false);
-
-            Data.LanguageAliases = JSONMethods.LoadLangAliases();
+            
+#pragma warning disable CS0618
             Data.Languages = JSONMethods.LoadLanguagePreferences();
+#pragma warning restore CS0618
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
             Deaths.Localization.Reload();
             Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);

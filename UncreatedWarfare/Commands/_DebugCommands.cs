@@ -1728,6 +1728,7 @@ public class DebugCommand : AsyncCommand
             throw ctx.SendCorrectUsage("/test damage <amount>[%] while looking at a barricade, structure, or vehicle.");
     }
 
+    [Obsolete]
     private async Task migratelangs(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertRanByConsole();
@@ -1750,7 +1751,7 @@ public class DebugCommand : AsyncCommand
                 continue;
             parameters.Add(languagePair.Key);
             parameters.Add(lang.PrimaryKey.Key);
-            parameters.Add(LanguageAliasSet.GetCultureInfo(languagePair.Value).Name);
+            parameters.Add(Languages.GetCultureInfo(languagePair.Value).Name);
             F.AppendPropertyList(query, c * 3 + 1, 3, c, 1);
             ++c;
         }

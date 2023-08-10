@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
@@ -545,11 +546,14 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
 #endif
         token.ThrowIfCancellationRequested();
         PlayerNames[] rtn = new PlayerNames[s64Array.Length];
+        object[] args = new object[s64Array.Length];
+        for (int i = 0; i < args.Length; ++i)
+            args[i] = s64Array[i];
         await QueryAsync(
             "SELECT `Steam64`, `PlayerName`, `CharacterName`, `NickName` " +
             "FROM `" + TableUsernames + "` " +
-            "WHERE `Steam64` IN (" + SqlTypes.ParameterList(0, s64Array.Length) + ") LIMIT 1;",
-            (object[])(Array)s64Array,
+            "WHERE `Steam64` IN (" + SqlTypes.ParameterList(0, s64Array.Length) + ") LIMIT " + s64Array.Length.ToString(CultureInfo.InvariantCulture) + ";",
+            args,
             reader =>
             {
                 ulong steam64 = reader.GetUInt64(0);

@@ -294,6 +294,15 @@ public class Translation
                         return _data[i];
                     }
                 }
+                for (int i = 0; i < _data.Length; ++i)
+                {
+                    LanguageInfo languageInfo = _data[i].Language;
+                    if (languageInfo.FallbackTranslationLanguageCode != null &&
+                        languageInfo.FallbackTranslationLanguageCode.Equals(language, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return _data[i];
+                    }
+                }
             }
             return _defaultData;
         }
@@ -307,6 +316,26 @@ public class Translation
                 for (int i = 0; i < _data.Length; ++i)
                 {
                     if (_data[i].Language == language)
+                    {
+                        return _data[i];
+                    }
+                }
+                if (language.FallbackTranslationLanguageCode != null)
+                {
+                    for (int i = 0; i < _data.Length; ++i)
+                    {
+                        LanguageInfo languageInfo = _data[i].Language;
+                        if (languageInfo.LanguageCode.Equals(language.FallbackTranslationLanguageCode, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return _data[i];
+                        }
+                    }
+                }
+                for (int i = 0; i < _data.Length; ++i)
+                {
+                    LanguageInfo languageInfo = _data[i].Language;
+                    if (languageInfo.FallbackTranslationLanguageCode != null &&
+                        languageInfo.FallbackTranslationLanguageCode.Equals(language.LanguageCode, StringComparison.OrdinalIgnoreCase))
                     {
                         return _data[i];
                     }
@@ -954,7 +983,7 @@ public class Translation
         if ((flags & TranslationFlags.NoPlural) == TranslationFlags.NoPlural || word.Length < 3 || (flags & TranslationFlags.Plural) == 0)
             return word;
         //culture ??= LanguageAliasSet.GetCultureInfo(language);
-        if (language.LanguageCode.Equals(LanguageAliasSet.EnglishUS, StringComparison.OrdinalIgnoreCase))
+        if (language.LanguageCode.Equals(Languages.EnglishUS, StringComparison.OrdinalIgnoreCase))
         {
             if (word.Equals("is", StringComparison.InvariantCulture))
                 return "are";
