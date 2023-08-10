@@ -3264,7 +3264,7 @@ internal static class T
                     tr.Key = field.Name;
                     tr.Id = i2;
                     tr.AttributeData = Attribute.GetCustomAttribute(field, typeof(TranslationDataAttribute)) as TranslationDataAttribute;
-                    if (tr.AttributeData.IsPrioritizedTranslation)
+                    if (tr.AttributeData is not { IsPrioritizedTranslation: false })
                         ++publicTranslations;
                     tr.Init();
                     if (tr.AttributeData is not null)
@@ -3298,7 +3298,7 @@ internal static class T
                     Signs.Add(tr.AttributeData.SignId!, tr);
             }
         }
-
+        Localization.ClearSection(TranslationSection.Primary);
         Localization.IncrementSection(TranslationSection.Primary, publicTranslations);
     }
     public static string Translate(this TranslationList list, UCPlayer player) => TryTranslate(list, player.Locale.LanguageInfo, out string local) ? local : string.Empty;

@@ -116,7 +116,8 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
         if (_totalSectionedDefaultTranslations.TryGetValue(section, out int value))
             _totalSectionedDefaultTranslations[section] = value + amt;
         else _totalSectionedDefaultTranslations.Add(section, amt);
-        _totalDefaultTranslations += amt;
+        if (_totalDefaultTranslations != 0)
+            _totalDefaultTranslations += amt;
     }
     internal void ClearSection(TranslationSection section)
     {
@@ -126,4 +127,14 @@ public class LanguageInfo : ITranslationArgument, IEquatable<LanguageInfo>
     }
     public static bool operator ==(LanguageInfo? left, LanguageInfo? right) => Equals(left, right);
     public static bool operator !=(LanguageInfo? left, LanguageInfo? right) => !Equals(left, right);
+
+    public bool SupportsCulture(CultureInfo culture)
+    {
+        if (AvailableCultureCodes == null) return false;
+        for (int i = 0; i < AvailableCultureCodes.Length; ++i)
+            if (AvailableCultureCodes[i].Equals(culture.Name, StringComparison.Ordinal))
+                return true;
+
+        return false;
+    }
 }

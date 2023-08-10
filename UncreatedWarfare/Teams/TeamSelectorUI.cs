@@ -45,15 +45,17 @@ public class TeamSelectorUI : UnturnedUI
 
     /* INTERNATIONALIZATION */
     public readonly LanguageBox[] Languages = UnturnedUIPatterns.CreateArray<LanguageBox>("box_l10n_{1}{0}", 1, to: 6);
-    public readonly CultureBox[] Cultures = UnturnedUIPatterns.CreateArray<CultureBox>("box_i14n_{1}{0}", 1, to: 6);
+    public readonly CultureBox[] Cultures = UnturnedUIPatterns.CreateArray<CultureBox>("box_i14n_{1}{0}", 1, to: 25);
 
-    public readonly ChangeableTextBox LanguageSearchBox = new ChangeableTextBox("txt_search_l10n", "txt_search_l10n_text", "txt_search_l10n_placeholder");
-    public readonly ChangeableTextBox CultureSearchBox = new ChangeableTextBox("txt_search_i14n", "txt_search_i14n_text", "txt_search_i14n_placeholder");
+    public readonly ChangeableTextBox LanguageSearchBox = new ChangeableTextBox("txt_search_l10n", "txt_search_l10n_placeholder");
+    public readonly ChangeableTextBox CultureSearchBox = new ChangeableTextBox("txt_search_i14n", "txt_search_i14n_placeholder");
 
     public readonly UnturnedLabel NoLanguagesLabel = new UnturnedLabel("lbl_no_l10n_found");
     public readonly UnturnedLabel NoCulturesLabel = new UnturnedLabel("lbl_no_i14n_found");
 
     public readonly UnturnedLabel NewOptionsLabel = new UnturnedLabel("lbl_new_options");
+
+    public readonly LabeledUnturnedToggle UseCultureForCommandInput = new LabeledUnturnedToggle(true, "tgl_use_for_cmd_input", "state_tgl_use_for_cmd_input", "lbl_use_for_cmd_input", null);
 
     public event Action<UCPlayer, ulong>? OnTeamButtonClicked;
     public event Action<UCPlayer>? OnConfirmClicked;
@@ -112,13 +114,14 @@ public class TeamSelectorUI : UnturnedUI
         if (PlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave save))
         {
             save.TrackQuests = !save.TrackQuests;
-            OptionsIMGUICheckToggle.SetVisibility(player.channel.owner.transportConnection, save.TrackQuests);
+            OptionsTrackQuestsCheckToggle.SetVisibility(player.channel.owner.transportConnection, save.TrackQuests);
             PlayerSave.WriteToSaveFile(save);
         }
     }
     private void OnApplyLanguageButtonPressed(UnturnedButton button, Player player)
     {
-        if (UCPlayer.FromPlayer(player) is not { TeamSelectorData.IsSelecting: true } ucPlayer) return;
+        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        if (ucPlayer is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
         int index = Array.FindIndex(Languages, x => x.ApplyButton == button);
         if (index == -1) return;
 
@@ -126,7 +129,8 @@ public class TeamSelectorUI : UnturnedUI
     }
     private void OnApplyCultureButtonPressed(UnturnedButton button, Player player)
     {
-        if (UCPlayer.FromPlayer(player) is not { TeamSelectorData.IsSelecting: true } ucPlayer) return;
+        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        if (ucPlayer is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
         int index = Array.FindIndex(Cultures, x => x.ApplyButton == button);
         if (index == -1) return;
 
@@ -134,13 +138,15 @@ public class TeamSelectorUI : UnturnedUI
     }
     private void OnLanguageTextUpdated(UnturnedTextBox textBox, Player player, string text)
     {
-        if (UCPlayer.FromPlayer(player) is not { TeamSelectorData.IsSelecting: true } ucPlayer) return;
+        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        if (ucPlayer is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
 
         OnLanguageSearch?.Invoke(ucPlayer, text);
     }
     private void OnCultureTextUpdated(UnturnedTextBox textBox, Player player, string text)
     {
-        if (UCPlayer.FromPlayer(player) is not { TeamSelectorData.IsSelecting: true } ucPlayer) return;
+        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        if (ucPlayer is not { TeamSelectorData.IsSelecting: true } and not { TeamSelectorData.IsOptionsOnly: true }) return;
 
         OnCultureSearch?.Invoke(ucPlayer, text);
     }
@@ -175,10 +181,10 @@ public class TeamSelectorUI : UnturnedUI
         [UIPattern("contributors_value_", Mode = FormatMode.Format)]
         public UnturnedLabel Contributors { get; set; }
 
-        [UIPattern("state_select_", Mode = FormatMode.Format)]
+        [UIPattern("btn_state_select_", Mode = FormatMode.Format)]
         public UnturnedUIElement ApplyState { get; set; }
 
-        [UIPattern("lbl_select_", Mode = FormatMode.Format)]
+        [UIPattern("btn_label_select_", Mode = FormatMode.Format)]
         public UnturnedLabel ApplyLabel { get; set; }
 
         [UIPattern("btn_select_", Mode = FormatMode.Format)]

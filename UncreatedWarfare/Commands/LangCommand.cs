@@ -82,7 +82,7 @@ public class LangCommand : AsyncCommand
 
             LanguageInfo defaultInfo = Localization.GetDefaultLanguage();
 
-            await ctx.Caller.Locale.Update(defaultInfo.LanguageCode, Data.LocalLocale, token).ConfigureAwait(false);
+            await ctx.Caller.Locale.Update(defaultInfo.LanguageCode, Data.LocalLocale, token: token).ConfigureAwait(false);
             ctx.Reply(T.ResetLanguage, defaultInfo);
             CheckIMGUIRequirements(ctx, defaultInfo);
         }
@@ -99,7 +99,7 @@ public class LangCommand : AsyncCommand
             if (newSet == oldSet)
                 throw ctx.Reply(T.LangAlreadySet, oldSet);
 
-            await ctx.Caller.Locale.Update(newSet.LanguageCode, null, token).ConfigureAwait(false);
+            await ctx.Caller.Locale.Update(newSet.LanguageCode, null, token: token).ConfigureAwait(false);
             CheckIMGUIRequirements(ctx, newSet);
             ctx.Reply(T.ChangedLanguage, newSet);
         }

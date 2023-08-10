@@ -38,7 +38,8 @@ public static class Localization
         if (TotalSectionedDefaultTranslations.TryGetValue(section, out int value))
             TotalSectionedDefaultTranslations[section] = value + amt;
         else TotalSectionedDefaultTranslations.Add(section, amt);
-        _totalDefaultTranslations += amt;
+        if (_totalDefaultTranslations != 0)
+            _totalDefaultTranslations += amt;
     }
     internal static void ClearSection(TranslationSection section)
     {
@@ -699,8 +700,6 @@ public static class Localization
                         defaultLangs.RemoveAll(x => x.Key == enumType.Key);
                 }
                 k.Add(dir.Name, k2);
-                if (Data.LanguageDataStore.GetInfoCached(dir.Name) is { } langInfo)
-                    langInfo.IncrementSection(TranslationSection.Enums, 1);
             }
         }
         for (int i = 0; i < defaultLangs.Count; ++i)
@@ -946,6 +945,11 @@ public static class Localization
     }
     public static bool TryGetCultureInfo(string code, out CultureInfo cultureInfo)
     {
+        if (code.Equals("invariant", StringComparison.InvariantCultureIgnoreCase))
+        {
+            cultureInfo = CultureInfo.InvariantCulture;
+            return true;
+        }
         try
         {
             cultureInfo = CultureInfo.GetCultureInfo(code);

@@ -2,10 +2,13 @@
 using SDG.Unturned;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework.UI;
+using Uncreated.Framework.UI.Presets;
 using Uncreated.Players;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -17,7 +20,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Teams;
 
-public class TeamSelector : BaseSingletonComponent
+public class TeamSelector : BaseSingletonComponent, IPlayerDisconnectListener
 {
     private static readonly DateTime NewOptionsExpire = new DateTime(2023, 08, 20, 00, 00, 00, DateTimeKind.Utc);
 
@@ -37,6 +40,7 @@ public class TeamSelector : BaseSingletonComponent
         EventDispatcher.PlayerLeft += OnPlayerDisconnect;
         Gamemode.OnStateUpdated += OnGamemodeStateUpdated;
         JoinUI.OnOptionsBackClicked += OnOptionsBackClicked;
+        JoinUI.UseCultureForCommandInput.OnToggleUpdated += OnUseCultureForCommandInputUpdated;
         JoinUI.OnLanguageSearch += OnLanguageSearch;
         JoinUI.OnCultureSearch += OnCultureSearch;
         JoinUI.OnLanguageApply += OnLanguageApply;
@@ -48,6 +52,7 @@ public class TeamSelector : BaseSingletonComponent
         JoinUI.OnLanguageApply -= OnLanguageApply;
         JoinUI.OnCultureSearch -= OnCultureSearch;
         JoinUI.OnLanguageSearch -= OnLanguageSearch;
+        JoinUI.UseCultureForCommandInput.OnToggleUpdated -= OnUseCultureForCommandInputUpdated;
         JoinUI.OnOptionsBackClicked -= OnOptionsBackClicked;
         Gamemode.OnStateUpdated -= OnGamemodeStateUpdated;
         EventDispatcher.PlayerLeft -= OnPlayerDisconnect;
@@ -76,6 +81,7 @@ public class TeamSelector : BaseSingletonComponent
             if (player.TeamSelectorData.IsSelecting)
             {
                 player.TeamSelectorData.IsSelecting = false;
+                ApplyOptions(player);
                 JoinUI.ClearFromPlayer(player.Connection);
             }
         }
@@ -87,14 +93,7 @@ public class TeamSelector : BaseSingletonComponent
             UCPlayer player = PlayerManager.OnlinePlayers[i];
             if (player.TeamSelectorData is { IsSelecting: true })
             {
-                if (Data.Gamemode.State is State.Staging or State.Active)
-                {
-                    JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, player.TeamSelectorData.SelectedTeam is 1 or 2);
-                }
-                else
-                {
-                    JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, true);
-                }
+                JoinUI.LogicConfirmToggle.SetVisibility(player.Connection, Data.Gamemode.State is not (State.Staging or State.Active) || player.TeamSelectorData.SelectedTeam is 1 or 2);
             }
         }
     }
@@ -118,6 +117,7 @@ public class TeamSelector : BaseSingletonComponent
     }
     private static void CloseOptions(UCPlayer player)
     {
+        ApplyOptions(player);
         JoinUI.ClearFromPlayer(player.Connection);
         player.ModalNeeded = false;
         player.HasUIHidden = false;
@@ -283,6 +283,7 @@ public class TeamSelector : BaseSingletonComponent
         if (TeamManager.JoinTeam(player, team, announce: true, teleport: true))
         {
             JoinUI.ClearFromPlayer(player.Connection);
+            ApplyOptions(player);
             player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
             player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
             player.ModalNeeded = false;
@@ -322,6 +323,18 @@ public class TeamSelector : BaseSingletonComponent
         SendOptionsMenuValues(player);
         JoinUI.LogicOpenOptionsMenu.SetVisibility(player.Connection, true);
     }
+    private static void ApplyOptions(UCPlayer player)
+    {
+        if (!player.Locale.PreferencesIsDirty)
+            return;
+
+        UCWarfare.RunTask(player.Locale.Apply, CancellationToken.None);
+    }
+    void IPlayerDisconnectListener.OnPlayerDisconnecting(UCPlayer player)
+    {
+        if (player.TeamSelectorData is { IsSelecting: true })
+            ApplyOptions(player);
+    }
     private static void SendOptionsMenuValues(UCPlayer player)
     {
         ITransportConnection c = player.Connection;
@@ -332,98 +345,451 @@ public class TeamSelector : BaseSingletonComponent
         JoinUI.CultureSearchBox.SetText(c, player.Locale.CultureInfo.Name);
 
         for (int i = 1; i < JoinUI.Languages.Length; ++i)
+        {
             JoinUI.Languages[i].Root.SetVisibility(c, false);
+            if (player.TeamSelectorData?.Languages != null)
+                player.TeamSelectorData.Languages[i] = null;
+        }
         for (int i = 1; i < JoinUI.Cultures.Length; ++i)
+        {
             JoinUI.Cultures[i].Root.SetVisibility(c, false);
-
-        JoinUI.NoLanguagesLabel.SetVisibility(c, false);
-        JoinUI.NoCulturesLabel.SetVisibility(c, false);
-
-        JoinUI.Languages[0].Root.SetVisibility(c, true);
-        JoinUI.Cultures[0].Root.SetVisibility(c, true);
+            if (player.TeamSelectorData?.Cultures != null)
+                player.TeamSelectorData.Cultures[i] = null;
+        }
 
         JoinUI.NewOptionsLabel.SetVisibility(c, DateTime.UtcNow < NewOptionsExpire);
 
-        SetLanguage(JoinUI.Languages[0], player, player.Locale.LanguageInfo, true);
-        SetCulture(JoinUI.Cultures[0], player, player.Locale.CultureInfo, true);
+        JoinUI.UseCultureForCommandInput.Set(player, player.Locale.Preferences.UseCultureForCommandInput);
+
+        SetLanguage(0, player, player.Locale.LanguageInfo, true);
+        SetCulture(0, player, player.Locale.CultureInfo, true);
     }
-    private static void SetLanguage(TeamSelectorUI.LanguageBox box, UCPlayer player, LanguageInfo language, bool selected)
+    private static void SetLanguage(int index, UCPlayer player, LanguageInfo language, bool selected)
     {
+        TeamSelectorUI.LanguageBox box = JoinUI.Languages[index];
         string name = language.DisplayName;
         if (!language.DisplayName.Equals(language.NativeName, StringComparison.Ordinal))
             name += " <#444>(<#eeb>" + language.NativeName + "</color>)";
         ITransportConnection c = player.Connection;
         box.Name.SetText(c, name);
 
-        string details = language.LanguageCode + " <#444>|</color> Support: <#fff>" + language.Support.ToString("P0", player.Locale.CultureInfo);
+        string details = language.LanguageCode + " <#444>|</color> Support: <#fff>" +
+                         language.Support.ToString("P0", player.Locale.CultureInfo) + "</color>" +
+                         " (" + (language.IsDefault ? Localization.TotalDefaultTranslations : language.TotalDefaultTranslations).ToString(player.Locale.CultureInfo) + "/" + 
+                         Localization.TotalDefaultTranslations.ToString(player.Locale.CultureInfo) + ")";
         if (selected)
-            details += "<#0f0>selected</color> <#444>|</color> ";
+            details = "<#0f0>selected</color> <#444>|</color> " + details;
         box.Details.SetText(c, details);
 
-        box.Contributors.SetText(c, string.Empty);
 
-        UCWarfare.RunTask(async token =>
+        box.Contributors.SetText(c, language.IsDefault ? "Uncreated Warfare Developers" : string.Empty);
+        if (language is { IsDefault: false, Credits.Length: > 0 })
         {
-            token.CombineIfNeeded(UCWarfare.UnloadCancel);
-            PlayerNames[] names = await Data.AdminSql.GetUsernamesAsync(language.Credits, token).ConfigureAwait(false);
-            box.Contributors.SetText(c, string.Join(Environment.NewLine, names.Select(PlayerNames.SelectPlayerName)));
-        }, player.DisconnectToken);
+            UCWarfare.RunTask(async token =>
+            {
+                token.CombineIfNeeded(UCWarfare.UnloadCancel);
+                PlayerNames[] names = await Data.AdminSql.GetUsernamesAsync(language.Credits, token).ConfigureAwait(false);
+                box.Contributors.SetText(c, string.Join(Environment.NewLine, names.Select(PlayerNames.SelectPlayerName)));
+            }, player.DisconnectToken);
+        }
 
         box.ApplyState.SetVisibility(c, !selected);
         box.ApplyLabel.SetText(c, selected ? "Applied" : "Apply");
 
-        box.Root.SetVisibility(c, true);
+        if (index == 0)
+            ToggleNoLanguages(player.Connection, false);
+        else
+            box.Root.SetVisibility(c, true);
+
+        if (player.TeamSelectorData == null) return;
+
+        player.TeamSelectorData.Languages ??= new LanguageInfo[JoinUI.Languages.Length];
+        player.TeamSelectorData.Languages[index] = language;
     }
-    private static void SetCulture(TeamSelectorUI.CultureBox box, UCPlayer player, CultureInfo culture, bool selected)
+    private static void ToggleNoLanguages(ITransportConnection connection, bool state)
     {
+        JoinUI.NoLanguagesLabel.SetVisibility(connection, state);
+        state = !state;
+        TeamSelectorUI.LanguageBox box = JoinUI.Languages[0];
+        box.ApplyButton.SetVisibility(connection, state);
+        box.Contributors.SetVisibility(connection, state);
+        box.ContributorsLabel.SetVisibility(connection, state);
+        box.Details.SetVisibility(connection, state);
+        box.Name.SetVisibility(connection, state);
+        box.Root.SetVisibility(connection, true);
+    }
+    private static void SetCulture(int index, UCPlayer player, CultureInfo culture, bool selected)
+    {
+        TeamSelectorUI.CultureBox box = JoinUI.Cultures[index];
         ITransportConnection c = player.Connection;
         box.Name.SetText(c, culture.EnglishName);
         string details = culture.Name;
         if (selected)
-            details += "<#0f0>selected</color> <#444>|</color> ";
+            details = "<#0f0>selected</color> <#444>|</color> " + details;
         box.Details.SetText(c, details);
 
         box.ApplyState.SetVisibility(c, !selected);
         box.ApplyLabel.SetText(c, selected ? "Applied" : "Apply");
+        
+        if (index == 0)
+            ToggleNoCultures(player.Connection, false);
+        else
+            box.Root.SetVisibility(c, true);
 
-        box.Root.SetVisibility(c, true);
+        if (player.TeamSelectorData == null) return;
+
+        player.TeamSelectorData.Cultures ??= new CultureInfo[JoinUI.Cultures.Length];
+        player.TeamSelectorData.Cultures[index] = culture;
     }
-    private void OnCultureApply(UCPlayer player, int arg2)
+    private static void ToggleNoCultures(ITransportConnection connection, bool state)
     {
-        throw new System.NotImplementedException();
+        JoinUI.NoCulturesLabel.SetVisibility(connection, state);
+        state = !state;
+        TeamSelectorUI.CultureBox box = JoinUI.Cultures[0];
+        box.ApplyButton.SetVisibility(connection, state);
+        box.Details.SetVisibility(connection, state);
+        box.Name.SetVisibility(connection, state);
+        box.Root.SetVisibility(connection, true);
+    }
+    private void OnCultureApply(UCPlayer player, int index)
+    {
+        if (player.TeamSelectorData is not { Cultures: not null })
+            return;
+
+        UCWarfare.RunTask(async token =>
+        {
+            await UCWarfare.ToUpdate(token);
+            CultureInfo? culture = player.TeamSelectorData.Cultures[index];
+            if (culture == null) return;
+
+            await player.Locale.Update(null, culture, holdSave: true, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
+            for (int i = 1; i < JoinUI.Cultures.Length; ++i)
+            {
+                JoinUI.Cultures[i].Root.SetVisibility(player.Connection, false);
+                if (player.TeamSelectorData?.Cultures != null)
+                    player.TeamSelectorData.Cultures[i] = null;
+            }
+
+            SetCulture(0, player, player.Locale.CultureInfo, true);
+        }, player.DisconnectToken, ctx: $"Update culture of {player}.");
     }
 
-    private void OnLanguageApply(UCPlayer player, int arg2)
+    private void OnLanguageApply(UCPlayer player, int index)
     {
-        throw new System.NotImplementedException();
-    }
+        if (player.TeamSelectorData is not { Languages: not null })
+            return;
 
-    private void OnCultureSearch(UCPlayer player, string arg2)
+        UCWarfare.RunTask(async token =>
+        {
+            await UCWarfare.ToUpdate(token);
+            LanguageInfo? language = player.TeamSelectorData.Languages[index];
+            if (language == null) return;
+            CultureInfo? culture = null;
+            CultureInfo oldCulture = player.Locale.CultureInfo;
+
+            if (language != player.Locale.LanguageInfo && !string.IsNullOrWhiteSpace(language.DefaultCultureCode))
+                Localization.TryGetCultureInfo(language.DefaultCultureCode!, out culture);
+
+            await player.Locale.Update(language.LanguageCode, culture, holdSave: true, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
+
+            JoinUI.CultureSearchBox.SetText(player.Connection, string.Empty);
+            JoinUI.LanguageSearchBox.SetText(player.Connection, language.LanguageCode);
+
+            OnCultureSearch(player, string.Empty);
+
+            UpdateLanguage(player);
+
+            for (int i = 1; i < JoinUI.Languages.Length; ++i)
+            {
+                JoinUI.Languages[i].Root.SetVisibility(player.Connection, false);
+                if (player.TeamSelectorData?.Languages != null)
+                    player.TeamSelectorData.Languages[i] = null;
+            }
+
+            if (!oldCulture.Name.Equals(player.Locale.CultureInfo.Name, StringComparison.Ordinal))
+            {
+                for (int i = 1; i < JoinUI.Cultures.Length; ++i)
+                {
+                    JoinUI.Cultures[i].Root.SetVisibility(player.Connection, false);
+                    if (player.TeamSelectorData?.Cultures != null)
+                        player.TeamSelectorData.Cultures[i] = null;
+                }
+
+                SetCulture(0, player, player.Locale.CultureInfo, true);
+            }
+
+            SetLanguage(0, player, player.Locale.LanguageInfo, true);
+        }, player.DisconnectToken, ctx: $"Update language of {player}.");
+    }
+    
+    private void OnCultureSearch(UCPlayer player, string text)
     {
-        if (string.IsNullOrWhiteSpace(arg2))
+        if (player.TeamSelectorData != null)
+            player.TeamSelectorData.CultureText = text;
+        ITransportConnection connection = player.Connection;
+        if (!string.IsNullOrWhiteSpace(text) && Localization.TryGetCultureInfo(text, out CultureInfo specificCulture))
         {
             for (int i = 1; i < JoinUI.Cultures.Length; ++i)
-                JoinUI.Cultures[i].Root.SetVisibility(player.Connection, false);
+            {
+                JoinUI.Cultures[i].Root.SetVisibility(connection, false);
+                if (player.TeamSelectorData?.Cultures != null)
+                    player.TeamSelectorData.Cultures[i] = null;
+            }
 
-            SetCulture(JoinUI.Cultures[0], player, player.Locale.CultureInfo, true);
+            SetCulture(0, player, specificCulture, false);
             return;
         }
-        CultureInfo[] cultures = Localization.AllCultures;
-        // todo
+
+        
+        Task.Run(async () =>
+        {
+            CancellationToken token = player.DisconnectToken;
+            List<CultureInfo> results = new List<CultureInfo>(JoinUI.Cultures.Length)
+            {
+                CultureInfo.InvariantCulture
+            };
+
+            CultureInfo[] cultures = Localization.AllCultures;
+            
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                string[] words = text.Split(F.SpaceSplit);
+                foreach (CultureInfo info in cultures)
+                {
+                    if (F.RoughlyEquals(info.DisplayName, text))
+                        results.Add(info);
+                }
+                token.ThrowIfCancellationRequested();
+                foreach (CultureInfo info in cultures)
+                {
+                    if (!results.Contains(info) && F.RoughlyEquals(info.EnglishName, name))
+                        results.Add(info);
+                }
+                token.ThrowIfCancellationRequested();
+                foreach (CultureInfo info in cultures)
+                {
+                    if (!results.Contains(info) && F.RoughlyEquals(info.NativeName, name))
+                        results.Add(info);
+                }
+                token.ThrowIfCancellationRequested();
+                foreach (CultureInfo info in cultures)
+                {
+                    if (!results.Contains(info) && info.DisplayName.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        results.Add(info);
+                }
+                token.ThrowIfCancellationRequested();
+                foreach (CultureInfo info in cultures)
+                {
+                    if (!results.Contains(info) && info.EnglishName.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        results.Add(info);
+                }
+                token.ThrowIfCancellationRequested();
+                foreach (CultureInfo info in cultures)
+                {
+                    if (!results.Contains(info) && info.NativeName.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        results.Add(info);
+                }
+                token.ThrowIfCancellationRequested();
+                foreach (CultureInfo info in cultures)
+                {
+                    if (!results.Contains(info) && words.Any(l => info.DisplayName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                        results.Add(info);
+                }
+                token.ThrowIfCancellationRequested();
+                foreach (CultureInfo info in cultures)
+                {
+                    if (!results.Contains(info) && words.Any(l => info.EnglishName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                        results.Add(info);
+                }
+                token.ThrowIfCancellationRequested();
+                foreach (CultureInfo info in cultures)
+                {
+                    if (!results.Contains(info) && words.Any(l => info.NativeName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                        results.Add(info);
+                }
+                token.ThrowIfCancellationRequested();
+            }
+            else results.AddRange(cultures);
+
+            await UCWarfare.ToUpdate(token);
+
+            results.RemoveAt(0);
+            LanguageInfo lang = player.Locale.LanguageInfo;
+            results.Sort((a, b) => lang.SupportsCulture(b).CompareTo(lang.SupportsCulture(a)));
+
+            L.LogDebug($"Found {results.Count} matching cultures.");
+            results.Add(CultureInfo.InvariantCulture);
+            if (results.Count == 0)
+            {
+                ToggleNoCultures(connection, true);
+                for (int i = 1; i < JoinUI.Cultures.Length; ++i)
+                {
+                    JoinUI.Cultures[i].Root.SetVisibility(connection, false);
+                    if (player.TeamSelectorData?.Cultures != null)
+                        player.TeamSelectorData.Cultures[i] = null;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < JoinUI.Cultures.Length; ++i)
+                {
+                    CultureInfo? language = i < results.Count ? results[i] : null;
+                    if (language == null)
+                    {
+                        JoinUI.Cultures[i].Root.SetVisibility(connection, false);
+                        if (player.TeamSelectorData?.Cultures != null)
+                            player.TeamSelectorData.Cultures[i] = null;
+                    }
+                    else
+                    {
+                        SetCulture(i, player, language, language.Name.Equals(player.Locale.CultureInfo.Name, StringComparison.Ordinal));
+                        await UCWarfare.SkipFrame(token);
+                    }
+                }
+            }
+        });
     }
-    private void OnLanguageSearch(UCPlayer player, string arg2)
+    
+    private void OnLanguageSearch(UCPlayer player, string text)
     {
-        LanguageInfo?[] results = new LanguageInfo[JoinUI.Languages.Length];
-        int index = -1;
-        Data.LanguageDataStore.WriteWait();
-        try
+        ITransportConnection connection = player.Connection;
+        if (!string.IsNullOrWhiteSpace(text) && Data.LanguageDataStore.GetInfoCached(text, true) is { } specificLanguage)
         {
-            // todo
+            for (int i = 1; i < JoinUI.Languages.Length; ++i)
+            {
+                JoinUI.Languages[i].Root.SetVisibility(connection, false);
+                if (player.TeamSelectorData?.Languages != null)
+                    player.TeamSelectorData.Languages[i] = null;
+            }
+
+            SetLanguage(0, player, specificLanguage, false);
+            return;
         }
-        finally
+
+        Task.Run(async () =>
         {
-            Data.LanguageDataStore.WriteRelease();
-        }
+            CancellationToken token = player.DisconnectToken;
+            List<LanguageInfo> results = new List<LanguageInfo>(JoinUI.Languages.Length);
+            
+            await Data.LanguageDataStore.WriteWaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    string[] words = text.Split(F.SpaceSplit);
+                    foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
+                    {
+                        if (F.RoughlyEquals(info.DisplayName, text))
+                            results.Add(info);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
+                    {
+                        if (!results.Contains(info) && F.RoughlyEquals(info.NativeName, text))
+                            results.Add(info);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
+                    {
+                        if (!results.Contains(info) && info.DisplayName.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) != -1)
+                            results.Add(info);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
+                    {
+                        if (!results.Contains(info) && info.NativeName.IndexOf(text, StringComparison.InvariantCultureIgnoreCase) != -1)
+                            results.Add(info);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
+                    {
+                        if (!results.Contains(info) && words.Any(l => info.Aliases.Any(x => F.RoughlyEquals(l, x))))
+                            results.Add(info);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
+                    {
+                        if (!results.Contains(info) && words.Any(l => info.Aliases.Any(x => F.RoughlyEquals(l, x))))
+                            results.Add(info);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
+                    {
+                        if (!results.Contains(info) && words.Any(l => info.DisplayName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                            results.Add(info);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    foreach (LanguageInfo info in Data.LanguageDataStore.Languages)
+                    {
+                        if (!results.Contains(info) && words.Any(l => info.NativeName.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                            results.Add(info);
+                    }
+                    token.ThrowIfCancellationRequested();
+                }
+                else results.AddRange(Data.LanguageDataStore.Languages);
+            }
+            finally
+            {
+                Data.LanguageDataStore.WriteRelease();
+            }
+
+            await UCWarfare.ToUpdate(token);
+            L.LogDebug($"Found {results.Count} matching languages.");
+
+            if (results.Count == 0)
+            {
+                ToggleNoLanguages(connection, true);
+                for (int i = 1; i < JoinUI.Languages.Length; ++i)
+                {
+                    JoinUI.Languages[i].Root.SetVisibility(connection, false);
+                    if (player.TeamSelectorData?.Languages != null)
+                        player.TeamSelectorData.Languages[i] = null;
+                }
+            }
+            else
+            {
+                results.Sort((a, b) => (player.Locale.LanguageInfo == b ? 2f : b.Support).CompareTo(player.Locale.LanguageInfo == a ? 2f : a.Support));
+                for (int i = 0; i < JoinUI.Languages.Length; ++i)
+                {
+                    LanguageInfo? language = i < results.Count ? results[i] : null;
+                    if (language == null)
+                    {
+                        JoinUI.Languages[i].Root.SetVisibility(connection, false);
+                        if (player.TeamSelectorData?.Languages != null)
+                            player.TeamSelectorData.Languages[i] = null;
+                    }
+                    else
+                    {
+                        SetLanguage(i, player, language, language == player.Locale.LanguageInfo);
+                        await UCWarfare.SkipFrame(token);
+                    }
+                }
+            }
+        });
+    }
+    private static void OnUseCultureForCommandInputUpdated(UnturnedToggle toggle, Player player, bool value)
+    {
+        if (UCPlayer.FromPlayer(player) is not { } ucPlayer)
+            return;
+
+        ucPlayer.Locale.Preferences.UseCultureForCommandInput = value;
+        ucPlayer.Locale.PreferencesIsDirty = true;
+    }
+    private static void UpdateLanguage(UCPlayer player)
+    {
+        ITransportConnection c = player.Connection;
+        JoinUI.TeamsTitle.SetText(c, T.TeamsUIHeader.Translate(player));
+        JoinUI.TeamNames[0].SetText(c, TeamManager.Team1Faction.GetShortName(player.Locale.LanguageInfo));
+        JoinUI.TeamNames[1].SetText(c, TeamManager.Team2Faction.GetShortName(player.Locale.LanguageInfo));
+        string status = T.TeamsUIClickToJoin.Translate(player);
+        JoinUI.TeamStatus[0].SetText(c, status);
+        JoinUI.TeamStatus[1].SetText(c, status);
+        JoinUI.LabelOptionsBack.SetText(player.Connection, T.TeamsUIConfirm.Translate(player));
+
+        JoinUI.LabelConfirm.SetText(c, T.TeamsUIConfirm.Translate(player));
+        JoinUI.LabelOptionsBack.SetText(player.Connection, T.TeamsUIBack.Translate(player));
     }
     private static void SendSelectionMenu(UCPlayer player, bool optionsAlreadyOpen, ulong team)
     {
@@ -432,15 +798,8 @@ public class TeamSelector : BaseSingletonComponent
             JoinUI.SendToPlayer(c);
         else
             JoinUI.LogicOpenTeamMenu.SetVisibility(c, true);
-        JoinUI.TeamsTitle.SetText(c, T.TeamsUIHeader.Translate(player));
-        JoinUI.TeamNames[0].SetText(c, TeamManager.Team1Faction.GetShortName(player.Locale.LanguageInfo));
-        JoinUI.TeamNames[1].SetText(c, TeamManager.Team2Faction.GetShortName(player.Locale.LanguageInfo));
-        string status = T.TeamsUIClickToJoin.Translate(player);
-        JoinUI.TeamStatus[0].SetText(c, status);
-        JoinUI.TeamStatus[1].SetText(c, status);
 
-        JoinUI.LabelConfirm.SetText(c, T.TeamsUIConfirm.Translate(player));
-        JoinUI.LabelOptionsBack.SetText(player.Connection, T.TeamsUIBack.Translate(player));
+        UpdateLanguage(player);
 
         if (Data.Gamemode == null || Data.Gamemode.State is not State.Staging and not State.Active)
             JoinUI.LogicConfirmToggle.SetVisibility(c, false);
@@ -665,6 +1024,9 @@ public class TeamSelectorData
     public bool IsOptionsOnly;
     public ulong SelectedTeam;
     public Coroutine? JoiningCoroutine;
+    public string? CultureText;
+    public CultureInfo?[]? Cultures;
+    public LanguageInfo?[]? Languages;
     public TeamSelectorData(bool isInLobby)
     {
         IsSelecting = isInLobby;

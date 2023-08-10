@@ -1482,7 +1482,8 @@ public class Translation
                         Translation t = T.Translations[j];
                         if (t.Key.Equals(key, StringComparison.OrdinalIgnoreCase))
                         {
-                            ++amt;
+                            if (t.AttributeData is not { IsPrioritizedTranslation: false })
+                                ++amt;
                             t.AddTranslation(languageInfo, value);
 
                             if (!T.AllLanguages.Contains(langFolder.Name, StringComparer.Ordinal))
@@ -1505,6 +1506,7 @@ public class Translation
 
             WriteLanguage(languageInfo, null, writeAll: isDefault);
             L.Log("Loaded " + amt + " translations for " + lang + ".", ConsoleColor.Magenta);
+            languageInfo.ClearSection(TranslationSection.Primary);
             languageInfo.IncrementSection(TranslationSection.Primary, amt);
             amt = 0;
         }

@@ -233,12 +233,13 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
         await _semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await Sql.NonQueryAsync(F.BuildOtherInsertQueryUpdate(TableLanguagePreferences, ColumnPreferencesSteam64, ColumnPreferencesLanguage, ColumnPreferencesCulture, ColumnPreferencesLastUpdated),
+            await Sql.NonQueryAsync(F.BuildOtherInsertQueryUpdate(TableLanguagePreferences, ColumnPreferencesSteam64, ColumnPreferencesLanguage, ColumnPreferencesCulture, ColumnPreferencesUseCultureForCommandInput, ColumnPreferencesLastUpdated),
                 new object[]
                 {
                     preferences.Steam64,
                     preferences.Language.IsValid ? preferences.Language.Key : DBNull.Value,
                     (object?)preferences.CultureCode ?? DBNull.Value,
+                    preferences.UseCultureForCommandInput,
                     preferences.LastUpdated.UtcDateTime
                 }, token).ConfigureAwait(false);
         }
@@ -256,14 +257,15 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
         try
         {
             PlayerLanguagePreferences? preferences = null;
-            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(ColumnPreferencesLanguage, ColumnPreferencesCulture, ColumnPreferencesLastUpdated)} FROM `{TableLanguagePreferences}` WHERE `{ColumnPreferencesSteam64}`=@0;", new object[] { steam64 },
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(ColumnPreferencesLanguage, ColumnPreferencesCulture, ColumnPreferencesUseCultureForCommandInput, ColumnPreferencesLastUpdated)} FROM `{TableLanguagePreferences}` WHERE `{ColumnPreferencesSteam64}`=@0 LIMIT 1;", new object[] { steam64 },
                 reader =>
                 {
                     preferences = new PlayerLanguagePreferences(
                         steam64,
                         reader.IsDBNull(0) ? PrimaryKey.NotAssigned : reader.GetInt32(0),
                         reader.IsDBNull(1) ? null : reader.GetString(1),
-                        new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc)));
+                        reader.GetBoolean(2),
+                        new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc)));
                 }, token).ConfigureAwait(false);
 
             return preferences ?? new PlayerLanguagePreferences(steam64);
@@ -392,6 +394,7 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
     public const string ColumnPreferencesSteam64 = "Steam64";
     public const string ColumnPreferencesLanguage = "Language";
     public const string ColumnPreferencesCulture = "Culture";
+    public const string ColumnPreferencesUseCultureForCommandInput = "UseCultureForCmdInput";
     public const string ColumnPreferencesLastUpdated = "LastUpdated";
 
     public static readonly Schema[] Schemas =
@@ -452,6 +455,10 @@ public abstract class MySqlLanguageDataStore : ICachableLanguageDataStore
             new Schema.Column(ColumnPreferencesCulture, SqlTypes.String(16))
             {
                 Nullable = true
+            },
+            new Schema.Column(ColumnPreferencesUseCultureForCommandInput, SqlTypes.BOOLEAN)
+            {
+                Default = "b'1'"
             },
             new Schema.Column(ColumnPreferencesLastUpdated, SqlTypes.DATETIME)
         }, true, typeof(PlayerLanguagePreferences))

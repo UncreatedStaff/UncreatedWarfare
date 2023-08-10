@@ -654,7 +654,7 @@ The bottom item, ""d6424d03-4309-417d-bc5f-17814af905a8"", is an override for th
     internal static void Reload()
     {
         Warfare.Localization.ClearSection(TranslationSection.Deaths);
-        Warfare.Localization.IncrementSection(TranslationSection.Deaths, Mathf.CeilToInt(DeathTranslations.SelectMany(x => x.Value).Count() / 3f));
+        Warfare.Localization.IncrementSection(TranslationSection.Deaths, Mathf.CeilToInt(DefaultValues.SelectMany(x => x.Translations).Count()));
         int ct = 0;
         string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
 

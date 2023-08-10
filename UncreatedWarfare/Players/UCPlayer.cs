@@ -1008,6 +1008,7 @@ public class UCPlayerLocale
     public UCPlayer Player { get; }
     public string Language => LanguageInfo.LanguageCode;
     public CultureInfo CultureInfo { get; private set; }
+    internal bool PreferencesIsDirty { get; set; }
     public PlayerLanguagePreferences Preferences
     {
         get => _preferences;
@@ -1058,7 +1059,13 @@ public class UCPlayerLocale
         Preferences = preferences;
         _init = true;
     }
-    internal Task Update(string? language, CultureInfo? culture, CancellationToken token = default)
+    internal Task Apply(CancellationToken token = default)
+    {
+        Preferences = Preferences;
+        PreferencesIsDirty = false;
+        return Data.LanguageDataStore.UpdateLanguagePreferences(Preferences, token);
+    }
+    internal Task Update(string? language, CultureInfo? culture, bool holdSave = false, CancellationToken token = default)
     {
         bool save = false;
         if (culture != null && !culture.Name.Equals(CultureInfo.Name, StringComparison.Ordinal))
@@ -1084,9 +1091,18 @@ public class UCPlayerLocale
         if (save)
         {
             Preferences.LastUpdated = DateTimeOffset.UtcNow;
-            Task task = Data.LanguageDataStore.UpdateLanguagePreferences(Preferences, token);
-            InvokeOnLocaleUpdated(Player);
-            return task;
+            if (holdSave)
+            {
+                InvokeOnLocaleUpdated(Player);
+                PreferencesIsDirty = true;
+            }
+            else
+            {
+                Task task = Data.LanguageDataStore.UpdateLanguagePreferences(Preferences, token);
+                InvokeOnLocaleUpdated(Player);
+                PreferencesIsDirty = false;
+                return task;
+            }
         }
 
         return Task.CompletedTask;
@@ -1098,8 +1114,32 @@ public class UCPlayerLocale
             return;
         // ReSharper disable once ConstantConditionalAccessQualifier
         if (UCWarfare.IsMainThread)
-            OnLocaleUpdated.Invoke(player);
-        else UCWarfare.RunOnMainThread(() => OnLocaleUpdated?.Invoke(player));
+        {
+            try
+            {
+                OnLocaleUpdated.Invoke(player);
+            }
+            catch (Exception ex)
+            {
+                L.LogError($"Error updating locale for {player}.");
+                L.LogError(ex);
+            }
+        }
+        else
+        {
+            UCWarfare.RunOnMainThread(() =>
+            {
+                try
+                {
+                    OnLocaleUpdated?.Invoke(player);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError($"Error updating locale for {player}.");
+                    L.LogError(ex);
+                }
+            });
+        }
     }
 }
 
