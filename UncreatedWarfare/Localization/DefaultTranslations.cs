@@ -1607,6 +1607,8 @@ internal static class T
     public static readonly Translation RequestVehicleStagingDelay = new Translation("<#a6918a>This vehicle can only be requested after the game starts.");
     [TranslationData(SectionRequest)]
     public static readonly Translation<string> RequestVehicleUnknownDelay = new Translation<string>("<#b3ab9f>This vehicle is delayed because: <#c$vbs_delay$>{0}</color>.");
+    [TranslationData(SectionRequest)]
+    public static readonly Translation<int> RequestVehicleTeammatesDelay = new Translation<int>("<#b3ab9f>This vehicle is delayed until <#c$vbs_delay$>{0}v{0}</color> players online.");
     #endregion
 
     #region Trait Request Delays
@@ -1636,6 +1638,8 @@ internal static class T
     public static readonly Translation RequestTraitStagingDelay = new Translation("<#a6918a>This trait can only be requested after the game starts.");
     [TranslationData(SectionRequest)]
     public static readonly Translation<string> RequestTraitUnknownDelay = new Translation<string>("<#b3ab9f>This trait is delayed because: <#c$vbs_delay$>{0}</color>.");
+    [TranslationData(SectionRequest)]
+    public static readonly Translation<int> RequestTraitTeammatesDelay = new Translation<int>("<#b3ab9f>This trait is delayed until <#c$vbs_delay$>{0}v{0}</color> players online.");
     #endregion
 
     #endregion
@@ -2068,6 +2072,8 @@ internal static class T
     public static readonly Translation VBSDelayStaging = new Translation("<#c$vbs_delay$>Locked Until Start</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionVBS, FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
     public static readonly Translation<int, int> VBSDelayTime = new Translation<int, int>("<#c$vbs_delay$>Locked: {0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
+    [TranslationData(SectionVBS)]
+    public static readonly Translation<int> VBSDelayTeammates = new Translation<int>("<#c$vbs_delay$>Locked until {0}v{0}</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(SectionVBS)]
     public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#c$vbs_delay$>Capture {0}</color>", TranslationFlags.NoColorOptimization | TranslationFlags.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
     [TranslationData(SectionVBS)]

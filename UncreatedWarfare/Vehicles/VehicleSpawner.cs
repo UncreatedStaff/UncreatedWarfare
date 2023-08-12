@@ -881,6 +881,14 @@ public class VehicleSpawner : ListSqlSingleton<VehicleSpawn>, ILevelStartListene
             e.Player.SendChat(T.VehicleNoKit);
             e.Break();
         }
+        if (e.Vehicle.transform.TryGetComponent(out VehicleComponent vc) && 
+            (vc.Data?.Item?.IsDelayed(out Delay delay) ?? false) && 
+            delay.Type == DelayType.Teammates
+            && e.Player.Player.IsInMain())
+        {
+            e.Player.SendChat(T.RequestVehicleTeammatesDelay, Mathf.FloorToInt(delay.Value));
+            e.Break();
+        }
     }
     private void OnVehicleSwapSeatRequested(VehicleSwapSeatRequested e)
     {

@@ -15,6 +15,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using static Uncreated.Warfare.Gamemodes.Flags.ZoneModel;
 
 namespace Uncreated.Warfare.Vehicles;
 
@@ -518,7 +519,8 @@ public enum DelayType
     Flag = 2,
     /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
     FlagPercentage = 3,
-    OutOfStaging = 4
+    OutOfStaging = 4,
+    Teammates = 5
 }
 [JsonConverter(typeof(DelayConverter))]
 public struct Delay : IJsonReadWrite
@@ -676,6 +678,10 @@ public struct Delay : IJsonReadWrite
                         if (StagingDelayed(ref del))
                             return true;
                         break;
+                    case DelayType.Teammates:
+                        if (TeammatesDelayed(ref del))
+                            return true;
+                        break;
                 }
             }
         }
@@ -755,11 +761,25 @@ public struct Delay : IJsonReadWrite
                         anyVal = true;
                     }
                     break;
+                case DelayType.Teammates:
+                    if ((!universal || !isNoneYet) && TeammatesDelayed(ref del))
+                    {
+                        delay = del;
+                        if (!universal) return true;
+                        anyVal = true;
+                    }
+                    break;
             }
         }
         return anyVal;
     }
     private static bool TimeDelayed(ref Delay delay) => Data.Gamemode != null && delay.Value > Data.Gamemode.SecondsSinceStart;
+    private static bool TeammatesDelayed(ref Delay delay) => Data.Gamemode != null &&
+        delay.Value > 0 && 
+        Mathf.Min(
+            PlayerManager.OnlinePlayers.Where(p => p.IsTeam1).Count(), 
+            PlayerManager.OnlinePlayers.Where(p => p.IsTeam2).Count()
+            ) < Mathf.FloorToInt(delay.Value);
     private static bool FlagDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, false, team);
     private static bool FlagPercentDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, true, team);
     private static bool FlagDelayed(ref Delay delay, bool percent, ulong team)
