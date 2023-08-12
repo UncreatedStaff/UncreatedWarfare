@@ -222,6 +222,7 @@ public static class Data
             L.LogDebug("IP not available.");
             ip = null;
         }
+        
         return new WarfareServerConfig
         {
             Address = ip,
