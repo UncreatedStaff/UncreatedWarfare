@@ -270,13 +270,15 @@ public class VehicleBayCommand : AsyncCommand
                         type = DelayType.FlagPercentage;
                     else if (ctx.MatchParameter(2, "staging", "prep"))
                         type = DelayType.OutOfStaging;
+                    else if (ctx.MatchParameter(2, "teammates", "players"))
+                        type = DelayType.Teammates;
                     else if (ctx.MatchParameter(2, "none"))
                         type = DelayType.None;
                     else
                     {
                         ctx.SendCorrectUsage(adding
-                            ? "/vehiclebay delay add <time|flag|percent|staging|none> [value] [!][gamemode]"
-                            : "/vehiclebay delay remove <all|time|flag|percent|staging|none> [value] [!][gamemode]");
+                            ? "/vehiclebay delay add <time|flag|percent|staging|teammates|none> [value] [!][gamemode]"
+                            : "/vehiclebay delay remove <all|time|flag|percent|staging|teammates|none> [value] [!][gamemode]");
                         return;
                     }
                     if (type == DelayType.None && ctx.ArgumentCount < 4)

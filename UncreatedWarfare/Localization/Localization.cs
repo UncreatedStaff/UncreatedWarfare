@@ -1162,6 +1162,10 @@ public static class Localization
                 }
             }
         }
+        else if (delay.Type == DelayType.Teammates)
+        {
+            return T.VBSDelayTeammates.Translate(language, Mathf.FloorToInt(delay.Value), null, team);
+        }
         return null;
     }
     public static void SendDelayRequestText(in Delay delay, UCPlayer player, ulong team, DelayTarget target)
@@ -1293,6 +1297,10 @@ public static class Localization
                 }
             }
         }
+        else if (delay.Type == DelayType.Teammates)
+        {
+            player.SendChat(res.TeammatesDelay, Mathf.FloorToInt(delay.Value));
+        }
         else
         {
             player.SendChat(res.UnknownDelay, delay.ToString());
@@ -1320,6 +1328,7 @@ public static class Localization
         public readonly Translation<Gamemodes.Flags.Flag> FlagDelay1;
         public readonly Translation<Gamemodes.Flags.Flag> LoseFlagDelay1;
         public readonly Translation<string> TimeDelay;
+        public readonly Translation<int> TeammatesDelay;
         public readonly Translation StagingDelay;
         public DelayResponses(DelayTarget target)
         {
@@ -1338,6 +1347,7 @@ public static class Localization
                 LoseFlagDelay1 = T.RequestTraitLoseFlagDelay1;
                 TimeDelay = T.RequestTraitTimeDelay;
                 StagingDelay = T.RequestTraitStagingDelay;
+                TeammatesDelay = T.RequestTraitTeammatesDelay;
             }
             else
             {
@@ -1354,6 +1364,7 @@ public static class Localization
                 LoseFlagDelay1 = T.RequestVehicleLoseFlagDelay1;
                 TimeDelay = T.RequestVehicleTimeDelay;
                 StagingDelay = T.RequestVehicleStagingDelay;
+                TeammatesDelay = T.RequestVehicleTeammatesDelay;
             }
         }
     }
