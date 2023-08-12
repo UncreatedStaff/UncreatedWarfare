@@ -447,7 +447,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         {
             _killThreshold = questState.KillThreshold.InsistValue();
             _kit = questState.Kit;
-            _translationCache1 = _kit.GetKitNames(_player == null ? 0 : _player.Steam64);
+            _translationCache1 = _kit.GetKitNames(Localization.GetDefaultLanguage());
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -549,7 +549,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
             _killThreshold = questState.KillThreshold.InsistValue();
             _kit = questState.Kit;
             _range = questState.Range.InsistValue();
-            _translationCache1 = _kit.GetKitNames(_player == null ? 0 : _player.Steam64);
+            _translationCache1 = _kit.GetKitNames(Localization.GetDefaultLanguage());
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -642,7 +642,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
         {
             _killThreshold = questState.KillThreshold.InsistValue();
             _class = questState.Class;
-            _translationCache1 = _class.GetCommaList(_player == null ? 0 : _player.Steam64);
+            _translationCache1 = _class.GetCommaList(Localization.GetDefaultLanguage());
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -747,7 +747,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
             _killThreshold = questState.KillThreshold.InsistValue();
             _class = questState.Class;
             _range = questState.Range.InsistValue();
-            _translationCache1 = _class.GetCommaList(_player == null ? 0 : _player.Steam64);
+            _translationCache1 = _class.GetCommaList(Localization.GetDefaultLanguage());
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -841,7 +841,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
         {
             _killThreshold = questState.KillThreshold.InsistValue();
             _class = questState.Class;
-            _translationCache1 = _class.GetCommaList(_player == null ? 0 : _player.Steam64);
+            _translationCache1 = _class.GetCommaList(Localization.GetDefaultLanguage());
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -932,7 +932,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
         {
             _killThreshold = questState.KillThreshold.InsistValue();
             _branch = questState.Branch;
-            _translationCache1 = _branch.GetCommaList(_player == null ? 0 : _player.Steam64);
+            _translationCache1 = _branch.GetCommaList(Localization.GetDefaultLanguage());
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {

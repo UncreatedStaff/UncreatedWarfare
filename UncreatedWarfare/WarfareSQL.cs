@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
@@ -536,6 +537,41 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
         string tname = s64.ToString(Data.AdminLocale);
         return new PlayerNames { Steam64 = s64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
     }
+    public async Task<PlayerNames[]> GetUsernamesAsync(ulong[] s64Array, CancellationToken token = default)
+    {
+        if (s64Array.Length == 0)
+            return Array.Empty<PlayerNames>();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        token.ThrowIfCancellationRequested();
+        PlayerNames[] rtn = new PlayerNames[s64Array.Length];
+        object[] args = new object[s64Array.Length];
+        for (int i = 0; i < args.Length; ++i)
+            args[i] = s64Array[i];
+        await QueryAsync(
+            "SELECT `Steam64`, `PlayerName`, `CharacterName`, `NickName` " +
+            "FROM `" + TableUsernames + "` " +
+            "WHERE `Steam64` IN (" + SqlTypes.ParameterList(0, s64Array.Length) + ") LIMIT " + s64Array.Length.ToString(CultureInfo.InvariantCulture) + ";",
+            args,
+            reader =>
+            {
+                ulong steam64 = reader.GetUInt64(0);
+                int index = Array.IndexOf(s64Array, steam64);
+                if (index == -1)
+                    return;
+                rtn[index] = new PlayerNames { Steam64 = steam64, PlayerName = reader.GetString(1), CharacterName = reader.GetString(2), NickName = reader.GetString(3), WasFound = true };
+            }, token).ConfigureAwait(false);
+        token.ThrowIfCancellationRequested();
+        for (int i = 0; i < s64Array.Length; ++i)
+        {
+            if (rtn[i].WasFound)
+                continue;
+            string ts = s64Array[i].ToString(Data.AdminLocale);
+            rtn[i] = new PlayerNames { Steam64 = s64Array[i], PlayerName = ts, CharacterName = ts, NickName = ts };
+        }
+        return rtn;
+    }
     [Obsolete]
     public bool GetDiscordID(ulong s64, out ulong discordId)
     {
@@ -787,7 +823,7 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
         if (ttlx >= 0)
         {
             await NonQueryAsync(
-                "INSERT INTO `" + TableLevels + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, 0, " + (xp < 0 ? "0" : "@2") + ") ON DUPLICATE KEY UPDATE `Credits` = 0, `Experience` = `Experience` + @3;",
+                "INSERT INTO `" + TableLevels + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, 0, " + (xp < 0 ? "0" : "@2") + ") ON DUPLICATE KEY UPDATE `Credits` = 0, `Experience` = `Experience` + @2;",
                 new object[] { player, team, xp }, token).ConfigureAwait(false);
             return (0, ttlx);
         }

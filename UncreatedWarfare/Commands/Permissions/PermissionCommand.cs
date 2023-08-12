@@ -63,7 +63,7 @@ public class PermissionCommand : Command
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
         if (ctx.HasArgsExact(0))
-            throw ctx.Reply(T.PermissionsCurrent, Localization.TranslateEnum(F.GetPermissions(ctx.CallerID), ctx.CallerID));
+            throw ctx.Reply(T.PermissionsCurrent, Localization.TranslateEnum(F.GetPermissions(ctx.CallerID), ctx.LanguageInfo));
 
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
@@ -87,7 +87,7 @@ public class PermissionCommand : Command
                     {
                         PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, type);
                         ctx.Reply(T.PermissionGrantSuccess, type, name, steam64);
-                        ctx.LogAction(ActionLogType.PermissionLevelChanged, $"{steam64} {Localization.TranslateEnum(t, L.Default)} >> {Localization.TranslateEnum(type, ctx.CallerID)}");
+                        ctx.LogAction(ActionLogType.PermissionLevelChanged, $"{steam64} {Localization.TranslateEnum(t)} >> {Localization.TranslateEnum(type, ctx.LanguageInfo)}");
                     }
                 });
                 ctx.Defer();
@@ -109,7 +109,7 @@ public class PermissionCommand : Command
                 {
                     PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, EAdminType.MEMBER);
                     ctx.Reply(T.PermissionRevokeSuccess, name, steam64);
-                    ctx.LogAction(ActionLogType.PermissionLevelChanged, $"{steam64} {Localization.TranslateEnum(t, L.Default)} >> {Localization.TranslateEnum(EAdminType.MEMBER, L.Default)}");
+                    ctx.LogAction(ActionLogType.PermissionLevelChanged, $"{steam64} {Localization.TranslateEnum(t)} >> {Localization.TranslateEnum(EAdminType.MEMBER)}");
                 }
             });
             ctx.Defer();

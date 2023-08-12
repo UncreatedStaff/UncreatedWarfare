@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using HarmonyLib;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -12,8 +13,6 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using HarmonyLib;
-using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
@@ -39,12 +38,12 @@ public static class TeamManager
             PrimaryKey = 0,
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.RUSSIAN, "Администрация" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "管理员" }
+                { Languages.Russian, "Администрация" },
+                { Languages.ChineseSimplified, "管理员" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "管理员" }
+                { Languages.ChineseSimplified, "管理员" }
             },
             TMProSpriteIndex = 0
         },
@@ -64,19 +63,19 @@ public static class TeamManager
             DefaultMask = "3a7ff1898393450187e970abfc3efbf1",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.RUSSIAN, "США" },
-                { LanguageAliasSet.ROMANIAN, "Statele Unite ale Americi" },
-                { LanguageAliasSet.SWEDISH, "Förenta Staterna" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "美利坚合众国" }
+                { Languages.Russian, "США" },
+                { Languages.Romanian, "Statele Unite ale Americi" },
+                { Languages.Swedish, "Förenta Staterna" },
+                { Languages.ChineseSimplified, "美利坚合众国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "美利坚" }
+                { Languages.ChineseSimplified, "美利坚" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.RUSSIAN, "США" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "美国" }
+                { Languages.Russian, "США" },
+                { Languages.ChineseSimplified, "美国" }
             },
             TMProSpriteIndex = 1,
             Emoji = "🇺🇸"
@@ -96,23 +95,23 @@ public static class TeamManager
             DefaultMask = "9d849c3f75ac405ca471fd65af4010b6",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.RUSSIAN, "РОССИЯ" },
-                { LanguageAliasSet.ROMANIAN, "Rusia" },
-                { LanguageAliasSet.SWEDISH, "Ryssland" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "俄罗斯联邦" }
+                { Languages.Russian, "РОССИЯ" },
+                { Languages.Romanian, "Rusia" },
+                { Languages.Swedish, "Ryssland" },
+                { Languages.ChineseSimplified, "俄罗斯联邦" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.RUSSIAN, "РОССИЯ" },
-                { LanguageAliasSet.ROMANIAN, "Rusia" },
-                { LanguageAliasSet.SWEDISH, "Ryssland" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "俄罗斯" }
+                { Languages.Russian, "РОССИЯ" },
+                { Languages.Romanian, "Rusia" },
+                { Languages.Swedish, "Ryssland" },
+                { Languages.ChineseSimplified, "俄罗斯" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.RUSSIAN, "РФ" },
-                { LanguageAliasSet.SWEDISH, "RY" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "俄国" }
+                { Languages.Russian, "РФ" },
+                { Languages.Swedish, "RY" },
+                { Languages.ChineseSimplified, "俄国" }
             },
             TMProSpriteIndex = 2,
             Emoji = "🇷🇺"
@@ -133,19 +132,19 @@ public static class TeamManager
             Emoji = "938653900913901598|938654469518950410",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Coalitia Orientului Mijlociu" },
-                { LanguageAliasSet.SWEDISH, "Mellanöstern Koalition" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "中东联盟" },
+                { Languages.Romanian, "Coalitia Orientului Mijlociu" },
+                { Languages.Swedish, "Mellanöstern Koalition" },
+                { Languages.ChineseSimplified, "中东联盟" },
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "MK" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "中东国" }
+                { Languages.Swedish, "MK" },
+                { Languages.ChineseSimplified, "中东国" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "MK" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "中东" }
+                { Languages.Swedish, "MK" },
+                { Languages.ChineseSimplified, "中东" }
             },
         },
         new FactionInfo(FactionInfo.Germany, "Germany", "DE", "Germany", "ffcc00", "geunarmed", @"https://i.imgur.com/91Apxc5.png")
@@ -164,20 +163,20 @@ public static class TeamManager
             Emoji = "🇩🇪",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Germania" },
-                { LanguageAliasSet.SWEDISH, "Tyskland" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "德意志联邦共和国" }
+                { Languages.Romanian, "Germania" },
+                { Languages.Swedish, "Tyskland" },
+                { Languages.ChineseSimplified, "德意志联邦共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Germania" },
-                { LanguageAliasSet.SWEDISH, "Tyskland" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "德意志国" }
+                { Languages.Romanian, "Germania" },
+                { Languages.Swedish, "Tyskland" },
+                { Languages.ChineseSimplified, "德意志国" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "TY" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "德国" }
+                { Languages.Swedish, "TY" },
+                { Languages.ChineseSimplified, "德国" }
             }
         },
         new FactionInfo(FactionInfo.China, "China", "CN", "China", "ee1c25", "chunarmed", @"https://i.imgur.com/Yns89Yk.png")
@@ -197,18 +196,18 @@ public static class TeamManager
             Emoji = "🇨🇳",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "Kina" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "中华人民共和国" }
+                { Languages.Swedish, "Kina" },
+                { Languages.ChineseSimplified, "中华人民共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "Kina" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "中国" }
+                { Languages.Swedish, "Kina" },
+                { Languages.ChineseSimplified, "中国" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "KN" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "中国" }
+                { Languages.Swedish, "KN" },
+                { Languages.ChineseSimplified, "中国" }
             }
         },
         new FactionInfo(FactionInfo.USMC, "US Marine Corps", "USMC", "U.S.M.C.", "004481", null, @"https://i.imgur.com/MO9nPmf.png")
@@ -225,18 +224,18 @@ public static class TeamManager
             Emoji = "989069549817171978|989032657834885150",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "US Marinkår" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "美利坚合众国海军陆战队" }
+                { Languages.Swedish, "US Marinkår" },
+                { Languages.ChineseSimplified, "美利坚合众国海军陆战队" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "U.S.M." },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "海军陆战队" }
+                { Languages.Swedish, "U.S.M." },
+                { Languages.ChineseSimplified, "海军陆战队" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "USM" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "海军陆战队" }
+                { Languages.Swedish, "USM" },
+                { Languages.ChineseSimplified, "海军陆战队" }
             }
         },
         new FactionInfo(FactionInfo.Soviet, "Soviet", "SOV", "Soviet", "cc0000", null, @"https://i.imgur.com/vk8gBBm.png")
@@ -251,20 +250,20 @@ public static class TeamManager
             Emoji = "989037438972334091|989037438972334091",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Sovietic" },
-                { LanguageAliasSet.SWEDISH, "Sovjet" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "苏维埃社会主义共和国联盟" }
+                { Languages.Romanian, "Sovietic" },
+                { Languages.Swedish, "Sovjet" },
+                { Languages.ChineseSimplified, "苏维埃社会主义共和国联盟" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Sovietic" },
-                { LanguageAliasSet.SWEDISH, "Sovjet" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "苏联" }
+                { Languages.Romanian, "Sovietic" },
+                { Languages.Swedish, "Sovjet" },
+                { Languages.ChineseSimplified, "苏联" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "SOV" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "苏联" }
+                { Languages.Swedish, "SOV" },
+                { Languages.ChineseSimplified, "苏联" }
             }
         },
         new FactionInfo(FactionInfo.Poland, "Poland", "PL", "Poland", "dc143c", null, @"https://i.imgur.com/fu3nCS3.png")
@@ -280,20 +279,20 @@ public static class TeamManager
             Emoji = "🇵🇱",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Polonia" },
-                { LanguageAliasSet.SWEDISH, "Polen" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "波兰共和国" }
+                { Languages.Romanian, "Polonia" },
+                { Languages.Swedish, "Polen" },
+                { Languages.ChineseSimplified, "波兰共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Polonia" },
-                { LanguageAliasSet.SWEDISH, "Polen" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "波兰" }
+                { Languages.Romanian, "Polonia" },
+                { Languages.Swedish, "Polen" },
+                { Languages.ChineseSimplified, "波兰" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "PL" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "波兰" }
+                { Languages.Swedish, "PL" },
+                { Languages.ChineseSimplified, "波兰" }
             }
         },
         new FactionInfo(FactionInfo.Militia, "Militia", "MIL", "Militia", "526257", null)
@@ -302,19 +301,19 @@ public static class TeamManager
             TMProSpriteIndex = 9,
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Militie" },
-                { LanguageAliasSet.SWEDISH, "Milis" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "民兵组织" }
+                { Languages.Romanian, "Militie" },
+                { Languages.Swedish, "Milis" },
+                { Languages.ChineseSimplified, "民兵组织" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Militie" },
-                { LanguageAliasSet.SWEDISH, "Milis" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "民兵" }
+                { Languages.Romanian, "Militie" },
+                { Languages.Swedish, "Milis" },
+                { Languages.ChineseSimplified, "民兵" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "民兵" }
+                { Languages.ChineseSimplified, "民兵" }
             }
         },
         new FactionInfo(FactionInfo.Israel, "Israel Defense Forces", "IDF", "IDF", "005eb8", null, @"https://i.imgur.com/Wzdspd3.png")
@@ -330,20 +329,20 @@ public static class TeamManager
             Emoji = "🇮🇱",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Forta de aparare a Israelului" },
-                { LanguageAliasSet.SWEDISH, "Israelsk Försvarsmakt" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "以色列国防军" }
+                { Languages.Romanian, "Forta de aparare a Israelului" },
+                { Languages.Swedish, "Israelsk Försvarsmakt" },
+                { Languages.ChineseSimplified, "以色列国防军" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "IDF" },
-                { LanguageAliasSet.SWEDISH, "IF" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "以色列" }
+                { Languages.Romanian, "IDF" },
+                { Languages.Swedish, "IF" },
+                { Languages.ChineseSimplified, "以色列" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "IF" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "以色列" }
+                { Languages.Swedish, "IF" },
+                { Languages.ChineseSimplified, "以色列" }
             }
         },
         new FactionInfo(FactionInfo.France, "France", "FR", "France", "002654", null, @"https://i.imgur.com/TYY0kwp.png")
@@ -358,20 +357,20 @@ public static class TeamManager
             Emoji = "🇫🇷",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Franta" },
-                { LanguageAliasSet.SWEDISH, "Frankrike" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "法兰西共和国" }
+                { Languages.Romanian, "Franta" },
+                { Languages.Swedish, "Frankrike" },
+                { Languages.ChineseSimplified, "法兰西共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Franta" },
-                { LanguageAliasSet.SWEDISH, "Frankrike" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "法兰西" }
+                { Languages.Romanian, "Franta" },
+                { Languages.Swedish, "Frankrike" },
+                { Languages.ChineseSimplified, "法兰西" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "FR" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "法国" }
+                { Languages.Swedish, "FR" },
+                { Languages.ChineseSimplified, "法国" }
             }
         },
         new FactionInfo(FactionInfo.Canada, "Canadian Armed Forces", "CAF", "Canada", "d80621", null, @"https://i.imgur.com/zs81UMe.png")
@@ -387,20 +386,20 @@ public static class TeamManager
             Emoji = "🇨🇦",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Forta armata canadiene" },
-                { LanguageAliasSet.SWEDISH, "Kanadas Försvarsmakt" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "加拿大军队" }
+                { Languages.Romanian, "Forta armata canadiene" },
+                { Languages.Swedish, "Kanadas Försvarsmakt" },
+                { Languages.ChineseSimplified, "加拿大军队" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Canada" },
-                { LanguageAliasSet.SWEDISH, "Kanada" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "加拿大" }
+                { Languages.Romanian, "Canada" },
+                { Languages.Swedish, "Kanada" },
+                { Languages.ChineseSimplified, "加拿大" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "KF" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "加拿大" }
+                { Languages.Swedish, "KF" },
+                { Languages.ChineseSimplified, "加拿大" }
             }
         },
         new FactionInfo(FactionInfo.SouthAfrica, "South Africa", "ZA", "S. Africa", "007749", null, @"https://i.imgur.com/2orfzTh.png")
@@ -416,19 +415,19 @@ public static class TeamManager
             Emoji = "🇿🇦",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Africa de Sud" },
-                { LanguageAliasSet.SWEDISH, "Sydafrika" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "南非共和国" }
+                { Languages.Romanian, "Africa de Sud" },
+                { Languages.Swedish, "Sydafrika" },
+                { Languages.ChineseSimplified, "南非共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "S. Africa" },
-                { LanguageAliasSet.SWEDISH, "S. Afrika" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "南非" }
+                { Languages.Romanian, "S. Africa" },
+                { Languages.Swedish, "S. Afrika" },
+                { Languages.ChineseSimplified, "南非" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "南非" }
+                { Languages.ChineseSimplified, "南非" }
             }
         },
         new FactionInfo(FactionInfo.Mozambique, "Mozambique", "MZ", "Mozambique", "ffd100", null, @"https://i.imgur.com/9nXhlMH.png")
@@ -443,20 +442,20 @@ public static class TeamManager
             Emoji = "🇲🇿",
             NameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Mozambic" },
-                { LanguageAliasSet.SWEDISH, "Mocambique" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "莫桑比克共和国" }
+                { Languages.Romanian, "Mozambic" },
+                { Languages.Swedish, "Mocambique" },
+                { Languages.ChineseSimplified, "莫桑比克共和国" }
             },
             ShortNameTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.ROMANIAN, "Mozambic" },
-                { LanguageAliasSet.SWEDISH, "Mocambique" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "莫桑比克" }
+                { Languages.Romanian, "Mozambic" },
+                { Languages.Swedish, "Mocambique" },
+                { Languages.ChineseSimplified, "莫桑比克" }
             },
             AbbreviationTranslations = new Dictionary<string, string>(4)
             {
-                { LanguageAliasSet.SWEDISH, "MC" },
-                { LanguageAliasSet.CHINESE_SIMPLIFIED, "莫桑比克" }
+                { Languages.Swedish, "MC" },
+                { Languages.ChineseSimplified, "莫桑比克" }
             }
         }
     };
@@ -739,7 +738,7 @@ public static class TeamManager
         get
         {
             if (_lobbySpawn == default && (Data.ExtraPoints == null || !Data.ExtraPoints.TryGetValue("lobby_spawn", out _lobbySpawn)))
-                _lobbySpawn = JSONMethods.DefaultExtraPoints.FirstOrDefault(x => x.name == "lobby_spawn").Vector3;
+                _lobbySpawn = JSONMethods.DefaultExtraPoints.FirstOrDefault(x => x.Name == "lobby_spawn").Vector3;
             return _lobbySpawn;
         }
     }
@@ -1121,33 +1120,29 @@ public static class TeamManager
     {
         return LobbyZone.IsInside(player) || Team1Main.IsInside(player) || Team2Main.IsInside(player) || Team1AMC.IsInside(player) || Team2AMC.IsInside(player);
     }
-    public static string TranslateName(ulong team, SteamPlayer player, bool colorize = false) => TranslateName(team, player.playerID.steamID.m_SteamID, colorize);
-    public static string TranslateName(ulong team, Player player, bool colorize = false) => TranslateName(team, player.channel.owner.playerID.steamID.m_SteamID, colorize);
-    public static string TranslateName(ulong team, CSteamID player, bool colorize = false) => TranslateName(team, player.m_SteamID, colorize);
-    public static string TranslateName(ulong team, UCPlayer player, bool colorize = false) => TranslateName(team, player.Steam64, colorize);
-    public static string TranslateName(ulong team, ulong player, bool colorize = false) => TranslateName(team, Localization.GetLang(player), colorize);
-    public static string TranslateName(ulong team, IPlayer player, bool colorize = false) => TranslateName(team, player.Steam64, colorize);
-    public static string TranslateName(ulong team, string language, bool colorize = false)
+    public static string TranslateName(ulong team, bool colorize = false) => TranslateName(team, (LanguageInfo?)null, colorize);
+    public static string TranslateName(ulong team, UCPlayer? player, bool colorize = false) => TranslateName(team, player?.Locale.LanguageInfo, colorize);
+    public static string TranslateName(ulong team, LanguageInfo? language, bool colorize = false)
     {
         string uncolorized;
         if (team == 1) uncolorized = Team1Faction.GetName(language);
         else if (team == 2) uncolorized = Team2Faction.GetName(language);
         else if (team == 3) uncolorized = AdminFaction.GetName(language);
         else if (team == 0) uncolorized = T.Neutral.Translate(language);
-        else uncolorized = team.ToString(Localization.GetLocale(language));
+        else uncolorized = team.ToString(Localization.GetCultureInfo(language));
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
     }
-    public static string TranslateShortName(ulong team, ulong player, bool colorize = false) => TranslateShortName(team, Localization.GetLang(player), colorize);
-    public static string TranslateShortName(ulong team, IPlayer player, bool colorize = false) => TranslateShortName(team, player.Steam64, colorize);
-    public static string TranslateShortName(ulong team, string language, bool colorize = false)
+    public static string TranslateShortName(ulong team, bool colorize = false) => TranslateShortName(team, (LanguageInfo?)null, colorize);
+    public static string TranslateShortName(ulong team, UCPlayer? player, bool colorize = false) => TranslateShortName(team, player?.Locale.LanguageInfo, colorize);
+    public static string TranslateShortName(ulong team, LanguageInfo? language, bool colorize = false)
     {
         string uncolorized;
         if (team == 1) uncolorized = Team1Faction.GetName(language);
         else if (team == 2) uncolorized = Team2Faction.GetName(language);
         else if (team == 3) uncolorized = AdminFaction.GetName(language);
         else if (team == 0) uncolorized = T.Neutral.Translate(language);
-        else uncolorized = team.ToString(Localization.GetLocale(language));
+        else uncolorized = team.ToString(Localization.GetCultureInfo(language));
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
     }
@@ -1315,14 +1310,14 @@ public static class TeamManager
     private static void InvokeOnLeftMain(UCPlayer player, ulong team)
     {
         player.SendChat(T.LeftMain, GetFaction(team));
-        ActionLog.Add(ActionLogType.LeftMain, "Team: " + TranslateName(player.GetTeam(), L.Default) + ", Base: " + TranslateName(team, L.Default) + 
+        ActionLog.Add(ActionLogType.LeftMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) + 
                                                    ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
         OnPlayerLeftMainBase?.Invoke(player, team);
     }
     private static void InvokeOnEnterMain(UCPlayer player, ulong team)
     {
         player.SendChat(T.EnteredMain, GetFaction(team));
-        ActionLog.Add(ActionLogType.EnterMain, "Team: " + TranslateName(player.GetTeam(), L.Default) + ", Base: " + TranslateName(team, L.Default) + 
+        ActionLog.Add(ActionLogType.EnterMain, "Team: " + TranslateName(player.GetTeam(), (LanguageInfo?)null) + ", Base: " + TranslateName(team, (LanguageInfo?)null) + 
                                                     ", Position: " + player.Position.ToString("F0", Data.AdminLocale), player);
         OnPlayerEnteredMainBase?.Invoke(player, team);
     }
@@ -1683,10 +1678,8 @@ public static class TeamManager
         }
         return FactionInfo.DownloadFactions(Data.AdminSql, _factions, token);
     }
-    public static void WriteFactionLocalization(string language, string path, bool writeMising)
+    public static void WriteFactionLocalization(LanguageInfo language, string path, bool writeMising)
     {
-        language ??= L.Default;
-        
         using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
         using StreamWriter writer = new StreamWriter(str, System.Text.Encoding.UTF8);
         writer.WriteLine("# Kit Name Translations");
@@ -1698,9 +1691,8 @@ public static class TeamManager
                 writer.WriteLine();
         }
     }
-    private static bool WriteFactionIntl(FactionInfo faction, string language, StreamWriter writer, bool writeMising)
+    private static bool WriteFactionIntl(FactionInfo faction, LanguageInfo language, StreamWriter writer, bool writeMising)
     {
-        bool isDefault = language.IsDefault();
         FactionInfo? defaultFaction = Array.Find(DefaultFactions, x => x.PrimaryKey.Key == faction.PrimaryKey.Key);
 
         GetValue(faction.NameTranslations, defaultFaction?.NameTranslations, out string? nameValue, out bool isNameValueDefault);
@@ -1710,7 +1702,7 @@ public static class TeamManager
         if (!writeMising && isNameValueDefault && isShortNameValueDefault && isAbbreviationNameValueDefault)
             return false;
 
-        writer.WriteLine("# " + faction.GetName(L.Default) + " (ID: " + faction.FactionId + ", #" + faction.PrimaryKey.Key.ToString(CultureInfo.InvariantCulture) + ")");
+        writer.WriteLine("# " + faction.GetName(null) + " (ID: " + faction.FactionId + ", #" + faction.PrimaryKey.Key.ToString(CultureInfo.InvariantCulture) + ")");
         if (faction.Name != null)
             writer.WriteLine("#  Name:         " + faction.Name);
         if (faction.ShortName != null)
@@ -1723,19 +1715,19 @@ public static class TeamManager
         if (writeMising || !isNameValueDefault)
         {
             if (!isNameValueDefault)
-                writer.WriteLine("# Default: " + faction.GetName(L.Default));
+                writer.WriteLine("# Default: " + faction.GetName(null));
             writer.WriteLine("Name: " + (nameValue ?? faction.Name ?? defaultFaction?.Name ?? faction.FactionId));
         }
         if (writeMising || !isShortNameValueDefault)
         {
             if (!isShortNameValueDefault)
-                writer.WriteLine("# Default: " + faction.GetShortName(L.Default));
+                writer.WriteLine("# Default: " + faction.GetShortName(null));
             writer.WriteLine("ShortName: " + (shortNameValue ?? faction.ShortName ?? defaultFaction?.ShortName ?? faction.FactionId));
         }
         if (writeMising || !isAbbreviationNameValueDefault)
         {
             if (!isAbbreviationNameValueDefault)
-                writer.WriteLine("# Default: " + faction.GetAbbreviation(L.Default));
+                writer.WriteLine("# Default: " + faction.GetAbbreviation(null));
             writer.WriteLine("Abbreviation: " + (abbreviationValue ?? faction.Abbreviation ?? defaultFaction?.Abbreviation ?? faction.FactionId));
         }
         return true;
@@ -1745,13 +1737,13 @@ public static class TeamManager
             value = null;
             if (loaded != null)
             {
-                if (loaded.TryGetValue(language, out value))
-                    isDefaultValue = isDefault;
-                else if (!isDefault && loaded.TryGetValue(L.Default, out value))
+                if (loaded.TryGetValue(language.LanguageCode, out value))
+                    isDefaultValue = language.IsDefault;
+                else if (!language.IsDefault && loaded.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
-                else if (@default != null && @default.TryGetValue(language, out value))
-                    isDefaultValue = isDefault;
-                else if (@default != null && !isDefault && @default.TryGetValue(L.Default, out value))
+                else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+                    isDefaultValue = language.IsDefault;
+                else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                     isDefaultValue = true;
                 else
                 {
@@ -1759,9 +1751,9 @@ public static class TeamManager
                     isDefaultValue = true;
                 }
             }
-            else if (@default != null && @default.TryGetValue(language, out value))
-                isDefaultValue = isDefault;
-            else if (@default != null && !isDefault && @default.TryGetValue(L.Default, out value))
+            else if (@default != null && @default.TryGetValue(language.LanguageCode, out value))
+                isDefaultValue = language.IsDefault;
+            else if (@default != null && !language.IsDefault && @default.TryGetValue(L.Default, out value))
                 isDefaultValue = true;
             else
                 isDefaultValue = true;
@@ -1887,7 +1879,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     [FormatDisplay("Colored Abbreviation")]
     public const string FormatColorAbbreviation = "ac";
 
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null)
@@ -1903,7 +1895,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             if (format.Equals(FormatColorAbbreviation, StringComparison.Ordinal))
                 return Localization.Colorize(HexColor, GetAbbreviation(language), flags);
             if (format.Equals(FormatId, StringComparison.Ordinal) ||
-                     format.Equals(FormatColorId, StringComparison.Ordinal))
+                format.Equals(FormatColorId, StringComparison.Ordinal))
             {
                 ulong team = 0;
                 if (TeamManager.Team1Faction == this)
@@ -1913,33 +1905,33 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                 else if (TeamManager.AdminFaction == this)
                     team = 3;
                 if (format.Equals(FormatId, StringComparison.Ordinal))
-                    return team.ToString(Localization.GetLocale(language));
+                    return team.ToString(culture ?? Data.LocalLocale);
 
-                return Localization.Colorize(HexColor, team.ToString(Localization.GetLocale(language)), flags);
+                return Localization.Colorize(HexColor, team.ToString(culture ?? Data.LocalLocale), flags);
             }
         }
         return GetName(language);
     }
-    public string GetName(string? language)
+    public string GetName(LanguageInfo? language)
     {
-        if (language is null || language.Equals(L.Default, StringComparison.OrdinalIgnoreCase) || NameTranslations is null || !NameTranslations.TryGetValue(language, out string val))
+        if (language is null || language.IsDefault || NameTranslations is null || !NameTranslations.TryGetValue(language.LanguageCode, out string val))
             return Name;
         return val;
     }
-    public string GetShortName(string? language)
+    public string GetShortName(LanguageInfo? language)
     {
-        if (language is null || language.Equals(L.Default, StringComparison.OrdinalIgnoreCase))
+        if (language is null || language.IsDefault)
             return ShortName ?? Name;
-        if (ShortNameTranslations is null || !ShortNameTranslations.TryGetValue(language, out string val))
+        if (ShortNameTranslations is null || !ShortNameTranslations.TryGetValue(language.LanguageCode, out string val))
         {
-            if (NameTranslations is null || !NameTranslations.TryGetValue(language, out val))
+            if (NameTranslations is null || !NameTranslations.TryGetValue(language.LanguageCode, out val))
                 return ShortName ?? Name;
         }
         return val;
     }
-    public string GetAbbreviation(string? language)
+    public string GetAbbreviation(LanguageInfo? language)
     {
-        if (language is null || language.Equals(L.Default, StringComparison.OrdinalIgnoreCase) || AbbreviationTranslations is null || !AbbreviationTranslations.TryGetValue(language, out string val))
+        if (language is null || language.IsDefault || AbbreviationTranslations is null || !AbbreviationTranslations.TryGetValue(language.LanguageCode, out string val))
             return Abbreviation;
         return val;
     }
@@ -2231,6 +2223,10 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     }
     public static async Task DownloadFactions(MySqlDatabase sql, List<FactionInfo> list, CancellationToken token = default)
     {
+        if (UCWarfare.IsLoaded)
+            Localization.ClearSection(TranslationSection.Factions);
+
+        int ct = 0;
         int[] vals = await sql.VerifyTables(SCHEMAS, token).ConfigureAwait(false);
         if (vals[0] == 3)
         {
@@ -2322,7 +2318,12 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         TMProSpriteIndex = spriteIndex,
                         Emoji = emoji,
                     });
+                ct += 3;
         }, token).ConfigureAwait(false);
+        if (UCWarfare.IsLoaded)
+        {
+            Localization.IncrementSection(TranslationSection.Factions, ct);
+        }
         await sql.QueryAsync(
             $"SELECT `{COLUMN_EXT_PK}`,`{COLUMN_ASSETS_SUPPLY_AMMO}`,`{COLUMN_ASSETS_SUPPLY_BUILD}`," +
             $"`{COLUMN_ASSETS_RALLY_POINT}`,`{COLUMN_ASSETS_FOB_RADIO}`,`{COLUMN_ASSETS_DEFAULT_BACKPACK}`," +
@@ -2421,6 +2422,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         else if (faction.NameTranslations.ContainsKey(lang))
                             break;
                         faction.NameTranslations.Add(lang, reader.GetString(2));
+                        TryIncrement(lang);
                         break;
                     }
                 }
@@ -2440,6 +2442,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         else if (faction.ShortNameTranslations.ContainsKey(lang))
                             break;
                         faction.ShortNameTranslations.Add(lang, reader.GetString(2));
+                        TryIncrement(lang);
                         break;
                     }
                 }
@@ -2459,10 +2462,17 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                         else if (faction.AbbreviationTranslations.ContainsKey(lang))
                             break;
                         faction.AbbreviationTranslations.Add(lang, reader.GetString(2));
+                        TryIncrement(lang);
                         break;
                     }
                 }
             }, token).ConfigureAwait(false);
+
+        void TryIncrement(string lang)
+        {
+            if (UCWarfare.IsLoaded && Data.LanguageDataStore.GetInfoCached(lang) is { } language)
+                language.IncrementSection(TranslationSection.Factions, 1);
+        }
     }
 
     public object Clone()

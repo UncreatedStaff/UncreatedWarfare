@@ -23,7 +23,7 @@ namespace Uncreated.Warfare;
 public static class L
 {
     /// <summary>Default Language (previously <see cref="JSONMethods"/>.DEFAULT_LANGUAGE)</summary>
-    public const string Default = LanguageAliasSet.ENGLISH;
+    public const string Default = Languages.EnglishUS;
     private const char ConsoleEscapeCharacter = '\u001B';
     private static readonly byte[] NewLineBytes = System.Text.Encoding.UTF8.GetBytes(Environment.NewLine);
     private static bool _init;

@@ -36,7 +36,7 @@ public class XPUI : UnturnedUI
         LevelData data = player.Level;
         SendToPlayer(c,
             data.Abbreviation,
-            data.CurrentXP.ToString(player.Culture) + "/" + data.RequiredXP.ToString(player.Culture),
+            data.CurrentXP.ToString(player.Locale.CultureInfo) + "/" + data.RequiredXP.ToString(player.Locale.CultureInfo),
             data.NextAbbreviation,
             data.ProgressBar);
         if (player.HasUIHidden || Data.Gamemode.LeaderboardUp())
@@ -77,7 +77,7 @@ public class XPUI : UnturnedUI
         LevelData data = player.Level;
         if (full || (player.PointsDirtyMask & 0b00000001) > 0)
         {
-            XP.SetText(c, data.CurrentXP.ToString(player.Culture) + "/" + data.RequiredXP.ToString(player.Culture));
+            XP.SetText(c, data.CurrentXP.ToString(player.Locale.CultureInfo) + "/" + data.RequiredXP.ToString(player.Locale.CultureInfo));
         }
         if (full || (player.PointsDirtyMask & 0b00000010) > 0)
         {
@@ -156,6 +156,6 @@ public class CreditsUI : UnturnedUI
 
     private string GetCreditsString(UCPlayer player)
     {
-        return "<color=#" + CreditsColor + ">C</color>  " + player.CachedCredits.ToString(player.Culture);
+        return "<color=#" + CreditsColor + ">C</color>  " + player.CachedCredits.ToString(player.Locale.CultureInfo);
     }
 }

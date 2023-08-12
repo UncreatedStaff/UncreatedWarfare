@@ -163,7 +163,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     private void OnPlayerMainCamping(UCPlayer player)
     {
         ToastMessage.QueueMessage(player, new ToastMessage(ToastMessageStyle.FlashingWarning,
-            T.EnteredEnemyTerritory.Translate(player, false, Mathf.RoundToInt(Config.GeneralAMCKillTime.Value).GetTimeFromSeconds(player))) { OverrideDuration = Config.GeneralAMCKillTime.Value } );
+            T.EnteredEnemyTerritory.Translate(player, false, Localization.GetTimeFromSeconds(Mathf.RoundToInt(Config.GeneralAMCKillTime.Value), player))) { OverrideDuration = Config.GeneralAMCKillTime.Value } );
         player.Player.StartCoroutine(PlayerMainCampingCoroutine(player));
     }
     private IEnumerator PlayerMainCampingCoroutine(UCPlayer player)
@@ -176,8 +176,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
         player.Player.movement.forceRemoveFromVehicle();
         yield return null;
         player.Player.life.askDamage(byte.MaxValue, Vector3.up / 8f, DeathTracker.InEnemyMainDeathCause, ELimb.SPINE, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
-        ActionLog.Add(ActionLogType.MainCampAttempt, $"Player team: {TeamManager.TranslateName(team, 0, false)}, " +
-                                                           $"Team: {TeamManager.TranslateName(TeamManager.Other(team), 0, false)}, " +
+        ActionLog.Add(ActionLogType.MainCampAttempt, $"Player team: {TeamManager.TranslateName(team, false)}, " +
+                                                           $"Team: {TeamManager.TranslateName(TeamManager.Other(team), false)}, " +
                                                            $"Location: {player.Position.ToString("0.#", Data.AdminLocale)}", player);
     }
     public void SpawnBlockers()

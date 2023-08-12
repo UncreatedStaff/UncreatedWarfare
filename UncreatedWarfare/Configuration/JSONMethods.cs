@@ -9,6 +9,7 @@ using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -16,76 +17,83 @@ namespace Uncreated.Warfare;
 
 public struct Point3D
 {
-    public string name;
-    public float x;
-    public float y;
-    public float z;
+    [JsonPropertyName("name")]
+    public string Name;
+    [JsonPropertyName("x")]
+    public float X;
+    [JsonPropertyName("y")]
+    public float Y;
+    [JsonPropertyName("z")]
+    public float Z;
     [JsonIgnore]
-    public readonly Vector3 Vector3 { get => new Vector3(x, y, z); }
+    public readonly Vector3 Vector3 { get => new Vector3(X, Y, Z); }
     [JsonConstructor]
     public Point3D(string name, float x, float y, float z)
     {
-        this.name = name;
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        this.Name = name;
+        this.X = x;
+        this.Y = y;
+        this.Z = z;
     }
 }
 public struct SerializableVector3 : IJsonReadWrite
 {
     public static readonly SerializableVector3 Zero = new SerializableVector3(0, 0, 0);
-    public float x;
-    public float y;
-    public float z;
+    [JsonPropertyName("x")]
+    public float X;
+    [JsonPropertyName("y")]
+    public float Y;
+    [JsonPropertyName("z")]
+    public float Z;
     [JsonIgnore]
     public Vector3 Vector3
     {
-        readonly get => new Vector3(x, y, z);
+        readonly get => new Vector3(X, Y, Z);
         set
         {
-            x = value.x; y = value.y; z = value.z;
+            X = value.x; Y = value.y; Z = value.z;
         }
     }
-    public static bool operator ==(SerializableVector3 a, SerializableVector3 b) => a.x == b.x && a.y == b.y && a.z == b.z;
-    public static bool operator ==(SerializableVector3 a, Vector3 b) => a.x == b.x && a.y == b.y && a.z == b.z;
-    public static bool operator !=(SerializableVector3 a, SerializableVector3 b) => a.x != b.x || a.y != b.y || a.z != b.z;
-    public static bool operator !=(SerializableVector3 a, Vector3 b) => a.x != b.x || a.y != b.y || a.z != b.z;
+    public static bool operator ==(SerializableVector3 a, SerializableVector3 b) => a.X == b.X && a.Y == b.Y && a.Z == b.Z;
+    public static bool operator ==(SerializableVector3 a, Vector3 b) => a.X == b.x && a.Y == b.y && a.Z == b.z;
+    public static bool operator !=(SerializableVector3 a, SerializableVector3 b) => a.X != b.X || a.Y != b.Y || a.Z != b.Z;
+    public static bool operator !=(SerializableVector3 a, Vector3 b) => a.X != b.x || a.Y != b.y || a.Z != b.z;
     public readonly override bool Equals(object obj)
     {
         if (obj == default) return false;
         if (obj is SerializableVector3 v3)
-            return x == v3.x && y == v3.y && z == v3.z;
+            return X == v3.X && Y == v3.Y && Z == v3.Z;
         else if (obj is Vector3 uv3)
-            return x == uv3.x && y == uv3.y && z == uv3.z;
+            return X == uv3.x && Y == uv3.y && Z == uv3.z;
         else return false;
     }
     public readonly override int GetHashCode()
     {
         int hashCode = 373119288;
-        hashCode = hashCode * -1521134295 + x.GetHashCode();
-        hashCode = hashCode * -1521134295 + y.GetHashCode();
-        hashCode = hashCode * -1521134295 + z.GetHashCode();
+        hashCode = hashCode * -1521134295 + X.GetHashCode();
+        hashCode = hashCode * -1521134295 + Y.GetHashCode();
+        hashCode = hashCode * -1521134295 + Z.GetHashCode();
         return hashCode;
     }
-    public readonly override string ToString() => $"({Mathf.RoundToInt(x).ToString(Data.LocalLocale)}, {Mathf.RoundToInt(y).ToString(Data.LocalLocale)}, {Mathf.RoundToInt(z).ToString(Data.LocalLocale)})";
+    public readonly override string ToString() => $"({Mathf.RoundToInt(X).ToString(Data.LocalLocale)}, {Mathf.RoundToInt(Y).ToString(Data.LocalLocale)}, {Mathf.RoundToInt(Z).ToString(Data.LocalLocale)})";
     public SerializableVector3(Vector3 v)
     {
-        x = v.x;
-        y = v.y;
-        z = v.z;
+        X = v.x;
+        Y = v.y;
+        Z = v.z;
     }
     [JsonConstructor]
     public SerializableVector3(float x, float y, float z)
     {
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        this.X = x;
+        this.Y = y;
+        this.Z = z;
     }
     public readonly void WriteJson(Utf8JsonWriter writer)
     {
-        writer.WriteProperty(nameof(x), x);
-        writer.WriteProperty(nameof(y), y);
-        writer.WriteProperty(nameof(z), z);
+        writer.WriteProperty("x", X);
+        writer.WriteProperty("y", Y);
+        writer.WriteProperty("z", Z);
     }
     public void ReadJson(ref Utf8JsonReader reader)
     {
@@ -98,14 +106,14 @@ public struct SerializableVector3 : IJsonReadWrite
                 {
                     switch (val)
                     {
-                        case nameof(x):
-                            x = (float)reader.GetDouble();
+                        case "x":
+                            X = (float)reader.GetDouble();
                             break;
-                        case nameof(y):
-                            y = (float)reader.GetDouble();
+                        case "y":
+                            Y = (float)reader.GetDouble();
                             break;
-                        case nameof(z):
-                            z = (float)reader.GetDouble();
+                        case "z":
+                            Z = (float)reader.GetDouble();
                             break;
                     }
                 }
@@ -117,63 +125,65 @@ public struct SerializableVector3 : IJsonReadWrite
 public struct SerializableTransform : IJsonReadWrite
 {
     public static readonly SerializableTransform Zero = new SerializableTransform(SerializableVector3.Zero, SerializableVector3.Zero);
-    public SerializableVector3 position;
-    public SerializableVector3 euler_angles;
+    [JsonPropertyName("position")]
+    public SerializableVector3 SerializablePosition;
+    [JsonPropertyName("euler_angles")]
+    public SerializableVector3 SerializableRotation;
     [JsonIgnore]
-    public readonly Quaternion Rotation { get => Quaternion.Euler(euler_angles.Vector3); }
+    public readonly Quaternion Rotation { get => Quaternion.Euler(SerializableRotation.Vector3); }
     [JsonIgnore]
-    public readonly Vector3 Position { get => position.Vector3; }
-    public static bool operator ==(SerializableTransform a, SerializableTransform b) => a.position == b.position && a.euler_angles == b.euler_angles;
-    public static bool operator !=(SerializableTransform a, SerializableTransform b) => a.position != b.position || a.euler_angles != b.euler_angles;
-    public static bool operator ==(SerializableTransform a, Transform b) => a.position == b.position && a.euler_angles == b.rotation.eulerAngles;
-    public static bool operator !=(SerializableTransform a, Transform b) => a.position != b.position || a.euler_angles != b.rotation.eulerAngles;
+    public readonly Vector3 Position { get => SerializablePosition.Vector3; }
+    public static bool operator ==(SerializableTransform a, SerializableTransform b) => a.SerializablePosition == b.SerializablePosition && a.SerializableRotation == b.SerializableRotation;
+    public static bool operator !=(SerializableTransform a, SerializableTransform b) => a.SerializablePosition != b.SerializablePosition || a.SerializableRotation != b.SerializableRotation;
+    public static bool operator ==(SerializableTransform a, Transform b) => a.SerializablePosition == b.position && a.SerializableRotation == b.rotation.eulerAngles;
+    public static bool operator !=(SerializableTransform a, Transform b) => a.SerializablePosition != b.position || a.SerializableRotation != b.rotation.eulerAngles;
     public readonly override bool Equals(object obj)
     {
         if (obj == default) return false;
         if (obj is SerializableTransform t)
-            return position == t.position && euler_angles == t.euler_angles;
+            return SerializablePosition == t.SerializablePosition && SerializableRotation == t.SerializableRotation;
         else if (obj is Transform ut)
-            return position == ut.position && euler_angles == ut.eulerAngles;
+            return SerializablePosition == ut.position && SerializableRotation == ut.eulerAngles;
         else return false;
     }
-    public readonly override string ToString() => position.ToString();
+    public readonly override string ToString() => SerializablePosition.ToString();
     public readonly override int GetHashCode()
     {
         int hashCode = -1079335343;
-        hashCode = hashCode * -1521134295 + position.GetHashCode();
-        hashCode = hashCode * -1521134295 + euler_angles.GetHashCode();
+        hashCode = hashCode * -1521134295 + SerializablePosition.GetHashCode();
+        hashCode = hashCode * -1521134295 + SerializableRotation.GetHashCode();
         return hashCode;
     }
     [JsonConstructor]
-    public SerializableTransform(SerializableVector3 position, SerializableVector3 euler_angles)
+    public SerializableTransform(SerializableVector3 serializablePosition, SerializableVector3 euler_angles)
     {
-        this.position = position;
-        this.euler_angles = euler_angles;
+        this.SerializablePosition = serializablePosition;
+        this.SerializableRotation = euler_angles;
     }
     public SerializableTransform(Transform transform)
     {
-        position = new SerializableVector3(transform.position);
-        euler_angles = new SerializableVector3(transform.rotation.eulerAngles);
+        SerializablePosition = new SerializableVector3(transform.position);
+        SerializableRotation = new SerializableVector3(transform.rotation.eulerAngles);
     }
     public SerializableTransform(Vector3 position, Vector3 eulerAngles)
     {
-        this.position = new SerializableVector3(position);
-        euler_angles = new SerializableVector3(eulerAngles);
+        this.SerializablePosition = new SerializableVector3(position);
+        SerializableRotation = new SerializableVector3(eulerAngles);
     }
     public SerializableTransform(float posx, float posy, float posz, float rotx, float roty, float rotz)
     {
-        position = new SerializableVector3(posx, posy, posz);
-        euler_angles = new SerializableVector3(rotx, roty, rotz);
+        SerializablePosition = new SerializableVector3(posx, posy, posz);
+        SerializableRotation = new SerializableVector3(rotx, roty, rotz);
     }
     public SerializableTransform(Vector3 position, Quaternion rotation)
     {
-        this.position = new SerializableVector3(position);
-        euler_angles = new SerializableVector3(rotation.eulerAngles);
+        this.SerializablePosition = new SerializableVector3(position);
+        SerializableRotation = new SerializableVector3(rotation.eulerAngles);
     }
     public readonly void WriteJson(Utf8JsonWriter writer)
     {
-        writer.WriteProperty(nameof(position), position);
-        writer.WriteProperty(nameof(euler_angles), euler_angles);
+        writer.WriteProperty("position", SerializablePosition);
+        writer.WriteProperty("euler_angles", SerializableRotation);
     }
     public void ReadJson(ref Utf8JsonReader reader)
     {
@@ -186,13 +196,13 @@ public struct SerializableTransform : IJsonReadWrite
                 {
                     switch (val)
                     {
-                        case nameof(position):
-                            position = new SerializableVector3();
-                            position.ReadJson(ref reader);
+                        case "position":
+                            SerializablePosition = new SerializableVector3();
+                            SerializablePosition.ReadJson(ref reader);
                             break;
-                        case nameof(euler_angles):
-                            euler_angles = new SerializableVector3();
-                            euler_angles.ReadJson(ref reader);
+                        case "euler_angles":
+                            SerializableRotation = new SerializableVector3();
+                            SerializableRotation.ReadJson(ref reader);
                             break;
                     }
                 }
@@ -232,6 +242,21 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable, IR
             throw new NotSupportedException("One-to-one only rn");
         return F.GetTranslationListSchema(tableName, fkColumn, mainTable, mainPkColumn, DefaultCharLength);
     }
+    public string Translate(LanguageInfo language, string @default) => Translate(language) ?? @default;
+    public string? Translate(LanguageInfo language)
+    {
+        language ??= Localization.GetDefaultLanguage();
+        if (TryGetValue(language.LanguageCode, out string value))
+            return value;
+
+        if (language.FallbackTranslationLanguageCode != null && TryGetValue(language.FallbackTranslationLanguageCode, out value))
+            return value;
+
+        if (!language.IsDefault && TryGetValue(L.Default, out value))
+            return value;
+
+        return Count > 0 ? Values.ElementAt(0) : null;
+    }
 
     public object Clone() => new TranslationList(this);
     public void Read(ByteReader reader)
@@ -256,7 +281,7 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable, IR
 }
 public sealed class TranslationListConverter : JsonConverter<TranslationList>
 {
-    public override TranslationList? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override TranslationList Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         JsonTokenType token = reader.TokenType;
         switch (token)
@@ -303,73 +328,9 @@ public sealed class TranslationListConverter : JsonConverter<TranslationList>
     }
 }
 
-public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
+[Obsolete]
+public class LanguageAliasSet : ITranslationArgument
 {
-    public const string ENGLISH = "en-us";
-    public const string RUSSIAN = "ru-ru";
-    public const string SPANISH = "es-es";
-    public const string GERMAN = "de-de";
-    public const string ARABIC = "ar-sa";
-    public const string FRENCH = "fr-fr";
-    public const string POLISH = "pl-pl";
-    public const string PORTUGUESE = "pt-pt";
-    public const string FILIPINO = "fil";
-    public const string NORWEGIAN = "nb-no";
-    public const string ROMANIAN = "ro-ro";
-    public const string DUTCH = "nl-nl";
-    public const string SWEDISH = "sv-se";
-    public const string CHINESE_SIMPLIFIED = "zh-cn";
-    public const string CHINESE_TRADITIONAL = "zh-tw";
-    public static readonly CultureInfo ENGLISH_C = new CultureInfo("en-US");
-    public static readonly CultureInfo RUSSIAN_C = new CultureInfo("ru-RU");
-    public static readonly CultureInfo SPANISH_C = new CultureInfo("es-ES");
-    public static readonly CultureInfo GERMAN_C = new CultureInfo("de-DE");
-    public static readonly CultureInfo ARABIC_C = new CultureInfo("ar-SA");
-    public static readonly CultureInfo FRENCH_C = new CultureInfo("fr-FR");
-    public static readonly CultureInfo POLISH_C = new CultureInfo("pl-PL");
-    public static readonly CultureInfo PORTUGUESE_C = new CultureInfo("pt-PT");
-    public static readonly CultureInfo FILIPINO_C = new CultureInfo("fil-PH");
-    public static readonly CultureInfo NORWEGIAN_C = new CultureInfo("nb-NO");
-    public static readonly CultureInfo ROMANIAN_C = new CultureInfo("ro-RO");
-    public static readonly CultureInfo DUTCH_C = new CultureInfo("nl-NL");
-    public static readonly CultureInfo CHINESE_C = new CultureInfo("zh-CN");
-    public static readonly CultureInfo SWEDISH_C = new CultureInfo("sv-SE");
-
-    public static CultureInfo GetCultureInfo(string? language)
-    {
-        if (language is not null)
-        {
-            if (language.Equals(ENGLISH, StringComparison.Ordinal))
-                return ENGLISH_C;
-            if (language.Equals(RUSSIAN, StringComparison.Ordinal))
-                return RUSSIAN_C;
-            if (language.Equals(SPANISH, StringComparison.Ordinal))
-                return SPANISH_C;
-            if (language.Equals(GERMAN, StringComparison.Ordinal))
-                return GERMAN_C;
-            if (language.Equals(ARABIC, StringComparison.Ordinal))
-                return ARABIC_C;
-            if (language.Equals(FRENCH, StringComparison.Ordinal))
-                return FRENCH_C;
-            if (language.Equals(POLISH, StringComparison.Ordinal))
-                return POLISH_C;
-            if (language.Equals(PORTUGUESE, StringComparison.Ordinal))
-                return PORTUGUESE_C;
-            if (language.Equals(NORWEGIAN, StringComparison.Ordinal))
-                return NORWEGIAN_C;
-            if (language.Equals(ROMANIAN, StringComparison.Ordinal))
-                return ROMANIAN_C;
-            if (language.Equals(DUTCH, StringComparison.Ordinal))
-                return DUTCH_C;
-            if (language.Equals(SWEDISH, StringComparison.Ordinal))
-                return SWEDISH_C;
-            if (language.Equals(CHINESE_SIMPLIFIED, StringComparison.Ordinal) ||
-                language.Equals(CHINESE_TRADITIONAL, StringComparison.Ordinal))
-                return CHINESE_C;
-        }
-
-        return Data.LocalLocale;
-    }
     public string key;
     public string display_name;
     public string[] values;
@@ -382,63 +343,16 @@ public class LanguageAliasSet : IJsonReadWrite, ITranslationArgument
         this.display_name = display_name;
         this.values = values;
     }
-
-    public LanguageAliasSet(ref Utf8JsonReader reader) => ReadJson(ref reader);
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.EndObject) return;
-            else if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string prop = reader.GetString()!;
-                if (!reader.Read()) continue;
-                if (prop == nameof(key))
-                    key = reader.GetString()!;
-                else if (prop == nameof(display_name))
-                    display_name = reader.GetString()!;
-                else if (prop == "imgui")
-                    RequiresIMGUI = reader.TokenType != JsonTokenType.Null && reader.GetBoolean();
-                else if (prop == nameof(values) && reader.TokenType == JsonTokenType.StartArray)
-                {
-                    List<string> tlist = new List<string>(24);
-                    while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-                    {
-                        if (reader.TokenType == JsonTokenType.String)
-                        {
-                            tlist.Add(reader.GetString()!);
-                        }
-                    }
-                    values = tlist.ToArray();
-                }
-            }
-        }
-    }
-
     [FormatDisplay("Display Name")]
     public const string FormatDisplayName = "d";
     [FormatDisplay("Key Code")]
     public const string FormatKey = "k";
-    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null && format.Equals(FormatKey, StringComparison.Ordinal))
             return key;
         return display_name;
-    }
-
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WriteProperty(nameof(key), key);
-        writer.WriteProperty(nameof(display_name), display_name);
-        writer.WriteProperty("imgui", RequiresIMGUI);
-        writer.WritePropertyName(nameof(values));
-        writer.WriteStartArray();
-        for (int i = 0; i < values.Length; i++)
-        {
-            writer.WriteStringValue(values[i]);
-        }
-        writer.WriteEndArray();
     }
 }
 // todo sqlify
@@ -562,13 +476,13 @@ public static partial class JSONMethods
                 for (int i = 0; i < DefaultExtraPoints.Count; i++)
                 {
                     Point3D point = DefaultExtraPoints[i];
-                    writer.WritePropertyName(point.name);
+                    writer.WritePropertyName(point.Name);
                     writer.WriteStartObject();
-                    writer.WriteProperty("x", point.x);
-                    writer.WriteProperty("y", point.y);
-                    writer.WriteProperty("z", point.z);
+                    writer.WriteProperty("x", point.X);
+                    writer.WriteProperty("y", point.Y);
+                    writer.WriteProperty("z", point.Z);
                     writer.WriteEndObject();
-                    defaultXtraPoints2.Add(point.name, point.Vector3);
+                    defaultXtraPoints2.Add(point.Name, point.Vector3);
                 }
                 writer.WriteEndObject();
                 writer.Dispose();
@@ -649,7 +563,7 @@ public static partial class JSONMethods
         for (int i = 0; i < DefaultExtraPoints.Count; i++)
         {
             Point3D point = DefaultExtraPoints[i];
-            defaultXtraPoints.Add(point.name, point.Vector3);
+            defaultXtraPoints.Add(point.Name, point.Vector3);
         }
         return defaultXtraPoints;
     }
@@ -718,120 +632,5 @@ public static partial class JSONMethods
         }
         L.LogError("Failed to load language preferences, see above.");
         return new Dictionary<ulong, string>();
-    }
-    public static void SaveLangs(Dictionary<ulong, string> languages)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (languages == null) return;
-        F.CheckDir(Data.Paths.LangStorage, out bool dirExists);
-        if (dirExists)
-        {
-            using FileStream stream = new FileStream(Path.Combine(Data.Paths.LangStorage, "preferences.json"), FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
-            Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-            writer.WriteStartObject();
-            foreach (KeyValuePair<ulong, string> languagePref in languages)
-            {
-                writer.WritePropertyName(languagePref.Key.ToString(Data.AdminLocale));
-                writer.WriteStringValue(languagePref.Value);
-            }
-            writer.WriteEndObject();
-            writer.Dispose();
-            stream.Close();
-            stream.Dispose();
-        }
-    }
-    public static void SetLanguage(ulong player, string language)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Data.Languages.ContainsKey(player))
-        {
-            Data.Languages[player] = language;
-            SaveLangs(Data.Languages);
-        }
-        else
-        {
-            Data.Languages.Add(player, language);
-            SaveLangs(Data.Languages);
-        }
-    }
-    public static List<LanguageAliasSet> LoadLangAliases()
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        F.CheckDir(Data.Paths.LangStorage, out bool dirExists);
-        string langAliases = Path.Combine(Data.Paths.LangStorage, "aliases.json");
-        if (dirExists)
-        {
-            if (!File.Exists(langAliases))
-            {
-                List<LanguageAliasSet> defaultLanguageAliasSets2 = new List<LanguageAliasSet>(DefaultLanguageAliasSets.Count);
-                using FileStream stream = new FileStream(langAliases, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
-                Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                writer.WriteStartArray();
-                for (int i = 0; i < DefaultLanguageAliasSets.Count; i++)
-                {
-                    LanguageAliasSet set = DefaultLanguageAliasSets[i];
-                    writer.WriteStartObject();
-                    set.WriteJson(writer);
-                    writer.WriteEndObject();;
-                }
-                writer.WriteEndArray();
-                writer.Dispose();
-                stream.Close();
-                stream.Dispose();
-                return defaultLanguageAliasSets2;
-            }
-            using (FileStream stream = new FileStream(langAliases, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                long len = stream.Length;
-                if (len > int.MaxValue)
-                {
-                    L.LogError("Language alias sets at aliases.json is too long to read.");
-                    goto def;
-                }
-                List<LanguageAliasSet> languageAliasSets = new List<LanguageAliasSet>(DefaultLanguageAliasSets.Count);
-                byte[] bytes = new byte[len];
-                stream.Read(bytes, 0, (int)len);
-                try
-                {
-                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                    while (reader.Read())
-                    {
-                        if (reader.TokenType == JsonTokenType.StartArray) continue;
-                        if (reader.TokenType == JsonTokenType.EndArray) break;
-                        if (reader.TokenType == JsonTokenType.StartObject)
-                        {
-                            LanguageAliasSet set = new LanguageAliasSet(ref reader);
-                            if (set.key != null)
-                                languageAliasSets.Add(set);
-                        }
-                    }
-
-                    return languageAliasSets;
-                }
-                catch (Exception e)
-                {
-                    L.LogError("Failed to read language aliases at aliases.json.");
-                    L.LogError(e);
-                }
-            }
-        }
-        else
-        {
-            L.LogError("Failed to load language aliases, see above. Loading default language aliases.");
-        }
-        def:
-        List<LanguageAliasSet> defaultLanguageAliasSets = new List<LanguageAliasSet>(DefaultLanguageAliasSets.Count);
-        for (int i = 0; i < DefaultLanguageAliasSets.Count; i++)
-        {
-            LanguageAliasSet set = DefaultLanguageAliasSets[i];
-            defaultLanguageAliasSets.Add(set);
-        }
-        return defaultLanguageAliasSets;
     }
 }

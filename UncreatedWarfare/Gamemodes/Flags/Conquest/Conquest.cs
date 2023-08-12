@@ -216,7 +216,7 @@ public sealed partial class Conquest :
 #endif
         if (newOwner == 1)
         {
-            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(1, 0));
+            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(1));
             for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
             {
                 if (flag.PlayersOnFlagTeam1[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.Stats is IFlagStats fg)
@@ -225,7 +225,7 @@ public sealed partial class Conquest :
         }
         else if (newOwner == 2)
         {
-            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(2, 0));
+            ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(2));
             for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
             {
                 if (flag.PlayersOnFlagTeam2[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.Stats is IFlagStats fg)
@@ -256,7 +256,7 @@ public sealed partial class Conquest :
         List<UCPlayer> playerList = neutralizingTeam == 1ul ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2;
         QuestManager.OnFlagNeutralized(playerList.Select(x => x.Steam64).ToArray(), neutralizingTeam);
 
-        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(neutralizingTeam, 0) + " NEUTRALIZED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam, 0));
+        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(neutralizingTeam) + " NEUTRALIZED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam));
         foreach (UCPlayer player in playerList)
         {
             Points.AwardXP(player, Levels.XPReward.FlagNeutralized, 0.25f);
@@ -282,7 +282,7 @@ public sealed partial class Conquest :
         if (capturedTeam != 0)
             QuestManager.OnObjectiveCaptured(playerList.Select(x => x.Steam64).ToArray());
 
-        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(capturedTeam, 0) + " CAPTURED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam, 0));
+        ActionLog.Add(ActionLogType.TeamCapturedObjective, TeamManager.TranslateName(capturedTeam) + " CAPTURED " + flag.Name + " FROM " + TeamManager.TranslateName(lostTeam));
         foreach (UCPlayer player in playerList)
         {
             Points.AwardXP(player, Levels.XPReward.FlagCaptured, 0.25f);
@@ -301,7 +301,7 @@ public sealed partial class Conquest :
             t2 = ConquestUI.ComputeUI(2, flag);
         for (int i = 0; i < flag.PlayersOnFlag.Count; i++)
         {
-            Player capper = flag.PlayersOnFlag[i];
+            UCPlayer capper = flag.PlayersOnFlag[i];
             ulong t = capper.GetTeam();
             if (t == 1)
                 CTFUI.CaptureUI.Send(capper, in t1);
@@ -318,23 +318,23 @@ public sealed partial class Conquest :
             flag.SetOwner(0);
         UpdateFlag(flag);
     }
-    protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
+    protected override void PlayerEnteredFlagRadius(Flag flag, UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
+        L.LogDebug("Player " + player.Name.PlayerName + " entered flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
     }
-    protected override void PlayerLeftFlagRadius(Flag flag, Player player)
+    protected override void PlayerLeftFlagRadius(Flag flag, UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
+        L.LogDebug("Player " + player.Name.PlayerName + " left flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.LeftCaptureRadius, flag);
-        CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
+        CTFUI.ClearCaptureUI(player.Connection);
         UpdateFlag(flag);
     }
     protected override void InitUI(UCPlayer player)

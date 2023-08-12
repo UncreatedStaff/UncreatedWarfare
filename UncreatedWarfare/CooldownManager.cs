@@ -189,7 +189,7 @@ public class Cooldown : ITranslationArgument
     [FormatDisplay("Short Time (3h 40m)")]
     /// <summary>3h 4m 20s</summary>
     public const string FormatTimeShort = "tl2";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (!string.IsNullOrEmpty(format))
@@ -197,7 +197,7 @@ public class Cooldown : ITranslationArgument
             if (format!.Equals(FormatName, StringComparison.Ordinal))
                 return Localization.TranslateEnum(type, language);
             if (format.Equals(FormatTimeLong, StringComparison.Ordinal))
-                return ((int)Timeleft.TotalSeconds).GetTimeFromSeconds(language);
+                return Localization.GetTimeFromSeconds((int)Timeleft.TotalSeconds, language, culture);
             if (format.Equals(FormatTimeShort, StringComparison.Ordinal))
                 return ToString();
             return Timeleft.ToString(format);

@@ -11,7 +11,6 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 
@@ -66,8 +65,9 @@ public class ReloadCommand : AsyncCommand
 
         if (module.Equals("translations", StringComparison.OrdinalIgnoreCase) || module.Equals("lang", StringComparison.OrdinalIgnoreCase))
         {
-            ReloadTranslations();
-            ctx.Reply(T.ReloadedTranslations);
+            await ReloadTranslations(token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
+            ctx.Reply(T.ReloadedTranslations, Localization.TotalDefaultTranslations);
             ctx.LogAction(ActionLogType.ReloadComponent, "TRANSLATIONS");
         }
         else if (module.Equals("flags", StringComparison.OrdinalIgnoreCase))
@@ -169,19 +169,23 @@ public class ReloadCommand : AsyncCommand
             }
         }
     }
-    internal static void ReloadTranslations()
+    internal static async Task ReloadTranslations(CancellationToken token = default)
     {
+        await UCWarfare.ToUpdate(token);
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         try
         {
-            Data.LanguageAliases = JSONMethods.LoadLangAliases();
-            Data.Languages = JSONMethods.LoadLanguagePreferences();
+            await Data.ReloadLanguageDataStore(false, token).ConfigureAwait(false);
+            
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-            Translation.ReadTranslations();
             Deaths.Localization.Reload();
             Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
+            await Translation.ReadTranslations(token);
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers.ToArray())
+                player.Locale.Preferences = await Data.LanguageDataStore.GetLanguagePreferences(player.Steam64, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate(token);
             OnTranslationsReloaded?.Invoke();
         }
         catch (Exception ex)

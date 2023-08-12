@@ -242,11 +242,12 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
 
         return true;
     }
-    public string GetDisplayName(string language = L.Default, bool removeNewLine = true)
+    public string GetDisplayName(LanguageInfo? language = null, bool removeNewLine = true)
     {
         if (SignText is null) return Id;
         string rtn;
-        if (SignText.TryGetValue(language, out string val))
+        language ??= Localization.GetDefaultLanguage();
+        if (SignText.TryGetValue(language.LanguageCode, out string val))
             rtn = val ?? Id;
         else if (SignText.Count > 0)
             rtn = SignText.FirstOrDefault().Value ?? Id;
@@ -441,7 +442,7 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
     public const string DisplayNameFormat = "d";
     [FormatDisplay("Class (" + nameof(Kits.Class) + ")")]
     public const string ClassFormat = "c";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null)
@@ -646,7 +647,8 @@ public readonly struct Skillset : IEquatable<Skillset>, ITranslationArgument
 
     [FormatDisplay("No Level")]
     public const string FormatNoLevel = "nl";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         string b = Speciality switch
         {
@@ -1817,17 +1819,17 @@ public enum SquadLevel : byte
 public enum Branch : byte
 {
     Default,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "步兵")]
+    [Translatable(Languages.ChineseSimplified, "步兵")]
     Infantry,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "装甲")]
+    [Translatable(Languages.ChineseSimplified, "装甲")]
     Armor,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "空军")]
+    [Translatable(Languages.ChineseSimplified, "空军")]
     [Translatable("Air Force")]
     Airforce,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "特种部队")]
+    [Translatable(Languages.ChineseSimplified, "特种部队")]
     [Translatable("Special Ops")]
     SpecOps,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "海军")]
+    [Translatable(Languages.ChineseSimplified, "海军")]
     Navy
 }
 
@@ -1871,41 +1873,41 @@ public enum KitAccessType : byte
 public enum RedirectType : byte
 {
     None = 255,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "上衣")]
+    [Translatable(Languages.ChineseSimplified, "上衣")]
     Shirt = 0,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "裤子")]
+    [Translatable(Languages.ChineseSimplified, "裤子")]
     Pants,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "背心")]
+    [Translatable(Languages.ChineseSimplified, "背心")]
     Vest,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "帽子")]
+    [Translatable(Languages.ChineseSimplified, "帽子")]
     Hat,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "面具")]
+    [Translatable(Languages.ChineseSimplified, "面具")]
     Mask,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "背包")]
+    [Translatable(Languages.ChineseSimplified, "背包")]
     Backpack,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "眼镜")]
+    [Translatable(Languages.ChineseSimplified, "眼镜")]
     Glasses,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "弹药补给")]
+    [Translatable(Languages.ChineseSimplified, "弹药补给")]
     [Translatable("Ammo Supplies")]
     AmmoSupply,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "建筑材料")]
+    [Translatable(Languages.ChineseSimplified, "建筑材料")]
     [Translatable("Building Supplies")]
     BuildSupply,
     [Translatable("Rally Point")]
     RallyPoint,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "FOB 电台")]
+    [Translatable(Languages.ChineseSimplified, "FOB 电台")]
     [Translatable("FOB Radio")]
     Radio,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "弹药包")]
+    [Translatable(Languages.ChineseSimplified, "弹药包")]
     [Translatable("Ammo Bag")]
     AmmoBag,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "弹药箱")]
+    [Translatable(Languages.ChineseSimplified, "弹药箱")]
     [Translatable("Ammo Crate")]
     AmmoCrate,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "维修站")]
+    [Translatable(Languages.ChineseSimplified, "维修站")]
     [Translatable("Repair Station")]
     RepairStation,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "FOB 地堡")]
+    [Translatable(Languages.ChineseSimplified, "FOB 地堡")]
     [Translatable("FOB Bunker")]
     Bunker,
     [Translatable("Vehicle Bay")]
@@ -1914,13 +1916,13 @@ public enum RedirectType : byte
     EntrenchingTool,
     [Translatable("UAV", Description = "Unmanned Aerial Vehicle")]
     UAV,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "建造维修站")]
+    [Translatable(Languages.ChineseSimplified, "建造维修站")]
     [Translatable("Built Repair Station")]
     RepairStationBuilt,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "建造弹药箱")]
+    [Translatable(Languages.ChineseSimplified, "建造弹药箱")]
     [Translatable("Built Ammo Crate")]
     AmmoCrateBuilt,
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "建造FOB地堡")]
+    [Translatable(Languages.ChineseSimplified, "建造FOB地堡")]
     [Translatable("Built FOB Bunker")]
     BunkerBuilt,
     [Translatable("Insurgency Cache")]
@@ -1956,113 +1958,113 @@ public enum Page : byte
 public enum Class : byte
 {
     None = 0,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Безоружный")]
-    [Translatable(LanguageAliasSet.SPANISH, "Desarmado")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Neinarmat")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Desarmado")]
-    [Translatable(LanguageAliasSet.POLISH, "Nieuzbrojony")]
+    [Translatable(Languages.Russian, "Безоружный")]
+    [Translatable(Languages.Spanish, "Desarmado")]
+    [Translatable(Languages.Romanian, "Neinarmat")]
+    [Translatable(Languages.PortugueseBrazil, "Desarmado")]
+    [Translatable(Languages.Polish, "Nieuzbrojony")]
     Unarmed = 1,
     [Translatable("Squad Leader")]
-    [Translatable(LanguageAliasSet.RUSSIAN, "Лидер отряда")]
-    [Translatable(LanguageAliasSet.SPANISH, "Líder De Escuadrón")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Lider de Echipa")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Líder de Esquadrão")]
-    [Translatable(LanguageAliasSet.POLISH, "Dowódca Oddziału")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "小队长")]
+    [Translatable(Languages.Russian, "Лидер отряда")]
+    [Translatable(Languages.Spanish, "Líder De Escuadrón")]
+    [Translatable(Languages.Romanian, "Lider de Echipa")]
+    [Translatable(Languages.PortugueseBrazil, "Líder de Esquadrão")]
+    [Translatable(Languages.Polish, "Dowódca Oddziału")]
+    [Translatable(Languages.ChineseSimplified, "小队长")]
     Squadleader = 2,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Стрелок")]
-    [Translatable(LanguageAliasSet.SPANISH, "Fusilero")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Puscas")]
-    [Translatable(LanguageAliasSet.POLISH, "Strzelec")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "步枪兵")]
+    [Translatable(Languages.Russian, "Стрелок")]
+    [Translatable(Languages.Spanish, "Fusilero")]
+    [Translatable(Languages.Romanian, "Puscas")]
+    [Translatable(Languages.Polish, "Strzelec")]
+    [Translatable(Languages.ChineseSimplified, "步枪兵")]
     Rifleman = 3,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Медик")]
-    [Translatable(LanguageAliasSet.SPANISH, "Médico")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Medic")]
-    [Translatable(LanguageAliasSet.POLISH, "Medyk")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "卫生员")]
+    [Translatable(Languages.Russian, "Медик")]
+    [Translatable(Languages.Spanish, "Médico")]
+    [Translatable(Languages.Romanian, "Medic")]
+    [Translatable(Languages.Polish, "Medyk")]
+    [Translatable(Languages.ChineseSimplified, "卫生员")]
     Medic = 4,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Нарушитель")]
-    [Translatable(LanguageAliasSet.SPANISH, "Brechador")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Breacher")]
-    [Translatable(LanguageAliasSet.POLISH, "Wyłamywacz")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "突破手")]
+    [Translatable(Languages.Russian, "Нарушитель")]
+    [Translatable(Languages.Spanish, "Brechador")]
+    [Translatable(Languages.Romanian, "Breacher")]
+    [Translatable(Languages.Polish, "Wyłamywacz")]
+    [Translatable(Languages.ChineseSimplified, "突破手")]
     Breacher = 5,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Солдат с автоматом")]
-    [Translatable(LanguageAliasSet.SPANISH, "Fusilero Automático")]
-    [Translatable(LanguageAliasSet.SPANISH, "Puscas Automat")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Fuzileiro Automobilístico")]
-    [Translatable(LanguageAliasSet.POLISH, "Strzelec Automatyczny")]
-    [Translatable(LanguageAliasSet.ENGLISH, "Automatic Rifleman")]
+    [Translatable(Languages.Russian, "Солдат с автоматом")]
+    [Translatable(Languages.Spanish, "Fusilero Automático")]
+    [Translatable(Languages.Spanish, "Puscas Automat")]
+    [Translatable(Languages.PortugueseBrazil, "Fuzileiro Automobilístico")]
+    [Translatable(Languages.Polish, "Strzelec Automatyczny")]
+    [Translatable(Languages.EnglishUS, "Automatic Rifleman")]
     AutomaticRifleman = 6,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Гренадёр")]
-    [Translatable(LanguageAliasSet.SPANISH, "Granadero")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Grenadier")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Granadeiro")]
-    [Translatable(LanguageAliasSet.POLISH, "Grenadier")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "掷弹兵")]
+    [Translatable(Languages.Russian, "Гренадёр")]
+    [Translatable(Languages.Spanish, "Granadero")]
+    [Translatable(Languages.Romanian, "Grenadier")]
+    [Translatable(Languages.PortugueseBrazil, "Granadeiro")]
+    [Translatable(Languages.Polish, "Grenadier")]
+    [Translatable(Languages.ChineseSimplified, "掷弹兵")]
     Grenadier = 7,
-    [Translatable(LanguageAliasSet.ROMANIAN, "Mitralior")]
-    [Translatable(LanguageAliasSet.ENGLISH, "Machine Gunner")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "机枪手")]
+    [Translatable(Languages.Romanian, "Mitralior")]
+    [Translatable(Languages.EnglishUS, "Machine Gunner")]
+    [Translatable(Languages.ChineseSimplified, "机枪手")]
     MachineGunner = 8,
     [Translatable("LAT")]
-    [Translatable(LanguageAliasSet.RUSSIAN, "Лёгкий противотанк")]
-    [Translatable(LanguageAliasSet.SPANISH, "Anti-Tanque Ligero")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Anti-Tanc Usor")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Anti-Tanque Leve")]
-    [Translatable(LanguageAliasSet.POLISH, "Lekka Piechota Przeciwpancerna")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "轻型反坦克兵")]
+    [Translatable(Languages.Russian, "Лёгкий противотанк")]
+    [Translatable(Languages.Spanish, "Anti-Tanque Ligero")]
+    [Translatable(Languages.Romanian, "Anti-Tanc Usor")]
+    [Translatable(Languages.PortugueseBrazil, "Anti-Tanque Leve")]
+    [Translatable(Languages.Polish, "Lekka Piechota Przeciwpancerna")]
+    [Translatable(Languages.ChineseSimplified, "轻型反坦克兵")]
     LAT = 9,
     [Translatable("HAT")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "重型反坦克兵")]
+    [Translatable(Languages.ChineseSimplified, "重型反坦克兵")]
     HAT = 10,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Марксман")]
-    [Translatable(LanguageAliasSet.SPANISH, "Tirador Designado")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Lunetist-Usor")]
-    [Translatable(LanguageAliasSet.POLISH, "Zwiadowca")]
+    [Translatable(Languages.Russian, "Марксман")]
+    [Translatable(Languages.Spanish, "Tirador Designado")]
+    [Translatable(Languages.Romanian, "Lunetist-Usor")]
+    [Translatable(Languages.Polish, "Zwiadowca")]
     Marksman = 11,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Снайпер")]
-    [Translatable(LanguageAliasSet.SPANISH, "Francotirador")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Lunetist")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Franco-Atirador")]
-    [Translatable(LanguageAliasSet.POLISH, "Snajper")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "狙击手")]
+    [Translatable(Languages.Russian, "Снайпер")]
+    [Translatable(Languages.Spanish, "Francotirador")]
+    [Translatable(Languages.Romanian, "Lunetist")]
+    [Translatable(Languages.PortugueseBrazil, "Franco-Atirador")]
+    [Translatable(Languages.Polish, "Snajper")]
+    [Translatable(Languages.ChineseSimplified, "狙击手")]
     Sniper = 12,
     [Translatable("Anti-personnel Rifleman")]
-    [Translatable(LanguageAliasSet.RUSSIAN, "Противопехотный")]
-    [Translatable(LanguageAliasSet.SPANISH, "Fusilero Anti-Personal")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Puscas Anti-Personal")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Antipessoal")]
-    [Translatable(LanguageAliasSet.POLISH, "Strzelec Przeciw-Piechotny")]
+    [Translatable(Languages.Russian, "Противопехотный")]
+    [Translatable(Languages.Spanish, "Fusilero Anti-Personal")]
+    [Translatable(Languages.Romanian, "Puscas Anti-Personal")]
+    [Translatable(Languages.PortugueseBrazil, "Antipessoal")]
+    [Translatable(Languages.Polish, "Strzelec Przeciw-Piechotny")]
     APRifleman = 13,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Инженер")]
-    [Translatable(LanguageAliasSet.SPANISH, "Ingeniero")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Inginer")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Engenheiro")]
-    [Translatable(LanguageAliasSet.POLISH, "Inżynier")]
-    [Translatable(LanguageAliasSet.ENGLISH, "Combat Engineer")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "战斗工兵")]
+    [Translatable(Languages.Russian, "Инженер")]
+    [Translatable(Languages.Spanish, "Ingeniero")]
+    [Translatable(Languages.Romanian, "Inginer")]
+    [Translatable(Languages.PortugueseBrazil, "Engenheiro")]
+    [Translatable(Languages.Polish, "Inżynier")]
+    [Translatable(Languages.EnglishUS, "Combat Engineer")]
+    [Translatable(Languages.ChineseSimplified, "战斗工兵")]
     CombatEngineer = 14,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Механик-водитель")]
-    [Translatable(LanguageAliasSet.SPANISH, "Tripulante")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Echipaj")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Tripulante")]
-    [Translatable(LanguageAliasSet.POLISH, "Załogant")]
+    [Translatable(Languages.Russian, "Механик-водитель")]
+    [Translatable(Languages.Spanish, "Tripulante")]
+    [Translatable(Languages.Romanian, "Echipaj")]
+    [Translatable(Languages.PortugueseBrazil, "Tripulante")]
+    [Translatable(Languages.Polish, "Załogant")]
     Crewman = 15,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Пилот")]
-    [Translatable(LanguageAliasSet.SPANISH, "Piloto")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Pilot")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Piloto")]
-    [Translatable(LanguageAliasSet.POLISH, "Pilot")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "飞行员")]
+    [Translatable(Languages.Russian, "Пилот")]
+    [Translatable(Languages.Spanish, "Piloto")]
+    [Translatable(Languages.Romanian, "Pilot")]
+    [Translatable(Languages.PortugueseBrazil, "Piloto")]
+    [Translatable(Languages.Polish, "Pilot")]
+    [Translatable(Languages.ChineseSimplified, "飞行员")]
     Pilot = 16,
     [Translatable("Special Ops")]
-    [Translatable(LanguageAliasSet.SPANISH, "Op. Esp.")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Trupe Speciale")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Op. Esp.")]
-    [Translatable(LanguageAliasSet.POLISH, "Specjalista")]
-    [Translatable(LanguageAliasSet.CHINESE_SIMPLIFIED, "特种部队")]
+    [Translatable(Languages.Spanish, "Op. Esp.")]
+    [Translatable(Languages.Romanian, "Trupe Speciale")]
+    [Translatable(Languages.PortugueseBrazil, "Op. Esp.")]
+    [Translatable(Languages.Polish, "Specjalista")]
+    [Translatable(Languages.ChineseSimplified, "特种部队")]
     SpecOps = 17,
     // increment ClassConverter.MaxClass if adding another field!
 }

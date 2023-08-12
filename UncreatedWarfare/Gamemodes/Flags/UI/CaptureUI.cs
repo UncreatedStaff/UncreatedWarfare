@@ -18,27 +18,25 @@ public class CaptureUI : UnturnedUI
     public readonly UnturnedLabel Status = new UnturnedLabel("Status");
     public CaptureUI() : base(Gamemode.Config.UICapture, reliable: false) { }
 
-    public void Send(Player player, in CaptureUIParameters p)
+    public void Send(UCPlayer player, in CaptureUIParameters p)
     {
-        if (p.Type == EFlagStatus.DONT_DISPLAY)
+        ITransportConnection c = player.Connection;
+        if (p.Type == EFlagStatus.DONT_DISPLAY || player.HasUIHidden)
         {
-            ClearFromPlayer(player.channel.owner.transportConnection);
+            ClearFromPlayer(c);
             return;
         }
         GetColors(p.Team, p.Type, out string backcolor, out string forecolor);
-        string lang = Localization.GetLang(player.channel.owner.playerID.steamID.m_SteamID);
-        string translation = p.Type is EFlagStatus.BLANK ? string.Empty : Localization.TranslateEnum(p.Type, lang);
-        ITransportConnection c = player.channel.owner.transportConnection;
+        string translation = p.Type is EFlagStatus.BLANK ? string.Empty : Localization.TranslateEnum(p.Type, player.Locale.LanguageInfo);
         string desc = new string(Gamemode.Config.UICircleFontCharacters[CTFUI.FromMax(p.Points)], 1);
-        IFormatProvider locale = Localization.GetLocale(lang);
-        if (p.Type is not EFlagStatus.BLANK or EFlagStatus.DONT_DISPLAY && Gamemode.Config.UICaptureShowPointCount)
-            translation += " (" + p.Points.ToString(locale) + "/" + Flag.MaxPoints.ToString(locale) + ")";
+        if (p.Type is not EFlagStatus.BLANK and not EFlagStatus.DONT_DISPLAY && Gamemode.Config.UICaptureShowPointCount)
+            translation += " (" + p.Points.ToString(player.Locale.CultureInfo) + "/" + Flag.MaxPoints.ToString(player.Locale.CultureInfo) + ")";
 
         SendToPlayer(c, "<color=#" + forecolor + ">" + translation + "</color>", "<color=#" + forecolor + ">" + desc + "</color>", backcolor);
         if (Gamemode.Config.UICaptureEnablePlayerCount && p.Flag is not null)
         {
-            T1Count.SetText(c, "<color=#ffffff>" + p.Flag.Team1TotalCappers.ToString(locale) + "</color>");
-            T2Count.SetText(c, "<color=#ffffff>" + p.Flag.Team2TotalCappers.ToString(locale) + "</color>");
+            T1Count.SetText(c, "<color=#ffffff>" + p.Flag.Team1TotalCappers.ToString(player.Locale.CultureInfo) + "</color>");
+            T2Count.SetText(c, "<color=#ffffff>" + p.Flag.Team2TotalCappers.ToString(player.Locale.CultureInfo) + "</color>");
             T1CountIcon.SetText(c, "<color=#" + TeamManager.GetTeamHexColor(1) + ">" + Gamemode.Config.UIIconPlayer + "</color>");
             T2CountIcon.SetText(c, "<color=#" + TeamManager.GetTeamHexColor(2) + ">" + Gamemode.Config.UIIconPlayer + "</color>");
         }

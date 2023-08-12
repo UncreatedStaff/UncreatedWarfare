@@ -17,9 +17,9 @@ using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Events.Vehicles;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -103,9 +103,11 @@ public static class EventDispatcher
         StructureManager.onDamageStructureRequested += StructureManagerOnDamageStructureRequested;
         PlayerQuests.onGroupChanged += PlayerQuestsOnGroupChanged;
         VehicleManager.OnToggleVehicleLockRequested += VehicleManagerOnOnToggleVehicleLockRequested;
+        EventPatches.OnStartVerifying += IntlOnStartVerifyingPlayerConnection;
     }
     internal static void UnsubscribeFromAll()
     {
+        EventPatches.OnStartVerifying -= IntlOnStartVerifyingPlayerConnection;
         VehicleManager.OnToggleVehicleLockRequested -= VehicleManagerOnOnToggleVehicleLockRequested;
         PlayerQuests.onGroupChanged -= PlayerQuestsOnGroupChanged;
         StructureManager.onDamageStructureRequested -= StructureManagerOnDamageStructureRequested;
@@ -156,7 +158,7 @@ public static class EventDispatcher
         {
             if (mainThread && !UCWarfare.IsMainThread)
             {
-                await UCWarfare.ToUpdate();
+                await UCWarfare.ToUpdate(token);
                 ThreadUtil.assertIsGameThread();
             }
 
@@ -362,6 +364,8 @@ public static class EventDispatcher
 
         GC.Collect(2, GCCollectionMode.Forced, false, false);
     }
+
+    private static PendingAsyncData? _pending;
     private static void ProviderOnServerConnected(CSteamID steamID)
     {
         if (PlayerJoined == null) return;
@@ -372,7 +376,7 @@ public static class EventDispatcher
             Player pl = PlayerTool.getPlayer(steamID);
             if (pl is null)
                 goto error;
-            player = PlayerManager.InvokePlayerConnected(pl, out newPlayer);
+            player = PlayerManager.InvokePlayerConnected(pl, _pending!, out newPlayer);
             if (player is null)
                 goto error;
         }
@@ -381,6 +385,10 @@ public static class EventDispatcher
             L.LogError("Error in EventDispatcher.ProviderOnServerConnected loading player into OnlinePlayers:");
             L.LogError(ex);
             goto error;
+        }
+        finally
+        {
+            _pending = null;
         }
         PlayerJoined args = new PlayerJoined(player, newPlayer);
         foreach (EventDelegate<PlayerJoined> inv in PlayerJoined.GetInvocationList().Cast<EventDelegate<PlayerJoined>>())
@@ -403,7 +411,7 @@ public static class EventDispatcher
         }
         if (pending is null) return;
         PlayerSave.TryReadSaveFile(callback.m_SteamID.m_SteamID, out PlayerSave? save);
-        PlayerPending args = new PlayerPending(pending, save, isValid, explanation);
+        PlayerPending args = new PlayerPending(pending, save, null, isValid, explanation);
         foreach (EventDelegate<PlayerPending> inv in PlayerPending.GetInvocationList().Cast<EventDelegate<PlayerPending>>())
         {
             if (!args.CanContinue) break;
@@ -874,14 +882,17 @@ public static class EventDispatcher
             TryInvoke(inv, args, nameof(PlayerInjured));
         }
     }
-    internal static bool InvokeOnAsyncPrePlayerConnect(SteamPending player)
+    internal static void IntlOnStartVerifyingPlayerConnection(SteamPending player, ref bool shouldDeferContinuation)
     {
         if (PlayerPendingAsync == null)
-            return false;
+            return;
+
         ulong s64 = player.playerID.steamID.m_SteamID;
         PlayerSave.TryReadSaveFile(s64, out PlayerSave? save);
-        PlayerPending args = new PlayerPending(player, save, true, string.Empty);
+
+        PendingAsyncData data = new PendingAsyncData(player);
         CancellationTokenSource? src = null;
+
         for (int i = 0; i < PlayerManager.PlayerConnectCancellationTokenSources.Count; ++i)
         {
             KeyValuePair<ulong, CancellationTokenSource> kvp = PlayerManager.PlayerConnectCancellationTokenSources[i];
@@ -891,41 +902,51 @@ public static class EventDispatcher
                 break;
             }
         }
-        
-        UCWarfare.RunTask(InvokePrePlayerConnectAsync, args, src == null ? CancellationToken.None : src.Token,
-            ctx: "Player connecting: {" + player.playerID.steamID.m_SteamID.ToString(Data.AdminLocale) + "} [" + player.playerID.playerName + "].");
-        return true;
+        PlayerPending args = new PlayerPending(player, save, data, true, string.Empty);
+        Task task = InvokePrePlayerConnectAsync(args, src == null ? CancellationToken.None : src.Token);
+        if (task.IsCompleted)
+        {
+            if (args.CanContinue)
+                return;
+
+            EventPatches.RemovePlayer(player, args.Rejection, args.RejectReason);
+            return;
+        }
+
+        UCWarfare.RunTask(task, ctx: "Player connecting: {" + player.playerID.steamID.m_SteamID.ToString(Data.AdminLocale) + "} [" + player.playerID.playerName + "].");
+        shouldDeferContinuation = true;
     }
     private static async Task InvokePrePlayerConnectAsync(PlayerPending args, CancellationToken token = default)
     {
-        await UCWarfare.I.PlayerJoinLock.WaitAsync(token);
+        await UCWarfare.I.PlayerJoinLock.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (PlayerPendingAsync == null) goto exit;
-            foreach (AsyncEventDelegate<PlayerPending> inv in PlayerPendingAsync.GetInvocationList()
-                         .Cast<AsyncEventDelegate<PlayerPending>>())
+            if (PlayerPendingAsync == null)
+                return;
+
+            foreach (AsyncEventDelegate<PlayerPending> inv in PlayerPendingAsync.GetInvocationList().Cast<AsyncEventDelegate<PlayerPending>>())
             {
-                if (!args.CanContinue) break;
+                if (!args.CanContinue)
+                    break;
+
                 await TryInvoke(inv, args, nameof(PlayerPendingAsync), token).ConfigureAwait(true);
-                if (PlayerPendingAsync == null) goto exit;
             }
 
             await UCWarfare.ToUpdate(token);
-            ThreadUtil.assertIsGameThread();
+
             if (args.CanContinue)
             {
-                if (args.PendingPlayer.canAcceptYet)
-                {
-                    EventPatches.Accept = args.Steam64;
-                    Provider.accept(args.PendingPlayer);
-                    EventPatches.Accept = 0ul;
-                }
+                EventPatches.ContinueSendingVerifyPacket(args.PendingPlayer);
+                _pending = args.AsyncData;
             }
             else
-                Provider.reject(args.PendingPlayer.transportConnection, ESteamRejection.PLUGIN,
-                    args.RejectReason ?? "An unknown error occured.");
-
-            exit: EventPatches.Accepted.Remove(args.Steam64);
+                EventPatches.RemovePlayer(args.PendingPlayer, args.Rejection, args.RejectReason ?? "An unknown error occured.");
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
+            await UCWarfare.ToUpdate(token);
+            EventPatches.ContinueSendingVerifyPacket(args.PendingPlayer);
         }
         finally
         {

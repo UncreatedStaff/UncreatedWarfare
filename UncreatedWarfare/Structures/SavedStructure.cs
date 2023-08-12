@@ -42,7 +42,7 @@ public sealed class SavedStructure : IListItem, ITranslationArgument
     {
         return $"#{PrimaryKey.Key:00000} | {ItemGuid:N} ({Assets.find(ItemGuid)?.FriendlyName ?? "null"}): InstID: {InstanceID}; Pos: {Position:F0}; Rot: {Rotation:F0}; Owner: {Owner}; Group: {Group}.";
     }
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         return Assets.find(ItemGuid)?.FriendlyName ?? ItemGuid.ToString("N");

@@ -34,7 +34,7 @@ public abstract class BaseQuestData : ITranslationArgument
         }
         return rews;
     }
-    public string Translate(bool forAsset, string language, params object[]? formatting)
+    public string Translate(bool forAsset, LanguageInfo language, CultureInfo culture, params object[]? formatting)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -49,7 +49,7 @@ public abstract class BaseQuestData : ITranslationArgument
             L.LogWarning("No translations for " + QuestType.ToString() + " quest.");
             return QuestType.ToString() + " - " + string.Join("|", formatting);
         }
-        if (Translations.TryGetValue(language, out string v) || (!language.Equals(L.Default, StringComparison.Ordinal) && Translations.TryGetValue(L.Default, out v)))
+        if (Translations.TryGetValue(language.LanguageCode, out string v) || (!language.IsDefault && Translations.TryGetValue(L.Default, out v)))
         {
             try
             {
@@ -61,10 +61,10 @@ public abstract class BaseQuestData : ITranslationArgument
                 L.LogError(ex);
             }
         }
-        return string.Join(", ", formatting);
+        return string.Join(", ", formatting ?? Array.Empty<object>());
     }
     public string Translate(bool forAsset, UCPlayer? player, params object[]? formatting) =>
-        Translate(forAsset, player is not null && Data.Languages.TryGetValue(player.Steam64, out string language) ? language : L.Default, formatting);
+        Translate(forAsset, player?.Locale.LanguageInfo ?? Localization.GetDefaultLanguage(), player?.Locale.CultureInfo ?? Data.LocalLocale, formatting);
     public abstract void OnPropertyRead(string propertyname, ref Utf8JsonReader reader);
     public abstract BaseQuestTracker? CreateTracker(UCPlayer player);
     public abstract IQuestState GetState();
@@ -102,7 +102,7 @@ public abstract class BaseQuestData : ITranslationArgument
     [FormatDisplay(typeof(QuestAsset), "Quest Name")]
     /// <summary>For <see cref="QuestAsset"/> formatting.</summary>
     public const string COLOR_QUEST_ASSET_FORMAT = "c";
-    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null)

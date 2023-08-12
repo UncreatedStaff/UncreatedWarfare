@@ -700,6 +700,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
     void IGameTickListener.Tick()
     {
+        if (Data.Gamemode.State is not State.Active and not State.Staging) return;
         for (int i = 0; i < _fobs.Count; ++i)
         {
             if (_fobs[i] is IGameTickListener ticker)
@@ -1029,8 +1030,6 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         for (int i = fobs.Length - 1; i > index; --i)
         {
-            if (fobs[i - 1] == null)
-                break;
             fobs[i] = fobs[i - 1];
         }
 
@@ -1514,7 +1513,8 @@ public class BuildableData : ITranslationArgument
     [JsonPropertyName("dontAutoWhitelist")]
     public bool DontAutoWhitelist;
 
-    public string Translate(string language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
+        ref TranslationFlags flags)
     {
         if (Emplacement is not null && Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vasset))
         {
@@ -1568,7 +1568,7 @@ public class BuildableData : ITranslationArgument
     public override string ToString()
     {
         TranslationFlags flags = TranslationFlags.NoRichText;
-        return Translate(L.Default, null, null, Data.LocalLocale, ref flags);
+        return Translate(Localization.GetDefaultLanguage(), null, null, Data.LocalLocale, ref flags);
     }
 }
 

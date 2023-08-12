@@ -144,7 +144,7 @@ public class Reporter : MonoBehaviour
                     times.Add(time);
                 }
             }
-        timeAdj:
+            timeAdj:
             foreach (KeyValuePair<Guid, List<float>> kvp in data.soloTime)
             {
                 List<float> times = kvp.Value;
@@ -680,7 +680,7 @@ public class Reporter : MonoBehaviour
                 vehicles[i] = new Report.VehicleTeamkill()
                 {
                     VehicleName = Assets.find<VehicleAsset>(data.vehicle)?.vehicleName ?? data.vehicle.ToString("N"),
-                    Origin = Localization.TranslateEnum(data.origin, 0),
+                    Origin = Localization.TranslateEnum(data.origin),
                     Timestamp = data.time.FromUnityTime(),
                     VehicleOwner = data.owner,
                     Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N"),
@@ -707,7 +707,7 @@ public class Reporter : MonoBehaviour
                 teamkills[i] = new Report.Teamkill()
                 {
                     Dead = data.dead,
-                    DeathType = Localization.TranslateEnum(data.cause, 0),
+                    DeathType = Localization.TranslateEnum(data.cause),
                     Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N"),
                     IsVehicle = false,
                     Timestamp = data.time.FromUnityTime()
@@ -734,7 +734,7 @@ public class Reporter : MonoBehaviour
                 damages[i] = new GreifingFOBsReport.StructureDamage()
                 {
                     Damage = data.damage,
-                    DamageOrigin = Localization.TranslateEnum(data.origin, 0),
+                    DamageOrigin = Localization.TranslateEnum(data.origin),
                     Structure = Assets.find<ItemAsset>(data.structure)?.itemName ?? data.structure.ToString("N"),
                     Timestamp = data.time.FromUnityTime(),
                     Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N")

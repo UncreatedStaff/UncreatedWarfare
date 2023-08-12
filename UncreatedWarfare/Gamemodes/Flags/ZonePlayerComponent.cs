@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using SDG.Framework.Debug;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
@@ -46,7 +45,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     internal static EffectAsset Corner = null!;
     internal static EffectAsset Side = null!;
     private int _closestPoint = -1;
-    private int _lastPtCheck = -4;
+    private float _lastPtCheck = -4;
     private readonly List<Transaction> _undoBuffer = new List<Transaction>(16);
     private readonly List<Transaction> _redoBuffer = new List<Transaction>(4);
     private volatile bool _isLoading;
@@ -81,6 +80,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 RefreshPreview();
             else if (_currentBuilder.ZoneType == ZoneType.Polygon && (_closestPoint == -1 || t - _lastPtCheck > 2f) && _currentPoints is not null && _currentPoints.Count > 0)
             {
+                _lastPtCheck = t;
                 Vector3 pos = _player.Position;
                 if (pos == default)
                     return;
@@ -263,7 +263,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         }
         Builders.Add(this);
         ITransportConnection tc = _player.Player.channel.owner.transportConnection;
-        string text = Localization.TranslateEnum(type, _player.Steam64);
+        string text = Localization.TranslateEnum(type, _player.Locale.LanguageInfo);
         if (_edit != null)
         {
             Data.HideAllUI(_player);
@@ -449,7 +449,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             }
             Builders.Add(this);
             ITransportConnection tc = _player.Player.channel.owner.transportConnection;
-            string text = Localization.TranslateEnum(_currentBuilder.ZoneType, _player.Steam64);
+            string text = Localization.TranslateEnum(_currentBuilder.ZoneType, _player.Locale.LanguageInfo);
             if (_edit != null)
             {
                 Data.HideAllUI(_player);
@@ -592,7 +592,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         }
                         else if (oldGObjs is { Length: > 0 })
                         {
-                            (removed ??= new List<GridObject>()).AddRange(oldGObjs!);
+                            (removed ??= new List<GridObject>()).AddRange(oldGObjs);
                         }
                     }
                     if (_currentAdj is { Count: > 0 })
@@ -1312,7 +1312,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         sb.Append(", ");
                     sb.Append(fl.Key.ShortName ?? fl.Key.Name);
                     if (Mathf.Abs(fl.Value - 1f) > 0.0005f)
-                        sb.Append(" (").Append(fl.Value.ToString("0.##", ctx.Caller.Culture)).Append(')');
+                        sb.Append(" (").Append(fl.Value.ToString("0.##", ctx.Caller.Locale.CultureInfo)).Append(')');
                 }
 
                 string adjt = sb.ToString();
@@ -1332,7 +1332,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         sb.Append(", ");
                     sb.Append(adjacency.Key.ShortName ?? adjacency.Key.Name);
                     if (Mathf.Abs(adjacency.Value - 1f) > 0.0005f)
-                        sb.Append(" (").Append(adjacency.Value.ToString("0.##", ctx.Caller.Culture)).Append(')');
+                        sb.Append(" (").Append(adjacency.Value.ToString("0.##", ctx.Caller.Locale.CultureInfo)).Append(')');
                 }
 
                 ctx.Reply(T.ZoneEditSeeAdjacencies);
@@ -1342,7 +1342,6 @@ internal class ZonePlayerComponent : MonoBehaviour
                     ctx.Reply(T.ZoneEditSeeAdjacents);
                     throw ctx.ReplyString(adjt);
                 }
-                return;
             }
             else if (ctx.MatchParameter(0, "addadj", "addadjacency", "adj"))
             {
@@ -1625,7 +1624,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             AddTransaction(new SetTypeTransaction(_currentBuilder.ZoneType, type, @implicit));
         _currentBuilder.ZoneType = type;
         UpdateHeights();
-        EffectManager.sendUIEffectText(EditKey, tc, true, "Type", Localization.TranslateEnum(type, _player.Steam64));
+        EffectManager.sendUIEffectText(EditKey, tc, true, "Type", Localization.TranslateEnum(type, _player.Locale.LanguageInfo));
         switch (type)
         {
             case ZoneType.Circle:
@@ -1693,7 +1692,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             string b = "CommandHelp (" + i + ")";
             EffectManager.sendUIEffectVisibility(EditKey, tc, true, b, a);
             if (a)
-                EffectManager.sendUIEffectText(EditKey, tc, true, b, Localization.Translate(cmds[i], _player.Steam64));
+                EffectManager.sendUIEffectText(EditKey, tc, true, b, cmds[i].Translate(_player));
         }
     }
     private void UpdateHeights()

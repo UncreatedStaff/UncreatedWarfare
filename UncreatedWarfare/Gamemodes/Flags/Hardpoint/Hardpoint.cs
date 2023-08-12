@@ -1,9 +1,6 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Actions;
@@ -23,7 +20,6 @@ using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using XPReward = Uncreated.Warfare.Quests.XPReward;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
@@ -186,7 +182,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         for (int i = flag.PlayersOnFlag.Count - 1; i >= 0; --i)
         {
             UCPlayer pl = flag.PlayersOnFlag[i];
-            RemovePlayerFromFlag(pl.Steam64, pl.Player, flag);
+            RemovePlayerFromFlag(pl.Steam64, pl, flag);
         }
 
         flag.PlayersOnFlag.Clear();
@@ -226,7 +222,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             case 2ul:
                 L.LogDebug("Owner Changed: " + _objectiveOwner + " for " + Objective.Name + ".");
                 FactionInfo faction = TeamManager.GetFaction(_objectiveOwner);
-                ActionLog.Add(ActionLogType.TeamCapturedObjective, Objective.Name + " - " + faction.GetName(L.Default));
+                ActionLog.Add(ActionLogType.TeamCapturedObjective, Objective.Name + " - " + faction.GetName(null));
                 Chat.Broadcast(T.HardpointObjectiveStateCaptured, Objective, faction);
                 break;
             case 3ul:
@@ -296,9 +292,9 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     }
     private static void EvaluatePointsOverride(Flag flag, bool overrideInactiveCheck) { }
 
-    private void SendCaptureUI(Player player)
+    private void SendCaptureUI(UCPlayer player)
     {
-        if (Objective != null && Objective.PlayerInRange(player.transform.position))
+        if (Objective != null && Objective.PlayerInRange(player.Position))
         {
             ulong team = player.GetTeam();
             EFlagStatus status = team switch
@@ -323,22 +319,22 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         }
         else
         {
-            CTFUI.CaptureUI.ClearFromPlayer(player.channel.owner.transportConnection);
+            CTFUI.CaptureUI.ClearFromPlayer(player.Connection);
         }
     }
     protected override void ReloadUI(UCPlayer player)
     {
-        SendCaptureUI(player.Player);
+        SendCaptureUI(player);
         SendListUI(player);
     }
 
-    protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
+    protected override void PlayerEnteredFlagRadius(Flag flag, UCPlayer player)
     {
         L.LogDebug(player + " entered " + flag + ".");
         SendCaptureUI(player);
     }
 
-    protected override void PlayerLeftFlagRadius(Flag flag, Player player)
+    protected override void PlayerLeftFlagRadius(Flag flag, UCPlayer player)
     {
         L.LogDebug(player + " left " + flag + ".");
         SendCaptureUI(player);
@@ -472,8 +468,8 @@ public class HardpointTicketProvider : BaseTicketProvider
             2 => TranslationFlags.Team2,
             _ => 0
         }) | TranslationFlags.UnityUI;
-        message = obj is null ? string.Empty : ("Objective: " + (obj as ITranslationArgument).Translate(L.Default, Flag.COLOR_SHORT_NAME_FORMAT,
-            null, Data.LocalLocale, ref flg));
+        message = obj is null ? string.Empty : ("Objective: " + (obj as ITranslationArgument).Translate(Localization.GetDefaultLanguage(),
+            Flag.COLOR_SHORT_NAME_FORMAT, null, Data.LocalLocale, ref flg));
         int bld = GetTeamBleed(team);
         bleed = bld == 0 ? string.Empty : bld.ToString(Data.LocalLocale);
     }

@@ -5,7 +5,6 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
@@ -77,7 +76,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         if (Data.LastsUntilDeath)
             TargetPlayer.SendChat(T.RequestTraitGivenUntilDeath, Data);
         else if (Data.EffectDuration > 0)
-            TargetPlayer.SendChat(T.RequestTraitGivenTimer, Data, Mathf.CeilToInt(Data.EffectDuration).GetTimeFromSeconds(TargetPlayer));
+            TargetPlayer.SendChat(T.RequestTraitGivenTimer, Data, Localization.GetTimeFromSeconds(Mathf.CeilToInt(Data.EffectDuration), TargetPlayer));
         else
             TargetPlayer.SendChat(T.RequestTraitGiven, Data);
         OnActivate();
@@ -201,7 +200,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         Coroutine = null;
         Destroy(this);
     }
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags) => Data is null
         ? Translation.Null(flags)
         : (Data as ITranslationArgument).Translate(language, format, target, culture, ref flags);
@@ -342,7 +341,7 @@ public class TraitData : ITranslationArgument
     [FormatDisplay(typeof(Trait), "Colored Description")]
     [FormatDisplay("Colored Description")]
     public const string FormatColorDescription = "cd";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null && !format.Equals(FormatName, StringComparison.Ordinal))
@@ -351,21 +350,21 @@ public class TraitData : ITranslationArgument
                 return TypeName;
             if (format.Equals(FormatDescription, StringComparison.Ordinal))
                 return DescriptionTranslations != null
-                    ? DescriptionTranslations.Translate(language).Replace('\n', ' ')
+                    ? DescriptionTranslations.Translate(language, string.Empty).Replace('\n', ' ')
                     : Translation.Null(flags & TranslationFlags.NoRichText);
             if (format.Equals(FormatColorTypeName, StringComparison.Ordinal))
                 return Localization.Colorize(TeamManager.GetTeamHexColor(Team), TypeName, flags);
             if (format.Equals(FormatColorName, StringComparison.Ordinal))
                 return Localization.Colorize(TeamManager.GetTeamHexColor(Team), NameTranslations != null
-                    ? NameTranslations.Translate(language).Replace('\n', ' ')
+                    ? NameTranslations.Translate(language, TypeName).Replace('\n', ' ')
                     : TypeName, flags);
             if (format.Equals(FormatColorDescription, StringComparison.Ordinal))
                 return Localization.Colorize(TeamManager.GetTeamHexColor(Team), DescriptionTranslations != null
-                    ? DescriptionTranslations.Translate(language).Replace('\n', ' ')
+                    ? DescriptionTranslations.Translate(language, string.Empty).Replace('\n', ' ')
                     : Translation.Null(flags & TranslationFlags.NoRichText), flags);
         }
         return NameTranslations != null
-            ? NameTranslations.Translate(language).Replace('\n', ' ')
+            ? NameTranslations.Translate(language, TypeName).Replace('\n', ' ')
             : TypeName;
     }
 }

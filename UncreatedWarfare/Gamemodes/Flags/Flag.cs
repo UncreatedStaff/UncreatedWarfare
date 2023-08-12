@@ -32,7 +32,7 @@ public class Flag : IDisposable, IObjective
     private float _y;
     private float _z;
     private string _color;
-    private ulong _owner = 0;
+    private ulong _owner;
     public List<UCPlayer> PlayersOnFlagTeam1;
     public int Team1TotalPlayers;
     public EvaluatePointsDelegate? EvaluatePointsOverride;
@@ -51,7 +51,7 @@ public class Flag : IDisposable, IObjective
     public event PlayerDelegate OnPlayerEntered;
     public event PlayerDelegate OnPlayerLeft;
     public delegate void PointsChangedDelegate(float points, float previousPoints, Flag flag);
-    public delegate void PlayerDelegate(Flag flag, Player player);
+    public delegate void PlayerDelegate(Flag flag, UCPlayer player);
     public event PointsChangedDelegate OnPointsChanged;
     public delegate void OwnerChangedDelegate(ulong lastOwner, ulong newOwner, Flag flag);
     public event OwnerChangedDelegate OnOwnerChanged;
@@ -241,10 +241,10 @@ public class Flag : IDisposable, IObjective
         UCPlayer[] prevPlayers = PlayersOnFlag.Count == 0 ? Array.Empty<UCPlayer>() : PlayersOnFlag.ToArray();
         RecalcCappers();
         PlayerChange change = PlayerChange.Claim();
-        List<Player> newPlayers = change.NewPlayers;
+        List<UCPlayer> newPlayers = change.NewPlayers;
         if (newPlayers.Capacity < 2)
             newPlayers.Capacity = 2;
-        List<Player> departingPlayers = change.DepartingPlayers;
+        List<UCPlayer> departingPlayers = change.DepartingPlayers;
         if (departingPlayers.Capacity < 2)
             departingPlayers.Capacity = 2;
         for (int i = 0; i < PlayersOnFlag.Count; i++)
@@ -271,10 +271,10 @@ public class Flag : IDisposable, IObjective
     }
     public readonly ref struct PlayerChange
     {
-        public readonly List<Player> NewPlayers;
-        public readonly List<Player> DepartingPlayers;
+        public readonly List<UCPlayer> NewPlayers;
+        public readonly List<UCPlayer> DepartingPlayers;
 
-        private PlayerChange(List<Player> newPlayers, List<Player> departingPlayers)
+        private PlayerChange(List<UCPlayer> newPlayers, List<UCPlayer> departingPlayers)
         {
             NewPlayers = newPlayers;
             DepartingPlayers = departingPlayers;
@@ -282,15 +282,15 @@ public class Flag : IDisposable, IObjective
 
         public static PlayerChange Claim()
         {
-            List<Player> newPlayers = ListPool<Player>.claim();
-            List<Player> departedPlayers = ListPool<Player>.claim();
+            List<UCPlayer> newPlayers = ListPool<UCPlayer>.claim();
+            List<UCPlayer> departedPlayers = ListPool<UCPlayer>.claim();
             return new PlayerChange(newPlayers, departedPlayers);
         }
 
         public void Release()
         {
-            ListPool<Player>.release(NewPlayers);
-            ListPool<Player>.release(DepartingPlayers);
+            ListPool<UCPlayer>.release(NewPlayers);
+            ListPool<UCPlayer>.release(DepartingPlayers);
         }
     }
 
@@ -338,11 +338,11 @@ public class Flag : IDisposable, IObjective
     public bool PlayerInRange(Vector2 position) => ZoneData is { Item: { } z } && z.IsInside(position);
     public bool PlayerInRange(SteamPlayer player) => PlayerInRange(player.player.transform.position);
     public bool PlayerInRange(Player player) => PlayerInRange(player.transform.position);
-    public void EnterPlayer(Player player)
+    public void EnterPlayer(UCPlayer player)
     {
         OnPlayerEntered?.Invoke(this, player);
     }
-    public void ExitPlayer(Player player)
+    public void ExitPlayer(UCPlayer player)
     {
         OnPlayerLeft?.Invoke(this, player);
     }
@@ -614,7 +614,7 @@ public class Flag : IDisposable, IObjective
     [FormatDisplay("Short Name (Discovered Check)")]
     [FormatDisplay(typeof(Zone), "Short Name")]
     public const string SHORT_NAME_DISCOVER_FORMAT = "sd";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target,
         CultureInfo? culture,
         ref TranslationFlags flags)
     {
@@ -642,23 +642,23 @@ public class Flag : IDisposable, IObjective
             return team == 0 || Discovered(team)
                 ? Localization.Colorize(TeamSpecificHexColor, Name, flags)
                 : Localization.Colorize(UCWarfare.GetColorHex("undiscovered_flag"),
-                    Localization.Translate(T.UndiscoveredFlagNoColor, target), flags);
+                    T.UndiscoveredFlagNoColor.Translate(target), flags);
 
         if (format.Equals(NAME_DISCOVER_FORMAT, StringComparison.Ordinal))
             return team == 0 || Discovered(team)
                 ? Name
-                : Localization.Translate(T.UndiscoveredFlagNoColor, target);
+                : T.UndiscoveredFlagNoColor.Translate(target);
 
         if (format.Equals(COLOR_SHORT_NAME_DISCOVER_FORMAT, StringComparison.Ordinal))
             return team == 0 || Discovered(team)
                 ? Localization.Colorize(TeamSpecificHexColor, ShortName, flags)
                 : Localization.Colorize(UCWarfare.GetColorHex("undiscovered_flag"),
-                    Localization.Translate(T.UndiscoveredFlagNoColor, target), flags);
+                    T.UndiscoveredFlagNoColor.Translate(target), flags);
 
         if (format.Equals(SHORT_NAME_DISCOVER_FORMAT, StringComparison.Ordinal))
             return team == 0 || Discovered(team)
                 ? Name
-                : Localization.Translate(T.UndiscoveredFlagNoColor, target);
+                : T.UndiscoveredFlagNoColor.Translate(target);
         end:
         return Name;
     }

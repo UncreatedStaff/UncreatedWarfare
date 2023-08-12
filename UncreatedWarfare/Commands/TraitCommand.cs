@@ -111,7 +111,7 @@ public class TraitCommand : Command
                     {
                         Trait t = ctx.Caller.ActiveTraits[i];
                         Object.Destroy(t);
-                        ctx.LogAction(ActionLogType.RevokeTrait, data.TypeName + " - Active for " + Mathf.CeilToInt(Time.realtimeSinceStartup - t.StartTime).GetTimeFromSeconds(L.Default));
+                        ctx.LogAction(ActionLogType.RevokeTrait, data.TypeName + " - Active for " + Localization.GetTimeFromSeconds(Mathf.CeilToInt(Time.realtimeSinceStartup - t.StartTime)));
                         throw ctx.Reply(T.TraitRemoved, data);
                     }
                 }

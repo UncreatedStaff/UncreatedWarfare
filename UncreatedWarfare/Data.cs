@@ -101,24 +101,21 @@ public static class Data
     internal static readonly IUncreatedSingleton[] GamemodeListeners = new IUncreatedSingleton[1];
     public const string SuppressCategory = "Microsoft.Performance";
     public const string SuppressID = "IDE0051";
-    public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/]\W{0,}[il1\|\!]\W{0,}[gqb96](?!h|(?:an)|(?:[e|a]t))\W{0,}[gqb96]{0,}\W{0,}[gqb96]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:f\W{0,}a\W{0,}g{1,}\W{0,}o{0,}\W{0,}t{0,1})", RegexOptions.IgnoreCase);
-    public static readonly Regex NameRichTextReplaceFilter = new Regex("<.*>");
-    public static readonly Regex PluginKeyMatch = new Regex(@"\<plugin_\d\/\>", RegexOptions.IgnoreCase);
-    [Obsolete("Choose between LocalLocale and AdminLocale")]
-    public static CultureInfo Locale = LanguageAliasSet.ENGLISH_C;
-    public static CultureInfo LocalLocale = LanguageAliasSet.ENGLISH_C; // todo set from config
-    public static readonly CultureInfo AdminLocale = LanguageAliasSet.ENGLISH_C;
+    public static readonly Regex ChatFilter = UCWarfare.IsLoaded ? new Regex(@"(?:[nV\|\\\/]\W{0,}[il1\|\!]\W{0,}[gqb96](?!h|(?:an)|(?:[e|a]t))\W{0,}[gqb96]{0,}\W{0,}[gqb96]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:f\W{0,}a\W{0,}g{1,}\W{0,}o{0,}\W{0,}t{0,1})", RegexOptions.IgnoreCase) : null!;
+    public static readonly Regex NameRichTextReplaceFilter = UCWarfare.IsLoaded ? new Regex("<.*>") : null!;
+    public static readonly Regex PluginKeyMatch = UCWarfare.IsLoaded ? new Regex(@"\<plugin_\d\/\>", RegexOptions.IgnoreCase) : null!;
+    public static CultureInfo LocalLocale = Languages.CultureEnglishUS; // todo set from config
+    public static readonly CultureInfo AdminLocale = Languages.CultureEnglishUS;
     public static Dictionary<string, Color> Colors;
     public static Dictionary<string, string> ColorsHex;
     public static Dictionary<string, Vector3> ExtraPoints;
     public static Dictionary<ulong, string> DefaultPlayerNames;
-    public static Dictionary<ulong, string> Languages;
-    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
-    public static List<LanguageAliasSet> LanguageAliases;
-    public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = new Dictionary<ulong, UCPlayerData>();
+    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = UCWarfare.IsLoaded ? new Dictionary<ulong, PlayerNames>(Provider.maxPlayers) : null!;
+    public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = UCWarfare.IsLoaded ? new Dictionary<ulong, UCPlayerData>() : null!;
     internal static WarfareSQL DatabaseManager;
     internal static WarfareSQL? RemoteSQL;
     internal static DatabaseInterface ModerationSql;
+    internal static WarfareMySqlLanguageDataStore LanguageDataStore;
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
     public static bool UseFastKits;
@@ -225,6 +222,7 @@ public static class Data
             L.LogDebug("IP not available.");
             ip = null;
         }
+        
         return new WarfareServerConfig
         {
             Address = ip,
@@ -467,6 +465,15 @@ public static class Data
         rtn.AddRange(selector);
         return rtn;
     }
+    public static async Task ReloadLanguageDataStore(bool init, CancellationToken token = default)
+    {
+        if (init)
+            await LanguageDataStore.Initialize(token).ConfigureAwait(false);
+        await LanguageDataStore.ReloadCache(token).ConfigureAwait(false);
+
+        if (LanguageDataStore.GetInfoCached(L.Default) is { } defaultLang)
+            FallbackLanguageInfo = defaultLang;
+    }
     internal static void RegisterInitialSyncs()
     {
         Gamemode.ConfigObj = new GamemodeConfig();
@@ -475,7 +482,6 @@ public static class Data
         if (UCWarfare.IsLoaded && UCWarfare.Config.EnableSync)
             ConfigSync.OnInitialSyncRegisteringComplete();
     }
-
     private static void OnSingletonReloaded(IReloadableSingleton singleton, bool success)
     {
         if (success)
@@ -598,4 +604,134 @@ public static class Data
                 ui.UpdateUI(player);
         }
     }
+    public static LanguageInfo FallbackLanguageInfo { get; internal set; } = new LanguageInfo(1, L.Default)
+    {
+        DisplayName = "English",
+        Aliases = new string[]
+        {
+            "English",
+            "American",
+            "British",
+            "Inglés",
+            "Ingles",
+            "Inglesa"
+        },
+        Credits = new ulong[]
+        {
+            76561198267927009,
+            76561198857595123
+        },
+        HasTranslationSupport = true,
+        DefaultCultureCode = "en-US",
+        RequiresIMGUI = false,
+        AvailableCultureCodes = new string[]
+        {
+           "en-001",
+           "en-029",
+           "en-150",
+           "en-AE",
+           "en-AG",
+           "en-AI",
+           "en-AS",
+           "en-AT",
+           "en-AU",
+           "en-BB",
+           "en-BE",
+           "en-BI",
+           "en-BM",
+           "en-BS",
+           "en-BW",
+           "en-BZ",
+           "en-CA",
+           "en-CC",
+           "en-CH",
+           "en-CK",
+           "en-CM",
+           "en-CX",
+           "en-CY",
+           "en-DE",
+           "en-DK",
+           "en-DM",
+           "en-ER",
+           "en-FI",
+           "en-FJ",
+           "en-FK",
+           "en-FM",
+           "en-GB",
+           "en-GD",
+           "en-GG",
+           "en-GH",
+           "en-GI",
+           "en-GM",
+           "en-GU",
+           "en-GY",
+           "en-HK",
+           "en-ID",
+           "en-IE",
+           "en-IL",
+           "en-IM",
+           "en-IN",
+           "en-IO",
+           "en-JE",
+           "en-JM",
+           "en-KE",
+           "en-KI",
+           "en-KN",
+           "en-KY",
+           "en-LC",
+           "en-LR",
+           "en-LS",
+           "en-MG",
+           "en-MH",
+           "en-MO",
+           "en-MP",
+           "en-MS",
+           "en-MT",
+           "en-MU",
+           "en-MW",
+           "en-MY",
+           "en-NA",
+           "en-NF",
+           "en-NG",
+           "en-NL",
+           "en-NR",
+           "en-NU",
+           "en-NZ",
+           "en-PG",
+           "en-PH",
+           "en-PK",
+           "en-PN",
+           "en-PR",
+           "en-PW",
+           "en-RW",
+           "en-SB",
+           "en-SC",
+           "en-SD",
+           "en-SE",
+           "en-SG",
+           "en-SH",
+           "en-SI",
+           "en-SL",
+           "en-SS",
+           "en-SX",
+           "en-SZ",
+           "en-TC",
+           "en-TK",
+           "en-TO",
+           "en-TT",
+           "en-TV",
+           "en-TZ",
+           "en-UG",
+           "en-UM",
+           "en-US",
+           "en-VC",
+           "en-VG",
+           "en-VI",
+           "en-VU",
+           "en-WS",
+           "en-ZA",
+           "en-ZM",
+           "en-ZW"
+        }
+    };
 }

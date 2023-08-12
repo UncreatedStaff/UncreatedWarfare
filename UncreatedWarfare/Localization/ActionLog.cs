@@ -900,10 +900,12 @@ public enum ActionLogType : byte
     UnlockLoadout,
     [Translatable("IP_WHITELIST")]
     IPWhitelist,
+    [Translatable("CHANGE_CULTURE")]
+    ChangeCulture,
 
     [JsonIgnore]
     [Translatable(IsPrioritizedTranslation = false)]
     [Obsolete("Don't use this.")]
-    Max = IPWhitelist
+    Max = ChangeCulture
 }
 // ReSharper restore InconsistentNaming

@@ -40,12 +40,12 @@ public sealed class CommandStructure
     public string Description { get; set; }
     public TranslationList? DescriptionTranslations { get; set; }
     public CommandParameter[] Parameters { get; set; } = Array.Empty<CommandParameter>();
-    public string? GetDescription(string language)
+    public string? GetDescription(LanguageInfo? language)
     {
         if (DescriptionTranslations == null)
             return Description;
 
-        if (DescriptionTranslations.TryGetValue(language, out string desc))
+        if (language != null && DescriptionTranslations.TryGetValue(language.LanguageCode, out string desc))
             return desc;
 
         return Description;
@@ -64,7 +64,7 @@ public sealed class CommandStructure
             throw ctx.SendNoPermission();
         }
 
-        string? desc = GetDescription(ctx.Language);
+        string? desc = GetDescription(ctx.LanguageInfo);
 
         StringBuilder builder = new StringBuilder(ctx.IsConsole ? "/" : (ctx.IMGUI ? "/<color=#ffffff>" : "/<#fff>"), Chat.MaxMessageSize);
         builder.Append(cmd.CommandName.ToLowerInvariant());
@@ -181,7 +181,7 @@ public sealed class CommandStructure
                         if (d2 != null)
                             desc = d2;
                     }
-                    desc = p.GetDescription(ctx.Language);
+                    desc = p.GetDescription(ctx.LanguageInfo);
                     return;
                 }
             }
@@ -203,7 +203,7 @@ public sealed class CommandStructure
                 if (flag![0] != '-')
                     builder.Append('-');
                 if (has)
-                    desc = p.GetDescription(ctx.Language);
+                    desc = p.GetDescription(ctx.LanguageInfo);
                 builder.Append(flag);
                 builder.Append(": ").Append(p.Name);
                 if (!has)
@@ -351,12 +351,12 @@ public sealed class CommandParameter
         Name = name;
         Values = values ?? Array.Empty<object>();
     }
-    public string? GetDescription(string language)
+    public string? GetDescription(LanguageInfo? language)
     {
         if (DescriptionTranslations == null)
             return Description;
 
-        if (DescriptionTranslations.TryGetValue(language, out string desc))
+        if (language != null && DescriptionTranslations.TryGetValue(language.LanguageCode, out string desc))
             return desc;
 
         return Description;

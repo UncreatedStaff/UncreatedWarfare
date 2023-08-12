@@ -60,8 +60,7 @@ public sealed class OptionsCommand : Command
                 if (PlayerSave.TryReadSaveFile(ctx.CallerID, out PlayerSave save))
                 {
                     if (save.IMGUI == value)
-                        throw ctx.Reply(T.OptionsAlreadySet, "IMGUI",
-                            Translation.ToString(value, ctx.Caller.Language, null, ctx.Caller, TranslationFlags.None));
+                        throw ctx.Reply(T.OptionsAlreadySet, "IMGUI", Translation.ToString(value, ctx.Caller.Locale.LanguageInfo, ctx.Caller.Locale.CultureInfo, null, ctx.Caller, TranslationFlags.None));
                     save.IMGUI = value;
                 }
                 else
@@ -72,8 +71,7 @@ public sealed class OptionsCommand : Command
                     };
                 }
                 PlayerSave.WriteToSaveFile(save);
-                ctx.Reply(T.OptionsSet, "IMGUI",
-                    Translation.ToString(value, ctx.Caller.Language, null, ctx.Caller, TranslationFlags.None));
+                ctx.Reply(T.OptionsSet, "IMGUI", Translation.ToString(value, ctx.Caller.Locale.LanguageInfo, ctx.Caller.Locale.CultureInfo, null, ctx.Caller, TranslationFlags.None));
             }
             else throw ctx.Reply(T.OptionsInvalidValue, ctx.Get(0)!.ToUpperInvariant(), typeof(bool));
         }
@@ -84,8 +82,7 @@ public sealed class OptionsCommand : Command
                 if (PlayerSave.TryReadSaveFile(ctx.CallerID, out PlayerSave save))
                 {
                     if (save.TrackQuests == value)
-                        throw ctx.Reply(T.OptionsAlreadySet, "TrackQuests",
-                            Translation.ToString(value, ctx.Caller.Language, null, ctx.Caller, TranslationFlags.None));
+                        throw ctx.Reply(T.OptionsAlreadySet, "TrackQuests", Translation.ToString(value, ctx.Caller.Locale.LanguageInfo, ctx.Caller.Locale.CultureInfo, null, ctx.Caller, TranslationFlags.None));
                     save.TrackQuests = value;
                 }
                 else
@@ -96,8 +93,7 @@ public sealed class OptionsCommand : Command
                     };
                 }
                 PlayerSave.WriteToSaveFile(save);
-                ctx.Reply(T.OptionsSet, "TrackQuests",
-                    Translation.ToString(value, ctx.Caller.Language, null, ctx.Caller, TranslationFlags.None));
+                ctx.Reply(T.OptionsSet, "TrackQuests", Translation.ToString(value, ctx.Caller.Locale.LanguageInfo, ctx.Caller.Locale.CultureInfo, null, ctx.Caller, TranslationFlags.None));
                 DailyQuests.CheckTrackQuestsOption(ctx.Caller);
             }
             else throw ctx.Reply(T.OptionsInvalidValue, ctx.Get(0)!.ToUpperInvariant(), typeof(bool));

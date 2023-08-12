@@ -451,7 +451,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
             _amount = questState.Amount.InsistValue();
             _baseIds = questState.BaseIDs;
             _buildableType = questState.BuildableType;
-            _translationCache1 = _buildableType.GetCommaList(_player == null ? 0 : _player.Steam64);
+            _translationCache1 = _buildableType.GetCommaList(Localization.GetDefaultLanguage());
             _translationCache2 = _baseIds.GetCommaList();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)

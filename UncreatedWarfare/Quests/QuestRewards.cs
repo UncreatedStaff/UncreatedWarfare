@@ -68,10 +68,7 @@ public class XPReward : IQuestReward
     {
         XPParameters parameters = new XPParameters(player, player.GetTeam(), XP,
             // todo translation
-            Localization.TranslateEnum(tracker.QuestData.QuestType,
-                Data.Languages.TryGetValue(player.Steam64, out string lang)
-                    ? lang
-                    : L.Default).ToUpper() + " REWARD", false);
+            Localization.TranslateEnum(tracker.QuestData.QuestType, Localization.GetDefaultLanguage()).ToUpper() + " REWARD", false);
         return Points.AwardXPAsync(parameters, token);
     }
     public void Init(object value)
@@ -114,10 +111,7 @@ public class CreditsReward : IQuestReward
     {
         CreditsParameters parameters = new CreditsParameters(player, player.GetTeam(), Credits,
             // todo translation
-            Localization.TranslateEnum(tracker.QuestData.QuestType,
-                Data.Languages.TryGetValue(player.Steam64, out string lang)
-                    ? lang
-                    : L.Default).ToUpper() + " REWARD");
+            Localization.TranslateEnum(tracker.QuestData.QuestType, player.Locale.LanguageInfo).ToUpper() + " REWARD");
         return Points.AwardCreditsAsync(parameters, token);
     }
     public void Init(object value)
@@ -192,7 +186,7 @@ public class RankReward : IQuestReward
     public override string ToString()
     {
         ref Ranks.RankData d = ref Ranks.RankManager.GetRank(RankOrder, out bool success);
-        return "Reward: Unlock " + (success ? d.GetName(L.Default) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
+        return "Reward: Unlock " + (success ? d.GetName(Localization.GetDefaultLanguage(), Data.LocalLocale) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
     }
 }
 [QuestReward(QuestRewardType.KitAccess, typeof(string))]

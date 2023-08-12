@@ -375,23 +375,23 @@ public class Signs : BaseSingleton, ILevelStartListener
         bool r = Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y);
         if (comp.DropIsPlanted)
             r = false;
-        if ((!comp.OptimizedBroadcast && comp.PerPlayer) || !r)
+        if (comp is { OptimizedBroadcast: false, PerPlayer: true } || !r)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 if (r && !Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
                     continue;
-                Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, pl.Connection, comp.Translate(pl.Language, pl));
+                Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, pl.Connection, comp.Translate(pl.Locale.LanguageInfo, pl.Locale.CultureInfo, pl));
             }
         }
         else
         {
             foreach (LanguageSet set in LanguageSet.InRegions(x, y, BarricadeManager.BARRICADE_REGIONS))
             {
-                string val = comp.OptimizedBroadcast ? comp.Translate(set.Language) : comp.Translate(set.Language, null!);
+                string val = comp.OptimizedBroadcast ? comp.Translate(set.Language, set.CultureInfo) : comp.Translate(set.Language, set.CultureInfo, null);
                 while (set.MoveNext())
-                    Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Connection, comp.OptimizedBroadcast ? comp.FormatBroadcast(val, set.Language, set.Next) : val);
+                    Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Connection, comp.OptimizedBroadcast ? comp.FormatBroadcast(val, set.Language, set.CultureInfo, set.Next) : val);
             }
         }
     }
@@ -424,7 +424,7 @@ public class Signs : BaseSingleton, ILevelStartListener
     {
         if (!comp.DropIsPlanted && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y) && !Regions.checkArea(x, y, player.Player.movement.region_x, player.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
             return;
-        string t = comp.Translate(player.Language, player);
+        string t = comp.Translate(player.Locale.LanguageInfo, player.Locale.CultureInfo, player);
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
@@ -667,7 +667,7 @@ public class Signs : BaseSingleton, ILevelStartListener
             if (ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp))
             {
                 isLong = comp is TranlationSignComponent t && t.IsLong;
-                return comp.Translate(player.Language, player);
+                return comp.Translate(player.Locale.LanguageInfo, player.Locale.CultureInfo, player);
             }
 
             isLong = false;
@@ -682,7 +682,7 @@ public class Signs : BaseSingleton, ILevelStartListener
     {
         if (drop.interactable is InteractableSign sign)
         {
-            return ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) ? comp.Translate(player.Language, player) : sign.text;
+            return ActiveSigns.TryGetValue(drop.instanceID, out CustomSignComponent comp) ? comp.Translate(player.Locale.LanguageInfo, player.Locale.CultureInfo, player) : sign.text;
         }
 
         return string.Empty;
@@ -726,9 +726,9 @@ public class Signs : BaseSingleton, ILevelStartListener
             Init();
         }
         protected abstract void Init();
-        public abstract string Translate(string language, UCPlayer player);
-        public virtual string Translate(string language) => throw new NotImplementedException();
-        public virtual string FormatBroadcast(string text, string language, UCPlayer player) => throw new NotImplementedException();
+        public abstract string Translate(LanguageInfo language, CultureInfo culture, UCPlayer? player);
+        public virtual string Translate(LanguageInfo language, CultureInfo culture) => throw new NotImplementedException();
+        public virtual string FormatBroadcast(string text, LanguageInfo language, CultureInfo culture, UCPlayer player) => text;
     }
     // ReSharper disable once ClassNeverInstantiated.Local
     private sealed class TranlationSignComponent : CustomSignComponent
@@ -772,13 +772,12 @@ public class Signs : BaseSingleton, ILevelStartListener
                 _translation = Translation.FromSignId(SignId);
         }
         private void OnReload() => _defCache = null;
-        public override string Translate(string language, UCPlayer player)
+        public override string Translate(LanguageInfo language, CultureInfo culture, UCPlayer? player)
         {
-            if (language.Equals(L.Default, StringComparison.Ordinal))
-            {
-                return _defCache ??= _translation?.Translate(L.Default) ?? SignId ?? Sign.text.Substring(Prefix.Length);
-            }
-            return _translation?.Translate(language) ?? SignId ?? Sign.text.Substring(Prefix.Length);
+            if (language.IsDefault)
+                return _defCache ??= _translation?.Translate(language) ?? SignId ?? Sign.text.Substring(Prefix.Length);
+            
+            return _translation?.Translate(language, culture) ?? SignId ?? Sign.text.Substring(Prefix.Length);
         }
     }
     // ReSharper disable once ClassNeverInstantiated.Local
@@ -810,30 +809,30 @@ public class Signs : BaseSingleton, ILevelStartListener
             else
                 _base = 0ul;
         }
-        public override string Translate(string language, UCPlayer player)
+        public override string Translate(LanguageInfo language, CultureInfo culture, UCPlayer? player)
         {
             VehicleSpawn? spawn = Spawn?.Item;
             VehicleData? data;
             if (spawn != null && (data = spawn.Vehicle?.Item) != null)
             {
-                return Util.QuickFormat(Localization.TranslateVBS(spawn, data, language,
+                return Util.QuickFormat(Localization.TranslateVBS(spawn, data, player!.Locale.LanguageInfo, player.Locale.CultureInfo,
                     TeamManager.GetFactionSafe(_base) ?? TeamManager.GetFactionInfo(data.Faction)), data.GetCostLine(player));
             }
             return Sign.text;
         }
 
-        public override string Translate(string language)
+        public override string Translate(LanguageInfo language, CultureInfo culture)
         {
             VehicleSpawn? spawn = Spawn?.Item;
             VehicleData? data;
             if (spawn != null && (data = spawn.Vehicle?.Item) != null)
             {
-                return Localization.TranslateVBS(spawn, data, language, TeamManager.GetFactionSafe(_base) ?? TeamManager.GetFactionInfo(data.Faction));
+                return Localization.TranslateVBS(spawn, data, language, culture, TeamManager.GetFactionSafe(_base) ?? TeamManager.GetFactionInfo(data.Faction));
             }
             return Sign.text;
         }
 
-        public override string FormatBroadcast(string text, string language, UCPlayer player)
+        public override string FormatBroadcast(string text, LanguageInfo language, CultureInfo culture, UCPlayer player)
         {
             VehicleSpawn? spawn = Spawn?.Item;
             VehicleData? data;
@@ -891,14 +890,14 @@ public class Signs : BaseSingleton, ILevelStartListener
                 }
             }
         }
-        public override string Translate(string language, UCPlayer player)
+        public override string Translate(LanguageInfo language, CultureInfo culture, UCPlayer? player)
         {
             TraitData? trait = Trait;
             if (trait != null)
             {
-                ulong team = trait.Team is 1 or 2 ? trait.Team : player.GetTeam();
-                string txt = TraitSigns.TranslateTraitSign(trait, language, team, out bool fmt);
-                return fmt ? TraitSigns.FormatTraitSign(trait, txt, player, team) : txt;
+                ulong team = trait.Team is 1 or 2 ? trait.Team : player!.GetTeam();
+                string txt = TraitSigns.TranslateTraitSign(player!.Locale.LanguageInfo, player.Locale.CultureInfo, trait, team, out bool fmt);
+                return fmt ? TraitSigns.FormatTraitSign(player, trait, txt) : txt;
             }
             return Sign.text;
         }
@@ -973,18 +972,14 @@ public class Signs : BaseSingleton, ILevelStartListener
                 }
             }
         }
-        public override string Translate(string language, UCPlayer player)
+        public override string Translate(LanguageInfo language, CultureInfo culture, UCPlayer? player)
         {
             if (IsLoadout)
             {
-                return LoadoutIndex > -1 ? Localization.TranslateLoadoutSign((byte)LoadoutIndex, language, player) : Sign.text;
+                return LoadoutIndex > -1 ? Localization.TranslateLoadoutSign((byte)LoadoutIndex, player!) : Sign.text;
             }
             Kit? kit = Kit?.Item;
-            if (kit != null)
-            {
-                return Localization.TranslateKitSign(language, kit, player);
-            }
-            return Sign.text;
+            return kit != null ? Localization.TranslateKitSign(kit, player!) : Sign.text;
         }
     }
 }

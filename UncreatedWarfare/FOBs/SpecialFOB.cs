@@ -71,7 +71,7 @@ public class SpecialFOB : IFOB, IGameTickListener
         }
     }
 
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, CultureInfo? culture,
+    string ITranslationArgument.Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture,
         ref TranslationFlags flags)
     {
         if (format is not null)
@@ -117,7 +117,7 @@ public class SpecialFOB : IFOB, IGameTickListener
     }
     void IDeployable.OnDeploy(UCPlayer player, bool chat)
     {
-        ActionLog.Add(ActionLogType.DeployToLocation, "SPECIAL FOB " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
+        ActionLog.Add(ActionLogType.DeployToLocation, "SPECIAL FOB " + Name + " TEAM " + TeamManager.TranslateName(Team), player);
         if (chat)
             player.SendChat(T.DeploySuccess, this);
     }

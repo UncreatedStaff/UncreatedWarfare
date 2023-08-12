@@ -73,8 +73,8 @@ public class GroupCommand : Command
                 if (team is > 0 and < 4)
                 {
                     ctx.Reply(T.JoinedGroup, team, TeamManager.TranslateName(team, ctx.Caller, true), TeamManager.GetTeamColor(team));
-                    L.Log($"{ctx.Caller.Name.PlayerName} ({ctx.CallerID}) joined group \"{TeamManager.TranslateName(team, 0)}\": {team} (ID {groupInfo.groupID}).", ConsoleColor.Cyan);
-                    ctx.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + TeamManager.TranslateName(team, 0).ToUpper());
+                    L.Log($"{ctx.Caller.Name.PlayerName} ({ctx.CallerID}) joined group \"{TeamManager.TranslateName(team)}\": {team} (ID {groupInfo.groupID}).", ConsoleColor.Cyan);
+                    ctx.LogAction(ActionLogType.ChangeGroupWithCommand, "GROUP: " + TeamManager.TranslateName(team).ToUpper());
                 }
                 else
                 {
