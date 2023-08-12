@@ -456,7 +456,6 @@ public class ActionManager : BaseSingleton
         if (caller == null)
             return;
         TryUnloadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Build);
-        CloseUI(caller);
     }
     private static void UnloadAmmo(UnturnedButton button, Player player) // WIP
     {
@@ -464,7 +463,6 @@ public class ActionManager : BaseSingleton
         if (caller == null)
             return;
         TryUnloadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Ammo);
-        CloseUI(caller);
     }
     private static void LoadBuild(UnturnedButton button, Player player) // WIP
     {
@@ -472,7 +470,6 @@ public class ActionManager : BaseSingleton
         if (caller == null)
             return;
         TryLoadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Build, true);
-        CloseUI(caller);
     }
     private static void LoadAmmo(UnturnedButton button, Player player) // WIP
     {
@@ -480,7 +477,6 @@ public class ActionManager : BaseSingleton
         if (caller == null)
             return;
         TryLoadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Ammo, false);
-        CloseUI(caller);
     }
     
     const int REQUIRED_UNLOAD_AMOUNT_FOR_REWARD = 5;
