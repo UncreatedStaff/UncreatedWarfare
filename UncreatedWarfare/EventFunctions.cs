@@ -1521,6 +1521,7 @@ public static class EventFunctions
 
             L.Log("PN: \"" + e.PendingPlayer.playerID.playerName + "\", CN: \"" + e.PendingPlayer.playerID.characterName + "\", NN: \"" + e.PendingPlayer.playerID.nickName + "\" (" + e.PendingPlayer.playerID.steamID.m_SteamID.ToString(Data.LocalLocale) + ") trying to connect.", ConsoleColor.Cyan);
         }
+        catch (ControlException) { throw; }
         catch (Exception ex)
         {
             L.LogError($"Error accepting {e.PendingPlayer.playerID.playerName} in OnPrePlayerConnect:");
