@@ -897,7 +897,7 @@ public static class Localization
         writer.WriteEndObject();
         writer.Dispose();
     }
-    public static LanguageInfo GetDefaultLanguage() => Data.LanguageDataStore.GetInfoCached(L.Default) ?? Data.FallbackLanguageInfo;
+    public static LanguageInfo GetDefaultLanguage() => Data.LanguageDataStore?.GetInfoCached(L.Default) ?? Data.FallbackLanguageInfo;
     public static async ValueTask<LanguageInfo> GetLanguage(ulong player, CancellationToken token = default)
     {
         if (UCWarfare.IsLoaded && UCPlayer.FromID(player) is { Locale: { } locale })
@@ -1072,8 +1072,8 @@ public static class Localization
         InitDelayResponses();
         DelayResponses res = target switch
         {
-            DelayTarget.Trait => TraitDelayResponses!,
-            _ => VehicleDelayResponses!
+            DelayTarget.Trait => _traitDelayResponses!,
+            _ => _vehicleDelayResponses!
         };
         if (delay.Type == DelayType.OutOfStaging &&
             (delay.Gamemode is null ||
@@ -1208,12 +1208,12 @@ public static class Localization
         Trait
     }
 
-    private static DelayResponses? VehicleDelayResponses;
-    private static DelayResponses? TraitDelayResponses;
+    private static DelayResponses? _vehicleDelayResponses;
+    private static DelayResponses? _traitDelayResponses;
     private static void InitDelayResponses()
     {
-        VehicleDelayResponses = new DelayResponses(DelayTarget.VehicleBay);
-        TraitDelayResponses = new DelayResponses(DelayTarget.Trait);
+        _vehicleDelayResponses = new DelayResponses(DelayTarget.VehicleBay);
+        _traitDelayResponses = new DelayResponses(DelayTarget.Trait);
     }
     private class DelayResponses
     {

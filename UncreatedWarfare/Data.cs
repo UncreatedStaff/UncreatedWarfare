@@ -101,21 +101,17 @@ public static class Data
     internal static readonly IUncreatedSingleton[] GamemodeListeners = new IUncreatedSingleton[1];
     public const string SuppressCategory = "Microsoft.Performance";
     public const string SuppressID = "IDE0051";
-    public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/]\W{0,}[il1\|\!]\W{0,}[gqb96](?!h|(?:an)|(?:[e|a]t))\W{0,}[gqb96]{0,}\W{0,}[gqb96]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:f\W{0,}a\W{0,}g{1,}\W{0,}o{0,}\W{0,}t{0,1})", RegexOptions.IgnoreCase);
-    public static readonly Regex NameRichTextReplaceFilter = new Regex("<.*>");
-    public static readonly Regex PluginKeyMatch = new Regex(@"\<plugin_\d\/\>", RegexOptions.IgnoreCase);
-    [Obsolete("Choose between LocalLocale and AdminLocale")]
-    public static CultureInfo Locale = Warfare.Languages.CultureEnglishUS;
-    public static CultureInfo LocalLocale = Warfare.Languages.CultureEnglishUS; // todo set from config
-    public static readonly CultureInfo AdminLocale = Warfare.Languages.CultureEnglishUS;
+    public static readonly Regex ChatFilter = UCWarfare.IsLoaded ? new Regex(@"(?:[nV\|\\\/]\W{0,}[il1\|\!]\W{0,}[gqb96](?!h|(?:an)|(?:[e|a]t))\W{0,}[gqb96]{0,}\W{0,}[gqb96]{0,}\W{0,}[ae]{0,1}\W{0,}[r]{0,}(?:ia){0,})|(?:c\W{0,}h\W{0,}i{1,}\W{0,}n{1,}\W{0,}k{1,})|(?:f\W{0,}a\W{0,}g{1,}\W{0,}o{0,}\W{0,}t{0,1})", RegexOptions.IgnoreCase) : null!;
+    public static readonly Regex NameRichTextReplaceFilter = UCWarfare.IsLoaded ? new Regex("<.*>") : null!;
+    public static readonly Regex PluginKeyMatch = UCWarfare.IsLoaded ? new Regex(@"\<plugin_\d\/\>", RegexOptions.IgnoreCase) : null!;
+    public static CultureInfo LocalLocale = Languages.CultureEnglishUS; // todo set from config
+    public static readonly CultureInfo AdminLocale = Languages.CultureEnglishUS;
     public static Dictionary<string, Color> Colors;
     public static Dictionary<string, string> ColorsHex;
     public static Dictionary<string, Vector3> ExtraPoints;
     public static Dictionary<ulong, string> DefaultPlayerNames;
-    [Obsolete("Use UCPlayer.Locale")]
-    public static Dictionary<ulong, string> Languages;
-    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
-    public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = new Dictionary<ulong, UCPlayerData>();
+    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = UCWarfare.IsLoaded ? new Dictionary<ulong, PlayerNames>(Provider.maxPlayers) : null!;
+    public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = UCWarfare.IsLoaded ? new Dictionary<ulong, UCPlayerData>() : null!;
     internal static WarfareSQL DatabaseManager;
     internal static WarfareSQL? RemoteSQL;
     internal static DatabaseInterface ModerationSql;

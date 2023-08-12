@@ -1727,38 +1727,4 @@ public class DebugCommand : AsyncCommand
         else
             throw ctx.SendCorrectUsage("/test damage <amount>[%] while looking at a barricade, structure, or vehicle.");
     }
-
-    [Obsolete]
-    private async Task migratelangs(CommandInteraction ctx, CancellationToken token)
-    {
-        ctx.AssertRanByConsole();
-
-        string[] columns =
-        {
-            MySqlLanguageDataStore.ColumnPreferencesLastUpdated, MySqlLanguageDataStore.ColumnPreferencesSteam64,
-            MySqlLanguageDataStore.ColumnPreferencesLanguage, MySqlLanguageDataStore.ColumnPreferencesCulture
-        };
-
-        StringBuilder query = new StringBuilder(F.StartBuildOtherInsertQueryNoUpdate(MySqlLanguageDataStore.TableLanguagePreferences, columns));
-
-        List<object> parameters = new List<object>(Data.Languages.Count * 3 + 1);
-
-        int c = 0;
-        parameters.Add(DateTime.UtcNow);
-        foreach (KeyValuePair<ulong, string> languagePair in Data.Languages)
-        {
-            if (Data.LanguageDataStore.GetInfoCached(languagePair.Value) is not { } lang)
-                continue;
-            parameters.Add(languagePair.Key);
-            parameters.Add(lang.PrimaryKey.Key);
-            parameters.Add(Languages.GetCultureInfo(languagePair.Value).Name);
-            F.AppendPropertyList(query, c * 3 + 1, 3, c, 1);
-            ++c;
-        }
-
-        query.Append($" ON DUPLICATE KEY UPDATE `{columns[0]}` = VALUES(`{columns[0]}`), `{columns[2]}` = VALUES(`{columns[2]}`), `{columns[3]}` = VALUES(`{columns[3]}`);");
-
-        int ct = await Data.LanguageDataStore.Sql.NonQueryAsync(query.ToString(), parameters.ToArray(), token).ConfigureAwait(false);
-        ctx.ReplyString($"Migrated {ct} rows.");
-    }
 }

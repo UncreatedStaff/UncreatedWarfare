@@ -148,13 +148,6 @@ public static partial class Patches
                         if (num > Block.BUFFER_SIZE / 2)
                             break;
                     }
-                    string? lang;
-                    if (hasSign)
-                    {
-                        if (!Data.Languages.TryGetValue(client.playerID.steamID.m_SteamID, out lang))
-                            lang = L.Default;
-                    }
-                    else lang = null;
                     Data.SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, writer =>
                     {
                         writer.WriteUInt8(x);
@@ -201,7 +194,7 @@ public static partial class Patches
                             if (drop.interactable is InteractableSign sign)
                             {
                                 string newtext = sign.text;
-                                if (lang == null || !newtext.StartsWith(Signs.Prefix, StringComparison.OrdinalIgnoreCase))
+                                if (!newtext.StartsWith(Signs.Prefix, StringComparison.OrdinalIgnoreCase))
                                     goto writeState;
                                 newtext = Signs.GetClientText(drop, pl);
                                 byte[] textbytes = System.Text.Encoding.UTF8.GetBytes(newtext);
