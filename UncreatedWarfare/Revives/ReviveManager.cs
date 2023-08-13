@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using SDG.Framework.Utilities;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
@@ -30,7 +31,7 @@ using XPReward = Uncreated.Warfare.Levels.XPReward;
 namespace Uncreated.Warfare.Revives;
 
 [SingletonDependency(typeof(KitManager))]
-public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinListener, IPlayerDisconnectListener, IGameTickListener
+public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinListener, IPlayerDisconnectListener
 {
     private readonly Dictionary<ulong, DownedPlayerData> _injuredPlayers;
     private static ReviveManager _singleton;
@@ -38,23 +39,23 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     // the estimated amount of time between simulate() calls.
     const float EstSimulateTimeSec = 0.08f;
     const float MarkerDistance = 150;
-    const float MarkerUpdateFrequency = 0.33f;
+    const float MarkerUpdateFrequency = 0.31f;
     const bool CanHealEnemies = true;
     public static bool Loaded => _singleton.IsLoaded();
     private IEnumerable<UCPlayer> GetAvailableMedics(UCPlayer injured) => PlayerManager.OnlinePlayers.Where(x => 
-    x != injured &&
-    x.GetTeam() == injured.GetTeam() && 
-    x.KitClass == Class.Medic &&
-    !x.Player.life.isDead &&
-    !IsInjured(x) &&
-    (x.Position - injured.Position).sqrMagnitude < Math.Pow(MarkerDistance, 2));
+        x != injured &&
+        x.GetTeam() == injured.GetTeam() && 
+        x.KitClass == Class.Medic &&
+        !x.Player.life.isDead &&
+        !IsInjured(x) &&
+        (x.Position - injured.Position).sqrMagnitude < Math.Pow(MarkerDistance, 2));
     public ReviveManager()
     {
         _injuredPlayers = new Dictionary<ulong, DownedPlayerData>(Provider.maxPlayers);
     }
     public bool IsInjured(ulong player) => _injuredPlayers.ContainsKey(player);
     public bool IsInjured(IPlayer player) => _injuredPlayers.ContainsKey(player.Steam64);
-    public DamagePlayerParameters GetParameters(ulong player) => _injuredPlayers.TryGetValue(player, out DownedPlayerData data) ? data.Parameters : default; 
+    public DamagePlayerParameters GetParameters(ulong player) => _injuredPlayers.TryGetValue(player, out DownedPlayerData data) ? data.Parameters : default;
     public bool CanPlayerInjure(in DamagePlayerParameters parameters)
     {
         return parameters.player != null &&
@@ -74,11 +75,11 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         _singleton = this;
         UCPlayerKeys.SubscribeKeyUp(GiveUpPressed, Data.Keys.GiveUp);
         UCPlayerKeys.SubscribeKeyUp(SelfRevivePressed, Data.Keys.SelfRevive);
-        KitManager.OnKitChanged += OnKitChanged;
+        TimeUtility.updated += OnUpdate;
     }
     public override void Unload()
     {
-        KitManager.OnKitChanged -= OnKitChanged;
+        TimeUtility.updated -= OnUpdate;
         UCPlayerKeys.UnsubscribeKeyUp(SelfRevivePressed, Data.Keys.SelfRevive);
         UCPlayerKeys.UnsubscribeKeyUp(GiveUpPressed, Data.Keys.GiveUp);
         _singleton = null!;
@@ -415,10 +416,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, e.Player.Player.channel.owner.transportConnection);
         }
     }
-    private void OnKitChanged(UCPlayer player, SqlItem<Kit>? newKit, SqlItem<Kit>? oldKit)
-    {
-        
-    }
     public IEnumerable<Vector3> GetPositionsOfTeam(ulong team)
     {
 #if DEBUG
@@ -449,11 +446,25 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 
 
     private float _timeSinceLastMarkers = 0;
-    public void Tick()
+    private bool _lastHadInjuredPlayers;
+    private void OnUpdate()
     {
         if (Time.time - _timeSinceLastMarkers > MarkerUpdateFrequency)
         {
             _timeSinceLastMarkers = Time.time;
+
+            SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset injuredMarker);
+            SquadManager.Config.MedicMarker.ValidReference(out EffectAsset medicMarker);
+
+            if (_lastHadInjuredPlayers)
+            {
+                if (injuredMarker != null)
+                    EffectManager.ClearEffectByGuid_AllPlayers(injuredMarker.GUID);
+                if (medicMarker != null)
+                    EffectManager.ClearEffectByGuid_AllPlayers(medicMarker.GUID);
+            }
+
+            _lastHadInjuredPlayers = false;
 
             foreach (var player in PlayerManager.OnlinePlayers)
             {
@@ -462,15 +473,17 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                     var medics = GetAvailableMedics(player);
 
                     // for all nearby medics, spawn an injured marker at this player's position 
-                    if (SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset injuredMarker))
+                    if (injuredMarker != null)
                         F.TriggerEffectReliable(injuredMarker, Data.GetPooledTransportConnectionList(medics.Select(x => x.Connection), medics.Count()), player.Position);
 
                     // for this player only, spawn a medic marker at every nearby medic's position
-                    if (SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset medicMarker))
+                    if (medicMarker != null)
                     {
                         foreach (var medic in medics)
                             F.TriggerEffectReliable(medicMarker, player.Connection, medic.Position);
-                    }                        
+                    }
+
+                    _lastHadInjuredPlayers = true;
                 }
             }
         }

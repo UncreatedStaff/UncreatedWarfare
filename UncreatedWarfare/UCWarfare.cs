@@ -306,7 +306,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         }
 
 #if DEBUG
-        if (Config.Debug && File.Exists(@"C:\orb.wav"))
+        if (Config.Debug && System.IO.File.Exists(@"C:\orb.wav"))
         {
             System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"C:\orb.wav");
             player.Load();
