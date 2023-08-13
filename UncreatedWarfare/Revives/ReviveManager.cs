@@ -19,25 +19,35 @@ using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
+using static SDG.Unturned.WeatherAsset;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.Revives;
 
 [SingletonDependency(typeof(KitManager))]
-public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinListener, IPlayerDisconnectListener
+public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinListener, IPlayerDisconnectListener, IGameTickListener
 {
     private readonly Dictionary<ulong, DownedPlayerData> _injuredPlayers;
     private static ReviveManager _singleton;
     private Coroutine? _updater;
     // the estimated amount of time between simulate() calls.
     const float EstSimulateTimeSec = 0.08f;
+    const float MarkerDistance = 150;
+    const float MarkerUpdateFrequency = 0.33f;
     const bool CanHealEnemies = true;
     public static bool Loaded => _singleton.IsLoaded();
-    private static IEnumerable<UCPlayer> Medics => PlayerManager.OnlinePlayers.Where(x => x.KitClass == Class.Medic);
+    private IEnumerable<UCPlayer> GetAvailableMedics(UCPlayer injured) => PlayerManager.OnlinePlayers.Where(x => 
+    x != injured &&
+    x.GetTeam() == injured.GetTeam() && 
+    x.KitClass == Class.Medic &&
+    !x.Player.life.isDead &&
+    !IsInjured(x) &&
+    (x.Position - injured.Position).sqrMagnitude < Math.Pow(MarkerDistance, 2));
     public ReviveManager()
     {
         _injuredPlayers = new Dictionary<ulong, DownedPlayerData>(Provider.maxPlayers);
@@ -62,7 +72,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         PlayerLife.OnRevived_Global += OnPlayerRespawned;
         UseableConsumeable.onPerformingAid += OnHealPlayer;
         _singleton = this;
-        _updater = UCWarfare.I.StartCoroutine(UpdatePositions());
         UCPlayerKeys.SubscribeKeyUp(GiveUpPressed, Data.Keys.GiveUp);
         UCPlayerKeys.SubscribeKeyUp(SelfRevivePressed, Data.Keys.SelfRevive);
         KitManager.OnKitChanged += OnKitChanged;
@@ -140,19 +149,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             PlayerSave.WriteToSaveFile(player.Save);
             player.Player.life.askDamage(byte.MaxValue, Vector3.up, p.Parameters.cause, p.Parameters.limb, p.Parameters.killer, out _, p.Parameters.trackKill, p.Parameters.ragdollEffect, false, true);
             // player will be removed from list in OnDeath
-        }
-    }
-    private IEnumerator<WaitForSeconds> UpdatePositions()
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(0.5f);
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            if (_injuredPlayers.Count == 0) continue;
-            UpdateInjuredMarkers();
-            UpdateMedicMarkers();
         }
     }
     private void OnHealPlayer(Player healer, Player downed, ItemConsumeableAsset asset, ref bool shouldAllow)
@@ -345,8 +341,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         ActionLog.Add(ActionLogType.Injured, "by " + (killer == null ? "self" : killer.Steam64.ToString(Data.AdminLocale)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
 
         _injuredPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, new DownedPlayerData(parameters));
-        SpawnInjuredMarker(parameters.player.transform.position, team);
-        UpdateMedicMarkers(parameters.player, team, parameters.player.transform.position, false);
         PlayerDied? died = DeathTracker.OnInjured(in parameters);
         Guid item = died != null ? died.PrimaryAsset : Guid.Empty;
 
@@ -420,136 +414,10 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             EffectManager.askEffectClearByID(Gamemode.Config.UIInjured.Value, e.Player.Player.channel.owner.transportConnection);
             EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, e.Player.Player.channel.owner.transportConnection);
         }
-        ClearInjuredMarker(e.Steam64, e.Player.GetTeam());
     }
     private void OnKitChanged(UCPlayer player, SqlItem<Kit>? newKit, SqlItem<Kit>? oldKit)
     {
-        bool oldIsMedic = oldKit?.Item != null && oldKit.Item.Class == Class.Medic;
-        if (newKit?.Item != null && newKit.Item.Class == Class.Medic)
-        {
-            if (!oldIsMedic)
-                RegisterMedic(player);
-            return;
-        }
-        if (oldIsMedic)
-            DeregisterMedic(player);
-    }
-    private void RegisterMedic(UCPlayer player)
-    {
-        IEnumerable<Vector3> newpositions = GetPositionsOfTeam(player.GetTeam());
-        SpawnInjuredMarkers(player.Player.channel.owner.transportConnection, newpositions, true, player.Position);
-    }
-    private void DeregisterMedic(UCPlayer player)
-    {
-        ClearInjuredMarkers(player);
-    }
-    public void SpawnInjuredMarker(Vector3 position, ulong team)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Squads.SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset effect))
-        {
-            double sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
-            F.TriggerEffectReliable(effect, Data.GetPooledTransportConnectionList(Medics.Where(x =>
-            {
-                if (x.GetTeam() != team)
-                    return false;
-                float sqr = (x.Position - position).sqrMagnitude;
-                return sqr > 1 && sqr <= sqrmLimit;
-            }).Select(x => x.Player.channel.owner.transportConnection)), position);
-        }
-    }
-    public void SpawnInjuredMarkers(IEnumerable<UCPlayer> players, IEnumerable<Vector3> positions, bool dispose, bool clearAll)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        float range = Mathf.Pow(Squads.SquadManager.Config.MedicRange, 2);
-        if (Squads.SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset asset))
-        {
-            foreach (UCPlayer player in players)
-            {
-                ITransportConnection c = player.Player.channel.owner.transportConnection;
-                if (clearAll)
-                    EffectManager.ClearEffectByGuid(asset.GUID, c);
-                foreach (Vector3 position in positions)
-                {
-                    float sqrDistance = (player.Position - position).sqrMagnitude;
-                    if (sqrDistance >= 1 && sqrDistance <= range)
-                        F.TriggerEffectReliable(asset, c, position);
-                }
-            }
-        }
-    }
-    public void SpawnMedicMarkers(IEnumerable<ITransportConnection> players, IEnumerable<Vector3> positions, bool dispose, bool clearAll)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Squads.SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset asset))
-        {
-            foreach (ITransportConnection c in players)
-            {
-                if (clearAll)
-                    EffectManager.ClearEffectByGuid(asset.GUID, c);
-                foreach (Vector3 position in positions)
-                    F.TriggerEffectReliable(asset, c, position);
-            }
-        }
-    }
-
-    public void SpawnInjuredMarkers(ITransportConnection player, IEnumerable<Vector3> positions, bool clearAll, Vector3 center)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        float range = Mathf.Pow(Squads.SquadManager.Config.MedicRange, 2);
-        if (Squads.SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset asset))
-        {
-            if (clearAll)
-                EffectManager.ClearEffectByGuid(asset.GUID, player);
-            foreach (Vector3 position in positions)
-            {
-                float sqr = (center - position).sqrMagnitude;
-                if (sqr > 1 && sqr <= range)
-                    F.TriggerEffectReliable(asset, player, position);
-            }
-        }
-    }
-    public void SpawnMedicMarkers(ITransportConnection player, IEnumerable<Vector3> positions, bool clearAll)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Squads.SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset asset))
-        {
-            if (clearAll)
-                EffectManager.ClearEffectByGuid(asset.GUID, player);
-            foreach (Vector3 position in positions)
-                F.TriggerEffectReliable(asset, player, position);
-        }
-    }
-    public void ClearInjuredMarker(ulong clearedPlayer, ulong team)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        IEnumerable<UCPlayer> medics = Medics.Where(x => TeamManager.IsFriendly(x, team));
-        List<Vector3> positions = new List<Vector3>();
-        foreach (ulong down in _injuredPlayers.Keys)
-        {
-            if (down == clearedPlayer) continue;
-            UCPlayer? player = UCPlayer.FromID(down);
-            if (player == null) continue;
-            positions.Add(player.Position);
-        }
-        Vector3[] newpositions = positions.ToArray();
-        SpawnInjuredMarkers(medics, newpositions, true, true);
-    }
-    public void ClearInjuredMarkers(UCPlayer medic)
-    {
-        EffectManager.askEffectClearByID(Squads.SquadManager.Config.InjuredMarker, medic.Player.channel.owner.transportConnection);
+        
     }
     public IEnumerable<Vector3> GetPositionsOfTeam(ulong team)
     {
@@ -566,49 +434,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         return positions;
     }
-    public void UpdateInjuredMarkers()
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        IEnumerable<UCPlayer> medics = Medics.Where(x => x.GetTeam() == 1);
-        IEnumerable<Vector3> newpositions = GetPositionsOfTeam(1);
-        SpawnInjuredMarkers(medics, newpositions, true, true);
-        medics = Medics.Where(x => x.GetTeam() == 2);
-        newpositions = GetPositionsOfTeam(2);
-        SpawnInjuredMarkers(medics, newpositions, true, true);
-    }
-    public void UpdateMedicMarkers()
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        float range = Mathf.Pow(Squads.SquadManager.Config.MedicRange, 2);
-        foreach (ulong s64 in _injuredPlayers.Keys)
-        {
-            UCPlayer? downed = UCPlayer.FromID(s64);
-            if (downed == null) continue;
-            ulong team = downed.GetTeam();
-            SpawnMedicMarkers(downed.Player.channel.owner.transportConnection, Medics
-                .Where(x => x.GetTeam() == team && (x.Position - downed.Position).sqrMagnitude < range && x.Steam64 != downed.Steam64)
-                .Select(x => x.Position), true);
-        }
-    }
-    public void UpdateMedicMarkers(Player player, ulong team, Vector3 origin, bool clearOld)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ulong s = player.channel.owner.playerID.steamID.m_SteamID;
-        float range = Mathf.Pow(Squads.SquadManager.Config.MedicRange, 2);
-        if (team is > 0 and < 3) return;
-        IEnumerable<Vector3> medics = Medics
-            .Where(x => x.GetTeam() == team &&
-                (x.Position - origin).sqrMagnitude <
-                range && x.Steam64 != s)
-            .Select(x => x.Position);
-        SpawnMedicMarkers(player.channel.owner.transportConnection, medics, clearOld);
-    }
     public void OnWinnerDeclared(ulong winner)
     {
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
@@ -620,6 +445,37 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             }
         }
     }
+
+
+
+    private float _timeSinceLastMarkers = 0;
+    public void Tick()
+    {
+        if (Time.time - _timeSinceLastMarkers > MarkerUpdateFrequency)
+        {
+            _timeSinceLastMarkers = Time.time;
+
+            foreach (var player in PlayerManager.OnlinePlayers)
+            {
+                if (IsInjured(player))
+                {
+                    var medics = GetAvailableMedics(player);
+
+                    // for all nearby medics, spawn an injured marker at this player's position 
+                    if (SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset injuredMarker))
+                        F.TriggerEffectReliable(injuredMarker, Data.GetPooledTransportConnectionList(medics.Select(x => x.Connection), medics.Count()), player.Position);
+
+                    // for this player only, spawn a medic marker at every nearby medic's position
+                    if (SquadManager.Config.InjuredMarker.ValidReference(out EffectAsset medicMarker))
+                    {
+                        foreach (var medic in medics)
+                            F.TriggerEffectReliable(medicMarker, player.Connection, medic.Position);
+                    }                        
+                }
+            }
+        }
+    }
+
     [UsedImplicitly]
     private class Reviver : MonoBehaviour
     {
@@ -740,8 +596,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 
                 if (Squads.SquadManager.Config.MedicMarker.ValidReference(out id))
                     EffectManager.ClearEffectByGuid(id, _player.Player.channel.owner.transportConnection);
-
-                g.ReviveManager.ClearInjuredMarker(_player.Player.channel.owner.playerID.steamID.m_SteamID, _player.GetTeam());
 
                 _player.Player.movement.sendPluginSpeedMultiplier(1.0f);
                 _player.Player.movement.sendPluginJumpMultiplier(1.0f);

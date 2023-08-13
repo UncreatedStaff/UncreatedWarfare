@@ -1608,7 +1608,6 @@ public static class EventFunctions
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            r.ReviveManager.ClearInjuredMarker(instigator.channel.owner.playerID.steamID.m_SteamID, instigator.GetTeam());
             if (pl2 is not null && pl is not null)
                 r.ReviveManager.OnPlayerHealed(pl2, pl);
         }
