@@ -1069,7 +1069,7 @@ public static class EventFunctions
         if (parameters.cause == EDeathCause.GUN)
         {
             InteractableVehicle veh = parameters.player.movement.getVehicle();
-            if (veh != null)
+            if (veh != null && (!VehicleData.IsFlyingEngine(veh.asset.engine) || veh.speed >= 5))
             {
                 VehicleBay? bay = VehicleBay.GetSingletonQuick();
                 VehicleData? data = bay?.GetDataSync(veh.asset.GUID);
