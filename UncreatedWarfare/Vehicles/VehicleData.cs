@@ -15,7 +15,6 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using static Uncreated.Warfare.Gamemodes.Flags.ZoneModel;
 
 namespace Uncreated.Warfare.Vehicles;
 
