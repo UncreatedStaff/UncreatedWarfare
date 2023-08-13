@@ -252,7 +252,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     {
         ThreadUtil.assertIsGameThread();
 
-        if (Bunker == null || enemy.Player.life.isDead)
+        if (Bunker == null || enemy.Player.life.isDead || enemy.IsInVehicle)
             return 0;
 
         float distanceFromBunker = (enemy.Position - Bunker.SpawnPosition).magnitude;
