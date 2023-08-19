@@ -96,6 +96,15 @@ Key: Value
 ```
 Keys should be left as is, and values should be translated.
 
+### Example
+```properties
+# Description: Sent when a player tries to abandon a damaged vehicle.            (Don't translate)
+# Formatting Arguments:                                                          (Don't translate)
+#  {0} - [InteractableVehicle]                                                   (Don't translate)
+# Default Value: Your {0} is damaged, repair it before returning it to the yard. (Don't translate)
+AbandonDamaged: Al tau {0} este deteriorat, reparal inainte sa il returnezi.   # (Translate after the ':' symbol)
+```
+
 # JSON
 Use IDE Format: **JSONC**, or **JSON** if JSONC is not available.
 <br>Anything starting with a **//** or between **/\*** and **\*/** is a comment, and ignored by the file reader.
