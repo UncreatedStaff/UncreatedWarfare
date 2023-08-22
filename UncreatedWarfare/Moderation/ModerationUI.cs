@@ -297,9 +297,9 @@ public class ModerationUI : UnturnedUI
                     L.LogError(ex);
                 }
             }
-            for (int i = ct; i < ModerationPlayerList.Length; ++i)
+            for (; ct < ModerationPlayerList.Length; ++ct)
             {
-                ModerationPlayerList[i].Root.SetVisibility(connection, false);
+                ModerationPlayerList[ct].Root.SetVisibility(connection, false);
             }
         }
         else

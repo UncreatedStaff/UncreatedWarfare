@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
-using Uncreated.Framework;
 using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation;
@@ -101,6 +100,30 @@ public abstract class ModerationEntry
     public Evidence[] Evidence { get; set; } = Array.Empty<Evidence>();
 
     /// <summary>
+    /// If the moderation entry was removed.
+    /// </summary>
+    [JsonPropertyName("is_removed")]
+    public bool Removed { get; set; }
+
+    /// <summary>
+    /// Who removed the moderation entry.
+    /// </summary>
+    [JsonPropertyName("removing_actor")]
+    public IModerationActor? RemovedBy { get; set; }
+
+    /// <summary>
+    /// When the moderation entry was removed.
+    /// </summary>
+    [JsonPropertyName("removed_timestamp_utc")]
+    public DateTimeOffset? RemovedAt { get; set; }
+
+    /// <summary>
+    /// Why the moderation entry was removed.
+    /// </summary>
+    [JsonPropertyName("removed_reason")]
+    public string? RemovedReason { get; set; }
+
+    /// <summary>
     /// Fills any cached properties.
     /// </summary>
     internal virtual Task FillDetail(DatabaseInterface db) => Task.CompletedTask;
@@ -128,25 +151,33 @@ public abstract class ModerationEntry
         else if (propertyName.Equals("message", StringComparison.InvariantCultureIgnoreCase))
             Message = reader.GetString();
         else if (propertyName.Equals("is_legacy", StringComparison.InvariantCultureIgnoreCase))
-            IsLegacy = reader.GetBoolean();
+            IsLegacy = reader.TokenType != JsonTokenType.Null && reader.GetBoolean();
         else if (propertyName.Equals("started_utc", StringComparison.InvariantCultureIgnoreCase))
             StartedTimestamp = new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
         else if (propertyName.Equals("resolved_utc", StringComparison.InvariantCultureIgnoreCase))
-            ResolvedTimestamp = new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
+            ResolvedTimestamp = reader.TokenType == JsonTokenType.Null ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
         else if (propertyName.Equals("reputation", StringComparison.InvariantCultureIgnoreCase))
-            Reputation = reader.GetDouble();
+            Reputation = reader.TokenType == JsonTokenType.Null ? 0d : reader.GetDouble();
         else if (propertyName.Equals("reputation_applied", StringComparison.InvariantCultureIgnoreCase))
-            ReputationApplied = reader.GetBoolean();
+            ReputationApplied = reader.TokenType != JsonTokenType.Null && reader.GetBoolean();
         else if (propertyName.Equals("legacy_id", StringComparison.InvariantCultureIgnoreCase))
-            LegacyId = reader.GetUInt32();
+            LegacyId = reader.TokenType == JsonTokenType.Null ? null : reader.GetUInt32();
         else if (propertyName.Equals("relevant_logs_begin_utc", StringComparison.InvariantCultureIgnoreCase))
-            RelevantLogsBegin = new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
+            RelevantLogsBegin = reader.TokenType == JsonTokenType.Null ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
         else if (propertyName.Equals("relevant_logs_end_utc", StringComparison.InvariantCultureIgnoreCase))
-            RelevantLogsEnd = new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
+            RelevantLogsEnd = reader.TokenType == JsonTokenType.Null ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
         else if (propertyName.Equals("actors", StringComparison.InvariantCultureIgnoreCase))
-            Actors = JsonSerializer.Deserialize<RelatedActor[]>(ref reader, options) ?? Array.Empty<RelatedActor>();
+            Actors = reader.TokenType == JsonTokenType.Null ? Array.Empty<RelatedActor>() : JsonSerializer.Deserialize<RelatedActor[]>(ref reader, options) ?? Array.Empty<RelatedActor>();
         else if (propertyName.Equals("evidence", StringComparison.InvariantCultureIgnoreCase))
-            Evidence = JsonSerializer.Deserialize<Evidence[]>(ref reader, options) ?? Array.Empty<Evidence>();
+            Evidence = reader.TokenType == JsonTokenType.Null ? Array.Empty<Evidence>() : JsonSerializer.Deserialize<Evidence[]>(ref reader, options) ?? Array.Empty<Evidence>();
+        else if (propertyName.Equals("is_removed", StringComparison.InvariantCultureIgnoreCase))
+            Removed = reader.TokenType != JsonTokenType.Null && reader.GetBoolean();
+        else if (propertyName.Equals("removing_actor", StringComparison.InvariantCultureIgnoreCase))
+            RemovedBy = reader.TokenType == JsonTokenType.Null ? null : Moderation.Actors.GetActor(reader.GetUInt64());
+        else if (propertyName.Equals("removed_timestamp_utc", StringComparison.InvariantCultureIgnoreCase))
+            RemovedAt = reader.TokenType == JsonTokenType.Null ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
+        else if (propertyName.Equals("removed_reason", StringComparison.InvariantCultureIgnoreCase))
+            RemovedReason = reader.GetString();
     }
     public virtual void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -174,6 +205,16 @@ public abstract class ModerationEntry
 
         writer.WritePropertyName("evidence");
         JsonSerializer.Serialize(writer, Evidence, options);
+
+        writer.WriteBoolean("is_removed", Removed);
+        if (Removed)
+        {
+            writer.WriteNumber("removing_actor", RemovedBy == null ? 0ul : RemovedBy.Id);
+            if (RemovedAt.HasValue)
+                writer.WriteString("removed_timestamp_utc", RemovedAt.Value.UtcDateTime);
+
+            writer.WriteString("removed_reason", RemovedReason);
+        }
     }
 
     protected virtual void ReadIntl(ByteReader reader, ushort version) { }
@@ -199,11 +240,12 @@ public abstract class ModerationEntry
         Id = reader.ReadInt32();
         Player = reader.ReadUInt64();
         Message = reader.ReadNullableString();
-        IsLegacy = reader.ReadBool();
+        byte flag = reader.ReadUInt8();
+        IsLegacy = (flag & 1) != 0;
         StartedTimestamp = reader.ReadDateTimeOffset();
         ResolvedTimestamp = reader.ReadNullableDateTimeOffset();
         Reputation = reader.ReadDouble();
-        ReputationApplied = reader.ReadBool();
+        ReputationApplied = (flag & 2) != 0;
         LegacyId = reader.ReadNullableUInt32();
         RelevantLogsBegin = reader.ReadNullableDateTimeOffset();
         RelevantLogsEnd = reader.ReadNullableDateTimeOffset();
@@ -216,29 +258,46 @@ public abstract class ModerationEntry
         for (int i = 0; i < Evidence.Length; ++i)
             Evidence[i] = new Evidence(reader, version);
 
+        Removed = (flag & 4) != 0;
+        if (Removed)
+        {
+            RemovedBy = Moderation.Actors.GetActor(reader.ReadUInt64());
+            RemovedAt = reader.ReadNullableDateTimeOffset();
+            RemovedReason = reader.ReadNullableString();
+        }
+
         ReadIntl(reader, version);
     }
-    public void WriteContent(ByteWriter writer)
+    internal void WriteContent(ByteWriter writer)
     {
         writer.Write(DataVersion);
 
         writer.Write(Id.Key);
         writer.Write(Player);
         writer.WriteNullable(Message);
-        writer.Write(IsLegacy);
+        byte flag = (byte)((IsLegacy ? 1 : 0) | (ReputationApplied ? 2 : 0) | (Removed ? 4 : 0));
+        writer.Write(flag);
         writer.Write(StartedTimestamp);
         writer.WriteNullable(ResolvedTimestamp);
         writer.Write(Reputation);
-        writer.Write(ReputationApplied);
         writer.WriteNullable(LegacyId);
         writer.WriteNullable(RelevantLogsBegin);
         writer.WriteNullable(RelevantLogsEnd);
+
         writer.Write(Actors.Length);
         for (int i = 0; i < Actors.Length; ++i)
             Actors[i].Write(writer);
+
         writer.Write(Evidence.Length);
         for (int i = 0; i < Evidence.Length; ++i)
             Evidence[i].Write(writer);
+
+        if (Removed)
+        {
+            writer.Write(RemovedBy == null ? 0ul : RemovedBy.Id);
+            writer.WriteNullable(RemovedAt);
+            writer.WriteNullable(RemovedReason);
+        }
 
         WriteIntl(writer);
     }

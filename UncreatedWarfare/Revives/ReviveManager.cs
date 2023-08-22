@@ -1,14 +1,11 @@
 ﻿using JetBrains.Annotations;
-using SDG.NetTransport;
+using SDG.Framework.Utilities;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using SDG.Framework.Utilities;
 using Uncreated.Players;
-using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
@@ -21,11 +18,9 @@ using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
-using static SDG.Unturned.WeatherAsset;
 using XPReward = Uncreated.Warfare.Levels.XPReward;
 
 namespace Uncreated.Warfare.Revives;

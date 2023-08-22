@@ -9,7 +9,7 @@ public class GodCommand : Command
     private const string SYNTAX = "/god";
     private const string HELP = "Toggles your ability to take damage.";
 
-    public GodCommand() : base("god", EAdminType.ADMIN)
+    public GodCommand() : base("god", EAdminType.TRIAL_ADMIN_ON_DUTY)
     {
         Structure = new CommandStructure
         {
