@@ -129,6 +129,8 @@ public class Appeal : ModerationEntry
         writer.WritePropertyName("responses");
         JsonSerializer.Serialize(writer, Responses, options);
     }
+
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 2 + PunishmentKeys.Length + Responses.Length * 2;
 }
 
 public readonly struct AppealResponse

@@ -142,7 +142,7 @@ public static class PlayerManager
                 players.Add(OnlinePlayers[i].Steam64);
         }
 
-        PlayerSummary[] summaries = await SteamAPI.GetPlayerSummaries(players.ToArrayFast(), token);
+        PlayerSummary[] summaries = await SteamAPI.GetPlayerSummaries(players.AsArrayFast(), token);
         for (int j = 0; j < summaries.Length; ++j)
         {
             PlayerSummary summary = summaries[j];

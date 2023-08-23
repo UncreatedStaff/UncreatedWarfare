@@ -120,4 +120,6 @@ public class Teamkill : ModerationEntry
         if (DeathMessage != null)
             writer.WriteString("death_message", DeathMessage);
     }
+
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 6;
 }

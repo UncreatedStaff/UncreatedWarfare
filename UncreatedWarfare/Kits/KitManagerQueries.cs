@@ -198,7 +198,7 @@ partial class KitManager
     public static async Task DownloadPlayersKitData(IEnumerable<UCPlayer> playerList, bool lockPurchaseSync,
         CancellationToken token = default)
     {
-        UCPlayer[] players = playerList.ToArrayFast(true);
+        UCPlayer[] players = playerList.AsArrayFast(true);
         if (players.Length == 0)
             return;
         for (int i = 0; i < players.Length; ++i)

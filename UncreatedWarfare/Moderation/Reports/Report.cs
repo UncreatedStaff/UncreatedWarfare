@@ -85,7 +85,7 @@ public class Report : ModerationEntry
             }
             if (reader.TokenType == JsonTokenType.StartArray)
             {
-                List<byte> bytes = new List<byte>(4096);
+                List<byte> bytes = new List<byte>(short.MaxValue);
                 while (reader.Read())
                 {
                     if (reader.TokenType == JsonTokenType.EndArray)
@@ -114,7 +114,8 @@ public class Report : ModerationEntry
             }
             if (reader.TokenType == JsonTokenType.Null)
                 ScreenshotJpgData = null;
-            throw new JsonException("Unexpected token " + reader.TokenType + " while reading ScreenshotJpgData.");
+            else
+                throw new JsonException("Unexpected token " + reader.TokenType + " while reading ScreenshotJpgData.");
         }
         else
             base.ReadProperty(ref reader, propertyName, options);
@@ -128,6 +129,8 @@ public class Report : ModerationEntry
         if (ScreenshotJpgData != null)
             writer.WriteString("screenshot_data", Convert.ToBase64String(ScreenshotJpgData));
     }
+
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 2;
 }
 
 public enum ReportType
