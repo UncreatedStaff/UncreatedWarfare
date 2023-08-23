@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -115,13 +116,13 @@ public abstract class ModerationEntry
     /// When the moderation entry was removed.
     /// </summary>
     [JsonPropertyName("removed_timestamp_utc")]
-    public DateTimeOffset? RemovedAt { get; set; }
+    public DateTimeOffset? RemovedTimestamp { get; set; }
 
     /// <summary>
     /// Why the moderation entry was removed.
     /// </summary>
-    [JsonPropertyName("removed_reason")]
-    public string? RemovedReason { get; set; }
+    [JsonPropertyName("removed_message")]
+    public string? RemovedMessage { get; set; }
 
     /// <summary>
     /// Fills any cached properties.
@@ -175,9 +176,9 @@ public abstract class ModerationEntry
         else if (propertyName.Equals("removing_actor", StringComparison.InvariantCultureIgnoreCase))
             RemovedBy = reader.TokenType == JsonTokenType.Null ? null : Moderation.Actors.GetActor(reader.GetUInt64());
         else if (propertyName.Equals("removed_timestamp_utc", StringComparison.InvariantCultureIgnoreCase))
-            RemovedAt = reader.TokenType == JsonTokenType.Null ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
-        else if (propertyName.Equals("removed_reason", StringComparison.InvariantCultureIgnoreCase))
-            RemovedReason = reader.GetString();
+            RemovedTimestamp = reader.TokenType == JsonTokenType.Null ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
+        else if (propertyName.Equals("removed_message", StringComparison.InvariantCultureIgnoreCase))
+            RemovedMessage = reader.GetString();
     }
     public virtual void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
@@ -210,10 +211,10 @@ public abstract class ModerationEntry
         if (Removed)
         {
             writer.WriteNumber("removing_actor", RemovedBy == null ? 0ul : RemovedBy.Id);
-            if (RemovedAt.HasValue)
-                writer.WriteString("removed_timestamp_utc", RemovedAt.Value.UtcDateTime);
+            if (RemovedTimestamp.HasValue)
+                writer.WriteString("removed_timestamp_utc", RemovedTimestamp.Value.UtcDateTime);
 
-            writer.WriteString("removed_reason", RemovedReason);
+            writer.WriteString("removed_message", RemovedMessage);
         }
     }
 
@@ -262,8 +263,8 @@ public abstract class ModerationEntry
         if (Removed)
         {
             RemovedBy = Moderation.Actors.GetActor(reader.ReadUInt64());
-            RemovedAt = reader.ReadNullableDateTimeOffset();
-            RemovedReason = reader.ReadNullableString();
+            RemovedTimestamp = reader.ReadNullableDateTimeOffset();
+            RemovedMessage = reader.ReadNullableString();
         }
 
         ReadIntl(reader, version);
@@ -295,11 +296,120 @@ public abstract class ModerationEntry
         if (Removed)
         {
             writer.Write(RemovedBy == null ? 0ul : RemovedBy.Id);
-            writer.WriteNullable(RemovedAt);
-            writer.WriteNullable(RemovedReason);
+            writer.WriteNullable(RemovedTimestamp);
+            writer.WriteNullable(RemovedMessage);
         }
 
         WriteIntl(writer);
+    }
+
+    internal virtual int EstimateColumnCount() => 1 + Actors.Length * 4 + Evidence.Length * 7;
+    internal virtual bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        builder.Append($"DELETE FROM `{DatabaseInterface.TableActors}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
+        if (Actors is { Length: > 0 })
+        {
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableActors}` ({SqlTypes.ColumnList(
+                DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnActorsIndex,
+                DatabaseInterface.ColumnActorsId, DatabaseInterface.ColumnActorsRole, DatabaseInterface.ColumnActorsAsAdmin)}) VALUES ");
+            
+            for (int i = 0; i < Actors.Length; ++i)
+            {
+                ref RelatedActor actor = ref Actors[i];
+
+                F.AppendPropertyList(builder, args.Count, 4, i, 1);
+
+                args.Add(i);
+                args.Add(actor.Actor.Id);
+                args.Add(actor.Role ?? string.Empty);
+                args.Add(actor.Admin);
+            }
+            builder.Append(';');
+        }
+
+        if (Evidence.Length == 0)
+            builder.Append($"DELETE FROM `{DatabaseInterface.TableEvidence}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
+
+        bool anyNew = false;
+        if (Evidence is { Length: > 0 })
+        {
+            bool anyOld = false;
+            for (int i = 0; i < Evidence.Length; ++i)
+            {
+                ref Evidence evidence = ref Evidence[i];
+                if (evidence.Id.IsValid)
+                    anyOld = true;
+                else
+                    anyNew = true;
+            }
+
+            if (anyOld)
+            {
+                builder.Append($" INSERT INTO `{DatabaseInterface.TableEvidence}` ({SqlTypes.ColumnList(
+                    DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnEvidenceId,
+                    DatabaseInterface.ColumnEvidenceActorId, DatabaseInterface.ColumnEvidenceIsImage,
+                    DatabaseInterface.ColumnEvidenceLink, DatabaseInterface.ColumnEvidenceLocalSource,
+                    DatabaseInterface.ColumnEvidenceMessage, DatabaseInterface.ColumnEvidenceTimestamp)}) VALUES ");
+
+                for (int i = 0; i < Evidence.Length; ++i)
+                {
+                    ref Evidence evidence = ref Evidence[i];
+                    if (!evidence.Id.IsValid)
+                        continue;
+
+                    F.AppendPropertyList(builder, args.Count, 7, i, 1);
+
+                    args.Add(evidence.Id.Key);
+                    args.Add(evidence.Actor == null ? DBNull.Value : evidence.Actor.Id);
+                    args.Add(evidence.Image);
+                    args.Add(evidence.URL);
+                    args.Add((object?)evidence.SavedLocation ?? DBNull.Value);
+                    args.Add((object?)evidence.Message ?? DBNull.Value);
+                    args.Add(evidence.Timestamp.UtcDateTime);
+                }
+
+                builder.Append($" AS `t` ON DUPLICATE KEY UPDATE " +
+                               $"`{DatabaseInterface.ColumnExternalPrimaryKey}` = `t`.`{DatabaseInterface.ColumnExternalPrimaryKey}`," +
+                               $"`{DatabaseInterface.ColumnEvidenceActorId}` = `t`.`{DatabaseInterface.ColumnEvidenceActorId}`," +
+                               $"`{DatabaseInterface.ColumnEvidenceIsImage}` = `t`.`{DatabaseInterface.ColumnEvidenceIsImage}`," +
+                               $"`{DatabaseInterface.ColumnEvidenceLink}` = `t`.`{DatabaseInterface.ColumnEvidenceLink}`," +
+                               $"`{DatabaseInterface.ColumnEvidenceLocalSource}` = `t`.`{DatabaseInterface.ColumnEvidenceLocalSource}`," +
+                               $"`{DatabaseInterface.ColumnEvidenceMessage}` = `t`.`{DatabaseInterface.ColumnEvidenceMessage}`," +
+                               $"`{DatabaseInterface.ColumnEvidenceTimestamp}` = `t`.`{DatabaseInterface.ColumnEvidenceTimestamp}`;");
+            }
+
+            if (anyNew)
+            {
+                builder.Append($" INSERT INTO `{DatabaseInterface.TableEvidence}` ({SqlTypes.ColumnList(
+                    DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnEvidenceActorId,
+                    DatabaseInterface.ColumnEvidenceIsImage, DatabaseInterface.ColumnEvidenceLink,
+                    DatabaseInterface.ColumnEvidenceLocalSource, DatabaseInterface.ColumnEvidenceMessage,
+                    DatabaseInterface.ColumnEvidenceTimestamp)}) VALUES ");
+
+                for (int i = 0; i < Evidence.Length; ++i)
+                {
+                    ref Evidence evidence = ref Evidence[i];
+                    if (evidence.Id.IsValid)
+                        continue;
+
+                    F.AppendPropertyList(builder, args.Count, 6, i, 1);
+
+                    args.Add(evidence.Actor == null ? DBNull.Value : evidence.Actor.Id);
+                    args.Add(evidence.Image);
+                    args.Add(evidence.URL);
+                    args.Add((object?)evidence.SavedLocation ?? DBNull.Value);
+                    args.Add((object?)evidence.Message ?? DBNull.Value);
+                    args.Add(evidence.Timestamp.UtcDateTime);
+                }
+
+                builder.Append($"; SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnEvidenceId,
+                    DatabaseInterface.ColumnEvidenceLink, DatabaseInterface.ColumnEvidenceMessage,
+                    DatabaseInterface.ColumnEvidenceLocalSource, DatabaseInterface.ColumnEvidenceIsImage,
+                    DatabaseInterface.ColumnEvidenceTimestamp, DatabaseInterface.ColumnEvidenceActorId)} WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
+            }
+        }
+
+        return anyNew;
     }
 }
 
@@ -312,10 +422,15 @@ public class ModerationCache : Dictionary<int, ModerationEntryCacheEntry>
         get => base[key].Entry;
         set => base[key] = new ModerationEntryCacheEntry(value);
     }
-    public void AddOrUpdate(ModerationEntry entry) => this[entry.Id.Key] = entry;
+    public void AddOrUpdate(ModerationEntry entry)
+    {
+        if (entry.Id.IsValid)
+            this[entry.Id.Key] = entry;
+    }
+
     public bool TryGet<T>(PrimaryKey key, out T value) where T : ModerationEntry
     {
-        if (TryGetValue(key.Key, out ModerationEntryCacheEntry entry))
+        if (key.IsValid && TryGetValue(key.Key, out ModerationEntryCacheEntry entry))
         {
             value = (entry.Entry as T)!;
             return value != null;
@@ -326,7 +441,7 @@ public class ModerationCache : Dictionary<int, ModerationEntryCacheEntry>
     }
     public bool TryGet<T>(PrimaryKey key, out T value, TimeSpan timeout) where T : ModerationEntry
     {
-        if (timeout.Ticks > 0 && TryGetValue(key.Key, out ModerationEntryCacheEntry entry))
+        if (key.IsValid && timeout.Ticks > 0 && TryGetValue(key.Key, out ModerationEntryCacheEntry entry))
         {
             value = (entry.Entry as T)!;
             return value != null && (DateTime.UtcNow - entry.LastRefreshed) < timeout;

@@ -98,6 +98,10 @@ public class GreifingReport : Report
         writer.WritePropertyName("vehicle_teamkills");
         JsonSerializer.Serialize(writer, VehicleTeamkillRecord, options);
     }
+
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 
+                                              DamageRecord.Length * 8 + VehicleRequestRecord.Length * 6 +
+                                              TeamkillRecord.Length * 5 + VehicleTeamkillRecord.Length * 4;
 }
 
 public readonly struct StructureDamageRecord

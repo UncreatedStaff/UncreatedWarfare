@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using HarmonyLib;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -21,17 +22,17 @@ namespace Uncreated.Warfare.Moderation;
 public abstract class DatabaseInterface
 {
     public static readonly TimeSpan DefaultInvalidateDuration = TimeSpan.FromSeconds(3);
+    private readonly Dictionary<ulong, string> _iconUrlCacheSmall = new Dictionary<ulong, string>(128);
+    private readonly Dictionary<ulong, string> _iconUrlCacheMedium = new Dictionary<ulong, string>(128);
+    private readonly Dictionary<ulong, string> _iconUrlCacheFull = new Dictionary<ulong, string>(128);
     public ModerationCache Cache { get; } = new ModerationCache(64);
-    public Dictionary<ulong, string> IconUrlCacheSmall = new Dictionary<ulong, string>(128);
-    public Dictionary<ulong, string> IconUrlCacheMedium = new Dictionary<ulong, string>(128);
-    public Dictionary<ulong, string> IconUrlCacheFull = new Dictionary<ulong, string>(128);
     public bool TryGetAvatar(ulong steam64, AvatarSize size, out string avatar)
     {
         Dictionary<ulong, string> dict = size switch
         {
-            AvatarSize.Full => IconUrlCacheFull,
-            AvatarSize.Medium => IconUrlCacheMedium,
-            _ => IconUrlCacheSmall
+            AvatarSize.Full => _iconUrlCacheFull,
+            AvatarSize.Medium => _iconUrlCacheMedium,
+            _ => _iconUrlCacheSmall
         };
         return dict.TryGetValue(steam64, out avatar);
     }
@@ -39,9 +40,9 @@ public abstract class DatabaseInterface
     {
         Dictionary<ulong, string> dict = size switch
         {
-            AvatarSize.Full => IconUrlCacheFull,
-            AvatarSize.Medium => IconUrlCacheMedium,
-            _ => IconUrlCacheSmall
+            AvatarSize.Full => _iconUrlCacheFull,
+            AvatarSize.Medium => _iconUrlCacheMedium,
+            _ => _iconUrlCacheSmall
         };
         dict[steam64] = value;
     }
@@ -59,7 +60,8 @@ public abstract class DatabaseInterface
         string query = $"SELECT {SqlTypes.ColumnList(ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
             ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
             ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
-            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp)} " +
+            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
+            ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason)} " +
                        $"FROM `{TableEntries}` WHERE `{ColumnEntriesPrimaryKey}`=@0 LIMIT 1;";
         object[] pkArgs = { id.Key };
         ModerationEntry? entry = null;
@@ -88,7 +90,8 @@ public abstract class DatabaseInterface
         string query = $"SELECT {SqlTypes.ColumnList(ColumnEntriesPrimaryKey, ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
             ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
             ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
-            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp)} " +
+            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
+            ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason)} " +
                        $"FROM `{TableEntries}` WHERE";
 
 
@@ -212,7 +215,8 @@ public abstract class DatabaseInterface
         string query = $"SELECT {SqlTypes.ColumnList(ColumnEntriesPrimaryKey, ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
             ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
             ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
-            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp)} " +
+            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
+            ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason)} " +
                        $"FROM `{TableEntries}` WHERE";
 
         ModerationEntryType[]? types = null;
@@ -378,7 +382,7 @@ public abstract class DatabaseInterface
             {
                 if (entries[j].Id.Key == pk)
                 {
-                    entries[j].Actors = actors[i].Item2.ToArrayFast();
+                    entries[j].Actors = actors[i].Item2.AsArrayFast();
                     break;
                 }
             }
@@ -409,7 +413,7 @@ public abstract class DatabaseInterface
             {
                 if (entries[j].Id.Key == pk)
                 {
-                    entries[j].Evidence = evidence[i].Item2.ToArrayFast();
+                    entries[j].Evidence = evidence[i].Item2.AsArrayFast();
                     break;
                 }
             }
@@ -459,7 +463,7 @@ public abstract class DatabaseInterface
                 {
                     if (entries[j].Id.Key == pk && entries[j] is Punishment p)
                     {
-                        p.AppealKeys = vals.ToArrayFast();
+                        p.AppealKeys = vals.AsArrayFast();
                         break;
                     }
                 }
@@ -486,7 +490,7 @@ public abstract class DatabaseInterface
                 {
                     if (entries[j].Id.Key == pk && entries[j] is Punishment p)
                     {
-                        p.ReportKeys = vals.ToArrayFast();
+                        p.ReportKeys = vals.AsArrayFast();
                         break;
                     }
                 }
@@ -520,9 +524,12 @@ public abstract class DatabaseInterface
         entry.LegacyId = reader.IsDBNull(8 + offset) ? null : reader.GetUInt32(8 + offset);
         entry.RelevantLogsBegin = reader.IsDBNull(9 + offset) ? null : DateTime.SpecifyKind(reader.GetDateTime(9 + offset), DateTimeKind.Utc);
         entry.RelevantLogsEnd = reader.IsDBNull(10 + offset) ? null : DateTime.SpecifyKind(reader.GetDateTime(10 + offset), DateTimeKind.Utc);
+        entry.Removed = !reader.IsDBNull(11 + offset) && reader.GetBoolean(11 + offset);
+        entry.RemovedBy = reader.IsDBNull(12 + offset) ? null : Actors.GetActor(reader.GetUInt64(12 + offset));
+        entry.RemovedTimestamp = reader.IsDBNull(13 + offset) ? null : DateTime.SpecifyKind(reader.GetDateTime(13 + offset), DateTimeKind.Utc);
+        entry.Message = reader.IsDBNull(14 + offset) ? null : reader.GetString(14 + offset);
         return entry;
     }
-
     private static Evidence ReadEvidence(MySqlDataReader reader, int offset)
     {
         return new Evidence(
@@ -540,6 +547,83 @@ public abstract class DatabaseInterface
             reader.GetString(1 + offset),
             reader.GetBoolean(2 + offset),
             Actors.GetActor(reader.GetUInt64(offset)));
+    }
+    public async Task AddOrUpdate(ModerationEntry entry, CancellationToken token = default)
+    {
+        token.ThrowIfCancellationRequested();
+
+        PrimaryKey pk = entry.Id;
+        object[] objs = new object[pk.IsValid ? 16 : 15];
+        objs[0] = (ModerationReflection.GetType(entry.GetType()) ?? ModerationEntryType.None).ToString();
+        objs[1] = entry.Player;
+        objs[2] = (object?)entry.Message ?? DBNull.Value;
+        objs[3] = entry.IsLegacy;
+        objs[4] = entry.StartedTimestamp.UtcDateTime;
+        objs[5] = entry.ResolvedTimestamp.HasValue ? entry.ResolvedTimestamp.Value.UtcDateTime : DBNull.Value;
+        objs[6] = entry.Reputation;
+        objs[7] = entry.ReputationApplied;
+        objs[8] = entry.LegacyId.HasValue ? entry.LegacyId.Value : DBNull.Value;
+        objs[9] = entry.RelevantLogsBegin.HasValue ? entry.RelevantLogsBegin.Value.UtcDateTime : DBNull.Value;
+        objs[10] = entry.RelevantLogsEnd.HasValue ? entry.RelevantLogsEnd.Value.UtcDateTime : DBNull.Value;
+        objs[11] = entry.Removed;
+        objs[12] = entry.RemovedBy == null ? DBNull.Value : entry.RemovedBy.Id;
+        objs[13] = entry.RemovedTimestamp.HasValue ? entry.RemovedTimestamp.Value.UtcDateTime : DBNull.Value;
+        objs[14] = (object?)entry.RemovedMessage ?? DBNull.Value;
+
+        if (pk.IsValid)
+            objs[15] = pk.Key;
+
+        string query = F.BuildInitialInsertQuery(TableEntries, ColumnEntriesPrimaryKey, pk.IsValid, null, null,
+
+            ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
+            ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
+            ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
+            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
+            ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason);
+
+        await Sql.QueryAsync(query, objs, reader =>
+        {
+            pk = reader.GetInt32(0);
+        }, token).ConfigureAwait(false);
+
+        if (pk.IsValid)
+            entry.Id = pk;
+
+        List<object> args = new List<object>(entry.EstimateColumnCount()) { pk.Key };
+
+        StringBuilder builder = new StringBuilder(82);
+
+        bool hasNewEvidence = entry.AppendWriteCall(builder, args);
+
+        if (!hasNewEvidence)
+        {
+            await Sql.NonQueryAsync(builder.ToString(), args.ToArray(), token).ConfigureAwait(false);
+        }
+        else
+        {
+            await Sql.QueryAsync(builder.ToString(), args.ToArray(), reader =>
+            {
+                Evidence read = ReadEvidence(reader, 0);
+                for (int i = 0; i < entry.Evidence.Length; ++i)
+                {
+                    ref Evidence existing = ref entry.Evidence[i];
+                    if (existing.Id.IsValid)
+                    {
+                        if (read.Id.Key == existing.Id.Key)
+                        {
+                            existing = read;
+                            return;
+                        }
+                    }
+                    else if (string.Equals(existing.URL, read.URL, StringComparison.OrdinalIgnoreCase) && existing.Timestamp == read.Timestamp)
+                    {
+                        existing = read;
+                    }
+                }
+            }, token).ConfigureAwait(false);
+        }
+
+        Cache.AddOrUpdate(entry);
     }
 
     public const string TableEntries = "moderation_entries";
@@ -572,6 +656,10 @@ public abstract class DatabaseInterface
     public const string ColumnEntriesInvalidatedTimestamp = "InvalidatedTimestamp";
     public const string ColumnEntriesRelavantLogsStartTimestamp = "RelavantLogsStartTimeUTC";
     public const string ColumnEntriesRelavantLogsEndTimestamp = "RelavantLogsEndTimeUTC";
+    public const string ColumnEntriesRemoved = "Removed";
+    public const string ColumnEntriesRemovedBy = "RemovedBy";
+    public const string ColumnEntriesRemovedTimestamp = "RemovedTimeUTC";
+    public const string ColumnEntriesRemovedReason = "RemovedReason";
 
     public const string ColumnActorsId = "ActorId";
     public const string ColumnActorsRole = "ActorRole";
@@ -600,6 +688,7 @@ public abstract class DatabaseInterface
     public const string ColumnPlayerReportAcceptedsReport = "AcceptedReport";
 
     public const string ColumnTableBugReportAcceptedsCommit = "AcceptedCommit";
+    public const string ColumnTableBugReportAcceptedsIssue = "AcceptedIssue";
 
     public static Schema[] Schema =
     {
@@ -661,6 +750,22 @@ public abstract class DatabaseInterface
             {
                 Nullable = true
             },
+            new Schema.Column(ColumnEntriesRemoved, SqlTypes.BOOLEAN)
+            {
+                Default = "b'0'"
+            },
+            new Schema.Column(ColumnEntriesRemovedBy, SqlTypes.STEAM_64)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnEntriesRemovedTimestamp, SqlTypes.DATETIME)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnEntriesRemovedReason, SqlTypes.String(1024))
+            {
+                Nullable = true
+            }
         }, true, typeof(ModerationEntry)),
         new Schema(TableActors, new Schema.Column[]
         {
@@ -766,6 +871,8 @@ public abstract class DatabaseInterface
         {
             new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
             {
+                PrimaryKey = true,
+                AutoIncrement = true,
                 ForeignKey = true,
                 ForeignKeyColumn = ColumnEntriesPrimaryKey,
                 ForeignKeyTable = TableEntries
@@ -776,6 +883,8 @@ public abstract class DatabaseInterface
         {
             new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
             {
+                PrimaryKey = true,
+                AutoIncrement = true,
                 ForeignKey = true,
                 ForeignKeyColumn = ColumnEntriesPrimaryKey,
                 ForeignKeyTable = TableEntries
@@ -799,7 +908,8 @@ public abstract class DatabaseInterface
             {
                 ForeignKey = true,
                 ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
+                ForeignKeyTable = TableEntries,
+                Nullable = true
             },
         }, false, typeof(PlayerReportAccepted)),
         new Schema(TableBugReportAccepteds, new Schema.Column[]
@@ -813,6 +923,10 @@ public abstract class DatabaseInterface
                 ForeignKeyTable = TableEntries
             },
             new Schema.Column(ColumnTableBugReportAcceptedsCommit, "char(7)")
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnTableBugReportAcceptedsIssue, SqlTypes.INT)
             {
                 Nullable = true
             }

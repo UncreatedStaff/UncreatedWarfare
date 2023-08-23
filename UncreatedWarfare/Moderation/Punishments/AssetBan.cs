@@ -64,4 +64,5 @@ public class AssetBan : DurationPunishment
             writer.WriteNumberValue(AssetFilter[i]);
         writer.WriteEndArray();
     }
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + AssetFilter.Length;
 }

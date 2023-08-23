@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
 
@@ -25,5 +29,20 @@ public class Warning : Punishment
     {
         base.Write(writer, options);
         writer.WriteBoolean("has_been_displayed", HasBeenDisplayed);
+    }
+
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 1;
+    internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableWarnings}` ({SqlTypes.ColumnList(
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnWarningsHasBeenDisplayed)}) VALUES " +
+                       $"(@{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
+                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnWarningsHasBeenDisplayed}` = `t`.`{DatabaseInterface.ColumnWarningsHasBeenDisplayed}`;");
+
+        args.Add(HasBeenDisplayed);
+
+        return hasEvidenceCalls;
     }
 }

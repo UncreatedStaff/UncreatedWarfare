@@ -1506,7 +1506,7 @@ public static class F
         {
             if (j != startIndex)
                 builder.Append(',');
-            builder.Append('@').Append(j);
+            builder.Append('@').Append(j.ToString(CultureInfo.InvariantCulture));
         }
         builder.Append(')');
     }
@@ -1519,7 +1519,7 @@ public static class F
         {
             if (j != startIndex)
                 builder.Append(',');
-            builder.Append('@').Append(j);
+            builder.Append('@').Append(j.ToString(CultureInfo.InvariantCulture));
         }
         builder.Append(')');
     }
@@ -1532,13 +1532,13 @@ public static class F
         {
             if (j != 0)
                 builder.Append(',');
-            builder.Append('@').Append(j);
+            builder.Append('@').Append(j.ToString(CultureInfo.InvariantCulture));
         }
         for (int j = startIndex; j < startIndex + length; ++j)
         {
             if (clampLen != 0 || j != startIndex)
                 builder.Append(',');
-            builder.Append('@').Append(j);
+            builder.Append('@').Append(j.ToString(CultureInfo.InvariantCulture));
         }
         builder.Append(')');
     }
@@ -1912,7 +1912,7 @@ public static class F
         return data.NonQueryAsync($"DELETE FROM `{tableMain}` WHERE `{columnPk}`=@0;", new object[] { pk.Key }, token);
     }
     public static bool IsDefault(this string str) => str.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
-    public static T[] ToArrayFast<T>(this IEnumerable<T> enumerable, bool copy = false)
+    public static T[] AsArrayFast<T>(this IEnumerable<T> enumerable, bool copy = false)
     {
         if (enumerable == null)
             return Array.Empty<T>();

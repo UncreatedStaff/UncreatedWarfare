@@ -42,6 +42,8 @@ public class ChatAbuseReport : Report
         writer.WritePropertyName("messages");
         JsonSerializer.Serialize(writer, Messages, options);
     }
+
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + Messages.Length * 3;
 }
 
 public readonly struct ReportChatRecord

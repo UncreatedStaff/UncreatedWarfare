@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Encoding;
@@ -39,5 +42,20 @@ public class PlayerReportAccepted : ModerationEntry
     {
         base.Write(writer, options);
         writer.WriteNumber("report_id", Report.Key);
+    }
+
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 1;
+    internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($" INSERT INTO `{DatabaseInterface.TablePlayerReportAccepteds}` ({SqlTypes.ColumnList(
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnPlayerReportAcceptedsReport)}) VALUES " +
+                       $"(@{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
+                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnPlayerReportAcceptedsReport}` = `t`.`{DatabaseInterface.ColumnPlayerReportAcceptedsReport}`;");
+
+        args.Add(Report.IsValid ? Report.Key : DBNull.Value);
+
+        return hasEvidenceCalls;
     }
 }

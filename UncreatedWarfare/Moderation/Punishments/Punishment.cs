@@ -132,6 +132,8 @@ public abstract class Punishment : ModerationEntry
         writer.WritePropertyName("reports");
         JsonSerializer.Serialize(writer, ReportKeys, options);
     }
+
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + AppealKeys.Length + ReportKeys.Length;
 }
 
 public abstract class DurationPunishment : Punishment
@@ -167,4 +169,6 @@ public abstract class DurationPunishment : Punishment
     {
         return ResolvedTimestamp.HasValue && IsPermanent || DateTime.UtcNow > GetExpiryTimestamp().UtcDateTime;
     }
+
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 1;
 }

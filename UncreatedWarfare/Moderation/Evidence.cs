@@ -28,6 +28,9 @@ public readonly struct Evidence
     [JsonPropertyName("timestamp_utc")]
     public DateTimeOffset Timestamp { get; }
 
+    public Evidence(string url, string? message, string? savedLocation, bool image, IModerationActor actor, DateTimeOffset timestamp)
+        : this(PrimaryKey.NotAssigned, url, message, savedLocation, image, actor, timestamp) { }
+
     [JsonConstructor]
     public Evidence(PrimaryKey id, string url, string? message, string? savedLocation, bool image, IModerationActor actor, DateTimeOffset timestamp)
     {
