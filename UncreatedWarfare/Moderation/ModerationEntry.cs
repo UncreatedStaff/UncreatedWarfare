@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.SQL;
@@ -127,7 +128,7 @@ public abstract class ModerationEntry
     /// <summary>
     /// Fills any cached properties.
     /// </summary>
-    internal virtual Task FillDetail(DatabaseInterface db) => Task.CompletedTask;
+    internal virtual Task FillDetail(DatabaseInterface db, CancellationToken token = default) => Task.CompletedTask;
     public virtual string GetDisplayName() => ToString();
     public bool TryGetPrimaryAdmin(out RelatedActor actor)
     {
@@ -321,7 +322,7 @@ public abstract class ModerationEntry
 
                 args.Add(i);
                 args.Add(actor.Actor.Id);
-                args.Add(actor.Role ?? string.Empty);
+                args.Add(actor.Role.MaxLength(255) ?? string.Empty);
                 args.Add(actor.Admin);
             }
             builder.Append(';');
@@ -362,9 +363,9 @@ public abstract class ModerationEntry
                     args.Add(evidence.Id.Key);
                     args.Add(evidence.Actor == null ? DBNull.Value : evidence.Actor.Id);
                     args.Add(evidence.Image);
-                    args.Add(evidence.URL);
-                    args.Add((object?)evidence.SavedLocation ?? DBNull.Value);
-                    args.Add((object?)evidence.Message ?? DBNull.Value);
+                    args.Add(evidence.URL.MaxLength(512)!);
+                    args.Add((object?)evidence.SavedLocation.MaxLength(512) ?? DBNull.Value);
+                    args.Add((object?)evidence.Message.MaxLength(1024) ?? DBNull.Value);
                     args.Add(evidence.Timestamp.UtcDateTime);
                 }
 
@@ -396,9 +397,9 @@ public abstract class ModerationEntry
 
                     args.Add(evidence.Actor == null ? DBNull.Value : evidence.Actor.Id);
                     args.Add(evidence.Image);
-                    args.Add(evidence.URL);
-                    args.Add((object?)evidence.SavedLocation ?? DBNull.Value);
-                    args.Add((object?)evidence.Message ?? DBNull.Value);
+                    args.Add(evidence.URL.MaxLength(512)!);
+                    args.Add((object?)evidence.SavedLocation?.MaxLength(512) ?? DBNull.Value);
+                    args.Add((object?)evidence.Message?.MaxLength(1024) ?? DBNull.Value);
                     args.Add(evidence.Timestamp.UtcDateTime);
                 }
 

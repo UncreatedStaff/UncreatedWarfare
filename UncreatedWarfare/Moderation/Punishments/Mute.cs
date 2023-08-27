@@ -76,7 +76,7 @@ public class Mute : DurationPunishment
 
         builder.Append($" INSERT INTO `{DatabaseInterface.TableMutes}` ({SqlTypes.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnMutesType)}) VALUES " +
-            $"(@{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
+            $"(@0, @{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
             $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnMutesType}` = `t`.`{DatabaseInterface.ColumnMutesType}`;");
 
         args.Add(Type.ToString());

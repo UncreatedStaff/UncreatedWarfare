@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Encoding;
 using Uncreated.Framework;
+using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 
@@ -131,6 +133,22 @@ public class Report : ModerationEntry
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 2;
+    internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableReports}` ({SqlTypes.ColumnList(
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsType)}) VALUES ");
+
+        F.AppendPropertyList(builder, args.Count, 1, 0, 1);
+        builder.Append(" AS `t` " +
+                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnReportsType}` = " +
+                       $"`t`.`{DatabaseInterface.ColumnReportsType}`;");
+
+        args.Add(Type.ToString());
+        
+        return hasEvidenceCalls;
+    }
 }
 
 public enum ReportType

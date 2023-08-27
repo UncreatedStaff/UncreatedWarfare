@@ -63,11 +63,11 @@ public class BugReportAccepted : ModerationEntry
 
         builder.Append($" INSERT INTO `{DatabaseInterface.TableBugReportAccepteds}` ({SqlTypes.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnTableBugReportAcceptedsCommit, DatabaseInterface.ColumnTableBugReportAcceptedsIssue)}) VALUES " +
-                       $"(@{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
+                       $"(@0, @{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnTableBugReportAcceptedsCommit}` = `t`.`{DatabaseInterface.ColumnTableBugReportAcceptedsCommit}`," +
                        $"`{DatabaseInterface.ColumnTableBugReportAcceptedsIssue}` = `t`.`{DatabaseInterface.ColumnTableBugReportAcceptedsIssue}`;");
 
-        args.Add((object?)Commit ?? DBNull.Value);
+        args.Add((object?)Commit.MaxLength(7) ?? DBNull.Value);
         args.Add(Issue.HasValue ? Issue.Value : DBNull.Value);
 
         return hasEvidenceCalls;
