@@ -38,7 +38,7 @@ public class Warning : Punishment
 
         builder.Append($" INSERT INTO `{DatabaseInterface.TableWarnings}` ({SqlTypes.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnWarningsHasBeenDisplayed)}) VALUES " +
-                       $"(@{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
+                       $"(@0, @{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnWarningsHasBeenDisplayed}` = `t`.`{DatabaseInterface.ColumnWarningsHasBeenDisplayed}`;");
 
         args.Add(HasBeenDisplayed);

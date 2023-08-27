@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.SQL;
@@ -58,34 +61,15 @@ public abstract class Punishment : ModerationEntry
         appeal = null!;
         return false;
     }
-    internal override async Task FillDetail(DatabaseInterface db)
+    internal override async Task FillDetail(DatabaseInterface db, CancellationToken token = default)
     {
         if (Appeals.Length != AppealKeys.Length)
             Appeals = new Appeal?[AppealKeys.Length];
         if (Reports.Length != ReportKeys.Length)
             Reports = new Report?[ReportKeys.Length];
-        for (int i = 0; i < AppealKeys.Length; ++i)
-        {
-            PrimaryKey key = AppealKeys[i];
-            if (db.Cache.TryGet<Appeal>(key.Key, out Appeal? appeal, DatabaseInterface.DefaultInvalidateDuration))
-                Appeals[i] = appeal;
-            else
-            {
-                appeal = await db.ReadOne<Appeal>(key).ConfigureAwait(false);
-                Appeals[i] = appeal;
-            }
-        }
-        for (int i = 0; i < ReportKeys.Length; ++i)
-        {
-            PrimaryKey key = ReportKeys[i];
-            if (db.Cache.TryGet<Report>(key.Key, out Report? report, DatabaseInterface.DefaultInvalidateDuration))
-                Reports[i] = report;
-            else
-            {
-                report = await db.ReadOne<Report>(key).ConfigureAwait(false);
-                Reports[i] = report;
-            }
-        }
+
+        await db.ReadAll(Appeals, AppealKeys, true, token).ConfigureAwait(false);
+        await db.ReadAll(Reports, ReportKeys, true, token).ConfigureAwait(false);
     }
 
     protected override void ReadIntl(ByteReader reader, ushort version)
@@ -134,6 +118,39 @@ public abstract class Punishment : ModerationEntry
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + AppealKeys.Length + ReportKeys.Length;
+    internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($"DELETE FROM `{DatabaseInterface.TableLinkedReports}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
+
+        if (ReportKeys.Length > 0)
+        {
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableLinkedReports}` ({SqlTypes.ColumnList(
+                DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnLinkedReportsReport)}) VALUES ");
+            for (int i = 0; i < ReportKeys.Length; ++i)
+            {
+                F.AppendPropertyList(builder, args.Count, 1, i, 1);
+                args.Add(ReportKeys[i].Key);
+            }
+            builder.Append(';');
+        }
+        builder.Append($"DELETE FROM `{DatabaseInterface.TableLinkedReports}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
+
+        if (AppealKeys.Length > 0)
+        {
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableLinkedAppeals}` ({SqlTypes.ColumnList(
+                DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnLinkedAppealsAppeal)}) VALUES ");
+            for (int i = 0; i < AppealKeys.Length; ++i)
+            {
+                F.AppendPropertyList(builder, args.Count, 1, i, 1);
+                args.Add(AppealKeys[i].Key);
+            }
+            builder.Append(';');
+        }
+
+        return hasEvidenceCalls;
+    }
 }
 
 public abstract class DurationPunishment : Punishment
@@ -162,13 +179,32 @@ public abstract class DurationPunishment : Punishment
     }
 
     /// <summary>
-    /// Gets the time at which the punishment expires, assuming it isn't appealed.
+    /// Checks if the punishment is still active, assuming it isn't appealed.
     /// </summary>
     /// <exception cref="InvalidOperationException">This punishment hasn't been resolved (<see cref="ModerationEntry.ResolvedTimestamp"/> is <see langword="null"/>).</exception>
     public bool IsApplied()
     {
-        return ResolvedTimestamp.HasValue && IsPermanent || DateTime.UtcNow > GetExpiryTimestamp().UtcDateTime;
+        if (!ResolvedTimestamp.HasValue)
+            throw new InvalidOperationException(GetType().Name + " has not been resolved.");
+
+        return IsPermanent || DateTime.UtcNow > ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 1;
+    internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableDurationPunishments}` ({SqlTypes.ColumnList(
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnDuationsDurationSeconds)}) VALUES ");
+
+        F.AppendPropertyList(builder, args.Count, 1, 0, 1);
+        builder.Append(" AS `t` " +
+                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnDuationsDurationSeconds}` = " +
+                       $"`t`.`{DatabaseInterface.ColumnDuationsDurationSeconds}`;");
+
+        args.Add((long)Math.Round(Duration.TotalSeconds));
+
+        return hasEvidenceCalls;
+    }
 }

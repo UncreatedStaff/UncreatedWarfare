@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Encoding;
+using Uncreated.SQL;
+using Uncreated.Warfare.Moderation.Appeals;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 [ModerationEntry(ModerationEntryType.ChatAbuseReport)]
@@ -44,6 +48,32 @@ public class ChatAbuseReport : Report
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + Messages.Length * 3;
+    internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($"DELETE FROM `{DatabaseInterface.TableReportChatRecords}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
+
+        if (Messages.Length > 0)
+        {
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportChatRecords}` ({SqlTypes.ColumnList(
+                DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsChatRecordsTimestamp,
+                DatabaseInterface.ColumnReportsChatRecordsCount, DatabaseInterface.ColumnReportsChatRecordsMessage)}) VALUES ");
+
+            for (int i = 0; i < Messages.Length; ++i)
+            {
+                ref ReportChatRecord record = ref Messages[i];
+                F.AppendPropertyList(builder, args.Count, 3, i, 1);
+                args.Add(record.Timestamp.UtcDateTime);
+                args.Add(record.Count);
+                args.Add(record.Message.MaxLength(512) ?? string.Empty);
+            }
+
+            builder.Append(';');
+        }
+
+        return hasEvidenceCalls;
+    }
 }
 
 public readonly struct ReportChatRecord

@@ -51,7 +51,7 @@ public class PlayerReportAccepted : ModerationEntry
 
         builder.Append($" INSERT INTO `{DatabaseInterface.TablePlayerReportAccepteds}` ({SqlTypes.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnPlayerReportAcceptedsReport)}) VALUES " +
-                       $"(@{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
+                       $"(@0, @{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnPlayerReportAcceptedsReport}` = `t`.`{DatabaseInterface.ColumnPlayerReportAcceptedsReport}`;");
 
         args.Add(Report.IsValid ? Report.Key : DBNull.Value);

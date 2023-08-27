@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Encoding;
@@ -65,4 +68,21 @@ public class AssetBan : DurationPunishment
         writer.WriteEndArray();
     }
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + AssetFilter.Length;
+    internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($"DELETE FROM `{DatabaseInterface.TableAssetBanFilters}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;" +
+                       $" INSERT INTO `{DatabaseInterface.TableAssetBanFilters}` ({SqlTypes.ColumnList(
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnAssetBanFiltersAsset)}) VALUES ");
+        
+        for (int i = 0; i < AssetFilter.Length; ++i)
+        {
+            F.AppendPropertyList(builder, args.Count, 1, i, 1);
+            args.Add(AssetFilter[i].Key);
+        }
+        builder.Append(';');
+
+        return hasEvidenceCalls;
+    }
 }

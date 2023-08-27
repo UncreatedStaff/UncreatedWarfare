@@ -1,4 +1,5 @@
 ﻿using MySqlConnector;
+using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,7 +7,6 @@ using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using HarmonyLib;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -15,6 +15,9 @@ using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Moderation.Appeals;
 using Uncreated.Warfare.Moderation.Commendation;
 using Uncreated.Warfare.Moderation.Punishments;
+using Uncreated.Warfare.Moderation.Records;
+using Uncreated.Warfare.Moderation.Reports;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
 using Report = Uncreated.Warfare.Moderation.Reports.Report;
 
@@ -55,14 +58,18 @@ public abstract class DatabaseInterface
 
         return await Sql.GetUsernamesAsync(id, token).ConfigureAwait(false);
     }
-    public async Task<T?> ReadOne<T>(PrimaryKey id, CancellationToken token = default) where T : ModerationEntry
+    public async Task<T?> ReadOne<T>(PrimaryKey id, bool tryGetFromCache, CancellationToken token = default) where T : ModerationEntry
     {
+        if (tryGetFromCache && Cache.TryGet(id, out T val, DefaultInvalidateDuration))
+            return val;
+
         string query = $"SELECT {SqlTypes.ColumnList(ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
             ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
             ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
             ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
             ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason)} " +
                        $"FROM `{TableEntries}` WHERE `{ColumnEntriesPrimaryKey}`=@0 LIMIT 1;";
+
         object[] pkArgs = { id.Key };
         ModerationEntry? entry = null;
         await Sql.QueryAsync(query, pkArgs, reader =>
@@ -79,9 +86,74 @@ public abstract class DatabaseInterface
             return null;
         }
 
-        await Fill(new ModerationEntry[] { entry }, token).ConfigureAwait(false);
+        await Fill(new ModerationEntry[] { entry }, null, token).ConfigureAwait(false);
         
         return entry as T;
+    }
+    public async Task<T?[]> ReadAll<T>(PrimaryKey[] ids, bool tryGetFromCache, CancellationToken token = default) where T : ModerationEntry
+    {
+        T?[] result = new T?[ids.Length];
+        await ReadAll(result, ids, tryGetFromCache, token).ConfigureAwait(false);
+        return result;
+    }
+    public async Task ReadAll<T>(T?[] result, PrimaryKey[] ids, bool tryGetFromCache, CancellationToken token = default) where T : ModerationEntry
+    {
+        if (result.Length != ids.Length)
+            throw new ArgumentException("Result must be the same length as ids.", nameof(result));
+
+        string query = $"SELECT {SqlTypes.ColumnList(ColumnEntriesPrimaryKey, ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
+            ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
+            ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
+            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
+            ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason)} " +
+                       $"FROM `{TableEntries}` WHERE `{ColumnEntriesPrimaryKey}` IN ({SqlTypes.ParameterList(0, ids.Length)});";
+
+        object[] parameters = new object[ids.Length];
+        for (int i = 0; i < ids.Length; ++i)
+            parameters[i] = ids[i].Key;
+        
+        BitArray? mask = null;
+        if (tryGetFromCache)
+        {
+            bool miss = false;
+            for (int i = 0; i < ids.Length; ++i)
+            {
+                if (Cache.TryGet(ids[i].Key, out T val, DefaultInvalidateDuration))
+                    result[i] = val;
+                else
+                    miss = true;
+            }
+
+            if (!miss)
+                return;
+
+            mask = new BitArray(result.Length);
+            for (int i = 0; i < mask.Length; ++i)
+                mask[i] = result[i] is null;
+        }
+        await Sql.QueryAsync(query, parameters, reader =>
+        {
+            ModerationEntry? entry = ReadEntry(reader, 1);
+            if (entry == null)
+                return;
+            int pk = reader.GetInt32(0);
+            entry.Id = pk;
+            int index = -1;
+            for (int j = 0; j < ids.Length; ++j)
+            {
+                if (ids[j].Key == pk)
+                {
+                    index = j;
+                    break;
+                }
+            }
+            if (index == -1 || entry is not T val)
+                return;
+            result[index] = val;
+        }, token).ConfigureAwait(false);
+        
+        // ReSharper disable once CoVariantArrayConversion
+        await Fill(result, mask, token).ConfigureAwait(false);
     }
     public async Task<T[]> ReadAll<T>(ulong actor, ActorRelationType relation, DateTimeOffset? start = null, DateTimeOffset? end = null, string? orderBy = null, string? condition = null, object[]? conditionArgs = null, CancellationToken token = default) where T : ModerationEntry
         => (T[])await ReadAll(typeof(T), actor, relation, start, end, orderBy, condition, conditionArgs, token).ConfigureAwait(false);
@@ -204,7 +276,7 @@ public abstract class DatabaseInterface
         Array rtn = entries.ToArray(type);
 
         // ReSharper disable once CoVariantArrayConversion
-        await Fill((ModerationEntry[])rtn, token).ConfigureAwait(false);
+        await Fill((ModerationEntry[])rtn, null, token).ConfigureAwait(false);
         
         return rtn;
     }
@@ -317,25 +389,32 @@ public abstract class DatabaseInterface
         Array rtn = entries.ToArray(type);
 
         // ReSharper disable once CoVariantArrayConversion
-        await Fill((ModerationEntry[])rtn, token).ConfigureAwait(false);
+        await Fill((ModerationEntry[])rtn, null, token).ConfigureAwait(false);
         
         return rtn;
     }
-    private async Task Fill(ModerationEntry[] entries, CancellationToken token = default)
+    private async Task Fill(ModerationEntry?[] entries, BitArray? mask = null, CancellationToken token = default)
     {
-        if (entries.Length == 0) return;
+        if (entries.Length == 0 || entries.Length == 1 && (entries[0] is null || mask is not null && !mask[0])) return;
         string inArg;
         if (entries.Length == 1)
-            inArg = " IN (" + entries[0].Id.Key.ToString(CultureInfo.InvariantCulture) + ")";
+            inArg = " = " + entries[0]!.Id.Key.ToString(CultureInfo.InvariantCulture);
         else
         {
             StringBuilder sb = new StringBuilder("IN (", entries.Length * 4 + 6);
+            int ct = 0;
             for (int i = 0; i < entries.Length; ++i)
             {
+                if (entries[i] is not { } e || mask is not null && !mask[i])
+                    continue;
+                ++ct;
                 if (i != 0)
                     sb.Append(',');
-                sb.Append(entries[i].Id.Key.ToString(CultureInfo.InvariantCulture));
+                sb.Append(e.Id.Key.ToString(CultureInfo.InvariantCulture));
             }
+
+            if (ct == 0)
+                return;
 
             inArg = sb.Append(')').ToString();
         }
@@ -344,7 +423,7 @@ public abstract class DatabaseInterface
         bool anyDurationPunishments = false;
         for (int i = 0; i < entries.Length; ++i)
         {
-            if (entries[i] is Punishment p)
+            if (entries[i] is Punishment p && (mask is null || mask[i]))
             {
                 anyPunishments = true;
                 if (p is DurationPunishment)
@@ -380,9 +459,9 @@ public abstract class DatabaseInterface
             int pk = actors[i].Item1;
             for (int j = 0; j < entries.Length; ++j)
             {
-                if (entries[j].Id.Key == pk)
+                if (entries[j] is { } e && (mask is null || mask[i]) && e.Id.Key == pk)
                 {
-                    entries[j].Actors = actors[i].Item2.AsArrayFast();
+                    e.Actors = actors[i].Item2.AsArrayFast();
                     break;
                 }
             }
@@ -411,9 +490,9 @@ public abstract class DatabaseInterface
             int pk = evidence[i].Item1;
             for (int j = 0; j < entries.Length; ++j)
             {
-                if (entries[j].Id.Key == pk)
+                if (entries[j] is { } e && (mask is null || mask[i]) && e.Id.Key == pk)
                 {
-                    entries[j].Evidence = evidence[i].Item2.AsArrayFast();
+                    e.Evidence = evidence[i].Item2.AsArrayFast();
                     break;
                 }
             }
@@ -430,9 +509,9 @@ public abstract class DatabaseInterface
                     sec = -1;
                 for (int i = 0; i < entries.Length; ++i)
                 {
-                    if (entries[i].Id.Key == pk && entries[i] is DurationPunishment duration)
+                    if (entries[i] is DurationPunishment e && (mask is null || mask[i]) && e.Id.Key == pk)
                     {
-                        duration.Duration = TimeSpan.FromSeconds(sec);
+                        e.Duration = TimeSpan.FromSeconds(sec);
                         break;
                     }
                 }
@@ -461,7 +540,7 @@ public abstract class DatabaseInterface
                 List<PrimaryKey> vals = links[i].Item2;
                 for (int j = 0; j < entries.Length; ++j)
                 {
-                    if (entries[j].Id.Key == pk && entries[j] is Punishment p)
+                    if (entries[j] is Punishment p && (mask is null || mask[i]) && p.Id.Key == pk)
                     {
                         p.AppealKeys = vals.AsArrayFast();
                         break;
@@ -488,7 +567,7 @@ public abstract class DatabaseInterface
                 List<PrimaryKey> vals = links[i].Item2;
                 for (int j = 0; j < entries.Length; ++j)
                 {
-                    if (entries[j].Id.Key == pk && entries[j] is Punishment p)
+                    if (entries[j] is Punishment p && (mask is null || mask[i]) && p.Id.Key == pk)
                     {
                         p.ReportKeys = vals.AsArrayFast();
                         break;
@@ -499,8 +578,9 @@ public abstract class DatabaseInterface
 
         for (int i = 0; i < entries.Length; ++i)
         {
-            Cache.AddOrUpdate(entries[i]);
-            await entries[i].FillDetail(this).ConfigureAwait(false);
+            if (entries[i] is not { } e || mask is not null && !mask[i]) continue;
+            Cache.AddOrUpdate(e);
+            await e.FillDetail(this, token).ConfigureAwait(false);
         }
     }
     private static ModerationEntry? ReadEntry(MySqlDataReader reader, int offset)
@@ -556,7 +636,7 @@ public abstract class DatabaseInterface
         object[] objs = new object[pk.IsValid ? 16 : 15];
         objs[0] = (ModerationReflection.GetType(entry.GetType()) ?? ModerationEntryType.None).ToString();
         objs[1] = entry.Player;
-        objs[2] = (object?)entry.Message ?? DBNull.Value;
+        objs[2] = (object?)entry.Message.MaxLength(1024) ?? DBNull.Value;
         objs[3] = entry.IsLegacy;
         objs[4] = entry.StartedTimestamp.UtcDateTime;
         objs[5] = entry.ResolvedTimestamp.HasValue ? entry.ResolvedTimestamp.Value.UtcDateTime : DBNull.Value;
@@ -637,6 +717,17 @@ public abstract class DatabaseInterface
     public const string TableWarnings = "moderation_warnings";
     public const string TablePlayerReportAccepteds = "moderation_accepted_player_reports";
     public const string TableBugReportAccepteds = "moderation_accepted_bug_reports";
+    public const string TableTeamkills = "moderation_teamkills";
+    public const string TableVehicleTeamkills = "moderation_teamkills";
+    public const string TableAppeals = "moderation_appeals";
+    public const string TableAppealPunishments = "moderation_appeal_punishments";
+    public const string TableAppealResponses = "moderation_appeal_responses";
+    public const string TableReports = "moderation_reports";
+    public const string TableReportChatRecords = "moderation_report_chat_records";
+    public const string TableReportStructureDamageRecords = "moderation_report_struct_dmg_records";
+    public const string TableReportVehicleRequestRecords = "moderation_report_veh_req_records";
+    public const string TableReportTeamkillRecords = "moderation_report_tk_records";
+    public const string TableReportVehicleTeamkillRecords = "moderation_report_veh_tk_records";
 
     public const string ColumnExternalPrimaryKey = "Entry";
     
@@ -689,6 +780,62 @@ public abstract class DatabaseInterface
 
     public const string ColumnTableBugReportAcceptedsCommit = "AcceptedCommit";
     public const string ColumnTableBugReportAcceptedsIssue = "AcceptedIssue";
+
+    public const string ColumnTeamkillsDeathCause = "DeathCause";
+    public const string ColumnTeamkillsAsset = "Asset";
+    public const string ColumnTeamkillsAssetName = "AssetName";
+    public const string ColumnTeamkillsLimb = "Limb";
+    public const string ColumnTeamkillsDistance = "Distance";
+    public const string ColumnTeamkillsDeathMessage = "DeathMessage";
+
+    public const string ColumnVehicleTeamkillsDamageOrigin = "DamageOrigin";
+    public const string ColumnVehicleTeamkillsVehicleAsset = "VehicleAsset";
+    public const string ColumnVehicleTeamkillsVehicleAssetName = "VehicleAssetName";
+    public const string ColumnVehicleTeamkillsAsset = "Asset";
+    public const string ColumnVehicleTeamkillsAssetName = "AssetName";
+    public const string ColumnVehicleTeamkillsDeathMessage = "DeathMessage";
+
+    public const string ColumnAppealsTicketId = "TicketId";
+    public const string ColumnAppealsState = "State";
+    public const string ColumnAppealsDiscordId = "DiscordId";
+
+    public const string ColumnAppealPunishmentsPunishment = "Punishment";
+
+    public const string ColumnAppealResponsesQuestion = "Question";
+    public const string ColumnAppealResponsesResponse = "Response";
+
+    public const string ColumnReportsType = "Type";
+
+    public const string ColumnReportsChatRecordsTimestamp = "TimeUTC";
+    public const string ColumnReportsChatRecordsCount = "Count";
+    public const string ColumnReportsChatRecordsMessage = "Message";
+
+    public const string ColumnReportsStructureDamageStructure = "Structure";
+    public const string ColumnReportsStructureDamageStructureName = "StructureName";
+    public const string ColumnReportsStructureDamageStructureOwner = "StructureOwner";
+    public const string ColumnReportsStructureDamageStructureType = "StructureType";
+    public const string ColumnReportsStructureDamageDamageOrigin = "DamageOrigin";
+    public const string ColumnReportsStructureDamageInstanceId = "InstanceId";
+    public const string ColumnReportsStructureDamageDamage = "Damage";
+    public const string ColumnReportsStructureDamageWasDestroyed = "WasDestroyed";
+
+    public const string ColumnReportsTeamkillRecordTeamkill = "Teamkill";
+    public const string ColumnReportsTeamkillRecordVictim = "Victim";
+    public const string ColumnReportsTeamkillRecordDeathCause = "DeathCause";
+    public const string ColumnReportsTeamkillRecordMessage = "Message";
+    public const string ColumnReportsTeamkillRecordWasIntentional = "WasIntentional";
+
+    public const string ColumnReportsVehicleTeamkillRecordTeamkill = "Teamkill";
+    public const string ColumnReportsVehicleTeamkillRecordVictim = "Victim";
+    public const string ColumnReportsVehicleTeamkillRecordDamageOrigin = "DamageOrigin";
+    public const string ColumnReportsVehicleTeamkillRecordMessage = "Message";
+
+    public const string ColumnReportsVehicleRequestRecordVehicle = "Vehicle";
+    public const string ColumnReportsVehicleRequestRecordVehicleName = "VehicleName";
+    public const string ColumnReportsVehicleRequestRecordRequestTimestamp = "RequestTimeUTC";
+    public const string ColumnReportsVehicleRequestRecordDestroyTimestamp = "DestroyTimeUTC";
+    public const string ColumnReportsVehicleRequestRecordDamageOrigin = "DamageOrigin";
+    public const string ColumnReportsVehicleRequestRecordInstigator = "DamageInstigator";
 
     public static Schema[] Schema =
     {
@@ -850,7 +997,7 @@ public abstract class DatabaseInterface
                 ForeignKey = true,
                 ForeignKeyColumn = ColumnEntriesPrimaryKey,
                 ForeignKeyTable = TableEntries
-            },
+            }
         }, false, typeof(Appeal)),
         new Schema(TableLinkedReports, new Schema.Column[]
         {
@@ -865,7 +1012,7 @@ public abstract class DatabaseInterface
                 ForeignKey = true,
                 ForeignKeyColumn = ColumnEntriesPrimaryKey,
                 ForeignKeyTable = TableEntries
-            },
+            }
         }, false, typeof(Report)),
         new Schema(TableMutes, new Schema.Column[]
         {
@@ -892,7 +1039,7 @@ public abstract class DatabaseInterface
             new Schema.Column(ColumnWarningsHasBeenDisplayed, SqlTypes.BOOLEAN)
             {
                 Default = "b'0'"
-            },
+            }
         }, false, typeof(Warning)),
         new Schema(TablePlayerReportAccepteds, new Schema.Column[]
         {
@@ -910,7 +1057,7 @@ public abstract class DatabaseInterface
                 ForeignKeyColumn = ColumnEntriesPrimaryKey,
                 ForeignKeyTable = TableEntries,
                 Nullable = true
-            },
+            }
         }, false, typeof(PlayerReportAccepted)),
         new Schema(TableBugReportAccepteds, new Schema.Column[]
         {
@@ -931,6 +1078,239 @@ public abstract class DatabaseInterface
                 Nullable = true
             }
         }, false, typeof(PlayerReportAccepted)),
+        new Schema(TableTeamkills, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true,
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnTeamkillsAsset, SqlTypes.GUID_STRING)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnTeamkillsAssetName, SqlTypes.String(48))
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnTeamkillsDeathCause, SqlTypes.Enum<EDeathCause>())
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnTeamkillsDistance, SqlTypes.FLOAT)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnTeamkillsLimb, SqlTypes.Enum<ELimb>())
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnTeamkillsDeathMessage, SqlTypes.STRING_255)
+            {
+                Nullable = true
+            }
+        }, false, typeof(Teamkill)),
+        new Schema(TableVehicleTeamkills, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true,
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnVehicleTeamkillsVehicleAsset, SqlTypes.GUID_STRING)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnVehicleTeamkillsVehicleAssetName, SqlTypes.String(48))
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnVehicleTeamkillsAsset, SqlTypes.GUID_STRING)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnVehicleTeamkillsAssetName, SqlTypes.String(48))
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnVehicleTeamkillsDamageOrigin, SqlTypes.Enum<EDamageOrigin>())
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnVehicleTeamkillsDeathMessage, SqlTypes.STRING_255)
+            {
+                Nullable = true
+            }
+        }, false, typeof(VehicleTeamkill)),
+        new Schema(TableAppeals, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true,
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnAppealsTicketId, SqlTypes.GUID_STRING),
+            new Schema.Column(ColumnAppealsState, SqlTypes.BOOLEAN)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnAppealsDiscordId, SqlTypes.ULONG)
+            {
+                Nullable = true
+            }
+        }, false, typeof(Appeal)),
+        new Schema(TableAppealPunishments, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnAppealPunishmentsPunishment, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            }
+        }, false, typeof(Punishment)),
+        new Schema(TableAppealResponses, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnAppealResponsesQuestion, SqlTypes.STRING_255),
+            new Schema.Column(ColumnAppealResponsesResponse, SqlTypes.String(1024))
+        }, false, typeof(AppealResponse)),
+        new Schema(TableReports, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true,
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnReportsType, SqlTypes.Enum<ReportType>())
+        }, false, typeof(Report)),
+        new Schema(TableReportChatRecords, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnReportsChatRecordsMessage, SqlTypes.String(512)),
+            new Schema.Column(ColumnReportsChatRecordsCount, SqlTypes.INT)
+            {
+                Default = "1"
+            }
+        }, false, typeof(ReportChatRecord)),
+        new Schema(TableReportStructureDamageRecords, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnReportsStructureDamageStructure, SqlTypes.GUID_STRING),
+            new Schema.Column(ColumnReportsStructureDamageStructureName, SqlTypes.String(48)),
+            new Schema.Column(ColumnReportsStructureDamageStructureOwner, SqlTypes.STEAM_64),
+            new Schema.Column(ColumnReportsStructureDamageStructureType, SqlTypes.Enum(StructType.Unknown)),
+            new Schema.Column(ColumnReportsStructureDamageDamage, SqlTypes.INT),
+            new Schema.Column(ColumnReportsStructureDamageDamageOrigin, SqlTypes.Enum<EDamageOrigin>()),
+            new Schema.Column(ColumnReportsStructureDamageInstanceId, SqlTypes.INSTANCE_ID),
+            new Schema.Column(ColumnReportsStructureDamageWasDestroyed, SqlTypes.BOOLEAN)
+            {
+                Default = "b'0'"
+            }
+        }, false, typeof(StructureDamageRecord)),
+        new Schema(TableReportTeamkillRecords, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnReportsTeamkillRecordTeamkill, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries,
+                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull,
+                Nullable = true
+            },
+            new Schema.Column(ColumnReportsTeamkillRecordVictim, SqlTypes.STEAM_64),
+            new Schema.Column(ColumnReportsTeamkillRecordDeathCause, SqlTypes.Enum<EDeathCause>()),
+            new Schema.Column(ColumnReportsTeamkillRecordWasIntentional, SqlTypes.BOOLEAN)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnReportsTeamkillRecordMessage, SqlTypes.STRING_255)
+            {
+                Nullable = true
+            }
+        }, false, typeof(TeamkillRecord)),
+        new Schema(TableReportVehicleTeamkillRecords, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnReportsVehicleTeamkillRecordTeamkill, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries,
+                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull,
+                Nullable = true
+            },
+            new Schema.Column(ColumnReportsVehicleTeamkillRecordVictim, SqlTypes.STEAM_64),
+            new Schema.Column(ColumnReportsVehicleTeamkillRecordDamageOrigin, SqlTypes.Enum<EDamageOrigin>()),
+            new Schema.Column(ColumnReportsVehicleTeamkillRecordMessage, SqlTypes.STRING_255)
+            {
+                Nullable = true
+            }
+        }, false, typeof(VehicleTeamkillRecord)),
+        new Schema(TableReportVehicleRequestRecords, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnReportsVehicleRequestRecordVehicle, SqlTypes.GUID_STRING),
+            new Schema.Column(ColumnReportsVehicleRequestRecordVehicleName, SqlTypes.String(48)),
+            new Schema.Column(ColumnReportsVehicleRequestRecordDamageOrigin, SqlTypes.Enum<EDamageOrigin>()),
+            new Schema.Column(ColumnReportsVehicleRequestRecordInstigator, SqlTypes.STEAM_64)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnReportsVehicleRequestRecordRequestTimestamp, SqlTypes.DATETIME),
+            new Schema.Column(ColumnReportsVehicleRequestRecordDestroyTimestamp, SqlTypes.DATETIME)
+            {
+                Nullable = true
+            }
+        }, false, typeof(VehicleRequestRecord))
     };
 }
 

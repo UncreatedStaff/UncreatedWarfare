@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using MySqlConnector;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -1971,6 +1972,13 @@ public static class F
 
         key = list[list.Count - 1].Key;
         action(key, arr);
+    }
+    
+    public static string? MaxLength(this string? str, int length)
+    {
+        if (str is null)
+            return null;
+        return str.Length <= length ? str : str.Substring(0, length);
     }
 }
 
