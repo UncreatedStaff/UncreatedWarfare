@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.SQL;
-using Uncreated.Warfare.Moderation.Appeals;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 [ModerationEntry(ModerationEntryType.ChatAbuseReport)]
@@ -31,6 +33,20 @@ public class ChatAbuseReport : Report
         writer.Write(Messages.Length);
         for (int i = 0; i < Messages.Length; ++i)
             Messages[i].Write(writer);
+    }
+    internal override async Task FillDetail(DatabaseInterface db, CancellationToken token = default)
+    {
+        List<ReportChatRecord>? responses = null;
+        await db.Sql.QueryAsync(
+            $"SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnReportsChatRecordsMessage, DatabaseInterface.ColumnReportsChatRecordsCount, DatabaseInterface.ColumnReportsChatRecordsTimestamp)} " +
+            $"FROM `{DatabaseInterface.TableReportChatRecords}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;",
+            new object[] { Id.Key },
+            reader =>
+            {
+                (responses ??= new List<ReportChatRecord>(6)).Add(new ReportChatRecord(reader.GetString(0), reader.GetInt32(1), new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc))));
+            }, token).ConfigureAwait(false);
+        Messages = responses?.ToArray() ?? Array.Empty<ReportChatRecord>();
+        await base.FillDetail(db, token).ConfigureAwait(false);
     }
     public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {

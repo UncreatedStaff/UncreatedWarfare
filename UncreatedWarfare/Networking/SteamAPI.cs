@@ -42,6 +42,8 @@ public sealed class SteamAPI
     {
         if (string.IsNullOrEmpty(UCWarfare.Config.SteamAPIKey))
             throw new InvalidOperationException("Steam API key not present.");
+        if (players.Length == 0)
+            return Array.Empty<PlayerSummary>();
 
         using UnityWebRequest webRequest = UnityWebRequest.Get(MakeUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + string.Join(",", players)));
         await webRequest.SendWebRequest().WithCancellation(token);

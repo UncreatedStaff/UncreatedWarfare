@@ -1973,13 +1973,6 @@ public static class F
         key = list[list.Count - 1].Key;
         action(key, arr);
     }
-    
-    public static string? MaxLength(this string? str, int length)
-    {
-        if (str is null)
-            return null;
-        return str.Length <= length ? str : str.Substring(0, length);
-    }
 }
 
 public readonly struct PrimaryKeyPair<T>

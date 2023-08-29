@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation.Records;

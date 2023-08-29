@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.SQL;
@@ -71,6 +73,70 @@ public class GreifingReport : Report
         writer.Write(VehicleTeamkillRecord.Length);
         for (int i = 0; i < VehicleTeamkillRecord.Length; ++i)
             VehicleTeamkillRecord[i].Write(writer);
+    }
+    internal override async Task FillDetail(DatabaseInterface db, CancellationToken token = default)
+    {
+        List<StructureDamageRecord>? structRecord = null;
+        await db.Sql.QueryAsync(
+            $"SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnReportsStructureDamageDamage, DatabaseInterface.ColumnReportsStructureDamageDamageOrigin,
+                DatabaseInterface.ColumnReportsStructureDamageInstanceId, DatabaseInterface.ColumnReportsStructureDamageStructure,
+                DatabaseInterface.ColumnReportsStructureDamageStructureName, DatabaseInterface.ColumnReportsStructureDamageStructureOwner,
+                DatabaseInterface.ColumnReportsStructureDamageStructureType, DatabaseInterface.ColumnReportsStructureDamageWasDestroyed)} " +
+            $"FROM `{DatabaseInterface.TableReportStructureDamageRecords}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;",
+            new object[] { Id.Key },
+            reader =>
+            {
+                (structRecord ??= new List<StructureDamageRecord>(6)).Add(
+                    new StructureDamageRecord(reader.ReadGuidString(3) ?? Guid.Empty, reader.GetString(4), reader.GetUInt64(5),
+                        reader.ReadStringEnum(1, EDamageOrigin.Unknown), reader.ReadStringEnum(6, StructType.Unknown), reader.GetUInt32(2),
+                        reader.GetInt32(0), reader.GetBoolean(7)));
+            }, token).ConfigureAwait(false);
+        DamageRecord = structRecord?.ToArray() ?? Array.Empty<StructureDamageRecord>();
+
+        List<TeamkillRecord>? tkRecord = null;
+        await db.Sql.QueryAsync(
+            $"SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnReportsTeamkillRecordVictim, DatabaseInterface.ColumnReportsTeamkillRecordDeathCause,
+                DatabaseInterface.ColumnReportsTeamkillRecordWasIntentional, DatabaseInterface.ColumnReportsTeamkillRecordTeamkill,
+                DatabaseInterface.ColumnReportsTeamkillRecordMessage)} " +
+            $"FROM `{DatabaseInterface.TableReportTeamkillRecords}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;",
+            new object[] { Id.Key },
+            reader =>
+            {
+                (tkRecord ??= new List<TeamkillRecord>(6)).Add(
+                    new TeamkillRecord(reader.GetInt32(3), reader.GetUInt64(0), reader.ReadStringEnum(1, EDeathCause.KILL), reader.GetString(4), reader.IsDBNull(2) ? null : reader.GetBoolean(2)));
+            }, token).ConfigureAwait(false);
+        TeamkillRecord = tkRecord?.ToArray() ?? Array.Empty<TeamkillRecord>();
+
+        List<VehicleTeamkillRecord>? vtkRecord = null;
+        await db.Sql.QueryAsync(
+            $"SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnReportsVehicleTeamkillRecordVictim, DatabaseInterface.ColumnReportsVehicleTeamkillRecordDamageOrigin,
+                DatabaseInterface.ColumnReportsVehicleTeamkillRecordTeamkill, DatabaseInterface.ColumnReportsVehicleTeamkillRecordMessage)} " +
+            $"FROM `{DatabaseInterface.TableReportVehicleTeamkillRecords}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;",
+            new object[] { Id.Key },
+            reader =>
+            {
+                (vtkRecord ??= new List<VehicleTeamkillRecord>(6)).Add(
+                    new VehicleTeamkillRecord(reader.GetInt32(2), reader.GetUInt64(0), reader.ReadStringEnum(1, EDamageOrigin.Unknown), reader.GetString(3)));
+            }, token).ConfigureAwait(false);
+        VehicleTeamkillRecord = vtkRecord?.ToArray() ?? Array.Empty<VehicleTeamkillRecord>();
+
+        List<VehicleRequestRecord>? reqRecord = null;
+        await db.Sql.QueryAsync(
+            $"SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnReportsVehicleRequestRecordAsset, DatabaseInterface.ColumnReportsVehicleRequestRecordVehicle,
+                DatabaseInterface.ColumnReportsVehicleRequestRecordVehicleName, DatabaseInterface.ColumnReportsVehicleRequestRecordInstigator,
+                DatabaseInterface.ColumnReportsVehicleRequestRecordDamageOrigin, DatabaseInterface.ColumnReportsVehicleRequestRecordRequestTimestamp,
+                DatabaseInterface.ColumnReportsVehicleRequestRecordDestroyTimestamp)} " +
+            $"FROM `{DatabaseInterface.TableReportVehicleRequestRecords}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;",
+            new object[] { Id.Key },
+            reader =>
+            {
+                (reqRecord ??= new List<VehicleRequestRecord>(6)).Add(
+                    new VehicleRequestRecord(reader.ReadGuidString(1) ?? Guid.Empty, reader.IsDBNull(0) ? PrimaryKey.NotAssigned : reader.GetInt32(0), reader.GetString(2),
+                        new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc)),
+                        reader.IsDBNull(6) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)), reader.ReadStringEnum(4, EDamageOrigin.Unknown), reader.GetUInt64(3)));
+            }, token).ConfigureAwait(false);
+        VehicleRequestRecord = reqRecord?.ToArray() ?? Array.Empty<VehicleRequestRecord>();
+        await base.FillDetail(db, token).ConfigureAwait(false);
     }
     public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
@@ -367,6 +433,9 @@ public readonly struct VehicleRequestRecord
     [JsonPropertyName("vehicle")]
     public Guid Vehicle { get; }
 
+    [JsonPropertyName("vehicle_bay_id")]
+    public PrimaryKey Asset { get; }
+
     [JsonPropertyName("name")]
     public string Name { get; }
 
@@ -383,9 +452,12 @@ public readonly struct VehicleRequestRecord
 
     [JsonPropertyName("instigator")]
     public ulong Instigator { get; }
-    public VehicleRequestRecord(Guid vehicle, string name, DateTimeOffset requested, DateTimeOffset? destroyed, EDamageOrigin origin, ulong instigator)
+
+    [JsonConstructor]
+    public VehicleRequestRecord(Guid vehicle, PrimaryKey asset, string name, DateTimeOffset requested, DateTimeOffset? destroyed, EDamageOrigin origin, ulong instigator)
     {
         Vehicle = vehicle;
+        Asset = asset;
         Name = name;
         Requested = requested;
         Destroyed = destroyed;

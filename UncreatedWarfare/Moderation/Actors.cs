@@ -180,6 +180,8 @@ public readonly struct RelatedActor
         Admin = admin;
         Actor = actor;
     }
+
+    // ReSharper disable once UnusedParameter.Local
     public RelatedActor(ByteReader reader, ushort version)
     {
         Role = reader.ReadString();

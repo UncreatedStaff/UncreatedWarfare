@@ -15,7 +15,7 @@ using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Moderation;
-public class ModerationUI : UnturnedUI
+internal class ModerationUI : UnturnedUI
 {
     public const int ModerationHistoryLength = 30;
     public const string PositiveReputationColor = "cc0000";
@@ -207,10 +207,10 @@ public class ModerationUI : UnturnedUI
         if (textBoxData != null)
             ModerationPlayerSearch.SetText(player.Connection, textBoxData.Text ?? string.Empty);
 
-        ModerationPlayerSearchModeButton.Update(player.Player, true); // calling the event will refresh the list.
         ModerationHistroyTypeButton.Update(player.Player, false);
         ModerationHistroySearchTypeButton.Update(player.Player, false);
         ModerationHistroySortTypeButton.Update(player.Player, false);
+        ModerationPlayerSearchModeButton.Update(player.Player, true); // calling the event will refresh the list.
 
         await RefreshModerationHistory(player, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
@@ -405,7 +405,7 @@ public class ModerationUI : UnturnedUI
                 if (ulong.TryParse(text, NumberStyles.Number, player.Locale.CultureInfo, out ulong steam64) && Util.IsValidSteam64Id(steam64))
                 {
                     condition = $"(SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
-                                 $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
+                                 $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `main`.`{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
                                  $"AND `a`.`{DatabaseInterface.ColumnActorsId}`={{0}} " +
                                  $"AND `a`.`{DatabaseInterface.ColumnActorsAsAdmin}` != 0) " +
                                 $"> 0";
@@ -448,13 +448,13 @@ public class ModerationUI : UnturnedUI
 
         await UCWarfare.ToUpdate(token);
 
-        ModerationHistroyTypeButton.TryGetSelection(player.Player, out ModerationEntryType filter2);
-        ModerationHistroySearchTypeButton.TryGetSelection(player.Player, out ModerationHistorySearchMode searchMode2);
-        ModerationHistroySortTypeButton.TryGetSelection(player.Player, out ModerationHistorySortMode sortMode2);
+        //ModerationHistroyTypeButton.TryGetSelection(player.Player, out ModerationEntryType filter2);
+        //ModerationHistroySearchTypeButton.TryGetSelection(player.Player, out ModerationHistorySearchMode searchMode2);
+        //ModerationHistroySortTypeButton.TryGetSelection(player.Player, out ModerationHistorySortMode sortMode2);
 
-        textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationPlayerSearch.TextBox);
-        if (filter2 != filter || searchMode2 != searchMode || sortMode2 != sortMode || !string.Equals(text, textBoxData?.Text, StringComparison.Ordinal))
-            return;
+        //textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationPlayerSearch.TextBox);
+        //if (filter2 != filter || searchMode2 != searchMode || sortMode2 != sortMode || !string.Equals(text, textBoxData?.Text, StringComparison.Ordinal))
+        //    return;
 
         data.HistoryView = entries;
         int pgCt = data.PageCount;

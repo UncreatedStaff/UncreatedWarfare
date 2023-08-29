@@ -70,6 +70,8 @@ public abstract class Punishment : ModerationEntry
 
         await db.ReadAll(Appeals, AppealKeys, true, token).ConfigureAwait(false);
         await db.ReadAll(Reports, ReportKeys, true, token).ConfigureAwait(false);
+
+        await base.FillDetail(db, token).ConfigureAwait(false);
     }
 
     protected override void ReadIntl(ByteReader reader, ushort version)
@@ -188,6 +190,18 @@ public abstract class DurationPunishment : Punishment
             throw new InvalidOperationException(GetType().Name + " has not been resolved.");
 
         return IsPermanent || DateTime.UtcNow > ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
+    }
+
+    /// <summary>
+    /// Checks if the punishment was still active at <paramref name="timestamp"/>, assuming it wasn't appealed.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">This punishment hasn't been resolved (<see cref="ModerationEntry.ResolvedTimestamp"/> is <see langword="null"/>).</exception>
+    public bool WasAppliedAt(DateTimeOffset timestamp)
+    {
+        if (!ResolvedTimestamp.HasValue)
+            throw new InvalidOperationException(GetType().Name + " has not been resolved.");
+
+        return IsPermanent || timestamp.UtcDateTime > ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 1;

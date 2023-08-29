@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Moderation.Punishments;
 
@@ -49,7 +50,7 @@ public class Appeal : ModerationEntry
     /// Responses to the asked questions.
     /// </summary>
     [JsonPropertyName("responses")]
-    public AppealResponse[] Responses { get; set; }
+    public AppealResponse[] Responses { get; set; } = Array.Empty<AppealResponse>();
 
     internal override async Task FillDetail(DatabaseInterface db, CancellationToken token = default)
     {
@@ -57,6 +58,18 @@ public class Appeal : ModerationEntry
             Punishments = new Punishment[PunishmentKeys.Length];
 
         await db.ReadAll(Punishments, PunishmentKeys, true, token).ConfigureAwait(false);
+
+        List<AppealResponse>? responses = null;
+        await db.Sql.QueryAsync(
+            $"SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnAppealResponsesQuestion, DatabaseInterface.ColumnAppealResponsesResponse)} " +
+            $"FROM `{DatabaseInterface.TableAppealResponses}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;",
+            new object[] { Id.Key },
+            reader =>
+            {
+                (responses ??= new List<AppealResponse>(3)).Add(new AppealResponse(reader.GetString(0), reader.GetString(1)));
+            }, token).ConfigureAwait(false);
+        Responses = responses?.ToArray() ?? Array.Empty<AppealResponse>();
+        await base.FillDetail(db, token).ConfigureAwait(false);
     }
 
     protected override void ReadIntl(ByteReader reader, ushort version)

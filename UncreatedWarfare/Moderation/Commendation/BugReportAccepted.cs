@@ -5,8 +5,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.SQL;
-using Uncreated.Warfare.Moderation.Appeals;
 
 namespace Uncreated.Warfare.Moderation.Commendation;
 
