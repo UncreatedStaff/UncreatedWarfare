@@ -63,20 +63,16 @@ public abstract class DatabaseInterface
         if (tryGetFromCache && Cache.TryGet(id, out T val, DefaultInvalidateDuration))
             return val;
 
-        string query = $"SELECT {SqlTypes.ColumnList(ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
-            ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
-            ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
-            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
-            ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason)} " +
-                       $"FROM `{TableEntries}` WHERE `{ColumnEntriesPrimaryKey}`=@0 LIMIT 1;";
+        StringBuilder sb = new StringBuilder("SELECT ", 128);
+        int flag = AppendReadColumns(sb, typeof(T));
+        AppendTables(sb, flag);
+        sb.Append($" WHERE `main`.`{ColumnEntriesPrimaryKey}` = @0;");
 
         object[] pkArgs = { id.Key };
         ModerationEntry? entry = null;
-        await Sql.QueryAsync(query, pkArgs, reader =>
+        await Sql.QueryAsync(sb.ToString(), pkArgs, reader =>
         {
-            entry = ReadEntry(reader, 0);
-            if (entry != null)
-                entry.Id = id;
+            entry = ReadEntry(flag, reader);
             return true;
         }, token).ConfigureAwait(false);
 
@@ -101,12 +97,12 @@ public abstract class DatabaseInterface
         if (result.Length != ids.Length)
             throw new ArgumentException("Result must be the same length as ids.", nameof(result));
 
-        string query = $"SELECT {SqlTypes.ColumnList(ColumnEntriesPrimaryKey, ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
-            ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
-            ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
-            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
-            ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason)} " +
-                       $"FROM `{TableEntries}` WHERE `{ColumnEntriesPrimaryKey}` IN ({SqlTypes.ParameterList(0, ids.Length)});";
+        StringBuilder sb = new StringBuilder("SELECT ", 164);
+        int flag = AppendReadColumns(sb, typeof(T));
+        AppendTables(sb, flag);
+        sb.Append($" WHERE `main`.`{ColumnEntriesPrimaryKey}` IN (");
+        SqlTypes.AppendParameterList(sb, 0, ids.Length);
+        sb.Append(");");
 
         object[] parameters = new object[ids.Length];
         for (int i = 0; i < ids.Length; ++i)
@@ -131,13 +127,12 @@ public abstract class DatabaseInterface
             for (int i = 0; i < mask.Length; ++i)
                 mask[i] = result[i] is null;
         }
-        await Sql.QueryAsync(query, parameters, reader =>
+        await Sql.QueryAsync(sb.ToString(), parameters, reader =>
         {
-            ModerationEntry? entry = ReadEntry(reader, 1);
+            ModerationEntry? entry = ReadEntry(flag, reader);
             if (entry == null)
                 return;
-            int pk = reader.GetInt32(0);
-            entry.Id = pk;
+            int pk = entry.Id;
             int index = -1;
             for (int j = 0; j < ids.Length; ++j)
             {
@@ -159,28 +154,25 @@ public abstract class DatabaseInterface
         => (T[])await ReadAll(typeof(T), actor, relation, start, end, orderBy, condition, conditionArgs, token).ConfigureAwait(false);
     public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, DateTimeOffset? start = null, DateTimeOffset? end = null, string? orderBy = null, string? condition = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
-        string query = $"SELECT {SqlTypes.ColumnList(ColumnEntriesPrimaryKey, ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
-            ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
-            ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
-            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
-            ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason)} " +
-                       $"FROM `{TableEntries}` WHERE";
-
+        StringBuilder sb = new StringBuilder("SELECT ", 164);
+        int flag = AppendReadColumns(sb, type);
+        AppendTables(sb, flag);
+        sb.Append(" WHERE ");
 
         switch (relation)
         {
             default:
             case ActorRelationType.IsTarget:
-                query += $" `{ColumnEntriesSteam64}`=@0;";
+                sb.Append($" `{ColumnEntriesSteam64}`=@0;");
                 break;
             case ActorRelationType.IsActor:
-                query += $" (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0) > 0";
+                sb.Append($" (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0) > 0");
                 break;
             case ActorRelationType.IsAdminActor:
-                query += $" (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` != 0) > 0";
+                sb.Append($" (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` != 0) > 0");
                 break;
             case ActorRelationType.IsNonAdminActor:
-                query += $" (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` == 0) > 0";
+                sb.Append($" (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` == 0) > 0");
                 break;
         }
         
@@ -196,21 +188,21 @@ public abstract class DatabaseInterface
             actorArgs = new object[3 + xtraLength];
             actorArgs[1] = start.Value.UtcDateTime;
             actorArgs[2] = end.Value.UtcDateTime;
-            query += $" AND `{ColumnEntriesStartTimestamp}` >= @1 AND `{ColumnEntriesStartTimestamp}` <= @2";
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @1 AND `main`.`{ColumnEntriesStartTimestamp}` <= @2");
         }
         else if (start.HasValue)
         {
             offset = 2;
             actorArgs = new object[2 + xtraLength];
             actorArgs[1] = start.Value.UtcDateTime;
-            query += $" AND `{ColumnEntriesStartTimestamp}` >= @1";
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @1");
         }
         else if (end.HasValue)
         {
             offset = 2;
             actorArgs = new object[2 + xtraLength];
             actorArgs[1] = end.Value.UtcDateTime;
-            query += $" AND `{ColumnEntriesStartTimestamp}` <= @1";
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` <= @1");
         }
         else
         {
@@ -223,23 +215,15 @@ public abstract class DatabaseInterface
         {
             for (int i = 0; i < types.Length; ++i)
                 actorArgs[offset + i] = types[i].ToString();
-            query += $" AND `{ColumnEntriesType} IN (";
-            if (types.Length == 1)
+            sb.Append($" AND `main`.`{ColumnEntriesType}` IN (");
+            for (int i = 0; i < types.Length; ++i)
             {
-                query += "@" + offset.ToString(CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                StringBuilder sb = new StringBuilder(types.Length * 12);
-                for (int i = 0; i < types.Length; ++i)
-                {
-                    if (i != 0)
-                        sb.Append(',');
-                    sb.Append('@').Append((i + offset).ToString(CultureInfo.InvariantCulture));
-                }
+                if (i != 0)
+                    sb.Append(',');
+                sb.Append('@').Append((i + offset).ToString(CultureInfo.InvariantCulture));
             }
 
-            query += ")";
+            sb.Append(")");
         }
 
         if (types != null)
@@ -254,23 +238,20 @@ public abstract class DatabaseInterface
         }
 
         if (condition != null)
-            query += " AND " + condition;
+            sb.Append(" AND " + condition);
 
         if (orderBy != null)
-            query += " ORDER BY " + orderBy;
+            sb.Append(" ORDER BY " + orderBy);
 
-        query += ";";
+        sb.Append(';');
 
 
         ArrayList entries = new ArrayList(4);
-        await Sql.QueryAsync(query, actorArgs, reader =>
+        await Sql.QueryAsync(sb.ToString(), actorArgs, reader =>
         {
-            ModerationEntry? entry = ReadEntry(reader, 1);
+            ModerationEntry? entry = ReadEntry(flag, reader);
             if (type.IsInstanceOfType(entry))
-            {
-                entry!.Id = reader.GetInt32(0);
                 entries.Add(entry);
-            }
         }, token).ConfigureAwait(false);
 
         Array rtn = entries.ToArray(type);
@@ -284,12 +265,10 @@ public abstract class DatabaseInterface
         => (T[])await ReadAll(typeof(T), start, end, condition, orderBy, conditionArgs, token).ConfigureAwait(false);
     public async Task<Array> ReadAll(Type type, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
-        string query = $"SELECT {SqlTypes.ColumnList(ColumnEntriesPrimaryKey, ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
-            ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
-            ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
-            ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
-            ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason)} " +
-                       $"FROM `{TableEntries}` WHERE";
+        StringBuilder sb = new StringBuilder("SELECT ", 164);
+        int flag = AppendReadColumns(sb, type);
+        AppendTables(sb, flag);
+        sb.Append(" WHERE ");
 
         ModerationEntryType[]? types = null;
         if (type != typeof(ModerationEntry))
@@ -304,7 +283,7 @@ public abstract class DatabaseInterface
             args = new object[2 + xtraLength];
             args[0] = start.Value.UtcDateTime;
             args[1] = end.Value.UtcDateTime;
-            query += $" `{ColumnEntriesStartTimestamp}` >= @1 AND `{ColumnEntriesStartTimestamp}` <= @2";
+            sb.Append($" `main`.`{ColumnEntriesStartTimestamp}` >= @1 AND `main`.`{ColumnEntriesStartTimestamp}` <= @2");
             and = true;
         }
         else if (start.HasValue)
@@ -312,7 +291,7 @@ public abstract class DatabaseInterface
             offset = 1;
             args = new object[1 + xtraLength];
             args[0] = start.Value.UtcDateTime;
-            query += $" `{ColumnEntriesStartTimestamp}` >= @1";
+            sb.Append($" `main`.`{ColumnEntriesStartTimestamp}` >= @1");
             and = true;
         }
         else if (end.HasValue)
@@ -320,7 +299,7 @@ public abstract class DatabaseInterface
             offset = 1;
             args = new object[1 + xtraLength];
             args[0] = end.Value.UtcDateTime;
-            query += $" `{ColumnEntriesStartTimestamp}` <= @1";
+            sb.Append($" `main`.`{ColumnEntriesStartTimestamp}` <= @1");
             and = true;
         }
         else
@@ -334,25 +313,17 @@ public abstract class DatabaseInterface
             for (int i = 0; i < types.Length; ++i)
                 args[offset + i] = types[i].ToString();
             if (and)
-                query += " AND";
-            query += $" `{ColumnEntriesType} IN (";
+                sb.Append(" AND");
+            sb.Append($" `main`.`{ColumnEntriesType}` IN (");
             and = true;
-            if (types.Length == 1)
+            for (int i = 0; i < types.Length; ++i)
             {
-                query += "@" + offset.ToString(CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                StringBuilder sb = new StringBuilder(types.Length * 12);
-                for (int i = 0; i < types.Length; ++i)
-                {
-                    if (i != 0)
-                        sb.Append(',');
-                    sb.Append('@').Append((i + offset).ToString(CultureInfo.InvariantCulture));
-                }
+                if (i != 0)
+                    sb.Append(',');
+                sb.Append('@').Append((i + offset).ToString(CultureInfo.InvariantCulture));
             }
 
-            query += ")";
+            sb.Append(')');
         }
 
         if (types != null)
@@ -367,23 +338,20 @@ public abstract class DatabaseInterface
         }
 
         if (condition != null)
-            query += (and ? " AND " : " ") + condition;
+            sb.Append((and ? " AND " : " ") + condition);
 
         if (orderBy != null)
-            query += " ORDER BY " + orderBy;
+            sb.Append(" ORDER BY " + orderBy);
 
-        query += ";";
+        sb.Append(';');
 
 
         ArrayList entries = new ArrayList(4);
-        await Sql.QueryAsync(query, args, reader =>
+        await Sql.QueryAsync(sb.ToString(), args, reader =>
         {
-            ModerationEntry? entry = ReadEntry(reader, 1);
+            ModerationEntry? entry = ReadEntry(flag, reader);
             if (type.IsInstanceOfType(entry))
-            {
-                entry!.Id = reader.GetInt32(0);
                 entries.Add(entry);
-            }
         }, token).ConfigureAwait(false);
 
         Array rtn = entries.ToArray(type);
@@ -583,37 +551,234 @@ public abstract class DatabaseInterface
             await e.FillDetail(this, token).ConfigureAwait(false);
         }
     }
-    private static ModerationEntry? ReadEntry(MySqlDataReader reader, int offset)
+    private static int AppendReadColumns(StringBuilder sb, Type type)
     {
-        ModerationEntryType? type = reader.ReadStringEnum<ModerationEntryType>(offset);
+        sb.Append(SqlTypes.ColumnListAliased("main", ColumnEntriesPrimaryKey,
+            ColumnEntriesType, ColumnEntriesSteam64,
+            ColumnEntriesMessage,
+            ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp,
+            ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
+            ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
+            ColumnEntriesRelavantLogsStartTimestamp,
+            ColumnEntriesRelavantLogsEndTimestamp,
+            ColumnEntriesRemoved, ColumnEntriesRemovedBy,
+            ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason));
+        int flag = 0;
+        if (type.IsAssignableFrom(typeof(DurationPunishment)) || typeof(DurationPunishment).IsAssignableFrom(type))
+        {
+            flag |= 1;
+            sb.Append(",`dur`.`" + ColumnDuationsDurationSeconds + "`");
+        }
+        if (type.IsAssignableFrom(typeof(Mute)) || typeof(Mute).IsAssignableFrom(type))
+        {
+            flag |= 1 << 1;
+            sb.Append(",`mutes`.`" + ColumnMutesType + "`");
+        }
+        if (type.IsAssignableFrom(typeof(Warning)) || typeof(Warning).IsAssignableFrom(type))
+        {
+            flag |= 1 << 2;
+            sb.Append(",`warns`.`" + ColumnWarningsHasBeenDisplayed + "`");
+        }
+        if (type.IsAssignableFrom(typeof(PlayerReportAccepted)) || typeof(PlayerReportAccepted).IsAssignableFrom(type))
+        {
+            flag |= 1 << 3;
+            sb.Append(",`praccept`.`" + ColumnPlayerReportAcceptedsReport + "`");
+        }
+        if (type.IsAssignableFrom(typeof(BugReportAccepted)) || typeof(BugReportAccepted).IsAssignableFrom(type))
+        {
+            flag |= 1 << 4;
+            sb.Append("," + SqlTypes.ColumnListAliased("braccept", ColumnTableBugReportAcceptedsIssue, ColumnTableBugReportAcceptedsCommit));
+        }
+        if (type.IsAssignableFrom(typeof(Teamkill)) || typeof(Teamkill).IsAssignableFrom(type))
+        {
+            flag |= 1 << 5;
+            sb.Append("," + SqlTypes.ColumnListAliased("tks", ColumnTeamkillsAsset, ColumnTeamkillsAssetName, ColumnTeamkillsDeathCause, ColumnTeamkillsDeathMessage, ColumnTeamkillsDistance, ColumnTeamkillsLimb));
+        }
+        if (type.IsAssignableFrom(typeof(VehicleTeamkill)) || typeof(VehicleTeamkill).IsAssignableFrom(type))
+        {
+            flag |= 1 << 6;
+            sb.Append("," + SqlTypes.ColumnListAliased("vtks", ColumnVehicleTeamkillsAsset, ColumnVehicleTeamkillsAssetName,
+                ColumnVehicleTeamkillsDamageOrigin, ColumnVehicleTeamkillsDeathMessage, ColumnVehicleTeamkillsVehicleAsset, ColumnVehicleTeamkillsVehicleAssetName));
+        }
+        if (type.IsAssignableFrom(typeof(Appeal)) || typeof(Appeal).IsAssignableFrom(type))
+        {
+            flag |= 1 << 7;
+            sb.Append("," + SqlTypes.ColumnListAliased("app", ColumnAppealsState, ColumnAppealsDiscordId, ColumnAppealsTicketId));
+        }
+        if (type.IsAssignableFrom(typeof(Report)) || typeof(Report).IsAssignableFrom(type))
+        {
+            flag |= 1 << 8;
+            sb.Append(",`rep`.`" + ColumnReportsType + "`");
+        }
+
+        return flag;
+    }
+    private static void AppendTables(StringBuilder sb, int flag)
+    {
+        sb.Append($" FROM `{TableEntries}` AS `main`");
+
+        if ((flag & 1) != 0)
+        {
+            sb.Append($" INNER JOIN `{TableDurationPunishments}` AS `dur` ON `main`.`{ColumnEntriesPrimaryKey}` = `dur`.`{ColumnExternalPrimaryKey}`");
+        }
+        if ((flag & (1 << 1)) != 0)
+        {
+            sb.Append($" INNER JOIN `{TableMutes}` AS `mutes` ON `main`.`{ColumnEntriesPrimaryKey}` = `mutes`.`{ColumnExternalPrimaryKey}`");
+        }
+        if ((flag & (1 << 2)) != 0)
+        {
+            sb.Append($" INNER JOIN `{TableWarnings}` AS `warns` ON `main`.`{ColumnEntriesPrimaryKey}` = `warns`.`{ColumnExternalPrimaryKey}`");
+        }
+        if ((flag & (1 << 3)) != 0)
+        {
+            sb.Append($" INNER JOIN `{TablePlayerReportAccepteds}` AS `praccept` ON `main`.`{ColumnEntriesPrimaryKey}` = `praccept`.`{ColumnExternalPrimaryKey}`");
+        }
+        if ((flag & (1 << 4)) != 0)
+        {
+            sb.Append($" INNER JOIN `{TableBugReportAccepteds}` AS `braccept` ON `main`.`{ColumnEntriesPrimaryKey}` = `braccept`.`{ColumnExternalPrimaryKey}`");
+        }
+        if ((flag & (1 << 5)) != 0)
+        {
+            sb.Append($" INNER JOIN `{TableTeamkills}` AS `tks` ON `main`.`{ColumnEntriesPrimaryKey}` = `tks`.`{ColumnExternalPrimaryKey}`");
+        }
+        if ((flag & (1 << 6)) != 0)
+        {
+            sb.Append($" INNER JOIN `{TableVehicleTeamkills}` AS `vtks` ON `main`.`{ColumnEntriesPrimaryKey}` = `vtks`.`{ColumnExternalPrimaryKey}`");
+        }
+        if ((flag & (1 << 7)) != 0)
+        {
+            sb.Append($" INNER JOIN `{TableAppeals}` AS `app` ON `main`.`{ColumnEntriesPrimaryKey}` = `app`.`{ColumnExternalPrimaryKey}`");
+        }
+        if ((flag & (1 << 8)) != 0)
+        {
+            sb.Append($" INNER JOIN `{TableReports}` AS `rep` ON `main`.`{ColumnEntriesPrimaryKey}` = `rep`.`{ColumnExternalPrimaryKey}`");
+        }
+    }
+    private static ModerationEntry? ReadEntry(int flag, MySqlDataReader reader)
+    {
+        ModerationEntryType? type = reader.ReadStringEnum<ModerationEntryType>(1);
         Type? csType = type.HasValue ? ModerationReflection.GetType(type.Value) : null;
         if (csType == null)
         {
-            Logging.LogWarning($"Invalid type while reading moderation entry: {reader.GetString(offset)}.");
+            Logging.LogWarning($"Invalid type while reading moderation entry: {reader.GetString(1)}.");
             return null;
         }
 
         ModerationEntry entry = (ModerationEntry)Activator.CreateInstance(csType);
-        entry.Player = reader.GetUInt64(1 + offset);
-        entry.Message = reader.IsDBNull(2 + offset) ? null : reader.GetString(2 + offset);
-        entry.IsLegacy = reader.GetBoolean(3 + offset);
-        entry.StartedTimestamp = DateTime.SpecifyKind(reader.GetDateTime(4 + offset), DateTimeKind.Utc);
-        entry.ResolvedTimestamp = reader.IsDBNull(5 + offset) ? null : DateTime.SpecifyKind(reader.GetDateTime(5 + offset), DateTimeKind.Utc);
-        entry.Reputation = reader.GetDouble(6 + offset);
-        entry.ReputationApplied = reader.GetBoolean(7 + offset);
-        entry.LegacyId = reader.IsDBNull(8 + offset) ? null : reader.GetUInt32(8 + offset);
-        entry.RelevantLogsBegin = reader.IsDBNull(9 + offset) ? null : DateTime.SpecifyKind(reader.GetDateTime(9 + offset), DateTimeKind.Utc);
-        entry.RelevantLogsEnd = reader.IsDBNull(10 + offset) ? null : DateTime.SpecifyKind(reader.GetDateTime(10 + offset), DateTimeKind.Utc);
-        entry.Removed = !reader.IsDBNull(11 + offset) && reader.GetBoolean(11 + offset);
-        entry.RemovedBy = reader.IsDBNull(12 + offset) ? null : Actors.GetActor(reader.GetUInt64(12 + offset));
-        entry.RemovedTimestamp = reader.IsDBNull(13 + offset) ? null : DateTime.SpecifyKind(reader.GetDateTime(13 + offset), DateTimeKind.Utc);
-        entry.Message = reader.IsDBNull(14 + offset) ? null : reader.GetString(14 + offset);
+        entry.Id = reader.GetInt32(0);
+        entry.Player = reader.GetUInt64(2);
+        entry.Message = reader.IsDBNull(3) ? null : reader.GetString(3);
+        entry.IsLegacy = reader.GetBoolean(4);
+        entry.StartedTimestamp = DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc);
+        entry.ResolvedTimestamp = reader.IsDBNull(6) ? null : DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc);
+        entry.Reputation = reader.GetDouble(7);
+        entry.ReputationApplied = reader.GetBoolean(8);
+        entry.LegacyId = reader.IsDBNull(9) ? null : reader.GetUInt32(9);
+        entry.RelevantLogsBegin = reader.IsDBNull(10) ? null : DateTime.SpecifyKind(reader.GetDateTime(10), DateTimeKind.Utc);
+        entry.RelevantLogsEnd = reader.IsDBNull(11) ? null : DateTime.SpecifyKind(reader.GetDateTime(11), DateTimeKind.Utc);
+        entry.Removed = !reader.IsDBNull(12) && reader.GetBoolean(12);
+        entry.RemovedBy = reader.IsDBNull(13) ? null : Actors.GetActor(reader.GetUInt64(13));
+        entry.RemovedTimestamp = reader.IsDBNull(14) ? null : DateTime.SpecifyKind(reader.GetDateTime(14), DateTimeKind.Utc);
+        entry.Message = reader.IsDBNull(15) ? null : reader.GetString(15);
+        
+        int offset = 15;
+        if ((flag & 1) != 0)
+        {
+            offset++;
+            if (entry is DurationPunishment dur)
+            {
+                long sec = reader.IsDBNull(offset) ? -1L : reader.GetInt64(offset);
+                if (sec < -1)
+                    sec = -1;
+                dur.Duration = TimeSpan.FromSeconds(sec);
+            }
+        }
+        if ((flag & (1 << 1)) != 0)
+        {
+            offset++;
+            if (entry is Mute mute)
+            {
+                MuteType? sec = reader.IsDBNull(offset) ? null : reader.ReadStringEnum<MuteType>(offset);
+                mute.Type = sec ?? MuteType.None;
+            }
+        }
+        if ((flag & (1 << 2)) != 0)
+        {
+            offset++;
+            if (entry is Warning warning)
+            {
+                warning.HasBeenDisplayed = !reader.IsDBNull(offset) && reader.GetBoolean(offset);
+            }
+        }
+        if ((flag & (1 << 3)) != 0)
+        {
+            offset++;
+            if (entry is PlayerReportAccepted praccept)
+            {
+                praccept.ReportKey = reader.IsDBNull(offset) ? PrimaryKey.NotAssigned : reader.GetInt32(offset);
+            }
+        }
+        if ((flag & (1 << 4)) != 0)
+        {
+            offset += 2;
+            if (entry is BugReportAccepted braccept)
+            {
+                braccept.Issue = reader.IsDBNull(offset - 1) ? null : reader.GetInt32(offset - 1);
+                braccept.Commit = reader.IsDBNull(offset) ? null : reader.GetString(offset);
+            }
+        }
+        if ((flag & (1 << 5)) != 0)
+        {
+            offset += 6;
+            if (entry is Teamkill tk)
+            {
+                tk.Item = reader.IsDBNull(offset - 5) ? null : reader.ReadGuidString(offset - 5);
+                tk.ItemName = reader.IsDBNull(offset - 4) ? null : reader.GetString(offset - 4);
+                tk.Cause = reader.IsDBNull(offset - 3) ? null : reader.ReadStringEnum<EDeathCause>(offset - 3);
+                tk.DeathMessage = reader.IsDBNull(offset - 2) ? null : reader.GetString(offset - 2);
+                tk.Distance = reader.IsDBNull(offset - 1) ? null : reader.GetDouble(offset - 1);
+                tk.Limb = reader.IsDBNull(offset) ? null : reader.ReadStringEnum<ELimb>(offset);
+            }
+        }
+        if ((flag & (1 << 6)) != 0)
+        {
+            offset += 6;
+            if (entry is VehicleTeamkill tk)
+            {
+                tk.Item = reader.IsDBNull(offset - 5) ? null : reader.ReadGuidString(offset - 5);
+                tk.ItemName = reader.IsDBNull(offset - 4) ? null : reader.GetString(offset - 4);
+                tk.Origin = reader.IsDBNull(offset - 3) ? null : reader.ReadStringEnum<EDamageOrigin>(offset - 3);
+                tk.DeathMessage = reader.IsDBNull(offset - 2) ? null : reader.GetString(offset - 2);
+                tk.Vehicle = reader.IsDBNull(offset - 1) ? null : reader.ReadGuidString(offset - 1);
+                tk.VehicleName = reader.IsDBNull(offset) ? null : reader.GetString(offset);
+            }
+        }
+        if ((flag & (1 << 7)) != 0)
+        {
+            offset += 3;
+            if (entry is Appeal app)
+            {
+                app.AppealState = !reader.IsDBNull(offset - 2) && reader.GetBoolean(offset - 2);
+                app.DiscordUserId = reader.IsDBNull(offset - 1) ? null : reader.GetUInt64(offset - 1);
+                app.TicketId = reader.IsDBNull(offset) ? Guid.Empty : (reader.ReadGuidString(offset) ?? Guid.Empty);
+            }
+        }
+        if ((flag & (1 << 8)) != 0)
+        {
+            offset++;
+            if (entry is Report rep)
+            {
+                ReportType? sec = reader.IsDBNull(offset) ? null : reader.ReadStringEnum<ReportType>(offset);
+                rep.Type = sec ?? ReportType.Custom;
+            }
+        }
+
         return entry;
     }
     private static Evidence ReadEvidence(MySqlDataReader reader, int offset)
     {
         return new Evidence(
-            reader.GetInt32(offset),
+            reader.IsDBNull(offset) ? PrimaryKey.NotAssigned : reader.GetInt32(offset),
             reader.GetString(1 + offset),
             reader.IsDBNull(3 + offset) ? null : reader.GetString(3 + offset),
             reader.IsDBNull(2 + offset) ? null : reader.GetString(2 + offset),
@@ -718,7 +883,7 @@ public abstract class DatabaseInterface
     public const string TablePlayerReportAccepteds = "moderation_accepted_player_reports";
     public const string TableBugReportAccepteds = "moderation_accepted_bug_reports";
     public const string TableTeamkills = "moderation_teamkills";
-    public const string TableVehicleTeamkills = "moderation_teamkills";
+    public const string TableVehicleTeamkills = "moderation_vehicle_teamkills";
     public const string TableAppeals = "moderation_appeals";
     public const string TableAppealPunishments = "moderation_appeal_punishments";
     public const string TableAppealResponses = "moderation_appeal_responses";
@@ -830,6 +995,7 @@ public abstract class DatabaseInterface
     public const string ColumnReportsVehicleTeamkillRecordDamageOrigin = "DamageOrigin";
     public const string ColumnReportsVehicleTeamkillRecordMessage = "Message";
 
+    public const string ColumnReportsVehicleRequestRecordAsset = "Asset";
     public const string ColumnReportsVehicleRequestRecordVehicle = "Vehicle";
     public const string ColumnReportsVehicleRequestRecordVehicleName = "VehicleName";
     public const string ColumnReportsVehicleRequestRecordRequestTimestamp = "RequestTimeUTC";
@@ -938,7 +1104,9 @@ public abstract class DatabaseInterface
             {
                 ForeignKey = true,
                 ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
+                ForeignKeyTable = TableEntries,
+                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull,
+                Nullable = true
             },
             new Schema.Column(ColumnEvidenceLink, SqlTypes.String(512)),
             new Schema.Column(ColumnEvidenceLocalSource, SqlTypes.String(512))
@@ -983,7 +1151,7 @@ public abstract class DatabaseInterface
                 ForeignKeyTable = TableEntries
             },
             new Schema.Column(ColumnDuationsDurationSeconds, SqlTypes.LONG)
-        }, false, typeof(TimeSpan)),
+        }, false, typeof(DurationPunishment)),
         new Schema(TableLinkedAppeals, new Schema.Column[]
         {
             new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
@@ -1218,7 +1386,8 @@ public abstract class DatabaseInterface
             new Schema.Column(ColumnReportsChatRecordsCount, SqlTypes.INT)
             {
                 Default = "1"
-            }
+            },
+            new Schema.Column(ColumnReportsChatRecordsTimestamp, SqlTypes.DATETIME)
         }, false, typeof(ReportChatRecord)),
         new Schema(TableReportStructureDamageRecords, new Schema.Column[]
         {
@@ -1297,6 +1466,14 @@ public abstract class DatabaseInterface
                 ForeignKey = true,
                 ForeignKeyColumn = ColumnEntriesPrimaryKey,
                 ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnReportsVehicleRequestRecordAsset, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyTable = VehicleBay.TABLE_MAIN,
+                ForeignKeyColumn = VehicleBay.COLUMN_PK,
+                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull,
+                Nullable = true
             },
             new Schema.Column(ColumnReportsVehicleRequestRecordVehicle, SqlTypes.GUID_STRING),
             new Schema.Column(ColumnReportsVehicleRequestRecordVehicleName, SqlTypes.String(48)),

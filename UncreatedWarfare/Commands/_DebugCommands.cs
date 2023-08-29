@@ -1727,4 +1727,10 @@ public class DebugCommand : AsyncCommand
         else
             throw ctx.SendCorrectUsage("/test damage <amount>[%] while looking at a barricade, structure, or vehicle.");
     }
+
+    private async Task migratebans(CommandInteraction ctx, CancellationToken token)
+    {
+        await Migration.MigrateBans(Data.ModerationSql, token).ConfigureAwait(false);
+        ctx.ReplyString("Done.");
+    }
 }

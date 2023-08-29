@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation;
@@ -23,7 +24,7 @@ public abstract class ModerationEntry
     /// Unique ID to all types of entries.
     /// </summary>
     [JsonPropertyName("id")]
-    public PrimaryKey Id { get; set; }
+    public PrimaryKey Id { get; set; } = PrimaryKey.NotAssigned;
 
     /// <summary>
     /// Steam64 ID for the target player.
@@ -573,6 +574,7 @@ public enum ModerationEntryType : ushort
     [Translatable("BattlEye Kick")]
     BattlEyeKick,
     Appeal,
+    [Translatable("Custom Report")]
     Report,
     [Translatable("Greifing Report")]
     GreifingReport,

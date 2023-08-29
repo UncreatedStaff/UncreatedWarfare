@@ -374,7 +374,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         BarricadeManager.onBarricadeSpawned += EventFunctions.OnBarricadePlaced;
         StructureManager.onStructureSpawned += EventFunctions.OnStructurePlaced;
         Patches.OnPlayerTogglesCosmetics_Global += EventFunctions.StopCosmeticsToggleEvent;
-        Patches.OnPlayerSetsCosmetics_Global += EventFunctions.StopCosmeticsSetStateEvent;
         Patches.OnBatterySteal_Global += EventFunctions.BatteryStolen;
         Patches.OnPlayerTriedStoreItem_Global += EventFunctions.OnTryStoreItem;
         Patches.OnPlayerGesture_Global += EventFunctions.OnPlayerGestureRequested;
@@ -422,7 +421,6 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         BarricadeManager.onBarricadeSpawned -= EventFunctions.OnBarricadePlaced;
         StructureManager.onStructureSpawned -= EventFunctions.OnStructurePlaced;
         Patches.OnPlayerTogglesCosmetics_Global -= EventFunctions.StopCosmeticsToggleEvent;
-        Patches.OnPlayerSetsCosmetics_Global -= EventFunctions.StopCosmeticsSetStateEvent;
         Patches.OnBatterySteal_Global -= EventFunctions.BatteryStolen;
         Patches.OnPlayerTriedStoreItem_Global -= EventFunctions.OnTryStoreItem;
         Patches.OnPlayerGesture_Global -= EventFunctions.OnPlayerGestureRequested;

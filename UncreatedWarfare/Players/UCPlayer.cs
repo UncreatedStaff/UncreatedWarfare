@@ -904,6 +904,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             return CachedSteamProfile;
 
         PlayerSummary? playerSummary = await SteamAPI.GetPlayerSummary(Steam64, token);
+        await UniTask.SwitchToMainThread(token);
         if (playerSummary != null)
             CachedSteamProfile = playerSummary;
 #if DEBUG

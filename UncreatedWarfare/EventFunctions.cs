@@ -119,11 +119,8 @@ public static class EventFunctions
     }
     internal static void StopCosmeticsToggleEvent(ref EVisualToggleType type, SteamPlayer player, ref bool allow)
     {
-        if (!UCWarfare.Config.AllowCosmetics) allow = false;
-    }
-    internal static void StopCosmeticsSetStateEvent(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow)
-    {
-        if (!UCWarfare.Config.AllowCosmetics) state = false;
+        if (Data.Gamemode is not { AllowCosmetics: true })
+            allow = false;
     }
     internal static void OnStructurePlaced(StructureRegion region, StructureDrop drop)
     {
