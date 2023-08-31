@@ -1919,6 +1919,8 @@ public static class F
             return Array.Empty<T>();
         if (enumerable is T[] arr1)
         {
+            if (arr1.Length == 0)
+                return Array.Empty<T>();
             if (copy)
             {
                 T[] arr2 = new T[arr1.Length];
@@ -1930,8 +1932,14 @@ public static class F
         }
         if (enumerable is List<T> list1)
             return list1.Count == 0 ? Array.Empty<T>() : list1.ToArray();
-        if (enumerable is ICollection<T> col1 && col1.Count == 0)
-            return Array.Empty<T>();
+        if (enumerable is ICollection<T> col1)
+        {
+            if (col1.Count == 0)
+                return Array.Empty<T>();
+            T[] arr2 = new T[col1.Count];
+            col1.CopyTo(arr2, 0);
+            return arr2;
+        }
 
         return enumerable.ToArray();
     }
@@ -1941,6 +1949,10 @@ public static class F
             return list;
         return new List<T>(enumerable);
     }
+    /// <summary>
+    /// Takes a list of primary key pairs and calls <paramref name="action"/> for each array of values per id.
+    /// </summary>
+    /// <remarks>The values should be sorted by ID, if not set <paramref name="sort"/> to <see langword="true"/>.</remarks>
     public static void ApplyQueriedList<T>(List<PrimaryKeyPair<T>> list, Action<int, T[]> action, bool sort = true)
     {
         if (list.Count == 0) return;
@@ -1972,6 +1984,31 @@ public static class F
 
         key = list[list.Count - 1].Key;
         action(key, arr);
+    }
+
+    public static T? FindIndexed<T>(this T[] array, Func<T, int, bool> predicate)
+    {
+        for (int i = 0; i < array.Length; ++i)
+        {
+            if (predicate(array[i], i))
+                return array[i];
+        }
+
+        return default;
+    }
+    public static T? FindIndexed<T>(this T[] array, out int index, Func<T, int, bool> predicate)
+    {
+        for (int i = 0; i < array.Length; ++i)
+        {
+            if (predicate(array[i], i))
+            {
+                index = i;
+                return array[i];
+            }
+        }
+
+        index = -1;
+        return default;
     }
 }
 

@@ -12,6 +12,10 @@ namespace Uncreated.Warfare.Moderation;
 
 public static class Actors
 {
+    public static IModerationActor BattlEye => BattlEyeActor.Instance;
+    public static IModerationActor AntiCheat => AntiCheatActor.Instance;
+    public static IModerationActor Console => ConsoleActor.Instance;
+
     public static IModerationActor GetActor(ulong id)
     {
         if (id == 0ul)
@@ -167,6 +171,13 @@ public readonly struct RelatedActor
 {
     [JsonIgnore]
     public const string RolePrimaryAdmin = "Primary Admin";
+    
+    [JsonIgnore]
+    public const string RoleRemovingAdmin = "Removing Admin";
+    
+    [JsonIgnore]
+    public const string RoleReporter = "Reporter";
+
     [JsonPropertyName("role")]
     public string Role { get; }
     [JsonPropertyName("admin")]

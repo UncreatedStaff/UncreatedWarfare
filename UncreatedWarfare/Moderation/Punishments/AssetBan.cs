@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.SQL;
 
@@ -51,21 +49,6 @@ public class AssetBan : DurationPunishment
     }
 
     public override string GetDisplayName() => "Asset Ban";
-    internal override async Task FillDetail(DatabaseInterface db, CancellationToken token = default)
-    {
-        List<PrimaryKey>? responses = null;
-        await db.Sql.QueryAsync(
-            $"SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnAssetBanFiltersAsset)} " +
-            $"FROM `{DatabaseInterface.TableAssetBanFilters}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;",
-            new object[] { Id.Key },
-            reader =>
-            {
-                (responses ??= new List<PrimaryKey>(6)).Add(reader.GetInt32(0));
-            }, token).ConfigureAwait(false);
-        AssetFilter = responses?.ToArray() ?? Array.Empty<PrimaryKey>();
-        await base.FillDetail(db, token).ConfigureAwait(false);
-    }
-
     public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("asset_filter", StringComparison.InvariantCultureIgnoreCase))
