@@ -51,24 +51,12 @@ public class Appeal : ModerationEntry
     /// </summary>
     [JsonPropertyName("responses")]
     public AppealResponse[] Responses { get; set; } = Array.Empty<AppealResponse>();
-
     internal override async Task FillDetail(DatabaseInterface db, CancellationToken token = default)
     {
         if (Punishments.Length != PunishmentKeys.Length)
             Punishments = new Punishment[PunishmentKeys.Length];
 
-        await db.ReadAll(Punishments, PunishmentKeys, true, token).ConfigureAwait(false);
-
-        List<AppealResponse>? responses = null;
-        await db.Sql.QueryAsync(
-            $"SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnAppealResponsesQuestion, DatabaseInterface.ColumnAppealResponsesResponse)} " +
-            $"FROM `{DatabaseInterface.TableAppealResponses}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;",
-            new object[] { Id.Key },
-            reader =>
-            {
-                (responses ??= new List<AppealResponse>(3)).Add(new AppealResponse(reader.GetString(0), reader.GetString(1)));
-            }, token).ConfigureAwait(false);
-        Responses = responses?.ToArray() ?? Array.Empty<AppealResponse>();
+        await db.ReadAll(Punishments, PunishmentKeys, true, true, token).ConfigureAwait(false);
         await base.FillDetail(db, token).ConfigureAwait(false);
     }
 

@@ -127,9 +127,27 @@ public abstract class ModerationEntry
     public string? RemovedMessage { get; set; }
 
     /// <summary>
+    /// The keys of related moderation entries.
+    /// </summary>
+    [JsonPropertyName("related_entries")]
+    public PrimaryKey[] RelatedEntryKeys { get; set; } = Array.Empty<PrimaryKey>();
+
+    /// <summary>
+    /// Related moderation entries to this one.
+    /// </summary>
+    [JsonIgnore]
+    public ModerationEntry?[]? RelatedEntries { get; set; }
+
+    /// <summary>
     /// Fills any cached properties.
     /// </summary>
-    internal virtual Task FillDetail(DatabaseInterface db, CancellationToken token = default) => Task.CompletedTask;
+    internal virtual Task FillDetail(DatabaseInterface db, CancellationToken token = default)
+    {
+        if (RelatedEntries == null || RelatedEntries.Length != RelatedEntryKeys.Length)
+            RelatedEntries = new ModerationEntry?[RelatedEntryKeys.Length];
+
+        return db.ReadAll(RelatedEntries, RelatedEntryKeys, true, true, token);
+    }
     public virtual string GetDisplayName() => ToString();
     public bool TryGetPrimaryAdmin(out RelatedActor actor)
     {
@@ -218,6 +236,9 @@ public abstract class ModerationEntry
 
             writer.WriteString("removed_message", RemovedMessage);
         }
+        
+        writer.WritePropertyName("related_entries");
+        JsonSerializer.Serialize(writer, RelatedEntryKeys, options);
     }
 
     protected virtual void ReadIntl(ByteReader reader, ushort version) { }
@@ -576,10 +597,12 @@ public enum ModerationEntryType : ushort
     Appeal,
     [Translatable("Custom Report")]
     Report,
-    [Translatable("Greifing Report")]
-    GreifingReport,
+    [Translatable("Griefing Report")]
+    GriefingReport,
     [Translatable("Chat Abuse Report")]
     ChatAbuseReport,
+    [Translatable("Cheating Report")]
+    CheatingReport,
     Note,
     Commendation,
     [Translatable("Bug Report Accepted")]

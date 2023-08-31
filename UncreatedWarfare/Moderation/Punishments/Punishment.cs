@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -32,13 +33,15 @@ public abstract class Punishment : ModerationEntry
     /// All related appeals.
     /// </summary>
     [JsonPropertyName("appeals_detail")]
-    public Appeal?[] Appeals { get; set; } = Array.Empty<Appeal>();
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Appeal?[]? Appeals { get; set; }
 
     /// <summary>
     /// All related reports.
     /// </summary>
     [JsonPropertyName("reports_detail")]
-    public Report?[] Reports { get; set; } = Array.Empty<Report>();
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Report?[]? Reports { get; set; }
 
     /// <summary>
     /// Try to find a resolved appeal with a state matching the value for <paramref name="state"/> in <see cref="Appeals"/>.
@@ -48,13 +51,16 @@ public abstract class Punishment : ModerationEntry
     /// <returns><see langword="true"/> if an appeal is found.</returns>
     public bool TryFindAppeal(out Appeal appeal, bool state = true)
     {
-        for (int i = 0; i < Appeals.Length; ++i)
+        if (Appeals != null)
         {
-            Appeal? appeal2 = Appeals[i];
-            if (appeal2 is { AppealState: not null } && appeal2.AppealState.Value == state)
+            for (int i = 0; i < Appeals.Length; ++i)
             {
-                appeal = appeal2;
-                return true;
+                Appeal? appeal2 = Appeals[i];
+                if (appeal2 is { AppealState: not null } && appeal2.AppealState.Value == state)
+                {
+                    appeal = appeal2;
+                    return true;
+                }
             }
         }
 
@@ -63,13 +69,13 @@ public abstract class Punishment : ModerationEntry
     }
     internal override async Task FillDetail(DatabaseInterface db, CancellationToken token = default)
     {
-        if (Appeals.Length != AppealKeys.Length)
+        if (Appeals == null || Appeals.Length != AppealKeys.Length)
             Appeals = new Appeal?[AppealKeys.Length];
-        if (Reports.Length != ReportKeys.Length)
+        if (Reports == null || Reports.Length != ReportKeys.Length)
             Reports = new Report?[ReportKeys.Length];
 
-        await db.ReadAll(Appeals, AppealKeys, true, token).ConfigureAwait(false);
-        await db.ReadAll(Reports, ReportKeys, true, token).ConfigureAwait(false);
+        await db.ReadAll(Appeals, AppealKeys, true, true, token).ConfigureAwait(false);
+        await db.ReadAll(Reports, ReportKeys, true, true, token).ConfigureAwait(false);
 
         await base.FillDetail(db, token).ConfigureAwait(false);
     }
@@ -84,6 +90,8 @@ public abstract class Punishment : ModerationEntry
         ReportKeys = new PrimaryKey[reader.ReadInt32()];
         for (int i = 0; i < ReportKeys.Length; ++i)
             ReportKeys[i] = reader.ReadInt32();
+        Appeals = null;
+        Reports = null;
     }
 
     protected override void WriteIntl(ByteWriter writer)
@@ -98,11 +106,25 @@ public abstract class Punishment : ModerationEntry
             writer.Write(ReportKeys[i].Key);
     }
 
+    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    {
+        if (propertyName.Equals("appeals", StringComparison.InvariantCultureIgnoreCase))
+            AppealKeys = JsonSerializer.Deserialize<PrimaryKey[]>(ref reader, options) ?? Array.Empty<PrimaryKey>();
+        else if (propertyName.Equals("appeals_detail", StringComparison.InvariantCultureIgnoreCase))
+            Appeals = JsonSerializer.Deserialize<Appeal[]>(ref reader, options);
+        else if (propertyName.Equals("reports", StringComparison.InvariantCultureIgnoreCase))
+            ReportKeys = JsonSerializer.Deserialize<PrimaryKey[]>(ref reader, options) ?? Array.Empty<PrimaryKey>();
+        else if (propertyName.Equals("reports_detail", StringComparison.InvariantCultureIgnoreCase))
+            Reports = JsonSerializer.Deserialize<Report[]>(ref reader, options);
+        else
+            base.ReadProperty(ref reader, propertyName, options);
+    }
+
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
         base.Write(writer, options);
 
-        if (Appeals.Length > 0 && Appeals.Length == AppealKeys.Length && Appeals.All(x => x != null))
+        if (Appeals is { Length: > 0 } && Appeals.Length == AppealKeys.Length && Appeals.All(x => x != null))
         {
             writer.WritePropertyName("appeals_detail");
             JsonSerializer.Serialize(writer, Appeals, options);
@@ -110,7 +132,7 @@ public abstract class Punishment : ModerationEntry
         writer.WritePropertyName("appeals");
         JsonSerializer.Serialize(writer, AppealKeys, options);
 
-        if (Reports.Length > 0 && Reports.Length == ReportKeys.Length && Reports.All(x => x != null))
+        if (Reports is { Length: > 0 } && Reports.Length == ReportKeys.Length && Reports.All(x => x != null))
         {
             writer.WritePropertyName("reports_detail");
             JsonSerializer.Serialize(writer, Reports, options);
@@ -138,7 +160,7 @@ public abstract class Punishment : ModerationEntry
             builder.Append(';');
         }
         builder.Append($"DELETE FROM `{DatabaseInterface.TableLinkedReports}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
-
+        
         if (AppealKeys.Length > 0)
         {
             builder.Append($" INSERT INTO `{DatabaseInterface.TableLinkedAppeals}` ({SqlTypes.ColumnList(
@@ -160,50 +182,160 @@ public abstract class DurationPunishment : Punishment
     /// <summary>
     /// Length of the punishment, negative implies permanent.
     /// </summary>
+    [JsonPropertyName("duration")]
     public TimeSpan Duration { get; set; }
 
     /// <summary>
-    /// Returns <see langword="true"/> if the punishment will never expire.
+    /// Returns <see langword="true"/> if the punishment will never expire, not considering <see cref="Forgiven"/>.
     /// </summary>
     /// <remarks>This is indicated by a negative <see cref="Duration"/>.</remarks>
-    public bool IsPermanent => Duration.Ticks < 0L;
+    /// <exception cref="ArgumentException">Thrown if you set to <see langword="false"/>.</exception>
+    [JsonIgnore]
+    public bool IsPermanent
+    {
+        get => Duration.Ticks < 0L;
+        set => Duration = value ? Timeout.InfiniteTimeSpan : throw new ArgumentException("Can not set IsPermanent to false.", nameof(value));
+    }
 
     /// <summary>
-    /// Gets the time at which the punishment expires, assuming it isn't appealed.
+    /// If the moderation entry was forgiven.
     /// </summary>
+    [JsonPropertyName("is_forgiven")]
+    public bool Forgiven { get; set; }
+
+    /// <summary>
+    /// Who forgave the moderation entry.
+    /// </summary>
+    [JsonPropertyName("forgiving_actor")]
+    public IModerationActor? ForgivenBy { get; set; }
+
+    /// <summary>
+    /// When the moderation entry was forgiven.
+    /// </summary>
+    [JsonPropertyName("forgive_timestamp_utc")]
+    public DateTimeOffset? ForgiveTimestamp { get; set; }
+
+    /// <summary>
+    /// Why the moderation entry was forgiven.
+    /// </summary>
+    [JsonPropertyName("forgive_message")]
+    public string? ForgiveMessage { get; set; }
+
+    /// <summary>
+    /// Gets the time at which the punishment expires.
+    /// </summary>
+    /// <param name="considerForgiven">Considers the values of <see cref="Forgiven"/> and <see cref="ModerationEntry.Removed"/>.</param>
     /// <exception cref="InvalidOperationException">This punishment hasn't been resolved (<see cref="ModerationEntry.ResolvedTimestamp"/> is <see langword="null"/>).</exception>
-    public DateTimeOffset GetExpiryTimestamp()
+    public DateTimeOffset GetExpiryTimestamp(bool considerForgiven)
     {
         if (!ResolvedTimestamp.HasValue)
             throw new InvalidOperationException(GetType().Name + " has not been resolved.");
+        
+        if (considerForgiven)
+        {
+            if (Forgiven && ForgiveTimestamp.HasValue)
+                return ForgiveTimestamp.Value;
+
+            if (Removed && RemovedTimestamp.HasValue)
+                return RemovedTimestamp.Value;
+        }
 
         return IsPermanent ? DateTimeOffset.MaxValue : ResolvedTimestamp.Value.Add(Duration);
     }
 
     /// <summary>
-    /// Checks if the punishment is still active, assuming it isn't appealed.
+    /// Checks if the punishment is still active.
     /// </summary>
+    /// <param name="considerForgiven">Considers the values of <see cref="Forgiven"/> and <see cref="ModerationEntry.Removed"/>.</param>
     /// <exception cref="InvalidOperationException">This punishment hasn't been resolved (<see cref="ModerationEntry.ResolvedTimestamp"/> is <see langword="null"/>).</exception>
-    public bool IsApplied()
+    public bool IsApplied(bool considerForgiven)
     {
         if (!ResolvedTimestamp.HasValue)
             throw new InvalidOperationException(GetType().Name + " has not been resolved.");
+
+        if (considerForgiven)
+        {
+            if (Forgiven && ForgiveTimestamp.HasValue)
+                return ForgiveTimestamp.Value > DateTime.UtcNow;
+
+            if (Removed && RemovedTimestamp.HasValue)
+                return RemovedTimestamp.Value > DateTime.UtcNow;
+        }
 
         return IsPermanent || DateTime.UtcNow > ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
     }
 
     /// <summary>
-    /// Checks if the punishment was still active at <paramref name="timestamp"/>, assuming it wasn't appealed.
+    /// Checks if the punishment was still active at <paramref name="timestamp"/>.
     /// </summary>
+    /// <param name="considerForgiven">Considers the values of <see cref="Forgiven"/> and <see cref="ModerationEntry.Removed"/>.</param>
     /// <exception cref="InvalidOperationException">This punishment hasn't been resolved (<see cref="ModerationEntry.ResolvedTimestamp"/> is <see langword="null"/>).</exception>
-    public bool WasAppliedAt(DateTimeOffset timestamp)
+    public bool WasAppliedAt(DateTimeOffset timestamp, bool considerForgiven)
     {
         if (!ResolvedTimestamp.HasValue)
             throw new InvalidOperationException(GetType().Name + " has not been resolved.");
 
+        if (considerForgiven)
+        {
+            if (Forgiven && ForgiveTimestamp.HasValue)
+                return ForgiveTimestamp.Value > timestamp.UtcDateTime;
+
+            if (Removed && RemovedTimestamp.HasValue)
+                return RemovedTimestamp.Value > timestamp.UtcDateTime;
+        }
+
         return IsPermanent || timestamp.UtcDateTime > ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
     }
+    public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
+    {
+        if (propertyName.Equals("duration", StringComparison.InvariantCultureIgnoreCase))
+        {
+            if (reader.TokenType != JsonTokenType.String)
+            {
+                if (reader.TokenType == JsonTokenType.Null)
+                    IsPermanent = true;
+                else
+                    throw new JsonException("Expected string duration.");
+            }
+            else
+            {
+                string str = reader.GetString()!;
+                if (TimeSpan.TryParseExact(str, "G", CultureInfo.InvariantCulture, TimeSpanStyles.None, out TimeSpan ts) ||
+                    TimeSpan.TryParse(str, CultureInfo.InvariantCulture, out ts))
+                    Duration = ts;
+                else if (str.Equals("permanent", StringComparison.InvariantCultureIgnoreCase))
+                    IsPermanent = true;
+                else throw new JsonException($"Invalid duration: \"{str}\".");
+            }
+        }
+        else if (propertyName.Equals("is_forgiven", StringComparison.InvariantCultureIgnoreCase))
+            Removed = reader.TokenType != JsonTokenType.Null && reader.GetBoolean();
+        else if (propertyName.Equals("forgiving_actor", StringComparison.InvariantCultureIgnoreCase))
+            RemovedBy = reader.TokenType == JsonTokenType.Null ? null : Moderation.Actors.GetActor(reader.GetUInt64());
+        else if (propertyName.Equals("forgive_timestamp_utc", StringComparison.InvariantCultureIgnoreCase))
+            RemovedTimestamp = reader.TokenType == JsonTokenType.Null ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
+        else if (propertyName.Equals("forgive_message", StringComparison.InvariantCultureIgnoreCase))
+            RemovedMessage = reader.GetString();
+        else
+            base.ReadProperty(ref reader, propertyName, options);
+    }
+    public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
+    {
+        base.Write(writer, options);
 
+        writer.WritePropertyName("duration");
+        writer.WriteStringValue(IsPermanent ? "permanent" : Duration.ToString("G", CultureInfo.InvariantCulture));
+
+        writer.WriteBoolean("is_forgiven", Forgiven);
+        if (Forgiven)
+        {
+            writer.WriteNumber("forgiving_actor", ForgivenBy == null ? 0ul : ForgivenBy.Id);
+            if (ForgiveTimestamp.HasValue)
+                writer.WriteString("forgive_timestamp_utc", ForgiveTimestamp.Value.UtcDateTime);
+
+            writer.WriteString("forgive_message", ForgiveMessage);
+        }
+    }
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 1;
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
