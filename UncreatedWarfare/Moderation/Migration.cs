@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using SDG.Unturned;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
@@ -42,7 +44,7 @@ internal static class Migration
         if (dt <= UTCCutoff)
         {
             DateTime dt2 = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(dt, DateTimeKind.Unspecified), RollbackWarfareTimezone);
-            return new DateTimeOffset(dt2, RollbackWarfareTimezone.GetUtcOffset(dt2));
+            return new DateTimeOffset(dt2);
         }
 
         return new DateTimeOffset(DateTime.SpecifyKind(dt, DateTimeKind.Utc));
@@ -315,6 +317,62 @@ internal static class Migration
 
             if (i % 10 == 0 || i == bans.Count - 1)
                 L.LogDebug($"Bans: {i + 1}/{bans.Count}.");
+        }
+    }
+    public static async Task MigrateTeamkills(DatabaseInterface db, CancellationToken token = default)
+    {
+        List<Teamkill> teamkills = new List<Teamkill>();
+        await db.Sql.QueryAsync("SELECT `TeamkillID`, `Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp` FROM `teamkills` ORDER BY `TeamkillID`;", null,
+            reader =>
+            {
+                Teamkill teamkill = new Teamkill
+                {
+                    LegacyId = reader.GetUInt32(0),
+                    IsLegacy = true,
+                    Player = reader.GetUInt64(1),
+                    Actors = new RelatedActor[]
+                    {
+                        new RelatedActor("Teamkilled", false, Actors.GetActor(reader.GetUInt64(2)))
+                    },
+                    Removed = false,
+                    Message = null,
+                    StartedTimestamp = ConvertTime(reader.GetDateTime(7)),
+                    Reputation = 0d,
+                    ReputationApplied = true,
+                    RemovedBy = null,
+                    RemovedMessage = null,
+                    RemovedTimestamp = null,
+                    Evidence = Array.Empty<Evidence>(),
+                    RelevantLogsBegin = null,
+                    RelevantLogsEnd = null,
+                    ResolvedTimestamp = null,
+                    Id = PrimaryKey.NotAssigned,
+                    Limb = null,
+                    Cause = reader.IsDBNull(3) ? null : (!int.TryParse(reader.GetString(3), NumberStyles.Number, CultureInfo.InvariantCulture, out _) && Enum.TryParse(reader.GetString(3), true, out EDeathCause cause)) ? cause : null,
+                    Distance = reader.IsDBNull(6) ? null : reader.GetFloat(6)
+                };
+                ushort itemId = reader.IsDBNull(5) ? (ushort)0 : reader.GetUInt16(5);
+                if (itemId != 0 && UCWarfare.IsLoaded && Assets.hasLoadedUgc && (Assets.find(EAssetType.ITEM, itemId) ?? Assets.find(EAssetType.VEHICLE, itemId)) is { } asset)
+                {
+                    teamkill.ItemName = asset.FriendlyName ?? asset.name ?? asset.id.ToString();
+                    teamkill.Item = asset.GUID;
+                }
+                else
+                {
+                    teamkill.ItemName = reader.IsDBNull(4) ? null : reader.GetString(4);
+                }
+
+                teamkill.ResolvedTimestamp = teamkill.StartedTimestamp;
+                teamkills.Add(teamkill);
+            }, token).ConfigureAwait(false);
+
+        for (int i = 0; i < teamkills.Count; i++)
+        {
+            Teamkill teamkill = teamkills[i];
+            await db.AddOrUpdate(teamkill, token).ConfigureAwait(false);
+
+            if (i % 10 == 0 || i == teamkills.Count - 1)
+                L.LogDebug($"Teamkills: {i + 1}/{teamkills.Count}.");
         }
     }
 }

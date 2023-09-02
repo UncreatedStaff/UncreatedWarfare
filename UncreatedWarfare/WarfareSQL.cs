@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -515,6 +516,40 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
             new Schema.Column(ColumnIPWhitelistsIPRange, SqlTypes.String(18))
         }, true, typeof(IPv4Range))
     };
+    public async Task<List<PlayerNames>> SearchAllPlayers(string input, UCPlayer.NameSearch prioritizedName, bool byLastJoined, CancellationToken token = default)
+    {
+        string col1 = prioritizedName switch
+        {
+            UCPlayer.NameSearch.CharacterName => ColumnUsernamesCharacterName,
+            UCPlayer.NameSearch.NickName => ColumnUsernamesNickName,
+            _ => ColumnUsernamesPlayerName
+        };
+        string col2 = prioritizedName switch
+        {
+            UCPlayer.NameSearch.CharacterName => ColumnUsernamesNickName,
+            UCPlayer.NameSearch.NickName => ColumnUsernamesCharacterName,
+            _ => ColumnUsernamesCharacterName
+        };
+        string col3 = prioritizedName switch
+        {
+            UCPlayer.NameSearch.CharacterName => ColumnUsernamesPlayerName,
+            UCPlayer.NameSearch.NickName => ColumnUsernamesPlayerName,
+            _ => ColumnUsernamesNickName
+        };
+        string l = $"SELECT `u`.`{ColumnUsernamesSteam64}`, `u`.`{ColumnUsernamesCharacterName}` AS `cn`, `u`.`{ColumnUsernamesNickName}` AS `nn`, `u`.`{ColumnUsernamesPlayerName}` AS `pn`,`l`.`{ColumnLoginDataLastLoggedIn}` AS `lln` " +
+                   $"FROM `{TableUsernames}` AS `u`{(byLastJoined ? $" LEFT JOIN `{TableLoginData}` AS `l` ON `l`.`{ColumnLoginDataSteam64}` = `u`.`{ColumnUsernamesSteam64}`" : string.Empty)} WHERE `u`.`";
+        List<PlayerNames> names = new List<PlayerNames>();
+
+        await QueryAsync($"({l}{col1}` LIKE @0) UNION ({l}{col2}` LIKE @0) UNION ({l}{col3}` LIKE @0) UNION " +
+                         $"({l}{col1}` LIKE @1) UNION ({l}{col2}` LIKE @1) UNION ({l}{col3}` LIKE @1) " +
+                         $"ORDER BY (`cn` LIKE @0 OR `nn` LIKE @0 OR `pn` LIKE @0) DESC" +
+                         (byLastJoined ? ", `lln` DESC;" : ";"), new object[] { input, "%" + input + "%" }, reader =>
+        {
+            names.Add(new PlayerNames(reader.GetUInt64(0)) { CharacterName = reader.GetString(1), NickName = reader.GetString(2), PlayerName = reader.GetString(3), WasFound = true });
+        }, token).ConfigureAwait(false);
+
+        return names;
+    }
     public async Task<PlayerNames> GetUsernamesAsync(ulong s64, CancellationToken token = default)
     {
 #if DEBUG

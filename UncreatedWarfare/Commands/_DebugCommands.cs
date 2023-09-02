@@ -1733,4 +1733,29 @@ public class DebugCommand : AsyncCommand
         await Migration.MigrateBans(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
+    private async Task migratebe(CommandInteraction ctx, CancellationToken token)
+    {
+        await Migration.MigrateBattlEyeKicks(Data.ModerationSql, token).ConfigureAwait(false);
+        ctx.ReplyString("Done.");
+    }
+    private async Task migratekicks(CommandInteraction ctx, CancellationToken token)
+    {
+        await Migration.MigrateKicks(Data.ModerationSql, token).ConfigureAwait(false);
+        ctx.ReplyString("Done.");
+    }
+    private async Task migratemutes(CommandInteraction ctx, CancellationToken token)
+    {
+        await Migration.MigrateMutes(Data.ModerationSql, token).ConfigureAwait(false);
+        ctx.ReplyString("Done.");
+    }
+    private async Task migratetks(CommandInteraction ctx, CancellationToken token)
+    {
+        await Migration.MigrateTeamkills(Data.ModerationSql, token).ConfigureAwait(false);
+        ctx.ReplyString("Done.");
+    }
+    private async Task migratewarns(CommandInteraction ctx, CancellationToken token)
+    {
+        await Migration.MigrateWarnings(Data.ModerationSql, token).ConfigureAwait(false);
+        ctx.ReplyString("Done.");
+    }
 }

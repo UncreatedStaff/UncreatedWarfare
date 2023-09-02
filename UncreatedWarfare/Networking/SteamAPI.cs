@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using SDG.Unturned;
 using Uncreated.Framework;
 using Uncreated.Json;
 using UnityEngine.Networking;
@@ -38,14 +40,27 @@ public sealed class SteamAPI
         return url;
     }
 
-    public static async UniTask<PlayerSummary[]> GetPlayerSummaries(ulong[] players, CancellationToken token = default)
+    public static UniTask<PlayerSummary[]> GetPlayerSummaries(IList<ulong> players, CancellationToken token = default) => GetPlayerSummaries(players, 0, players.Count, token);
+    public static async UniTask<PlayerSummary[]> GetPlayerSummaries(IList<ulong> players, int index, int length, CancellationToken token = default)
     {
         if (string.IsNullOrEmpty(UCWarfare.Config.SteamAPIKey))
             throw new InvalidOperationException("Steam API key not present.");
-        if (players.Length == 0)
+        if (index >= players.Count)
+            throw new ArgumentOutOfRangeException(nameof(index));
+        if (index + length > players.Count)
+            throw new ArgumentOutOfRangeException(nameof(length));
+        if (length < 0)
+            length = players.Count;
+        if (index < 0)
+            index = 0;
+        if (players.Count == 0)
             return Array.Empty<PlayerSummary>();
 
-        using UnityWebRequest webRequest = UnityWebRequest.Get(MakeUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + string.Join(",", players)));
+        string[] strs = new string[length];
+        for (int i = 0; i < length; ++i)
+            strs[i] = players[i + index].ToString(CultureInfo.InvariantCulture);
+
+        using UnityWebRequest webRequest = UnityWebRequest.Get(MakeUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + string.Join(",", strs)));
         await webRequest.SendWebRequest().WithCancellation(token);
         
         if (webRequest.result != UnityWebRequest.Result.Success)

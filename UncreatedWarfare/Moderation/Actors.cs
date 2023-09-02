@@ -28,7 +28,12 @@ public static class Actors
             return BattlEyeActor.Instance;
 
         if (Util.IsValidSteam64Id(id))
+        {
+            if (UCWarfare.IsLoaded && UCPlayer.FromID(id) is { IsOnline: true } pl)
+                return pl;
+            
             return new PlayerActor(id);
+        }
 
         return new DiscordActor(id);
     }
@@ -180,10 +185,14 @@ public readonly struct RelatedActor
 
     [JsonPropertyName("role")]
     public string Role { get; }
+
     [JsonPropertyName("admin")]
     public bool Admin { get; }
+
     [JsonPropertyName("actor")]
+    [JsonConverter(typeof(ActorConverter))]
     public IModerationActor Actor { get; }
+
     [JsonConstructor]
     public RelatedActor(string role, bool admin, IModerationActor actor)
     {
