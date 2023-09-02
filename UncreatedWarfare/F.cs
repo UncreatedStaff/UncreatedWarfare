@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using JetBrains.Annotations;
 using MySqlConnector;
 using Uncreated.Framework;
@@ -26,6 +27,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
@@ -1581,6 +1583,8 @@ public static class F
     public static bool RoughlyEquals(string? a, string? b) => string.Compare(a, b, CultureInfo.InvariantCulture,
         CompareOptions.IgnoreCase | CompareOptions.IgnoreKanaType | CompareOptions.IgnoreNonSpace |
         CompareOptions.IgnoreSymbols) == 0;
+    public static bool RoughlyContains(string? a, string? b) => a != null && b != null && CultureInfo.InvariantCulture.CompareInfo.IndexOf(a, b,
+        CompareOptions.IgnoreCase | CompareOptions.IgnoreKanaType | CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreSymbols) >= 0;
     public static T? StringFind<T>(IReadOnlyList<T> collection, Func<T, string?> selector, string input, bool equalsOnly = false)
     {
         if (input == null)
@@ -1682,24 +1686,27 @@ public static class F
 
         for (int i = 0; i < collection.Count; ++i)
         {
-            if (string.Equals(selector(collection[i]), input, StringComparison.InvariantCultureIgnoreCase))
-                output.Add(collection[i]);
+            T value = collection[i];
+            if (string.Equals(selector(value), input, StringComparison.InvariantCultureIgnoreCase) && !output.Contains(value))
+                output.Add(value);
         }
         if (!equalsOnly)
         {
             for (int i = 0; i < collection.Count; ++i)
             {
-                string? n = selector(collection[i]);
-                if (n != null && n.IndexOf(input, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    output.Add(collection[i]);
+                T value = collection[i];
+                string? name = selector(value);
+                if (name != null && !output.Contains(value) && name.IndexOf(input, StringComparison.InvariantCultureIgnoreCase) != -1)
+                    output.Add(value);
             }
 
             string[] inSplits = input.Split(SpaceSplit);
             for (int i = 0; i < collection.Count; ++i)
             {
-                string? name = selector(collection[i]);
-                if (name != null && inSplits.All(l => name.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
-                    output.Add(collection[i]);
+                T value = collection[i];
+                string? name = selector(value);
+                if (name != null && !output.Contains(value) && inSplits.All(l => name.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                    output.Add(value);
             }
         }
     }
@@ -2009,6 +2016,78 @@ public static class F
 
         index = -1;
         return default;
+    }
+    public static async UniTask<string?> GetProfilePictureURL(ulong steam64, AvatarSize size, CancellationToken token = default)
+    {
+        if (!UCWarfare.IsLoaded)
+            throw new SingletonUnloadedException(typeof(UCWarfare));
+        if (UCPlayer.FromID(steam64) is { } player)
+        {
+            return await player.GetProfilePictureURL(size, token);
+        }
+
+        if (Data.ModerationSql.TryGetAvatar(steam64, size, out string url))
+            return url;
+
+        PlayerSummary summary = await GetPlayerSummary(steam64, token: token);
+
+        return size switch
+        {
+            AvatarSize.Full => summary.AvatarUrlFull,
+            AvatarSize.Medium => summary.AvatarUrlMedium,
+            _ => summary.AvatarUrlSmall
+        };
+    }
+    public static async UniTask<PlayerSummary> GetPlayerSummary(ulong steam64, bool allowCache = true, CancellationToken token = default)
+    {
+        if (UCWarfare.IsLoaded && UCPlayer.FromID(steam64) is { } player)
+        {
+            return await player.GetPlayerSummary(allowCache, token);
+        }
+
+        PlayerSummary? playerSummary = await Networking.SteamAPI.GetPlayerSummary(steam64, token);
+        await UniTask.SwitchToMainThread(token);
+#if DEBUG
+        ThreadUtil.assertIsGameThread();
+#endif
+
+        if (playerSummary != null && UCWarfare.IsLoaded)
+        {
+            if (!string.IsNullOrEmpty(playerSummary.AvatarUrlSmall))
+                Data.ModerationSql.UpdateAvatar(steam64, AvatarSize.Small, playerSummary.AvatarUrlSmall);
+            if (!string.IsNullOrEmpty(playerSummary.AvatarUrlMedium))
+                Data.ModerationSql.UpdateAvatar(steam64, AvatarSize.Medium, playerSummary.AvatarUrlMedium);
+            if (!string.IsNullOrEmpty(playerSummary.AvatarUrlFull))
+                Data.ModerationSql.UpdateAvatar(steam64, AvatarSize.Full, playerSummary.AvatarUrlFull);
+        }
+
+        return playerSummary ?? new PlayerSummary
+        {
+            Steam64 = steam64,
+            PlayerName = steam64.ToString()
+        };
+    }
+    public static async UniTask CacheAvatars(this DatabaseInterface db, IEnumerable<ulong> players, CancellationToken token = default)
+    {
+        List<ulong> pls = new List<ulong>();
+        foreach (ulong pl in players)
+        {
+            if (db.TryGetAvatar(pl, AvatarSize.Small, out _) && db.TryGetAvatar(pl, AvatarSize.Medium, out _) && db.TryGetAvatar(pl, AvatarSize.Full, out _))
+                continue;
+
+            pls.Add(pl);
+        }
+
+        if (pls.Count <= 0)
+            return;
+        PlayerSummary[] summaries = await Networking.SteamAPI.GetPlayerSummaries(pls, token);
+        for (int i = 0; i < summaries.Length; ++i)
+        {
+            PlayerSummary summary = summaries[i];
+            db.UpdateAvatar(summary.Steam64, AvatarSize.Small, summary.AvatarUrlSmall);
+            db.UpdateAvatar(summary.Steam64, AvatarSize.Medium, summary.AvatarUrlMedium);
+            db.UpdateAvatar(summary.Steam64, AvatarSize.Full, summary.AvatarUrlFull);
+        }
     }
 }
 

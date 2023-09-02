@@ -8,9 +8,10 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Moderation.Appeals;
-using Uncreated.Warfare.Moderation.Reports;
+using Report = Uncreated.Warfare.Moderation.Reports.Report;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
 
@@ -159,7 +160,7 @@ public abstract class Punishment : ModerationEntry
             }
             builder.Append(';');
         }
-        builder.Append($"DELETE FROM `{DatabaseInterface.TableLinkedReports}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
+        builder.Append($"DELETE FROM `{DatabaseInterface.TableLinkedAppeals}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
         
         if (AppealKeys.Length > 0)
         {
@@ -207,6 +208,7 @@ public abstract class DurationPunishment : Punishment
     /// Who forgave the moderation entry.
     /// </summary>
     [JsonPropertyName("forgiving_actor")]
+    [JsonConverter(typeof(ActorConverter))]
     public IModerationActor? ForgivenBy { get; set; }
 
     /// <summary>
@@ -336,20 +338,28 @@ public abstract class DurationPunishment : Punishment
             writer.WriteString("forgive_message", ForgiveMessage);
         }
     }
-    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 1;
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 5;
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
         builder.Append($" INSERT INTO `{DatabaseInterface.TableDurationPunishments}` ({SqlTypes.ColumnList(
-            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnDuationsDurationSeconds)}) VALUES ");
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnDurationsDurationSeconds, DatabaseInterface.ColumnDurationsForgiven,
+            DatabaseInterface.ColumnDurationsForgivenBy, DatabaseInterface.ColumnDurationsForgivenTimestamp, DatabaseInterface.ColumnDurationsForgivenReason)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 1, 0, 1);
+        F.AppendPropertyList(builder, args.Count, 5, 0, 1);
         builder.Append(" AS `t` " +
-                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnDuationsDurationSeconds}` = " +
-                       $"`t`.`{DatabaseInterface.ColumnDuationsDurationSeconds}`;");
+                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnDurationsDurationSeconds}` = `t`.`{DatabaseInterface.ColumnDurationsDurationSeconds}`," +
+                       $"`{DatabaseInterface.ColumnDurationsForgiven}` = `t`.`{DatabaseInterface.ColumnDurationsForgiven}`," +
+                       $"`{DatabaseInterface.ColumnDurationsForgivenBy}` = `t`.`{DatabaseInterface.ColumnDurationsForgivenBy}`," +
+                       $"`{DatabaseInterface.ColumnDurationsForgivenTimestamp}` = `t`.`{DatabaseInterface.ColumnDurationsForgivenTimestamp}`," +
+                       $"`{DatabaseInterface.ColumnDurationsForgivenReason}` = `t`.`{DatabaseInterface.ColumnDurationsForgivenReason}`;");
 
         args.Add((long)Math.Round(Duration.TotalSeconds));
+        args.Add(Forgiven);
+        args.Add(ForgivenBy == null ? DBNull.Value : ForgivenBy.Id);
+        args.Add(ForgiveTimestamp.HasValue ? ForgiveTimestamp.Value.UtcDateTime : DBNull.Value);
+        args.Add((object?)ForgiveMessage.MaxLength(1024) ?? DBNull.Value);
 
         return hasEvidenceCalls;
     }

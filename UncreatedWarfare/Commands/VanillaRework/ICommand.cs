@@ -220,7 +220,7 @@ public class ICommand : Command
             }
         }
         if (asset == null)
-            throw ctx.ReplyString($"No item found.", "8f9494");
+            throw ctx.ReplyString("No item found.", "8f9494");
 
         foundItem:
         Item itemFromID = new Item(asset!.id, itemAmt is <= 0 or > byte.MaxValue ? asset.amount : (byte)itemAmt, 100, itemSt ?? asset.getState(true));

@@ -161,13 +161,13 @@ public abstract class DatabaseInterface
         StringBuilder sb = new StringBuilder("SELECT ", 164);
         int flag = AppendReadColumns(sb, type);
         AppendTables(sb, flag);
-        sb.Append(" WHERE ");
+        sb.Append(" WHERE");
 
         switch (relation)
         {
             default:
             case ActorRelationType.IsTarget:
-                sb.Append($" `{ColumnEntriesSteam64}`=@0;");
+                sb.Append($" `{ColumnEntriesSteam64}`=@0");
                 break;
             case ActorRelationType.IsActor:
                 sb.Append($" (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0) > 0");
@@ -272,7 +272,7 @@ public abstract class DatabaseInterface
         StringBuilder sb = new StringBuilder("SELECT ", 164);
         int flag = AppendReadColumns(sb, type);
         AppendTables(sb, flag);
-        sb.Append(" WHERE ");
+        sb.Append(" WHERE");
 
         ModerationEntryType[]? types = null;
         if (type != typeof(ModerationEntry))
@@ -748,7 +748,7 @@ public abstract class DatabaseInterface
         if (type.IsAssignableFrom(typeof(DurationPunishment)) || typeof(DurationPunishment).IsAssignableFrom(type))
         {
             flag |= 1;
-            sb.Append(",`dur`.`" + ColumnDuationsDurationSeconds + "`");
+            sb.Append("," + SqlTypes.ColumnListAliased("dur", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason));
         }
         if (type.IsAssignableFrom(typeof(Mute)) || typeof(Mute).IsAssignableFrom(type))
         {
@@ -800,39 +800,39 @@ public abstract class DatabaseInterface
 
         if ((flag & 1) != 0)
         {
-            sb.Append($" INNER JOIN `{TableDurationPunishments}` AS `dur` ON `main`.`{ColumnEntriesPrimaryKey}` = `dur`.`{ColumnExternalPrimaryKey}`");
+            sb.Append($" LEFT JOIN `{TableDurationPunishments}` AS `dur` ON `main`.`{ColumnEntriesPrimaryKey}` = `dur`.`{ColumnExternalPrimaryKey}`");
         }
         if ((flag & (1 << 1)) != 0)
         {
-            sb.Append($" INNER JOIN `{TableMutes}` AS `mutes` ON `main`.`{ColumnEntriesPrimaryKey}` = `mutes`.`{ColumnExternalPrimaryKey}`");
+            sb.Append($" LEFT JOIN `{TableMutes}` AS `mutes` ON `main`.`{ColumnEntriesPrimaryKey}` = `mutes`.`{ColumnExternalPrimaryKey}`");
         }
         if ((flag & (1 << 2)) != 0)
         {
-            sb.Append($" INNER JOIN `{TableWarnings}` AS `warns` ON `main`.`{ColumnEntriesPrimaryKey}` = `warns`.`{ColumnExternalPrimaryKey}`");
+            sb.Append($" LEFT JOIN `{TableWarnings}` AS `warns` ON `main`.`{ColumnEntriesPrimaryKey}` = `warns`.`{ColumnExternalPrimaryKey}`");
         }
         if ((flag & (1 << 3)) != 0)
         {
-            sb.Append($" INNER JOIN `{TablePlayerReportAccepteds}` AS `praccept` ON `main`.`{ColumnEntriesPrimaryKey}` = `praccept`.`{ColumnExternalPrimaryKey}`");
+            sb.Append($" LEFT JOIN `{TablePlayerReportAccepteds}` AS `praccept` ON `main`.`{ColumnEntriesPrimaryKey}` = `praccept`.`{ColumnExternalPrimaryKey}`");
         }
         if ((flag & (1 << 4)) != 0)
         {
-            sb.Append($" INNER JOIN `{TableBugReportAccepteds}` AS `braccept` ON `main`.`{ColumnEntriesPrimaryKey}` = `braccept`.`{ColumnExternalPrimaryKey}`");
+            sb.Append($" LEFT JOIN `{TableBugReportAccepteds}` AS `braccept` ON `main`.`{ColumnEntriesPrimaryKey}` = `braccept`.`{ColumnExternalPrimaryKey}`");
         }
         if ((flag & (1 << 5)) != 0)
         {
-            sb.Append($" INNER JOIN `{TableTeamkills}` AS `tks` ON `main`.`{ColumnEntriesPrimaryKey}` = `tks`.`{ColumnExternalPrimaryKey}`");
+            sb.Append($" LEFT JOIN `{TableTeamkills}` AS `tks` ON `main`.`{ColumnEntriesPrimaryKey}` = `tks`.`{ColumnExternalPrimaryKey}`");
         }
         if ((flag & (1 << 6)) != 0)
         {
-            sb.Append($" INNER JOIN `{TableVehicleTeamkills}` AS `vtks` ON `main`.`{ColumnEntriesPrimaryKey}` = `vtks`.`{ColumnExternalPrimaryKey}`");
+            sb.Append($" LEFT JOIN `{TableVehicleTeamkills}` AS `vtks` ON `main`.`{ColumnEntriesPrimaryKey}` = `vtks`.`{ColumnExternalPrimaryKey}`");
         }
         if ((flag & (1 << 7)) != 0)
         {
-            sb.Append($" INNER JOIN `{TableAppeals}` AS `app` ON `main`.`{ColumnEntriesPrimaryKey}` = `app`.`{ColumnExternalPrimaryKey}`");
+            sb.Append($" LEFT JOIN `{TableAppeals}` AS `app` ON `main`.`{ColumnEntriesPrimaryKey}` = `app`.`{ColumnExternalPrimaryKey}`");
         }
         if ((flag & (1 << 8)) != 0)
         {
-            sb.Append($" INNER JOIN `{TableReports}` AS `rep` ON `main`.`{ColumnEntriesPrimaryKey}` = `rep`.`{ColumnExternalPrimaryKey}`");
+            sb.Append($" LEFT JOIN `{TableReports}` AS `rep` ON `main`.`{ColumnEntriesPrimaryKey}` = `rep`.`{ColumnExternalPrimaryKey}`");
         }
     }
     private static ModerationEntry? ReadEntry(int flag, MySqlDataReader reader)
@@ -865,13 +865,17 @@ public abstract class DatabaseInterface
         int offset = 15;
         if ((flag & 1) != 0)
         {
-            offset++;
+            offset += 5;
             if (entry is DurationPunishment dur)
             {
-                long sec = reader.IsDBNull(offset) ? -1L : reader.GetInt64(offset);
+                long sec = reader.IsDBNull(offset - 4) ? -1L : reader.GetInt64(offset - 4);
                 if (sec < -1)
                     sec = -1;
                 dur.Duration = TimeSpan.FromSeconds(sec);
+                dur.Forgiven = !reader.IsDBNull(offset - 3) && reader.GetBoolean(offset - 3);
+                dur.ForgivenBy = reader.IsDBNull(offset - 2) ? null : Actors.GetActor(reader.GetUInt64(offset - 2));
+                dur.ForgiveTimestamp = reader.IsDBNull(offset - 1) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(offset - 1), DateTimeKind.Utc));
+                dur.ForgiveMessage = reader.IsDBNull(offset) ? null : reader.GetString(offset);
             }
         }
         if ((flag & (1 << 1)) != 0)
@@ -1119,7 +1123,11 @@ public abstract class DatabaseInterface
 
     public const string ColumnAssetBanFiltersAsset = "AssetBanAsset";
 
-    public const string ColumnDuationsDurationSeconds = "Duration";
+    public const string ColumnDurationsDurationSeconds = "Duration";
+    public const string ColumnDurationsForgiven = "Forgiven";
+    public const string ColumnDurationsForgivenBy = "ForgivenBy";
+    public const string ColumnDurationsForgivenTimestamp = "ForgivenTimeUTC";
+    public const string ColumnDurationsForgivenReason = "ForgivenReason";
 
     public const string ColumnLinkedAppealsAppeal = "LinkedAppeal";
     public const string ColumnLinkedReportsReport = "LinkedReport";
@@ -1386,7 +1394,23 @@ public abstract class DatabaseInterface
                 ForeignKeyColumn = ColumnEntriesPrimaryKey,
                 ForeignKeyTable = TableEntries
             },
-            new Schema.Column(ColumnDuationsDurationSeconds, SqlTypes.LONG)
+            new Schema.Column(ColumnDurationsDurationSeconds, SqlTypes.LONG),
+            new Schema.Column(ColumnDurationsForgiven, SqlTypes.BOOLEAN)
+            {
+                Default = "b'0'"
+            },
+            new Schema.Column(ColumnDurationsForgivenBy, SqlTypes.STEAM_64)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnDurationsForgivenTimestamp, SqlTypes.DATETIME)
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnDurationsForgivenReason, SqlTypes.String(1024))
+            {
+                Nullable = true
+            }
         }, false, typeof(DurationPunishment)),
         new Schema(TableLinkedAppeals, new Schema.Column[]
         {

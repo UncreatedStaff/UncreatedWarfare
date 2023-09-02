@@ -15,10 +15,14 @@ public class AssetBan : DurationPunishment
     [JsonPropertyName("asset_filter")]
     public PrimaryKey[] AssetFilter { get; set; } = Array.Empty<PrimaryKey>();
 
-    public bool IsAssetBanned(PrimaryKey assetKey, bool checkStillActive = true)
+    public bool IsAssetBanned(PrimaryKey assetKey, bool considerForgiven, bool checkStillActive = true)
     {
-        if (checkStillActive && !IsApplied())
+        if (checkStillActive && !IsApplied(considerForgiven))
             return false;
+
+        if (!checkStillActive && considerForgiven && (Forgiven || Removed))
+            return true;
+        
         if (AssetFilter.Length == 0) return true;
         if (!assetKey.IsValid) return false;
         int key = assetKey.Key;

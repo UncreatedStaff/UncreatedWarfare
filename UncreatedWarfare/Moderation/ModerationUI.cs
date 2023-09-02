@@ -3,6 +3,7 @@ using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
 using Uncreated.Framework.UI.Presets;
+using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -122,11 +124,59 @@ internal class ModerationUI : UnturnedUI
     /* ACTION CONTROLS */
     public ActionControl[] ModerationActionControls { get; } = UnturnedUIPatterns.CreateArray<ActionControl>("ModerationActionControl{1}_{0}", 1, to: 4);
 
-    public ModerationUI() : base(Gamemode.Config.UIModerationMenu)
+    public ModerationUI() : base(Gamemode.Config.UIModerationMenu, debugLogging: true)
     {
         ButtonClose.OnClicked += OnButtonCloseClicked;
         ModerationPlayerSearchModeButton.OnValueUpdated += OnModerationPlayerSearchModeUpdated;
         ModerationPlayerSearch.OnTextUpdated += OnModerationPlayerSearchTextUpdated;
+        for (int i = 0; i < ModerationPlayerList.Length; ++i)
+        {
+            ModerationPlayerList[i].ModerateButton.OnClicked += OnClickedModeratePlayer;
+        }
+        for (int i = 0; i < ModerationHistory.Length; ++i)
+        {
+            ModerationHistory[i].Root.OnClicked += OnClickedModerationEntry;
+        }
+    }
+
+    private void OnClickedModeratePlayer(UnturnedButton button, Player player)
+    {
+        int index = Array.FindIndex(ModerationPlayerList, x => x.ModerateButton == button);
+        if (index == -1)
+            return;
+
+        UCPlayer? ucp = UCPlayer.FromPlayer(player);
+
+        if (ucp == null)
+            return;
+
+        ModerationData data = GetOrAddModerationData(ucp);
+        if (data.PlayerList == null || index >= data.PlayerList.Length)
+            return;
+
+        data.SelectedPlayer = data.PlayerList[index];
+
+        UCWarfare.RunTask(RefreshModerationHistory, ucp, ucp.DisconnectToken, $"Update moderation history of {data.SelectedPlayer} for {ucp.Steam64}.");
+    }
+
+    private void OnClickedModerationEntry(UnturnedButton button, Player player)
+    {
+        int index = Array.FindIndex(ModerationHistory, x => x.Root == button);
+        if (index == -1)
+            return;
+
+        UCPlayer? ucp = UCPlayer.FromPlayer(player);
+
+        if (ucp == null)
+            return;
+
+        ModerationData data = GetOrAddModerationData(ucp);
+        if (data.HistoryView == null || index >= data.HistoryView.Length)
+            return;
+
+        data.SelectedEntry = data.HistoryView[index];
+
+        // todo UCWarfare.RunTask(RefreshModerationHistory, ucp, ucp.DisconnectToken, $"Update moderation history of {data.SelectedPlayer} for {ucp.Steam64}.");
     }
 
     private void OnModerationPlayerSearchModeUpdated(UnturnedEnumButton<PlayerSearchMode> button, Player player, PlayerSearchMode value)
@@ -137,6 +187,14 @@ internal class ModerationUI : UnturnedUI
     }
     private void OnModerationPlayerSearchTextUpdated(UnturnedTextBox button, Player player, string text)
     {
+        UnturnedTextBoxData? data = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.channel.owner.playerID.steamID, ModerationPlayerSearch.TextBox);
+        if (data == null)
+        {
+            data = new UnturnedTextBoxData(player.channel.owner.playerID.steamID, ModerationPlayerSearch.TextBox);
+            UnturnedUIDataSource.AddData(data);
+        }
+
+        data.Text = text;
         UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
         if (ucPlayer != null)
             SendModerationPlayerList(ucPlayer);
@@ -165,8 +223,9 @@ internal class ModerationUI : UnturnedUI
         {
             SendToPlayer(player.Connection);
             player.HasModerationUI = true;
-            await SetPage(player, Page.Moderation, true, token).ConfigureAwait(false);
         }
+
+        await SetPage(player, Page.Moderation, false, token).ConfigureAwait(false);
     }
     public void Close(UCPlayer player)
     {
@@ -186,23 +245,23 @@ internal class ModerationUI : UnturnedUI
         await UCWarfare.ToUpdate(token);
         if (!isAlreadyInView)
         {
-            await (page switch
-            {
-                Page.Moderation => PrepareModerationPage(player, token),
-                Page.Players => PreparePlayersPage(player, token),
-                Page.Tickets => PrepareTicketsPage(player, token),
-                _ => PrepareLogsPage(player, token)
-            }).ConfigureAwait(false);
             PageLogic[(int)page].SetVisibility(player.Connection, true);
         }
+        await (page switch
+        {
+            Page.Moderation => PrepareModerationPage(player, token),
+            Page.Players => PreparePlayersPage(player, token),
+            Page.Tickets => PrepareTicketsPage(player, token),
+            _ => PrepareLogsPage(player, token)
+        }).ConfigureAwait(false);
     }
     private async Task PrepareModerationPage(UCPlayer player, CancellationToken token = default)
     {
         await UCWarfare.ToUpdate(token);
 
         await PlayerManager.TryDownloadAllPlayerSummaries(token: token);
-        await UniTask.SwitchToMainThread(token);
-
+        await UCWarfare.ToUpdate(token);
+        
         UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationPlayerSearch.TextBox);
         if (textBoxData != null)
             ModerationPlayerSearch.SetText(player.Connection, textBoxData.Text ?? string.Empty);
@@ -210,8 +269,10 @@ internal class ModerationUI : UnturnedUI
         ModerationHistroyTypeButton.Update(player.Player, false);
         ModerationHistroySearchTypeButton.Update(player.Player, false);
         ModerationHistroySortTypeButton.Update(player.Player, false);
-        ModerationPlayerSearchModeButton.Update(player.Player, true); // calling the event will refresh the list.
+        ModerationPlayerSearchModeButton.Update(player.Player, false);
 
+        SendModerationPlayerList(player);
+        
         await RefreshModerationHistory(player, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate(token);
     }
@@ -228,12 +289,13 @@ internal class ModerationUI : UnturnedUI
         return Task.CompletedTask;
     }
     public ModerationData? GetModerationData(UCPlayer player) => UnturnedUIDataSource.GetData<ModerationData>(player.CSteamID, Headers[(int)Page.Moderation].Button);
-    public ModerationData GetOrAddModerationData(UCPlayer player)
+    public ModerationData GetOrAddModerationData(UCPlayer player) => GetOrAddModerationData(player.Steam64);
+    public ModerationData GetOrAddModerationData(ulong steam64)
     {
-        ModerationData? data = UnturnedUIDataSource.GetData<ModerationData>(player.CSteamID, Headers[(int)Page.Moderation].Button);
+        ModerationData? data = UnturnedUIDataSource.GetData<ModerationData>(new CSteamID(steam64), Headers[(int)Page.Moderation].Button);
         if (data == null)
         {
-            data = new ModerationData(player.CSteamID, this);
+            data = new ModerationData(new CSteamID(steam64), this);
             UnturnedUIDataSource.AddData(data);
         }
 
@@ -263,51 +325,107 @@ internal class ModerationUI : UnturnedUI
                 UpdateModerationEntry(player, index, entries[index]);
         }
     }
+
+    private static readonly List<UCPlayer> TempPlayerSearchBuffer = new List<UCPlayer>(Provider.maxPlayers);
     public void SendModerationPlayerList(UCPlayer player)
     {
+        ThreadUtil.assertIsGameThread();
+
         ITransportConnection connection = player.Connection;
 
         if (!ModerationPlayerSearchModeButton.TryGetSelection(player.Player, out PlayerSearchMode searchMode))
             searchMode = PlayerSearchMode.Online;
-
+        ModerationData data = GetOrAddModerationData(player);
         UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationPlayerSearch.TextBox);
         string searchText = textBoxData?.Text ?? string.Empty;
-
+        data.PlayerList ??= new ulong[ModerationPlayerList.Length];
         if (searchText.Length < 3 || searchMode == PlayerSearchMode.Online)
         {
-            int ct = Math.Min(Provider.clients.Count, ModerationPlayerList.Length);
-            for (int i = 0; i < ct; ++i)
+            List<UCPlayer> buffer;
+            bool clr = false;
+            if (!string.IsNullOrWhiteSpace(searchText))
             {
-                try
+                UCPlayer.Search(searchText, UCPlayer.NameSearch.PlayerName, TempPlayerSearchBuffer);
+                buffer = TempPlayerSearchBuffer;
+                clr = true;
+            }
+            else
+            {
+                buffer = PlayerManager.OnlinePlayers;
+            }
+
+            try
+            {
+                int ct = Math.Min(ModerationPlayerList.Length, buffer.Count);
+                int i = 0;
+                for (; i < ct; ++i)
                 {
-                    SteamPlayer steamPlayer = Provider.clients[i];
-                    UCPlayer? listPlayer = UCPlayer.FromSteamPlayer(steamPlayer);
-                    if (listPlayer == null)
-                    {
-                        PlayerListEntry entry = ModerationPlayerList[i];
-                        entry.SteamId.SetText(connection, steamPlayer.playerID.steamID.m_SteamID.ToString(CultureInfo.InvariantCulture));
-                        entry.ProfilePicture.SetImage(connection, string.Empty);
-                        entry.Name.SetText(connection, steamPlayer.playerID.playerName);
-                        entry.Root.SetVisibility(connection, true);
-                    }
-                    else UpdateModerationPlayerListEntry(player, i, listPlayer);
+                    UCPlayer listPlayer = buffer[i];
+                    UpdateModerationPlayerListEntry(player, i, listPlayer, true);
+
+                    data.PlayerList[i] = listPlayer.Steam64;
                 }
-                catch (Exception ex)
+                
+                for (; i < ModerationPlayerList.Length; ++i)
                 {
-                    L.LogError(ex);
+                    ModerationPlayerList[i].Root.SetVisibility(connection, false);
+                    data.PlayerList[i] = 0;
                 }
             }
-            for (; ct < ModerationPlayerList.Length; ++ct)
+            finally
             {
-                ModerationPlayerList[ct].Root.SetVisibility(connection, false);
+                if (clr)
+                    buffer.Clear();
             }
         }
         else
         {
-            // todo
+            UCWarfare.RunTask(async token =>
+            {
+                token.ThrowIfCancellationRequested();
+
+                int version = Interlocked.Increment(ref data.SearchVersion);
+                List<PlayerNames> names = await Data.AdminSql.SearchAllPlayers(searchText, UCPlayer.NameSearch.PlayerName, true, token);
+
+                if (data.SearchVersion != version)
+                    return;
+                token.ThrowIfCancellationRequested();
+
+                await UCWarfare.ToUpdate(token);
+
+                int ct = Math.Min(ModerationPlayerList.Length, names.Count);
+                int i2 = 0;
+                for (; i2 < ct; ++i2)
+                {
+                    PlayerNames name = names[i2];
+                    UpdateModerationPlayerListEntry(player, i2, name, false);
+
+                    data.PlayerList[i2] = name.Steam64;
+                }
+
+                for (; i2 < ModerationPlayerList.Length; ++i2)
+                {
+                    ModerationPlayerList[i2].Root.SetVisibility(connection, false);
+                    data.PlayerList[i2] = 0;
+                }
+                ulong[] ids = new ulong[ct];
+                for (int i = 0; i < ct; ++i)
+                    ids[i] = names[i].Steam64;
+
+                await Data.ModerationSql.CacheAvatars(ids, token);
+#if DEBUG
+                ThreadUtil.assertIsGameThread();
+#endif
+                for (int i = 0; i < ct; ++i)
+                {
+                    PlayerNames name = names[i];
+                    if (Data.ModerationSql.TryGetAvatar(name.Steam64, AvatarSize.Small, out string avatarUrl))
+                        ModerationPlayerList[i].ProfilePicture.SetImage(connection, avatarUrl);
+                }
+            }, player.DisconnectToken, ctx: "Update moderation player list for " + player.Steam64.ToString(CultureInfo.InvariantCulture) + ".");
         }
     }
-    private void UpdateModerationPlayerListEntry(UCPlayer player, int index, UCPlayer listPlayer)
+    private void UpdateModerationPlayerListEntry(UCPlayer player, int index, UCPlayer listPlayer, bool downloadAvatar)
     {
         PlayerListEntry entry = ModerationPlayerList[index];
         ITransportConnection connection = player.Connection;
@@ -318,12 +436,39 @@ internal class ModerationUI : UnturnedUI
         else
         {
             entry.ProfilePicture.SetImage(connection, string.Empty);
-            UniTask.Create(async () =>
+            if (downloadAvatar)
             {
-                string? icon = await listPlayer.GetProfilePictureURL(AvatarSize.Small, player.DisconnectToken);
-                await UniTask.SwitchToMainThread(player.DisconnectToken);
-                entry.ProfilePicture.SetImage(player.Connection, icon ?? string.Empty);
-            });
+                UniTask.Create(async () =>
+                {
+                    string? icon = await listPlayer.GetProfilePictureURL(AvatarSize.Small, player.DisconnectToken);
+                    await UniTask.SwitchToMainThread(player.DisconnectToken);
+                    entry.ProfilePicture.SetImage(player.Connection, icon ?? string.Empty);
+                });
+            }
+        }
+
+        entry.Root.SetVisibility(player.Connection, true);
+    }
+    private void UpdateModerationPlayerListEntry(UCPlayer player, int index, PlayerNames listPlayerNames, bool downloadAvatar)
+    {
+        PlayerListEntry entry = ModerationPlayerList[index];
+        ITransportConnection connection = player.Connection;
+        entry.SteamId.SetText(connection, listPlayerNames.Steam64.ToString(CultureInfo.InvariantCulture));
+        entry.Name.SetText(connection, listPlayerNames.PlayerName);
+        if (Data.ModerationSql.TryGetAvatar(listPlayerNames.Steam64, AvatarSize.Small, out string avatarUrl))
+            entry.ProfilePicture.SetImage(connection, avatarUrl);
+        else
+        {
+            entry.ProfilePicture.SetImage(connection, string.Empty);
+            if (downloadAvatar)
+            {
+                UniTask.Create(async () =>
+                {
+                    string? icon = await F.GetProfilePictureURL(listPlayerNames.Steam64, AvatarSize.Small, player.DisconnectToken);
+                    await UniTask.SwitchToMainThread(player.DisconnectToken);
+                    entry.ProfilePicture.SetImage(player.Connection, icon ?? string.Empty);
+                });
+            }
         }
 
         entry.Root.SetVisibility(player.Connection, true);
@@ -397,7 +542,7 @@ internal class ModerationUI : UnturnedUI
             }
             else if (searchMode == ModerationHistorySearchMode.Message)
             {
-                condition = $"{DatabaseInterface.ColumnEntriesMessage} LIKE {{0}}";
+                condition = $"`main`.{DatabaseInterface.ColumnEntriesMessage} LIKE {{0}}";
                 conditionArgs = new object[] { "%" + text + "%" };
             }
             else if (searchMode == ModerationHistorySearchMode.Admin)
@@ -414,12 +559,12 @@ internal class ModerationUI : UnturnedUI
                 else
                 {
                     condition = $"(SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
-                                 $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
+                                 $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `main`.`{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
                                  $"AND " +
                                  $"(SELECT COUNT(*) FROM `{WarfareSQL.TableUsernames}` AS `u` " +
                                   $"WHERE `a`.`{DatabaseInterface.ColumnActorsId}`=`u`.`{WarfareSQL.ColumnUsernamesSteam64}` " +
                                  $"AND " +
-                                  $"(`u`.`{WarfareSQL.ColumnUsernamesPlayerName}` LIKE {{0}} OR `u`.`{WarfareSQL.ColumnUsernamesCharacterName}` LIKE {{0}} OR `u`.`{WarfareSQL.ColumnUsernamesNickName}` LIKE {{0}}))" +
+                                  $"(`u`.`{WarfareSQL.ColumnUsernamesPlayerName}` LIKE @0 OR `u`.`{WarfareSQL.ColumnUsernamesCharacterName}` LIKE @0 OR `u`.`{WarfareSQL.ColumnUsernamesNickName}` LIKE @0))" +
                                  $" > 0)" +
                                 $" > 0";
                     conditionArgs = new object[] { "%" + text + "%" };
@@ -429,22 +574,19 @@ internal class ModerationUI : UnturnedUI
             {
                 if (Enum.TryParse(text, true, out ModerationEntryType entryType))
                 {
-                    condition = $"{DatabaseInterface.ColumnEntriesType} = {{0}}";
+                    condition = $"`main`.{DatabaseInterface.ColumnEntriesType} = @0";
                     conditionArgs = new object[] { entryType.ToString() };
                 }
                 else
                 {
-                    condition = $"{DatabaseInterface.ColumnEntriesType} LIKE {{0}}";
+                    condition = $"`main`.{DatabaseInterface.ColumnEntriesType} LIKE @0";
                     conditionArgs = new object[] { "%" + text + "%" };
                 }
             }
         }
 
-        ModerationEntry[] entries;
-        if (data.SelectedPlayer == 0ul)
-            entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, player.Steam64, ActorRelationType.IsActor, start, end, orderBy, condition, conditionArgs, token);
-        else
-            entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, data.SelectedPlayer, ActorRelationType.IsTarget, start, end, orderBy, condition, conditionArgs, token);
+        ModerationEntry[] entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, data.SelectedPlayer == 0ul ? player.Steam64 : data.SelectedPlayer,
+            data.SelectedPlayer == 0ul ? ActorRelationType.IsActor : ActorRelationType.IsTarget, false, start, end, orderBy, condition, conditionArgs, token);
 
         await UCWarfare.ToUpdate(token);
 
@@ -477,12 +619,12 @@ internal class ModerationUI : UnturnedUI
         public UnturnedLabel Name { get; set; }
 
         [UIPattern("ModerateButton", Mode = FormatMode.Format)]
-        public UnturnedLabel ModerateButton { get; set; }
+        public UnturnedButton ModerateButton { get; set; }
 
         [UIPattern("ModerateButtonLabel", Mode = FormatMode.Format)]
         public UnturnedLabel ModerateButtonLabel { get; set; }
 
-        [UIPattern("SteamIDText", Mode = FormatMode.Format)]
+        [UIPattern("SteamID", Mode = FormatMode.Format)]
         public UnturnedLabel SteamId { get; set; }
 
         [UIPattern("Pfp", Mode = FormatMode.Format)]
@@ -491,7 +633,7 @@ internal class ModerationUI : UnturnedUI
     public class ModerationHistoryEntry
     {
         [UIPattern("", Mode = FormatMode.Format)]
-        public UnturnedUIElement Root { get; set; }
+        public UnturnedButton Root { get; set; }
 
         [UIPattern("Type", Mode = FormatMode.Format)]
         public UnturnedLabel Type { get; set; }
@@ -652,14 +794,17 @@ internal class ModerationUI : UnturnedUI
     }
     public class ModerationData : IUnturnedUIData
     {
+        internal int SearchVersion;
         public CSteamID Player { get; }
         public ModerationUI Owner { get; }
         UnturnedUI IUnturnedUIData.Owner => Owner;
         UnturnedUIElement IUnturnedUIData.Element => Owner.Headers[(int)Page.Moderation].Button;
         public ModerationEntry[]? HistoryView { get; set; }
+        public ulong[]? PlayerList { get; set; }
         public int PageCount => HistoryView is not { Length: > 0 } ? 1 : Mathf.CeilToInt(HistoryView.Length / (float)ModerationHistoryLength);
         public int HistoryPage { get; set; }
         public ulong SelectedPlayer { get; set; }
+        public ModerationEntry? SelectedEntry { get; set; }
         public ModerationData(CSteamID player, ModerationUI owner)
         {
             Owner = owner;

@@ -112,6 +112,7 @@ public abstract class ModerationEntry
     /// Who removed the moderation entry.
     /// </summary>
     [JsonPropertyName("removing_actor")]
+    [JsonConverter(typeof(ActorConverter))]
     public IModerationActor? RemovedBy { get; set; }
 
     /// <summary>

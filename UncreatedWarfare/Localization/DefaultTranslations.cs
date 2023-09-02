@@ -176,7 +176,7 @@ internal static class T
     public static readonly Translation Neutral = new Translation("Neutral", TranslationFlags.UnityUI);
 
     [TranslationData(SectionFlags, "Shows in place of the objective name for an undiscovered flag or objective.")]
-    public static readonly Translation UndiscoveredFlag = new Translation("<#c$undiscovered_flag$>unknown", TranslationFlags.UnityUI);
+    public static readonly Translation UndiscoveredFlag = new Translation("<color=#c$undiscovered_flag$>unknown</color>", TranslationFlags.UnityUI);
 
     [TranslationData(SectionFlags, "Shows in place of the objective name for an undiscovered flag or objective.")]
     public static readonly Translation UndiscoveredFlagNoColor = new Translation("unknown", TranslationFlags.NoColorOptimization);
