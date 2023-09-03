@@ -3,8 +3,13 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using SDG.Unturned;
+using Steamworks;
 using Uncreated.Encoding;
 using Uncreated.SQL;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
 
@@ -69,6 +74,58 @@ public class AssetBan : DurationPunishment
             writer.WriteNumberValue(AssetFilter[i]);
         writer.WriteEndArray();
     }
+
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        const int maxFilters = 4;
+
+        await base.AddExtraInfo(db, workingList, formatter, token);
+
+        if (AssetFilter.Length > 0)
+        {
+            if (UCWarfare.IsLoaded && Data.Singletons.TryGetSingleton(out VehicleBay vb))
+            {
+                await vb.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    int ct = 0;
+                    foreach (SqlItem<VehicleData> data in vb.Items)
+                    {
+                        if (Array.Exists(AssetFilter, x => x == data.PrimaryKey) && data.Item is { } v)
+                        {
+                            if (ct >= maxFilters)
+                            {
+                                workingList[workingList.Count - 1] += " (and " + (AssetFilter.Length - ct).ToString(formatter) + " more)";
+                                break;
+                            }
+                            workingList.Add($"Asset Filter - {Assets.find(v.VehicleID)?.FriendlyName ?? v.VehicleID.ToString("N")}");
+                            ++ct;
+                        }
+                    }
+                }
+                finally
+                {
+                    vb.Release();
+                }
+            }
+            else
+            {
+                int ct = Math.Min(maxFilters, AssetFilter.Length);
+                for (int i = 0; i < ct; ++i)
+                {
+                    workingList.Add($"Asset Filter - {AssetFilter[i]}");
+                }
+
+                if (ct < AssetFilter.Length)
+                    workingList[workingList.Count - 1] += " (and " + (AssetFilter.Length - ct).ToString(formatter) + " more)";
+            }
+        }
+        else
+        {
+            workingList.Add("Asset banned from all assets");
+        }
+    }
+
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + AssetFilter.Length;
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {

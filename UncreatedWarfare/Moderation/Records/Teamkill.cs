@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.SQL;
@@ -152,6 +154,33 @@ public class Teamkill : ModerationEntry
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 6;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+
+        if (Cause.HasValue)
+            workingList.Add($"Cause: {Cause.Value}");
+        if (Limb.HasValue)
+            workingList.Add($"Limb: {Limb.Value}");
+        if (Distance.HasValue && !Cause.HasValue)
+            workingList.Add($"Distance: {Distance.Value.ToString("0.#", formatter)} meters");
+        if (Item.HasValue)
+        {
+            string name;
+            if (UCWarfare.IsLoaded && Assets.find(Item.Value) is ItemAsset item)
+            {
+                name = item.FriendlyName ?? item.name;
+                if (item.id > 0)
+                    name += " (" + item.id.ToString(formatter) + ")";
+            }
+            else
+                name = ItemName ?? Item.Value.ToString("N");
+            workingList.Add($"Item: {name}");
+        }
+
+        if (Message != null)
+            workingList.Add(Message.MaxLength(128)!);
+    }
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);

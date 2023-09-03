@@ -150,6 +150,47 @@ public abstract class ModerationEntry
         return db.ReadAll(RelatedEntries, RelatedEntryKeys, true, true, token);
     }
     public virtual string GetDisplayName() => ToString();
+    public virtual async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        workingList.Add($"Entry ID: {Id.Key.ToString(formatter)}");
+        if (IsLegacy)
+        {
+            workingList.Add($"Legacy ID: {(LegacyId.HasValue ? LegacyId.Value.ToString(formatter) : "--")}");
+        }
+
+        if (Removed)
+        {
+            if (RemovedBy != null)
+            {
+                string disp = await RemovedBy.GetDisplayName(db, token).ConfigureAwait(false) + " (" + RemovedBy.Id.ToString(CultureInfo.InvariantCulture) + ")";
+                if (RemovedTimestamp.HasValue)
+                    workingList.Add($"Removed By: {disp} @ {RemovedTimestamp.Value.UtcDateTime.ToString(ModerationUI.DateTimeFormat, formatter)}");
+                else
+                    workingList.Add($"Removed By: {disp}");
+            }
+            else
+            {
+                if (RemovedTimestamp.HasValue)
+                    workingList.Add($"Removed @ {RemovedTimestamp.Value.UtcDateTime.ToString(ModerationUI.DateTimeFormat, formatter)}");
+                else
+                    workingList.Add("Removed");
+            }
+            if (RemovedMessage != null)
+            {
+                workingList.Add("For: \"" + RemovedMessage.MaxLength(64) + "\"");
+            }
+        }
+
+        if (RelevantLogsEnd.HasValue)
+        {
+            if (RelevantLogsBegin.HasValue)
+                workingList.Add($"Relevant Logs: {RelevantLogsBegin.Value.UtcDateTime.ToString(ModerationUI.DateTimeFormat, formatter)} to {RelevantLogsEnd.Value.UtcDateTime.ToString(ModerationUI.DateTimeFormat, formatter)}");
+            else
+                workingList.Add($"Relevant Log: {RelevantLogsEnd.Value.UtcDateTime.ToString(ModerationUI.DateTimeFormat, formatter)}");
+        }
+        else if (RelevantLogsBegin.HasValue)
+            workingList.Add($"Relevant Log: {RelevantLogsBegin.Value.UtcDateTime.ToString(ModerationUI.DateTimeFormat, formatter)}");
+    }
     public bool TryGetPrimaryAdmin(out RelatedActor actor)
     {
         for (int i = 0; i < Actors.Length; ++i)
@@ -435,6 +476,20 @@ public abstract class ModerationEntry
 
         return anyNew;
     }
+}
+public interface IDurationModerationEntry
+{
+    /// <summary>
+    /// Length of the punishment, negative implies permanent.
+    /// </summary>
+    TimeSpan Duration { get; set; }
+
+    /// <summary>
+    /// Returns <see langword="true"/> if the punishment will never expire, not considering <see cref="Forgiven"/>.
+    /// </summary>
+    /// <remarks>This is indicated by a negative <see cref="Duration"/>.</remarks>
+    /// <exception cref="ArgumentException">Thrown if you set to <see langword="false"/>.</exception>
+    bool IsPermanent { get; set; }
 }
 
 public class ModerationCache : Dictionary<int, ModerationEntryCacheEntry>

@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -53,7 +54,7 @@ public class PlayerActor : IModerationActor
     public ulong Id { get; }
     bool IModerationActor.Async => true;
     public PlayerActor(ulong id) => Id = id;
-
+    public override string ToString() => Id.ToString(CultureInfo.InvariantCulture);
     public virtual async ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default)
     {
         return (await database.GetUsernames(Id, token)).PlayerName;
@@ -92,6 +93,7 @@ public class DiscordActor : IModerationActor
     public ulong Id { get; }
     bool IModerationActor.Async => true;
     public DiscordActor(ulong id) => Id = id;
+    public override string ToString() => "<@" + Id.ToString(CultureInfo.InvariantCulture) + ">";
     public virtual async ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default)
     {
         if (GetDiscordDisplayNameOverride != null)
@@ -141,6 +143,7 @@ public class ConsoleActor : IModerationActor
     public ulong Id => 0;
     bool IModerationActor.Async => false;
     private ConsoleActor() { }
+    public override string ToString() => "Console";
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("Console");
     public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
         => UCWarfare.IsLoaded ? new ValueTask<string?>(Provider.configData.Browser.Icon) : new ValueTask<string?>("https://i.imgur.com/NRZFfKN.png");
@@ -152,6 +155,7 @@ public class AntiCheatActor : IModerationActor
     public ulong Id => 1;
     bool IModerationActor.Async => false;
     private AntiCheatActor() { }
+    public override string ToString() => "Anti-Cheat";
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("Anti-Cheat");
     public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default) => ConsoleActor.Instance.GetProfilePictureURL(database, size, token);
 }
@@ -162,6 +166,7 @@ public class BattlEyeActor : IModerationActor
     public ulong Id => 2;
     bool IModerationActor.Async => false;
     private BattlEyeActor() { }
+    public override string ToString() => "BattlEye";
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("BattlEye");
     public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default) => new ValueTask<string?>("https://i.imgur.com/jasTgpD.jpg");
 }

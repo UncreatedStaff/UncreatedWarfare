@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.SQL;
@@ -57,6 +59,15 @@ public class BugReportAccepted : ModerationEntry
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 2;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+        if (Commit != null)
+            workingList.Add($"Commit ID: \"{Commit}\"");
+        if (Issue.HasValue)
+            workingList.Add($"Issue ID: {Issue.Value.ToString(formatter)}");
+    }
+
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);

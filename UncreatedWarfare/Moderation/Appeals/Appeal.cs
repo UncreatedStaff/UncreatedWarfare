@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -123,7 +124,7 @@ public class Appeal : ModerationEntry
         else
             writer.WriteNullValue();
 
-        writer.WritePropertyName("appeal_state");
+        writer.WritePropertyName("discord_user_id");
         if (DiscordUserId.HasValue)
             writer.WriteNumberValue(DiscordUserId.Value);
         else
@@ -142,6 +143,17 @@ public class Appeal : ModerationEntry
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 2 + PunishmentKeys.Length + Responses.Length * 2;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+        if (TicketId != Guid.Empty)
+            workingList.Add($"Ticket: {TicketId:N}");
+        
+        workingList.Add($"State: {AppealState switch { true => "Accepted", false => "Denied", _ => "Undecided" }}");
+
+        if (DiscordUserId.HasValue)
+            workingList.Add($"Discord ID: <@{DiscordUserId.Value.ToString(CultureInfo.InvariantCulture)}>");
+    }
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);

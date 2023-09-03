@@ -50,6 +50,12 @@ public class ChatAbuseReport : Report
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + Messages.Length * 3;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+        
+        workingList.Add($"Recorded Messages: {Messages.Length.ToString(formatter)}");
+    }
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
