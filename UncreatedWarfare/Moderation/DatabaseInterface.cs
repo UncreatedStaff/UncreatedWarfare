@@ -860,7 +860,7 @@ public abstract class DatabaseInterface
         entry.Removed = !reader.IsDBNull(12) && reader.GetBoolean(12);
         entry.RemovedBy = reader.IsDBNull(13) ? null : Actors.GetActor(reader.GetUInt64(13));
         entry.RemovedTimestamp = reader.IsDBNull(14) ? null : DateTime.SpecifyKind(reader.GetDateTime(14), DateTimeKind.Utc);
-        entry.Message = reader.IsDBNull(15) ? null : reader.GetString(15);
+        entry.RemovedMessage = reader.IsDBNull(15) ? null : reader.GetString(15);
         
         int offset = 15;
         if ((flag & 1) != 0)

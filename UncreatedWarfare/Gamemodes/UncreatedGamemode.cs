@@ -1018,6 +1018,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         TimeSpan timeleft = TimeSpan.FromSeconds(StagingSeconds);
         CTFUI.StagingUI.SendToPlayer(player.Connection, T.PhaseBriefing.Translate(player), $"{timeleft.Minutes}:{timeleft.Seconds:D2}");
+        UpdateStagingUI(player, timeleft);
     }
     public void ClearStagingUI(UCPlayer player)
     {

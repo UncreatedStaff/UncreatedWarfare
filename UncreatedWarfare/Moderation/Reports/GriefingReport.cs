@@ -107,6 +107,17 @@ public class GriefingReport : Report
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 
                                                    DamageRecord.Length * 8 + VehicleRequestRecord.Length * 6 +
                                                    TeamkillRecord.Length * 5 + VehicleTeamkillRecord.Length * 4;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+        int ttl = 0;
+        for (int i = 0; i < DamageRecord.Length; ++i)
+            ttl += DamageRecord[i].Damage;
+        workingList.Add($"Recorded Structure Damage: {ttl.ToString(formatter)} dmg");
+        workingList.Add($"Recorded Vehicle Requests: {VehicleRequestRecord.Length.ToString(formatter)}");
+        workingList.Add($"Recorded Player Teamkills: {TeamkillRecord.Length.ToString(formatter)}");
+        workingList.Add($"Recorded Vehicle Teamkills: {VehicleTeamkillRecord.Length.ToString(formatter)}");
+    }
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);

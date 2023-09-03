@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using SDG.Unturned;
 using Uncreated.Encoding;
 using Uncreated.Framework;
@@ -135,6 +137,56 @@ public class CheatingReport : Report
         JsonSerializer.Serialize(writer, Shots, options);
     }
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + Shots.Length * 22;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+        
+        GetAccuracy(out AccuracyMap map, EPlayerKill.PLAYER);
+        StringBuilder limbMask = new StringBuilder(16);
+
+        if (map.HeadAccuracy > 0)
+            limbMask.Append("|SK");
+        if (map.SpineAccuracy > 0)
+            limbMask.Append("|SP");
+        if (map.LeftArmAccuracy > 0)
+            limbMask.Append("|LA");
+        if (map.RightArmAccuracy > 0)
+            limbMask.Append("|RA");
+        if (map.LeftHandAccuracy > 0)
+            limbMask.Append("|LH");
+        if (map.RightHandAccuracy > 0)
+            limbMask.Append("|RH");
+        if (map.LeftLegAccuracy > 0)
+            limbMask.Append("|LL");
+        if (map.RightLegAccuracy > 0)
+            limbMask.Append("|RL");
+        if (map.LeftFootAccuracy > 0)
+            limbMask.Append("|LFT");
+        if (map.RightFootAccuracy > 0)
+            limbMask.Append("|RFT");
+        if (map.LeftFrontAccuracy > 0)
+            limbMask.Append("|LFR");
+        if (map.RightFrontAccuracy > 0)
+            limbMask.Append("|RFR");
+        if (map.LeftBackAccuracy > 0)
+            limbMask.Append("|LB");
+        if (map.RightBackAccuracy > 0)
+            limbMask.Append("|RB");
+
+        workingList.Add($"Recorded Shots: {Shots.Length.ToString(formatter)}");
+        if (map.OverallAccuracy > 0)
+        {
+            workingList.Add($"Overall Player Accuracy: {map.OverallAccuracy.ToString("P1", formatter)}");
+            workingList.Add($"Skull Accuracy: {map.HeadAccuracy.ToString("P1", formatter)}");
+            workingList.Add($"Spine Accuracy: {map.SpineAccuracy.ToString("P1", formatter)}");
+            if (limbMask.Length > 0)
+                workingList.Add($"Limb mask: {limbMask.ToString(1, limbMask.Length - 1)}");
+        }
+        else
+        {
+            workingList.Add("No player hits.");
+        }
+    }
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);

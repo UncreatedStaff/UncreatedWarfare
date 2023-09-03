@@ -178,7 +178,7 @@ public abstract class Punishment : ModerationEntry
     }
 }
 
-public abstract class DurationPunishment : Punishment
+public abstract class DurationPunishment : Punishment, IDurationModerationEntry
 {
     /// <summary>
     /// Length of the punishment, negative implies permanent.
@@ -339,6 +339,39 @@ public abstract class DurationPunishment : Punishment
         }
     }
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 5;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+
+        if (IsPermanent)
+            workingList.Add("Permanent");
+        else
+            workingList.Add($"Duration: {Util.ToTimeString((int)Math.Round(Duration.TotalSeconds))}");
+
+        if (!Removed && Forgiven)
+        {
+            if (ForgivenBy != null)
+            {
+                string disp = await ForgivenBy.GetDisplayName(db, token).ConfigureAwait(false) + " (" + ForgivenBy.Id.ToString(CultureInfo.InvariantCulture) + ")";
+                if (ForgiveTimestamp.HasValue)
+                    workingList.Add($"Forgiven By: {disp} @ {ForgiveTimestamp.Value.UtcDateTime.ToString(ModerationUI.DateTimeFormat, formatter)}");
+                else
+                    workingList.Add($"Forgiven By: {disp}");
+            }
+            else
+            {
+                if (ForgiveTimestamp.HasValue)
+                    workingList.Add($"Forgiven @ {ForgiveTimestamp.Value.UtcDateTime.ToString(ModerationUI.DateTimeFormat, formatter)}");
+                else
+                    workingList.Add("Forgiven");
+            }
+            if (ForgiveMessage != null)
+            {
+                workingList.Add("For: \"" + ForgiveMessage.MaxLength(64) + "\"");
+            }
+        }
+    }
+
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
@@ -355,7 +388,7 @@ public abstract class DurationPunishment : Punishment
                        $"`{DatabaseInterface.ColumnDurationsForgivenTimestamp}` = `t`.`{DatabaseInterface.ColumnDurationsForgivenTimestamp}`," +
                        $"`{DatabaseInterface.ColumnDurationsForgivenReason}` = `t`.`{DatabaseInterface.ColumnDurationsForgivenReason}`;");
 
-        args.Add((long)Math.Round(Duration.TotalSeconds));
+        args.Add(IsPermanent ? -1L : (long)Math.Round(Duration.TotalSeconds));
         args.Add(Forgiven);
         args.Add(ForgivenBy == null ? DBNull.Value : ForgivenBy.Id);
         args.Add(ForgiveTimestamp.HasValue ? ForgiveTimestamp.Value.UtcDateTime : DBNull.Value);

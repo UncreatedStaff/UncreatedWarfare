@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.SQL;
@@ -122,6 +124,42 @@ public class VehicleTeamkill : ModerationEntry
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 6;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+
+        workingList.Add($"Damage Origin: {Origin}");
+        if (Vehicle.HasValue)
+        {
+            string name;
+            if (UCWarfare.IsLoaded && Assets.find(Vehicle.Value) is VehicleAsset veh)
+            {
+                name = veh.FriendlyName ?? veh.name;
+                if (veh.id > 0)
+                    name += " (" + veh.id.ToString(formatter) + ")";
+            }
+            else
+                name = VehicleName ?? Vehicle.Value.ToString("N");
+            workingList.Add($"Vehicle: {name}");
+        }
+        if (Item.HasValue)
+        {
+            string name;
+            if (UCWarfare.IsLoaded && Assets.find(Item.Value) is ItemAsset item)
+            {
+                name = item.FriendlyName ?? item.name;
+                if (item.id > 0)
+                    name += " (" + item.id.ToString(formatter) + ")";
+            }
+            else
+                name = ItemName ?? Item.Value.ToString("N");
+            workingList.Add($"Item: {name}");
+        }
+
+        if (Message != null)
+            workingList.Add(Message.MaxLength(128)!);
+    }
+
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);

@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
@@ -32,6 +34,13 @@ public class Warning : Punishment
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 1;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+
+        workingList.Add(HasBeenDisplayed ? "Has been viewed" : "Not yet viewed");
+    }
+
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);

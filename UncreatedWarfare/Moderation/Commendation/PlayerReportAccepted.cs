@@ -48,6 +48,12 @@ public class PlayerReportAccepted : ModerationEntry
         writer.WriteNumber("report_id", ReportKey.Key);
     }
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 1;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+        if (ReportKey.IsValid)
+            workingList.Add($"Report ID: \"{ReportKey.Key.ToString(formatter)}\"");
+    }
     internal override async Task FillDetail(DatabaseInterface db, CancellationToken token = default)
     {
         Report = ReportKey.IsValid ? await db.ReadOne<Report>(ReportKey, true, true, token).ConfigureAwait(false) : null;
