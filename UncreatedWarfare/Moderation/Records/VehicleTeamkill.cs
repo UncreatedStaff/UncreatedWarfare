@@ -32,9 +32,6 @@ public class VehicleTeamkill : ModerationEntry
     [JsonPropertyName("item_name")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ItemName { get; set; }
-
-    [JsonPropertyName("death_message")]
-    public string? DeathMessage { get; set; }
     public override string GetDisplayName() => "Vehicle Teamkill";
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
@@ -45,7 +42,6 @@ public class VehicleTeamkill : ModerationEntry
         VehicleName = reader.ReadNullableString();
         Item = reader.ReadNullableGuid();
         ItemName = reader.ReadNullableString();
-        DeathMessage = reader.ReadNullableString();
     }
 
     protected override void WriteIntl(ByteWriter writer)
@@ -63,7 +59,6 @@ public class VehicleTeamkill : ModerationEntry
         writer.WriteNullable(VehicleName);
         writer.WriteNullable(Item);
         writer.WriteNullable(ItemName);
-        writer.WriteNullable(DeathMessage);
     }
     public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
@@ -100,8 +95,6 @@ public class VehicleTeamkill : ModerationEntry
             Vehicle = reader.TokenType == JsonTokenType.Null ? new Guid?() : reader.GetGuid();
         else if (propertyName.Equals("vehicle_name", StringComparison.InvariantCultureIgnoreCase))
             VehicleName = reader.GetString();
-        else if (propertyName.Equals("death_message", StringComparison.InvariantCultureIgnoreCase))
-            DeathMessage = reader.GetString();
         else
             base.ReadProperty(ref reader, propertyName, options);
     }
@@ -119,8 +112,6 @@ public class VehicleTeamkill : ModerationEntry
             writer.WriteString("item_guid", Item.Value.ToString());
         if (ItemName != null)
             writer.WriteString("item_name", ItemName);
-        if (DeathMessage != null)
-            writer.WriteString("death_message", DeathMessage);
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 6;
@@ -155,9 +146,6 @@ public class VehicleTeamkill : ModerationEntry
                 name = ItemName ?? Item.Value.ToString("N");
             workingList.Add($"Item: {name}");
         }
-
-        if (Message != null)
-            workingList.Add(Message.MaxLength(128)!);
     }
 
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
@@ -166,8 +154,7 @@ public class VehicleTeamkill : ModerationEntry
 
         builder.Append($" INSERT INTO `{DatabaseInterface.TableVehicleTeamkills}` ({SqlTypes.ColumnList(
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset, DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName,
-            DatabaseInterface.ColumnVehicleTeamkillsAsset, DatabaseInterface.ColumnVehicleTeamkillsAssetName, DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin,
-            DatabaseInterface.ColumnVehicleTeamkillsDeathMessage)}) VALUES ");
+            DatabaseInterface.ColumnVehicleTeamkillsAsset, DatabaseInterface.ColumnVehicleTeamkillsAssetName, DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin)}) VALUES ");
 
         F.AppendPropertyList(builder, args.Count, 6, 0, 1);
         builder.Append(" AS `t` " +
@@ -175,15 +162,13 @@ public class VehicleTeamkill : ModerationEntry
                        $"`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName}`," +
                        $"`{DatabaseInterface.ColumnVehicleTeamkillsAsset}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsAsset}`," +
                        $"`{DatabaseInterface.ColumnVehicleTeamkillsAssetName}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsAssetName}`," +
-                       $"`{DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin}`," +
-                       $"`{DatabaseInterface.ColumnVehicleTeamkillsDeathMessage}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsDeathMessage}`;");
+                       $"`{DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin}`;");
 
         args.Add(Vehicle.HasValue ? Vehicle.Value.ToString("N") : DBNull.Value);
         args.Add((object?)VehicleName.MaxLength(48) ?? DBNull.Value);
         args.Add(Item.HasValue ? Item.Value.ToString("N") : DBNull.Value);
         args.Add((object?)ItemName.MaxLength(48) ?? DBNull.Value);
         args.Add(Origin.HasValue ? Origin.Value.ToString() : DBNull.Value);
-        args.Add((object?)Message.MaxLength(255) ?? DBNull.Value);
 
         return hasEvidenceCalls;
     }

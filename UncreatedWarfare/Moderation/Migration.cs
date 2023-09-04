@@ -332,7 +332,7 @@ internal static class Migration
                     Player = reader.GetUInt64(1),
                     Actors = new RelatedActor[]
                     {
-                        new RelatedActor("Teamkilled", false, Actors.GetActor(reader.GetUInt64(2)))
+                        new RelatedActor(Teamkill.RoleTeamkilled, false, Actors.GetActor(reader.GetUInt64(2)))
                     },
                     Removed = false,
                     Message = null,

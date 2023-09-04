@@ -145,6 +145,7 @@ public static class PlayerManager
         if (players == null)
             return;
 
+
         PlayerSummary[] summaries = await SteamAPI.GetPlayerSummaries(players.AsArrayFast(), token);
         for (int j = 0; j < summaries.Length; ++j)
         {

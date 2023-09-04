@@ -518,6 +518,10 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     };
     public async Task<List<PlayerNames>> SearchAllPlayers(string input, UCPlayer.NameSearch prioritizedName, bool byLastJoined, CancellationToken token = default)
     {
+        if (Util.TryParseSteamId(input, out CSteamID steamId))
+        {
+            return new List<PlayerNames>(1) { await GetUsernamesAsync(steamId.m_SteamID, token).ConfigureAwait(false) };
+        }
         string col1 = prioritizedName switch
         {
             UCPlayer.NameSearch.CharacterName => ColumnUsernamesCharacterName,

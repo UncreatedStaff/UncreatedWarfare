@@ -59,26 +59,51 @@ public sealed class SteamAPI
         string[] strs = new string[length];
         for (int i = 0; i < length; ++i)
             strs[i] = players[i + index].ToString(CultureInfo.InvariantCulture);
-
-        using UnityWebRequest webRequest = UnityWebRequest.Get(MakeUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + string.Join(",", strs)));
-        await webRequest.SendWebRequest().WithCancellation(token);
         
-        if (webRequest.result != UnityWebRequest.Result.Success)
-            throw new Exception($"Error getting player summaries from {webRequest.url.Replace(UCWarfare.Config.SteamAPIKey!, "API_KEY")}: {webRequest.responseCode} ({webRequest.result}).");
-        
-        string responseText = webRequest.downloadHandler.text;
-        if (string.IsNullOrEmpty(responseText))
-            return Array.Empty<PlayerSummary>();
 
-        try
-        {
-            PlayerSummariesResponse? responseData = JsonSerializer.Deserialize<PlayerSummariesResponse>(responseText, JsonEx.serializerSettings);
+        const int tryCt = 5;
+        const float delay = 1.0f;
 
-            return responseData?.Data.Results ?? Array.Empty<PlayerSummary>();
-        }
-        catch (Exception ex)
+        for (int tries = 0; tries < tryCt; ++tries)
         {
-            throw new Exception($"Error deserializing response from Steam API: {responseText}.", ex);
+            string responseText;
+
+            try
+            {
+                using UnityWebRequest webRequest = UnityWebRequest.Get(MakeUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + string.Join(",", strs)));
+                await webRequest.SendWebRequest().WithCancellation(token);
+
+                if (webRequest.result != UnityWebRequest.Result.Success)
+                    throw new Exception($"Error getting player summaries from {webRequest.url.Replace(UCWarfare.Config.SteamAPIKey!, "API_KEY")}: {webRequest.responseCode} ({webRequest.result}).");
+
+                responseText = webRequest.downloadHandler.text;
+                if (string.IsNullOrEmpty(responseText))
+                    return Array.Empty<PlayerSummary>();
+
+            }
+            catch (Exception ex)
+            {
+                if (tries == tryCt - 1)
+                    throw new Exception("Error downloading " + strs.Length + " player summary(ies).", ex);
+
+                L.LogError($"Error getting steam player summaries. Retrying {(tries + 1).ToString(CultureInfo.InvariantCulture)} / {tryCt.ToString(CultureInfo.InvariantCulture)}.");
+
+                await UniTask.WaitForSeconds(delay, cancellationToken: token);
+                continue;
+            }
+
+            try
+            {
+                PlayerSummariesResponse? responseData = JsonSerializer.Deserialize<PlayerSummariesResponse>(responseText, JsonEx.serializerSettings);
+
+                return responseData?.Data.Results ?? Array.Empty<PlayerSummary>();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error deserializing response from Steam API: {responseText}.", ex);
+            }
         }
+
+        return Array.Empty<PlayerSummary>(); // this will never be reached
     }
 }

@@ -147,9 +147,10 @@ public abstract class ModerationEntry
         if (RelatedEntries == null || RelatedEntries.Length != RelatedEntryKeys.Length)
             RelatedEntries = new ModerationEntry?[RelatedEntryKeys.Length];
 
-        return db.ReadAll(RelatedEntries, RelatedEntryKeys, true, true, token);
+        return db.ReadAll(RelatedEntries, RelatedEntryKeys, true, true, false, token);
     }
     public virtual string GetDisplayName() => ToString();
+    public virtual string? GetDisplayMessage() => Message;
     public virtual async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
         workingList.Add($"Entry ID: {Id.Key.ToString(formatter)}");
@@ -195,7 +196,7 @@ public abstract class ModerationEntry
     {
         for (int i = 0; i < Actors.Length; ++i)
         {
-            if (string.Equals(Actors[i].Role, RelatedActor.RolePrimaryAdmin))
+            if (string.Equals(Actors[i].Role, RelatedActor.RolePrimaryAdmin, StringComparison.OrdinalIgnoreCase))
             {
                 actor = Actors[i];
                 return true;
@@ -203,6 +204,20 @@ public abstract class ModerationEntry
         }
 
         actor = new RelatedActor(RelatedActor.RolePrimaryAdmin, true, ConsoleActor.Instance);
+        return false;
+    }
+    public bool TryGetActor(string role, out RelatedActor actor)
+    {
+        for (int i = Actors.Length - 1; i >= 0; --i)
+        {
+            if (string.Equals(Actors[i].Role, role, StringComparison.OrdinalIgnoreCase))
+            {
+                actor = Actors[i];
+                return true;
+            }
+        }
+
+        actor = new RelatedActor(role, false, ConsoleActor.Instance);
         return false;
     }
     public virtual void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)

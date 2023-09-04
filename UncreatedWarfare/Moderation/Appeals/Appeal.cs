@@ -57,7 +57,7 @@ public class Appeal : ModerationEntry
         if (Punishments.Length != PunishmentKeys.Length)
             Punishments = new Punishment[PunishmentKeys.Length];
 
-        await db.ReadAll(Punishments, PunishmentKeys, true, true, token).ConfigureAwait(false);
+        await db.ReadAll(Punishments, PunishmentKeys, true, true, false, token).ConfigureAwait(false);
         await base.FillDetail(db, token).ConfigureAwait(false);
     }
 

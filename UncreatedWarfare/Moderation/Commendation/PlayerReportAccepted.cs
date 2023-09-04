@@ -56,7 +56,7 @@ public class PlayerReportAccepted : ModerationEntry
     }
     internal override async Task FillDetail(DatabaseInterface db, CancellationToken token = default)
     {
-        Report = ReportKey.IsValid ? await db.ReadOne<Report>(ReportKey, true, true, token).ConfigureAwait(false) : null;
+        Report = ReportKey.IsValid ? await db.ReadOne<Report>(ReportKey, true, true, false, token).ConfigureAwait(false) : null;
         await base.FillDetail(db, token).ConfigureAwait(false);
     }
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
