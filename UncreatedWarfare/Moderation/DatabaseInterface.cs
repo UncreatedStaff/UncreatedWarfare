@@ -62,8 +62,9 @@ public abstract class DatabaseInterface
 
         return await Sql.GetUsernamesAsync(id, token).ConfigureAwait(false);
     }
-    public async Task<T?> ReadOne<T>(PrimaryKey id, bool tryGetFromCache, bool detail = true, CancellationToken token = default) where T : ModerationEntry
+    public async Task<T?> ReadOne<T>(PrimaryKey id, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : ModerationEntry
     {
+        detail &= baseOnly;
         if (tryGetFromCache && Cache.TryGet(id, out T val, DefaultInvalidateDuration))
             return val;
 
@@ -86,18 +87,19 @@ public abstract class DatabaseInterface
             return null;
         }
 
-        await Fill(new ModerationEntry[] { entry }, detail, null, token).ConfigureAwait(false);
+        await Fill(new ModerationEntry[] { entry }, detail, baseOnly, null, token).ConfigureAwait(false);
         
         return entry as T;
     }
-    public async Task<T?[]> ReadAll<T>(PrimaryKey[] ids, bool tryGetFromCache, bool detail = true, CancellationToken token = default) where T : ModerationEntry
+    public async Task<T?[]> ReadAll<T>(PrimaryKey[] ids, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : ModerationEntry
     {
         T?[] result = new T?[ids.Length];
-        await ReadAll(result, ids, tryGetFromCache, detail, token).ConfigureAwait(false);
+        await ReadAll(result, ids, tryGetFromCache, detail, baseOnly, token).ConfigureAwait(false);
         return result;
     }
-    public async Task ReadAll<T>(T?[] result, PrimaryKey[] ids, bool tryGetFromCache, bool detail = true, CancellationToken token = default) where T : ModerationEntry
+    public async Task ReadAll<T>(T?[] result, PrimaryKey[] ids, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : ModerationEntry
     {
+        detail &= baseOnly;
         if (result.Length != ids.Length)
             throw new ArgumentException("Result must be the same length as ids.", nameof(result));
 
@@ -152,12 +154,13 @@ public abstract class DatabaseInterface
         }, token).ConfigureAwait(false);
         
         // ReSharper disable once CoVariantArrayConversion
-        await Fill(result, detail, mask, token).ConfigureAwait(false);
+        await Fill(result, detail, baseOnly, mask, token).ConfigureAwait(false);
     }
-    public async Task<T[]> ReadAll<T>(ulong actor, ActorRelationType relation, bool detail = true, DateTimeOffset? start = null, DateTimeOffset? end = null, string? orderBy = null, string? condition = null, object[]? conditionArgs = null, CancellationToken token = default) where T : ModerationEntry
-        => (T[])await ReadAll(typeof(T), actor, relation, detail, start, end, orderBy, condition, conditionArgs, token).ConfigureAwait(false);
-    public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, bool detail = true, DateTimeOffset? start = null, DateTimeOffset? end = null, string? orderBy = null, string? condition = null, object[]? conditionArgs = null, CancellationToken token = default)
+    public async Task<T[]> ReadAll<T>(ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? orderBy = null, string? condition = null, object[]? conditionArgs = null, CancellationToken token = default) where T : ModerationEntry
+        => (T[])await ReadAll(typeof(T), actor, relation, detail, baseOnly, start, end, orderBy, condition, conditionArgs, token).ConfigureAwait(false);
+    public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? orderBy = null, string? condition = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
+        detail &= baseOnly;
         StringBuilder sb = new StringBuilder("SELECT ", 164);
         int flag = AppendReadColumns(sb, type);
         AppendTables(sb, flag);
@@ -261,14 +264,15 @@ public abstract class DatabaseInterface
         Array rtn = entries.ToArray(type);
 
         // ReSharper disable once CoVariantArrayConversion
-        await Fill((ModerationEntry[])rtn, detail, null, token).ConfigureAwait(false);
+        await Fill((ModerationEntry[])rtn, detail, baseOnly, null, token).ConfigureAwait(false);
         
         return rtn;
     }
-    public async Task<T[]> ReadAll<T>(bool detail = true, DateTimeOffset ? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : ModerationEntry
-        => (T[])await ReadAll(typeof(T), detail, start, end, condition, orderBy, conditionArgs, token).ConfigureAwait(false);
-    public async Task<Array> ReadAll(Type type, bool detail = true, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
+    public async Task<T[]> ReadAll<T>(bool detail = true, bool baseOnly = false, DateTimeOffset ? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : ModerationEntry
+        => (T[])await ReadAll(typeof(T), detail, baseOnly, start, end, condition, orderBy, conditionArgs, token).ConfigureAwait(false);
+    public async Task<Array> ReadAll(Type type, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
+        detail &= baseOnly;
         StringBuilder sb = new StringBuilder("SELECT ", 164);
         int flag = AppendReadColumns(sb, type);
         AppendTables(sb, flag);
@@ -361,12 +365,13 @@ public abstract class DatabaseInterface
         Array rtn = entries.ToArray(type);
 
         // ReSharper disable once CoVariantArrayConversion
-        await Fill((ModerationEntry[])rtn, detail, null, token).ConfigureAwait(false);
+        await Fill((ModerationEntry[])rtn, detail, baseOnly, null, token).ConfigureAwait(false);
         
         return rtn;
     }
-    private async Task Fill(ModerationEntry?[] entries, bool detail, BitArray? mask = null, CancellationToken token = default)
+    private async Task Fill(ModerationEntry?[] entries, bool detail, bool baseOnly, BitArray? mask = null, CancellationToken token = default)
     {
+        detail &= baseOnly;
         if (entries.Length == 0 || entries.Length == 1 && (entries[0] is null || mask is not null && !mask[0])) return;
         string inArg;
         if (entries.Length == 1)
@@ -453,6 +458,8 @@ public abstract class DatabaseInterface
             if (info != null)
                 info.Evidence = arr;
         }, false);
+
+        if (baseOnly) return;
 
         List<PrimaryKeyPair<PrimaryKey>> links = new List<PrimaryKeyPair<PrimaryKey>>();
 
@@ -773,13 +780,13 @@ public abstract class DatabaseInterface
         if (type.IsAssignableFrom(typeof(Teamkill)) || typeof(Teamkill).IsAssignableFrom(type))
         {
             flag |= 1 << 5;
-            sb.Append("," + SqlTypes.ColumnListAliased("tks", ColumnTeamkillsAsset, ColumnTeamkillsAssetName, ColumnTeamkillsDeathCause, ColumnTeamkillsDeathMessage, ColumnTeamkillsDistance, ColumnTeamkillsLimb));
+            sb.Append("," + SqlTypes.ColumnListAliased("tks", ColumnTeamkillsAsset, ColumnTeamkillsAssetName, ColumnTeamkillsDeathCause, ColumnTeamkillsDistance, ColumnTeamkillsLimb));
         }
         if (type.IsAssignableFrom(typeof(VehicleTeamkill)) || typeof(VehicleTeamkill).IsAssignableFrom(type))
         {
             flag |= 1 << 6;
             sb.Append("," + SqlTypes.ColumnListAliased("vtks", ColumnVehicleTeamkillsAsset, ColumnVehicleTeamkillsAssetName,
-                ColumnVehicleTeamkillsDamageOrigin, ColumnVehicleTeamkillsDeathMessage, ColumnVehicleTeamkillsVehicleAsset, ColumnVehicleTeamkillsVehicleAssetName));
+                ColumnVehicleTeamkillsDamageOrigin, ColumnVehicleTeamkillsVehicleAsset, ColumnVehicleTeamkillsVehicleAssetName));
         }
         if (type.IsAssignableFrom(typeof(Appeal)) || typeof(Appeal).IsAssignableFrom(type))
         {
@@ -790,6 +797,11 @@ public abstract class DatabaseInterface
         {
             flag |= 1 << 8;
             sb.Append(",`rep`.`" + ColumnReportsType + "`");
+        }
+        if (type.IsAssignableFrom(typeof(Punishment)) || typeof(Punishment).IsAssignableFrom(type))
+        {
+            flag |= 1 << 9;
+            sb.Append("," + SqlTypes.ColumnListAliased("pnsh", ColumnPunishmentsPresetType, ColumnPunishmentsPresetLevel));
         }
 
         return flag;
@@ -834,6 +846,10 @@ public abstract class DatabaseInterface
         {
             sb.Append($" LEFT JOIN `{TableReports}` AS `rep` ON `main`.`{ColumnEntriesPrimaryKey}` = `rep`.`{ColumnExternalPrimaryKey}`");
         }
+        if ((flag & (1 << 9)) != 0)
+        {
+            sb.Append($" LEFT JOIN `{TablePunishments}` AS `pnsh` ON `main`.`{ColumnEntriesPrimaryKey}` = `pnsh`.`{ColumnExternalPrimaryKey}`");
+        }
     }
     private static ModerationEntry? ReadEntry(int flag, MySqlDataReader reader)
     {
@@ -869,9 +885,8 @@ public abstract class DatabaseInterface
             if (entry is DurationPunishment dur)
             {
                 long sec = reader.IsDBNull(offset - 4) ? -1L : reader.GetInt64(offset - 4);
-                if (sec < -1)
-                    sec = -1;
-                dur.Duration = TimeSpan.FromSeconds(sec);
+
+                dur.Duration = sec < 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(sec);
                 dur.Forgiven = !reader.IsDBNull(offset - 3) && reader.GetBoolean(offset - 3);
                 dur.ForgivenBy = reader.IsDBNull(offset - 2) ? null : Actors.GetActor(reader.GetUInt64(offset - 2));
                 dur.ForgiveTimestamp = reader.IsDBNull(offset - 1) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(offset - 1), DateTimeKind.Utc));
@@ -914,26 +929,24 @@ public abstract class DatabaseInterface
         }
         if ((flag & (1 << 5)) != 0)
         {
-            offset += 6;
+            offset += 5;
             if (entry is Teamkill tk)
             {
-                tk.Item = reader.IsDBNull(offset - 5) ? null : reader.ReadGuidString(offset - 5);
-                tk.ItemName = reader.IsDBNull(offset - 4) ? null : reader.GetString(offset - 4);
-                tk.Cause = reader.IsDBNull(offset - 3) ? null : reader.ReadStringEnum<EDeathCause>(offset - 3);
-                tk.DeathMessage = reader.IsDBNull(offset - 2) ? null : reader.GetString(offset - 2);
+                tk.Item = reader.IsDBNull(offset - 4) ? null : reader.ReadGuidString(offset - 4);
+                tk.ItemName = reader.IsDBNull(offset - 3) ? null : reader.GetString(offset - 3);
+                tk.Cause = reader.IsDBNull(offset - 2) ? null : reader.ReadStringEnum<EDeathCause>(offset - 2);
                 tk.Distance = reader.IsDBNull(offset - 1) ? null : reader.GetDouble(offset - 1);
                 tk.Limb = reader.IsDBNull(offset) ? null : reader.ReadStringEnum<ELimb>(offset);
             }
         }
         if ((flag & (1 << 6)) != 0)
         {
-            offset += 6;
+            offset += 5;
             if (entry is VehicleTeamkill tk)
             {
-                tk.Item = reader.IsDBNull(offset - 5) ? null : reader.ReadGuidString(offset - 5);
-                tk.ItemName = reader.IsDBNull(offset - 4) ? null : reader.GetString(offset - 4);
-                tk.Origin = reader.IsDBNull(offset - 3) ? null : reader.ReadStringEnum<EDamageOrigin>(offset - 3);
-                tk.DeathMessage = reader.IsDBNull(offset - 2) ? null : reader.GetString(offset - 2);
+                tk.Item = reader.IsDBNull(offset - 4) ? null : reader.ReadGuidString(offset - 4);
+                tk.ItemName = reader.IsDBNull(offset - 3) ? null : reader.GetString(offset - 3);
+                tk.Origin = reader.IsDBNull(offset - 2) ? null : reader.ReadStringEnum<EDamageOrigin>(offset - 2);
                 tk.Vehicle = reader.IsDBNull(offset - 1) ? null : reader.ReadGuidString(offset - 1);
                 tk.VehicleName = reader.IsDBNull(offset) ? null : reader.GetString(offset);
             }
@@ -955,6 +968,15 @@ public abstract class DatabaseInterface
             {
                 ReportType? sec = reader.IsDBNull(offset) ? null : reader.ReadStringEnum<ReportType>(offset);
                 rep.Type = sec ?? ReportType.Custom;
+            }
+        }
+        if ((flag & (1 << 9)) != 0)
+        {
+            offset += 2;
+            if (entry is Punishment punishment)
+            {
+                punishment.PresetType = reader.IsDBNull(offset - 1) ? PresetType.None : reader.ReadStringEnum(offset - 1, PresetType.None);
+                punishment.PresetLevel = reader.IsDBNull(offset) ? 0 : reader.GetInt32(offset);
             }
         }
 
@@ -1055,12 +1077,37 @@ public abstract class DatabaseInterface
 
         Cache.AddOrUpdate(entry);
     }
+    public async Task<int> GetNextLevel(ulong player, PresetType type, CancellationToken token = default)
+    {
+        if (type == PresetType.None)
+            throw new ArgumentException("Preset type can not be None.", nameof(type));
+
+        int max = -1;
+        await Sql.QueryAsync($"SELECT MAX(`pnsh`.`{ColumnPunishmentsPresetLevel}`) " +
+                             $"FROM `{TableEntries}` as `main` " +
+                             $"LEFT JOIN `{TablePunishments}` AS `pnsh` ON `main`.`{ColumnEntriesPrimaryKey}` = `pnsh`.`{ColumnExternalPrimaryKey}` " +
+                             $"WHERE `main`.`{ColumnEntriesSteam64}` = @1 AND `pnsh`.`{ColumnPunishmentsPresetType}` = @0 AND `{ColumnEntriesRemoved}` = 0;", new object[] { type.ToString(), player },
+            reader =>
+            {
+                if (!reader.IsDBNull(0))
+                    max = reader.GetInt32(0);
+
+                return true;
+
+            }, token).ConfigureAwait(false);
+
+        if (max == -1)
+            return 1;
+        
+        return max + 1;
+    }
 
     public const string TableEntries = "moderation_entries";
     public const string TableActors = "moderation_actors";
     public const string TableEvidence = "moderation_evidence";
     public const string TableRelatedEntries = "moderation_related_entries";
     public const string TableAssetBanFilters = "moderation_asset_ban_filters";
+    public const string TablePunishments = "moderation_punishments";
     public const string TableDurationPunishments = "moderation_durations";
     public const string TableLinkedAppeals = "moderation_linked_appeals";
     public const string TableLinkedReports = "moderation_linked_reports";
@@ -1103,8 +1150,6 @@ public abstract class DatabaseInterface
     public const string ColumnEntriesRemovedBy = "RemovedBy";
     public const string ColumnEntriesRemovedTimestamp = "RemovedTimeUTC";
     public const string ColumnEntriesRemovedReason = "RemovedReason";
-    public const string ColumnEntriesPresetType = "PresetType";
-    public const string ColumnEntriesPresetLevel = "PresetLevel";
 
     public const string ColumnActorsId = "ActorId";
     public const string ColumnActorsRole = "ActorRole";
@@ -1122,6 +1167,9 @@ public abstract class DatabaseInterface
     public const string ColumnRelatedEntry = "RelatedEntry";
 
     public const string ColumnAssetBanFiltersAsset = "AssetBanAsset";
+
+    public const string ColumnPunishmentsPresetType = "PresetType";
+    public const string ColumnPunishmentsPresetLevel = "PresetLevel";
 
     public const string ColumnDurationsDurationSeconds = "Duration";
     public const string ColumnDurationsForgiven = "Forgiven";
@@ -1146,14 +1194,12 @@ public abstract class DatabaseInterface
     public const string ColumnTeamkillsAssetName = "AssetName";
     public const string ColumnTeamkillsLimb = "Limb";
     public const string ColumnTeamkillsDistance = "Distance";
-    public const string ColumnTeamkillsDeathMessage = "DeathMessage";
 
     public const string ColumnVehicleTeamkillsDamageOrigin = "DamageOrigin";
     public const string ColumnVehicleTeamkillsVehicleAsset = "VehicleAsset";
     public const string ColumnVehicleTeamkillsVehicleAssetName = "VehicleAssetName";
     public const string ColumnVehicleTeamkillsAsset = "Asset";
     public const string ColumnVehicleTeamkillsAssetName = "AssetName";
-    public const string ColumnVehicleTeamkillsDeathMessage = "DeathMessage";
 
     public const string ColumnAppealsTicketId = "TicketId";
     public const string ColumnAppealsState = "State";
@@ -1299,15 +1345,7 @@ public abstract class DatabaseInterface
             new Schema.Column(ColumnEntriesRemovedReason, SqlTypes.String(1024))
             {
                 Nullable = true
-            },
-            new Schema.Column(ColumnEntriesPresetType, SqlTypes.Enum<PresetType>())
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnEntriesPresetLevel, SqlTypes.INT)
-            {
-                Nullable = true
-            },
+            }
         }, true, typeof(ModerationEntry)),
         new Schema(TableActors, new Schema.Column[]
         {
@@ -1384,6 +1422,25 @@ public abstract class DatabaseInterface
                 ForeignKeyColumn = VehicleBay.COLUMN_PK
             }
         }, false, typeof(VehicleData)),
+        new Schema(TablePunishments, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true,
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnPunishmentsPresetType, SqlTypes.Enum<PresetType>())
+            {
+                Nullable = true
+            },
+            new Schema.Column(ColumnPunishmentsPresetLevel, SqlTypes.INT)
+            {
+                Nullable = true
+            }
+        }, false, typeof(Punishment)),
         new Schema(TableDurationPunishments, new Schema.Column[]
         {
             new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
@@ -1535,10 +1592,6 @@ public abstract class DatabaseInterface
             new Schema.Column(ColumnTeamkillsLimb, SqlTypes.Enum<ELimb>())
             {
                 Nullable = true
-            },
-            new Schema.Column(ColumnTeamkillsDeathMessage, SqlTypes.STRING_255)
-            {
-                Nullable = true
             }
         }, false, typeof(Teamkill)),
         new Schema(TableVehicleTeamkills, new Schema.Column[]
@@ -1568,10 +1621,6 @@ public abstract class DatabaseInterface
                 Nullable = true
             },
             new Schema.Column(ColumnVehicleTeamkillsDamageOrigin, SqlTypes.Enum<EDamageOrigin>())
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnVehicleTeamkillsDeathMessage, SqlTypes.STRING_255)
             {
                 Nullable = true
             }

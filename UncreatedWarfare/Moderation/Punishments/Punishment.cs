@@ -11,6 +11,7 @@ using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Moderation.Appeals;
+using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Report = Uncreated.Warfare.Moderation.Reports.Report;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
@@ -18,6 +19,21 @@ namespace Uncreated.Warfare.Moderation.Punishments;
 [JsonConverter(typeof(ModerationEntryConverter))]
 public abstract class Punishment : ModerationEntry
 {
+    /// <summary>
+    /// Type of preset.
+    /// </summary>
+    [JsonPropertyName("preset_type")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public PresetType PresetType { get; set; }
+
+    /// <summary>
+    /// Level of preset (indexed from 1).
+    /// </summary>
+    [JsonPropertyName("preset_level")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int PresetLevel { get; set; }
+
     /// <summary>
     /// Keys for all related appeals.
     /// </summary>
@@ -75,8 +91,8 @@ public abstract class Punishment : ModerationEntry
         if (Reports == null || Reports.Length != ReportKeys.Length)
             Reports = new Report?[ReportKeys.Length];
 
-        await db.ReadAll(Appeals, AppealKeys, true, true, token).ConfigureAwait(false);
-        await db.ReadAll(Reports, ReportKeys, true, true, token).ConfigureAwait(false);
+        await db.ReadAll(Appeals, AppealKeys, true, true, false, token).ConfigureAwait(false);
+        await db.ReadAll(Reports, ReportKeys, true, true, false, token).ConfigureAwait(false);
 
         await base.FillDetail(db, token).ConfigureAwait(false);
     }
@@ -117,6 +133,27 @@ public abstract class Punishment : ModerationEntry
             ReportKeys = JsonSerializer.Deserialize<PrimaryKey[]>(ref reader, options) ?? Array.Empty<PrimaryKey>();
         else if (propertyName.Equals("reports_detail", StringComparison.InvariantCultureIgnoreCase))
             Reports = JsonSerializer.Deserialize<Report[]>(ref reader, options);
+        else if (propertyName.Equals("preset_level", StringComparison.InvariantCultureIgnoreCase))
+            PresetLevel = reader.TokenType == JsonTokenType.Null ? 0 : reader.GetInt32();
+        else if (propertyName.Equals("preset_type", StringComparison.InvariantCultureIgnoreCase))
+        {
+            switch (reader.TokenType)
+            {
+                case JsonTokenType.Null:
+                    PresetType = PresetType.None;
+                    break;
+                case JsonTokenType.Number:
+                    PresetType = (PresetType)reader.GetInt32();
+                    break;
+                case JsonTokenType.String:
+                    if (Enum.TryParse(reader.GetString(), true, out PresetType type))
+                        PresetType = type;
+                    else throw new JsonException($"Unable to read preset type with value: {reader.GetString()}.");
+                    break;
+                default:
+                    throw new JsonException($"Unexpected token type {reader.TokenType} for \"preset_type\".");
+            }
+        }
         else
             base.ReadProperty(ref reader, propertyName, options);
     }
@@ -124,6 +161,11 @@ public abstract class Punishment : ModerationEntry
     public override void Write(Utf8JsonWriter writer, JsonSerializerOptions options)
     {
         base.Write(writer, options);
+
+        if (PresetType != PresetType.None)
+            writer.WriteString("preset_type", PresetType.ToString());
+        if (PresetLevel > 0)
+            writer.WriteNumber("preset_level", PresetLevel);
 
         if (Appeals is { Length: > 0 } && Appeals.Length == AppealKeys.Length && Appeals.All(x => x != null))
         {
@@ -142,10 +184,29 @@ public abstract class Punishment : ModerationEntry
         JsonSerializer.Serialize(writer, ReportKeys, options);
     }
 
-    internal override int EstimateColumnCount() => base.EstimateColumnCount() + AppealKeys.Length + ReportKeys.Length;
+    internal override int EstimateColumnCount() => base.EstimateColumnCount() + AppealKeys.Length + ReportKeys.Length + 2;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+        if (PresetType != PresetType.None)
+        {
+            workingList.Add($"Preset: {(UCWarfare.IsLoaded ? Localization.TranslateEnum(PresetType) : PresetType.ToString())} | Level {PresetLevel.ToString(formatter)}");
+        }
+    }
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($" INSERT INTO `{DatabaseInterface.TablePunishments}` ({SqlTypes.ColumnList(
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnPunishmentsPresetType, DatabaseInterface.ColumnPunishmentsPresetLevel)}) VALUES ");
+
+        F.AppendPropertyList(builder, args.Count, 2, 0, 1);
+        builder.Append(" AS `t` " +
+                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnPunishmentsPresetType}` = `t`.`{DatabaseInterface.ColumnPunishmentsPresetType}`," +
+                       $"`{DatabaseInterface.ColumnPunishmentsPresetLevel}` = `t`.`{DatabaseInterface.ColumnPunishmentsPresetLevel}`;");
+
+        args.Add(PresetType == PresetType.None ? DBNull.Value : PresetType.ToString());
+        args.Add(PresetLevel <= 0 || PresetType == PresetType.None ? DBNull.Value : PresetLevel);
 
         builder.Append($"DELETE FROM `{DatabaseInterface.TableLinkedReports}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
 
@@ -304,7 +365,11 @@ public abstract class DurationPunishment : Punishment, IDurationModerationEntry
                 string str = reader.GetString()!;
                 if (TimeSpan.TryParseExact(str, "G", CultureInfo.InvariantCulture, TimeSpanStyles.None, out TimeSpan ts) ||
                     TimeSpan.TryParse(str, CultureInfo.InvariantCulture, out ts))
+                {
                     Duration = ts;
+                    if (ts.Ticks < 0)
+                        IsPermanent = true;
+                }
                 else if (str.Equals("permanent", StringComparison.InvariantCultureIgnoreCase))
                     IsPermanent = true;
                 else throw new JsonException($"Invalid duration: \"{str}\".");
