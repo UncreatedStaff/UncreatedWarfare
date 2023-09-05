@@ -49,7 +49,10 @@ internal class ModerationUI : UnturnedUI
     /* PLAYER LIST */
     public PlayerListEntry[] ModerationPlayerList { get; } = UnturnedUIPatterns.CreateArray<PlayerListEntry>("ModerationPlayer{1}_{0}", 1, to: 30);
     public UnturnedTextBox PlayerSearch { get; } = new UnturnedTextBox("ModerationPlayersInputSearch");
-    public ChangeableTextBox ModerationPlayerSearch { get; } = new ChangeableTextBox("ModerationPlayersInputSearch");
+    public ChangeableTextBox ModerationPlayerSearch { get; } = new ChangeableTextBox("ModerationPlayersInputSearch")
+    {
+        UseData = true
+    };
     public UnturnedEnumButton<PlayerSearchMode> ModerationPlayerSearchModeButton { get; }
         = new UnturnedEnumButton<PlayerSearchMode>(PlayerSearchMode.Online, "ModerationButtonToggleOnline", "ModerationButtonToggleOnlineLabel")
         {
@@ -61,7 +64,10 @@ internal class ModerationUI : UnturnedUI
     public LabeledStateButton ModerationHistoryBackButton { get; } = new LabeledStateButton("ModerationListBackButton");
     public LabeledStateButton ModerationHistoryNextButton { get; } = new LabeledStateButton("ModerationListNextButton");
     public ChangeableStateTextBox ModerationHistoryPage { get; } = new ChangeableStateTextBox("ModerationListPageInput");
-    public ChangeableTextBox ModerationHistorySearch { get; } = new ChangeableTextBox("ModerationInputSearch");
+    public ChangeableTextBox ModerationHistorySearch { get; } = new ChangeableTextBox("ModerationInputSearch")
+    {
+        UseData = true
+    };
     public LabeledButton ModerationResetHistory { get; } = new LabeledButton("ModerationResetHistory");
     public UnturnedEnumButton<ModerationEntryType> ModerationHistoryTypeButton { get; }
         = new UnturnedEnumButton<ModerationEntryType>(ModerationEntryType.None, "ModerationButtonToggleType", "ModerationButtonToggleTypeLabel")
@@ -73,7 +79,7 @@ internal class ModerationUI : UnturnedUI
         {
             TextFormatter = (v, player) => "Search - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
         };
-    public UnturnedEnumButton<ModerationHistorySortMode> ModerationHistorySortTypeButton { get; }
+    public UnturnedEnumButton<ModerationHistorySortMode> ModerationHistorySortModeButton { get; }
         = new UnturnedEnumButton<ModerationHistorySortMode>(ModerationHistorySortMode.Latest, "ModerationButtonToggleSortType", "ModerationButtonToggleSortTypeLabel")
         {
             TextFormatter = (v, player) => "Sort - " + Localization.TranslateEnum(v, UCPlayer.FromPlayer(player)?.Locale.LanguageInfo)
@@ -168,6 +174,9 @@ internal class ModerationUI : UnturnedUI
         ModerationHistoryBackButton.OnClicked += OnModerationHistoryBack;
         ModerationHistoryPage.OnTextUpdated += OnModerationHistoryPageTyped;
 
+        ModerationHistorySearch.OnTextUpdated += OnModerationHistorySearched;
+        ModerationHistorySearchTypeButton.OnValueUpdated += OnModerationHistorySearchTypeUpdated;
+        ModerationHistorySortModeButton.OnValueUpdated += OnModerationHistorySortModeUpdated;
         ModerationResetHistory.OnClicked += OnReset;
 
         ModerationActionAddActorButton.OnClicked += OnClickedAddActor;
@@ -194,7 +203,7 @@ internal class ModerationUI : UnturnedUI
 
         ModerationHistoryTypeButton.SetDefault(player);
         ModerationHistorySearchTypeButton.SetDefault(player);
-        ModerationHistorySortTypeButton.SetDefault(player);
+        ModerationHistorySortModeButton.SetDefault(player);
         ModerationHistorySearch.SetText(ucp.Connection, string.Empty);
 
         UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(ucp.CSteamID, ModerationHistorySearch.TextBox);
@@ -264,8 +273,12 @@ internal class ModerationUI : UnturnedUI
             return;
 
         ModerationData data = GetOrAddModerationData(ucp);
+        index += data.HistoryPage * ModerationHistory.Length;
         if (data.HistoryView == null || index >= data.HistoryView.Length)
+        {
+            L.LogWarning($"Invalid history index: {index} (p. {data.HistoryPage} / {data.PageCount}).");
             return;
+        }
         
         SelectEntry(ucp, data.HistoryView[index]);
     }
@@ -278,14 +291,6 @@ internal class ModerationUI : UnturnedUI
     }
     private void OnModerationPlayerSearchTextUpdated(UnturnedTextBox button, Player player, string text)
     {
-        UnturnedTextBoxData? data = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.channel.owner.playerID.steamID, ModerationPlayerSearch.TextBox);
-        if (data == null)
-        {
-            data = new UnturnedTextBoxData(player.channel.owner.playerID.steamID, ModerationPlayerSearch.TextBox);
-            UnturnedUIDataSource.AddData(data);
-        }
-
-        data.Text = text;
         UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
         if (ucPlayer != null)
             SendModerationPlayerList(ucPlayer);
@@ -295,6 +300,30 @@ internal class ModerationUI : UnturnedUI
         UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
         if (ucPlayer != null)
             Close(ucPlayer);
+    }
+    private void OnModerationHistorySortModeUpdated(UnturnedEnumButton<ModerationHistorySortMode> button, Player player, ModerationHistorySortMode value)
+    {
+        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        if (ucPlayer == null)
+            return;
+
+        UCWarfare.RunTask(RefreshModerationHistory, ucPlayer, ucPlayer.DisconnectToken);
+    }
+    private void OnModerationHistorySearchTypeUpdated(UnturnedEnumButton<ModerationHistorySearchMode> button, Player player, ModerationHistorySearchMode value)
+    {
+        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        if (ucPlayer == null)
+            return;
+
+        UCWarfare.RunTask(RefreshModerationHistory, ucPlayer, ucPlayer.DisconnectToken);
+    }
+    private void OnModerationHistorySearched(UnturnedTextBox textbox, Player player, string text)
+    {
+        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
+        if (ucPlayer == null)
+            return;
+        
+        UCWarfare.RunTask(RefreshModerationHistory, ucPlayer, ucPlayer.DisconnectToken);
     }
     private void OnModerationHistoryNext(UnturnedButton button, Player player)
     {
@@ -400,6 +429,7 @@ internal class ModerationUI : UnturnedUI
             return;
         UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
         PresetType preset = (PresetType)(index + 1);
+        L.LogDebug($"Pressed preset: {preset}.");
         if (ucPlayer == null || !PunishmentPresets.TryGetPreset(preset, out _))
             return;
 
@@ -486,7 +516,7 @@ internal class ModerationUI : UnturnedUI
 
         ModerationHistoryTypeButton.Update(player.Player, false);
         ModerationHistorySearchTypeButton.Update(player.Player, false);
-        ModerationHistorySortTypeButton.Update(player.Player, false);
+        ModerationHistorySortModeButton.Update(player.Player, false);
         ModerationPlayerSearchModeButton.Update(player.Player, false);
 
         SendModerationPlayerList(player);
@@ -687,19 +717,17 @@ internal class ModerationUI : UnturnedUI
         ModerationHistoryPage.SetText(player.Connection, page.ToString(player.Locale.ParseFormat));
         if (page > 0)
             ModerationHistoryBackButton.Enable(player.Connection);
-        else
-            ModerationHistoryBackButton.Disable(player.Connection);
         if (page < pgCt - 1)
             ModerationHistoryNextButton.Enable(player.Connection);
-        else
-            ModerationHistoryNextButton.Disable(player.Connection);
+        if (pgCt > 1)
+            ModerationHistoryPage.Enable(player.Connection);
         for (int i = 0; i < ModerationHistoryLength; ++i)
         {
             int index = i + offset;
             if (index >= entries.Length)
                 ModerationHistory[i].Root.SetVisibility(player.Connection, false);
             else
-                UpdateModerationEntry(player, index, entries[index]);
+                UpdateModerationEntry(player, i, entries[index]);
         }
     }
 
@@ -825,10 +853,6 @@ internal class ModerationUI : UnturnedUI
         }
 
         entry.Root.SetVisibility(player.Connection, true);
-    }
-    public void UpdatePendingEntry(UCPlayer player, ModerationEntry[]? entries)
-    {
-
     }
     public void SelectEntry(UCPlayer player, ModerationEntry? entry)
     {
@@ -1123,106 +1147,126 @@ internal class ModerationUI : UnturnedUI
         ModerationHistoryBackButton.Disable(player.Connection);
         ModerationHistoryPage.Disable(player.Connection);
 
-        try
-        {
-            ModerationData data = GetOrAddModerationData(player);
-            UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationHistorySearch.TextBox);
-            ModerationHistoryTypeButton.TryGetSelection(player.Player, out ModerationEntryType filter);
-            ModerationHistorySearchTypeButton.TryGetSelection(player.Player, out ModerationHistorySearchMode searchMode);
-            ModerationHistorySortTypeButton.TryGetSelection(player.Player, out ModerationHistorySortMode sortMode);
-            Type type = (filter == ModerationEntryType.None ? null : ModerationReflection.GetType(filter)) ?? typeof(ModerationEntry);
-            DateTimeOffset? start = null, end = null;
-            string? orderBy = null, condition = null;
-            object[]? conditionArgs = null;
-            string? text = textBoxData?.Text;
+        ModerationData data = GetOrAddModerationData(player);
+        UnturnedTextBoxData? textBoxData = UnturnedUIDataSource.GetData<UnturnedTextBoxData>(player.CSteamID, ModerationHistorySearch.TextBox);
+        ModerationHistoryTypeButton.TryGetSelection(player.Player, out ModerationEntryType filter);
+        ModerationHistorySearchTypeButton.TryGetSelection(player.Player, out ModerationHistorySearchMode searchMode);
+        ModerationHistorySortModeButton.TryGetSelection(player.Player, out ModerationHistorySortMode sortMode);
+        Type type = (filter == ModerationEntryType.None ? null : ModerationReflection.GetType(filter)) ?? typeof(ModerationEntry);
+        DateTimeOffset? start = null, end = null;
+        string? orderBy = null;
 
-            if (text is { Length: > 0 })
+        bool noType = !(searchMode == ModerationHistorySearchMode.Type || filter != ModerationEntryType.None);
+
+        string condition = !noType ? string.Empty : (
+            $"(`main`.`{DatabaseInterface.ColumnEntriesType}` != '{ModerationEntryType.Teamkill}' AND" +
+            $"`main`.`{DatabaseInterface.ColumnEntriesType}` != '{ModerationEntryType.VehicleTeamkill}')");
+
+        object[]? conditionArgs = null;
+        string? text = textBoxData?.Text;
+
+
+        if (text is { Length: > 0 })
+        {
+            if (searchMode is ModerationHistorySearchMode.Before or ModerationHistorySearchMode.After
+                && DateTimeOffset.TryParse(text, player.Locale.CultureInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset offset))
             {
-                if (searchMode is ModerationHistorySearchMode.Before or ModerationHistorySearchMode.After
-                    && DateTimeOffset.TryParse(text, player.Locale.CultureInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset offset))
+                if (searchMode == ModerationHistorySearchMode.Before)
+                    end = offset;
+                else
+                    start = offset;
+            }
+            else if (searchMode == ModerationHistorySearchMode.Message)
+            {
+                if (noType)
+                    condition += " AND ";
+                condition += $"`main`.`{DatabaseInterface.ColumnEntriesMessage}` LIKE {{0}}";
+                conditionArgs = new object[] { "%" + text + "%" };
+            }
+            else if (searchMode == ModerationHistorySearchMode.Admin)
+            {
+                if (noType)
+                    condition += " AND ";
+                if (ulong.TryParse(text, NumberStyles.Number, player.Locale.CultureInfo, out ulong steam64) && Util.IsValidSteam64Id(steam64))
                 {
-                    if (searchMode == ModerationHistorySearchMode.Before)
-                        end = offset;
-                    else
-                        start = offset;
+                    condition += $"(SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
+                                 $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `main`.`{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
+                                 $"AND `a`.`{DatabaseInterface.ColumnActorsId}`={{0}} " +
+                                 $"AND `a`.`{DatabaseInterface.ColumnActorsAsAdmin}` != 0) " +
+                                $"> 0";
+                    conditionArgs = new object[] { steam64 };
                 }
-                else if (searchMode == ModerationHistorySearchMode.Message)
+                else
                 {
-                    condition = $"`main`.`{DatabaseInterface.ColumnEntriesMessage}` LIKE {{0}}";
+                    condition += $"(SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
+                                 $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `main`.`{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
+                                 $"AND " +
+                                 $"(SELECT COUNT(*) FROM `{WarfareSQL.TableUsernames}` AS `u` " +
+                                  $"WHERE `a`.`{DatabaseInterface.ColumnActorsId}`=`u`.`{WarfareSQL.ColumnUsernamesSteam64}` " +
+                                 $"AND " +
+                                  $"(`u`.`{WarfareSQL.ColumnUsernamesPlayerName}` LIKE {{0}} OR `u`.`{WarfareSQL.ColumnUsernamesCharacterName}` LIKE {{0}} OR `u`.`{WarfareSQL.ColumnUsernamesNickName}` LIKE {{0}}))" +
+                                 $" > 0)" +
+                                $" > 0";
                     conditionArgs = new object[] { "%" + text + "%" };
                 }
-                else if (searchMode == ModerationHistorySearchMode.Admin)
+            }
+            else if (!noType)
+            {
+                if (noType)
+                    condition += " AND";
+                if (filter != ModerationEntryType.None)
                 {
-                    if (ulong.TryParse(text, NumberStyles.Number, player.Locale.CultureInfo, out ulong steam64) && Util.IsValidSteam64Id(steam64))
-                    {
-                        condition = $"(SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
-                                     $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `main`.`{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
-                                     $"AND `a`.`{DatabaseInterface.ColumnActorsId}`={{0}} " +
-                                     $"AND `a`.`{DatabaseInterface.ColumnActorsAsAdmin}` != 0) " +
-                                    $"> 0";
-                        conditionArgs = new object[] { steam64 };
-                    }
-                    else
-                    {
-                        condition = $"(SELECT COUNT(*) FROM `{DatabaseInterface.TableActors}` AS `a` " +
-                                     $"WHERE `a`.`{DatabaseInterface.ColumnExternalPrimaryKey}` = `main`.`{DatabaseInterface.ColumnEntriesPrimaryKey}` " +
-                                     $"AND " +
-                                     $"(SELECT COUNT(*) FROM `{WarfareSQL.TableUsernames}` AS `u` " +
-                                      $"WHERE `a`.`{DatabaseInterface.ColumnActorsId}`=`u`.`{WarfareSQL.ColumnUsernamesSteam64}` " +
-                                     $"AND " +
-                                      $"(`u`.`{WarfareSQL.ColumnUsernamesPlayerName}` LIKE @0 OR `u`.`{WarfareSQL.ColumnUsernamesCharacterName}` LIKE @0 OR `u`.`{WarfareSQL.ColumnUsernamesNickName}` LIKE @0))" +
-                                     $" > 0)" +
-                                    $" > 0";
-                        conditionArgs = new object[] { "%" + text + "%" };
-                    }
+                    condition += $"`main`.`{DatabaseInterface.ColumnEntriesType}` = {{0}}";
+                    conditionArgs = new object[] { filter.ToString() };
                 }
-                else if (searchMode == ModerationHistorySearchMode.Type)
+                else if (Enum.TryParse(text, true, out ModerationEntryType entryType))
                 {
-                    if (Enum.TryParse(text, true, out ModerationEntryType entryType))
-                    {
-                        condition = $"`main`.`{DatabaseInterface.ColumnEntriesType}` = @0";
-                        conditionArgs = new object[] { entryType.ToString() };
-                    }
-                    else
-                    {
-                        condition = $"`main`.`{DatabaseInterface.ColumnEntriesType}` LIKE @0";
-                        conditionArgs = new object[] { "%" + text + "%" };
-                    }
+                    condition += $"`main`.`{DatabaseInterface.ColumnEntriesType}` = {{0}}";
+                    conditionArgs = new object[] { entryType.ToString() };
+                }
+                else
+                {
+                    condition += $"`main`.`{DatabaseInterface.ColumnEntriesType}` LIKE {{0}}";
+                    conditionArgs = new object[] { "%" + text + "%" };
                 }
             }
-
-            if (sortMode is ModerationHistorySortMode.Latest or ModerationHistorySortMode.Oldest)
-            {
-                orderBy = $"`main`.`{DatabaseInterface.ColumnEntriesStartTimestamp}`";
-                if (sortMode == ModerationHistorySortMode.Latest)
-                    orderBy += " DESC";
-            }
-            else if (sortMode is ModerationHistorySortMode.HighestReputation or ModerationHistorySortMode.LowestReputation)
-            {
-                orderBy = $"`main`.`{DatabaseInterface.ColumnEntriesReputation}`";
-                if (sortMode == ModerationHistorySortMode.HighestReputation)
-                    orderBy += " DESC";
-            }
-            else if (sortMode == ModerationHistorySortMode.Type)
-            {
-                orderBy = $"`main`.`{DatabaseInterface.ColumnEntriesType}`";
-            }
-
-            ModerationEntry[] entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, data.SelectedPlayer == 0ul ? player.Steam64 : data.SelectedPlayer,
-                !Util.IsValidSteam64Id(data.SelectedPlayer) ? ActorRelationType.IsActor : ActorRelationType.IsTarget, false, true, start, end, orderBy, condition, conditionArgs, token);
-
-            await UCWarfare.ToUpdate(token);
-
-            data.HistoryView = entries;
-            int pgCt = data.PageCount;
-            SetHistoryPage(player, data, data.HistoryPage >= pgCt ? pgCt : data.HistoryPage);
         }
-        finally
+
+        if (sortMode is ModerationHistorySortMode.Latest or ModerationHistorySortMode.Oldest)
         {
-            ModerationHistoryNextButton.Enable(player.Connection);
-            ModerationHistoryBackButton.Enable(player.Connection);
-            ModerationHistoryPage.Enable(player.Connection);
+            orderBy = $"`main`.`{DatabaseInterface.ColumnEntriesStartTimestamp}`";
+            if (sortMode == ModerationHistorySortMode.Latest)
+                orderBy += " DESC";
         }
+        else if (sortMode is ModerationHistorySortMode.HighestReputation or ModerationHistorySortMode.LowestReputation)
+        {
+            orderBy = $"`main`.`{DatabaseInterface.ColumnEntriesReputation}`";
+            if (sortMode == ModerationHistorySortMode.HighestReputation)
+                orderBy += " DESC";
+        }
+        else if (sortMode == ModerationHistorySortMode.Type)
+        {
+            orderBy = $"`main`.`{DatabaseInterface.ColumnEntriesType}`";
+        }
+
+        ModerationEntry[] entries;
+
+        bool showRecentActors = text is not { Length: > 0 } && !Util.IsValidSteam64Id(data.SelectedPlayer);
+        if (showRecentActors || Util.IsValidSteam64Id(data.SelectedPlayer))
+        {
+            entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, showRecentActors ? player.Steam64 : data.SelectedPlayer,
+                showRecentActors ? ActorRelationType.IsActor : ActorRelationType.IsTarget, false, true, start, end, orderBy, condition, conditionArgs, token);
+        }
+        else
+        {
+            entries = (ModerationEntry[])await Data.ModerationSql.ReadAll(type, false, true, start, end, orderBy, condition, conditionArgs, token);
+        }
+
+        await UCWarfare.ToUpdate(token);
+
+        data.HistoryView = entries;
+        int pgCt = data.PageCount;
+        SetHistoryPage(player, data, data.HistoryPage >= pgCt ? (pgCt - 1) : data.HistoryPage);
     }
 
     public enum Page

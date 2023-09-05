@@ -64,12 +64,11 @@ public abstract class DatabaseInterface
     }
     public async Task<T?> ReadOne<T>(PrimaryKey id, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : ModerationEntry
     {
-        detail &= baseOnly;
         if (tryGetFromCache && Cache.TryGet(id, out T val, DefaultInvalidateDuration))
             return val;
 
         StringBuilder sb = new StringBuilder("SELECT ", 128);
-        int flag = AppendReadColumns(sb, typeof(T));
+        int flag = AppendReadColumns(sb, typeof(T), baseOnly);
         AppendTables(sb, flag);
         sb.Append($" WHERE `main`.`{ColumnEntriesPrimaryKey}` = @0;");
 
@@ -99,12 +98,11 @@ public abstract class DatabaseInterface
     }
     public async Task ReadAll<T>(T?[] result, PrimaryKey[] ids, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : ModerationEntry
     {
-        detail &= baseOnly;
         if (result.Length != ids.Length)
             throw new ArgumentException("Result must be the same length as ids.", nameof(result));
 
         StringBuilder sb = new StringBuilder("SELECT ", 164);
-        int flag = AppendReadColumns(sb, typeof(T));
+        int flag = AppendReadColumns(sb, typeof(T), baseOnly);
         AppendTables(sb, flag);
         sb.Append($" WHERE `main`.`{ColumnEntriesPrimaryKey}` IN (");
         SqlTypes.AppendParameterList(sb, 0, ids.Length);
@@ -160,11 +158,23 @@ public abstract class DatabaseInterface
         => (T[])await ReadAll(typeof(T), actor, relation, detail, baseOnly, start, end, orderBy, condition, conditionArgs, token).ConfigureAwait(false);
     public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? orderBy = null, string? condition = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
-        detail &= baseOnly;
+        ModerationEntryType[]? types = null;
+        if (typeof(T) != typeof(ModerationEntry))
+            ModerationReflection.TypeInheritance.TryGetValue(typeof(T), out types);
+
         StringBuilder sb = new StringBuilder("SELECT ", 164);
-        int flag = AppendReadColumns(sb, type);
+        int flag = AppendReadColumns(sb, type, baseOnly);
         AppendTables(sb, flag);
         sb.Append(" WHERE");
+        List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 3) { actor };
+        if (conditionArgs != null && condition != null)
+        {
+            args.AddRange(conditionArgs);
+            for (int i = 0; i < conditionArgs.Length; ++i)
+                condition = Util.QuickFormat(condition, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i);
+
+            sb.Append(" (").Append(condition).Append(')').Append(" AND");
+        }
 
         switch (relation)
         {
@@ -173,79 +183,48 @@ public abstract class DatabaseInterface
                 sb.Append($" `{ColumnEntriesSteam64}`=@0");
                 break;
             case ActorRelationType.IsActor:
-                sb.Append($" (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0) > 0");
+                sb.Append($" EXISTS (SELECT `a`.`{ColumnActorsId}` FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0)");
                 break;
             case ActorRelationType.IsAdminActor:
-                sb.Append($" (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` != 0) > 0");
+                sb.Append($" EXISTS (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` != 0)");
                 break;
             case ActorRelationType.IsNonAdminActor:
-                sb.Append($" (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` == 0) > 0");
+                sb.Append($" EXISTS (SELECT COUNT(*) FROM `{TableActors}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}` = `main`.`{ColumnEntriesPrimaryKey}` AND `a`.`{ColumnActorsId}`=@0 AND `a`.`{ColumnActorsAsAdmin}` == 0)");
                 break;
         }
         
-        ModerationEntryType[]? types = null;
-        if (typeof(T) != typeof(ModerationEntry))
-            ModerationReflection.TypeInheritance.TryGetValue(typeof(T), out types);
-        object[] actorArgs;
-        int offset;
-        int xtraLength = (types == null ? 0 : types.Length) + (conditionArgs == null || condition == null ? 0 : conditionArgs.Length);
         if (start.HasValue && end.HasValue)
         {
-            offset = 3;
-            actorArgs = new object[3 + xtraLength];
-            actorArgs[1] = start.Value.UtcDateTime;
-            actorArgs[2] = end.Value.UtcDateTime;
-            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @1 AND `main`.`{ColumnEntriesStartTimestamp}` <= @2");
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)} AND `main`.`{ColumnEntriesStartTimestamp}` <= @{(args.Count + 1).ToString(CultureInfo.InvariantCulture)}");
+
+            args.Add(start.Value.UtcDateTime);
+            args.Add(end.Value.UtcDateTime);
         }
         else if (start.HasValue)
         {
-            offset = 2;
-            actorArgs = new object[2 + xtraLength];
-            actorArgs[1] = start.Value.UtcDateTime;
-            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @1");
+            sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)}");
+            args.Add(start.Value.UtcDateTime);
         }
         else if (end.HasValue)
         {
-            offset = 2;
-            actorArgs = new object[2 + xtraLength];
-            actorArgs[1] = end.Value.UtcDateTime;
             sb.Append($" AND `main`.`{ColumnEntriesStartTimestamp}` <= @1");
+            args.Add(end.Value.UtcDateTime);
         }
-        else
-        {
-            offset = 1;
-            actorArgs = new object[1 + xtraLength];
-        }
-
-        actorArgs[0] = actor;
+        
         if (types is { Length: > 0 })
         {
-            for (int i = 0; i < types.Length; ++i)
-                actorArgs[offset + i] = types[i].ToString();
             sb.Append($" AND `main`.`{ColumnEntriesType}` IN (");
+
             for (int i = 0; i < types.Length; ++i)
             {
                 if (i != 0)
                     sb.Append(',');
-                sb.Append('@').Append((i + offset).ToString(CultureInfo.InvariantCulture));
+                sb.Append('@').Append(args.Count.ToString(CultureInfo.InvariantCulture));
+                args.Add(types[i].ToString());
             }
 
             sb.Append(")");
         }
-
-        if (types != null)
-            offset += types.Length;
-        if (conditionArgs != null && condition != null)
-        {
-            for (int i = 0; i < conditionArgs.Length; ++i)
-            {
-                actorArgs[offset + i] = conditionArgs[i];
-                condition = Util.QuickFormat(condition, "@" + (offset + i).ToString(CultureInfo.InvariantCulture), i);
-            }
-        }
-
-        if (condition != null)
-            sb.Append(" AND " + condition);
 
         if (orderBy != null)
             sb.Append(" ORDER BY " + orderBy);
@@ -254,7 +233,7 @@ public abstract class DatabaseInterface
 
 
         ArrayList entries = new ArrayList(4);
-        await Sql.QueryAsync(sb.ToString(), actorArgs, reader =>
+        await Sql.QueryAsync(sb.ToString(), args, reader =>
         {
             ModerationEntry? entry = ReadEntry(flag, reader);
             if (type.IsInstanceOfType(entry))
@@ -272,81 +251,61 @@ public abstract class DatabaseInterface
         => (T[])await ReadAll(typeof(T), detail, baseOnly, start, end, condition, orderBy, conditionArgs, token).ConfigureAwait(false);
     public async Task<Array> ReadAll(Type type, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
-        detail &= baseOnly;
-        StringBuilder sb = new StringBuilder("SELECT ", 164);
-        int flag = AppendReadColumns(sb, type);
-        AppendTables(sb, flag);
-        sb.Append(" WHERE");
-
         ModerationEntryType[]? types = null;
         if (type != typeof(ModerationEntry))
             ModerationReflection.TypeInheritance.TryGetValue(type, out types);
-        bool and = false;
-        object[] args;
-        int offset;
-        int xtraLength = (types == null ? 0 : types.Length) + (conditionArgs == null || condition == null ? 0 : conditionArgs.Length);
+
+        StringBuilder sb = new StringBuilder("SELECT ", 164);
+        int flag = AppendReadColumns(sb, type, baseOnly);
+        AppendTables(sb, flag);
+        sb.Append(" WHERE ");
+        List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 2);
+        if (conditionArgs != null && condition != null)
+        {
+            args.AddRange(conditionArgs);
+            for (int i = 0; i < conditionArgs.Length; ++i)
+                condition = Util.QuickFormat(condition, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i);
+
+            sb.Append('(').Append(condition).Append(')');
+            sb.Append(" AND ");
+        }
+
+        bool and = true;
         if (start.HasValue && end.HasValue)
         {
-            offset = 2;
-            args = new object[2 + xtraLength];
-            args[0] = start.Value.UtcDateTime;
-            args[1] = end.Value.UtcDateTime;
-            sb.Append($" `main`.`{ColumnEntriesStartTimestamp}` >= @1 AND `main`.`{ColumnEntriesStartTimestamp}` <= @2");
-            and = true;
+            sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)} AND `main`.`{ColumnEntriesStartTimestamp}` <= @{(args.Count + 1).ToString(CultureInfo.InvariantCulture)}");
+
+            args.Add(start.Value.UtcDateTime);
+            args.Add(end.Value.UtcDateTime);
         }
         else if (start.HasValue)
         {
-            offset = 1;
-            args = new object[1 + xtraLength];
-            args[0] = start.Value.UtcDateTime;
-            sb.Append($" `main`.`{ColumnEntriesStartTimestamp}` >= @1");
-            and = true;
+            sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)}");
+            args.Add(start.Value.UtcDateTime);
         }
         else if (end.HasValue)
         {
-            offset = 1;
-            args = new object[1 + xtraLength];
-            args[0] = end.Value.UtcDateTime;
-            sb.Append($" `main`.`{ColumnEntriesStartTimestamp}` <= @1");
-            and = true;
+            sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` <= @1");
+            args.Add(end.Value.UtcDateTime);
         }
-        else
-        {
-            offset = 0;
-            args = new object[xtraLength];
-        }
-        
+        else and = false;
+
         if (types is { Length: > 0 })
         {
-            for (int i = 0; i < types.Length; ++i)
-                args[offset + i] = types[i].ToString();
             if (and)
-                sb.Append(" AND");
-            sb.Append($" `main`.`{ColumnEntriesType}` IN (");
-            and = true;
+                sb.Append(" AND ");
+            sb.Append($"`main`.`{ColumnEntriesType}` IN (");
+
             for (int i = 0; i < types.Length; ++i)
             {
                 if (i != 0)
                     sb.Append(',');
-                sb.Append('@').Append((i + offset).ToString(CultureInfo.InvariantCulture));
+                sb.Append('@').Append(args.Count.ToString(CultureInfo.InvariantCulture));
+                args.Add(types[i].ToString());
             }
 
-            sb.Append(')');
+            sb.Append(")");
         }
-
-        if (types != null)
-            offset += types.Length;
-        if (conditionArgs != null && condition != null)
-        {
-            for (int i = 0; i < conditionArgs.Length; ++i)
-            {
-                args[offset + i] = conditionArgs[i];
-                condition = Util.QuickFormat(condition, "@" + (offset + i).ToString(CultureInfo.InvariantCulture), i);
-            }
-        }
-
-        if (condition != null)
-            sb.Append((and ? " AND " : " ") + condition);
 
         if (orderBy != null)
             sb.Append(" ORDER BY " + orderBy);
@@ -739,7 +698,7 @@ public abstract class DatabaseInterface
             await Task.WhenAll(tasks.AsArrayFast()).ConfigureAwait(false);
         }
     }
-    private static int AppendReadColumns(StringBuilder sb, Type type)
+    private static int AppendReadColumns(StringBuilder sb, Type type, bool baseOnly)
     {
         sb.Append(SqlTypes.ColumnListAliased("main", ColumnEntriesPrimaryKey,
             ColumnEntriesType, ColumnEntriesSteam64,
@@ -762,33 +721,33 @@ public abstract class DatabaseInterface
             flag |= 1 << 1;
             sb.Append(",`mutes`.`" + ColumnMutesType + "`");
         }
-        if (type.IsAssignableFrom(typeof(Warning)) || typeof(Warning).IsAssignableFrom(type))
+        if (!baseOnly && (type.IsAssignableFrom(typeof(Warning)) || typeof(Warning).IsAssignableFrom(type)))
         {
             flag |= 1 << 2;
             sb.Append(",`warns`.`" + ColumnWarningsHasBeenDisplayed + "`");
         }
-        if (type.IsAssignableFrom(typeof(PlayerReportAccepted)) || typeof(PlayerReportAccepted).IsAssignableFrom(type))
+        if (!baseOnly && (type.IsAssignableFrom(typeof(PlayerReportAccepted)) || typeof(PlayerReportAccepted).IsAssignableFrom(type)))
         {
             flag |= 1 << 3;
             sb.Append(",`praccept`.`" + ColumnPlayerReportAcceptedsReport + "`");
         }
-        if (type.IsAssignableFrom(typeof(BugReportAccepted)) || typeof(BugReportAccepted).IsAssignableFrom(type))
+        if (!baseOnly && (type.IsAssignableFrom(typeof(BugReportAccepted)) || typeof(BugReportAccepted).IsAssignableFrom(type)))
         {
             flag |= 1 << 4;
             sb.Append("," + SqlTypes.ColumnListAliased("braccept", ColumnTableBugReportAcceptedsIssue, ColumnTableBugReportAcceptedsCommit));
         }
-        if (type.IsAssignableFrom(typeof(Teamkill)) || typeof(Teamkill).IsAssignableFrom(type))
+        if (!baseOnly && (type.IsAssignableFrom(typeof(Teamkill)) || typeof(Teamkill).IsAssignableFrom(type)))
         {
             flag |= 1 << 5;
             sb.Append("," + SqlTypes.ColumnListAliased("tks", ColumnTeamkillsAsset, ColumnTeamkillsAssetName, ColumnTeamkillsDeathCause, ColumnTeamkillsDistance, ColumnTeamkillsLimb));
         }
-        if (type.IsAssignableFrom(typeof(VehicleTeamkill)) || typeof(VehicleTeamkill).IsAssignableFrom(type))
+        if (!baseOnly && (type.IsAssignableFrom(typeof(VehicleTeamkill)) || typeof(VehicleTeamkill).IsAssignableFrom(type)))
         {
             flag |= 1 << 6;
             sb.Append("," + SqlTypes.ColumnListAliased("vtks", ColumnVehicleTeamkillsAsset, ColumnVehicleTeamkillsAssetName,
                 ColumnVehicleTeamkillsDamageOrigin, ColumnVehicleTeamkillsVehicleAsset, ColumnVehicleTeamkillsVehicleAssetName));
         }
-        if (type.IsAssignableFrom(typeof(Appeal)) || typeof(Appeal).IsAssignableFrom(type))
+        if (!baseOnly && (type.IsAssignableFrom(typeof(Appeal)) || typeof(Appeal).IsAssignableFrom(type)))
         {
             flag |= 1 << 7;
             sb.Append("," + SqlTypes.ColumnListAliased("app", ColumnAppealsState, ColumnAppealsDiscordId, ColumnAppealsTicketId));
@@ -809,7 +768,7 @@ public abstract class DatabaseInterface
     private static void AppendTables(StringBuilder sb, int flag)
     {
         sb.Append($" FROM `{TableEntries}` AS `main`");
-
+        if (flag == 0) return;
         if ((flag & 1) != 0)
         {
             sb.Append($" LEFT JOIN `{TableDurationPunishments}` AS `dur` ON `main`.`{ColumnEntriesPrimaryKey}` = `dur`.`{ColumnExternalPrimaryKey}`");
@@ -877,7 +836,7 @@ public abstract class DatabaseInterface
         entry.RemovedBy = reader.IsDBNull(13) ? null : Actors.GetActor(reader.GetUInt64(13));
         entry.RemovedTimestamp = reader.IsDBNull(14) ? null : DateTime.SpecifyKind(reader.GetDateTime(14), DateTimeKind.Utc);
         entry.RemovedMessage = reader.IsDBNull(15) ? null : reader.GetString(15);
-        
+
         int offset = 15;
         if ((flag & 1) != 0)
         {
@@ -893,6 +852,7 @@ public abstract class DatabaseInterface
                 dur.ForgiveMessage = reader.IsDBNull(offset) ? null : reader.GetString(offset);
             }
         }
+
         if ((flag & (1 << 1)) != 0)
         {
             offset++;
@@ -1336,6 +1296,7 @@ public abstract class DatabaseInterface
             },
             new Schema.Column(ColumnEntriesRemovedBy, SqlTypes.STEAM_64)
             {
+                Indexed = true,
                 Nullable = true
             },
             new Schema.Column(ColumnEntriesRemovedTimestamp, SqlTypes.DATETIME)
@@ -1356,7 +1317,10 @@ public abstract class DatabaseInterface
                 ForeignKeyTable = TableEntries
             },
             new Schema.Column(ColumnActorsRole, SqlTypes.STRING_255),
-            new Schema.Column(ColumnActorsId, SqlTypes.STEAM_64),
+            new Schema.Column(ColumnActorsId, SqlTypes.STEAM_64)
+            {
+                Indexed = true
+            },
             new Schema.Column(ColumnActorsAsAdmin, SqlTypes.BOOLEAN),
             new Schema.Column(ColumnActorsIndex, SqlTypes.INT)
         }, false, typeof(RelatedActor)),
@@ -1434,10 +1398,12 @@ public abstract class DatabaseInterface
             },
             new Schema.Column(ColumnPunishmentsPresetType, SqlTypes.Enum<PresetType>())
             {
+                Indexed = true,
                 Nullable = true
             },
             new Schema.Column(ColumnPunishmentsPresetLevel, SqlTypes.INT)
             {
+                Indexed = true,
                 Nullable = true
             }
         }, false, typeof(Punishment)),
@@ -1458,6 +1424,7 @@ public abstract class DatabaseInterface
             },
             new Schema.Column(ColumnDurationsForgivenBy, SqlTypes.STEAM_64)
             {
+                Indexed = true,
                 Nullable = true
             },
             new Schema.Column(ColumnDurationsForgivenTimestamp, SqlTypes.DATETIME)
@@ -1523,6 +1490,7 @@ public abstract class DatabaseInterface
             },
             new Schema.Column(ColumnWarningsHasBeenDisplayed, SqlTypes.BOOLEAN)
             {
+                Indexed = true,
                 Default = "b'0'"
             }
         }, false, typeof(Warning)),
@@ -1642,6 +1610,7 @@ public abstract class DatabaseInterface
             },
             new Schema.Column(ColumnAppealsDiscordId, SqlTypes.ULONG)
             {
+                Indexed = true,
                 Nullable = true
             }
         }, false, typeof(Appeal)),
