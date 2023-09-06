@@ -17,6 +17,7 @@ namespace Uncreated.Warfare;
 public interface IWarfareSql : IMySqlDatabase
 {
     Task<PlayerNames> GetUsernamesAsync(ulong s64, CancellationToken token = default);
+    Task<PlayerNames[]> GetUsernamesAsync(ulong[] s64, CancellationToken token = default);
     Task<ulong> GetDiscordID(ulong s64, CancellationToken token = default);
     Task<ulong> GetSteam64(ulong discordId, CancellationToken token = default);
     Task<(int, int)> GetCreditsAndXP(ulong player, ulong team, CancellationToken token = default);
@@ -547,7 +548,7 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
         await QueryAsync($"({l}{col1}` LIKE @0) UNION ({l}{col2}` LIKE @0) UNION ({l}{col3}` LIKE @0) UNION " +
                          $"({l}{col1}` LIKE @1) UNION ({l}{col2}` LIKE @1) UNION ({l}{col3}` LIKE @1) " +
                          $"ORDER BY (`cn` LIKE @0 OR `nn` LIKE @0 OR `pn` LIKE @0) DESC" +
-                         (byLastJoined ? ", `lln` DESC;" : ";"), new object[] { input, "%" + input + "%" }, reader =>
+                         (byLastJoined ? ", `lln` DESC;" : ";"), new object[] { input, "%" + Util.EscapeSqlPattern(input) + "%" }, reader =>
         {
             names.Add(new PlayerNames(reader.GetUInt64(0)) { CharacterName = reader.GetString(1), NickName = reader.GetString(2), PlayerName = reader.GetString(3), WasFound = true });
         }, token).ConfigureAwait(false);
@@ -572,8 +573,12 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
             }, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
         if (name.WasFound)
+        {
+            if (UCWarfare.IsLoaded)
+                Data.ModerationSql.UpdateUsernames(s64, name);
             return name;
-        string tname = s64.ToString(Data.AdminLocale);
+        }
+        string tname = s64.ToString(CultureInfo.InvariantCulture);
         return new PlayerNames { Steam64 = s64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
     }
     public async Task<PlayerNames[]> GetUsernamesAsync(ulong[] s64Array, CancellationToken token = default)
@@ -604,27 +609,17 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
         token.ThrowIfCancellationRequested();
         for (int i = 0; i < s64Array.Length; ++i)
         {
-            if (rtn[i].WasFound)
+            PlayerNames names = rtn[i];
+            if (names.WasFound)
+            {
+                if (UCWarfare.IsLoaded)
+                    Data.ModerationSql.UpdateUsernames(names.Steam64, names);
                 continue;
+            }
             string ts = s64Array[i].ToString(Data.AdminLocale);
             rtn[i] = new PlayerNames { Steam64 = s64Array[i], PlayerName = ts, CharacterName = ts, NickName = ts };
         }
         return rtn;
-    }
-    [Obsolete]
-    public bool GetDiscordID(ulong s64, out ulong discordId)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ulong tid = 0;
-        Query("SELECT `DiscordID` FROM `" + TableDiscordIds + "` WHERE `Steam64` = @0 LIMIT 1;", new object[] { s64 },
-            reader =>
-            {
-                tid = reader.GetUInt64(0);
-            });
-        discordId = tid;
-        return tid != 0;
     }
     public async Task<ulong> GetDiscordID(ulong s64, CancellationToken token = default)
     {

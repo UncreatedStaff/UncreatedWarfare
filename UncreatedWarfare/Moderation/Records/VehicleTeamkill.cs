@@ -33,6 +33,7 @@ public class VehicleTeamkill : ModerationEntry
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ItemName { get; set; }
     public override string GetDisplayName() => "Vehicle Teamkill";
+    public override Guid? GetIcon() => Item;
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
         base.ReadIntl(reader, version);
@@ -113,7 +114,6 @@ public class VehicleTeamkill : ModerationEntry
         if (ItemName != null)
             writer.WriteString("item_name", ItemName);
     }
-
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 6;
     public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {

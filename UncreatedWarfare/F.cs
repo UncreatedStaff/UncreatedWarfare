@@ -570,7 +570,10 @@ public static class F
     {
         UCPlayer? pl = UCPlayer.FromID(player);
         if (pl != null)
+        {
+            Data.ModerationSql.UpdateUsernames(player, pl.Name);
             return new ValueTask<PlayerNames>(pl.Name);
+        }
 
         return Util.IsValidSteam64Id(player)
             ? new ValueTask<PlayerNames>(Data.DatabaseManager.GetUsernamesAsync(player, token))

@@ -38,6 +38,8 @@ public class Teamkill : ModerationEntry
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public double? Distance { get; set; }
     public override string GetDisplayName() => "Player Teamkill";
+    public override Guid? GetIcon() => Item;
+
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
         base.ReadIntl(reader, version);
@@ -145,6 +147,24 @@ public class Teamkill : ModerationEntry
             writer.WriteString("limb", Limb.Value.ToString());
         if (Distance.HasValue)
             writer.WriteNumber("distance", Distance.Value);
+    }
+
+    public override bool TryGetDisplayActor(out RelatedActor actor)
+    {
+        if (base.TryGetDisplayActor(out actor))
+            return true;
+
+        for (int i = 0; i < Actors.Length; ++i)
+        {
+            if (string.Equals(Actors[i].Role, RoleTeamkilled, StringComparison.OrdinalIgnoreCase))
+            {
+                actor = Actors[i];
+                return true;
+            }
+        }
+
+        actor = new RelatedActor(RoleTeamkilled, false, ConsoleActor.Instance);
+        return false;
     }
 
     internal override int EstimateColumnCount() => base.EstimateColumnCount() + 6;

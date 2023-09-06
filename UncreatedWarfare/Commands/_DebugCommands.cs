@@ -1758,4 +1758,9 @@ public class DebugCommand : AsyncCommand
         await Migration.MigrateWarnings(Data.ModerationSql, token).ConfigureAwait(false);
         ctx.ReplyString("Done.");
     }
+
+    private void geticons(CommandInteraction ctx)
+    {
+        ctx.ReplyString(string.Join(string.Empty, ItemIconProvider.Defaults.Select(x => x.Character).Where(x => x.HasValue).Select(x => x!.Value.ToString())));
+    }
 }
