@@ -32,7 +32,17 @@ public abstract class DatabaseInterface
     private readonly Dictionary<ulong, string> _iconUrlCacheSmall = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheMedium = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheFull = new Dictionary<ulong, string>(128);
+    private readonly Dictionary<ulong, PlayerNames> _usernameCache = new Dictionary<ulong, PlayerNames>(128);
     public ModerationCache Cache { get; } = new ModerationCache(64);
+    public bool TryGetAvatar(IModerationActor actor, AvatarSize size, out string avatar)
+    {
+        if (!Util.IsValidSteam64Id(actor.Id))
+        {
+            avatar = null!;
+            return false;
+        }
+        return TryGetAvatar(actor.Id, size, out avatar);
+    }
     public bool TryGetAvatar(ulong steam64, AvatarSize size, out string avatar)
     {
         Dictionary<ulong, string> dict = size switch
@@ -53,14 +63,36 @@ public abstract class DatabaseInterface
         };
         dict[steam64] = value;
     }
+    public bool TryGetUsernames(IModerationActor actor, out PlayerNames names)
+    {
+        if (!Util.IsValidSteam64Id(actor.Id))
+        {
+            names = default;
+            return false;
+        }
+        return TryGetUsernames(actor.Id, out names);
+    }
+    public bool TryGetUsernames(ulong steam64, out PlayerNames names)
+    {
+        return _usernameCache.TryGetValue(steam64, out names);
+    }
+    public void UpdateUsernames(ulong steam64, PlayerNames names)
+    {
+        _usernameCache[steam64] = names;
+    }
     public abstract IWarfareSql Sql { get; }
     public Task VerifyTables(CancellationToken token = default) => Sql.VerifyTables(Schema, token);
-    public async Task<PlayerNames> GetUsernames(ulong id, CancellationToken token = default)
+    public async Task<PlayerNames> GetUsernames(ulong id, bool useCache, CancellationToken token = default)
     {
+        if (useCache && TryGetUsernames(id, out PlayerNames names))
+            return names;
+
         if (UCWarfare.IsLoaded)
             return await F.GetPlayerOriginalNamesAsync(id, token).ConfigureAwait(false);
 
-        return await Sql.GetUsernamesAsync(id, token).ConfigureAwait(false);
+        names = await Sql.GetUsernamesAsync(id, token).ConfigureAwait(false);
+        UpdateUsernames(id, names);
+        return names;
     }
     public async Task<T?> ReadOne<T>(PrimaryKey id, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : ModerationEntry
     {
@@ -154,9 +186,9 @@ public abstract class DatabaseInterface
         // ReSharper disable once CoVariantArrayConversion
         await Fill(result, detail, baseOnly, mask, token).ConfigureAwait(false);
     }
-    public async Task<T[]> ReadAll<T>(ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? orderBy = null, string? condition = null, object[]? conditionArgs = null, CancellationToken token = default) where T : ModerationEntry
-        => (T[])await ReadAll(typeof(T), actor, relation, detail, baseOnly, start, end, orderBy, condition, conditionArgs, token).ConfigureAwait(false);
-    public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? orderBy = null, string? condition = null, object[]? conditionArgs = null, CancellationToken token = default)
+    public async Task<T[]> ReadAll<T>(ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : ModerationEntry
+        => (T[])await ReadAll(typeof(T), actor, relation, detail, baseOnly, start, end, condition, orderBy, conditionArgs, token).ConfigureAwait(false);
+    public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
         ModerationEntryType[]? types = null;
         if (typeof(T) != typeof(ModerationEntry))
@@ -258,21 +290,29 @@ public abstract class DatabaseInterface
         StringBuilder sb = new StringBuilder("SELECT ", 164);
         int flag = AppendReadColumns(sb, type, baseOnly);
         AppendTables(sb, flag);
-        sb.Append(" WHERE ");
+        bool where = false, and = true;
         List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 2);
         if (conditionArgs != null && condition != null)
         {
+            sb.Append(" WHERE ");
+            where = true;
             args.AddRange(conditionArgs);
             for (int i = 0; i < conditionArgs.Length; ++i)
-                condition = Util.QuickFormat(condition, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i);
+                condition = Util.QuickFormat(condition, "@" + i.ToString(CultureInfo.InvariantCulture), i);
 
             sb.Append('(').Append(condition).Append(')');
-            sb.Append(" AND ");
+            and = false;
         }
-
-        bool and = true;
+        
         if (start.HasValue && end.HasValue)
         {
+            if (!where)
+            {
+                sb.Append(" WHERE ");
+                where = true;
+            }
+            if (!and)
+                sb.Append(" AND ");
             sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)} AND `main`.`{ColumnEntriesStartTimestamp}` <= @{(args.Count + 1).ToString(CultureInfo.InvariantCulture)}");
 
             args.Add(start.Value.UtcDateTime);
@@ -280,19 +320,34 @@ public abstract class DatabaseInterface
         }
         else if (start.HasValue)
         {
+            if (!where)
+            {
+                sb.Append(" WHERE ");
+                where = true;
+            }
+            if (!and)
+                sb.Append(" AND ");
             sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` >= @{args.Count.ToString(CultureInfo.InvariantCulture)}");
             args.Add(start.Value.UtcDateTime);
         }
         else if (end.HasValue)
         {
+            if (!where)
+            {
+                sb.Append(" WHERE ");
+                where = true;
+            }
+            if (!and)
+                sb.Append(" AND ");
             sb.Append($"`main`.`{ColumnEntriesStartTimestamp}` <= @1");
             args.Add(end.Value.UtcDateTime);
         }
-        else and = false;
 
         if (types is { Length: > 0 })
         {
-            if (and)
+            if (!where)
+                sb.Append(" WHERE ");
+            if (!and)
                 sb.Append(" AND ");
             sb.Append($"`main`.`{ColumnEntriesType}` IN (");
 
@@ -1060,6 +1115,76 @@ public abstract class DatabaseInterface
             return 1;
         
         return max + 1;
+    }
+    public async Task<ulong[]> GetSteam64IDs(IList<IModerationActor> actors, CancellationToken token = default)
+    {
+        ulong[] steamIds = new ulong[actors.Count];
+        bool anyDiscord = false;
+        StringBuilder? sb = null;
+        for (int i = 0; i < steamIds.Length; ++i)
+        {
+            IModerationActor actor = actors[i];
+            if (actor is DiscordActor)
+            {
+                sb ??= new StringBuilder("IN (");
+                if (anyDiscord)
+                    sb.Append(',');
+                else anyDiscord = true;
+                sb.Append(actor.Id.ToString(CultureInfo.InvariantCulture));
+            }
+
+            steamIds[i] = actor.Id;
+        }
+
+        if (!anyDiscord)
+        {
+            for (int k = 0; k < steamIds.Length; ++k)
+            {
+                if (!Util.IsValidSteam64Id(steamIds[k]))
+                    steamIds[k] = 0ul;
+            }
+
+            return steamIds;
+        }
+
+        await Sql.QueryAsync(
+            $"SELECT `{WarfareSQL.ColumnDiscordIdsSteam64}`,`{WarfareSQL.ColumnDiscordIdsDiscordId}` FROM `{WarfareSQL.TableDiscordIds}` WHERE `{WarfareSQL.ColumnDiscordIdsDiscordId}` {sb});",
+            null, reader =>
+            {
+                ulong d = reader.GetUInt64(1);
+                for (int j = 0; j < steamIds.Length; ++j)
+                {
+                    if (d == steamIds[j])
+                    {
+                        steamIds[j] = reader.GetUInt64(0);
+                        break;
+                    }
+                }
+            }, token);
+
+        for (int k = 0; k < steamIds.Length; ++k)
+        {
+            if (!Util.IsValidSteam64Id(steamIds[k]))
+                steamIds[k] = 0ul;
+        }
+
+        return steamIds;
+    }
+    public async Task CacheUsernames(ulong[] players, CancellationToken token = default)
+    {
+        if (UCWarfare.IsLoaded)
+        {
+            _ = await Sql.GetUsernamesAsync(players, token);
+        }
+        else
+        {
+            PlayerNames[] names = await Sql.GetUsernamesAsync(players, token);
+            for (int i = 0; i < names.Length; ++i)
+            {
+                PlayerNames name = names[i];
+                UpdateUsernames(name.Steam64, name);
+            }
+        }
     }
 
     public const string TableEntries = "moderation_entries";

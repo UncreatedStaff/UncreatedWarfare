@@ -151,6 +151,7 @@ public abstract class ModerationEntry
     }
     public virtual string GetDisplayName() => ToString();
     public virtual string? GetDisplayMessage() => Message;
+    public virtual Guid? GetIcon() => null;
     public virtual async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
         workingList.Add($"Entry ID: {Id.Key.ToString(formatter)}");
@@ -192,6 +193,8 @@ public abstract class ModerationEntry
         else if (RelevantLogsBegin.HasValue)
             workingList.Add($"Relevant Log: {RelevantLogsBegin.Value.UtcDateTime.ToString(ModerationUI.DateTimeFormat, formatter)}");
     }
+
+    public virtual bool TryGetDisplayActor(out RelatedActor actor) => TryGetPrimaryAdmin(out actor);
     public bool TryGetPrimaryAdmin(out RelatedActor actor)
     {
         for (int i = 0; i < Actors.Length; ++i)

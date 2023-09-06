@@ -45,7 +45,9 @@ public sealed class SteamAPI
     {
         if (string.IsNullOrEmpty(UCWarfare.Config.SteamAPIKey))
             throw new InvalidOperationException("Steam API key not present.");
-        if (index >= players.Count)
+        if (length == 0)
+            return Array.Empty<PlayerSummary>();
+        if (index > players.Count)
             throw new ArgumentOutOfRangeException(nameof(index));
         if (index + length > players.Count)
             throw new ArgumentOutOfRangeException(nameof(length));
@@ -53,8 +55,6 @@ public sealed class SteamAPI
             length = players.Count;
         if (index < 0)
             index = 0;
-        if (players.Count == 0)
-            return Array.Empty<PlayerSummary>();
 
         string[] strs = new string[length];
         for (int i = 0; i < length; ++i)
@@ -91,6 +91,9 @@ public sealed class SteamAPI
                 await UniTask.WaitForSeconds(delay, cancellationToken: token);
                 continue;
             }
+
+            if (tries > 0)
+                L.Log($"[GETPLAYERSUMMARIES] Try {(tries + 1).ToString(CultureInfo.InvariantCulture)} / {tryCt.ToString(CultureInfo.InvariantCulture)} succeeded.", ConsoleColor.Green);
 
             try
             {
