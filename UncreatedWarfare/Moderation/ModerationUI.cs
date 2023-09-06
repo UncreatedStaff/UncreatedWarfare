@@ -1,12 +1,12 @@
-﻿using Cysharp.Threading.Tasks;
-using SDG.NetTransport;
-using SDG.Unturned;
-using Steamworks;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
+using SDG.NetTransport;
+using SDG.Unturned;
+using Steamworks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Framework.UI.Data;
@@ -14,9 +14,9 @@ using Uncreated.Framework.UI.Presets;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
-using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using SteamAPI = Uncreated.Warfare.Networking.SteamAPI;
 
 namespace Uncreated.Warfare.Moderation;
 internal class ModerationUI : UnturnedUI
@@ -1405,7 +1405,7 @@ internal class ModerationUI : UnturnedUI
 
             Task usernames = Data.ModerationSql.CacheUsernames(steam64Ids, token);
 
-            await Networking.SteamAPI.GetPlayerSummaries(steam64Ids, token);
+            await SteamAPI.GetPlayerSummaries(steam64Ids, token);
             await usernames;
 
             await UCWarfare.ToUpdate(token);
@@ -1623,12 +1623,12 @@ internal class ModerationUI : UnturnedUI
         public int PageCount => HistoryView is not { Length: > 0 } ? 1 : Mathf.CeilToInt(HistoryView.Length / (float)ModerationHistoryLength);
         public int HistoryPage { get; set; }
         public ulong SelectedPlayer { get; set; }
-        public int HistoryCount { get; set; } = 0;
-        public int PlayerCount { get; set; } = 0;
-        public int InfoActorCount { get; set; } = 0;
-        public int InfoEvidenceCount { get; set; } = 0;
-        public int ActionsActorCount { get; set; } = 0;
-        public int ActionsEvidenceCount { get; set; } = 0;
+        public int HistoryCount { get; set; }
+        public int PlayerCount { get; set; }
+        public int InfoActorCount { get; set; }
+        public int InfoEvidenceCount { get; set; }
+        public int ActionsActorCount { get; set; }
+        public int ActionsEvidenceCount { get; set; }
         public ModerationEntry? SelectedEntry { get; set; }
         public ModerationEntryType PendingType { get; set; } = ModerationEntryType.None;
         public PresetType PendingPreset { get; set; } = PresetType.None;
