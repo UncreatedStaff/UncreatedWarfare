@@ -295,25 +295,16 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
     private string GetOpenStandardFOBName(ulong team, out int number)
     {
-        int maxId = 0;
-        int lowestGap = int.MaxValue;
-        int last = -1;
+        int last = 0;
         foreach (FOB fob in FOBs.OfType<FOB>().Where(f => f.Team == team).OrderBy(x => x.Number))
         {
-            int c = fob.Number;
-            if (last != -1)
-            {
-                if (last + 1 != c && lowestGap > last + 1)
-                    lowestGap = last + 1;
-            }
+            if (fob.Number != last + 1)
+                break;
 
-            last = c;
-
-            if (maxId < c)
-                maxId = c;
+            last = fob.Number;
         }
 
-        number = lowestGap == int.MaxValue ? maxId + 1 : lowestGap;
+        number = last + 1;
         return "FOB" + number.ToString(Data.LocalLocale);
     }
     public void DestroyAllFOBs(ulong instigator = 0ul)

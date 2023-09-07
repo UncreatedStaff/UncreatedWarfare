@@ -277,6 +277,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             return _multCache = max;
         }
     }
+    public float Yaw => Player.look.aim.transform.rotation.eulerAngles.y;
     public Vector3 Position
     {
         get
