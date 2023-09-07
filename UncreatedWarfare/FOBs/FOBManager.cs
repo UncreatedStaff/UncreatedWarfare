@@ -261,10 +261,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     {
         if (_singleton == null)
             return;
-        if (_singleton._fobs.Remove(fob))
-        {
-            _singleton.RemoveFOBFromList(fob.Team, fob);
-        }
+
+        _singleton._fobs.Remove(fob);
+        _singleton.RemoveFOBFromList(fob.Team, fob);
     }
     public static InteractableVehicle SpawnEmplacement(VehicleAsset asset, Vector3 position, Quaternion rotation, ulong owner, ulong group)
     {
@@ -332,7 +331,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (fob.ContainsBuildable(buildable))
                 return fob;
         }
-
+        
         return null;
     }
     public IFOB? FindFob(InteractableVehicle vehicle)
@@ -490,6 +489,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         fob.Name = GetOpenStandardFOBName(team, out int number);
         fob.Number = number;
         fob.RegisterItem(radio.model.gameObject.AddComponent<RadioComponent>());
+        fob.Team = team;
 
         AddFOB(fob);
         return fob;

@@ -72,9 +72,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 
     Vector3 IDeployable.SpawnPosition => Bunker == null ? Vector3.zero : Bunker.SpawnPosition;
     float IDeployable.Yaw => Bunker == null ? 0f : Bunker.SpawnYaw;
-    public ulong Team => Radio == null ? 0 : Radio.Team;
+    public ulong Team { get; internal set; }
     public float Radius { get; private set; }
-
     public bool Bleeding => Radio != null && Radio.State == RadioComponent.RadioState.Bleeding;
     public float ProxyScore { get; private set; }
     public bool IsProxied => ProxyScore >= 1f;
@@ -144,6 +143,7 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             Destroy(this);
             return;
         }
+
         if (Radio.State != RadioComponent.RadioState.Alive)
         {
             L.LogWarning($"[FOBS] [{Name}] FOB created with damaged or destroyed radio.");
@@ -269,8 +269,20 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
             IconManager.AttachIcon(icon, mb.transform, item.Team, item.IconOffset);
         if (item is BunkerComponent b)
         {
+            BunkerComponent? oldBunker = Bunker;
+            if (oldBunker != null && b.TryGetComponent(out SpottedComponent spot))
+                Destroy(spot);
+
             Bunker = b;
             L.LogDebug($"[FOBS] [{Name}] Registered bunker: {item.Buildable}.");
+            if (b.State == ShovelableComponent.BuildableState.Full)
+            {
+                if (!b.TryGetComponent<SpottedComponent>(out _))
+                    b.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.Spotted.FOB, Team);
+                L.LogDebug($"[FOBS] [{Name}] Spotter is present.");
+            }
+            else if (b.TryGetComponent(out spot))
+                Destroy(spot);
             return;
         }
         if (item is RadioComponent c)
@@ -712,7 +724,12 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
     {
         _items.RemoveAll(x => x.Equals(item));
         if (item.Equals(Bunker))
+        {
+            if (Bunker != null && Bunker.TryGetComponent(out SpottedComponent spot))
+                Destroy(spot);
+
             Bunker = null;
+        }
         if (item.Equals(Radio))
             Radio = null!;
     }
@@ -764,7 +781,14 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
         }
         if (itemMb is BunkerComponent b && b == Bunker)
         {
+            if (b.TryGetComponent(out SpottedComponent comp))
+                Destroy(comp);
+
             Bunker = newObj.gameObject.AddComponent<BunkerComponent>();
+
+            if (!newObj.gameObject.TryGetComponent<SpottedComponent>(out _))
+                newObj.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.Spotted.FOB, Team);
+            
             Bunker.FOB = this;
             Destroy(b);
             if (Bunker.Icon.ValidReference(out Guid icon))
@@ -852,6 +876,8 @@ public sealed class FOB : MonoBehaviour, IRadiusFOB, IResourceFOB, IGameTickList
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (this.transform == null)
+            return;
         Vector3 pos = transform.position;
         float proxyScore = 0;
         float sqrRad = Radius;

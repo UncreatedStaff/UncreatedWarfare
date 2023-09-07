@@ -208,6 +208,7 @@ public static class EventFunctions
                 hits.Sort((a, _) => (ELayerMask)a.transform.gameObject.layer is ELayerMask.PLAYER ? -1 : 1);
 
                 SpottedComponent.MarkTarget(hits[0].transform, firer);
+                UnityEngine.Object.Destroy(projectile);
                 return;
             }
 
@@ -547,6 +548,7 @@ public static class EventFunctions
             }
             else if (TeamManager.LobbyZone.IsInside(ucplayer.Position) || Data.Gamemode == null || ucplayer.Save.LastGame != Data.Gamemode.GameID || Data.Gamemode.State is not State.Active and not State.Staging)
             {
+                ucplayer.Player.life.sendRevive();
                 L.LogDebug("Player " + ucplayer + " did not play this game, leaving group.");
                 if (Data.Gamemode is ITeams teams && teams.UseTeamSelector && teams.TeamSelector is { IsLoaded: true })
                     teams.TeamSelector.JoinSelectionMenu(ucplayer);
@@ -559,13 +561,16 @@ public static class EventFunctions
                 ulong other = TeamManager.Other(ucplayer.Save.Team);
                 Vector3 pos = ucplayer.Position;
                 // if there's no teammates nearby then teleport them
-                TeamManager.JoinTeam(ucplayer, ucplayer.Save.Team, PlayerManager.OnlinePlayers.Any(x => 
+                bool teleport = PlayerManager.OnlinePlayers.Any(x =>
                     x.GetTeam() == other &&
-                    (x.Position - pos).sqrMagnitude <= EnemyNearbyRespawnDistance * EnemyNearbyRespawnDistance),
-                    true);
+                    (x.Position - pos).sqrMagnitude <= EnemyNearbyRespawnDistance * EnemyNearbyRespawnDistance);
+                TeamManager.JoinTeam(ucplayer, ucplayer.Save.Team, teleport, true);
+                if (teleport)
+                    ucplayer.Player.life.sendRevive();
             }
             else if (Data.Gamemode is ITeams teams && teams.UseTeamSelector && teams.TeamSelector is { IsLoaded: true })
             {
+                ucplayer.Player.life.sendRevive();
                 L.LogDebug("Player " + ucplayer + " played this game but can't join " + ucplayer.Save.Team + ", joining lobby.");
                 teams.TeamSelector.JoinSelectionMenu(ucplayer);
             }

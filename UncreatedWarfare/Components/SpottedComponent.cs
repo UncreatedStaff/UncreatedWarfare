@@ -288,6 +288,12 @@ public class SpottedComponent : MonoBehaviour
     {
         Deactivate();
         AllMarkers.Remove(this);
+        if (_statInit)
+        {
+            EventDispatcher.EnterVehicle -= OnEnterVehicle;
+            EventDispatcher.ExitVehicle -= OnExitVehicle;
+            _statInit = false;
+        }
     }
     public void Activate(UCPlayer spotter, bool isUav) => Activate(spotter, _defaultTimer, isUav);
     public void Activate(UCPlayer spotter, float seconds, bool isUav)
