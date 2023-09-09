@@ -259,6 +259,8 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
             {
                 float rad = Cache.Radius;
                 rad *= rad;
+                float vehicleRad = Cache.Radius / 4f;
+                vehicleRad *= vehicleRad;
                 _lastTick = t;
                 Vector3 pos = transform.position;
                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
@@ -282,7 +284,12 @@ public class Cache : IRadiusFOB, IObjective, IPlayerDisconnectListener, IDisposa
                     }
                     else if (team is > 0 and < 3)
                     {
-                        if (!pl.Player.life.isDead && (pos2 - pos).sqrMagnitude < rad)
+                        bool isProxying = !pl.Player.life.isDead && (pos2 - pos).sqrMagnitude < rad;
+
+                        if (isProxying && pl.IsInVehicle)
+                            isProxying = (pos2 - pos).sqrMagnitude < vehicleRad;
+
+                        if (isProxying)
                         {
                             if (!_cache.NearbyAttackers.HasPlayer(pl))
                             {
