@@ -191,7 +191,7 @@ public abstract class DatabaseInterface
     public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
         ModerationEntryType[]? types = null;
-        if (typeof(T) != typeof(ModerationEntry))
+        if (type != typeof(ModerationEntry))
             ModerationReflection.TypeInheritance.TryGetValue(typeof(T), out types);
 
         StringBuilder sb = new StringBuilder("SELECT ", 164);
