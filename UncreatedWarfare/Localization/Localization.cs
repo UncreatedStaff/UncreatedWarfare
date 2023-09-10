@@ -387,6 +387,8 @@ public static class Localization
                 cost = T.KitPremiumOwned.Translate(player);
             else if (kit.Type == KitType.Special)
                 cost = T.KitExclusive.Translate(player);
+            else if (kit.EliteKitInfo?.Product?.DefaultPrice is { UnitAmountDecimal: { } price })
+                cost = T.KitPremiumCost.Translate(player, price);
             else
                 cost = kit.PremiumCost <= 0m ? T.KitFree.Translate(player) : T.KitPremiumCost.Translate(player, kit.PremiumCost);
             goto n;

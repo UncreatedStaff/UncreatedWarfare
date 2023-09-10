@@ -86,7 +86,7 @@ partial class KitManager
     public const string COLUMN_LAYOUT_OLD_Y = "OldY";
     public const string COLUMN_LAYOUT_NEW_Y = "NewY";
     public const string COLUMN_LAYOUT_NEW_ROTATION = "NewRotation";
-    private static readonly Schema[] SCHEMAS =
+    internal static readonly Schema[] SCHEMAS =
     {
         new Schema(TABLE_MAIN, new Schema.Column[]
         {
@@ -1439,10 +1439,10 @@ partial class KitManager
         return list.ToArray();
     }
     /// <exception cref="FormatException"/>
-    private static Kit ReadKit(MySqlDataReader reader, int colOffset = 0)
+    internal static Kit ReadKit(MySqlDataReader reader, int colOffset = 0)
     {
         string id = reader.GetString(colOffset + 1);
-        if (id.Length is < 1 or > KitEx.KitNameMaxCharLimit)
+        if (id.Length < 1 || id.Length > KitEx.KitNameMaxCharLimit)
             throw new FormatException("Invalid kit ID: \"" + id + "\".");
         Class @class = reader.ReadStringEnum<Class>(colOffset + 3) ?? throw new FormatException("Invalid class: \"" + reader.GetString(colOffset + 3) + "\".");
         KitType type = reader.ReadStringEnum<KitType>(colOffset + 5) ?? throw new FormatException("Invalid type: \"" + reader.GetString(colOffset + 5) + "\".");
@@ -1465,7 +1465,7 @@ partial class KitManager
             CreditCost = reader.IsDBNull(colOffset + 12) ? 0 : reader.GetInt32(colOffset + 12),
             PremiumCost = type is KitType.Public or KitType.Special || reader.IsDBNull(colOffset + 13)
                 ? 0
-                : type is KitType.Loadout
+                : type is KitType.Loadout && UCWarfare.IsLoaded
                     ? decimal.Round(UCWarfare.Config.LoadoutCost, 2)
                     : new decimal(Math.Round(reader.GetDouble(colOffset + 13), 2)),
             RequiresNitro = !reader.IsDBNull(colOffset + 14) && reader.GetBoolean(colOffset + 14),
@@ -1482,7 +1482,7 @@ partial class KitManager
         };
     }
     /// <exception cref="FormatException"/>
-    private static IKitItem ReadItem(MySqlDataReader reader, int colOffset = 0)
+    internal static IKitItem ReadItem(MySqlDataReader reader, int colOffset = 0)
     {
         IKitItem item;
         bool hasGuid = !reader.IsDBNull(colOffset + 1);

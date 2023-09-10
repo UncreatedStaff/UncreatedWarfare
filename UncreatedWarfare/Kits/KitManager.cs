@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -20,6 +21,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -34,7 +36,8 @@ namespace Uncreated.Warfare.Kits;
 public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync, IGameTickListener, IPlayerDisconnectListener, ITCPConnectedListener
 {
     private static int _v;
-    public static readonly KitMenuUI MenuUI = new KitMenuUI();
+    private static KitMenuUI? _menuUi;
+    public static KitMenuUI MenuUI => _menuUi ??= new KitMenuUI();
     private readonly List<Kit> _kitListTemp = new List<Kit>(64);
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
@@ -74,6 +77,10 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         {
             WriteRelease();
         }
+
+        await Data.PurchasingDataStore.RefreshKits(token: token).ConfigureAwait(false);
+        await Data.PurchasingDataStore.RefreshBundles(token: token).ConfigureAwait(false);
+
         if (dirty != null)
         {
             foreach (SqlItem<Kit> kit in dirty)
@@ -259,7 +266,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         UpdateSigns(proxy);
         return proxy;
     }
-    public static KitManager? GetSingletonQuick() => Data.Is(out IKitRequests r) ? r.KitManager : Data.Singletons.GetSingleton<KitManager>();
+    public static KitManager? GetSingletonQuick() => Data.Is(out IKitRequests r) ? r.KitManager : Data.Singletons?.GetSingleton<KitManager>();
     public static float GetDefaultTeamLimit(Class @class) => @class switch
     {
         Class.HAT => 0.1f,

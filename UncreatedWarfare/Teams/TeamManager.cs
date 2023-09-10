@@ -481,6 +481,7 @@ public static class TeamManager
     public const ulong AdminID = 3;
     private static IReadOnlyList<FactionInfo> _factionsReadonly;
     public static IReadOnlyList<FactionInfo> Factions => _factionsReadonly ?? throw new NullReferenceException("Factions have not been loaded yet.");
+    public static bool FactionsLoaded => _factionsReadonly != null;
     public static TeamConfigData Config => _data.Data;
     public static string Team1Name => Team1Faction.Name;
     public static string Team2Name => Team2Faction.Name;

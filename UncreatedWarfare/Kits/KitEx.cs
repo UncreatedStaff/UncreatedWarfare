@@ -22,16 +22,16 @@ public delegate void KitChanged(UCPlayer player, SqlItem<Kit>? kit, SqlItem<Kit>
 
 public static class KitEx
 {
-    public const int BranchMaxCharLimit = 16;
-    public const int ClothingMaxCharLimit = 16;
-    public const int ClassMaxCharLimit = 20;
-    public const int TypeMaxCharLimit = 16;
-    public const int RedirectTypeCharLimit = 20;
-    public const int SquadLevelMaxCharLimit = 16;
-    public const int KitNameMaxCharLimit = 25;
-    public const int WeaponTextMaxCharLimit = 128;
-    public const int SignTextMaxCharLimit = 50;
-    public const int MaxStateArrayLimit = 18;
+    public static readonly int BranchMaxCharLimit = 16;
+    public static readonly int ClothingMaxCharLimit = 16;
+    public static readonly int ClassMaxCharLimit = 20;
+    public static readonly int TypeMaxCharLimit = 16;
+    public static readonly int RedirectTypeCharLimit = 20;
+    public static readonly int SquadLevelMaxCharLimit = 16;
+    public static readonly int KitNameMaxCharLimit = 25;
+    public static readonly int WeaponTextMaxCharLimit = 128;
+    public static readonly int SignTextMaxCharLimit = 50;
+    public static readonly int MaxStateArrayLimit = 18;
     public static void WriteKitLocalization(LanguageInfo language, string path, bool writeMising)
     {
         KitManager? manager = KitManager.GetSingletonQuick();

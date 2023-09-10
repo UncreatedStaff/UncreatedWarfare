@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Cysharp.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
@@ -38,13 +39,43 @@ public static class L
     private static ICommandInputOutput? _defaultIOHandler;
     private delegate void OutputToConsole(string value, ConsoleColor color);
     private static OutputToConsole? _outputToConsoleMethod;
-    private static readonly StackTraceCleaner Cleaner = new StackTraceCleaner(new StackCleanerConfiguration()
+    private static readonly StackTraceCleaner Cleaner;
+    static L()
     {
-        ColorFormatting = StackColorFormatType.ExtendedANSIColor,
-        Colors = UnityColor32Config.Default,
-        IncludeNamespaces = false,
-        IncludeFileData = true
-    });
+        StackCleanerConfiguration config = new StackCleanerConfiguration
+        {
+            ColorFormatting = StackColorFormatType.ExtendedANSIColor,
+            Colors = UnityColor32Config.Default,
+            IncludeNamespaces = false,
+            IncludeFileData = true
+        };
+        List<Type> hiddenTypes = new List<Type>(config.GetHiddenTypes())
+        {
+            typeof(UniTask),
+        };
+        Type? type = typeof(UniTask).Assembly.GetType("Cysharp.Threading.Tasks.EnumeratorAsyncExtensions+EnumeratorPromise", false, false);
+
+        if (type != null)
+            hiddenTypes.Add(type);
+
+        type = typeof(UniTask).Assembly.GetType("Cysharp.Threading.Tasks.CompilerServices.AsyncUniTask`1", false, false);
+
+        if (type != null)
+            hiddenTypes.Add(type);
+
+        type = typeof(UniTask).Assembly.GetType("Cysharp.Threading.Tasks.CompilerServices.AsyncUniTask`2", false, false);
+
+        if (type != null)
+            hiddenTypes.Add(type);
+
+        foreach (Type baseType in typeof(UniTask).GetNestedTypes(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).Where(x => x.Name.IndexOf("promise", StringComparison.OrdinalIgnoreCase) != -1))
+        {
+            hiddenTypes.Add(baseType);
+        }
+
+        config.HiddenTypes = hiddenTypes;
+        Cleaner = new StackTraceCleaner(config);
+    }
     public static bool IsBufferingLogs { get; set; }
     public static void FlushBadLogs()
     {

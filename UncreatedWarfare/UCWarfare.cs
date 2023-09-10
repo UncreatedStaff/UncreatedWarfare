@@ -27,6 +27,7 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
@@ -170,6 +171,9 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         L.Log("Loading Moderation Data...", ConsoleColor.Magenta);
         Data.ModerationSql = new WarfareDatabaseInterface();
         // await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
+
+        Data.WarfareStripeService = new WarfareStripeService();
+        Data.PurchasingDataStore = await PurchaseRecordsInterface.Create<WarfarePurchaseRecordsInterface>(token).ConfigureAwait(false);
 
 
         await ToUpdate(token);
