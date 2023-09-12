@@ -1670,14 +1670,15 @@ public static class TeamManager
     [Obsolete]
     private static readonly Guid VestRedirect               = new Guid("2b22ac1b5de74755a24c2f05219c5e1f");
 #endif
-    public static Task ReloadFactions(CancellationToken token)
+    public static Task ReloadFactions(CancellationToken token) => ReloadFactions(Data.AdminSql, token);
+    public static Task ReloadFactions(IMySqlDatabase sql, CancellationToken token)
     {
         if (_factions == null)
         {
             _factions = new List<FactionInfo>(DefaultFactions.Length);
             _factionsReadonly = _factions.AsReadOnly();
         }
-        return FactionInfo.DownloadFactions(Data.AdminSql, _factions, token);
+        return FactionInfo.DownloadFactions(sql, _factions, token);
     }
     public static void WriteFactionLocalization(LanguageInfo language, string path, bool writeMising)
     {
@@ -2062,7 +2063,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     };
     // ReSharper restore InconsistantNaming
 
-    private static async Task AddDefaults(MySqlDatabase sql, CancellationToken token = default)
+    private static async Task AddDefaults(IMySqlDatabase sql, CancellationToken token = default)
     {
         StringBuilder builder = new StringBuilder($"INSERT INTO `{TABLE_MAIN}` (`{COLUMN_PK}`,`{COLUMN_ID}`,`{COLUMN_NAME}`,`{COLUMN_SHORT_NAME}`,`{COLUMN_ABBREVIATION}`," +
                                                   $"`{COLUMN_HEX_COLOR}`,`{COLUMN_UNARMED_KIT}`,`{COLUMN_FLAG_IMAGE_URL}`,`{COLUMN_SPRITE_INDEX}`,`{COLUMN_EMOJI}`) VALUES ", 256);
@@ -2222,7 +2223,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         builder.Append(';');
         await sql.NonQueryAsync(builder.ToString(), objs2.ToArray(), token).ConfigureAwait(false);
     }
-    public static async Task DownloadFactions(MySqlDatabase sql, List<FactionInfo> list, CancellationToken token = default)
+    public static async Task DownloadFactions(IMySqlDatabase sql, List<FactionInfo> list, CancellationToken token = default)
     {
         if (UCWarfare.IsLoaded)
             Localization.ClearSection(TranslationSection.Factions);

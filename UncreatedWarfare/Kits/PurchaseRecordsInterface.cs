@@ -173,7 +173,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
             }, false);
 
             if (!TeamManager.FactionsLoaded)
-                await TeamManager.ReloadFactions(token).ConfigureAwait(false);
+                await TeamManager.ReloadFactions(Sql, token).ConfigureAwait(false);
 
             for (int i = 0; i < bundles.Count; ++i)
             {
@@ -441,6 +441,9 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
                     kit.RequestSigns = arr;
             }, false);
 
+            if (!TeamManager.FactionsLoaded)
+                await TeamManager.ReloadFactions(Sql, token).ConfigureAwait(false);
+
             _kits = kits.ToArray();
             Kits = new ReadOnlyCollection<Kit>(_kits);
 
@@ -453,7 +456,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
                     EliteBundle? bundle = _bundles[i];
                     if (bundle?.Kits == null)
                         continue;
-                    for (int j = 0; j < bundle.Kits.Length; ++i)
+                    for (int j = 0; j < bundle.Kits.Length; ++j)
                     {
                         Kit? kit = bundle.Kits[j];
                         if (kit == null)
@@ -463,7 +466,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
                         {
                             if (kits[k].PrimaryKey.Key == key)
                             {
-                                bundle.Kits[k] = kits[k];
+                                bundle.Kits[j] = kits[k];
                                 break;
                             }
                         }
