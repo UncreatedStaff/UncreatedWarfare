@@ -1,12 +1,13 @@
-﻿using Stripe;
+﻿using Cysharp.Threading.Tasks;
+using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
-using Steamworks;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Networking.Purchasing;
@@ -54,6 +55,8 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
     public Product LoadoutProduct { get; set; }
     public abstract IMySqlDatabase Sql { get; }
     public abstract IStripeService StripeService { get; }
+    protected virtual KitSubItemTypes ExpandFields => KitSubItemTypes.All;
+    public bool FilterLoadouts { get; set; } = true;
     public UCSemaphore Semaphore { get; } = new UCSemaphore();
     public static async Task<T> Create<T>(CancellationToken token = default) where T : PurchaseRecordsInterface, new()
     {
@@ -173,7 +176,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
             }, false);
 
             if (!TeamManager.FactionsLoaded)
-                await TeamManager.ReloadFactions(Sql, token).ConfigureAwait(false);
+                await TeamManager.ReloadFactions(Sql, false, token).ConfigureAwait(false);
 
             for (int i = 0; i < bundles.Count; ++i)
             {
@@ -326,106 +329,30 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
 
             List<Kit> kits = new List<Kit>(256);
 
-            await Sql.QueryAsync(F.BuildSelect(TABLE_MAIN, COLUMN_PK, COLUMN_KIT_ID, COLUMN_FACTION,
+            StringBuilder? inStr = FilterLoadouts && ExpandFields != 0 ? new StringBuilder(128) : null;
+
+            await Sql.QueryAsync($"SELECT {SqlTypes.ColumnList(COLUMN_PK, COLUMN_KIT_ID, COLUMN_FACTION,
                 COLUMN_CLASS, COLUMN_BRANCH, COLUMN_TYPE, COLUMN_REQUEST_COOLDOWN, COLUMN_TEAM_LIMIT,
                 COLUMN_SEASON, COLUMN_DISABLED, COLUMN_WEAPONS, COLUMN_SQUAD_LEVEL, COLUMN_COST_CREDITS,
                 COLUMN_COST_PREMIUM, COLUMN_REQUIRES_NITRO, COLUMN_MAPS_WHITELIST, COLUMN_FACTIONS_WHITELIST, COLUMN_CREATOR,
-                COLUMN_LAST_EDITOR, COLUMN_CREATION_TIME, COLUMN_LAST_EDIT_TIME), null, reader =>
+                COLUMN_LAST_EDITOR, COLUMN_CREATION_TIME, COLUMN_LAST_EDIT_TIME)} FROM `{TABLE_MAIN}` WHERE `{COLUMN_TYPE}` != @0;",
+                new object[] { KitType.Loadout.ToString() }, reader =>
                 {
-                    kits.Add(ReadKit(reader));
+                    PrimaryKey pk = reader.GetInt32(0);
+                    if (inStr is not null)
+                    {
+                        if (inStr.Length != 0)
+                            inStr.Append(',');
+                        inStr.Append(pk.Key.ToString(CultureInfo.InvariantCulture));
+                    }
+                    Kit kit = ReadKit(reader);
+                    kit.PrimaryKey = pk;
+                    kits.Add(kit);
                 }, token).ConfigureAwait(false);
 
-            List<PrimaryKeyPair<IKitItem>> items = new List<PrimaryKeyPair<IKitItem>>();
-            await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, COLUMN_ITEM_GUID, COLUMN_ITEM_X, COLUMN_ITEM_Y, COLUMN_ITEM_ROTATION, COLUMN_ITEM_PAGE,
-                COLUMN_ITEM_CLOTHING, COLUMN_ITEM_REDIRECT, COLUMN_ITEM_AMOUNT, COLUMN_ITEM_METADATA) + " FROM `" + TABLE_ITEMS + "` ORDER BY `" + COLUMN_EXT_PK + "`;",
-                null, reader =>
-                {
-                    items.Add(new PrimaryKeyPair<IKitItem>(reader.GetInt32(0), ReadItem(reader)));
-                }, token).ConfigureAwait(false);
+            string inStrV = inStr == null ? string.Empty : $" WHERE `{COLUMN_EXT_PK}` IN ({inStr})";
 
-            F.ApplyQueriedList(items, (key, arr) =>
-            {
-                Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
-                if (kit != null)
-                    kit.Items = arr;
-            }, false);
-
-            List<PrimaryKeyPair<UnlockRequirement>> unlockRequirements = new List<PrimaryKeyPair<UnlockRequirement>>();
-            await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, UnlockRequirement.COLUMN_JSON) + " FROM `" + TABLE_UNLOCK_REQUIREMENTS + "` ORDER BY `" + COLUMN_EXT_PK + "`;",
-                null, reader =>
-                {
-                    UnlockRequirement? req = UnlockRequirement.Read(reader);
-                    if (req != null)
-                        unlockRequirements.Add(new PrimaryKeyPair<UnlockRequirement>(reader.GetInt32(0), req));
-                }, token).ConfigureAwait(false);
-
-            F.ApplyQueriedList(unlockRequirements, (key, arr) =>
-            {
-                Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
-                if (kit != null)
-                    kit.UnlockRequirements = arr;
-            }, false);
-
-            List<PrimaryKeyPair<Skillset>> skillsetRequirements = new List<PrimaryKeyPair<Skillset>>();
-            await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, Skillset.COLUMN_SKILL, Skillset.COLUMN_LEVEL) + " FROM `" + TABLE_SKILLSETS + "` ORDER BY `" + COLUMN_EXT_PK + "`;",
-                null, reader =>
-                {
-                    Skillset skillset = Skillset.Read(reader);
-                    skillsetRequirements.Add(new PrimaryKeyPair<Skillset>(reader.GetInt32(0), skillset));
-                }, token).ConfigureAwait(false);
-
-            F.ApplyQueriedList(skillsetRequirements, (key, arr) =>
-            {
-                Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
-                if (kit != null)
-                    kit.Skillsets = arr;
-            }, false);
-
-            List<PrimaryKeyPair<PrimaryKey>> pkRequirements = new List<PrimaryKeyPair<PrimaryKey>>();
-            await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, COLUMN_FILTER_FACTION) + " FROM `" + TABLE_FACTION_FILTER + "` ORDER BY `" + COLUMN_EXT_PK + "`;",
-                null, reader =>
-                {
-                    pkRequirements.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), new PrimaryKey(reader.GetInt32(1))));
-                }, token).ConfigureAwait(false);
-
-            F.ApplyQueriedList(pkRequirements, (key, arr) =>
-            {
-                Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
-                if (kit != null)
-                    kit.FactionFilter = arr;
-            }, false);
-
-            pkRequirements.Clear();
-
-            await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, COLUMN_FILTER_MAP) + " FROM `" + TABLE_MAP_FILTER + "` ORDER BY `" + COLUMN_EXT_PK + "`;",
-                null, reader =>
-                {
-                    pkRequirements.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), new PrimaryKey(reader.GetInt32(1))));
-                }, token).ConfigureAwait(false);
-
-            F.ApplyQueriedList(pkRequirements, (key, arr) =>
-            {
-                Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
-                if (kit != null)
-                    kit.MapFilter = arr;
-            }, false);
-
-            pkRequirements.Clear();
-
-            await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, COLUMN_REQUEST_SIGN) + " FROM `" + TABLE_REQUEST_SIGNS + "` ORDER BY `" + COLUMN_EXT_PK + "`;",
-                null, reader =>
-                {
-                    pkRequirements.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), new PrimaryKey(reader.GetInt32(1))));
-                }, token).ConfigureAwait(false);
-
-            F.ApplyQueriedList(pkRequirements, (key, arr) =>
-            {
-                Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
-                if (kit != null)
-                    kit.RequestSigns = arr;
-            }, false);
-
-            await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, F.COLUMN_LANGUAGE, F.COLUMN_VALUE) + " FROM `" + TABLE_SIGN_TEXT + "` ORDER BY `" + COLUMN_EXT_PK + "`;",
+            await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, F.COLUMN_LANGUAGE, F.COLUMN_VALUE) + " FROM `" + TABLE_SIGN_TEXT + $"`{inStrV} ORDER BY `" + COLUMN_EXT_PK + "`;",
                 null, reader =>
                 {
                     int key = reader.GetInt32(0);
@@ -434,15 +361,124 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
                         F.ReadToTranslationList(reader, kit.SignText ??= new TranslationList(kit.Type is KitType.Special or KitType.Loadout ? 1 : 4));
                 }, token).ConfigureAwait(false);
 
-            F.ApplyQueriedList(pkRequirements, (key, arr) =>
+            if (ExpandFields == 0)
+                goto skip;
+
+            if ((ExpandFields & KitSubItemTypes.Items) != 0)
             {
-                Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
-                if (kit != null)
-                    kit.RequestSigns = arr;
-            }, false);
+                List<PrimaryKeyPair<IKitItem>> items = new List<PrimaryKeyPair<IKitItem>>();
+                await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, COLUMN_ITEM_GUID, COLUMN_ITEM_X, COLUMN_ITEM_Y, COLUMN_ITEM_ROTATION, COLUMN_ITEM_PAGE,
+                        COLUMN_ITEM_CLOTHING, COLUMN_ITEM_REDIRECT, COLUMN_ITEM_AMOUNT, COLUMN_ITEM_METADATA) + " FROM `" + TABLE_ITEMS + $"`{inStrV} ORDER BY `" + COLUMN_EXT_PK + "`;",
+                    null, reader =>
+                    {
+                        items.Add(new PrimaryKeyPair<IKitItem>(reader.GetInt32(0), ReadItem(reader)));
+                    }, token).ConfigureAwait(false);
+
+                F.ApplyQueriedList(items, (key, arr) =>
+                {
+                    Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
+                    if (kit != null)
+                        kit.Items = arr;
+                }, false);
+            }
+
+            if ((ExpandFields & KitSubItemTypes.UnlockRequirements) != 0)
+            {
+                List<PrimaryKeyPair<UnlockRequirement>> unlockRequirements = new List<PrimaryKeyPair<UnlockRequirement>>();
+                await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, UnlockRequirement.COLUMN_JSON) + " FROM `" + TABLE_UNLOCK_REQUIREMENTS + $"`{inStrV} ORDER BY `" + COLUMN_EXT_PK + "`;",
+                    null, reader =>
+                    {
+                        UnlockRequirement? req = UnlockRequirement.Read(reader);
+                        if (req != null)
+                            unlockRequirements.Add(new PrimaryKeyPair<UnlockRequirement>(reader.GetInt32(0), req));
+                    }, token).ConfigureAwait(false);
+
+                F.ApplyQueriedList(unlockRequirements, (key, arr) =>
+                {
+                    Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
+                    if (kit != null)
+                        kit.UnlockRequirements = arr;
+                }, false);
+            }
+            
+            if ((ExpandFields & KitSubItemTypes.Skillsets) != 0)
+            {
+                List<PrimaryKeyPair<Skillset>> skillsetRequirements = new List<PrimaryKeyPair<Skillset>>();
+                await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, Skillset.COLUMN_SKILL, Skillset.COLUMN_LEVEL) + " FROM `" + TABLE_SKILLSETS + $"`{inStrV} ORDER BY `" + COLUMN_EXT_PK + "`;",
+                    null, reader =>
+                    {
+                        Skillset skillset = Skillset.Read(reader);
+                        skillsetRequirements.Add(new PrimaryKeyPair<Skillset>(reader.GetInt32(0), skillset));
+                    }, token).ConfigureAwait(false);
+
+                F.ApplyQueriedList(skillsetRequirements, (key, arr) =>
+                {
+                    Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
+                    if (kit != null)
+                        kit.Skillsets = arr;
+                }, false);
+            }
+
+            if ((ExpandFields & (KitSubItemTypes.Factions | KitSubItemTypes.Maps | KitSubItemTypes.RequestSigns)) == 0)
+                goto skip;
+
+            List<PrimaryKeyPair<PrimaryKey>> pkRequirements = new List<PrimaryKeyPair<PrimaryKey>>();
+            if ((ExpandFields & KitSubItemTypes.Factions) != 0)
+            {
+                await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, COLUMN_FILTER_FACTION) + " FROM `" + TABLE_FACTION_FILTER + $"`{inStrV} ORDER BY `" + COLUMN_EXT_PK + "`;",
+                    null, reader =>
+                    {
+                        pkRequirements.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), new PrimaryKey(reader.GetInt32(1))));
+                    }, token).ConfigureAwait(false);
+
+                F.ApplyQueriedList(pkRequirements, (key, arr) =>
+                {
+                    Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
+                    if (kit != null)
+                        kit.FactionFilter = arr;
+                }, false);
+
+                pkRequirements.Clear();
+            }
+
+            if ((ExpandFields & KitSubItemTypes.Maps) != 0)
+            {
+                await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, COLUMN_FILTER_MAP) + " FROM `" + TABLE_MAP_FILTER + $"`{inStrV} ORDER BY `" + COLUMN_EXT_PK + "`;",
+                    null, reader =>
+                    {
+                        pkRequirements.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), new PrimaryKey(reader.GetInt32(1))));
+                    }, token).ConfigureAwait(false);
+
+                F.ApplyQueriedList(pkRequirements, (key, arr) =>
+                {
+                    Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
+                    if (kit != null)
+                        kit.MapFilter = arr;
+                }, false);
+
+                pkRequirements.Clear();
+            }
+
+            if ((ExpandFields & KitSubItemTypes.RequestSigns) != 0)
+            {
+                await Sql.QueryAsync("SELECT " + SqlTypes.ColumnList(COLUMN_EXT_PK, COLUMN_REQUEST_SIGN) + " FROM `" + TABLE_REQUEST_SIGNS + $"`{inStrV} ORDER BY `" + COLUMN_EXT_PK + "`;",
+                    null, reader =>
+                    {
+                        pkRequirements.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), new PrimaryKey(reader.GetInt32(1))));
+                    }, token).ConfigureAwait(false);
+
+                F.ApplyQueriedList(pkRequirements, (key, arr) =>
+                {
+                    Kit kit = kits.Find(x => x.PrimaryKey.Key == key);
+                    if (kit != null)
+                        kit.RequestSigns = arr;
+                }, false);
+            }
+
+            skip:
 
             if (!TeamManager.FactionsLoaded)
-                await TeamManager.ReloadFactions(Sql, token).ConfigureAwait(false);
+                await TeamManager.ReloadFactions(Sql, false, token).ConfigureAwait(false);
 
             _kits = kits.ToArray();
             Kits = new ReadOnlyCollection<Kit>(_kits);
@@ -490,6 +526,19 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
         if (StripeService is IDisposable disp)
             disp.Dispose();
         Semaphore.Dispose();
+    }
+
+    [Flags]
+    public enum KitSubItemTypes
+    {
+        Items = 1 << 1,
+        UnlockRequirements = 1 << 2,
+        Skillsets = 1 << 3,
+        Factions = 1 << 4,
+        Maps = 1 << 5,
+        RequestSigns = 1 << 6,
+        SignText = 1 << 7,
+        All = -1
     }
 }
 
