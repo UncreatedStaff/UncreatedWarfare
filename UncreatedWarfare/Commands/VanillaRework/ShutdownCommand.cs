@@ -115,9 +115,6 @@ public class ShutdownCommand : Command
                 Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
                 NetCalls.SendShuttingDownAfter.NetInvoke(0UL, reason);
                 ctx.Defer();
-#if RELEASE
-                Console.WriteLine("shutdown");
-#endif
             }
             else throw ctx.SendCorrectUsage("/shutdown after <reason>");
         }
@@ -128,9 +125,6 @@ public class ShutdownCommand : Command
                 throw ctx.Reply(T.InvalidTime, time);
             ShutdownIn(secs, reason, ctx.CallerID);
             ctx.Defer();
-#if RELEASE
-            Console.WriteLine("shutdown");
-#endif
         }
         else throw ctx.SendCorrectUsage(Syntax + " - " + Help);
     }

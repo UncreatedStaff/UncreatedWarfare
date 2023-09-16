@@ -1837,7 +1837,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         List<int> taken = new List<int>(4);
         await Data.DatabaseManager.QueryAsync("SELECT `Id` FROM `kits` WHERE `Id` LIKE @0 ORDER BY `Id`;", new object[]
         {
-            playerId.ToString(Data.AdminLocale) + "_%"
+            playerId.ToString(Data.AdminLocale) + "\\_%"
         }, reader =>
         {
             string name = reader.GetString(0);

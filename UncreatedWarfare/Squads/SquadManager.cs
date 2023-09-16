@@ -775,7 +775,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                     squad.Leader.KitClass == Class.Crewman ||
                     squad.Leader.KitClass == Class.Pilot);
 
-                bool noSquadMates = squad.Members.Count == 1;
+                bool noSquadMates = squad.Members.Count == 1 && PlayerManager.OnlinePlayers.Count(x => x.GetTeam() == squad.Team) > 3;
 
                 if (wrongKit || noSquadMates)
                 {

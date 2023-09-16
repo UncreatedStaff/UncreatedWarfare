@@ -261,10 +261,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     {
         if (_singleton == null)
             return;
-        if (_singleton._fobs.Remove(fob))
-        {
-            _singleton.RemoveFOBFromList(fob.Team, fob);
-        }
+
+        _singleton._fobs.Remove(fob);
+        _singleton.RemoveFOBFromList(fob.Team, fob);
     }
     public static InteractableVehicle SpawnEmplacement(VehicleAsset asset, Vector3 position, Quaternion rotation, ulong owner, ulong group)
     {
@@ -296,25 +295,16 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
     private string GetOpenStandardFOBName(ulong team, out int number)
     {
-        int maxId = 0;
-        int lowestGap = int.MaxValue;
-        int last = -1;
+        int last = 0;
         foreach (FOB fob in FOBs.OfType<FOB>().Where(f => f.Team == team).OrderBy(x => x.Number))
         {
-            int c = fob.Number;
-            if (last != -1)
-            {
-                if (last + 1 != c && lowestGap > last + 1)
-                    lowestGap = last + 1;
-            }
+            if (fob.Number != last + 1)
+                break;
 
-            last = c;
-
-            if (maxId < c)
-                maxId = c;
+            last = fob.Number;
         }
 
-        number = lowestGap == int.MaxValue ? maxId + 1 : lowestGap;
+        number = last + 1;
         return "FOB" + number.ToString(Data.LocalLocale);
     }
     public void DestroyAllFOBs(ulong instigator = 0ul)
@@ -332,7 +322,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (fob.ContainsBuildable(buildable))
                 return fob;
         }
-
+        
         return null;
     }
     public IFOB? FindFob(InteractableVehicle vehicle)
@@ -490,6 +480,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         fob.Name = GetOpenStandardFOBName(team, out int number);
         fob.Number = number;
         fob.RegisterItem(radio.model.gameObject.AddComponent<RadioComponent>());
+        fob.Team = team;
 
         AddFOB(fob);
         return fob;

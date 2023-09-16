@@ -1,7 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Globalization;
-using System.Linq;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Locations;
@@ -111,24 +110,9 @@ public class TeleportCommand : Command
         {
             ctx.AssertRanByPlayer();
             bool raycast = !ctx.TryGet(1, out float distance);
-            Vector3 castPt = default;
-            if (raycast)
-            {
-                distance = 10f;
-                raycast = Physics.Raycast(new Ray(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward), out RaycastHit hit,
-                    1024, RayMasks.BLOCK_COLLISION);
-                if (raycast)
-                    castPt = hit.point;
-            }
-            if (!raycast)
-                castPt = ctx.Caller.Position + ctx.Caller.Player.look.aim.forward * distance;
-            int c = 0;
-            while (!PlayerStance.hasStandingHeightClearanceAtPosition(castPt) && ++c < 12)
-                castPt += new Vector3(0, 1f, 0);
-
-            ctx.Caller.Player.teleportToLocationUnsafe(castPt, ctx.Caller.Player.transform.rotation.y);
-            throw ctx.Reply(T.TeleportSelfLocationSuccess,
-                $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
+            Jump(raycast, distance, ctx.Caller);
+            Vector3 castPt = ctx.Caller.Position;
+            throw ctx.Reply(T.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
         }
 
         Vector3 pos;
@@ -144,7 +128,7 @@ public class TeleportCommand : Command
                     Vector3 waypoint = ctx.Caller.Player.quests.markerPosition;
                     GridLocation loc = new GridLocation(in waypoint);
                     if (F.TryGetHeight(waypoint.x, waypoint.z, out float height, 2f) &&
-                        ctx.Caller.Player.teleportToLocation(new Vector3(waypoint.x, height, waypoint.z), ctx.Caller.Player.transform.rotation.eulerAngles.y))
+                        ctx.Caller.Player.teleportToLocation(new Vector3(waypoint.x, height, waypoint.z), ctx.Caller.Yaw))
                         throw ctx.Reply(T.TeleportSelfWaypointSuccess, loc);
                     throw ctx.Reply(T.TeleportSelfWaypointObstructed, loc);
                 }
@@ -161,7 +145,7 @@ public class TeleportCommand : Command
                         pos.y += 5f;
                     }
 
-                    if (ctx.Caller.Player.teleportToLocation(pos, onlinePlayer.Player.look.aim.transform.rotation.y))
+                    if (ctx.Caller.Player.teleportToLocation(pos, onlinePlayer.Yaw))
                         throw ctx.Reply(T.TeleportSelfSuccessPlayer, onlinePlayer);
                     throw ctx.Reply(T.TeleportSelfPlayerObstructed, onlinePlayer);
                 }
@@ -169,7 +153,7 @@ public class TeleportCommand : Command
                 {
                     Vector3 center = location.Center;
                     if (F.TryGetHeight(center.x, center.z, out float height, 2f) &&
-                        ctx.Caller.Player.teleportToLocation(new Vector3(center.x, height, center.z), ctx.Caller.Player.transform.rotation.eulerAngles.y))
+                        ctx.Caller.Player.teleportToLocation(new Vector3(center.x, height, center.z), ctx.Caller.Yaw))
                         throw ctx.Reply(T.TeleportSelfWaypointSuccess, location);
                     throw ctx.Reply(T.TeleportSelfWaypointObstructed, location);
                 }
@@ -179,7 +163,7 @@ public class TeleportCommand : Command
                 if (n is null)
                     throw ctx.Reply(T.TeleportLocationNotFound, input);
                 pos = n.transform.position;
-                if (ctx.Caller.Player.teleportToLocation(new Vector3(pos.x, F.GetTerrainHeightAt2DPoint(pos.x, pos.z, 1f), pos.z), 0f))
+                if (ctx.Caller.Player.teleportToLocation(new Vector3(pos.x, F.GetTerrainHeightAt2DPoint(pos.x, pos.z, 1f), pos.z), ctx.Caller.Yaw))
                     throw ctx.Reply(T.TeleportSelfLocationSuccess, n.locationName);
                 throw ctx.Reply(T.TeleportSelfLocationObstructed, n.locationName);
             case 2:
@@ -195,9 +179,12 @@ public class TeleportCommand : Command
                         Vector3 waypoint = ctx.Caller.Player.quests.markerPosition;
                         GridLocation loc = new GridLocation(in waypoint);
                         if (F.TryGetHeight(waypoint.x, waypoint.z, out float height, 2f) &&
-                            ctx.Caller.Player.teleportToLocation(new Vector3(waypoint.x, height, waypoint.z), ctx.Caller.Player.transform.rotation.eulerAngles.y))
-                            throw ctx.Reply(T.TeleportSelfWaypointSuccess, loc);
-                        throw ctx.Reply(T.TeleportSelfWaypointObstructed, loc);
+                            target.Player.teleportToLocation(new Vector3(waypoint.x, height, waypoint.z), target.Yaw))
+                        {
+                            target.SendChat(T.TeleportSelfWaypointSuccess, loc);
+                            throw ctx.Reply(T.TeleportOtherWaypointSuccess, target, loc);
+                        }
+                        throw ctx.Reply(T.TeleportOtherWaypointObstructed, target, loc);
                     }
                     if (ctx.TryGet(1, out _, out onlinePlayer) && onlinePlayer is not null)
                     {
@@ -215,7 +202,7 @@ public class TeleportCommand : Command
                             pos.y += 5f;
                         }
 
-                        if (target.Player.teleportToLocation(pos, onlinePlayer.Player.look.aim.transform.rotation.y))
+                        if (target.Player.teleportToLocation(pos, onlinePlayer.Yaw))
                         {
                             target.SendChat(T.TeleportSelfSuccessPlayer, onlinePlayer);
                             throw ctx.Reply(T.TeleportOtherSuccessPlayer, target, onlinePlayer);
@@ -226,9 +213,12 @@ public class TeleportCommand : Command
                     {
                         Vector3 center = location.Center;
                         if (F.TryGetHeight(center.x, center.z, out float height, 2f) &&
-                            ctx.Caller.Player.teleportToLocation(new Vector3(center.x, height, center.z), ctx.Caller.Player.transform.rotation.eulerAngles.y))
-                            throw ctx.Reply(T.TeleportSelfWaypointSuccess, location);
-                        throw ctx.Reply(T.TeleportSelfWaypointObstructed, location);
+                            target.Player.teleportToLocation(new Vector3(center.x, height, center.z), target.Yaw))
+                        {
+                            target.SendChat(T.TeleportSelfWaypointSuccess, location);
+                            throw ctx.Reply(T.TeleportOtherWaypointSuccess, target, location);
+                        }
+                        throw ctx.Reply(T.TeleportOtherWaypointObstructed, target, location);
                     }
                     input = ctx.GetRange(1)!;
                     n = F.StringFind(LocationDevkitNodeSystem.Get().GetAllNodes(), loc => loc.locationName, loc => loc.locationName.Length, input);
@@ -236,7 +226,7 @@ public class TeleportCommand : Command
                     if (n is null)
                         throw ctx.Reply(T.TeleportLocationNotFound, input);
                     pos = n.transform.position;
-                    if (target.Player.teleportToLocation(new Vector3(pos.x, F.GetTerrainHeightAt2DPoint(pos.x, pos.z, 1f), pos.z), 0f))
+                    if (target.Player.teleportToLocation(new Vector3(pos.x, F.GetTerrainHeightAt2DPoint(pos.x, pos.z, 1f), pos.z), target.Yaw))
                     {
                         target.SendChat(T.TeleportSelfLocationSuccess, n.locationName);
                         throw ctx.Reply(T.TeleportOtherSuccessLocation, target, n.locationName);
@@ -277,7 +267,7 @@ public class TeleportCommand : Command
                 if (float.IsNaN(y))
                     y = F.GetHeightAt2DPoint(x, z, pos.y, 2f);
                 pos = new Vector3(x, y, z);
-                throw ctx.Reply(ctx.Caller.Player.teleportToLocation(pos, ctx.Caller.Player.look.aim.transform.rotation.y)
+                throw ctx.Reply(ctx.Caller.Player.teleportToLocation(pos, ctx.Caller.Yaw)
                         ? T.TeleportSelfLocationSuccess
                         : T.TeleportSelfLocationObstructed,
                     $"({x.ToString("0.##", Data.LocalLocale)}, {y.ToString("0.##", Data.LocalLocale)}, {z.ToString("0.##", Data.LocalLocale)})");
@@ -319,7 +309,7 @@ public class TeleportCommand : Command
                         y = F.GetHeightAt2DPoint(x, z, pos.y, 2f);
                     pos = new Vector3(x, y, z);
                     string loc = $"({x.ToString("0.##", Data.LocalLocale)}, {y.ToString("0.##", Data.LocalLocale)}, {z.ToString("0.##", Data.LocalLocale)})";
-                    if (target.Player.teleportToLocation(pos, target.Player.look.aim.transform.rotation.y))
+                    if (target.Player.teleportToLocation(pos, target.Yaw))
                     {
                         target.SendChat(T.TeleportSelfLocationSuccess, loc);
                         throw ctx.Reply(T.TeleportOtherSuccessLocation, target, loc);
@@ -337,5 +327,25 @@ public class TeleportCommand : Command
         if (float.TryParse(arg.Substring(1), NumberStyles.Number, Data.AdminLocale, out float offset) || float.TryParse(arg.Substring(1), NumberStyles.Number, Data.LocalLocale, out offset))
             return offset;
         return 0;
+    }
+    public static void Jump(bool raycast, float distance, UCPlayer player)
+    {
+        Vector3 castPt = default;
+        if (raycast)
+        {
+            distance = 10f;
+            raycast = Physics.Raycast(new Ray(player.Player.look.aim.position, player.Player.look.aim.forward), out RaycastHit hit,
+                1024, RayMasks.BLOCK_COLLISION);
+            if (raycast)
+                castPt = hit.point;
+        }
+        if (!raycast)
+            castPt = player.Position + player.Player.look.aim.forward * distance;
+
+        int c = 0;
+        while (!PlayerStance.hasStandingHeightClearanceAtPosition(castPt) && ++c < 12)
+            castPt += new Vector3(0, 1f, 0);
+
+        player.Player.teleportToLocationUnsafe(castPt, player.Yaw);
     }
 }

@@ -816,7 +816,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         EffectMarkerCacheDefend = new JsonAssetReference<EffectAsset>("06efa2c2f9ec413aa417c717a7be3364");
         EffectMarkerBuildable = new JsonAssetReference<EffectAsset>("35ab4b71bfb74755b318ce62935f58c9");
         EffectActionNeedMedic = new JsonAssetReference<EffectAsset>("4d9167abea4f4f009c6db4417e7efcdf");
-        EffectActionNearbyMedic = new JsonAssetReference<EffectAsset>("eec285561d6040c7bbfcfa6b48f4b5ba");
+        EffectActionNearbyMedic = new JsonAssetReference<EffectAsset>("ab5cb35e4ae14411a6190a87e72d50ba");
         EffectActionNeedAmmo = new JsonAssetReference<EffectAsset>("6e7dadbfafbe46ecbe565499f901670f");
         EffectActionNearbyAmmo = new JsonAssetReference<EffectAsset>("8caccb6344924fbab842625e5b1f5932");
         EffectActionNeedRide = new JsonAssetReference<EffectAsset>("2a4748c3e5464b2d93132e2ed15b57b2");

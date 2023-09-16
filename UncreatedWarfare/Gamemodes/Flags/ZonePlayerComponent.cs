@@ -5,10 +5,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using JetBrains.Annotations;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.VanillaRework;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -49,6 +51,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     private readonly List<Transaction> _undoBuffer = new List<Transaction>(16);
     private readonly List<Transaction> _redoBuffer = new List<Transaction>(4);
     private volatile bool _isLoading;
+    private bool _listening;
     internal static void UIInit()
     {
         _edit = Assets.find<EffectAsset>(new Guid("503fed1019db4c7e9c365bf6e108b43f"));
@@ -276,7 +279,40 @@ internal class ZonePlayerComponent : MonoBehaviour
         ctx.Reply(T.ZoneCreated, name, type);
         CheckType(type, true, @implicit: false);
         RefreshPreview();
+        StartEditing();
     }
+    private void StartEditing()
+    {
+        if (!_listening)
+        {
+            PlayerEquipment.OnPunch_Global += OnPunch;
+            _listening = true;
+        }
+    }
+    private void StopEditing()
+    {
+        if (_listening)
+        {
+            PlayerEquipment.OnPunch_Global -= OnPunch;
+            _listening = false;
+        }
+    }
+    [UsedImplicitly]
+    private void OnDestroy()
+    {
+        StopEditing();
+    }
+
+    private void OnPunch(PlayerEquipment arg1, EPlayerPunch arg2)
+    {
+        if (arg2 != EPlayerPunch.RIGHT || arg1.player.channel.owner.playerID.steamID.m_SteamID != this._player.Steam64 || !_player.OnDuty())
+            return;
+
+        TeleportCommand.Jump(true, default, _player);
+        Vector3 castPt = _player.Position;
+        _player.SendChat(T.TeleportSelfLocationSuccess, $"({castPt.x.ToString("0.##", Data.LocalLocale)}, {castPt.y.ToString("0.##", Data.LocalLocale)}, {castPt.z.ToString("0.##", Data.LocalLocale)})");
+    }
+
     private void RefreshPreview()
     {
         ThreadUtil.assertIsGameThread();
@@ -462,6 +498,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             ctx.Reply(T.ZoneEditExistingSuccess, _currentBuilder.Name!, _currentBuilder.ZoneType);
             CheckType(_currentBuilder.ZoneType, true, @implicit: false);
             RefreshPreview();
+            StartEditing();
         }
         else
         {
@@ -653,6 +690,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         }
                     }, ctx: "Finalizing zone.");
                     ctx.Defer();
+                    StopEditing();
                 }
                 catch (Exception ex)
                 {
@@ -673,6 +711,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 _player.HasUIHidden = false;
                 UCWarfare.I.UpdateLangs(_player, true);
                 RefreshPreview();
+                StopEditing();
             }
             else if (ctx.MatchParameter(0, "addpt", "addpoint", "newpt"))
             {
