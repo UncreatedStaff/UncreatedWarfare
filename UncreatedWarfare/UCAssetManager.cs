@@ -10,7 +10,6 @@ using SDG.Framework.Utilities;
 using Uncreated.Encoding;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
-using ItemData = Uncreated.Framework.Assets.ItemData;
     
 namespace Uncreated.Warfare;
 
