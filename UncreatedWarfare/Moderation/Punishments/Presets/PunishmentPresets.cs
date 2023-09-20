@@ -188,7 +188,7 @@ public static class PunishmentPresets
         {
             PresetType.Cheating, new PunishmentPreset[]
             {
-                new PunishmentPreset(PresetType.Discrimination, ModerationEntryType.Ban, "Cheating | L1")
+                new PunishmentPreset(PresetType.Cheating, ModerationEntryType.Ban, "Cheating | L1")
                 {
                     PrimaryDuration = Timeout.InfiniteTimeSpan
                 }
