@@ -36,7 +36,7 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     public const string TIME_FORMAT_SQL = "{0:" + TIME_FORMAT_SQL_I + "}";
     public const string TIME_FORMAT_SQL_I = "yyyy-MM-dd HH:mm:ss";
     private static readonly ByteWriter ReportWriter = new ByteWriter(false, 27);
-    public WarfareSQL(MySqlData data) : base(data)
+    public WarfareSQL(MySqlData data) : base(data, "Uncreated Warfare")
     {
         DebugLogging |= UCWarfare.Config.Debug;
     }
@@ -1100,12 +1100,12 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
             ).ConfigureAwait(false);
         return ip;
     }
-    protected override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
+    public override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
         => L.Log(message, color);
-    protected override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow)
+    public override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow)
         => L.LogWarning(message, color, "MySQL");
-    protected override void LogError(string message, ConsoleColor color = ConsoleColor.Red)
+    public override void LogError(string message, ConsoleColor color = ConsoleColor.Red)
         => L.LogError(message, color, "MySQL");
-    protected override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
+    public override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
         => L.LogError(ex, method: "MySQL");
 }

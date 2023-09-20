@@ -27,9 +27,11 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
@@ -116,6 +118,7 @@ public static class Data
     internal static WarfareSQL? RemoteSQL;
     internal static DatabaseInterface ModerationSql;
     internal static WarfareMySqlLanguageDataStore LanguageDataStore;
+    internal static PurchaseRecordsInterface PurchasingDataStore;
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
     public static bool UseFastKits;
@@ -124,6 +127,7 @@ public static class Data
     public static Reporter? Reporter;
     public static DeathTracker DeathTracker;
     public static Points Points;
+    public static WarfareStripeService WarfareStripeService;
     internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
     internal static ClientInstanceMethod<byte[]>? SendUpdateBarricadeState;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt;

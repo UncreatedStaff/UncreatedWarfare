@@ -14,6 +14,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
@@ -74,6 +75,8 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
 
     [JsonIgnore]
     internal string? ClothingSetCache { get; set; }
+    [JsonIgnore]
+    public StripeEliteKit EliteKitInfo { get; set; }
     byte IVersionableReadWrite.Version { get; set; }
     public FactionInfo? Faction
     {

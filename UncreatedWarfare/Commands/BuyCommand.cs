@@ -36,13 +36,22 @@ public class BuyCommand : AsyncCommand
             throw ctx.SendUnknownError();
         if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign)
         {
-            if (Signs.GetKitFromSign(drop, out int ld) is { Item: { } } kit)
+            if (Signs.GetKitFromSign(drop, out int ld) is { Item: not null } kit)
             {
                 await manager.BuyKit(ctx, kit, drop.model.position, token).ConfigureAwait(false);
                 return;
             }
             if (ld > -1)
+            {
+                if (UCWarfare.Config.WebsiteUri != null && Data.PurchasingDataStore.LoadoutProduct != null)
+                {
+                    ctx.Caller.Player.sendBrowserRequest("Purchase loadouts on our website.",
+                        new Uri(UCWarfare.Config.WebsiteUri, "kits/loadout").OriginalString);
+
+                    throw ctx.Defer();
+                }
                 throw ctx.Reply(T.RequestNotBuyable);
+            }
             throw ctx.Reply(T.RequestKitNotRegistered);
         }
         throw ctx.Reply(T.RequestNoTarget);

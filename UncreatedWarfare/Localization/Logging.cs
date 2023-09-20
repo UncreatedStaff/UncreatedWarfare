@@ -2,6 +2,7 @@
 
 using HarmonyLib;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 using SDG.Unturned;
 using StackCleaner;
 using System;
@@ -16,12 +17,14 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Debug = UnityEngine.Debug;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 using Object = UnityEngine.Object;
 
 namespace Uncreated.Warfare;
 
 public static class L
 {
+    private static UCLogger? _logger;
     /// <summary>Default Language (previously <see cref="JSONMethods"/>.DEFAULT_LANGUAGE)</summary>
     public const string Default = Languages.EnglishUS;
     private const char ConsoleEscapeCharacter = '\u001B';
@@ -38,13 +41,54 @@ public static class L
     private static ICommandInputOutput? _defaultIOHandler;
     private delegate void OutputToConsole(string value, ConsoleColor color);
     private static OutputToConsole? _outputToConsoleMethod;
-    private static readonly StackTraceCleaner Cleaner = new StackTraceCleaner(new StackCleanerConfiguration()
+    private static readonly StackTraceCleaner Cleaner;
+    public static UCLogger Logger => _logger ??= new UCLogger();
+    static L()
     {
-        ColorFormatting = StackColorFormatType.ExtendedANSIColor,
-        Colors = UnityColor32Config.Default,
-        IncludeNamespaces = false,
-        IncludeFileData = true
-    });
+        StackCleanerConfiguration config = new StackCleanerConfiguration
+        {
+            ColorFormatting = StackColorFormatType.ExtendedANSIColor,
+            Colors = UnityColor32Config.Default,
+            IncludeNamespaces = false,
+            IncludeFileData = true
+        };
+
+        if (Type.GetType("Cysharp.Threading.Tasks.UniTask, UniTask", throwOnError: false) is { } uniTaskType)
+        {
+            List<Type> hiddenTypes = new List<Type>(config.GetHiddenTypes())
+            {
+                uniTaskType,
+            };
+
+            Assembly asm = uniTaskType.Assembly;
+
+            Type? type = asm.GetType("Cysharp.Threading.Tasks.EnumeratorAsyncExtensions+EnumeratorPromise", false, false);
+
+            if (type != null)
+                hiddenTypes.Add(type);
+
+            type = asm.GetType("Cysharp.Threading.Tasks.CompilerServices.AsyncUniTask`1", false, false);
+
+            if (type != null)
+                hiddenTypes.Add(type);
+
+            type = asm.GetType("Cysharp.Threading.Tasks.CompilerServices.AsyncUniTask`2", false, false);
+
+            if (type != null)
+                hiddenTypes.Add(type);
+
+            foreach (Type baseType in uniTaskType
+                         .GetNestedTypes(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                         .Where(x => x.Name.IndexOf("promise", StringComparison.OrdinalIgnoreCase) != -1))
+            {
+                hiddenTypes.Add(baseType);
+            }
+
+            config.HiddenTypes = hiddenTypes;
+        }
+        
+        Cleaner = new StackTraceCleaner(config);
+    }
     public static bool IsBufferingLogs { get; set; }
     public static void FlushBadLogs()
     {
@@ -647,7 +691,46 @@ public static class L
             isRequestingLog = state;
         }*/
     }
-    private class UCUnityLogger : ILogger
+
+    public sealed class UCLogger : ILogger
+    {
+        internal UCLogger() { }
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (!IsEnabled(logLevel))
+                return;
+
+            string str = formatter(state, exception);
+            switch (logLevel)
+            {
+                default:
+                    L.Log(str);
+                    break;
+                case LogLevel.Trace:
+                case LogLevel.Debug:
+                    LogDebug(str);
+                    break;
+                case LogLevel.Warning:
+                    LogWarning(str, method: eventId.ToString());
+                    break;
+                case LogLevel.Critical:
+                case LogLevel.Error:
+                    LogError(str, method: eventId.ToString());
+                    break;
+            }
+        }
+        public bool IsEnabled(LogLevel logLevel)
+        {
+#if DEBUG
+            return true;
+#else
+            return logLevel > LogLevel.Debug;
+#endif
+        }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => default;
+    }
+    private class UCUnityLogger : UnityEngine.ILogger
     {
         public bool IsLogTypeAllowed(LogType logType) => true;
         public void LogFormat(LogType logType, Object context, string format, params object[] args)

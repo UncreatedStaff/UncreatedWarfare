@@ -2020,6 +2020,30 @@ public static class F
         index = -1;
         return default;
     }
+    public static T? FindIndexed<T>(this IList<T> array, Func<T, int, bool> predicate)
+    {
+        for (int i = 0; i < array.Count; ++i)
+        {
+            if (predicate(array[i], i))
+                return array[i];
+        }
+
+        return default;
+    }
+    public static T? FindIndexed<T>(this IList<T> array, out int index, Func<T, int, bool> predicate)
+    {
+        for (int i = 0; i < array.Count; ++i)
+        {
+            if (predicate(array[i], i))
+            {
+                index = i;
+                return array[i];
+            }
+        }
+
+        index = -1;
+        return default;
+    }
     public static async UniTask<string?> GetProfilePictureURL(ulong steam64, AvatarSize size, CancellationToken token = default)
     {
         if (!UCWarfare.IsLoaded)
