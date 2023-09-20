@@ -173,7 +173,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         // await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
 
         Data.WarfareStripeService = new WarfareStripeService();
-        Data.PurchasingDataStore = await PurchaseRecordsInterface.Create<WarfarePurchaseRecordsInterface>(token).ConfigureAwait(false);
+        Data.PurchasingDataStore = await PurchaseRecordsInterface.Create<WarfarePurchaseRecordsInterface>(false, token).ConfigureAwait(false);
 
 
         await ToUpdate(token);

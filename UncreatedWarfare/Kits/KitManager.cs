@@ -1,4 +1,5 @@
-﻿using SDG.NetTransport;
+﻿using Cysharp.Threading.Tasks;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -6,7 +7,6 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -21,7 +21,6 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Maps;
-using Uncreated.Warfare.Networking.Purchasing;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -78,8 +77,9 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             WriteRelease();
         }
 
-        await Data.PurchasingDataStore.RefreshKits(token: token).ConfigureAwait(false);
-        await Data.PurchasingDataStore.RefreshBundles(token: token).ConfigureAwait(false);
+        await Data.PurchasingDataStore.RefreshBundles(true, false, token).ConfigureAwait(false);
+        await Data.PurchasingDataStore.RefreshKits(false, false, true, token).ConfigureAwait(false);
+        await Data.PurchasingDataStore.FetchStripeKitProducts(true, token).ConfigureAwait(false);
 
         if (dirty != null)
         {
@@ -2321,7 +2321,17 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             if (kit == null)
                 throw ctx.Reply(T.KitNotFound, proxy.LastPrimaryKey.ToString());
             if (!kit.IsPublicKit)
+            {
+                if (UCWarfare.Config.WebsiteUri != null && kit.EliteKitInfo != null)
+                {
+                    ctx.Caller.Player.sendBrowserRequest("Purchase " + kit.GetDisplayName(ctx.LanguageInfo) + " on our website.",
+                        new Uri(UCWarfare.Config.WebsiteUri, "checkout/addtocart?productkeys=" + Uri.EscapeDataString(kit.Id)).OriginalString);
+
+                    throw ctx.Defer();
+                }
+
                 throw ctx.Reply(T.RequestNotBuyable);
+            }
             if (kit.CreditCost == 0 || HasAccessQuick(kit, ctx.Caller))
                 throw ctx.Reply(T.RequestKitAlreadyOwned);
             if (ctx.Caller.CachedCredits < kit.CreditCost)

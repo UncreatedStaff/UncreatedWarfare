@@ -323,7 +323,7 @@ public static class Localization
         }
 
         return "<b>" + T.LoadoutName.Translate(player, "#" + loadoutId) + "</b>\n\n\n\n" +
-               T.KitPremiumCost.Translate(player, UCWarfare.Config.LoadoutCost)
+               T.KitPremiumCost.Translate(player, Data.PurchasingDataStore is { LoadoutProduct.DefaultPrice.UnitAmountDecimal: { } price } ? decimal.Round(decimal.Divide(price, 100m), 2) : UCWarfare.Config.LoadoutCost)
                    .ColorizeTMPro(UCWarfare.GetColorHex("kit_level_dollars"), true);
     }
     public static string TranslateKitSign(Kit kit, UCPlayer player)
@@ -388,7 +388,7 @@ public static class Localization
             else if (kit.Type == KitType.Special)
                 cost = T.KitExclusive.Translate(player);
             else if (kit.EliteKitInfo?.Product?.DefaultPrice is { UnitAmountDecimal: { } price })
-                cost = T.KitPremiumCost.Translate(player, price);
+                cost = T.KitPremiumCost.Translate(player, decimal.Round(decimal.Divide(price, 100m), 2));
             else
                 cost = kit.PremiumCost <= 0m ? T.KitFree.Translate(player) : T.KitPremiumCost.Translate(player, kit.PremiumCost);
             goto n;

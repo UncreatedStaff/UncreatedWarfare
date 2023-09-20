@@ -91,8 +91,10 @@ public class StripeEliteKit
                         };
                         if (product is { DefaultPrice.UnitAmountDecimal: { } price })
                         {
+                            price = decimal.Round(decimal.Divide(price, 100m), 2);
+                            decimal oldPrice = kit.PremiumCost;
                             kit.PremiumCost = price;
-                            if (manager != null && manager.IsLoading)
+                            if (manager != null && manager.IsLoading && oldPrice != price)
                                 kit.IsLoadDirty = true;
                         }
                     }

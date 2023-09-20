@@ -1,5 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using Stripe;
+﻿using Stripe;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -58,11 +57,11 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
     protected virtual KitSubItemTypes ExpandFields => KitSubItemTypes.All;
     public bool FilterLoadouts { get; set; } = true;
     public UCSemaphore Semaphore { get; } = new UCSemaphore();
-    public static async Task<T> Create<T>(CancellationToken token = default) where T : PurchaseRecordsInterface, new()
+    public static async Task<T> Create<T>(bool createMissingProducts, CancellationToken token = default) where T : PurchaseRecordsInterface, new()
     {
         T pri = new T();
         await pri.VerifyTables(token).ConfigureAwait(false);
-        await pri.RefreshAll(token).ConfigureAwait(false);
+        await pri.RefreshAll(createMissingProducts, token).ConfigureAwait(false);
         return pri;
     }
     public Task VerifyTables(CancellationToken token = default)
@@ -72,12 +71,13 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
         Array.Copy(EliteBundle.Schemas, 0, schemas, SCHEMAS.Length, EliteBundle.Schemas.Length);
         return Sql.VerifyTables(schemas, token);
     }
-    public async Task RefreshAll(CancellationToken token = default)
+    public Task RefreshAll(CancellationToken token = default) => RefreshAll(false, token);
+    public async Task RefreshAll(bool createMissingProducts, CancellationToken token = default)
     {
         await RefreshLoadoutProduct(token).ConfigureAwait(false);
-        await RefreshBundles(true, token).ConfigureAwait(false);
-        await RefreshKits(false, false, token).ConfigureAwait(false);
-        await FetchStripeBundleProducts(token).ConfigureAwait(false);
+        await RefreshBundles(true, false, token).ConfigureAwait(false);
+        await RefreshKits(false, false, createMissingProducts, token).ConfigureAwait(false);
+        await FetchStripeBundleProducts(createMissingProducts, token).ConfigureAwait(false);
     }
     public async Task RefreshLoadoutProduct(CancellationToken token = default)
     {
@@ -137,8 +137,8 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
             Semaphore.Release();
         }
     }
-    public Task RefreshBundles(CancellationToken token = default) => RefreshBundles(false, token);
-    public async Task RefreshBundles(bool holdStripeReload = false, CancellationToken token = default)
+    public Task RefreshBundles(CancellationToken token = default) => RefreshBundles(false, false, token);
+    public async Task RefreshBundles(bool holdStripeReload = false, bool createMissingStripeBundles = false, CancellationToken token = default)
     {
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
@@ -219,7 +219,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
 
             if (!holdStripeReload)
             {
-                await FetchStripeBundleProductsIntl(token).ConfigureAwait(false);
+                await FetchStripeBundleProductsIntl(createMissingStripeBundles, token).ConfigureAwait(false);
             }
         }
         finally
@@ -227,33 +227,33 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
             Semaphore.Release();
         }
     }
-    public async Task FetchStripeBundleProducts(CancellationToken token = default)
+    public async Task FetchStripeBundleProducts(bool createMissingProducts, CancellationToken token = default)
     {
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await FetchStripeBundleProductsIntl(token).ConfigureAwait(false);
+            await FetchStripeBundleProductsIntl(createMissingProducts, token).ConfigureAwait(false);
         }
         finally
         {
             Semaphore.Release();
         }
     }
-    public async Task FetchStripeKitProducts(CancellationToken token = default)
+    public async Task FetchStripeKitProducts(bool createMissingProducts, CancellationToken token = default)
     {
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            await FetchStripeKitProductsIntl(token).ConfigureAwait(false);
+            await FetchStripeKitProductsIntl(createMissingProducts, token).ConfigureAwait(false);
         }
         finally
         {
             Semaphore.Release();
         }
     }
-    private async Task FetchStripeBundleProductsIntl(CancellationToken token)
+    private async Task FetchStripeBundleProductsIntl(bool create, CancellationToken token)
     {
-        await EliteBundle.BulkAddStripeEliteBundles(StripeService, this, token);
+        await EliteBundle.BulkAddStripeEliteBundles(StripeService, this, token).ConfigureAwait(false);
         if (UCWarfare.IsLoaded)
         {
             for (int i = 0; i < _bundles.Length; ++i)
@@ -262,15 +262,15 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
                 if (bundle.Product == null)
                 {
                     L.Log($"Creating stripe product for {bundle.DisplayName}.");
-                    await EliteBundle.GetOrAddProduct(StripeService, bundle, true, token).ConfigureAwait(false);
+                    await EliteBundle.GetOrAddProduct(StripeService, bundle, create, token).ConfigureAwait(false);
                     L.Log("  ... Done");
                 }
             }
         }
     }
-    private async Task FetchStripeKitProductsIntl(CancellationToken token)
+    private async Task FetchStripeKitProductsIntl(bool create, CancellationToken token)
     {
-        await StripeEliteKit.BulkAddStripeEliteKits(StripeService, this, token);
+        await StripeEliteKit.BulkAddStripeEliteKits(StripeService, this, token).ConfigureAwait(false);
         if (UCWarfare.IsLoaded)
         {
             for (int i = 0; i < _kits.Length; ++i)
@@ -279,14 +279,14 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
                 if (kit is { Type: KitType.Elite, EliteKitInfo: null })
                 {
                     L.Log($"Creating stripe product for {kit.GetDisplayName()}.");
-                    await StripeEliteKit.GetOrAddProduct(StripeService, kit, true, token).ConfigureAwait(false);
+                    await StripeEliteKit.GetOrAddProduct(StripeService, kit, create, token).ConfigureAwait(false);
                     L.Log("  ... Done");
                 }
             }
         }
     }
-    public Task RefreshKits(CancellationToken token = default) => RefreshKits(false, false, token);
-    public async Task RefreshKits(bool forceNotUseKitManager = false, bool holdStripeReload = false, CancellationToken token = default)
+    public Task RefreshKits(CancellationToken token = default) => RefreshKits(false, false, false, token);
+    public async Task RefreshKits(bool forceNotUseKitManager = false, bool holdStripeReload = false, bool createMissingStripeKits = false, CancellationToken token = default)
     {
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
@@ -512,7 +512,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
 
             if (!holdStripeReload)
             {
-                await StripeEliteKit.BulkAddStripeEliteKits(StripeService, this, token).ConfigureAwait(false);
+                await FetchStripeKitProductsIntl(createMissingStripeKits, token).ConfigureAwait(false);
             }
         }
         finally
