@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using MySqlConnector;
 using Uncreated.Framework;
 using Uncreated.SQL;
 using Uncreated.Warfare.Configuration;
@@ -481,6 +482,7 @@ public static class TeamManager
     public const ulong AdminID = 3;
     private static IReadOnlyList<FactionInfo> _factionsReadonly;
     public static IReadOnlyList<FactionInfo> Factions => _factionsReadonly ?? throw new NullReferenceException("Factions have not been loaded yet.");
+    public static bool FactionsLoaded => _factionsReadonly != null;
     public static TeamConfigData Config => _data.Data;
     public static string Team1Name => Team1Faction.Name;
     public static string Team2Name => Team2Faction.Name;
@@ -1669,14 +1671,15 @@ public static class TeamManager
     [Obsolete]
     private static readonly Guid VestRedirect               = new Guid("2b22ac1b5de74755a24c2f05219c5e1f");
 #endif
-    public static Task ReloadFactions(CancellationToken token)
+    public static Task ReloadFactions(CancellationToken token) => ReloadFactions(Data.AdminSql, true, token);
+    public static Task ReloadFactions(IMySqlDatabase sql, bool checkTables, CancellationToken token)
     {
         if (_factions == null)
         {
             _factions = new List<FactionInfo>(DefaultFactions.Length);
             _factionsReadonly = _factions.AsReadOnly();
         }
-        return FactionInfo.DownloadFactions(Data.AdminSql, _factions, token);
+        return FactionInfo.DownloadFactions(sql, _factions, checkTables, token);
     }
     public static void WriteFactionLocalization(LanguageInfo language, string path, bool writeMising)
     {
@@ -1784,6 +1787,8 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     public const string Canada = "canada";
     public const string SouthAfrica = "southafrica";
     public const string Mozambique = "mozambique";
+
+    public static DataMask QueryMask { get; set; } = DataMask.All;
 
     [Obsolete("Africa was split into individual countries.")]
     public const string LegacyAfrica = "africa";
@@ -2061,7 +2066,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
     };
     // ReSharper restore InconsistantNaming
 
-    private static async Task AddDefaults(MySqlDatabase sql, CancellationToken token = default)
+    private static async Task AddDefaults(IMySqlDatabase sql, CancellationToken token = default)
     {
         StringBuilder builder = new StringBuilder($"INSERT INTO `{TABLE_MAIN}` (`{COLUMN_PK}`,`{COLUMN_ID}`,`{COLUMN_NAME}`,`{COLUMN_SHORT_NAME}`,`{COLUMN_ABBREVIATION}`," +
                                                   $"`{COLUMN_HEX_COLOR}`,`{COLUMN_UNARMED_KIT}`,`{COLUMN_FLAG_IMAGE_URL}`,`{COLUMN_SPRITE_INDEX}`,`{COLUMN_EMOJI}`) VALUES ", 256);
@@ -2221,16 +2226,254 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         builder.Append(';');
         await sql.NonQueryAsync(builder.ToString(), objs2.ToArray(), token).ConfigureAwait(false);
     }
-    public static async Task DownloadFactions(MySqlDatabase sql, List<FactionInfo> list, CancellationToken token = default)
+    public static async Task DownloadFactions(IMySqlDatabase sql, List<FactionInfo> list, bool checkTables, CancellationToken token = default)
     {
         if (UCWarfare.IsLoaded)
             Localization.ClearSection(TranslationSection.Factions);
 
         int ct = 0;
-        int[] vals = await sql.VerifyTables(SCHEMAS, token).ConfigureAwait(false);
-        if (vals[0] == 3)
+        if (checkTables)
         {
-            await AddDefaults(sql, token).ConfigureAwait(false);
+            int[] vals = await sql.VerifyTables(SCHEMAS, token).ConfigureAwait(false);
+            if (vals[0] == 3)
+            {
+                await AddDefaults(sql, token).ConfigureAwait(false);
+                AddDefaultsToList();
+            }
+        }
+
+        bool queried = false;
+        try
+        {
+            await sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_ID}`,`{COLUMN_NAME}`," +
+                                 $"`{COLUMN_SHORT_NAME}`,`{COLUMN_ABBREVIATION}`,`{COLUMN_HEX_COLOR}`,`{COLUMN_UNARMED_KIT}`," +
+                                 $"`{COLUMN_FLAG_IMAGE_URL}`,`{COLUMN_SPRITE_INDEX}`,`{COLUMN_EMOJI}` FROM `{TABLE_MAIN}`;", null,
+                reader =>
+                {
+                    int pk = reader.GetInt32(0);
+                    string name = reader.GetString(2);
+                    string id = reader.GetString(1);
+                    string shortName = reader.IsDBNull(3) ? name : reader.GetString(3);
+                    string abbreviation = reader.IsDBNull(4) ? shortName.ToUpperInvariant() : reader.GetString(4);
+                    string hexColor = reader.IsDBNull(5) ? UCWarfare.GetColorHex("default") : reader.GetString(5);
+                    string? unarmedKit = reader.IsDBNull(6) ? null : reader.GetString(6);
+                    string flag = reader.IsDBNull(7) ? UnknownTeamImgURL : reader.GetString(7);
+                    uint? spriteIndex = reader.IsDBNull(8) ? null : reader.GetUInt32(8);
+                    string? emoji = reader.IsDBNull(9) ? null : reader.GetString(9);
+                    for (int i = 0; i < list.Count; ++i)
+                    {
+                        if (list[i].PrimaryKey.Key == pk)
+                        {
+                            FactionInfo faction = list[i];
+                            faction.FactionId = id;
+                            faction.Name = name;
+                            faction.ShortName = shortName;
+                            faction.Abbreviation = abbreviation;
+                            faction.HexColor = hexColor;
+                            faction.UnarmedKit = unarmedKit;
+                            faction.FlagImageURL = flag;
+                            faction.TMProSpriteIndex = spriteIndex;
+                            faction.Emoji = emoji;
+                            return;
+                        }
+                    }
+                    list.Add(
+                        new FactionInfo(
+                            id,
+                            name,
+                            abbreviation,
+                            shortName,
+                            hexColor,
+                            unarmedKit,
+                            flag)
+                        {
+                            PrimaryKey = pk,
+                            TMProSpriteIndex = spriteIndex,
+                            Emoji = emoji,
+                        });
+                    ct += 3;
+                }, token).ConfigureAwait(false);
+            queried = true;
+            if (UCWarfare.IsLoaded)
+            {
+                Localization.IncrementSection(TranslationSection.Factions, ct);
+            }
+
+            if ((QueryMask & DataMask.Assets) != 0)
+            {
+                await sql.QueryAsync(
+                    $"SELECT `{COLUMN_EXT_PK}`,`{COLUMN_ASSETS_SUPPLY_AMMO}`,`{COLUMN_ASSETS_SUPPLY_BUILD}`," +
+                    $"`{COLUMN_ASSETS_RALLY_POINT}`,`{COLUMN_ASSETS_FOB_RADIO}`,`{COLUMN_ASSETS_DEFAULT_BACKPACK}`," +
+                    $"`{COLUMN_ASSETS_DEFAULT_SHIRT}`,`{COLUMN_ASSETS_DEFAULT_PANTS}`,`{COLUMN_ASSETS_DEFAULT_VEST}`," +
+                    $"`{COLUMN_ASSETS_DEFAULT_GLASSES}`,`{COLUMN_ASSETS_DEFAULT_MASK}`,`{COLUMN_ASSETS_DEFAULT_HAT}` FROM `{TABLE_MAP_ASSETS}`;", null,
+                    reader =>
+                    {
+                        int pk = reader.GetInt32(0);
+                        for (int i = 0; i < list.Count; ++i)
+                        {
+                            if (list[i].PrimaryKey.Key == pk)
+                            {
+                                FactionInfo faction = list[i];
+                                if (!reader.IsDBNull(1))
+                                {
+                                    Guid? guid = reader.ReadGuidString(1);
+                                    if (guid.HasValue)
+                                        faction.Ammo = new JsonAssetReference<ItemAsset>(guid.Value);
+                                }
+                                if (!reader.IsDBNull(2))
+                                {
+                                    Guid? guid = reader.ReadGuidString(2);
+                                    if (guid.HasValue)
+                                        faction.Build = new JsonAssetReference<ItemAsset>(guid.Value);
+                                }
+                                if (!reader.IsDBNull(3))
+                                {
+                                    Guid? guid = reader.ReadGuidString(3);
+                                    if (guid.HasValue)
+                                        faction.RallyPoint = new JsonAssetReference<ItemBarricadeAsset>(guid.Value);
+                                }
+                                if (!reader.IsDBNull(4))
+                                {
+                                    Guid? guid = reader.ReadGuidString(4);
+                                    if (guid.HasValue)
+                                        faction.FOBRadio = new JsonAssetReference<ItemBarricadeAsset>(guid.Value);
+                                }
+                                if (!reader.IsDBNull(5))
+                                {
+                                    Guid? guid = reader.ReadGuidString(5);
+                                    if (guid.HasValue)
+                                        faction.DefaultBackpack = new JsonAssetReference<ItemBackpackAsset>(guid.Value);
+                                }
+                                if (!reader.IsDBNull(6))
+                                {
+                                    Guid? guid = reader.ReadGuidString(6);
+                                    if (guid.HasValue)
+                                        faction.DefaultShirt = new JsonAssetReference<ItemShirtAsset>(guid.Value);
+                                }
+                                if (!reader.IsDBNull(7))
+                                {
+                                    Guid? guid = reader.ReadGuidString(7);
+                                    if (guid.HasValue)
+                                        faction.DefaultPants = new JsonAssetReference<ItemPantsAsset>(guid.Value);
+                                }
+                                if (!reader.IsDBNull(8))
+                                {
+                                    Guid? guid = reader.ReadGuidString(8);
+                                    if (guid.HasValue)
+                                        faction.DefaultVest = new JsonAssetReference<ItemVestAsset>(guid.Value);
+                                }
+                                if (!reader.IsDBNull(9))
+                                {
+                                    Guid? guid = reader.ReadGuidString(9);
+                                    if (guid.HasValue)
+                                        faction.DefaultGlasses = new JsonAssetReference<ItemGlassesAsset>(guid.Value);
+                                }
+                                if (!reader.IsDBNull(10))
+                                {
+                                    Guid? guid = reader.ReadGuidString(10);
+                                    if (guid.HasValue)
+                                        faction.DefaultMask = new JsonAssetReference<ItemMaskAsset>(guid.Value);
+                                }
+                                if (!reader.IsDBNull(11))
+                                {
+                                    Guid? guid = reader.ReadGuidString(11);
+                                    if (guid.HasValue)
+                                        faction.DefaultHat = new JsonAssetReference<ItemHatAsset>(guid.Value);
+                                }
+                                break;
+                            }
+                        }
+                    }, token).ConfigureAwait(false);
+            }
+
+            if ((QueryMask & DataMask.Name) != 0)
+            {
+                await sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}` FROM `{TABLE_NAME_TRANSLATIONS}`;", null,
+                    reader =>
+                    {
+                        int pk = reader.GetInt32(0);
+                        for (int i = 0; i < list.Count; ++i)
+                        {
+                            if (list[i].PrimaryKey.Key == pk)
+                            {
+                                string lang = reader.GetString(1);
+                                FactionInfo faction = list[i];
+                                if (faction.NameTranslations == null)
+                                    faction.NameTranslations = new Dictionary<string, string>(1);
+                                else if (faction.NameTranslations.ContainsKey(lang))
+                                    break;
+                                faction.NameTranslations.Add(lang, reader.GetString(2));
+                                TryIncrement(lang);
+                                break;
+                            }
+                        }
+                    }, token).ConfigureAwait(false);
+            }
+
+            if ((QueryMask & DataMask.ShortName) != 0)
+            {
+                await sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}` FROM `{TABLE_SHORT_NAME_TRANSLATIONS}`;", null,
+                    reader =>
+                    {
+                        int pk = reader.GetInt32(0);
+                        for (int i = 0; i < list.Count; ++i)
+                        {
+                            if (list[i].PrimaryKey.Key == pk)
+                            {
+                                string lang = reader.GetString(1);
+                                FactionInfo faction = list[i];
+                                if (faction.ShortNameTranslations == null)
+                                    faction.ShortNameTranslations = new Dictionary<string, string>(1);
+                                else if (faction.ShortNameTranslations.ContainsKey(lang))
+                                    break;
+                                faction.ShortNameTranslations.Add(lang, reader.GetString(2));
+                                TryIncrement(lang);
+                                break;
+                            }
+                        }
+                    }, token).ConfigureAwait(false);
+            }
+
+            if ((QueryMask & DataMask.Abbreviation) != 0)
+            {
+                await sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}` FROM `{TABLE_ABBREVIATIONS_TRANSLATIONS}`;", null,
+                    reader =>
+                    {
+                        int pk = reader.GetInt32(0);
+                        for (int i = 0; i < list.Count; ++i)
+                        {
+                            if (list[i].PrimaryKey.Key == pk)
+                            {
+                                string lang = reader.GetString(1);
+                                FactionInfo faction = list[i];
+                                if (faction.AbbreviationTranslations == null)
+                                    faction.AbbreviationTranslations = new Dictionary<string, string>(1);
+                                else if (faction.AbbreviationTranslations.ContainsKey(lang))
+                                    break;
+                                faction.AbbreviationTranslations.Add(lang, reader.GetString(2));
+                                TryIncrement(lang);
+                                break;
+                            }
+                        }
+                    }, token).ConfigureAwait(false);
+            }
+        }
+        catch (MySqlException)
+        {
+            if (!queried)
+            {
+                list.AddRange(TeamManager.DefaultFactions);
+            }
+        }
+
+        void TryIncrement(string lang)
+        {
+            if (UCWarfare.IsLoaded && Data.LanguageDataStore.GetInfoCached(lang) is { } language)
+                language.IncrementSection(TranslationSection.Factions, 1);
+        }
+
+        void AddDefaultsToList()
+        {
             for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
             {
                 int pk = TeamManager.DefaultFactions[i].PrimaryKey.Key;
@@ -2272,207 +2515,6 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                 }
             }
         }
-        await sql.QueryAsync($"SELECT `{COLUMN_PK}`,`{COLUMN_ID}`,`{COLUMN_NAME}`," +
-                             $"`{COLUMN_SHORT_NAME}`,`{COLUMN_ABBREVIATION}`,`{COLUMN_HEX_COLOR}`,`{COLUMN_UNARMED_KIT}`," +
-                             $"`{COLUMN_FLAG_IMAGE_URL}`,`{COLUMN_SPRITE_INDEX}`,`{COLUMN_EMOJI}` FROM `{TABLE_MAIN}`;", null,
-            reader =>
-            {
-                int pk = reader.GetInt32(0);
-                string name = reader.GetString(2);
-                string id = reader.GetString(1);
-                string shortName = reader.IsDBNull(3) ? name : reader.GetString(3);
-                string abbreviation = reader.IsDBNull(4) ? shortName.ToUpperInvariant() : reader.GetString(4);
-                string hexColor = reader.IsDBNull(5) ? UCWarfare.GetColorHex("default") : reader.GetString(5);
-                string? unarmedKit = reader.IsDBNull(6) ? null : reader.GetString(6);
-                string flag = reader.IsDBNull(7) ? UnknownTeamImgURL : reader.GetString(7);
-                uint? spriteIndex = reader.IsDBNull(8) ? null : reader.GetUInt32(8);
-                string? emoji = reader.IsDBNull(9) ? null : reader.GetString(9);
-                for (int i = 0; i < list.Count; ++i)
-                {
-                    if (list[i].PrimaryKey.Key == pk)
-                    {
-                        FactionInfo faction = list[i];
-                        faction.FactionId = id;
-                        faction.Name = name;
-                        faction.ShortName = shortName;
-                        faction.Abbreviation = abbreviation;
-                        faction.HexColor = hexColor;
-                        faction.UnarmedKit = unarmedKit;
-                        faction.FlagImageURL = flag;
-                        faction.TMProSpriteIndex = spriteIndex;
-                        faction.Emoji = emoji;
-                        return;
-                    }
-                }
-                list.Add(
-                    new FactionInfo(
-                        id,
-                        name,
-                        abbreviation,
-                        shortName,
-                        hexColor,
-                        unarmedKit,
-                        flag)
-                    {
-                        PrimaryKey = pk,
-                        TMProSpriteIndex = spriteIndex,
-                        Emoji = emoji,
-                    });
-                ct += 3;
-        }, token).ConfigureAwait(false);
-        if (UCWarfare.IsLoaded)
-        {
-            Localization.IncrementSection(TranslationSection.Factions, ct);
-        }
-        await sql.QueryAsync(
-            $"SELECT `{COLUMN_EXT_PK}`,`{COLUMN_ASSETS_SUPPLY_AMMO}`,`{COLUMN_ASSETS_SUPPLY_BUILD}`," +
-            $"`{COLUMN_ASSETS_RALLY_POINT}`,`{COLUMN_ASSETS_FOB_RADIO}`,`{COLUMN_ASSETS_DEFAULT_BACKPACK}`," +
-            $"`{COLUMN_ASSETS_DEFAULT_SHIRT}`,`{COLUMN_ASSETS_DEFAULT_PANTS}`,`{COLUMN_ASSETS_DEFAULT_VEST}`," +
-            $"`{COLUMN_ASSETS_DEFAULT_GLASSES}`,`{COLUMN_ASSETS_DEFAULT_MASK}`,`{COLUMN_ASSETS_DEFAULT_HAT}` FROM `{TABLE_MAP_ASSETS}`;", null,
-            reader =>
-            {
-                int pk = reader.GetInt32(0);
-                for (int i = 0; i < list.Count; ++i)
-                {
-                    if (list[i].PrimaryKey.Key == pk)
-                    {
-                        FactionInfo faction = list[i];
-                        if (!reader.IsDBNull(1))
-                        {
-                            Guid? guid = reader.ReadGuidString(1);
-                            if (guid.HasValue)
-                                faction.Ammo = new JsonAssetReference<ItemAsset>(guid.Value);
-                        }
-                        if (!reader.IsDBNull(2))
-                        {
-                            Guid? guid = reader.ReadGuidString(2);
-                            if (guid.HasValue)
-                                faction.Build = new JsonAssetReference<ItemAsset>(guid.Value);
-                        }
-                        if (!reader.IsDBNull(3))
-                        {
-                            Guid? guid = reader.ReadGuidString(3);
-                            if (guid.HasValue)
-                                faction.RallyPoint = new JsonAssetReference<ItemBarricadeAsset>(guid.Value);
-                        }
-                        if (!reader.IsDBNull(4))
-                        {
-                            Guid? guid = reader.ReadGuidString(4);
-                            if (guid.HasValue)
-                                faction.FOBRadio = new JsonAssetReference<ItemBarricadeAsset>(guid.Value);
-                        }
-                        if (!reader.IsDBNull(5))
-                        {
-                            Guid? guid = reader.ReadGuidString(5);
-                            if (guid.HasValue)
-                                faction.DefaultBackpack = new JsonAssetReference<ItemBackpackAsset>(guid.Value);
-                        }
-                        if (!reader.IsDBNull(6))
-                        {
-                            Guid? guid = reader.ReadGuidString(6);
-                            if (guid.HasValue)
-                                faction.DefaultShirt = new JsonAssetReference<ItemShirtAsset>(guid.Value);
-                        }
-                        if (!reader.IsDBNull(7))
-                        {
-                            Guid? guid = reader.ReadGuidString(7);
-                            if (guid.HasValue)
-                                faction.DefaultPants = new JsonAssetReference<ItemPantsAsset>(guid.Value);
-                        }
-                        if (!reader.IsDBNull(8))
-                        {
-                            Guid? guid = reader.ReadGuidString(8);
-                            if (guid.HasValue)
-                                faction.DefaultVest = new JsonAssetReference<ItemVestAsset>(guid.Value);
-                        }
-                        if (!reader.IsDBNull(9))
-                        {
-                            Guid? guid = reader.ReadGuidString(9);
-                            if (guid.HasValue)
-                                faction.DefaultGlasses = new JsonAssetReference<ItemGlassesAsset>(guid.Value);
-                        }
-                        if (!reader.IsDBNull(10))
-                        {
-                            Guid? guid = reader.ReadGuidString(10);
-                            if (guid.HasValue)
-                                faction.DefaultMask = new JsonAssetReference<ItemMaskAsset>(guid.Value);
-                        }
-                        if (!reader.IsDBNull(11))
-                        {
-                            Guid? guid = reader.ReadGuidString(11);
-                            if (guid.HasValue)
-                                faction.DefaultHat = new JsonAssetReference<ItemHatAsset>(guid.Value);
-                        }
-                        break;
-                    }
-                }
-            }, token).ConfigureAwait(false);
-        await sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}` FROM `{TABLE_NAME_TRANSLATIONS}`;", null,
-            reader =>
-            {
-                int pk = reader.GetInt32(0);
-                for (int i = 0; i < list.Count; ++i)
-                {
-                    if (list[i].PrimaryKey.Key == pk)
-                    {
-                        string lang = reader.GetString(1);
-                        FactionInfo faction = list[i];
-                        if (faction.NameTranslations == null)
-                            faction.NameTranslations = new Dictionary<string, string>(1);
-                        else if (faction.NameTranslations.ContainsKey(lang))
-                            break;
-                        faction.NameTranslations.Add(lang, reader.GetString(2));
-                        TryIncrement(lang);
-                        break;
-                    }
-                }
-            }, token).ConfigureAwait(false);
-        await sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}` FROM `{TABLE_SHORT_NAME_TRANSLATIONS}`;", null,
-            reader =>
-            {
-                int pk = reader.GetInt32(0);
-                for (int i = 0; i < list.Count; ++i)
-                {
-                    if (list[i].PrimaryKey.Key == pk)
-                    {
-                        string lang = reader.GetString(1);
-                        FactionInfo faction = list[i];
-                        if (faction.ShortNameTranslations == null)
-                            faction.ShortNameTranslations = new Dictionary<string, string>(1);
-                        else if (faction.ShortNameTranslations.ContainsKey(lang))
-                            break;
-                        faction.ShortNameTranslations.Add(lang, reader.GetString(2));
-                        TryIncrement(lang);
-                        break;
-                    }
-                }
-            }, token).ConfigureAwait(false);
-        await sql.QueryAsync($"SELECT `{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}` FROM `{TABLE_ABBREVIATIONS_TRANSLATIONS}`;", null,
-            reader =>
-            {
-                int pk = reader.GetInt32(0);
-                for (int i = 0; i < list.Count; ++i)
-                {
-                    if (list[i].PrimaryKey.Key == pk)
-                    {
-                        string lang = reader.GetString(1);
-                        FactionInfo faction = list[i];
-                        if (faction.AbbreviationTranslations == null)
-                            faction.AbbreviationTranslations = new Dictionary<string, string>(1);
-                        else if (faction.AbbreviationTranslations.ContainsKey(lang))
-                            break;
-                        faction.AbbreviationTranslations.Add(lang, reader.GetString(2));
-                        TryIncrement(lang);
-                        break;
-                    }
-                }
-            }, token).ConfigureAwait(false);
-
-        void TryIncrement(string lang)
-        {
-            if (UCWarfare.IsLoaded && Data.LanguageDataStore.GetInfoCached(lang) is { } language)
-                language.IncrementSection(TranslationSection.Factions, 1);
-        }
     }
 
     public object Clone()
@@ -2492,6 +2534,16 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             DefaultMask = DefaultMask?.Clone() as JsonAssetReference<ItemMaskAsset>,
             DefaultHat = DefaultHat?.Clone() as JsonAssetReference<ItemHatAsset>
         };
+    }
+
+    [Flags]
+    public enum DataMask
+    {
+        Assets = 1 << 0,
+        ShortName = 1 << 1,
+        Abbreviation = 1 << 2,
+        Name = 1 << 3,
+        All = Assets | ShortName | Abbreviation | Name
     }
 }
 

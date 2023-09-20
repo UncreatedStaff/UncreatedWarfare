@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using System;
+using SDG.Unturned;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Uncreated.SQL;
@@ -110,6 +111,17 @@ public class SystemConfigData : JSONConfigData
     public bool DisableKitMenu;
     [JsonPropertyName("steam_api_key")]
     public string? SteamAPIKey;
+    [JsonPropertyName("stripe_api_key")]
+    public string? StripeAPIKey;
+    [JsonPropertyName("website_domain")]
+    public string? WebsiteDomain
+    {
+        get => WebsiteUri?.OriginalString;
+        set => WebsiteUri = value == null ? null : new Uri(value);
+    }
+
+    [JsonIgnore]
+    public Uri? WebsiteUri { get; set; }
 
     public override void SetDefaults()
     {
@@ -153,11 +165,13 @@ public class SystemConfigData : JSONConfigData
         SecondsBetweenAnnouncements = 60f;
         SendActionLogs = true;
         DisableMissingAssetKick = false;
-        Nerds = new List<ulong>() { 76561198312948915ul };
+        Nerds = new List<ulong> { 76561198312948915ul };
         DisableDailyRestart = false;
         DisableAprilFools = false;
         DisableKitMenu = false;
         SteamAPIKey = null;
+        StripeAPIKey = null;
+        WebsiteDomain = null;
     }
     public class ModerationConfig
     {

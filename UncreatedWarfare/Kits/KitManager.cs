@@ -1,4 +1,5 @@
-﻿using SDG.NetTransport;
+﻿using Cysharp.Threading.Tasks;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -34,7 +35,8 @@ namespace Uncreated.Warfare.Kits;
 public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerAsync, IPlayerConnectListenerAsync, IPlayerPostInitListenerAsync, IJoinedTeamListenerAsync, IGameTickListener, IPlayerDisconnectListener, ITCPConnectedListener
 {
     private static int _v;
-    public static readonly KitMenuUI MenuUI = new KitMenuUI();
+    private static KitMenuUI? _menuUi;
+    public static KitMenuUI MenuUI => _menuUi ??= new KitMenuUI();
     private readonly List<Kit> _kitListTemp = new List<Kit>(64);
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
@@ -74,6 +76,11 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         {
             WriteRelease();
         }
+
+        await Data.PurchasingDataStore.RefreshBundles(true, false, token).ConfigureAwait(false);
+        await Data.PurchasingDataStore.RefreshKits(false, false, true, token).ConfigureAwait(false);
+        await Data.PurchasingDataStore.FetchStripeKitProducts(true, token).ConfigureAwait(false);
+
         if (dirty != null)
         {
             foreach (SqlItem<Kit> kit in dirty)
@@ -259,7 +266,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
         UpdateSigns(proxy);
         return proxy;
     }
-    public static KitManager? GetSingletonQuick() => Data.Is(out IKitRequests r) ? r.KitManager : Data.Singletons.GetSingleton<KitManager>();
+    public static KitManager? GetSingletonQuick() => Data.Is(out IKitRequests r) ? r.KitManager : Data.Singletons?.GetSingleton<KitManager>();
     public static float GetDefaultTeamLimit(Class @class) => @class switch
     {
         Class.HAT => 0.1f,
@@ -2314,7 +2321,17 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
             if (kit == null)
                 throw ctx.Reply(T.KitNotFound, proxy.LastPrimaryKey.ToString());
             if (!kit.IsPublicKit)
+            {
+                if (UCWarfare.Config.WebsiteUri != null && kit.EliteKitInfo != null)
+                {
+                    ctx.Caller.Player.sendBrowserRequest("Purchase " + kit.GetDisplayName(ctx.LanguageInfo) + " on our website.",
+                        new Uri(UCWarfare.Config.WebsiteUri, "checkout/addtocart?productkeys=" + Uri.EscapeDataString(kit.Id)).OriginalString);
+
+                    throw ctx.Defer();
+                }
+
                 throw ctx.Reply(T.RequestNotBuyable);
+            }
             if (kit.CreditCost == 0 || HasAccessQuick(kit, ctx.Caller))
                 throw ctx.Reply(T.RequestKitAlreadyOwned);
             if (ctx.Caller.CachedCredits < kit.CreditCost)

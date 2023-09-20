@@ -1972,6 +1972,54 @@ public static class F
         key = list[list.Count - 1].Key;
         action(key, arr);
     }
+    public static T? FindIndexed<T>(this T[] array, Func<T, int, bool> predicate)
+    {
+        for (int i = 0; i < array.Length; ++i)
+        {
+            if (predicate(array[i], i))
+                return array[i];
+        }
+
+        return default;
+    }
+    public static T? FindIndexed<T>(this T[] array, out int index, Func<T, int, bool> predicate)
+    {
+        for (int i = 0; i < array.Length; ++i)
+        {
+            if (predicate(array[i], i))
+            {
+                index = i;
+                return array[i];
+            }
+        }
+
+        index = -1;
+        return default;
+    }
+    public static T? FindIndexed<T>(this IList<T> array, Func<T, int, bool> predicate)
+    {
+        for (int i = 0; i < array.Count; ++i)
+        {
+            if (predicate(array[i], i))
+                return array[i];
+        }
+
+        return default;
+    }
+    public static T? FindIndexed<T>(this IList<T> array, out int index, Func<T, int, bool> predicate)
+    {
+        for (int i = 0; i < array.Count; ++i)
+        {
+            if (predicate(array[i], i))
+            {
+                index = i;
+                return array[i];
+            }
+        }
+
+        index = -1;
+        return default;
+    }
 }
 
 public readonly struct PrimaryKeyPair<T>
