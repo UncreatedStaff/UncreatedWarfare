@@ -46,7 +46,7 @@ public class BuyCommand : AsyncCommand
                 if (UCWarfare.Config.WebsiteUri != null && Data.PurchasingDataStore.LoadoutProduct != null)
                 {
                     ctx.Caller.Player.sendBrowserRequest("Purchase loadouts on our website.",
-                        new Uri(UCWarfare.Config.WebsiteUri, "loadout").OriginalString);
+                        new Uri(UCWarfare.Config.WebsiteUri, "kits/loadout").OriginalString);
 
                     throw ctx.Defer();
                 }

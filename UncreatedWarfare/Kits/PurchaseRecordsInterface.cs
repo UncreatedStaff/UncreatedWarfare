@@ -74,12 +74,12 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
     public Task RefreshAll(CancellationToken token = default) => RefreshAll(false, token);
     public async Task RefreshAll(bool createMissingProducts, CancellationToken token = default)
     {
-        await RefreshLoadoutProduct(token).ConfigureAwait(false);
+        await RefreshLoadoutProduct(createMissingProducts, token).ConfigureAwait(false);
         await RefreshBundles(true, false, token).ConfigureAwait(false);
         await RefreshKits(false, false, createMissingProducts, token).ConfigureAwait(false);
         await FetchStripeBundleProducts(createMissingProducts, token).ConfigureAwait(false);
     }
-    public async Task RefreshLoadoutProduct(CancellationToken token = default)
+    public async Task RefreshLoadoutProduct(bool createIfNotFound, CancellationToken token = default)
     {
         if (StripeService?.StripeClient == null)
             return;
@@ -98,7 +98,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
 
                 Product? prod = existing.FirstOrDefault();
 
-                if (prod == null)
+                if (prod == null && createIfNotFound)
                 {
                     ProductCreateOptions product = new ProductCreateOptions
                     {
@@ -125,7 +125,7 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
                     prod = await StripeService.ProductService.CreateAsync(product, cancellationToken: token).ConfigureAwait(false);
                 }
 
-                LoadoutProduct = prod;
+                LoadoutProduct = prod!;
             }
             finally
             {
@@ -229,6 +229,9 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
     }
     public async Task FetchStripeBundleProducts(bool createMissingProducts, CancellationToken token = default)
     {
+        if (StripeService?.StripeClient == null)
+            return;
+
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -241,6 +244,9 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
     }
     public async Task FetchStripeKitProducts(bool createMissingProducts, CancellationToken token = default)
     {
+        if (StripeService?.StripeClient == null)
+            return;
+
         await Semaphore.WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -253,6 +259,9 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
     }
     private async Task FetchStripeBundleProductsIntl(bool create, CancellationToken token)
     {
+        if (StripeService?.StripeClient == null)
+            return;
+
         await EliteBundle.BulkAddStripeEliteBundles(StripeService, this, token).ConfigureAwait(false);
         if (UCWarfare.IsLoaded)
         {
@@ -270,6 +279,9 @@ public abstract class PurchaseRecordsInterface : IPurchaseRecordsInterface, IDis
     }
     private async Task FetchStripeKitProductsIntl(bool create, CancellationToken token)
     {
+        if (StripeService?.StripeClient == null)
+            return;
+
         await StripeEliteKit.BulkAddStripeEliteKits(StripeService, this, token).ConfigureAwait(false);
         if (UCWarfare.IsLoaded)
         {
