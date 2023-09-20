@@ -542,8 +542,8 @@ partial class KitManager
                           $"AND `{COLUMN_EXT_PK}`=@{st + 4}; ");
             }
 
-            UCWarfare.RunTask(async (q, args, token) => await Data.AdminSql.NonQueryAsync(q, args, token).ConfigureAwait(false),
-                sb.ToString(), args, token, ctx: "Delete invalid hotkeys and/or layout transformations for " + players.Length + " player(s).");
+            UCWarfare.RunTask(Data.AdminSql.NonQueryAsync(sb.ToString(), args, token),
+                ctx: "Delete invalid hotkeys and/or layout transformations for " + players.Length + " player(s).");
         }
 
         await UCWarfare.ToUpdate(token);
