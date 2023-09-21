@@ -38,7 +38,8 @@ public class Warning : Punishment
     {
         await base.AddExtraInfo(db, workingList, formatter, token);
 
-        workingList.Add(HasBeenDisplayed ? "Has been viewed" : "Not yet viewed");
+        if (!IsLegacy)
+            workingList.Add(HasBeenDisplayed ? "Has been viewed" : "Not yet viewed");
     }
 
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)

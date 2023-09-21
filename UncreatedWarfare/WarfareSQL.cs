@@ -3,6 +3,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
@@ -565,9 +566,8 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
         await QueryAsync(
             "SELECT `PlayerName`, `CharacterName`, `NickName` " +
             "FROM `" + TableUsernames + "` " +
-            "WHERE `Steam64` = @0 LIMIT 1;",
-            new object[] { s64 },
-            reader =>
+            "WHERE `Steam64` = " + s64.ToString("D17", CultureInfo.InvariantCulture) + " LIMIT 1;",
+            null, reader =>
             {
                 name = new PlayerNames { Steam64 = s64, PlayerName = reader.GetString(0), CharacterName = reader.GetString(1), NickName = reader.GetString(2), WasFound = true };
             }, token).ConfigureAwait(false);
@@ -590,21 +590,45 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
 #endif
         token.ThrowIfCancellationRequested();
         PlayerNames[] rtn = new PlayerNames[s64Array.Length];
-        object[] args = new object[s64Array.Length];
-        for (int i = 0; i < args.Length; ++i)
-            args[i] = s64Array[i];
+
+        StringBuilder sb = new StringBuilder(s64Array.Length * 18);
+        int ct = 0;
+        for (int i = 0; i < s64Array.Length; ++i)
+        {
+            ulong current = s64Array[i];
+            bool alreadyExists = false;
+            for (int j = i - 1; j >= 0; --j)
+            {
+                if (current == s64Array[j])
+                {
+                    alreadyExists = true;
+                    break;
+                }
+            }
+
+            if (alreadyExists)
+                continue;
+            if (ct != 0)
+                sb.Append(',');
+            ++ct;
+            sb.Append(current.ToString("D17", CultureInfo.InvariantCulture));
+        }
+
         await QueryAsync(
             "SELECT `Steam64`, `PlayerName`, `CharacterName`, `NickName` " +
             "FROM `" + TableUsernames + "` " +
-            "WHERE `Steam64` IN (" + SqlTypes.ParameterList(0, s64Array.Length) + ") LIMIT " + s64Array.Length.ToString(CultureInfo.InvariantCulture) + ";",
-            args,
-            reader =>
+            "WHERE `Steam64` IN (" + sb + ") LIMIT " + ct.ToString(CultureInfo.InvariantCulture) + ";",
+            null, reader =>
             {
                 ulong steam64 = reader.GetUInt64(0);
-                int index = Array.IndexOf(s64Array, steam64);
-                if (index == -1)
-                    return;
-                rtn[index] = new PlayerNames { Steam64 = steam64, PlayerName = reader.GetString(1), CharacterName = reader.GetString(2), NickName = reader.GetString(3), WasFound = true };
+                int index = -1;
+                while (true)
+                {
+                    index = Array.IndexOf(s64Array, steam64, index + 1);
+                    if (index == -1)
+                        break;
+                    rtn[index] = new PlayerNames { Steam64 = steam64, PlayerName = reader.GetString(1), CharacterName = reader.GetString(2), NickName = reader.GetString(3), WasFound = true };
+                }
             }, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
         for (int i = 0; i < s64Array.Length; ++i)

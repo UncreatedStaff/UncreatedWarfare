@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -56,10 +57,33 @@ public sealed class SteamAPI
         if (index < 0)
             index = 0;
 
-        string[] strs = new string[length];
+        StringBuilder sb = new StringBuilder(length * 18);
+        bool any = false;
         for (int i = 0; i < length; ++i)
-            strs[i] = players[i + index].ToString(CultureInfo.InvariantCulture);
-        
+        {
+            bool alreadyAdded = false;
+            ulong current = players[i + index];
+            for (int j = i - 1; j >= 0; --j)
+            {
+                if (players[j + index] == current)
+                {
+                    alreadyAdded = true;
+                    break;
+                }
+            }
+
+            if (alreadyAdded)
+                continue;
+            if (!any)
+                any = true;
+            else
+                sb.Append(',');
+            sb.Append(current.ToString("D17", CultureInfo.InvariantCulture));
+        }
+
+        string str = sb.ToString();
+        sb.Clear();
+        sb.Capacity = 0;
 
         const int tryCt = 5;
         const float delay = 1.0f;
@@ -70,8 +94,11 @@ public sealed class SteamAPI
 
             try
             {
-                using UnityWebRequest webRequest = UnityWebRequest.Get(MakeUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + string.Join(",", strs)));
+                using UnityWebRequest webRequest = UnityWebRequest.Get(MakeUrl("ISteamUser", 2, "GetPlayerSummaries", "&steamids=" + str));
+                webRequest.timeout = tries + 1;
+                L.LogDebug($"Sending PlayerSummary request: {webRequest.url} with timeout {webRequest.timeout}... ({tries + 1}/{tryCt})");
                 await webRequest.SendWebRequest().WithCancellation(token);
+                L.LogDebug($"  Done with {webRequest.url}.");
 
                 if (webRequest.result != UnityWebRequest.Result.Success)
                     throw new Exception($"Error getting player summaries from {webRequest.url.Replace(UCWarfare.Config.SteamAPIKey!, "API_KEY")}: {webRequest.responseCode} ({webRequest.result}).");
@@ -84,7 +111,7 @@ public sealed class SteamAPI
             catch (Exception ex)
             {
                 if (tries == tryCt - 1)
-                    throw new Exception("Error downloading " + strs.Length + " player summary(ies).", ex);
+                    throw new Exception("Error downloading " + players.Count + " player summary(ies).", ex);
 
                 L.LogError($"Error getting steam player summaries. Retrying {(tries + 1).ToString(CultureInfo.InvariantCulture)} / {tryCt.ToString(CultureInfo.InvariantCulture)}.");
 

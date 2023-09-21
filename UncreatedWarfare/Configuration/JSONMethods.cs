@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SDG.Framework.Utilities;
 using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Json;
@@ -277,6 +278,83 @@ public sealed class TranslationList : Dictionary<string, string>, ICloneable, IR
             writer.WriteShort(vals.Key);
             writer.WriteNullable(vals.Value);
         }
+    }
+}
+
+public sealed class ArrayConverter<TElement, TConverter> : JsonConverter<TElement?[]> where TConverter : JsonConverter, new()
+{
+    private readonly TConverter _converterFactory = new TConverter();
+    private JsonConverter<TElement>? _converter = null;
+    private void CheckConverter(JsonSerializerOptions options)
+    {
+        JsonConverterFactory? factory = _converterFactory as JsonConverterFactory;
+        if (_converter != null && factory == null)
+            return;
+
+
+        if (factory != null)
+            _converter = factory.CreateConverter(typeof(TElement), options) as JsonConverter<TElement>;
+        else
+            _converter = _converterFactory as JsonConverter<TElement>;
+
+        if (_converter == null)
+            throw new JsonException($"Invalid converter for type: {typeof(TElement)} (using factory: {typeof(TConverter)}).");
+    }
+    public override TElement?[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        CheckConverter(options);
+
+        if (reader.TokenType == JsonTokenType.Null)
+            return null;
+
+        if (reader.TokenType == JsonTokenType.StartArray)
+        {
+            List<TElement?> list;
+            bool pooled = false;
+            if (UCWarfare.IsLoaded && UCWarfare.IsMainThread)
+            {
+                pooled = true;
+                list = ListPool<TElement?>.claim();
+            }
+            else list = new List<TElement?>(16);
+
+            try
+            {
+                while (reader.Read())
+                {
+                    if (reader.TokenType == JsonTokenType.EndArray)
+                        break;
+                    list.Add(_converter!.Read(ref reader, typeof(TElement), options));
+                }
+
+                return list.Count == 0 ? Array.Empty<TElement?>() : list.ToArray();
+            }
+            finally
+            {
+                if (pooled)
+                    ListPool<TElement?>.release(list);
+            }
+        }
+
+        return new TElement?[] { _converter!.Read(ref reader, typeToConvert, options) };
+    }
+
+    public override void Write(Utf8JsonWriter writer, TElement?[] value, JsonSerializerOptions options)
+    {
+        CheckConverter(options);
+
+        if (value == null)
+        {
+            writer.WriteNullValue();
+            return;
+        }
+
+        writer.WriteStartArray();
+        for (int i = 0; i < value.Length; ++i)
+        {
+            _converter!.Write(writer, value[i]!, options);
+        }
+        writer.WriteEndArray();
     }
 }
 public sealed class TranslationListConverter : JsonConverter<TranslationList>

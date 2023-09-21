@@ -20,6 +20,11 @@ public static class ModerationReflection
         CheckReflect();
         return Types.TryGetValue(type, out ModerationEntryType type2) ? type2 : null;
     }
+    public static bool IsOfType<T>(ModerationEntryType type)
+    {
+        Type? sysType = GetType(type);
+        return sysType != null && typeof(T).IsAssignableFrom(sysType);
+    }
     private static void CheckReflect()
     {
         if (_hasReflected) return;

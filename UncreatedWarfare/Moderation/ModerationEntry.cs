@@ -495,11 +495,40 @@ public abstract class ModerationEntry
         return anyNew;
     }
 }
+public interface IForgiveableModerationEntry : IDurationModerationEntry
+{
+    /// <summary>
+    /// If the moderation entry was forgiven.
+    /// </summary>
+    [JsonPropertyName("is_forgiven")]
+    bool Forgiven { get; set; }
+
+    /// <summary>
+    /// Who forgave the moderation entry.
+    /// </summary>
+    [JsonPropertyName("forgiving_actor")]
+    [JsonConverter(typeof(ActorConverter))]
+    IModerationActor? ForgivenBy { get; set; }
+
+    /// <summary>
+    /// When the moderation entry was forgiven.
+    /// </summary>
+    [JsonPropertyName("forgive_timestamp_utc")]
+    DateTimeOffset? ForgiveTimestamp { get; set; }
+
+    /// <summary>
+    /// Why the moderation entry was forgiven.
+    /// </summary>
+    [JsonPropertyName("forgive_message")]
+    string? ForgiveMessage { get; set; }
+}
+
 public interface IDurationModerationEntry
 {
     /// <summary>
     /// Length of the punishment, negative implies permanent.
     /// </summary>
+    [JsonPropertyName("duration")]
     TimeSpan Duration { get; set; }
 
     /// <summary>
@@ -507,6 +536,7 @@ public interface IDurationModerationEntry
     /// </summary>
     /// <remarks>This is indicated by a negative <see cref="Duration"/>.</remarks>
     /// <exception cref="ArgumentException">Thrown if you set to <see langword="false"/>.</exception>
+    [JsonIgnore]
     bool IsPermanent { get; set; }
 }
 

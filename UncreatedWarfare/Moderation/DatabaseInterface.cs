@@ -205,8 +205,9 @@ public abstract class DatabaseInterface
             for (int i = 0; i < conditionArgs.Length; ++i)
                 condition = Util.QuickFormat(condition, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i);
 
-            sb.Append(" (").Append(condition).Append(')').Append(" AND");
         }
+        if (condition != null)
+            sb.Append(" (").Append(condition).Append(')').Append(" AND");
 
         switch (relation)
         {
@@ -264,7 +265,7 @@ public abstract class DatabaseInterface
         sb.Append(';');
 
 
-        ArrayList entries = new ArrayList(4);
+        ArrayList entries = new ArrayList(16);
         await Sql.QueryAsync(sb.ToString(), args, reader =>
         {
             ModerationEntry? entry = ReadEntry(flag, reader);
@@ -299,7 +300,9 @@ public abstract class DatabaseInterface
             args.AddRange(conditionArgs);
             for (int i = 0; i < conditionArgs.Length; ++i)
                 condition = Util.QuickFormat(condition, "@" + i.ToString(CultureInfo.InvariantCulture), i);
-
+        }
+        if (condition != null)
+        {
             sb.Append('(').Append(condition).Append(')');
             and = false;
         }
@@ -367,8 +370,7 @@ public abstract class DatabaseInterface
 
         sb.Append(';');
 
-
-        ArrayList entries = new ArrayList(4);
+        ArrayList entries = new ArrayList(16);
         await Sql.QueryAsync(sb.ToString(), args, reader =>
         {
             ModerationEntry? entry = ReadEntry(flag, reader);
@@ -381,6 +383,57 @@ public abstract class DatabaseInterface
         // ReSharper disable once CoVariantArrayConversion
         await Fill((ModerationEntry[])rtn, detail, baseOnly, null, token).ConfigureAwait(false);
         
+        return rtn;
+    }
+    public async Task<T[]> GetEntriesOfLevel<T>(ulong player, int level, PresetType type, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : Punishment
+        => (T[])await GetEntriesOfLevel(typeof(T), player, level, type, detail, baseOnly, token).ConfigureAwait(false);
+    public async Task<Array> GetEntriesOfLevel(Type type, ulong player, int level, PresetType presetType, bool detail = true, bool baseOnly = false, CancellationToken token = default)
+    {
+        if (!typeof(Punishment).IsAssignableFrom(type))
+            return Array.Empty<Punishment>();
+        ModerationReflection.TypeInheritance.TryGetValue(type, out ModerationEntryType[] types);
+
+        StringBuilder sb = new StringBuilder("SELECT ", 164);
+        int flag = AppendReadColumns(sb, type, baseOnly);
+        AppendTables(sb, flag);
+        object?[] args = new object?[(types == null ? 0 : types.Length) + 3];
+
+        args[0] = presetType.ToString();
+        args[1] = level;
+        args[2] = player;
+
+        sb.Append($" WHERE `main`.`{ColumnEntriesRemoved}`=0 AND `pnsh`.`{ColumnPunishmentsPresetType}`=@0 AND `pnsh`.`{ColumnPunishmentsPresetLevel}`=@1 AND `main`.`{ColumnEntriesSteam64}`=@2");
+
+        if (types is { Length: > 0 })
+        {
+            sb.Append($"AND `main`.`{ColumnEntriesType}` IN (");
+
+            for (int i = 0; i < types.Length; ++i)
+            {
+                if (i != 0)
+                    sb.Append(',');
+                sb.Append('@').Append((i + 3).ToString(CultureInfo.InvariantCulture));
+                args[i + 3] = types[i].ToString();
+            }
+
+            sb.Append(")");
+        }
+
+        sb.Append(';');
+
+        ArrayList entries = new ArrayList(2);
+        await Sql.QueryAsync(sb.ToString(), args, reader =>
+        {
+            ModerationEntry? entry = ReadEntry(flag, reader);
+            if (type.IsInstanceOfType(entry))
+                entries.Add(entry);
+        }, token).ConfigureAwait(false);
+
+        Array rtn = entries.ToArray(type);
+
+        // ReSharper disable once CoVariantArrayConversion
+        await Fill((ModerationEntry[])rtn, detail, baseOnly, null, token).ConfigureAwait(false);
+
         return rtn;
     }
     private async Task Fill(ModerationEntry?[] entries, bool detail, bool baseOnly, BitArray? mask = null, CancellationToken token = default)
@@ -1101,7 +1154,7 @@ public abstract class DatabaseInterface
         await Sql.QueryAsync($"SELECT MAX(`pnsh`.`{ColumnPunishmentsPresetLevel}`) " +
                              $"FROM `{TableEntries}` as `main` " +
                              $"LEFT JOIN `{TablePunishments}` AS `pnsh` ON `main`.`{ColumnEntriesPrimaryKey}` = `pnsh`.`{ColumnExternalPrimaryKey}` " +
-                             $"WHERE `main`.`{ColumnEntriesSteam64}` = @1 AND `pnsh`.`{ColumnPunishmentsPresetType}` = @0 AND `{ColumnEntriesRemoved}` = 0;", new object[] { type.ToString(), player },
+                             $"WHERE `main`.`{ColumnEntriesSteam64}` = @1 AND `pnsh`.`{ColumnPunishmentsPresetType}` = @0 AND `main`.`{ColumnEntriesRemoved}` = 0;", new object[] { type.ToString(), player },
             reader =>
             {
                 if (!reader.IsDBNull(0))
@@ -1192,6 +1245,7 @@ public abstract class DatabaseInterface
     public const string TableEvidence = "moderation_evidence";
     public const string TableRelatedEntries = "moderation_related_entries";
     public const string TableAssetBanFilters = "moderation_asset_ban_filters";
+    public const string TableAssetBanTypeFilters = "moderation_asset_ban_type_filters";
     public const string TablePunishments = "moderation_punishments";
     public const string TableDurationPunishments = "moderation_durations";
     public const string TableLinkedAppeals = "moderation_linked_appeals";
@@ -1252,6 +1306,8 @@ public abstract class DatabaseInterface
     public const string ColumnRelatedEntry = "RelatedEntry";
 
     public const string ColumnAssetBanFiltersAsset = "AssetBanAsset";
+
+    public const string ColumnAssetBanTypeFiltersType = "VehicleType";
 
     public const string ColumnPunishmentsPresetType = "PresetType";
     public const string ColumnPunishmentsPresetLevel = "PresetLevel";
@@ -1511,6 +1567,16 @@ public abstract class DatabaseInterface
                 ForeignKeyColumn = VehicleBay.COLUMN_PK
             }
         }, false, typeof(VehicleData)),
+        new Schema(TableAssetBanFilters, new Schema.Column[]
+        {
+            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = ColumnEntriesPrimaryKey,
+                ForeignKeyTable = TableEntries
+            },
+            new Schema.Column(ColumnAssetBanTypeFiltersType, SqlTypes.Enum<VehicleType>())
+        }, false, typeof(VehicleType)),
         new Schema(TablePunishments, new Schema.Column[]
         {
             new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)

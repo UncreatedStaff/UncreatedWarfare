@@ -239,7 +239,7 @@ public abstract class Punishment : ModerationEntry
     }
 }
 
-public abstract class DurationPunishment : Punishment, IDurationModerationEntry
+public abstract class DurationPunishment : Punishment, IForgiveableModerationEntry
 {
     /// <summary>
     /// Length of the punishment, negative implies permanent.

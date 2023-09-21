@@ -1923,6 +1923,7 @@ public static class F
         return data.NonQueryAsync($"DELETE FROM `{tableMain}` WHERE `{columnPk}`=@0;", new object[] { pk.Key }, token);
     }
     public static bool IsDefault(this string str) => str.Equals(L.Default, StringComparison.OrdinalIgnoreCase);
+    
     public static T[] AsArrayFast<T>(this IEnumerable<T> enumerable, bool copy = false)
     {
         if (enumerable == null)
