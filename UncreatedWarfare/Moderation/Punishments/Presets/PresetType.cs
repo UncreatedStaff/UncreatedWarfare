@@ -7,18 +7,12 @@ public enum PresetType
     Griefing,
     Toxicity,
     Soloing,
-    [Translatable("Asset Waste")]
     AssetWaste,
-    [Translatable("Int. TKing")]
     IntentionalTeamkilling,
-    [Translatable("Harassment")]
     TargetedHarassment,
     Discrimination,
     Cheating,
-    [Translatable("Disrpt. Bhvr.")]
     DisruptiveBehavior,
-    [Translatable("Inappr. Profile")]
     InappropriateProfile,
-    [Translatable("Bypassing Pnshmnt.")]
     BypassingPunishment
 }

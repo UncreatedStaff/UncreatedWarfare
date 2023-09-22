@@ -684,6 +684,7 @@ public sealed class ModerationEntryConverter : JsonConverter<ModerationEntry>
         writer.WriteEndObject();
     }
 }
+[Translatable("Moderation Entry Type", IsPrioritizedTranslation = false)]
 public enum ModerationEntryType : ushort
 {
     None,
@@ -691,27 +692,22 @@ public enum ModerationEntryType : ushort
     Kick,
     Ban,
     Mute,
-    [Translatable("Asset Ban")]
     AssetBan,
     Teamkill,
-    [Translatable("Vehicle Teamkill")]
     VehicleTeamkill,
     [Translatable("BattlEye Kick")]
     BattlEyeKick,
     Appeal,
     [Translatable("Custom Report")]
     Report,
-    [Translatable("Griefing Report")]
     GriefingReport,
-    [Translatable("Chat Abuse Report")]
     ChatAbuseReport,
-    [Translatable("Cheating Report")]
     CheatingReport,
     Note,
     Commendation,
-    [Translatable("Bug Report Accepted")]
+    [Translatable("Accepted Bug Report")]
     BugReportAccepted,
-    [Translatable("Player Report Accepted")]
+    [Translatable("Accepted Player Report")]
     PlayerReportAccepted
 
     // update ModerationEntry.MaxEntry when adding

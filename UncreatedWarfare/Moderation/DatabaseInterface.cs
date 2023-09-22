@@ -199,14 +199,14 @@ public abstract class DatabaseInterface
         AppendTables(sb, flag);
         sb.Append(" WHERE");
         List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 3) { actor };
-        if (conditionArgs != null && condition != null)
+        if (conditionArgs != null && !string.IsNullOrEmpty(condition))
         {
             args.AddRange(conditionArgs);
             for (int i = 0; i < conditionArgs.Length; ++i)
-                condition = Util.QuickFormat(condition, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i);
+                condition = Util.QuickFormat(condition!, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i, repeat: true);
 
         }
-        if (condition != null)
+        if (!string.IsNullOrEmpty(condition))
             sb.Append(" (").Append(condition).Append(')').Append(" AND");
 
         switch (relation)
@@ -293,15 +293,15 @@ public abstract class DatabaseInterface
         AppendTables(sb, flag);
         bool where = false, and = true;
         List<object?> args = new List<object?>((types == null ? 0 : types.Length) + (conditionArgs == null ? 0 : conditionArgs.Length) + 2);
-        if (conditionArgs != null && condition != null)
+        if (conditionArgs != null && !string.IsNullOrEmpty(condition))
         {
             sb.Append(" WHERE ");
             where = true;
             args.AddRange(conditionArgs);
             for (int i = 0; i < conditionArgs.Length; ++i)
-                condition = Util.QuickFormat(condition, "@" + i.ToString(CultureInfo.InvariantCulture), i);
+                condition = Util.QuickFormat(condition!, "@" + i.ToString(CultureInfo.InvariantCulture), i, repeat: true);
         }
-        if (condition != null)
+        if (!string.IsNullOrEmpty(condition))
         {
             sb.Append('(').Append(condition).Append(')');
             and = false;
