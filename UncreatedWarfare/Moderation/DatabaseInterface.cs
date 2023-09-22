@@ -1567,7 +1567,7 @@ public abstract class DatabaseInterface
                 ForeignKeyColumn = VehicleBay.COLUMN_PK
             }
         }, false, typeof(VehicleData)),
-        new Schema(TableAssetBanFilters, new Schema.Column[]
+        new Schema(TableAssetBanTypeFilters, new Schema.Column[]
         {
             new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
             {
