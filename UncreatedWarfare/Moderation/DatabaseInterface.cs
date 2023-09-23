@@ -580,20 +580,20 @@ public abstract class DatabaseInterface
 
             if (anyAssetBans)
             {
-                links.Clear();
+                List<PrimaryKeyPair<VehicleType>> types = new List<PrimaryKeyPair<VehicleType>>();
 
                 // AssetBan.AssetFilter
-                query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnAssetBanFiltersAsset)} FROM `{TableAssetBanFilters}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+                query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnAssetBanFiltersType)} FROM `{TableAssetBanTypeFilters}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
                 await Sql.QueryAsync(query, null, reader =>
                 {
-                    links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+                    types.Add(new PrimaryKeyPair<VehicleType>(reader.GetInt32(0), reader.ReadStringEnum(1, VehicleType.None)));
                 }, token).ConfigureAwait(false);
 
-                F.ApplyQueriedList(links, (key, arr) =>
+                F.ApplyQueriedList(types, (key, arr) =>
                 {
                     AssetBan? info = (AssetBan?)entries.FindIndexed((x, i) => x is AssetBan && (mask is null || mask[i]) && x.Id.Key == key);
                     if (info != null)
-                        info.AssetFilter = arr;
+                        info.VehicleTypeFilter = arr;
                 }, false);
             }
         }
@@ -1109,7 +1109,7 @@ public abstract class DatabaseInterface
         if (pk.IsValid)
             entry.Id = pk;
 
-        List<object> args = new List<object>(entry.EstimateColumnCount()) { pk.Key };
+        List<object> args = new List<object>(entry.EstimateParameterCount()) { pk.Key };
 
         StringBuilder builder = new StringBuilder(82);
 
@@ -1244,8 +1244,7 @@ public abstract class DatabaseInterface
     public const string TableActors = "moderation_actors";
     public const string TableEvidence = "moderation_evidence";
     public const string TableRelatedEntries = "moderation_related_entries";
-    public const string TableAssetBanFilters = "moderation_asset_ban_filters";
-    public const string TableAssetBanTypeFilters = "moderation_asset_ban_type_filters";
+    public const string TableAssetBanTypeFilters = "moderation_asset_ban_filters";
     public const string TablePunishments = "moderation_punishments";
     public const string TableDurationPunishments = "moderation_durations";
     public const string TableLinkedAppeals = "moderation_linked_appeals";
@@ -1304,10 +1303,8 @@ public abstract class DatabaseInterface
     public const string ColumnEvidenceTimestamp = "EvidenceTimestampUTC";
 
     public const string ColumnRelatedEntry = "RelatedEntry";
-
-    public const string ColumnAssetBanFiltersAsset = "AssetBanAsset";
-
-    public const string ColumnAssetBanTypeFiltersType = "VehicleType";
+    
+    public const string ColumnAssetBanFiltersType = "VehicleType";
 
     public const string ColumnPunishmentsPresetType = "PresetType";
     public const string ColumnPunishmentsPresetLevel = "PresetLevel";
@@ -1552,21 +1549,6 @@ public abstract class DatabaseInterface
             }
 
         }, false, typeof(Evidence)),
-        new Schema(TableAssetBanFilters, new Schema.Column[]
-        {
-            new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyColumn = ColumnEntriesPrimaryKey,
-                ForeignKeyTable = TableEntries
-            },
-            new Schema.Column(ColumnAssetBanFiltersAsset, SqlTypes.INCREMENT_KEY)
-            {
-                ForeignKey = true,
-                ForeignKeyTable = VehicleBay.TABLE_MAIN,
-                ForeignKeyColumn = VehicleBay.COLUMN_PK
-            }
-        }, false, typeof(VehicleData)),
         new Schema(TableAssetBanTypeFilters, new Schema.Column[]
         {
             new Schema.Column(ColumnExternalPrimaryKey, SqlTypes.INCREMENT_KEY)
@@ -1575,7 +1557,7 @@ public abstract class DatabaseInterface
                 ForeignKeyColumn = ColumnEntriesPrimaryKey,
                 ForeignKeyTable = TableEntries
             },
-            new Schema.Column(ColumnAssetBanTypeFiltersType, SqlTypes.Enum<VehicleType>())
+            new Schema.Column(ColumnAssetBanFiltersType, SqlTypes.Enum<VehicleType>())
         }, false, typeof(VehicleType)),
         new Schema(TablePunishments, new Schema.Column[]
         {

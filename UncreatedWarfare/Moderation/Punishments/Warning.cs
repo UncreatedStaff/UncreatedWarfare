@@ -33,7 +33,7 @@ public class Warning : Punishment
         writer.WriteBoolean("has_been_displayed", HasBeenDisplayed);
     }
 
-    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 1;
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + 1;
     public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
         await base.AddExtraInfo(db, workingList, formatter, token);

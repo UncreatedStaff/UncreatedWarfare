@@ -184,7 +184,7 @@ public abstract class Punishment : ModerationEntry
         JsonSerializer.Serialize(writer, ReportKeys, options);
     }
 
-    internal override int EstimateColumnCount() => base.EstimateColumnCount() + AppealKeys.Length + ReportKeys.Length + 2;
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + AppealKeys.Length + ReportKeys.Length + 2;
     public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
         await base.AddExtraInfo(db, workingList, formatter, token);
@@ -403,7 +403,7 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
             writer.WriteString("forgive_message", ForgiveMessage);
         }
     }
-    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 5;
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + 5;
     public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
         await base.AddExtraInfo(db, workingList, formatter, token);

@@ -114,7 +114,7 @@ public class VehicleTeamkill : ModerationEntry
         if (ItemName != null)
             writer.WriteString("item_name", ItemName);
     }
-    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 6;
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + 6;
     public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
         await base.AddExtraInfo(db, workingList, formatter, token);

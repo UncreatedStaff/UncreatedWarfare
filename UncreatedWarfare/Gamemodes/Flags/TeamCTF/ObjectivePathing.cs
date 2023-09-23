@@ -170,6 +170,8 @@ public static class ObjectivePathing
     }
     public static int PickWeightedAdjacency(AdjacentFlagData[] adj)
     {
+        if (adj.Length == 0)
+            return -1;
         float ttl = 0f;
         for (int i = 0; i < adj.Length; ++i)
             ttl += adj[i].Weight;

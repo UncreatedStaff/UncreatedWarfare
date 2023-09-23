@@ -132,7 +132,7 @@ public class Report : ModerationEntry
             writer.WriteString("screenshot_data", Convert.ToBase64String(ScreenshotJpgData));
     }
 
-    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 2;
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + 2;
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);

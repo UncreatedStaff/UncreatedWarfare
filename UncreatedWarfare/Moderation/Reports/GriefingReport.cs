@@ -104,7 +104,7 @@ public class GriefingReport : Report
         JsonSerializer.Serialize(writer, VehicleTeamkillRecord, options);
     }
 
-    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + 
                                                    DamageRecord.Length * 8 + VehicleRequestRecord.Length * 6 +
                                                    TeamkillRecord.Length * 5 + VehicleTeamkillRecord.Length * 4;
     public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)

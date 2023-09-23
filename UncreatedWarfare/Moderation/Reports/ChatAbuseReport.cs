@@ -49,7 +49,7 @@ public class ChatAbuseReport : Report
         JsonSerializer.Serialize(writer, Messages, options);
     }
 
-    internal override int EstimateColumnCount() => base.EstimateColumnCount() + Messages.Length * 3;
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + Messages.Length * 3;
     public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
         await base.AddExtraInfo(db, workingList, formatter, token);

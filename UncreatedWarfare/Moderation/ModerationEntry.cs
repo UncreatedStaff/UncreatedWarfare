@@ -386,7 +386,7 @@ public abstract class ModerationEntry
         WriteIntl(writer);
     }
 
-    internal virtual int EstimateColumnCount() => 1 + Actors.Length * 4 + Evidence.Length * 7;
+    internal virtual int EstimateParameterCount() => 1 + Actors.Length * 4 + Evidence.Length * 7;
     internal virtual bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         builder.Append($"DELETE FROM `{DatabaseInterface.TableActors}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
@@ -521,6 +521,20 @@ public interface IForgiveableModerationEntry : IDurationModerationEntry
     /// </summary>
     [JsonPropertyName("forgive_message")]
     string? ForgiveMessage { get; set; }
+
+    /// <summary>
+    /// Checks if the punishment is still active.
+    /// </summary>
+    /// <param name="considerForgiven">Considers the values of <see cref="Forgiven"/> and <see cref="ModerationEntry.Removed"/>.</param>
+    /// <exception cref="InvalidOperationException">This punishment hasn't been resolved (<see cref="ModerationEntry.ResolvedTimestamp"/> is <see langword="null"/>).</exception>
+    bool IsApplied(bool considerForgiven);
+
+    /// <summary>
+    /// Checks if the punishment was still active at <paramref name="timestamp"/>.
+    /// </summary>
+    /// <param name="considerForgiven">Considers the values of <see cref="Forgiven"/> and <see cref="ModerationEntry.Removed"/>.</param>
+    /// <exception cref="InvalidOperationException">This punishment hasn't been resolved (<see cref="ModerationEntry.ResolvedTimestamp"/> is <see langword="null"/>).</exception>
+    bool WasAppliedAt(DateTimeOffset timestamp, bool considerForgiven);
 }
 
 public interface IDurationModerationEntry

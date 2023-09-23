@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -146,7 +145,7 @@ public class ConsoleActor : IModerationActor
     public override string ToString() => "Console";
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("Console");
     public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
-        => UCWarfare.IsLoaded ? new ValueTask<string?>(Provider.configData.Browser.Icon) : new ValueTask<string?>("https://i.imgur.com/NRZFfKN.png");
+        => new ValueTask<string?>(UCWarfare.IsLoaded ? "https://i.imgur.com/G05HJn2.png" /* this image has rounded corners */ : "https://i.imgur.com/NRZFfKN.png");
 }
 [JsonConverter(typeof(ActorConverter))]
 public class AntiCheatActor : IModerationActor
@@ -187,6 +186,9 @@ public readonly struct RelatedActor
     
     [JsonIgnore]
     public const string RoleReporter = "Reporter";
+    
+    [JsonIgnore]
+    public const string RoleEditor = "Editor";
 
     [JsonPropertyName("role")]
     public string Role { get; }

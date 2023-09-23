@@ -69,7 +69,7 @@ public class Mute : DurationPunishment
         writer.WriteString("mute_type", Type.ToString());
     }
 
-    internal override int EstimateColumnCount() => base.EstimateColumnCount() + 1;
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + 1;
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
     {
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);

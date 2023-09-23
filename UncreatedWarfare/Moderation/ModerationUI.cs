@@ -20,12 +20,15 @@ using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Moderation;
-internal class ModerationUI : UnturnedUI
+internal partial class ModerationUI : UnturnedUI
 {
     public const int ModerationHistoryLength = 30;
     public const string PositiveReputationColor = "cc0000";
     public const string NegativeReputationColor = "00cc00";
     public const string DateTimeFormat = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss\\ \\U\\T\\C\\-\\2\\4";
+    public const string DateTimeFormatInput = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss";
+
+    private readonly List<UCPlayer> _tempPlayerSearchBuffer = new List<UCPlayer>(Provider.maxPlayers);
     public static ModerationUI Instance { get; } = new ModerationUI();
 
     /* HEADERS */
@@ -223,8 +226,12 @@ internal class ModerationUI : UnturnedUI
 
         ModerationActionAddEvidenceButton.OnClicked += OnClickedAddEidence;
         ModerationActionRemoveEvidenceButton.OnClicked += OnClickedRemoveEvidence;
-    }
 
+        for (int i = 0; i < ModerationActionControls.Length; ++i)
+        {
+            ModerationActionControls[i].Root.OnClicked += OnActionControlClicked;
+        }
+    }
     private void OnReset(UnturnedButton button, Player player)
     {
         UCPlayer? ucp = UCPlayer.FromPlayer(player);
@@ -248,7 +255,7 @@ internal class ModerationUI : UnturnedUI
         if (textBoxData != null)
             textBoxData.Text = string.Empty;
 
-        AddOrEditEntry(ucp, false);
+        EditInActionMenu(ucp, false);
 
         UpdateSelectedPlayer(ucp);
 
@@ -428,126 +435,6 @@ internal class ModerationUI : UnturnedUI
 
         TryQueueHistoryUpdate(player, 0);
     }
-    private void OnClickedAddActor(UnturnedButton button, Player player)
-    {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer == null)
-            return;
-    }
-    private void OnClickedRemoveActor(UnturnedButton button, Player player)
-    {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer == null)
-            return;
-    }
-    private void OnClickedAddEidence(UnturnedButton button, Player player)
-    {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer == null)
-            return;
-    }
-    private void OnClickedRemoveEvidence(UnturnedButton button, Player player)
-    {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer == null)
-            return;
-    }
-    private void OnClickedModerateButton(Player player, ModerationEntryType type)
-    {
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        if (ucPlayer == null)
-            return;
-        Type? sysType = ModerationReflection.GetType(type);
-        if (sysType == null || !typeof(ModerationEntry).IsAssignableFrom(sysType))
-        {
-            L.LogWarning($"Unknown moderation type: {type}.");
-            return;
-        }
-
-        L.LogDebug($"Pressed action: {type}.");
-
-        ModerationData data = GetOrAddModerationData(ucPlayer);
-        bool isDeselecting = !Util.IsValidSteam64Id(data.SelectedPlayer);
-
-        if (data.PendingPreset != PresetType.None)
-        {
-            if ((int)data.PendingPreset - 1 < Presets.Length)
-                Presets[(int)data.PendingPreset - 1].Enable(ucPlayer.Connection);
-            
-            data.PendingPreset = PresetType.None;
-        }
-
-        if (data.PendingType != ModerationEntryType.None && data.PendingType != type)
-        {
-            LabeledStateButton btn = GetModerationButton(data.PendingType);
-            if (btn.Button != null)
-                btn.Enable(ucPlayer.Connection);
-        }
-
-        if (!isDeselecting)
-        {
-            data.PendingType = type;
-
-            LabeledStateButton btn = GetModerationButton(type);
-            if (btn.Button != null)
-                btn.Disable(ucPlayer.Connection);
-
-            AddOrEditEntry(ucPlayer, false);
-        }
-        else
-        {
-            ModerationFormRoot.SetVisibility(ucPlayer.Connection, false);
-        }
-    }
-    private void OnClickedPreset(UnturnedButton button, Player player)
-    {
-        int index = Array.FindIndex(Presets, x => x.Button == button);
-        if (index == -1 || PunishmentPresets.Presets.Count <= index)
-        {
-            L.LogWarning($"Unknown preset type: {button.Name}.");
-            return;
-        }
-
-        UCPlayer? ucPlayer = UCPlayer.FromPlayer(player);
-        PresetType preset = (PresetType)(index + 1);
-        if (ucPlayer == null || !PunishmentPresets.TryGetPreset(preset, out _))
-        {
-            L.LogWarning($"Preset not found: {preset}.");
-            return;
-        }
-
-        L.LogDebug($"Pressed preset: {preset}.");
-
-        ModerationData data = GetOrAddModerationData(ucPlayer);
-        if (data.PendingPreset != PresetType.None && data.PendingPreset != preset)
-        {
-            if ((int)data.PendingPreset - 1 < Presets.Length)
-                Presets[(int)data.PendingPreset - 1].Enable(ucPlayer.Connection);
-        }
-
-        bool isDeselecting = !Util.IsValidSteam64Id(data.SelectedPlayer);
-
-        if (!isDeselecting)
-        {
-            data.PendingPreset = preset;
-            Presets[index].Disable(ucPlayer.Connection);
-
-            if (data.PendingType != ModerationEntryType.None)
-            {
-                LabeledStateButton btn = GetModerationButton(data.PendingType);
-                if (btn.Button != null)
-                    btn.Enable(ucPlayer.Connection);
-
-                data.PendingType = ModerationEntryType.None;
-            }
-
-            AddOrEditEntry(ucPlayer, false);
-        }
-        else
-        {
-            ModerationFormRoot.SetVisibility(ucPlayer.Connection, false);
-        }
-    }
     public async Task Open(UCPlayer player, CancellationToken token = default)
     {
         token.CombineIfNeeded(player.DisconnectToken);
@@ -646,7 +533,7 @@ internal class ModerationUI : UnturnedUI
 
         SelectEntry(player, data.SelectedEntry);
 
-        AddOrEditEntry(player, false);
+        EditInActionMenu(player, false);
 
         await RefreshModerationHistory(player, token).ConfigureAwait(false);
     }
@@ -699,7 +586,7 @@ internal class ModerationUI : UnturnedUI
             {
                 data.PendingType = ModerationEntryType.None;
                 data.PendingPreset = PresetType.None;
-                AddOrEditEntry(player, true);
+                EditInActionMenu(player, true);
             }
         }
         else
@@ -723,203 +610,6 @@ internal class ModerationUI : UnturnedUI
             ActionsRoot.SetVisibility(player.Connection, true);
 
         }, player.DisconnectToken, ctx: "Update player name.");
-    }
-    private void AddOrEditEntry(UCPlayer player, bool editingExisting)
-    {
-        ModerationData data = GetOrAddModerationData(player);
-
-        ITransportConnection c = player.Connection;
-        if (!Util.IsValidSteam64Id(data.SelectedPlayer) || data is { PendingPreset: PresetType.None, PendingType: ModerationEntryType.None })
-        {
-            ModerationFormRoot.SetVisibility(c, false);
-            return;
-        }
-
-        ModerationActionMessage.TextBox.UpdateFromDataMainThread(player.Player);
-
-        if (data.PendingType != ModerationEntryType.None)
-        {
-            ModerationActionPresetHeaderRoot.SetVisibility(c, false);
-            ModerationActionTypeHeader.SetText(c, Localization.TranslateEnum(data.PendingType));
-            UpdateArgumentTypes(player, null, editingExisting);
-        }
-        else
-        {
-            ModerationActionTypeHeader.SetText(c, "...");
-        }
-
-        for (int i = 1; i < ModerationActionActors.Length; ++i)
-            ModerationActionActors[i].Root.SetVisibility(c, false);
-
-        for (int i = 0; i < ModerationActionEvidence.Length; ++i)
-            ModerationActionEvidence[i].Root.SetVisibility(c, false);
-
-        data.ActionsActorCount = 1;
-        data.ActionsEvidenceCount = 0;
-
-        if (!editingExisting)
-        {
-            ModerationSelectedActor mainActor = ModerationActionActors[0];
-            mainActor.Root.SetVisibility(c, true);
-            mainActor.Name.SetText(c, player.Name.PlayerName);
-            mainActor.YouButton.SetVisibility(c, false);
-            mainActor.Steam64Input.SetText(c, player.Steam64.ToString(CultureInfo.InvariantCulture));
-            mainActor.RoleInput.SetText(c, RelatedActor.RolePrimaryAdmin);
-            mainActor.AsAdminToggleState.SetVisibility(c, true);
-            mainActor.AsAdminToggleButton.SetVisibility(c, false);
-            mainActor.AsAdminToggleButton.SetVisibility(c, false);
-
-            if (player.CachedSteamProfile != null)
-            {
-                mainActor.ProfilePicture.SetImage(c, player.CachedSteamProfile.AvatarUrlMedium ?? string.Empty);
-            }
-            else
-            {
-                UniTask.Create(async () =>
-                {
-                    string? url = await player.GetProfilePictureURL(AvatarSize.Medium, player.DisconnectToken);
-                    mainActor.ProfilePicture.SetImage(c, url ?? string.Empty);
-                });
-            }
-        }
-        else
-        {
-            // todo
-        }
-
-        ModerationFormRoot.SetVisibility(c, true);
-
-        if (data.PendingPreset != PresetType.None)
-        {
-            UCWarfare.RunTask(async token =>
-            {
-                if (data.PendingPreset == PresetType.None || !PunishmentPresets.TryGetPreset(data.PendingPreset, out PunishmentPreset[] presets))
-                    return;
-                int nextLevel = await Data.ModerationSql.GetNextLevel(data.SelectedPlayer, data.PendingPreset, token).ConfigureAwait(false);
-                int index = nextLevel;
-                if (index < 1)
-                    index = 1;
-                else if (index > presets.Length)
-                    index = presets.Length;
-                PunishmentPreset preset = presets[index - 1];
-
-                string str = Localization.TranslateEnum(preset.PrimaryModerationType);
-
-                if (preset.PrimaryDuration.HasValue)
-                {
-                    str = (preset.PrimaryDuration.Value.Ticks < 0
-                        ? "Permanent "
-                        : (Util.ToTimeString((int)Math.Round(preset.PrimaryDuration.Value.TotalSeconds)) + " ")) + str;
-                }
-
-                if (preset.SecondaryModerationType is > ModerationEntryType.None)
-                {
-                    str += " + ";
-                    if (preset.SecondaryDuration.HasValue)
-                    {
-                        str += preset.SecondaryDuration.Value.Ticks < 0
-                            ? "Permanent "
-                            : (Util.ToTimeString((int)Math.Round(preset.SecondaryDuration.Value.TotalSeconds)) + " ");
-                    }
-
-                    str += Localization.TranslateEnum(preset.SecondaryModerationType!.Value);
-                }
-
-                ModerationActionTypeHeader.SetText(c, str);
-                ModerationActionPresetHeader.SetText(c, Localization.TranslateEnum(data.PendingPreset) + " | Level " + nextLevel);
-                ModerationActionPresetHeaderRoot.SetVisibility(c, true);
-
-            }, player.DisconnectToken, ctx: $"Update preset level for {player.Steam64} for player {data.SelectedPlayer}.");
-        }
-    }
-    private void UpdateArgumentTypes(UCPlayer player, PunishmentPreset? preset, bool editingExisting)
-    {
-        ModerationData data = GetOrAddModerationData(player);
-
-        ModerationEntryType type = data.PendingType;
-        ITransportConnection c = player.Connection;
-        bool hasForgiveable = false;
-        bool hasMute;
-        bool hasAssetBan;
-        if (preset == null)
-        {
-            if (type == ModerationEntryType.None)
-                goto hideAllElements;
-
-            hasForgiveable = editingExisting && ModerationReflection.IsOfType<IForgiveableModerationEntry>(type);
-            hasMute = type == ModerationEntryType.Mute;
-            hasAssetBan = type == ModerationEntryType.AssetBan;
-        }
-        else
-        {
-            PresetType presetType = preset.PresetType;
-            if (presetType == PresetType.None)
-                goto hideAllElements;
-            if (editingExisting)
-            {
-                hasForgiveable = ModerationReflection.IsOfType<IForgiveableModerationEntry>(preset.PrimaryModerationType) ||
-                                      (preset.SecondaryModerationType.HasValue
-                                       && ModerationReflection.IsOfType<IForgiveableModerationEntry>(preset.SecondaryModerationType.Value));
-            }
-
-            hasMute = preset.PrimaryModerationType == ModerationEntryType.Mute || preset.SecondaryModerationType is ModerationEntryType.Mute;
-            hasAssetBan = preset.PrimaryModerationType == ModerationEntryType.AssetBan || preset.SecondaryModerationType is ModerationEntryType.AssetBan;
-        }
-
-        // bool tgl1 = false, msg1 = false; (add back if needed)
-        if (hasMute)
-        {
-            MuteTypeTracker.Show(c);
-            // tgl1 = true;
-        }
-        if (hasAssetBan)
-        {
-            ModerationActionInputBox2.Show(c);
-            ModerationActionInputBox2.SetPlaceholder(c, "Vehicles (comma separated, blank = all)");
-            // msg1 = true;
-        }
-
-        int ct;
-        ModerationActionControls[0].Text.SetText(c, "Cancel");
-        if (editingExisting)
-        {
-            ModerationActionControls[1].Text.SetText(c, "Save");
-            ModerationActionControls[2].Text.SetText(c, "Remove");
-            ct = 3;
-            if (hasForgiveable)
-            {
-                ModerationActionControls[3].Text.SetText(c, "Forgive");
-                ct = 4;
-            }
-
-            if (ct > ModerationActionControls.Length)
-                ct = ModerationActionControls.Length;
-        }
-        else
-        {
-            ModerationActionControls[1].Text.SetText(c, "Add");
-            ct = Math.Min(2, ModerationActionControls.Length);
-        }
-
-        int i2 = 0;
-        for (; i2 < ct; ++i2)
-            ModerationActionControls[i2].Root.SetVisibility(c, true);
-
-        for (; i2 < ModerationActionControls.Length; ++i2)
-            ModerationActionControls[i2].Root.SetVisibility(c, false);
-
-        return;
-
-        hideAllElements:
-
-        for (int i = 0; i < ModerationActionControls.Length; ++i)
-            ModerationActionControls[i].Root.SetVisibility(c, false);
-        ModerationActionInputBox2.Hide(c);
-        ModerationActionInputBox3.Hide(c);
-        ModerationActionToggleButton1.Button.SetVisibility(c, false);
-        ModerationActionToggleButton2.Button.SetVisibility(c, false);
-        ModerationActionMiniInputBox1.Hide(c);
-        ModerationActionMiniInputBox2.Hide(c);
     }
     public void SetHistoryPage(UCPlayer player, ModerationData data, int page)
     {
@@ -957,8 +647,6 @@ internal class ModerationUI : UnturnedUI
 
         data.HistoryCount = c;
     }
-
-    private readonly List<UCPlayer> _tempPlayerSearchBuffer = new List<UCPlayer>(Provider.maxPlayers);
     public void SendModerationPlayerList(UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();
@@ -1107,7 +795,7 @@ internal class ModerationUI : UnturnedUI
                     data.PendingPreset = PresetType.None;
                     data.PrimaryEditingEntry = entry;
                     data.SecondaryEditingEntry = null;
-                    AddOrEditEntry(player, true);
+                    EditInActionMenu(player, true);
                 }
                 else
                 {
@@ -1128,7 +816,7 @@ internal class ModerationUI : UnturnedUI
                         data.PendingPreset = punishment.PresetType;
                         data.PrimaryEditingEntry = punishment;
                         data.SecondaryEditingEntry = punishments.Length > 1 ? punishments[1] : null;
-                        AddOrEditEntry(player, true);
+                        EditInActionMenu(player, true);
                     });
                 }
                 return;
@@ -1592,34 +1280,6 @@ internal class ModerationUI : UnturnedUI
 
         }, player.DisconnectToken);
     }
-    public static string GetPresetButtonText(PresetType type)
-    {
-        return type switch
-        {
-            PresetType.BypassingPunishment => "Bypassing Pnshmnt.",
-            PresetType.InappropriateProfile => "Inappr. Profile",
-            PresetType.DisruptiveBehavior => "Disrpt. Bhvr.",
-            PresetType.TargetedHarassment => "Harassment",
-            PresetType.IntentionalTeamkilling => "Int. TKing",
-            PresetType.AssetWaste => "Asset Waste",
-            _ => type.ToString()
-        };
-    }
-    public static string GetModerationTypeButtonText(ModerationEntryType type)
-    {
-        return type switch
-        {
-            ModerationEntryType.VehicleTeamkill => "Veh. Tk.",
-            ModerationEntryType.BattlEyeKick => "BtlEye. Kick",
-            ModerationEntryType.GriefingReport => "Grief. Rep.",
-            ModerationEntryType.ChatAbuseReport => "Chat Ab. Rep.",
-            ModerationEntryType.CheatingReport => "Cheat. Rep.",
-            ModerationEntryType.Commendation => "Commend.",
-            ModerationEntryType.BugReportAccepted => "Bug Rep. Acc.",
-            ModerationEntryType.PlayerReportAccepted => "Pl. Rep. Acc.",
-            _ => type.ToString()
-        };
-    }
     public enum Page
     {
         Moderation,
@@ -1742,14 +1402,8 @@ internal class ModerationUI : UnturnedUI
         [UIPattern("Role", Mode = FormatMode.Format)]
         public UnturnedTextBox RoleInput { get; set; }
 
-        [UIPattern("RoleText", Mode = FormatMode.Format)]
-        public UnturnedLabel RoleText { get; set; }
-
         [UIPattern("Steam64", Mode = FormatMode.Format)]
         public UnturnedTextBox Steam64Input { get; set; }
-
-        [UIPattern("Steam64Text", Mode = FormatMode.Format)]
-        public UnturnedLabel Steam64Text { get; set; }
 
         [UIPattern("You", Mode = FormatMode.Format)]
         public UnturnedButton YouButton { get; set; }
@@ -1780,26 +1434,14 @@ internal class ModerationUI : UnturnedUI
         [UIPattern("Timestamp", Mode = FormatMode.Format)]
         public UnturnedTextBox TimestampInput { get; set; }
 
-        [UIPattern("TimestampText", Mode = FormatMode.Format)]
-        public UnturnedTextBox TimestampText { get; set; }
-
         [UIPattern("Message", Mode = FormatMode.Format)]
         public UnturnedTextBox MessageInput { get; set; }
-
-        [UIPattern("MessageText", Mode = FormatMode.Format)]
-        public UnturnedTextBox MessageText { get; set; }
 
         [UIPattern("Link", Mode = FormatMode.Format)]
         public UnturnedTextBox LinkInput { get; set; }
 
-        [UIPattern("LinkText", Mode = FormatMode.Format)]
-        public UnturnedTextBox LinkText { get; set; }
-
         [UIPattern("Steam64", Mode = FormatMode.Format)]
         public UnturnedTextBox Steam64Input { get; set; }
-
-        [UIPattern("Steam64Text", Mode = FormatMode.Format)]
-        public UnturnedTextBox Steam64Text { get; set; }
 
         [UIPattern("Now", Mode = FormatMode.Format)]
         public UnturnedButton NowButton { get; set; }
@@ -1817,6 +1459,7 @@ internal class ModerationUI : UnturnedUI
     }
     public class ModerationData : IUnturnedUIData
     {
+        internal int ActionModeVersion;
         internal int SearchVersion;
         internal int InfoVersion;
         internal int HistorySearchUpdateVersion;
@@ -1833,14 +1476,22 @@ internal class ModerationUI : UnturnedUI
         public int PlayerCount { get; set; }
         public int InfoActorCount { get; set; }
         public int InfoEvidenceCount { get; set; }
-        public int ActionsActorCount { get; set; }
-        public int ActionsEvidenceCount { get; set; }
         public ModerationEntry? SelectedEntry { get; set; }
+        public float LastViewedTime { get; set; }
+
+        /* START ACTION MENU */
+
+        public int ActionsActorCount { get; set; } = 1;
+        public int ActionsEvidenceCount { get; set; }
         public ModerationEntry? PrimaryEditingEntry { get; set; }
         public ModerationEntry? SecondaryEditingEntry { get; set; }
         public ModerationEntryType PendingType { get; set; } = ModerationEntryType.None;
         public PresetType PendingPreset { get; set; } = PresetType.None;
-        public float LastViewedTime { get; set; }
+        public PunishmentPreset? PendingPresetValue { get; set; }
+        public List<RelatedActor> Actors { get; set; } = new List<RelatedActor>();
+        public List<Evidence> Evidence { get; set; } = new List<Evidence>();
+
+        /* END ACTION MENU */
         public ModerationData(CSteamID player, ModerationUI owner)
         {
             Owner = owner;

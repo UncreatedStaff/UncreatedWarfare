@@ -35,7 +35,7 @@ internal class MapScheduler : MonoBehaviour
         new MapData("Fool's Road",      new ulong[] { 2407566267, 2407740920 }, removeChildren: new ulong[] { 2407566267 }),
         new MapData("Goose Bay",        new ulong[] { 2301006771 }),
         new MapData("Nuijamaa",         new ulong[] { 2557112412 }),
-        new MapData("Gulf of Aqaba",    new ulong[] { 2726964335 }),
+        new MapData("Gulf of Aqaba",    Array.Empty<ulong>()/*new ulong[] { 2726964335 }*/),
         new MapData("Changbai Shan",    new ulong[] { 2943688379, 2407740920 }),
     };
 
@@ -49,7 +49,7 @@ internal class MapScheduler : MonoBehaviour
     public static string GetMapName(int index) => MapRotation[index].Name;
 
     // Map to load if rotation is undefined
-    private static readonly string DefaultMap = ChangbaiShan;
+    private static readonly string DefaultMap = GulfOfAqaba;
 
     private static List<ulong> _originalMods;
     private static List<ulong> _originalIgnoreChildren;

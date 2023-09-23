@@ -87,6 +87,7 @@ public class TeleportCommand : Command
                 new CommandParameter("Jump")
                 {
                     Description = "Teleport to where you're looking.",
+                    Aliases = new string[] { "j" },
                     Parameters = new CommandParameter[]
                     {
                         new CommandParameter("Distance", typeof(float))
@@ -106,7 +107,7 @@ public class TeleportCommand : Command
 
         ctx.AssertArgs(1, Syntax);
 
-        if (ctx.MatchParameter(0, "jump"))
+        if (ctx.MatchParameter(0, "jump", "j"))
         {
             ctx.AssertRanByPlayer();
             bool raycast = !ctx.TryGet(1, out float distance);

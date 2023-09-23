@@ -136,7 +136,7 @@ public class CheatingReport : Report
         writer.WritePropertyName("hits");
         JsonSerializer.Serialize(writer, Shots, options);
     }
-    internal override int EstimateColumnCount() => base.EstimateColumnCount() + Shots.Length * 22;
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + Shots.Length * 22;
     public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
         await base.AddExtraInfo(db, workingList, formatter, token);
