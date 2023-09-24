@@ -47,8 +47,8 @@ public class TeamSelectorUI : UnturnedUI
     public readonly LanguageBox[] Languages = UnturnedUIPatterns.CreateArray<LanguageBox>("box_l10n_{1}{0}", 1, to: 6);
     public readonly CultureBox[] Cultures = UnturnedUIPatterns.CreateArray<CultureBox>("box_i14n_{1}{0}", 1, to: 25);
 
-    public readonly ChangeableTextBox LanguageSearchBox = new ChangeableTextBox("txt_search_l10n", "txt_search_l10n_placeholder");
-    public readonly ChangeableTextBox CultureSearchBox = new ChangeableTextBox("txt_search_i14n", "txt_search_i14n_placeholder");
+    public readonly PlaceholderTextBox LanguageSearchBox = new PlaceholderTextBox("txt_search_l10n", "txt_search_l10n_placeholder");
+    public readonly PlaceholderTextBox CultureSearchBox = new PlaceholderTextBox("txt_search_i14n", "txt_search_i14n_placeholder");
 
     public readonly UnturnedLabel NoLanguagesLabel = new UnturnedLabel("lbl_no_l10n_found");
     public readonly UnturnedLabel NoCulturesLabel = new UnturnedLabel("lbl_no_i14n_found");

@@ -408,9 +408,9 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         }
     }
     public static explicit operator ulong(UCPlayer player) => player.Steam64;
-    public static implicit operator CSteamID(UCPlayer player) => player.Player.channel.owner.playerID.steamID;
+    public static explicit operator CSteamID(UCPlayer player) => player.Player.channel.owner.playerID.steamID;
     public static implicit operator Player(UCPlayer player) => player.Player;
-    public static implicit operator SteamPlayer(UCPlayer player) => player.Player.channel.owner;
+    public static explicit operator SteamPlayer(UCPlayer player) => player.Player.channel.owner;
     internal void SetOffline()
     {
         lock (this)

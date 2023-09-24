@@ -356,7 +356,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                     ToastMessage.QueueMessage(killer, new ToastMessage(ToastMessageStyle.Mini, T.XPToastEnemyInjured.Translate(killer)));
 
                     Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
-                    if (UCPlayer.FromSteamPlayer(killer) is { ActiveKit.Item: { } kit })
+                    if (killer is { ActiveKit.Item: { } kit })
                     {
                         Stats.StatsManager.ModifyStats(killer.Steam64, s =>
                         {

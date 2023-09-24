@@ -900,6 +900,13 @@ public static class Localization
         writer.Dispose();
     }
     public static LanguageInfo GetDefaultLanguage() => Data.LanguageDataStore?.GetInfoCached(L.Default) ?? Data.FallbackLanguageInfo;
+    public static LanguageInfo GetLanguageCached(ulong player)
+    {
+        if (UCWarfare.IsLoaded && UCPlayer.FromID(player) is { Locale: { } locale })
+            return locale.LanguageInfo;
+
+        return GetDefaultLanguage();
+    }
     public static async ValueTask<LanguageInfo> GetLanguage(ulong player, CancellationToken token = default)
     {
         if (UCWarfare.IsLoaded && UCPlayer.FromID(player) is { Locale: { } locale })

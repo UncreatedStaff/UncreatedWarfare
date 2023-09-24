@@ -23,7 +23,7 @@ public class AssetBan : DurationPunishment
     [JsonConverter(typeof(ArrayConverter<VehicleType, JsonStringEnumConverter>))]
     public VehicleType[] VehicleTypeFilter { get; set; }
 
-    internal string FillFromText(string? text)
+    internal void FillFromText(string? text)
     {
         ThreadUtil.assertIsGameThread();
 
@@ -32,14 +32,12 @@ public class AssetBan : DurationPunishment
             || text.Equals("all", StringComparison.InvariantCultureIgnoreCase))
         {
             VehicleTypeFilter = Array.Empty<VehicleType>();
-            return string.Empty;
+            return;
         }
 
         _split ??= new char[] { ',' };
         string[] splits = text!.Split(_split, StringSplitOptions.RemoveEmptyEntries);
         List<VehicleType>? vehicleTypes = null;
-
-        StringBuilder response = new StringBuilder();
         
         for (int i = 0; i < splits.Length; ++i)
         {
@@ -49,25 +47,14 @@ public class AssetBan : DurationPunishment
             if (types is { Length: > 0 })
             {
                 (vehicleTypes ??= new List<VehicleType>(2)).AddRange(types);
-                for (int j = 0; j < types.Length; ++j)
-                {
-                    if (response.Length > 0)
-                        response.Append(", ");
-                    response.Append(types[j].ToString());
-                }
             }
             else if (single != VehicleType.None)
             {
                 (vehicleTypes ??= new List<VehicleType>(2)).Add(single);
-                if (response.Length > 0)
-                    response.Append(", ");
-                response.Append(single.ToString());
             }
         }
 
         VehicleTypeFilter = vehicleTypes == null ? Array.Empty<VehicleType>() : vehicleTypes.ToArray();
-
-        return response.ToString();
     }
 
     private static void ParseValue(string input, out VehicleType single, out VehicleType[]? vehicleTypes)
@@ -107,6 +94,74 @@ public class AssetBan : DurationPunishment
         {
             vehicleTypes = new VehicleType[] { VehicleType.HMG, VehicleType.ATGM, VehicleType.AA, VehicleType.Mortar };
         }
+    }
+    public string GetCommaList(bool roundTrip)
+    {
+        StringBuilder sb = new StringBuilder();
+        List<VehicleType> types = new List<VehicleType>(VehicleTypeFilter);
+        if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportGround) != -1)
+        {
+            types.Remove(VehicleType.TransportAir);
+            types.Remove(VehicleType.TransportGround);
+            sb.Append("Transports");
+        }
+        if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.Jet) != -1
+            && Array.IndexOf(VehicleTypeFilter, VehicleType.AttackHeli) != -1)
+        {
+            types.Remove(VehicleType.TransportAir);
+            types.Remove(VehicleType.Jet);
+            types.Remove(VehicleType.AttackHeli);
+            if (sb.Length > 0)
+                sb.Append(", ");
+            sb.Append("Aircraft");
+        }
+        else if (Array.IndexOf(VehicleTypeFilter, VehicleType.Jet) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.AttackHeli) != -1)
+        {
+            types.Remove(VehicleType.Jet);
+            types.Remove(VehicleType.AttackHeli);
+            if (sb.Length > 0)
+                sb.Append(", ");
+            sb.Append("Assault Aircraft");
+        }
+        if (Array.IndexOf(VehicleTypeFilter, VehicleType.APC) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.IFV) != -1
+                                                                    && Array.IndexOf(VehicleTypeFilter, VehicleType.MBT) != -1
+                                                                    && Array.IndexOf(VehicleTypeFilter, VehicleType.ScoutCar) != -1)
+        {
+            types.Remove(VehicleType.APC);
+            types.Remove(VehicleType.IFV);
+            types.Remove(VehicleType.MBT);
+            types.Remove(VehicleType.ScoutCar);
+            if (sb.Length > 0)
+                sb.Append(", ");
+            sb.Append("Armors");
+        }
+        if (Array.IndexOf(VehicleTypeFilter, VehicleType.LogisticsGround) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1)
+        {
+            types.Remove(VehicleType.LogisticsGround);
+            types.Remove(VehicleType.TransportAir);
+            if (sb.Length > 0)
+                sb.Append(", ");
+            sb.Append("Loigistics");
+        }
+        if (Array.IndexOf(VehicleTypeFilter, VehicleType.HMG) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.ATGM) != -1
+                                                                    && Array.IndexOf(VehicleTypeFilter, VehicleType.AA) != -1
+                                                                    && Array.IndexOf(VehicleTypeFilter, VehicleType.Mortar) != -1)
+        {
+            types.Remove(VehicleType.HMG);
+            types.Remove(VehicleType.ATGM);
+            types.Remove(VehicleType.AA);
+            types.Remove(VehicleType.Mortar);
+            if (sb.Length > 0)
+                sb.Append(", ");
+            sb.Append("Emplacements");
+        }
+        for (int i = 0; i < types.Count; ++i)
+        {
+            if (sb.Length > 0)
+                sb.Append(", ");
+            sb.Append(roundTrip ? types[i].ToString() : Localization.TranslateEnum(types[i]));
+        }
+        return sb.ToString();
     }
     public bool IsAssetBanned(VehicleType type, bool considerForgiven, bool checkStillActive = true)
     {
@@ -207,79 +262,14 @@ public class AssetBan : DurationPunishment
             writer.WriteStringValue(VehicleTypeFilter[i].ToString());
         writer.WriteEndArray();
     }
-
     public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
     {
         await base.AddExtraInfo(db, workingList, formatter, token);
         if (VehicleTypeFilter.Length > 0)
         {
-            StringBuilder sb = new StringBuilder();
-            List<VehicleType> types = new List<VehicleType>(VehicleTypeFilter);
-            if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportGround) != -1)
-            {
-                types.Remove(VehicleType.TransportAir);
-                types.Remove(VehicleType.TransportGround);
-                sb.Append("Transports");
-            }
-            if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.Jet) != -1
-                && Array.IndexOf(VehicleTypeFilter, VehicleType.AttackHeli) != -1)
-            {
-                types.Remove(VehicleType.TransportAir);
-                types.Remove(VehicleType.Jet);
-                types.Remove(VehicleType.AttackHeli);
-                if (sb.Length > 0)
-                    sb.Append(", ");
-                sb.Append("Aircraft");
-            }
-            else if (Array.IndexOf(VehicleTypeFilter, VehicleType.Jet) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.AttackHeli) != -1)
-            {
-                types.Remove(VehicleType.Jet);
-                types.Remove(VehicleType.AttackHeli);
-                if (sb.Length > 0)
-                    sb.Append(", ");
-                sb.Append("Assault Aircraft");
-            }
-            if (Array.IndexOf(VehicleTypeFilter, VehicleType.APC) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.IFV) != -1
-                                                                        && Array.IndexOf(VehicleTypeFilter, VehicleType.MBT) != -1
-                                                                        && Array.IndexOf(VehicleTypeFilter, VehicleType.ScoutCar) != -1)
-            {
-                types.Remove(VehicleType.APC);
-                types.Remove(VehicleType.IFV);
-                types.Remove(VehicleType.MBT);
-                types.Remove(VehicleType.ScoutCar);
-                if (sb.Length > 0)
-                    sb.Append(", ");
-                sb.Append("Armors");
-            }
-            if (Array.IndexOf(VehicleTypeFilter, VehicleType.LogisticsGround) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1)
-            {
-                types.Remove(VehicleType.LogisticsGround);
-                types.Remove(VehicleType.TransportAir);
-                if (sb.Length > 0)
-                    sb.Append(", ");
-                sb.Append("Loigistics");
-            }
-            if (Array.IndexOf(VehicleTypeFilter, VehicleType.HMG) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.ATGM) != -1
-                                                                        && Array.IndexOf(VehicleTypeFilter, VehicleType.AA) != -1
-                                                                        && Array.IndexOf(VehicleTypeFilter, VehicleType.Mortar) != -1)
-            {
-                types.Remove(VehicleType.HMG);
-                types.Remove(VehicleType.ATGM);
-                types.Remove(VehicleType.AA);
-                types.Remove(VehicleType.Mortar);
-                if (sb.Length > 0)
-                    sb.Append(", ");
-                sb.Append("Emplacements");
-            }
-            for (int i = 0; i < types.Count; ++i)
-            {
-                if (sb.Length > 0)
-                    sb.Append(", ");
-                sb.Append(Localization.TranslateEnum(types));
-            }
             
             workingList.Add("Type Filter:");
-            workingList.Add(sb.ToString());
+            workingList.Add(GetCommaList(false));
         }
         else
         {
