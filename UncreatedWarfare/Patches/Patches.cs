@@ -11,7 +11,6 @@ using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -41,7 +40,7 @@ public static partial class Patches
     public delegate void StructureDestroyedEventArgs(StructureData data, StructureDrop drop, uint instanceID);
     public delegate void BarricadeHealthEventArgs(BarricadeData data);
     public delegate void OnPlayerTogglesCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool allow);
-    public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
+    public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool allow);
     public delegate void BatteryStealingDelegate(SteamPlayer theif, ref bool allow);
     public delegate void PlayerTriedStoreItem(Player player, byte page, ItemJar jar, ref bool allow);
     public delegate void InventoryItemAdded(Player __instance, byte page, byte index, ItemJar jar);
@@ -49,7 +48,6 @@ public static partial class Patches
     public delegate void PlayerMarker(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed);
 
     public static event OnPlayerTogglesCosmeticsDelegate OnPlayerTogglesCosmetics_Global;
-    public static event OnPlayerSetsCosmeticsDelegate OnPlayerSetsCosmetics_Global;
     public static event BatteryStealingDelegate OnBatterySteal_Global;
     public static event PlayerTriedStoreItem OnPlayerTriedStoreItem_Global;
     public static event PlayerGesture OnPlayerGesture_Global;
@@ -149,7 +147,7 @@ public static partial class Patches
         }
         // SDG.Unturned.ChatManager
         /// <summary>
-        /// Postfix of <see cref="ChatManager.ReceiveChatRequest(in ServerInvocationContext, byte, string)"/> to reroute local chats to squad.
+        /// Postfix of <see cref="ChatManager.ReceiveChatRequest"/> to reroute local chats to squad.
         /// </summary>
         [HarmonyPatch(typeof(ChatManager), nameof(ChatManager.ReceiveChatRequest))]
         [HarmonyPrefix]
@@ -418,26 +416,9 @@ public static partial class Patches
             OnPlayerTogglesCosmetics_Global?.Invoke(ref newtype, __instance.player.channel.owner, ref allow);
             return allow;
         }
-        // SDG.Unturned.PlayerClothing
-        /// <summary>
-        /// Prefix of <see cref="PlayerClothing.ServerSetVisualToggleState(EVisualToggleType, bool)"/> to use an event to cancel it.
-        /// </summary>
-        [HarmonyPatch(typeof(PlayerClothing), nameof(PlayerClothing.ServerSetVisualToggleState))]
-        [HarmonyPrefix]
-        [UsedImplicitly]
-        static bool CancelCosmeticSetPrefix(EVisualToggleType type, ref bool isVisible, PlayerClothing __instance)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            EVisualToggleType newtype = type;
-            bool allow = true;
-            OnPlayerSetsCosmetics_Global?.Invoke(ref newtype, __instance.player.channel.owner, ref isVisible, ref allow);
-            return allow;
-        }
         // SDG.Unturned.VehicleManager
         /// <summary>
-        /// Prefix of <see cref="VehicleManager.ReceiveStealVehicleBattery(in ServerInvocationContext)"/> to disable the removal of batteries from vehicles.
+        /// Prefix of <see cref="VehicleManager.ReceiveStealVehicleBattery"/> to disable the removal of batteries from vehicles.
         /// </summary>
         [HarmonyPatch(typeof(VehicleManager), nameof(VehicleManager.ReceiveStealVehicleBattery))]
         [HarmonyPrefix]

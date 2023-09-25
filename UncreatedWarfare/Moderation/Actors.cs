@@ -1,5 +1,5 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -12,6 +12,10 @@ namespace Uncreated.Warfare.Moderation;
 
 public static class Actors
 {
+    public static IModerationActor BattlEye => BattlEyeActor.Instance;
+    public static IModerationActor AntiCheat => AntiCheatActor.Instance;
+    public static IModerationActor Console => ConsoleActor.Instance;
+
     public static IModerationActor GetActor(ulong id)
     {
         if (id == 0ul)
@@ -24,7 +28,12 @@ public static class Actors
             return BattlEyeActor.Instance;
 
         if (Util.IsValidSteam64Id(id))
+        {
+            if (UCWarfare.IsLoaded && UCPlayer.FromID(id) is { IsOnline: true } pl)
+                return pl;
+            
             return new PlayerActor(id);
+        }
 
         return new DiscordActor(id);
     }
@@ -44,10 +53,10 @@ public class PlayerActor : IModerationActor
     public ulong Id { get; }
     bool IModerationActor.Async => true;
     public PlayerActor(ulong id) => Id = id;
-
+    public override string ToString() => Id.ToString(CultureInfo.InvariantCulture);
     public virtual async ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default)
     {
-        return (await database.GetUsernames(Id, token)).PlayerName;
+        return (await database.GetUsernames(Id, true, token)).PlayerName;
     }
     public virtual async ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
     {
@@ -83,6 +92,7 @@ public class DiscordActor : IModerationActor
     public ulong Id { get; }
     bool IModerationActor.Async => true;
     public DiscordActor(ulong id) => Id = id;
+    public override string ToString() => "<@" + Id.ToString(CultureInfo.InvariantCulture) + ">";
     public virtual async ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default)
     {
         if (GetDiscordDisplayNameOverride != null)
@@ -90,7 +100,7 @@ public class DiscordActor : IModerationActor
 
         ulong steam64 = await database.Sql.GetSteam64(Id, token).ConfigureAwait(false);
         if (steam64 != 0)
-            return (await database.GetUsernames(steam64, token).ConfigureAwait(false)).PlayerName;
+            return (await database.GetUsernames(steam64, true, token).ConfigureAwait(false)).PlayerName;
 
         return "<@" + Id + ">";
     }
@@ -132,9 +142,10 @@ public class ConsoleActor : IModerationActor
     public ulong Id => 0;
     bool IModerationActor.Async => false;
     private ConsoleActor() { }
+    public override string ToString() => "Console";
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("Console");
     public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
-        => UCWarfare.IsLoaded ? new ValueTask<string?>(Provider.configData.Browser.Icon) : new ValueTask<string?>("https://i.imgur.com/NRZFfKN.png");
+        => new ValueTask<string?>(UCWarfare.IsLoaded ? "https://i.imgur.com/f2axLoQ.png" /* this image has rounded corners */ : "https://i.imgur.com/NRZFfKN.png");
 }
 [JsonConverter(typeof(ActorConverter))]
 public class AntiCheatActor : IModerationActor
@@ -143,6 +154,7 @@ public class AntiCheatActor : IModerationActor
     public ulong Id => 1;
     bool IModerationActor.Async => false;
     private AntiCheatActor() { }
+    public override string ToString() => "Anti-Cheat";
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("Anti-Cheat");
     public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default) => ConsoleActor.Instance.GetProfilePictureURL(database, size, token);
 }
@@ -153,6 +165,7 @@ public class BattlEyeActor : IModerationActor
     public ulong Id => 2;
     bool IModerationActor.Async => false;
     private BattlEyeActor() { }
+    public override string ToString() => "BattlEye";
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("BattlEye");
     public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default) => new ValueTask<string?>("https://i.imgur.com/jasTgpD.jpg");
 }
@@ -163,16 +176,30 @@ public enum AvatarSize
     Small
 }
 
-public readonly struct RelatedActor
+public readonly struct RelatedActor : IEquatable<RelatedActor>
 {
     [JsonIgnore]
     public const string RolePrimaryAdmin = "Primary Admin";
+    
+    [JsonIgnore]
+    public const string RoleRemovingAdmin = "Removing Admin";
+    
+    [JsonIgnore]
+    public const string RoleReporter = "Reporter";
+    
+    [JsonIgnore]
+    public const string RoleEditor = "Editor";
+
     [JsonPropertyName("role")]
     public string Role { get; }
+
     [JsonPropertyName("admin")]
     public bool Admin { get; }
+
     [JsonPropertyName("actor")]
+    [JsonConverter(typeof(ActorConverter))]
     public IModerationActor Actor { get; }
+
     [JsonConstructor]
     public RelatedActor(string role, bool admin, IModerationActor actor)
     {
@@ -180,6 +207,8 @@ public readonly struct RelatedActor
         Admin = admin;
         Actor = actor;
     }
+
+    // ReSharper disable once UnusedParameter.Local
     public RelatedActor(ByteReader reader, ushort version)
     {
         Role = reader.ReadString();
@@ -192,6 +221,35 @@ public readonly struct RelatedActor
         writer.Write(Admin);
         writer.Write(Actor.Id);
     }
+
+    public bool Equals(RelatedActor other)
+    {
+        return Role == other.Role && Admin == other.Admin && (Actor == null && other.Actor == null || Actor != null && other.Actor != null && Actor.Id == other.Actor.Id);
+    }
+    public override bool Equals(object? obj)
+    {
+        return obj is RelatedActor other && Equals(other);
+    }
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            int hashCode = Role.GetHashCode();
+            hashCode = (hashCode * 397) ^ Admin.GetHashCode();
+            hashCode = (hashCode * 397) ^ Actor.GetHashCode();
+            return hashCode;
+        }
+    }
+    public static bool operator ==(RelatedActor left, RelatedActor right)
+    {
+        return left.Equals(right);
+    }
+    public static bool operator !=(RelatedActor left, RelatedActor right)
+    {
+        return !left.Equals(right);
+    }
+
+    public override string ToString() => Actor + " (" + Role + (Admin ? " [A]" : string.Empty) + ")";
 }
 public sealed class ActorConverter : JsonConverter<IModerationActor>
 {

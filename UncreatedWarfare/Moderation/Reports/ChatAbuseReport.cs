@@ -1,7 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Encoding;
+using Uncreated.Framework;
+using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 [ModerationEntry(ModerationEntryType.ChatAbuseReport)]
@@ -9,15 +15,15 @@ namespace Uncreated.Warfare.Moderation.Reports;
 public class ChatAbuseReport : Report
 {
     [JsonPropertyName("messages")]
-    public ReportChatRecord[] Messages { get; set; } = Array.Empty<ReportChatRecord>();
+    public AbusiveChatRecord[] Messages { get; set; } = Array.Empty<AbusiveChatRecord>();
     public override string GetDisplayName() => "Chat Abuse Report";
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
         base.ReadIntl(reader, version);
 
-        Messages = new ReportChatRecord[reader.ReadInt32()];
+        Messages = new AbusiveChatRecord[reader.ReadInt32()];
         for (int i = 0; i < Messages.Length; ++i)
-            Messages[i] = new ReportChatRecord(reader);
+            Messages[i] = new AbusiveChatRecord(reader);
     }
 
     protected override void WriteIntl(ByteWriter writer)
@@ -31,7 +37,7 @@ public class ChatAbuseReport : Report
     public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
         if (propertyName.Equals("messages", StringComparison.InvariantCultureIgnoreCase))
-            Messages = JsonSerializer.Deserialize<ReportChatRecord[]>(ref reader, options) ?? Array.Empty<ReportChatRecord>();
+            Messages = JsonSerializer.Deserialize<AbusiveChatRecord[]>(ref reader, options) ?? Array.Empty<AbusiveChatRecord>();
         else
             base.ReadProperty(ref reader, propertyName, options);
     }
@@ -42,34 +48,63 @@ public class ChatAbuseReport : Report
         writer.WritePropertyName("messages");
         JsonSerializer.Serialize(writer, Messages, options);
     }
+
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + Messages.Length * 3;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+        
+        workingList.Add($"Recorded Messages: {Messages.Length.ToString(formatter)}");
+    }
+    internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($"DELETE FROM `{DatabaseInterface.TableReportChatRecords}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
+
+        if (Messages.Length > 0)
+        {
+            builder.Append($" INSERT INTO `{DatabaseInterface.TableReportChatRecords}` ({SqlTypes.ColumnList(
+                DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsChatRecordsTimestamp,
+                DatabaseInterface.ColumnReportsChatRecordsIndex, DatabaseInterface.ColumnReportsChatRecordsMessage)}) VALUES ");
+
+            for (int i = 0; i < Messages.Length; ++i)
+            {
+                ref AbusiveChatRecord record = ref Messages[i];
+                F.AppendPropertyList(builder, args.Count, 3, i, 1);
+                args.Add(record.Timestamp.UtcDateTime);
+                args.Add(i);
+                args.Add(record.Message.MaxLength(512) ?? string.Empty);
+            }
+
+            builder.Append(';');
+        }
+
+        return hasEvidenceCalls;
+    }
 }
 
-public readonly struct ReportChatRecord
+public readonly struct AbusiveChatRecord
 {
     [JsonPropertyName("timestamp")]
     public DateTimeOffset Timestamp { get; }
-    [JsonPropertyName("count")]
-    public int Count { get; }
     [JsonPropertyName("message")]
     public string Message { get; }
 
     [JsonConstructor]
-    public ReportChatRecord(string message, int count, DateTimeOffset timestamp)
+    public AbusiveChatRecord(string message, DateTimeOffset timestamp)
     {
         Timestamp = timestamp;
-        Count = count;
         Message = message;
     }
-    public ReportChatRecord(ByteReader reader)
+    public AbusiveChatRecord(ByteReader reader)
     {
         Timestamp = reader.ReadDateTimeOffset();
-        Count = reader.ReadInt32();
         Message = reader.ReadString();
     }
     public void Write(ByteWriter writer)
     {
         writer.Write(Timestamp);
-        writer.Write(Count);
         writer.Write(Message);
     }
 }

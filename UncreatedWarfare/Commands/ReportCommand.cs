@@ -185,7 +185,7 @@ public class ReportCommand : AsyncCommand
         byte[] jpgData =
             targetPl == null || (type != EReportType.CUSTOM && type < EReportType.SOLOING_VEHICLE)
                 ? Array.Empty<byte>()
-                : await SpyTask.RequestScreenshot(targetPl);
+                : await SpyTask.RequestScreenshot(targetPl.SteamPlayer);
         report.JpgData = jpgData;
         if (!UCWarfare.CanUseNetCall)
         {

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Encoding;
 using Uncreated.Framework;
+using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation.Reports;
 
@@ -85,7 +87,7 @@ public class Report : ModerationEntry
             }
             if (reader.TokenType == JsonTokenType.StartArray)
             {
-                List<byte> bytes = new List<byte>(4096);
+                List<byte> bytes = new List<byte>(short.MaxValue);
                 while (reader.Read())
                 {
                     if (reader.TokenType == JsonTokenType.EndArray)
@@ -114,7 +116,8 @@ public class Report : ModerationEntry
             }
             if (reader.TokenType == JsonTokenType.Null)
                 ScreenshotJpgData = null;
-            throw new JsonException("Unexpected token " + reader.TokenType + " while reading ScreenshotJpgData.");
+            else
+                throw new JsonException("Unexpected token " + reader.TokenType + " while reading ScreenshotJpgData.");
         }
         else
             base.ReadProperty(ref reader, propertyName, options);
@@ -127,6 +130,24 @@ public class Report : ModerationEntry
 
         if (ScreenshotJpgData != null)
             writer.WriteString("screenshot_data", Convert.ToBase64String(ScreenshotJpgData));
+    }
+
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + 2;
+    internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableReports}` ({SqlTypes.ColumnList(
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnReportsType)}) VALUES ");
+
+        F.AppendPropertyList(builder, args.Count, 1, 0, 1);
+        builder.Append(" AS `t` " +
+                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnReportsType}` = " +
+                       $"`t`.`{DatabaseInterface.ColumnReportsType}`;");
+
+        args.Add(Type.ToString());
+        
+        return hasEvidenceCalls;
     }
 }
 

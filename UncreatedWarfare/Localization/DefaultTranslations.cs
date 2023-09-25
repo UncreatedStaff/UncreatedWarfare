@@ -176,7 +176,7 @@ internal static class T
     public static readonly Translation Neutral = new Translation("Neutral", TranslationFlags.UnityUI);
 
     [TranslationData(SectionFlags, "Shows in place of the objective name for an undiscovered flag or objective.")]
-    public static readonly Translation UndiscoveredFlag = new Translation("<#c$undiscovered_flag$>unknown", TranslationFlags.UnityUI);
+    public static readonly Translation UndiscoveredFlag = new Translation("<color=#c$undiscovered_flag$>unknown</color>", TranslationFlags.UnityUI);
 
     [TranslationData(SectionFlags, "Shows in place of the objective name for an undiscovered flag or objective.")]
     public static readonly Translation UndiscoveredFlagNoColor = new Translation("unknown", TranslationFlags.NoColorOptimization);
@@ -1574,7 +1574,7 @@ internal static class T
     [TranslationData(SectionRequest)]
     public static readonly Translation<IPlayer> RequestVehicleAlreadyRequested = new Translation<IPlayer>("<#a8918a>This vehicle was already requested by {0}.", UCPlayer.FormatColoredCharacterName);
     [TranslationData(SectionRequest)]
-    public static readonly Translation<VehicleData> RequestVehicleAlreadyOwned = new Translation<VehicleData>("<#a8918a>You already have a nearby {0}.", VehicleData.COLORED_NAME);
+    public static readonly Translation<InteractableVehicle> RequestVehicleAlreadyOwned = new Translation<InteractableVehicle>("<#a8918a>You already have a nearby {0}.", VehicleData.COLORED_NAME);
     [TranslationData(SectionRequest)]
     public static readonly Translation<VehicleData> RequestVehicleSuccess = new Translation<VehicleData>("<#b3a591>This {0} is now yours to take into battle.", VehicleData.COLORED_NAME);
     [TranslationData(SectionRequest)]

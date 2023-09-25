@@ -120,6 +120,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private EAdminType? _pLvl;
     private LevelData? _level;
     private PlayerNames _cachedName;
+    private int _pendingReputation;
     internal VehicleSwapRequest PendingVehicleSwapRequest;
     internal int CacheLocationIndex = -1;
     internal UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore, PendingAsyncData data)
@@ -407,9 +408,9 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         }
     }
     public static explicit operator ulong(UCPlayer player) => player.Steam64;
-    public static implicit operator CSteamID(UCPlayer player) => player.Player.channel.owner.playerID.steamID;
+    public static explicit operator CSteamID(UCPlayer player) => player.Player.channel.owner.playerID.steamID;
     public static implicit operator Player(UCPlayer player) => player.Player;
-    public static implicit operator SteamPlayer(UCPlayer player) => player.Player.channel.owner;
+    public static explicit operator SteamPlayer(UCPlayer player) => player.Player.channel.owner;
     internal void SetOffline()
     {
         lock (this)
@@ -432,6 +433,9 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     public static UCPlayer? FromName(string name, bool includeContains = false)
     {
+        if (Util.TryParseSteamId(name, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+            return FromCSteamID(steamId);
+
         if (name == null) return null;
         UCPlayer? player = PlayerManager.OnlinePlayers.Find(
             s =>
@@ -450,6 +454,9 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     public static UCPlayer? FromName(string name, bool includeContains, IEnumerable<UCPlayer> selection)
     {
+        if (Util.TryParseSteamId(name, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+            return FromCSteamID(steamId);
+
         if (name == null) return null;
         UCPlayer? player = selection.FirstOrDefault(
             s =>
@@ -466,114 +473,244 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         }
         return player;
     }
-
-    /// <summary>Slow, use rarely.</summary>
+    
     public static UCPlayer? FromName(string name, NameSearch type) => FromName(name, PlayerManager.OnlinePlayers, type);
     public static UCPlayer? FromName(string name, IEnumerable<UCPlayer> selection, NameSearch type)
     {
-        if (type == NameSearch.CharacterName)
+        if (Util.TryParseSteamId(name, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
+            return FromCSteamID(steamId);
+
+        switch (type)
         {
-            foreach (UCPlayer current in selection)
-            {
-                if (current.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                    return current;
-            }
-            foreach (UCPlayer current in selection)
-            {
-                if (current.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                    return current;
-            }
-            foreach (UCPlayer current in selection)
-            {
-                if (current.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                    return current;
-            }
-            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
-            {
-                if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    return current;
-            }
-            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
-            {
-                if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    return current;
-            }
-            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
-            {
-                if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    return current;
-            }
-            return null;
+            default:
+                foreach (UCPlayer current in selection)
+                {
+                    if (current.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                        return current;
+                }
+                foreach (UCPlayer current in selection)
+                {
+                    if (current.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                        return current;
+                }
+                foreach (UCPlayer current in selection)
+                {
+                    if (current.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                        return current;
+                }
+                foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        return current;
+                }
+                return null;
+            case NameSearch.NickName:
+                foreach (UCPlayer current in selection)
+                {
+                    if (current.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                        return current;
+                }
+                foreach (UCPlayer current in selection)
+                {
+                    if (current.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                        return current;
+                }
+                foreach (UCPlayer current in selection)
+                {
+                    if (current.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                        return current;
+                }
+                foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        return current;
+                }
+                return null;
+            case NameSearch.PlayerName:
+                foreach (UCPlayer current in selection)
+                {
+                    if (current.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                        return current;
+                }
+                foreach (UCPlayer current in selection)
+                {
+                    if (current.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                        return current;
+                }
+                foreach (UCPlayer current in selection)
+                {
+                    if (current.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                        return current;
+                }
+                foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
+                        return current;
+                }
+                return null;
         }
-        else if (type == NameSearch.NickName)
+    }
+    public static void Search(string input, NameSearch searchPriority, IList<UCPlayer> output, bool equalsOnly = false)
+    {
+        if (string.IsNullOrWhiteSpace(input))
         {
-            foreach (UCPlayer current in selection)
+            if (output is List<UCPlayer> list)
+                list.AddRange(PlayerManager.OnlinePlayers);
+            else
             {
-                if (current.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                    return current;
+                foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+                    output.Add(player);
             }
-            foreach (UCPlayer current in selection)
-            {
-                if (current.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                    return current;
-            }
-            foreach (UCPlayer current in selection)
-            {
-                if (current.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                    return current;
-            }
-            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
-            {
-                if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    return current;
-            }
-            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
-            {
-                if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    return current;
-            }
-            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
-            {
-                if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    return current;
-            }
-            return null;
+            return;
         }
-        else if (type == NameSearch.PlayerName)
+
+        if (Util.TryParseSteamId(input, out CSteamID steamId) && steamId.GetEAccountType() == EAccountType.k_EAccountTypeIndividual)
         {
-            foreach (UCPlayer current in selection)
-            {
-                if (current.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                    return current;
-            }
-            foreach (UCPlayer current in selection)
-            {
-                if (current.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                    return current;
-            }
-            foreach (UCPlayer current in selection)
-            {
-                if (current.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                    return current;
-            }
-            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
-            {
-                if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    return current;
-            }
-            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
-            {
-                if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    return current;
-            }
-            foreach (UCPlayer current in selection.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
-            {
-                if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    return current;
-            }
-            return null;
+            UCPlayer? s64 = FromCSteamID(steamId);
+            if (s64 != null)
+                output.Add(s64);
+            return;
         }
-        else return FromName(name, NameSearch.CharacterName);
+
+        List<UCPlayer> collection = PlayerManager.OnlinePlayers;
+
+        for (int i = 0; i < collection.Count; ++i)
+        {
+            UCPlayer value = collection[i];
+            if (string.Equals(searchPriority switch
+            {
+                NameSearch.CharacterName => value.Name.CharacterName,
+                NameSearch.NickName => value.Name.NickName,
+                _ => value.Name.PlayerName
+            }, input, StringComparison.InvariantCultureIgnoreCase) && !output.Contains(value))
+                output.Add(value);
+        }
+        for (int i = 0; i < collection.Count; ++i)
+        {
+            UCPlayer value = collection[i];
+            if (string.Equals(searchPriority switch
+            {
+                NameSearch.CharacterName => value.Name.NickName,
+                NameSearch.NickName => value.Name.CharacterName,
+                _ => value.Name.CharacterName
+            }, input, StringComparison.InvariantCultureIgnoreCase) && !output.Contains(value))
+                output.Add(value);
+        }
+        for (int i = 0; i < collection.Count; ++i)
+        {
+            UCPlayer value = collection[i];
+            if (string.Equals(searchPriority switch
+            {
+                NameSearch.NickName or NameSearch.CharacterName => value.Name.PlayerName,
+                _ => value.Name.NickName
+            }, input, StringComparison.InvariantCultureIgnoreCase) && !output.Contains(value))
+                output.Add(value);
+        }
+        if (!equalsOnly)
+        {
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                UCPlayer value = collection[i];
+                string? name = searchPriority switch
+                {
+                    NameSearch.CharacterName => value.Name.CharacterName,
+                    NameSearch.NickName => value.Name.NickName,
+                    _ => value.Name.PlayerName
+                };
+                if (name != null && !output.Contains(value) && name.IndexOf(input, StringComparison.InvariantCultureIgnoreCase) != -1)
+                    output.Add(value);
+            }
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                UCPlayer value = collection[i];
+                string? name = searchPriority switch
+                {
+                    NameSearch.CharacterName => value.Name.NickName,
+                    NameSearch.NickName => value.Name.CharacterName,
+                    _ => value.Name.CharacterName
+                };
+                if (name != null && !output.Contains(value) && name.IndexOf(input, StringComparison.InvariantCultureIgnoreCase) != -1)
+                    output.Add(value);
+            }
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                UCPlayer value = collection[i];
+                string? name = searchPriority switch
+                {
+                    NameSearch.NickName or NameSearch.CharacterName => value.Name.PlayerName,
+                    _ => value.Name.NickName
+                };
+                if (name != null && !output.Contains(value) && name.IndexOf(input, StringComparison.InvariantCultureIgnoreCase) != -1)
+                    output.Add(value);
+            }
+
+            string[] inSplits = input.Split(F.SpaceSplit);
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                UCPlayer value = collection[i];
+                string? name = searchPriority switch
+                {
+                    NameSearch.CharacterName => value.Name.CharacterName,
+                    NameSearch.NickName => value.Name.NickName,
+                    _ => value.Name.PlayerName
+                };
+                if (name != null && !output.Contains(value) && inSplits.All(l => name.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                    output.Add(value);
+            }
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                UCPlayer value = collection[i];
+                string? name = searchPriority switch
+                {
+                    NameSearch.CharacterName => value.Name.NickName,
+                    NameSearch.NickName => value.Name.CharacterName,
+                    _ => value.Name.CharacterName
+                };
+                if (name != null && !output.Contains(value) && inSplits.All(l => name.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                    output.Add(value);
+            }
+            for (int i = 0; i < collection.Count; ++i)
+            {
+                UCPlayer value = collection[i];
+                string? name = searchPriority switch
+                {
+                    NameSearch.NickName or NameSearch.CharacterName => value.Name.PlayerName,
+                    _ => value.Name.NickName
+                };
+                if (name != null && !output.Contains(value) && inSplits.All(l => name.IndexOf(l, StringComparison.InvariantCultureIgnoreCase) != -1))
+                    output.Add(value);
+            }
+        }
     }
     public bool IsInSameSquadAs(UCPlayer other) => Squad is not null && other.Squad is not null && Squad == other.Squad;
     public bool IsInSameVehicleAs(UCPlayer other)
@@ -836,6 +973,19 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         return 0;
     }
 
+    /// <remarks>Thread Safe</remarks>
+    /// <param name="amount">Net amount to add to the player's reputation. Can be negative to subtract.</param>
+    public void AddReputation(int amount)
+    {
+        if (UCWarfare.IsMainThread)
+        {
+            Player.skills.askRep(amount);
+        }
+        else
+        {
+            Interlocked.Add(ref _pendingReputation, amount);
+        }
+    }
     public override string ToString() => Name.PlayerName + " [" + Steam64.ToString("G17", Data.AdminLocale) + "]";
     internal void ResetPermissionLevel() => _pLvl = null;
     internal void Update()
@@ -905,6 +1055,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
             return CachedSteamProfile;
 
         PlayerSummary? playerSummary = await SteamAPI.GetPlayerSummary(Steam64, token);
+        await UniTask.SwitchToMainThread(token);
         if (playerSummary != null)
             CachedSteamProfile = playerSummary;
 #if DEBUG

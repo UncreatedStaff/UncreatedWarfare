@@ -79,6 +79,7 @@ internal class GuidedMissileComponent : MonoBehaviour
                 _isActive = false;
                 return;
             }
+
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif

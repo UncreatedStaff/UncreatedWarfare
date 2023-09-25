@@ -13,7 +13,7 @@ namespace Uncreated.Warfare;
 internal static class ItemIconProvider
 {
     private const int WhiteColor = unchecked((int)0xFFFFFFFF);
-    private static readonly ItemIconData[] Defaults =
+    internal static readonly ItemIconData[] Defaults =
     {
         // Block: IPA Extensions
 
@@ -311,11 +311,13 @@ internal static class ItemIconProvider
         str = Class.None.GetIcon().ToString();
         return false;
     }
-    public static bool TryGetIcon(ItemAsset asset, out string str, bool rich = true, bool tmpro = false)
+    public static bool TryGetIcon(ItemAsset asset, out string str, bool rich = true, bool tmpro = false) => TryGetIcon(asset.GUID, out str, rich, tmpro);
+    public static string GetIcon(ItemAsset asset, bool rich = true, bool tmpro = false) => GetIcon(asset.GUID, rich, tmpro);
+    public static bool TryGetIcon(Guid guid, out string str, bool rich = true, bool tmpro = false)
     {
         lock (ItemData)
         {
-            if (ItemData.TryGetValue(asset.GUID, out ItemIconData data))
+            if (ItemData.TryGetValue(guid, out ItemIconData data))
             {
                 if (data.Character.HasValue)
                 {
@@ -329,11 +331,11 @@ internal static class ItemIconProvider
         str = Class.None.GetIcon().ToString();
         return false;
     }
-    public static string GetIcon(ItemAsset asset, bool rich = true, bool tmpro = false)
+    public static string GetIcon(Guid guid, bool rich = true, bool tmpro = false)
     {
         lock (ItemData)
         {
-            if (ItemData.TryGetValue(asset.GUID, out ItemIconData data))
+            if (ItemData.TryGetValue(guid, out ItemIconData data))
             {
                 if (data.Character.HasValue)
                 {
@@ -598,7 +600,7 @@ internal static class ItemIconProvider
         new Schema.Column(COLUMN_COLOR, "char(8)") { Nullable = true, Default = "'ffffffff'" },
         new Schema.Column(COLUMN_PARENT, SqlTypes.GUID_STRING) { Nullable = true }
     }, true, typeof(ItemIconData));
-    private readonly struct ItemIconData
+    internal readonly struct ItemIconData
     {
         public readonly Guid Item;
         public readonly RedirectType RedirectType;

@@ -413,7 +413,7 @@ public class RequestCommand : AsyncCommand, ICompoundingCooldownCommand
                             continue;
                         if (veh.lockedOwner.m_SteamID == ctx.CallerID && (veh.transform.position - vehicle.transform.position).sqrMagnitude <
                             UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
-                            throw ctx.Reply(T.RequestVehicleAlreadyOwned, data);
+                            throw ctx.Reply(T.RequestVehicleAlreadyOwned, veh);
                     }
                 }
             }

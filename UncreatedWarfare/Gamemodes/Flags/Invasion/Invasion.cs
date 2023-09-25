@@ -92,7 +92,15 @@ public class Invasion :
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (AllFlags == null || AllFlags.Count == 0) return;
-        LoadFlagsIntoRotation();
+        try
+        {
+            LoadFlagsIntoRotation();
+        }
+        catch (InvalidOperationException ex)
+        {
+            Rotation.Clear();
+            L.LogError(ex);
+        }
         if (FlagRotation.Count < 1)
         {
             L.LogError("No flags were put into rotation!!");

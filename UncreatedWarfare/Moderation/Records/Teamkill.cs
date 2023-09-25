@@ -1,17 +1,26 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Encoding;
+using Uncreated.Framework;
+using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation.Records;
 [ModerationEntry(ModerationEntryType.Teamkill)]
 [JsonConverter(typeof(ModerationEntryConverter))]
 public class Teamkill : ModerationEntry
 {
+    [JsonIgnore]
+    public const string RoleTeamkilled = "Teamkilled";
+
     [JsonPropertyName("death_cause")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public EDeathCause Cause { get; set; }
+    public EDeathCause? Cause { get; set; }
 
     [JsonPropertyName("item_guid")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -23,38 +32,45 @@ public class Teamkill : ModerationEntry
 
     [JsonPropertyName("limb")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public ELimb Limb { get; set; }
+    public ELimb? Limb { get; set; }
 
     [JsonPropertyName("distance")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public float Distance { get; set; }
-
-    [JsonPropertyName("death_message")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? DeathMessage { get; set; }
+    public double? Distance { get; set; }
     public override string GetDisplayName() => "Player Teamkill";
+    public override Guid? GetIcon() => Item;
+
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
         base.ReadIntl(reader, version);
 
-        Cause = (EDeathCause)reader.ReadUInt16();
+        Cause = reader.ReadBool() ? (EDeathCause)reader.ReadUInt16() : null;
         Item = reader.ReadNullableGuid();
         ItemName = reader.ReadNullableString();
-        Limb = (ELimb)reader.ReadUInt8();
+        Limb = reader.ReadBool() ? (ELimb)reader.ReadUInt16() : null;
         Distance = reader.ReadFloat();
-        DeathMessage = reader.ReadNullableString();
     }
 
     protected override void WriteIntl(ByteWriter writer)
     {
         base.WriteIntl(writer);
 
-        writer.Write((ushort)Cause);
+        if (Cause.HasValue)
+        {
+            writer.Write(true);
+            writer.Write((ushort)Cause.Value);
+        }
+        else writer.Write(false);
         writer.WriteNullable(Item);
         writer.WriteNullable(ItemName);
-        writer.Write((byte)Limb);
-        writer.Write(Distance);
-        writer.WriteNullable(DeathMessage);
+        if (Limb.HasValue)
+        {
+            writer.Write(true);
+            writer.Write((ushort)Limb.Value);
+        }
+        else writer.Write(false);
+
+        writer.WriteNullable(Distance);
     }
     public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
@@ -71,6 +87,13 @@ public class Teamkill : ModerationEntry
 
                 throw new JsonException($"Invalid integer for EDeathCause: {num}.");
             }
+
+            if (reader.TokenType == JsonTokenType.Null)
+            {
+                Cause = null;
+                return;
+            }
+
             string str = reader.GetString()!;
             if (!Enum.TryParse(str, true, out EDeathCause cause))
                 throw new JsonException("Invalid string value for EDeathCause.");
@@ -89,6 +112,13 @@ public class Teamkill : ModerationEntry
 
                 throw new JsonException($"Invalid integer for ELimb: {num}.");
             }
+
+            if (reader.TokenType == JsonTokenType.Null)
+            {
+                Limb = null;
+                return;
+            }
+
             string str = reader.GetString()!;
             if (!Enum.TryParse(str, true, out ELimb limb))
                 throw new JsonException("Invalid string value for ELimb.");
@@ -99,9 +129,7 @@ public class Teamkill : ModerationEntry
         else if (propertyName.Equals("item_name", StringComparison.InvariantCultureIgnoreCase))
             ItemName = reader.GetString();
         else if (propertyName.Equals("distance", StringComparison.InvariantCultureIgnoreCase))
-            Distance = reader.TokenType == JsonTokenType.Null ? 0f : reader.GetSingle();
-        else if (propertyName.Equals("death_message", StringComparison.InvariantCultureIgnoreCase))
-            DeathMessage = reader.GetString();
+            Distance = reader.TokenType == JsonTokenType.Null ? new double?() : reader.GetSingle();
         else
             base.ReadProperty(ref reader, propertyName, options);
     }
@@ -109,15 +137,96 @@ public class Teamkill : ModerationEntry
     {
         base.Write(writer, options);
         
-        writer.WriteString("death_cause", Cause.ToString());
+        if (Cause.HasValue)
+            writer.WriteString("death_cause", Cause.Value.ToString());
         if (Item.HasValue)
             writer.WriteString("item_guid", Item.Value.ToString());
         if (ItemName != null)
             writer.WriteString("item_name", ItemName);
-        writer.WriteString("limb", Limb.ToString());
-        if (Distance > 0d)
-            writer.WriteNumber("distance", Distance);
-        if (DeathMessage != null)
-            writer.WriteString("death_message", DeathMessage);
+        if (Limb.HasValue)
+            writer.WriteString("limb", Limb.Value.ToString());
+        if (Distance.HasValue)
+            writer.WriteNumber("distance", Distance.Value);
+    }
+
+    public override bool TryGetDisplayActor(out RelatedActor actor)
+    {
+        if (base.TryGetDisplayActor(out actor))
+            return true;
+
+        for (int i = 0; i < Actors.Length; ++i)
+        {
+            if (string.Equals(Actors[i].Role, RoleTeamkilled, StringComparison.OrdinalIgnoreCase))
+            {
+                actor = Actors[i];
+                return true;
+            }
+        }
+
+        actor = new RelatedActor(RoleTeamkilled, false, ConsoleActor.Instance);
+        return false;
+    }
+
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + 6;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+
+        if (Cause.HasValue)
+            workingList.Add($"Cause: {Cause.Value}");
+        if (Limb.HasValue)
+            workingList.Add($"Limb: {Limb.Value}");
+        if (Distance.HasValue && !Cause.HasValue)
+            workingList.Add($"Distance: {Distance.Value.ToString("0.#", formatter)} meters");
+        if (Item.HasValue)
+        {
+            string name;
+            if (UCWarfare.IsLoaded && Assets.find(Item.Value) is ItemAsset item)
+            {
+                name = item.FriendlyName ?? item.name;
+                if (item.id > 0)
+                    name += " (" + item.id.ToString(formatter) + ")";
+            }
+            else
+                name = ItemName ?? Item.Value.ToString("N");
+            workingList.Add($"Item: {name}");
+        }
+    }
+    internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableTeamkills}` ({SqlTypes.ColumnList(
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnTeamkillsAsset, DatabaseInterface.ColumnTeamkillsAssetName,
+            DatabaseInterface.ColumnTeamkillsDeathCause, DatabaseInterface.ColumnTeamkillsDistance, DatabaseInterface.ColumnTeamkillsLimb)}) VALUES ");
+
+        F.AppendPropertyList(builder, args.Count, 5, 0, 1);
+        builder.Append(" AS `t` " +
+                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnTeamkillsAsset}` = `t`.`{DatabaseInterface.ColumnTeamkillsAsset}`," +
+                       $"`{DatabaseInterface.ColumnTeamkillsAssetName}` = `t`.`{DatabaseInterface.ColumnTeamkillsAssetName}`," +
+                       $"`{DatabaseInterface.ColumnTeamkillsDeathCause}` = `t`.`{DatabaseInterface.ColumnTeamkillsDeathCause}`," +
+                       $"`{DatabaseInterface.ColumnTeamkillsDistance}` = `t`.`{DatabaseInterface.ColumnTeamkillsDistance}`," +
+                       $"`{DatabaseInterface.ColumnTeamkillsLimb}` = `t`.`{DatabaseInterface.ColumnTeamkillsLimb}`;");
+        
+        args.Add(Item.HasValue ? Item.Value.ToString("N") : DBNull.Value);
+        args.Add((object?)ItemName.MaxLength(48) ?? DBNull.Value);
+        args.Add(Cause.HasValue ? Cause.Value.ToString() : DBNull.Value);
+        args.Add(Distance.HasValue ? Distance.Value : DBNull.Value);
+        args.Add(Limb.HasValue ? Limb.Value.ToString() : DBNull.Value);
+
+        return hasEvidenceCalls;
+    }
+
+    public override string? GetDisplayMessage()
+    {
+        if (Message != null)
+            return Message;
+        
+        if (TryGetActor(RoleTeamkilled, out RelatedActor actor))
+        {
+            return $"Teamkilled {actor.Actor.Id} with {(Cause.HasValue ? Cause.Value.ToString() : "UNKOWN_CAUSE")}";
+        }
+
+        return $"Teamkilled with {(Cause.HasValue ? Cause.Value.ToString() : "UNKOWN_CAUSE")}";
     }
 }

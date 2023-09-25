@@ -181,7 +181,15 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (AllFlags == null || AllFlags.Count == 0) return;
-        LoadFlagsIntoRotation();
+        try
+        {
+            LoadFlagsIntoRotation();
+        }
+        catch (InvalidOperationException ex)
+        {
+            FlagRotation.Clear();
+            L.LogError(ex);
+        }
         if (FlagRotation.Count < 1)
         {
             L.LogError("No flags were put into rotation!!");

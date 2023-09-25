@@ -1367,7 +1367,7 @@ public static class UCBarricadeManager
         for (int i = 0; i < region.Count; i++)
         {
             LevelObject obj = region[i];
-            if (transform == obj.transform || transform.IsChildOf(obj.transform))
+            if (obj.transform != null && transform == obj.transform || transform.IsChildOf(obj.transform))
                 return obj;
         }
 

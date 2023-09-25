@@ -67,7 +67,56 @@ public struct PlayerNames : IPlayer
             CharacterName = reader.ReadString(),
             NickName = reader.ReadString()
         };
-    public override string ToString() => PlayerName;
+
+    public override string ToString() => ToString(true);
+    public string ToString(bool steamId)
+    {
+        string? pn = PlayerName;
+        string? cn = CharacterName;
+        string? nn = NickName;
+        string s64 = Steam64.ToString("D17");
+        bool pws = string.IsNullOrWhiteSpace(pn);
+        bool cws = string.IsNullOrWhiteSpace(cn);
+        bool nws = string.IsNullOrWhiteSpace(nn);
+        if (pws && cws && nws)
+            return s64;
+        if (pws)
+        {
+            if (cws)
+                return steamId ? (s64 + " (" + nn + ")") : nn;
+            if (nws || nn!.Equals(cn, StringComparison.Ordinal))
+                return steamId ? (s64 + " (" + cn + ")") : cn;
+            return steamId ? (s64 + " (" + cn + " | " + nn + ")") : (cn + " | " + nn);
+        }
+        if (cws)
+        {
+            if (pws)
+                return steamId ? (s64 + " (" + nn + ")") : nn;
+            if (nws || nn!.Equals(pn, StringComparison.Ordinal))
+                return steamId ? (s64 + " (" + pn + ")") : pn;
+            return steamId ? (s64 + " (" + pn + " | " + nn + ")") : (pn + " | " + nn);
+        }
+        if (nws)
+        {
+            if (pws)
+                return steamId ? (s64 + " (" + cn + ")") : cn;
+            if (cws || cn!.Equals(pn, StringComparison.Ordinal))
+                return steamId ? (s64 + " (" + pn + ")") : pn;
+            return steamId ? (s64 + " (" + pn + " | " + cn + ")") : pn + " | " + cn;
+        }
+
+        bool nep = nn!.Equals(pn, StringComparison.Ordinal);
+        bool nec = nn.Equals(cn, StringComparison.Ordinal);
+        bool pec = nec && nep || pn!.Equals(cn, StringComparison.Ordinal);
+        if (nep && nec)
+            return steamId ? (s64 + " (" + nn + ")") : nn;
+        if (pec || nec)
+            return steamId ? (s64 + " (" + pn + " | " + nn + ")") : (pn + " | " + nn); 
+        if (nep)
+            return steamId ? (s64 + " (" + pn + " | " + cn + ")") : (pn + " | " + cn);
+
+        return steamId ? (s64 + " (" + pn + " | " + cn + " | " + nn + ")") : (pn + " | " + cn + " | " + nn);
+    }
     public static bool operator ==(PlayerNames left, PlayerNames right) => left.Steam64 == right.Steam64;
     public static bool operator !=(PlayerNames left, PlayerNames right) => left.Steam64 != right.Steam64;
     public override bool Equals(object obj) => obj is PlayerNames pn && Steam64 == pn.Steam64;

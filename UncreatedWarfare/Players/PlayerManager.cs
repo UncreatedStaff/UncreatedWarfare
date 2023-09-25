@@ -135,14 +135,18 @@ public static class PlayerManager
     {
         await UniTask.SwitchToMainThread(token);
 
-        List<ulong> players = new List<ulong>(OnlinePlayers.Count);
+        List<ulong>? players = null;
         for (int i = 0; i < OnlinePlayers.Count; ++i)
         {
             if (!allowCache || OnlinePlayers[i].CachedSteamProfile == null)
-                players.Add(OnlinePlayers[i].Steam64);
+                (players ??= new List<ulong>(OnlinePlayers.Count)).Add(OnlinePlayers[i].Steam64);
         }
 
-        PlayerSummary[] summaries = await SteamAPI.GetPlayerSummaries(players.ToArrayFast(), token);
+        if (players == null)
+            return;
+
+
+        PlayerSummary[] summaries = await SteamAPI.GetPlayerSummaries(players.AsArrayFast(), token);
         for (int j = 0; j < summaries.Length; ++j)
         {
             PlayerSummary summary = summaries[j];

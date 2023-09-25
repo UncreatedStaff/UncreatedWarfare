@@ -23,7 +23,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         "delpoint", "delpt", "deletepoint", "removepoint", "deletept", "removept", "clearpoints", "clearpts", "clrpts",
         "clrpoints", "setpoint", "movepoint", "setpt", "movept", "orderpoint", "orderpt", "setindex", "ptindex",
         "radius", "addgobj", "addgridobj", "addobject", "delgobj", "delgridobj", "delobject", "sizex", "width",
-        "length", "size", "sizez", "height", "depth", "center", "position", "origin", "spawn", "spawnpoint", "respawn",
+        "length", "size", "sizez", "corner", "height", "depth", "center", "position", "origin", "spawn", "spawnpoint", "respawn",
         "name", "title", "longname", "use", "use-case", "usecase", "shortname", "short", "short name", "abbreviation",
         "abbr", "undo", "redo", "seeadj", "adjacencies", "addadj", "addadjacency", "adj", "deladj", "remadj"
     };
@@ -244,6 +244,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             SpawnX = pos.x,
             SpawnZ = pos.z,
             ZoneType = type,
+            UseCase = ZoneUseCase.Flag,
             Id = -1,
             Adjacencies = Array.Empty<AdjacentFlagData>()
         };
@@ -1198,7 +1199,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     throw ctx.Reply(T.ZoneEditSizeXInvalid);
 
                 AddTransaction(new SetFloatTransaction(_currentBuilder.ZoneData.SizeX, sizex, SetFloatTransaction.FloatType.SizeX));
-                SetSizeX(sizex);
+                SetSizeX(sizex, false);
                 float sizez;
                 if (!ctx.HasArgs(2))
                     sizez = Mathf.Abs(pos.z - _currentBuilder.CenterZ) * 2;
@@ -1233,6 +1234,44 @@ internal class ZonePlayerComponent : MonoBehaviour
 
                 AddTransaction(new SetCenterTransaction(_currentBuilder.CenterX, _currentBuilder.CenterZ, x, z, false));
                 SetCenter(x, z, false);
+            }
+            else if (ctx.MatchParameter(0, "corner", "corners"))
+            {
+                float x;
+                float z;
+                if (!ctx.HasArgs(3))
+                {
+                    x = pos.x;
+                    z = pos.z;
+                }
+                else if (!ctx.TryGet(1, out x) || !ctx.TryGet(2, out z))
+                    throw ctx.Reply(T.ZoneEditCenterInvalid);
+
+                float newCenterX = (x + _currentBuilder.CenterX) / 2f;
+                float newCenterZ = (z + _currentBuilder.CenterZ) / 2f;
+
+                AddTransaction(new SetCenterTransaction(_currentBuilder.CenterX, _currentBuilder.CenterZ, newCenterX, newCenterZ, false));
+                SetCenter(newCenterX, newCenterZ, false, false);
+
+                AddTransaction(new SetCenterTransaction(_currentBuilder.SpawnX, _currentBuilder.SpawnZ, newCenterX, newCenterZ, true));
+                SetCenter(newCenterX, newCenterZ, true, false);
+
+                float sizex;
+                if (!ctx.HasArgs(2))
+                    sizex = Mathf.Abs(pos.x - _currentBuilder.CenterX) * 2;
+                else if (!ctx.TryGet(1, out sizex))
+                    throw ctx.Reply(T.ZoneEditSizeXInvalid);
+
+                AddTransaction(new SetFloatTransaction(_currentBuilder.ZoneData.SizeX, sizex, SetFloatTransaction.FloatType.SizeX));
+                SetSizeX(sizex, false);
+                float sizez;
+                if (!ctx.HasArgs(2))
+                    sizez = Mathf.Abs(pos.z - _currentBuilder.CenterZ) * 2;
+                else if (!ctx.TryGet(1, out sizez))
+                    throw ctx.Reply(T.ZoneEditSizeZInvalid);
+
+                AddTransaction(new SetFloatTransaction(_currentBuilder.ZoneData.SizeZ, sizez, SetFloatTransaction.FloatType.SizeZ));
+                SetSizeZ(sizez);
             }
             else if (ctx.MatchParameter(0, "spawn", "spawnpoint", "respawn"))
             {
@@ -1469,13 +1508,14 @@ internal class ZonePlayerComponent : MonoBehaviour
         else
             _player.SendChat(T.ZoneEditShortNameRemoved);
     }
-    private void SetRadius(float radius)
+    private void SetRadius(float radius, bool prev = true)
     {
         _currentBuilder!.ZoneData.Radius = radius;
         if (!CheckType(ZoneType.Circle))
         {
             EffectManager.sendUIEffectText(EditKey, _player.Player.channel.owner.transportConnection, true, "Circle_Radius", _currentBuilder.ZoneData.Radius.ToString("F2", Data.LocalLocale) + "m");
-            RefreshPreview();
+            if (prev)
+                RefreshPreview();
         }
         _player.SendChat(T.ZoneEditRadiusSuccess, radius);
     }
@@ -1485,39 +1525,42 @@ internal class ZonePlayerComponent : MonoBehaviour
         UpdateHeights();
         _player.SendChat(T.ZoneEditMaxHeightSuccess, mh);
     }
-    private void SetMinHeight(float mh)
+    private void SetMinHeight(float mh, bool prev = true)
     {
         _currentBuilder!.MinHeight = mh;
         UpdateHeights();
         _player.SendChat(T.ZoneEditMinHeightSuccess, mh);
-        RefreshPreview();
+        if (prev)
+            RefreshPreview();
     }
     internal void ReloadLang()
     {
         if (_currentBuilder == null) return;
         CheckType(_currentBuilder.ZoneType, true);
     }
-    private void SetSizeX(float sizex)
+    private void SetSizeX(float sizex, bool prev = true)
     {
         _currentBuilder!.ZoneData.SizeX = sizex;
         if (!CheckType(ZoneType.Rectangle))
         {
             EffectManager.sendUIEffectText(EditKey, _player.Player.channel.owner.transportConnection, true, "Rect_SizeX", _currentBuilder.ZoneData.SizeX.ToString("F2", Data.LocalLocale) + "m");
-            RefreshPreview();
+            if (prev)
+                RefreshPreview();
         }
         _player.SendChat(T.ZoneEditSizeXSuccess, sizex);
     }
-    private void SetSizeZ(float sizez)
+    private void SetSizeZ(float sizez, bool prev = true)
     {
         _currentBuilder!.ZoneData.SizeZ = sizez;
         if (!CheckType(ZoneType.Rectangle))
         {
             EffectManager.sendUIEffectText(EditKey, _player.Player.channel.owner.transportConnection, true, "Rect_SizeZ", _currentBuilder.ZoneData.SizeZ.ToString("F2", Data.LocalLocale) + "m");
-            RefreshPreview();
+            if (prev)
+                RefreshPreview();
         }
         _player.SendChat(T.ZoneEditSizeZSuccess, sizez);
     }
-    private void AddGridObject(LevelObject obj)
+    private void AddGridObject(LevelObject obj, bool prev = true)
     {
         _currentGridObjects ??= new List<KeyValuePair<Vector3, GridObject>>(16);
         for (int i = 0; i < _currentGridObjects.Count; ++i)
@@ -1532,18 +1575,20 @@ internal class ZonePlayerComponent : MonoBehaviour
         Vector3 pos = obj.GetPosition();
         _currentGridObjects.Add(new KeyValuePair<Vector3, GridObject>(pos, new GridObject(_currentBuilder!.Id, obj.instanceID, obj.GUID, pos.x, pos.y, pos.z, obj)));
         _player.SendChat(T.ZoneEditAddGridObjSuccess, obj.asset);
-        RefreshPreview();
+        if (prev)
+            RefreshPreview();
     }
-    private List<KeyValuePair<Vector3, GridObject>> RemoveAllGridObjects()
+    private List<KeyValuePair<Vector3, GridObject>> RemoveAllGridObjects(bool prev = true)
     {
         List<KeyValuePair<Vector3, GridObject>> old = _currentGridObjects?.ToList() ?? new List<KeyValuePair<Vector3, GridObject>>(0);
         _player.SendChat(T.ZoneEditDelGridObjAllSuccess, old.Count, old.Count.S());
         if (old.Count > 0)
             _currentGridObjects!.Clear();
-        RefreshPreview();
+        if (prev)
+            RefreshPreview();
         return old;
     }
-    private void AddAllGridObjectsBack(List<KeyValuePair<Vector3, GridObject>> objs)
+    private void AddAllGridObjectsBack(List<KeyValuePair<Vector3, GridObject>> objs, bool prev = true)
     {
         int c = objs.Count;
         if (_currentGridObjects == null)
@@ -1551,9 +1596,10 @@ internal class ZonePlayerComponent : MonoBehaviour
         else
             _currentGridObjects.AddRange(objs);
         _player.SendChat(T.ZoneEditAddGridObjAllSuccess, c, c.S());
-        RefreshPreview();
+        if (prev)
+            RefreshPreview();
     }
-    private void RemoveGridObject(LevelObject obj)
+    private void RemoveGridObject(LevelObject obj, bool prev = true)
     {
         if (_currentGridObjects is not { Count: > 0 })
         {
@@ -1570,9 +1616,10 @@ internal class ZonePlayerComponent : MonoBehaviour
                 return;
             }
         }
-        RefreshPreview();
+        if (prev)
+            RefreshPreview();
     }
-    private void SetCenter(float x, float z, bool isSpawn)
+    private void SetCenter(float x, float z, bool isSpawn, bool prev = true)
     {
         if (isSpawn)
         {
@@ -1634,7 +1681,8 @@ internal class ZonePlayerComponent : MonoBehaviour
             _player.SendChat(T.ZoneEditSpawnSuccessRotation, new Vector2(x, z), rot);
         else
             _player.SendChat(isSpawn ? T.ZoneEditSpawnSuccess : T.ZoneEditCenterSuccess, new Vector2(x, z));
-        RefreshPreview();
+        if (prev)
+            RefreshPreview();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

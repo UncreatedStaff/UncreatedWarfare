@@ -4,7 +4,7 @@ using Uncreated.Encoding;
 using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation;
-public readonly struct Evidence
+public readonly struct Evidence : IEquatable<Evidence>
 {
     [JsonPropertyName("id")]
     public PrimaryKey Id { get; }
@@ -27,6 +27,9 @@ public readonly struct Evidence
 
     [JsonPropertyName("timestamp_utc")]
     public DateTimeOffset Timestamp { get; }
+
+    public Evidence(string url, string? message, string? savedLocation, bool image, IModerationActor actor, DateTimeOffset timestamp)
+        : this(PrimaryKey.NotAssigned, url, message, savedLocation, image, actor, timestamp) { }
 
     [JsonConstructor]
     public Evidence(PrimaryKey id, string url, string? message, string? savedLocation, bool image, IModerationActor actor, DateTimeOffset timestamp)
@@ -58,5 +61,45 @@ public readonly struct Evidence
         writer.Write(Image);
         writer.Write(Actor.Id);
         writer.Write(Timestamp);
+    }
+
+    public bool Equals(Evidence other)
+    {
+        return Id.Key == other.Id.Key && string.Equals(URL, other.URL, StringComparison.Ordinal) &&
+               string.Equals(SavedLocation, other.SavedLocation, StringComparison.Ordinal) &&
+               string.Equals(Message, other.Message, StringComparison.Ordinal) &&
+               Image == other.Image &&
+               (Actor == null && other.Actor == null || Actor != null && other.Actor != null && Actor.Id == other.Actor.Id) &&
+               Timestamp == other.Timestamp;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is Evidence other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            int hashCode = Id.GetHashCode();
+            hashCode = (hashCode * 397) ^ URL.GetHashCode();
+            hashCode = (hashCode * 397) ^ (SavedLocation != null ? SavedLocation.GetHashCode() : 0);
+            hashCode = (hashCode * 397) ^ (Message != null ? Message.GetHashCode() : 0);
+            hashCode = (hashCode * 397) ^ Image.GetHashCode();
+            hashCode = (hashCode * 397) ^ Actor.GetHashCode();
+            hashCode = (hashCode * 397) ^ Timestamp.GetHashCode();
+            return hashCode;
+        }
+    }
+
+    public static bool operator ==(Evidence left, Evidence right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(Evidence left, Evidence right)
+    {
+        return !left.Equals(right);
     }
 }

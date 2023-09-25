@@ -22,6 +22,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Action = System.Action;
 
@@ -449,6 +450,7 @@ public class Translation
                 17 => CheckCase((value as StructureData)?.structure.asset.itemName ?? value.ToString(), format),
                 18 => value is Guid guid ? guid.ToString(format ?? "N", culture) : value.ToString(),
                 19 => value is char chr ? CheckCase(new string(chr, 1), format) : value.ToString(),
+                20 => VehicleToString(language, culture, format, (InteractableVehicle)(object)value, flags),
                 50 => CheckTime(value, format, out string? val, language, culture) ? val! : value.ToString(),
                 51 => CheckTime(value, format, out string? val, language, culture) ? val! : ToStringFunc1!(value, format!, culture),
                 52 => CheckTime(value, format, out string? val, language, culture) ? val! : ToStringFunc2!(value, format!),
@@ -459,6 +461,14 @@ public class Translation
             return str;
         }
 
+        private static string VehicleToString(LanguageInfo language, CultureInfo culture, string? format, InteractableVehicle vehicle, TranslationFlags flags)
+        {
+            string str = VehicleAssetToString(language, culture, vehicle.asset, format, flags);
+            if (format != null && format.Equals(VehicleData.COLORED_NAME))
+                str = Localization.Colorize(TeamManager.GetTeamHexColor(vehicle.lockedGroup.m_SteamID.GetTeam()), str, flags);
+
+            return str;
+        }
         private static string Default(T value, string? format, LanguageInfo lang, IFormatProvider locale, UCPlayer? target, TranslationFlags flags)
         {
             if (value is ICollection col)
@@ -786,6 +796,11 @@ public class Translation
             if (typeof(Guid).IsAssignableFrom(t))
             {
                 Type = 18;
+                return;
+            }
+            if (typeof(InteractableVehicle).IsAssignableFrom(t))
+            {
+                Type = 20;
                 return;
             }
             PropertyInfo? info1 = t

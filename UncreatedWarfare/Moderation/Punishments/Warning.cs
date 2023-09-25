@@ -1,6 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using Uncreated.SQL;
 
 namespace Uncreated.Warfare.Moderation.Punishments;
 
@@ -25,5 +31,28 @@ public class Warning : Punishment
     {
         base.Write(writer, options);
         writer.WriteBoolean("has_been_displayed", HasBeenDisplayed);
+    }
+
+    internal override int EstimateParameterCount() => base.EstimateParameterCount() + 1;
+    public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
+    {
+        await base.AddExtraInfo(db, workingList, formatter, token);
+
+        if (!IsLegacy)
+            workingList.Add(HasBeenDisplayed ? "Has been viewed" : "Not yet viewed");
+    }
+
+    internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
+    {
+        bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
+
+        builder.Append($" INSERT INTO `{DatabaseInterface.TableWarnings}` ({SqlTypes.ColumnList(
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnWarningsHasBeenDisplayed)}) VALUES " +
+                       $"(@0, @{args.Count.ToString(CultureInfo.InvariantCulture)}) AS `t` " +
+                       $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnWarningsHasBeenDisplayed}` = `t`.`{DatabaseInterface.ColumnWarningsHasBeenDisplayed}`;");
+
+        args.Add(HasBeenDisplayed);
+
+        return hasEvidenceCalls;
     }
 }
