@@ -170,7 +170,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         await TeamManager.ReloadFactions(token).ConfigureAwait(false);
         L.Log("Loading Moderation Data...", ConsoleColor.Magenta);
         Data.ModerationSql = new WarfareDatabaseInterface();
-        // await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
+        await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
 
         Data.WarfareStripeService = new WarfareStripeService();
         Data.PurchasingDataStore = await PurchaseRecordsInterface.Create<WarfarePurchaseRecordsInterface>(false, token).ConfigureAwait(false);

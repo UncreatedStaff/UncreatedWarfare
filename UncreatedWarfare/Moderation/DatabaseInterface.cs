@@ -94,7 +94,7 @@ public abstract class DatabaseInterface
         UpdateUsernames(id, names);
         return names;
     }
-    public async Task<T?> ReadOne<T>(PrimaryKey id, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : ModerationEntry
+    public async Task<T?> ReadOne<T>(PrimaryKey id, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
     {
         if (tryGetFromCache && Cache.TryGet(id, out T val, DefaultInvalidateDuration))
             return val;
@@ -118,17 +118,17 @@ public abstract class DatabaseInterface
             return null;
         }
 
-        await Fill(new ModerationEntry[] { entry }, detail, baseOnly, null, token).ConfigureAwait(false);
+        await Fill(new IModerationEntry[] { entry }, detail, baseOnly, null, token).ConfigureAwait(false);
         
         return entry as T;
     }
-    public async Task<T?[]> ReadAll<T>(PrimaryKey[] ids, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : ModerationEntry
+    public async Task<T?[]> ReadAll<T>(PrimaryKey[] ids, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
     {
         T?[] result = new T?[ids.Length];
         await ReadAll(result, ids, tryGetFromCache, detail, baseOnly, token).ConfigureAwait(false);
         return result;
     }
-    public async Task ReadAll<T>(T?[] result, PrimaryKey[] ids, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : ModerationEntry
+    public async Task ReadAll<T>(T?[] result, PrimaryKey[] ids, bool tryGetFromCache, bool detail = true, bool baseOnly = false, CancellationToken token = default) where T : class, IModerationEntry
     {
         if (result.Length != ids.Length)
             throw new ArgumentException("Result must be the same length as ids.", nameof(result));
@@ -191,7 +191,7 @@ public abstract class DatabaseInterface
     public async Task<Array> ReadAll(Type type, ulong actor, ActorRelationType relation, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
         ModerationEntryType[]? types = null;
-        if (type != typeof(ModerationEntry))
+        if (type != typeof(ModerationEntry) && type != typeof(IModerationEntry))
             ModerationReflection.TypeInheritance.TryGetValue(typeof(T), out types);
 
         StringBuilder sb = new StringBuilder("SELECT ", 164);
@@ -204,8 +204,8 @@ public abstract class DatabaseInterface
             args.AddRange(conditionArgs);
             for (int i = 0; i < conditionArgs.Length; ++i)
                 condition = Util.QuickFormat(condition!, "@" + (i + 1).ToString(CultureInfo.InvariantCulture), i, repeat: true);
-
         }
+
         if (!string.IsNullOrEmpty(condition))
             sb.Append(" (").Append(condition).Append(')').Append(" AND");
 
@@ -280,12 +280,12 @@ public abstract class DatabaseInterface
         
         return rtn;
     }
-    public async Task<T[]> ReadAll<T>(bool detail = true, bool baseOnly = false, DateTimeOffset ? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : ModerationEntry
+    public async Task<T[]> ReadAll<T>(bool detail = true, bool baseOnly = false, DateTimeOffset ? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default) where T : IModerationEntry
         => (T[])await ReadAll(typeof(T), detail, baseOnly, start, end, condition, orderBy, conditionArgs, token).ConfigureAwait(false);
     public async Task<Array> ReadAll(Type type, bool detail = true, bool baseOnly = false, DateTimeOffset? start = null, DateTimeOffset? end = null, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, CancellationToken token = default)
     {
         ModerationEntryType[]? types = null;
-        if (type != typeof(ModerationEntry))
+        if (type != typeof(ModerationEntry) && type != typeof(IModerationEntry))
             ModerationReflection.TypeInheritance.TryGetValue(type, out types);
 
         StringBuilder sb = new StringBuilder("SELECT ", 164);
@@ -436,7 +436,7 @@ public abstract class DatabaseInterface
 
         return rtn;
     }
-    private async Task Fill(ModerationEntry?[] entries, bool detail, bool baseOnly, BitArray? mask = null, CancellationToken token = default)
+    private async Task Fill(IModerationEntry?[] entries, bool detail, bool baseOnly, BitArray? mask = null, CancellationToken token = default)
     {
         detail &= baseOnly;
         if (entries.Length == 0 || entries.Length == 1 && (entries[0] is null || mask is not null && !mask[0])) return;
@@ -471,7 +471,7 @@ public abstract class DatabaseInterface
         bool anyCheatingReports = false;
         for (int i = 0; i < entries.Length; ++i)
         {
-            ModerationEntry? entry = entries[i];
+            IModerationEntry? entry = entries[i];
             if (entry == null || mask is not null && !mask[i])
                 continue;
             if (entry is Punishment p)
@@ -502,7 +502,7 @@ public abstract class DatabaseInterface
 
         F.ApplyQueriedList(actors, (key, arr) =>
         {
-            ModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
+            IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
             if (info != null)
                 info.Actors = arr;
         }, false);
@@ -521,7 +521,7 @@ public abstract class DatabaseInterface
 
         F.ApplyQueriedList(evidence, (key, arr) =>
         {
-            ModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
+            IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
             if (info != null)
                 info.Evidence = arr;
         }, false);
@@ -539,7 +539,7 @@ public abstract class DatabaseInterface
 
         F.ApplyQueriedList(links, (key, arr) =>
         {
-            ModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
+            IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
             if (info != null)
                 info.RelatedEntryKeys = arr;
         }, false);
@@ -799,7 +799,7 @@ public abstract class DatabaseInterface
             List<Task> tasks = new List<Task>();
             for (int i = 0; i < entries.Length; ++i)
             {
-                if (entries[i] is not { } e || mask is not null && !mask[i]) continue;
+                if (entries[i] is not ModerationEntry e || mask is not null && !mask[i]) continue;
                 tasks.Add(e.FillDetail(this, token));
             }
 
@@ -813,7 +813,7 @@ public abstract class DatabaseInterface
             ColumnEntriesMessage,
             ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp,
             ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
-            ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
+            ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
             ColumnEntriesRelavantLogsStartTimestamp,
             ColumnEntriesRelavantLogsEndTimestamp,
             ColumnEntriesRemoved, ColumnEntriesRemovedBy,
@@ -935,8 +935,8 @@ public abstract class DatabaseInterface
         entry.IsLegacy = reader.GetBoolean(4);
         entry.StartedTimestamp = DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc);
         entry.ResolvedTimestamp = reader.IsDBNull(6) ? null : DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc);
-        entry.Reputation = reader.GetDouble(7);
-        entry.ReputationApplied = reader.GetBoolean(8);
+        entry.Reputation = reader.IsDBNull(7) ? 0d : reader.GetDouble(7);
+        entry.PendingReputation = reader.IsDBNull(8) ? 0d : reader.GetDouble(8);
         entry.LegacyId = reader.IsDBNull(9) ? null : reader.GetUInt32(9);
         entry.RelevantLogsBegin = reader.IsDBNull(10) ? null : DateTime.SpecifyKind(reader.GetDateTime(10), DateTimeKind.Utc);
         entry.RelevantLogsEnd = reader.IsDBNull(11) ? null : DateTime.SpecifyKind(reader.GetDateTime(11), DateTimeKind.Utc);
@@ -1068,7 +1068,7 @@ public abstract class DatabaseInterface
             reader.GetBoolean(2 + offset),
             Actors.GetActor(reader.GetUInt64(offset)));
     }
-    public async Task AddOrUpdate(ModerationEntry entry, CancellationToken token = default)
+    public async Task AddOrUpdate(IModerationEntry entry, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
 
@@ -1081,7 +1081,7 @@ public abstract class DatabaseInterface
         objs[4] = entry.StartedTimestamp.UtcDateTime;
         objs[5] = entry.ResolvedTimestamp.HasValue ? entry.ResolvedTimestamp.Value.UtcDateTime : DBNull.Value;
         objs[6] = entry.Reputation;
-        objs[7] = entry.ReputationApplied;
+        objs[7] = entry.PendingReputation;
         objs[8] = entry.LegacyId.HasValue ? entry.LegacyId.Value : DBNull.Value;
         objs[9] = entry.RelevantLogsBegin.HasValue ? entry.RelevantLogsBegin.Value.UtcDateTime : DBNull.Value;
         objs[10] = entry.RelevantLogsEnd.HasValue ? entry.RelevantLogsEnd.Value.UtcDateTime : DBNull.Value;
@@ -1097,7 +1097,7 @@ public abstract class DatabaseInterface
 
             ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
             ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
-            ColumnEntriesReputationApplied, ColumnEntriesLegacyId,
+            ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
             ColumnEntriesRelavantLogsStartTimestamp, ColumnEntriesRelavantLogsEndTimestamp,
             ColumnEntriesRemoved, ColumnEntriesRemovedBy, ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason);
 
@@ -1109,11 +1109,14 @@ public abstract class DatabaseInterface
         if (pk.IsValid)
             entry.Id = pk;
 
-        List<object> args = new List<object>(entry.EstimateParameterCount()) { pk.Key };
+        if (entry is not ModerationEntry mod)
+            return;
+
+        List<object> args = new List<object>(mod.EstimateParameterCount()) { pk.Key };
 
         StringBuilder builder = new StringBuilder(82);
 
-        bool hasNewEvidence = entry.AppendWriteCall(builder, args);
+        bool hasNewEvidence = mod.AppendWriteCall(builder, args);
 
         if (!hasNewEvidence)
         {
@@ -1124,9 +1127,9 @@ public abstract class DatabaseInterface
             await Sql.QueryAsync(builder.ToString(), args.ToArray(), reader =>
             {
                 Evidence read = ReadEvidence(reader, 0);
-                for (int i = 0; i < entry.Evidence.Length; ++i)
+                for (int i = 0; i < mod.Evidence.Length; ++i)
                 {
-                    ref Evidence existing = ref entry.Evidence[i];
+                    ref Evidence existing = ref mod.Evidence[i];
                     if (existing.Id.IsValid)
                     {
                         if (read.Id.Key == existing.Id.Key)
@@ -1143,7 +1146,7 @@ public abstract class DatabaseInterface
             }, token).ConfigureAwait(false);
         }
 
-        Cache.AddOrUpdate(entry);
+        Cache.AddOrUpdate(mod);
     }
     public async Task<int> GetNextLevel(ulong player, PresetType type, CancellationToken token = default)
     {
@@ -1276,12 +1279,9 @@ public abstract class DatabaseInterface
     public const string ColumnEntriesStartTimestamp = "StartTimeUTC";
     public const string ColumnEntriesResolvedTimestamp = "ResolvedTimeUTC";
     public const string ColumnEntriesReputation = "Reputation";
-    public const string ColumnEntriesReputationApplied = "ReputationApplied";
+    public const string ColumnEntriesPendingReputation = "PendingReputation";
     public const string ColumnEntriesLegacyId = "LegacyId";
     public const string ColumnEntriesMessageId = "OffenseMessageId";
-    public const string ColumnEntriesInvalidated = "Invalidated";
-    public const string ColumnEntriesInvalidatedActor = "InvalidatedActor";
-    public const string ColumnEntriesInvalidatedTimestamp = "InvalidatedTimestamp";
     public const string ColumnEntriesRelavantLogsStartTimestamp = "RelavantLogsStartTimeUTC";
     public const string ColumnEntriesRelavantLogsEndTimestamp = "RelavantLogsEndTimeUTC";
     public const string ColumnEntriesRemoved = "Removed";
@@ -1439,10 +1439,10 @@ public abstract class DatabaseInterface
             {
                 Nullable = true
             },
-            new Schema.Column(ColumnEntriesReputationApplied, SqlTypes.BOOLEAN)
+            new Schema.Column(ColumnEntriesPendingReputation, SqlTypes.DOUBLE)
             {
                 Nullable = true,
-                Default = "b'0'"
+                Default = "'0'"
             },
             new Schema.Column(ColumnEntriesReputation, SqlTypes.DOUBLE)
             {
@@ -1453,18 +1453,6 @@ public abstract class DatabaseInterface
                 Nullable = true
             },
             new Schema.Column(ColumnEntriesRelavantLogsEndTimestamp, SqlTypes.DATETIME)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnEntriesInvalidated, SqlTypes.BOOLEAN)
-            {
-                Default = "b'0'"
-            },
-            new Schema.Column(ColumnEntriesInvalidatedActor, SqlTypes.STEAM_64)
-            {
-                Nullable = true
-            },
-            new Schema.Column(ColumnEntriesInvalidatedTimestamp, SqlTypes.DATETIME)
             {
                 Nullable = true
             },

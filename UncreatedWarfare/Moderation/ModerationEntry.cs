@@ -15,127 +15,89 @@ namespace Uncreated.Warfare.Moderation;
 /// <summary>
 /// Base class for a moderation record for a player. All punishments and commendations derive from this.
 /// </summary>
-public abstract class ModerationEntry
+public abstract class ModerationEntry : IModerationEntry
 {
     private const ushort DataVersion = 0;
     public static readonly ModerationEntryType MaxEntry = ModerationEntryType.PlayerReportAccepted;
 
-    /// <summary>
-    /// Unique ID to all types of entries.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("id")]
     public PrimaryKey Id { get; set; } = PrimaryKey.NotAssigned;
 
-    /// <summary>
-    /// Steam64 ID for the target player.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("target_steam_64")]
     public ulong Player { get; set; }
 
-    /// <summary>
-    /// Short message about the player.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("message")]
     public string? Message { get; set; }
 
-    /// <summary>
-    /// Other related players, including admins.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("actors")]
     public RelatedActor[] Actors { get; set; } = Array.Empty<RelatedActor>();
 
-    /// <summary>
-    /// If the entry was from before the moderation rewrite.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("is_legacy")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsLegacy { get; set; }
 
-    /// <summary>
-    /// When the entry was started, i.e. when an offense was reported.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("started_utc")]
     public DateTimeOffset StartedTimestamp { get; set; }
 
-    /// <summary>
-    /// When the entry was finished, i.e. when a punishment was handed out. <see langword="null"/> if the entry is still in progress.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("resolved_utc")]
     public DateTimeOffset? ResolvedTimestamp { get; set; }
 
-    /// <summary>
-    /// Effect this entry has on the player's reputation. Negative for punishments, positive for commendations.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("reputation")]
     public double Reputation { get; set; }
 
-    /// <summary>
-    /// If this entry's reputation change has been applied.
-    /// </summary>
-    [JsonPropertyName("reputation_applied")]
-    public bool ReputationApplied { get; set; }
+    /// <inheritdoc/>
+    [JsonPropertyName("pending_reputation")]
+    public double PendingReputation { get; set; }
 
-    /// <summary>
-    /// Unique legacy ID to only this type of entry. Only will exist when <see cref="IsLegacy"/> is <see langword="true"/>.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("legacy_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public uint? LegacyId { get; set; }
 
-    /// <summary>
-    /// Start time of <see cref="ActionLog"/>s relevant to this entry.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("relevant_logs_begin_utc")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public DateTimeOffset? RelevantLogsBegin { get; set; }
 
-    /// <summary>
-    /// End time of <see cref="ActionLog"/>s relevant to this entry.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("relevant_logs_end_utc")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public DateTimeOffset? RelevantLogsEnd { get; set; }
 
-    /// <summary>
-    /// URL's to video/photo evidence.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("evidence")]
     public Evidence[] Evidence { get; set; } = Array.Empty<Evidence>();
 
-    /// <summary>
-    /// If the moderation entry was removed.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("is_removed")]
     public bool Removed { get; set; }
 
-    /// <summary>
-    /// Who removed the moderation entry.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("removing_actor")]
     [JsonConverter(typeof(ActorConverter))]
     public IModerationActor? RemovedBy { get; set; }
 
-    /// <summary>
-    /// When the moderation entry was removed.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("removed_timestamp_utc")]
     public DateTimeOffset? RemovedTimestamp { get; set; }
 
-    /// <summary>
-    /// Why the moderation entry was removed.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("removed_message")]
     public string? RemovedMessage { get; set; }
 
-    /// <summary>
-    /// The keys of related moderation entries.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonPropertyName("related_entries")]
     public PrimaryKey[] RelatedEntryKeys { get; set; } = Array.Empty<PrimaryKey>();
 
-    /// <summary>
-    /// Related moderation entries to this one.
-    /// </summary>
+    /// <inheritdoc/>
     [JsonIgnore]
     public ModerationEntry?[]? RelatedEntries { get; set; }
 
@@ -158,6 +120,11 @@ public abstract class ModerationEntry
         if (IsLegacy)
         {
             workingList.Add($"Legacy ID: {(LegacyId.HasValue ? LegacyId.Value.ToString(formatter) : "--")}");
+        }
+
+        if (PendingReputation != 0d)
+        {
+            workingList.Add($"Pending Reptuation: {PendingReputation.ToString("0.#", CultureInfo.InvariantCulture)}");
         }
 
         if (Removed)
@@ -239,8 +206,8 @@ public abstract class ModerationEntry
             ResolvedTimestamp = reader.TokenType == JsonTokenType.Null ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(), DateTimeKind.Utc));
         else if (propertyName.Equals("reputation", StringComparison.InvariantCultureIgnoreCase))
             Reputation = reader.TokenType == JsonTokenType.Null ? 0d : reader.GetDouble();
-        else if (propertyName.Equals("reputation_applied", StringComparison.InvariantCultureIgnoreCase))
-            ReputationApplied = reader.TokenType != JsonTokenType.Null && reader.GetBoolean();
+        else if (propertyName.Equals("pending_reputation", StringComparison.InvariantCultureIgnoreCase))
+            PendingReputation = reader.TokenType == JsonTokenType.Null ? 0d : reader.GetDouble();
         else if (propertyName.Equals("legacy_id", StringComparison.InvariantCultureIgnoreCase))
             LegacyId = reader.TokenType == JsonTokenType.Null ? null : reader.GetUInt32();
         else if (propertyName.Equals("relevant_logs_begin_utc", StringComparison.InvariantCultureIgnoreCase))
@@ -273,7 +240,7 @@ public abstract class ModerationEntry
         if (ResolvedTimestamp.HasValue)
             writer.WriteString("resolved_utc", ResolvedTimestamp.Value.UtcDateTime);
         writer.WriteNumber("reputation", Reputation);
-        writer.WriteBoolean("reputation_applied", ReputationApplied);
+        writer.WriteNumber("pending_reputation", PendingReputation);
         if (LegacyId.HasValue)
             writer.WriteNumber("legacy_id", LegacyId.Value);
         if (RelevantLogsBegin.HasValue)
@@ -329,7 +296,7 @@ public abstract class ModerationEntry
         StartedTimestamp = reader.ReadDateTimeOffset();
         ResolvedTimestamp = reader.ReadNullableDateTimeOffset();
         Reputation = reader.ReadDouble();
-        ReputationApplied = (flag & 2) != 0;
+        PendingReputation = reader.ReadDouble();
         LegacyId = reader.ReadNullableUInt32();
         RelevantLogsBegin = reader.ReadNullableDateTimeOffset();
         RelevantLogsEnd = reader.ReadNullableDateTimeOffset();
@@ -342,7 +309,7 @@ public abstract class ModerationEntry
         for (int i = 0; i < Evidence.Length; ++i)
             Evidence[i] = new Evidence(reader, version);
 
-        Removed = (flag & 4) != 0;
+        Removed = (flag & 2) != 0;
         if (Removed)
         {
             RemovedBy = Moderation.Actors.GetActor(reader.ReadUInt64());
@@ -359,11 +326,12 @@ public abstract class ModerationEntry
         writer.Write(Id.Key);
         writer.Write(Player);
         writer.WriteNullable(Message);
-        byte flag = (byte)((IsLegacy ? 1 : 0) | (ReputationApplied ? 2 : 0) | (Removed ? 4 : 0));
+        byte flag = (byte)((IsLegacy ? 1 : 0) | (Removed ? 2 : 0));
         writer.Write(flag);
         writer.Write(StartedTimestamp);
         writer.WriteNullable(ResolvedTimestamp);
         writer.Write(Reputation);
+        writer.Write(PendingReputation);
         writer.WriteNullable(LegacyId);
         writer.WriteNullable(RelevantLogsBegin);
         writer.WriteNullable(RelevantLogsEnd);
@@ -495,6 +463,127 @@ public abstract class ModerationEntry
         return anyNew;
     }
 }
+public interface IModerationEntry
+{
+    /// <summary>
+    /// Unique ID to all types of entries.
+    /// </summary>
+    [JsonPropertyName("id")]
+    PrimaryKey Id { get; set; }
+
+    /// <summary>
+    /// Steam64 ID for the target player.
+    /// </summary>
+    [JsonPropertyName("target_steam_64")]
+    ulong Player { get; set; }
+
+    /// <summary>
+    /// Short message about the player.
+    /// </summary>
+    [JsonPropertyName("message")]
+    string? Message { get; set; }
+
+    /// <summary>
+    /// Other related players, including admins.
+    /// </summary>
+    [JsonPropertyName("actors")]
+    RelatedActor[] Actors { get; set; }
+
+    /// <summary>
+    /// If the entry was from before the moderation rewrite.
+    /// </summary>
+    [JsonPropertyName("is_legacy")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    bool IsLegacy { get; set; }
+
+    /// <summary>
+    /// When the entry was started, i.e. when an offense was reported.
+    /// </summary>
+    [JsonPropertyName("started_utc")]
+    DateTimeOffset StartedTimestamp { get; set; }
+
+    /// <summary>
+    /// When the entry was finished, i.e. when a punishment was handed out. <see langword="null"/> if the entry is still in progress.
+    /// </summary>
+    [JsonPropertyName("resolved_utc")]
+    DateTimeOffset? ResolvedTimestamp { get; set; }
+
+    /// <summary>
+    /// Effect this entry has on the player's reputation. Negative for punishments, positive for commendations.
+    /// </summary>
+    [JsonPropertyName("reputation")]
+    double Reputation { get; set; }
+
+    /// <summary>
+    /// If this entry's reputation change has been applied.
+    /// </summary>
+    [JsonPropertyName("pending_reputation")]
+    double PendingReputation { get; set; }
+
+    /// <summary>
+    /// Unique legacy ID to only this type of entry. Only will exist when <see cref="IsLegacy"/> is <see langword="true"/>.
+    /// </summary>
+    [JsonPropertyName("legacy_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    uint? LegacyId { get; set; }
+
+    /// <summary>
+    /// Start time of <see cref="ActionLog"/>s relevant to this entry.
+    /// </summary>
+    [JsonPropertyName("relevant_logs_begin_utc")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    DateTimeOffset? RelevantLogsBegin { get; set; }
+
+    /// <summary>
+    /// End time of <see cref="ActionLog"/>s relevant to this entry.
+    /// </summary>
+    [JsonPropertyName("relevant_logs_end_utc")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    DateTimeOffset? RelevantLogsEnd { get; set; }
+
+    /// <summary>
+    /// URL's to video/photo evidence.
+    /// </summary>
+    [JsonPropertyName("evidence")]
+    Evidence[] Evidence { get; set; }
+
+    /// <summary>
+    /// If the moderation entry was removed.
+    /// </summary>
+    [JsonPropertyName("is_removed")]
+    bool Removed { get; set; }
+
+    /// <summary>
+    /// Who removed the moderation entry.
+    /// </summary>
+    [JsonPropertyName("removing_actor")]
+    [JsonConverter(typeof(ActorConverter))]
+    IModerationActor? RemovedBy { get; set; }
+
+    /// <summary>
+    /// When the moderation entry was removed.
+    /// </summary>
+    [JsonPropertyName("removed_timestamp_utc")]
+    DateTimeOffset? RemovedTimestamp { get; set; }
+
+    /// <summary>
+    /// Why the moderation entry was removed.
+    /// </summary>
+    [JsonPropertyName("removed_message")]
+    string? RemovedMessage { get; set; }
+
+    /// <summary>
+    /// The keys of related moderation entries.
+    /// </summary>
+    [JsonPropertyName("related_entries")]
+    PrimaryKey[] RelatedEntryKeys { get; set; }
+
+    /// <summary>
+    /// Related moderation entries to this one.
+    /// </summary>
+    [JsonIgnore]
+    ModerationEntry?[]? RelatedEntries { get; set; }
+}
 public interface IForgiveableModerationEntry : IDurationModerationEntry
 {
     /// <summary>
@@ -537,7 +626,7 @@ public interface IForgiveableModerationEntry : IDurationModerationEntry
     bool WasAppliedAt(DateTimeOffset timestamp, bool considerForgiven);
 }
 
-public interface IDurationModerationEntry
+public interface IDurationModerationEntry : IModerationEntry
 {
     /// <summary>
     /// Length of the punishment, negative implies permanent.
@@ -558,12 +647,12 @@ public class ModerationCache : Dictionary<int, ModerationEntryCacheEntry>
 {
     public ModerationCache() { }
     public ModerationCache(int capacity) : base(capacity) { }
-    public new ModerationEntry this[int key]
+    public new IModerationEntry this[int key]
     {
         get => base[key].Entry;
         set => base[key] = new ModerationEntryCacheEntry(value);
     }
-    public void AddOrUpdate(ModerationEntry entry)
+    public void AddOrUpdate(IModerationEntry entry)
     {
         if (entry.Id.IsValid)
             this[entry.Id.Key] = entry;
@@ -580,7 +669,7 @@ public class ModerationCache : Dictionary<int, ModerationEntryCacheEntry>
         value = null!;
         return false;
     }
-    public bool TryGet<T>(PrimaryKey key, out T value, TimeSpan timeout) where T : ModerationEntry
+    public bool TryGet<T>(PrimaryKey key, out T value, TimeSpan timeout) where T : class, IModerationEntry
     {
         if (key.IsValid && timeout.Ticks > 0 && TryGetValue(key.Key, out ModerationEntryCacheEntry entry))
         {
@@ -594,10 +683,10 @@ public class ModerationCache : Dictionary<int, ModerationEntryCacheEntry>
 }
 public readonly struct ModerationEntryCacheEntry
 {
-    public ModerationEntry Entry { get; }
+    public IModerationEntry Entry { get; }
     public DateTime LastRefreshed { get; }
-    public ModerationEntryCacheEntry(ModerationEntry entry) : this(entry, DateTime.UtcNow) { }
-    public ModerationEntryCacheEntry(ModerationEntry entry, DateTime lastRefreshed)
+    public ModerationEntryCacheEntry(IModerationEntry entry) : this(entry, DateTime.UtcNow) { }
+    public ModerationEntryCacheEntry(IModerationEntry entry, DateTime lastRefreshed)
     {
         Entry = entry;
         LastRefreshed = lastRefreshed;

@@ -145,7 +145,7 @@ public class ConsoleActor : IModerationActor
     public override string ToString() => "Console";
     public ValueTask<string> GetDisplayName(DatabaseInterface database, CancellationToken token = default) => new ValueTask<string>("Console");
     public ValueTask<string?> GetProfilePictureURL(DatabaseInterface database, AvatarSize size, CancellationToken token = default)
-        => new ValueTask<string?>(UCWarfare.IsLoaded ? "https://i.imgur.com/G05HJn2.png" /* this image has rounded corners */ : "https://i.imgur.com/NRZFfKN.png");
+        => new ValueTask<string?>(UCWarfare.IsLoaded ? "https://i.imgur.com/f2axLoQ.png" /* this image has rounded corners */ : "https://i.imgur.com/NRZFfKN.png");
 }
 [JsonConverter(typeof(ActorConverter))]
 public class AntiCheatActor : IModerationActor
@@ -176,7 +176,7 @@ public enum AvatarSize
     Small
 }
 
-public readonly struct RelatedActor
+public readonly struct RelatedActor : IEquatable<RelatedActor>
 {
     [JsonIgnore]
     public const string RolePrimaryAdmin = "Primary Admin";
@@ -221,6 +221,35 @@ public readonly struct RelatedActor
         writer.Write(Admin);
         writer.Write(Actor.Id);
     }
+
+    public bool Equals(RelatedActor other)
+    {
+        return Role == other.Role && Admin == other.Admin && (Actor == null && other.Actor == null || Actor != null && other.Actor != null && Actor.Id == other.Actor.Id);
+    }
+    public override bool Equals(object? obj)
+    {
+        return obj is RelatedActor other && Equals(other);
+    }
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            int hashCode = Role.GetHashCode();
+            hashCode = (hashCode * 397) ^ Admin.GetHashCode();
+            hashCode = (hashCode * 397) ^ Actor.GetHashCode();
+            return hashCode;
+        }
+    }
+    public static bool operator ==(RelatedActor left, RelatedActor right)
+    {
+        return left.Equals(right);
+    }
+    public static bool operator !=(RelatedActor left, RelatedActor right)
+    {
+        return !left.Equals(right);
+    }
+
+    public override string ToString() => Actor + " (" + Role + (Admin ? " [A]" : string.Empty) + ")";
 }
 public sealed class ActorConverter : JsonConverter<IModerationActor>
 {

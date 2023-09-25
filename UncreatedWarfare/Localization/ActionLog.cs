@@ -902,10 +902,18 @@ public enum ActionLogType : byte
     IPWhitelist,
     [Translatable("CHANGE_CULTURE")]
     ChangeCulture,
+    [Translatable("FORGIVE_MOD_ENTRY")]
+    ForgiveModerationEntry,
+    [Translatable("EDIT_MOD_ENTRY")]
+    EditModerationEntry,
+    [Translatable("CREATE_MOD_ENTRY")]
+    CreateModerationEntry,
+    [Translatable("REMOVE_MOD_ENTRY")]
+    RemoveModerationEntry,
 
     [JsonIgnore]
     [Translatable(IsPrioritizedTranslation = false)]
     [Obsolete("Don't use this.")]
-    Max = ChangeCulture
+    Max = RemoveModerationEntry
 }
 // ReSharper restore InconsistentNaming

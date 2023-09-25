@@ -35,21 +35,27 @@ public static class ModerationReflection
         for (int i = 0; i < types.Count; ++i)
         {
             Type type = types[i];
-            if (Types.Contains(type))
+            if (types2.Contains(type))
                 continue;
-            if (typeof(ModerationEntry).IsAssignableFrom(type))
-            {
-                types2.Add(type);
-                if (Attribute.GetCustomAttribute(type, typeof(ModerationEntryAttribute)) is ModerationEntryAttribute attr)
-                {
-                    if (Types.Contains(attr.Type))
-                    {
-                        L.LogWarning($"Multiple moderation types defined with {attr.Type}.");
-                        continue;
-                    }
 
-                    Types.Add(attr.Type, type);
+            if (!typeof(ModerationEntry).IsAssignableFrom(type))
+            {
+                if (type.IsInterface && typeof(IModerationEntry).IsAssignableFrom(type))
+                    types2.Add(type);
+                
+                continue;
+            }
+
+            types2.Add(type);
+            if (Attribute.GetCustomAttribute(type, typeof(ModerationEntryAttribute)) is ModerationEntryAttribute attr)
+            {
+                if (Types.Contains(attr.Type))
+                {
+                    L.LogWarning($"Multiple moderation types defined with {attr.Type}.");
+                    continue;
                 }
+
+                Types.Add(attr.Type, type);
             }
         }
 
