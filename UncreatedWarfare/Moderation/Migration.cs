@@ -127,7 +127,7 @@ internal static class Migration
                     RelevantLogsEnd = null,
                     ResolvedTimestamp = null,
                     Id = PrimaryKey.NotAssigned,
-                    HasBeenDisplayed = true
+                    DisplayedTimestamp = null
                 };
                 warning.ResolvedTimestamp = warning.StartedTimestamp;
                 warnings.Add(warning);

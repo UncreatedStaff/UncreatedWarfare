@@ -419,6 +419,8 @@ internal static class ItemIconProvider
         builder.Append(';');
         await Data.AdminSql.NonQueryAsync(builder.ToString(), objs, token).ConfigureAwait(false);
     }
+
+    public static void UseDefaults() => AddDefaultsToData();
     public static async Task DownloadConfig(CancellationToken token = default)
     {
         int val = await Data.AdminSql.VerifyTable(Schema, token).ConfigureAwait(false);

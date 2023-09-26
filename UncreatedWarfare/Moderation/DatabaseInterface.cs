@@ -832,7 +832,7 @@ public abstract class DatabaseInterface
         if (!baseOnly && (type.IsAssignableFrom(typeof(Warning)) || typeof(Warning).IsAssignableFrom(type)))
         {
             flag |= 1 << 2;
-            sb.Append(",`warns`.`" + ColumnWarningsHasBeenDisplayed + "`");
+            sb.Append(",`warns`.`" + ColumnWarningsDisplayedTimestamp + "`");
         }
         if (!baseOnly && (type.IsAssignableFrom(typeof(PlayerReportAccepted)) || typeof(PlayerReportAccepted).IsAssignableFrom(type)))
         {
@@ -963,7 +963,7 @@ public abstract class DatabaseInterface
 
         if ((flag & (1 << 1)) != 0)
         {
-            offset++;
+            ++offset;
             if (entry is Mute mute)
             {
                 MuteType? sec = reader.IsDBNull(offset) ? null : reader.ReadStringEnum<MuteType>(offset);
@@ -972,15 +972,15 @@ public abstract class DatabaseInterface
         }
         if ((flag & (1 << 2)) != 0)
         {
-            offset++;
+            ++offset;
             if (entry is Warning warning)
             {
-                warning.HasBeenDisplayed = !reader.IsDBNull(offset) && reader.GetBoolean(offset);
+                warning.DisplayedTimestamp = reader.IsDBNull(offset) ? null : new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(offset), DateTimeKind.Utc));
             }
         }
         if ((flag & (1 << 3)) != 0)
         {
-            offset++;
+            ++offset;
             if (entry is PlayerReportAccepted praccept)
             {
                 praccept.ReportKey = reader.IsDBNull(offset) ? PrimaryKey.NotAssigned : reader.GetInt32(offset);
@@ -1031,7 +1031,7 @@ public abstract class DatabaseInterface
         }
         if ((flag & (1 << 8)) != 0)
         {
-            offset++;
+            ++offset;
             if (entry is Report rep)
             {
                 ReportType? sec = reader.IsDBNull(offset) ? null : reader.ReadStringEnum<ReportType>(offset);
@@ -1094,7 +1094,6 @@ public abstract class DatabaseInterface
             objs[15] = pk.Key;
 
         string query = F.BuildInitialInsertQuery(TableEntries, ColumnEntriesPrimaryKey, pk.IsValid, null, null,
-
             ColumnEntriesType, ColumnEntriesSteam64, ColumnEntriesMessage,
             ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp, ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
             ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
@@ -1320,7 +1319,7 @@ public abstract class DatabaseInterface
 
     public const string ColumnMutesType = "MuteType";
 
-    public const string ColumnWarningsHasBeenDisplayed = "WarningHasBeenDisplayed";
+    public const string ColumnWarningsDisplayedTimestamp = "Displayed";
 
     public const string ColumnPlayerReportAcceptedsReport = "AcceptedReport";
 
@@ -1649,10 +1648,10 @@ public abstract class DatabaseInterface
                 ForeignKeyColumn = ColumnEntriesPrimaryKey,
                 ForeignKeyTable = TableEntries
             },
-            new Schema.Column(ColumnWarningsHasBeenDisplayed, SqlTypes.BOOLEAN)
+            new Schema.Column(ColumnWarningsDisplayedTimestamp, SqlTypes.DATETIME)
             {
                 Indexed = true,
-                Default = "b'0'"
+                Nullable = true
             }
         }, false, typeof(Warning)),
         new Schema(TablePlayerReportAccepteds, new Schema.Column[]

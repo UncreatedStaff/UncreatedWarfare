@@ -21,7 +21,7 @@ public class AssetBan : DurationPunishment
 
     [JsonPropertyName("vehicle_type_filter")]
     [JsonConverter(typeof(ArrayConverter<VehicleType, JsonStringEnumConverter>))]
-    public VehicleType[] VehicleTypeFilter { get; set; }
+    public VehicleType[] VehicleTypeFilter { get; set; } = Array.Empty<VehicleType>();
 
     internal void FillFromText(string? text)
     {
@@ -46,11 +46,20 @@ public class AssetBan : DurationPunishment
 
             if (types is { Length: > 0 })
             {
-                (vehicleTypes ??= new List<VehicleType>(2)).AddRange(types);
+                vehicleTypes ??= new List<VehicleType>(2);
+                for (int j = 0; j < types.Length; ++j)
+                {
+                    VehicleType t = types[j];
+                    if (!vehicleTypes.Contains(t))
+                        vehicleTypes.Add(t);
+                }
             }
             else if (single != VehicleType.None)
             {
-                (vehicleTypes ??= new List<VehicleType>(2)).Add(single);
+                vehicleTypes ??= new List<VehicleType>(2);
+
+                if (!vehicleTypes.Contains(single))
+                    vehicleTypes.Add(single);
             }
         }
 
@@ -59,6 +68,7 @@ public class AssetBan : DurationPunishment
 
     private static void ParseValue(string input, out VehicleType single, out VehicleType[]? vehicleTypes)
     {
+        input = input.Trim();
         single = default;
         vehicleTypes = null;
         if (!input.Equals("emplacement", StringComparison.InvariantCultureIgnoreCase) && Enum.TryParse(input, true, out VehicleType type))
@@ -99,12 +109,6 @@ public class AssetBan : DurationPunishment
     {
         StringBuilder sb = new StringBuilder();
         List<VehicleType> types = new List<VehicleType>(VehicleTypeFilter);
-        if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportGround) != -1)
-        {
-            types.Remove(VehicleType.TransportAir);
-            types.Remove(VehicleType.TransportGround);
-            sb.Append("Transports");
-        }
         if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.Jet) != -1
             && Array.IndexOf(VehicleTypeFilter, VehicleType.AttackHeli) != -1)
         {
@@ -135,14 +139,6 @@ public class AssetBan : DurationPunishment
                 sb.Append(", ");
             sb.Append("Armors");
         }
-        if (Array.IndexOf(VehicleTypeFilter, VehicleType.LogisticsGround) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1)
-        {
-            types.Remove(VehicleType.LogisticsGround);
-            types.Remove(VehicleType.TransportAir);
-            if (sb.Length > 0)
-                sb.Append(", ");
-            sb.Append("Loigistics");
-        }
         if (Array.IndexOf(VehicleTypeFilter, VehicleType.HMG) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.ATGM) != -1
                                                                     && Array.IndexOf(VehicleTypeFilter, VehicleType.AA) != -1
                                                                     && Array.IndexOf(VehicleTypeFilter, VehicleType.Mortar) != -1)
@@ -154,6 +150,20 @@ public class AssetBan : DurationPunishment
             if (sb.Length > 0)
                 sb.Append(", ");
             sb.Append("Emplacements");
+        }
+        if (Array.IndexOf(VehicleTypeFilter, VehicleType.LogisticsGround) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1)
+        {
+            types.Remove(VehicleType.LogisticsGround);
+            types.Remove(VehicleType.TransportAir);
+            if (sb.Length > 0)
+                sb.Append(", ");
+            sb.Append("Loigistics");
+        }
+        if (Array.IndexOf(VehicleTypeFilter, VehicleType.TransportAir) != -1 && Array.IndexOf(VehicleTypeFilter, VehicleType.TransportGround) != -1)
+        {
+            types.Remove(VehicleType.TransportAir);
+            types.Remove(VehicleType.TransportGround);
+            sb.Append("Transports");
         }
         for (int i = 0; i < types.Count; ++i)
         {

@@ -456,7 +456,7 @@ public abstract class ModerationEntry : IModerationEntry
                 builder.Append($"; SELECT {SqlTypes.ColumnList(DatabaseInterface.ColumnEvidenceId,
                     DatabaseInterface.ColumnEvidenceLink, DatabaseInterface.ColumnEvidenceMessage,
                     DatabaseInterface.ColumnEvidenceLocalSource, DatabaseInterface.ColumnEvidenceIsImage,
-                    DatabaseInterface.ColumnEvidenceTimestamp, DatabaseInterface.ColumnEvidenceActorId)} WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
+                    DatabaseInterface.ColumnEvidenceTimestamp, DatabaseInterface.ColumnEvidenceActorId)} FROM `{DatabaseInterface.TableEvidence}` WHERE `{DatabaseInterface.ColumnExternalPrimaryKey}` = @0;");
             }
         }
 
