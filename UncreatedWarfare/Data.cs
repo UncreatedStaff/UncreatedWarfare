@@ -112,8 +112,8 @@ public static class Data
     public static Dictionary<string, string> ColorsHex;
     public static Dictionary<string, Vector3> ExtraPoints;
     public static Dictionary<ulong, string> DefaultPlayerNames;
-    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
-    public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = new Dictionary<ulong, UCPlayerData>();
+    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = UCWarfare.IsLoaded ? new Dictionary<ulong, PlayerNames>(Provider.maxPlayers) : null!;
+    public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = UCWarfare.IsLoaded ? new Dictionary<ulong, UCPlayerData>() : null!;
     internal static WarfareSQL DatabaseManager;
     internal static WarfareSQL? RemoteSQL;
     internal static DatabaseInterface ModerationSql;

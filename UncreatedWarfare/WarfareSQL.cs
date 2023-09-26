@@ -39,7 +39,7 @@ public class WarfareSQL : MySqlDatabase, IWarfareSql
     private static readonly ByteWriter ReportWriter = new ByteWriter(false, 27);
     public WarfareSQL(MySqlData data) : base(data, "Uncreated Warfare")
     {
-        DebugLogging |= UCWarfare.Config.Debug;
+        DebugLogging |= UCWarfare.IsLoaded && UCWarfare.Config.Debug;
     }
 
     public static readonly string TableLevels = UCWarfare.Season switch
