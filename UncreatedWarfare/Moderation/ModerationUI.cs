@@ -24,8 +24,8 @@ namespace Uncreated.Warfare.Moderation;
 internal partial class ModerationUI : UnturnedUI
 {
     public const int ModerationHistoryLength = 30;
-    public const string PositiveReputationColor = "cc0000";
-    public const string NegativeReputationColor = "00cc00";
+    public const string PositiveReputationColor = "00cc00";
+    public const string NegativeReputationColor = "cc0000";
     public const string DateTimeFormat = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss\\ \\U\\T\\C\\-\\2\\4";
     public const string DateTimeFormatInput = "yyyy\\/MM\\/dd\\ hh\\:mm\\:ss";
 
@@ -1426,7 +1426,7 @@ internal partial class ModerationUI : UnturnedUI
         [UIPattern("Preview", Mode = FormatMode.Format)]
         public UnturnedImage PreviewImage { get; set; }
 
-        [UIPattern("Preview", Mode = FormatMode.Format)]
+        [UIPattern("Open", Mode = FormatMode.Format)]
         public UnturnedButton PreviewImageButton { get; set; }
 
         [UIPattern("PreviewName", Mode = FormatMode.Format)]

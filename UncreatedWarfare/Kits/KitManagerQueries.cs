@@ -53,6 +53,7 @@ partial class KitManager
     public const string COLUMN_LAST_EDITOR = "LastEditor";
     public const string COLUMN_CREATION_TIME = "CreatedAt";
     public const string COLUMN_LAST_EDIT_TIME = "LastEditedAt";
+    public const string COLUMN_BUNDLE = "Bundle";
 
     public const string COLUMN_FILTER_FACTION = "Faction";
     public const string COLUMN_FILTER_MAP = "Map";
@@ -122,6 +123,14 @@ partial class KitManager
             new Schema.Column(COLUMN_LAST_EDITOR, SqlTypes.STEAM_64) { Nullable = true },
             new Schema.Column(COLUMN_CREATION_TIME, SqlTypes.DATETIME) { Nullable = true },
             new Schema.Column(COLUMN_LAST_EDIT_TIME, SqlTypes.DATETIME) { Nullable = true },
+            new Schema.Column(COLUMN_BUNDLE, SqlTypes.INT)
+            {
+                ForeignKey = true,
+                ForeignKeyColumn = EliteBundle.ColumnBundlePrimaryKey,
+                ForeignKeyTable = EliteBundle.TableBundles,
+                Nullable = true,
+                ForeignKeyDeleteBehavior = ConstraintBehavior.SetNull
+            }
         }, true, typeof(Kit)),
         new Schema(TABLE_ITEMS, new Schema.Column[]
         {

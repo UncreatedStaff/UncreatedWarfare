@@ -325,6 +325,7 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
                 return RemovedTimestamp.Value > DateTime.UtcNow;
         }
 
+        L.LogDebug($"{ResolvedTimestamp.Value} + {Duration}.");
         return IsPermanent || DateTime.UtcNow > ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
     }
 
