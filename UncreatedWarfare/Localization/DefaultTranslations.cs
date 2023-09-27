@@ -1579,6 +1579,14 @@ internal static class T
     public static readonly Translation<VehicleData> RequestVehicleSuccess = new Translation<VehicleData>("<#b3a591>This {0} is now yours to take into battle.", VehicleData.COLORED_NAME);
     [TranslationData(SectionRequest)]
     public static readonly Translation<VehicleData> RequestVehicleDead = new Translation<VehicleData>("<#b3a591>The {0} was destroyed and will be restocked soon.", VehicleData.COLORED_NAME);
+    [TranslationData(SectionRequest)]
+    public static readonly Translation RequestVehicleAssetBannedGlobalPermanent = new Translation("<#b3a591>You are permanently banned from using all vehicles.");
+    [TranslationData(SectionRequest)]
+    public static readonly Translation<TimeSpan> RequestVehicleAssetBannedGlobal = new Translation<TimeSpan>("<#b3a591>You are banned from using all vehicles for another {0}.", FormatTimeLong);
+    [TranslationData(SectionRequest)]
+    public static readonly Translation<string> RequestVehicleAssetBannedPermanent = new Translation<string>("<#b3a591>You are permanently banned from using <#fff>{0}</color>.");
+    [TranslationData(SectionRequest)]
+    public static readonly Translation<TimeSpan, string> RequestVehicleAssetBanned = new Translation<TimeSpan, string>("<#b3a591>You are banned from using <#fff>{1}</color> for another {0}.", FormatTimeLong);
 
     #region Vehicle Request Delays
     [TranslationData(SectionRequest)]

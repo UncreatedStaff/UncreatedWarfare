@@ -33,6 +33,20 @@ public abstract class DatabaseInterface
     private readonly Dictionary<ulong, string> _iconUrlCacheMedium = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, string> _iconUrlCacheFull = new Dictionary<ulong, string>(128);
     private readonly Dictionary<ulong, PlayerNames> _usernameCache = new Dictionary<ulong, PlayerNames>(128);
+
+    private readonly string[] _columns =
+    {
+        ColumnEntriesPrimaryKey,
+        ColumnEntriesType, ColumnEntriesSteam64,
+        ColumnEntriesMessage,
+        ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp,
+        ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
+        ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
+        ColumnEntriesRelavantLogsStartTimestamp,
+        ColumnEntriesRelavantLogsEndTimestamp,
+        ColumnEntriesRemoved, ColumnEntriesRemovedBy,
+        ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason
+    };
     public ModerationCache Cache { get; } = new ModerationCache(64);
     public bool TryGetAvatar(IModerationActor actor, AvatarSize size, out string avatar)
     {
@@ -806,20 +820,57 @@ public abstract class DatabaseInterface
             await Task.WhenAll(tasks.AsArrayFast()).ConfigureAwait(false);
         }
     }
-    private static int AppendReadColumns(StringBuilder sb, Type type, bool baseOnly)
+    public Task<Array> GetActiveEntries(Type type, ulong steam64, bool detail = true, bool baseOnly = false, string? condition = null, string? orderBy = null, object[]? conditionArgs = null, DateTimeOffset? start = null, DateTimeOffset? end = null, CancellationToken token = default)
     {
-        sb.Append(SqlTypes.ColumnListAliased("main", ColumnEntriesPrimaryKey,
-            ColumnEntriesType, ColumnEntriesSteam64,
-            ColumnEntriesMessage,
-            ColumnEntriesIsLegacy, ColumnEntriesStartTimestamp,
-            ColumnEntriesResolvedTimestamp, ColumnEntriesReputation,
-            ColumnEntriesPendingReputation, ColumnEntriesLegacyId,
-            ColumnEntriesRelavantLogsStartTimestamp,
-            ColumnEntriesRelavantLogsEndTimestamp,
-            ColumnEntriesRemoved, ColumnEntriesRemovedBy,
-            ColumnEntriesRemovedTimestamp, ColumnEntriesRemovedReason));
+        bool dur = typeof(IDurationModerationEntry).IsAssignableFrom(type);
+        string cond = (dur
+            ? $"(`dur`.`{ColumnDurationsForgiven}` = 0 OR `dur`.`{ColumnDurationsForgiven}` IS NULL) AND "
+            : string.Empty) + $"`main`.`{ColumnEntriesRemoved}` = 0";
+        if (dur)
+        {
+            cond += " AND " + Util.BuildCheckDurationClause("dur", "main", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp);
+        }
+
+        if (condition != null)
+            cond += " AND (" + condition + ")";
+        
+        return ReadAll(type, steam64, ActorRelationType.IsTarget, detail, baseOnly, start, end, cond, orderBy, conditionArgs, token: token);
+    }
+
+    public async Task<AssetBan?> GetActiveAssetBan(ulong steam64, VehicleType type, bool detail = true, CancellationToken token = default)
+    {
+        AssetBan? result = null;
+        
+        await Sql.QueryAsync(
+            $"SELECT {SqlTypes.ColumnListAliased("e", _columns)}, " +
+            $"{SqlTypes.ColumnListAliased("d", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason)}, " +
+            $"{SqlTypes.ColumnListAliased("pnsh", ColumnPunishmentsPresetType, ColumnPunishmentsPresetLevel)}" +
+            $"FROM `{TableEntries}` AS `e` LEFT JOIN `{TableDurationPunishments}` AS `d` ON `e`.`{ColumnEntriesPrimaryKey}`=`d`.`{ColumnExternalPrimaryKey}` LEFT JOIN `{TablePunishments}` AS `pnsh` ON `e`.`{ColumnEntriesPrimaryKey}`=`pnsh`.`{ColumnExternalPrimaryKey}` " +
+            $"WHERE `e`.`{ColumnEntriesSteam64}` = @0 " +
+            $"AND `e`.`{ColumnEntriesType}` = '" + nameof(ModerationEntryType.AssetBan) + "' " +
+            $"AND `d`.`{ColumnDurationsForgiven}` = 0 " +
+            $"AND `e`.`{ColumnEntriesRemoved}` = 0 " +
+            $"AND {Util.BuildCheckDurationClause("d", "e", ColumnDurationsDurationSeconds, ColumnEntriesResolvedTimestamp, ColumnEntriesStartTimestamp)} " +
+            $"AND (NOT EXISTS (SELECT NULL FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`) " +
+            $"OR (@1 IN (SELECT `a`.`{ColumnAssetBanFiltersType}` FROM `{TableAssetBanTypeFilters}` AS `a` WHERE `a`.`{ColumnExternalPrimaryKey}`=`e`.`{ColumnEntriesPrimaryKey}`))) " +
+            $"ORDER BY (IF(`d`.`{ColumnDurationsDurationSeconds}` < 0, 2147483647, `d`.`{ColumnDurationsDurationSeconds}`)) DESC;",
+            new object[] { steam64, type.ToString() },
+            reader =>
+            {
+                result = ReadEntry(1 | (1 << 9), reader) as AssetBan;
+                return true;
+            }, token).ConfigureAwait(false);
+
+        if (detail && result != null)
+            await Fill(new IModerationEntry[] { result }, true, false, token: token).ConfigureAwait(false);
+
+        return result;
+    }
+    private int AppendReadColumns(StringBuilder sb, Type type, bool baseOnly)
+    {
+        sb.Append(SqlTypes.ColumnListAliased("main", _columns));
         int flag = 0;
-        if (type.IsAssignableFrom(typeof(DurationPunishment)) || typeof(DurationPunishment).IsAssignableFrom(type))
+        if (type.IsAssignableFrom(typeof(IDurationModerationEntry)) || typeof(IDurationModerationEntry).IsAssignableFrom(type))
         {
             flag |= 1;
             sb.Append("," + SqlTypes.ColumnListAliased("dur", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason));
