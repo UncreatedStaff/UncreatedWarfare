@@ -533,7 +533,6 @@ internal partial class ModerationUI
                     ModerationActionEvidence[i + startIndEvidence].Root.SetVisibility(c, false);
             }
 
-
             UCWarfare.RunTask(async token =>
             {
                 if (data.ActionVersion != v)

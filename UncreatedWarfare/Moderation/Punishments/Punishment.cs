@@ -307,6 +307,50 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
     }
 
     /// <summary>
+    /// Gets the length of time until the punishment expires.
+    /// </summary>
+    /// <param name="considerForgiven">Considers the values of <see cref="Forgiven"/> and <see cref="ModerationEntry.Removed"/>.</param>
+    /// <exception cref="InvalidOperationException">This punishment hasn't been resolved (<see cref="ModerationEntry.ResolvedTimestamp"/> is <see langword="null"/>).</exception>
+    public TimeSpan GetTimeUntilExpiry(bool considerForgiven)
+    {
+        if (!ResolvedTimestamp.HasValue)
+            throw new InvalidOperationException(GetType().Name + " has not been resolved.");
+        
+        if (considerForgiven)
+        {
+            if (Forgiven && ForgiveTimestamp.HasValue)
+                return TimeSpan.Zero;
+
+            if (Removed && RemovedTimestamp.HasValue)
+                return TimeSpan.Zero;
+        }
+
+        return IsPermanent ? Timeout.InfiniteTimeSpan : (ResolvedTimestamp.Value.UtcDateTime.Add(Duration) - DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// Gets the length of time until the punishment expires from <paramref name="timestamp"/>.
+    /// </summary>
+    /// <param name="considerForgiven">Considers the values of <see cref="Forgiven"/> and <see cref="ModerationEntry.Removed"/>.</param>
+    /// <exception cref="InvalidOperationException">This punishment hasn't been resolved (<see cref="ModerationEntry.ResolvedTimestamp"/> is <see langword="null"/>).</exception>
+    public TimeSpan GetTimeUntilExpiryAt(DateTimeOffset timestamp, bool considerForgiven)
+    {
+        if (!ResolvedTimestamp.HasValue)
+            throw new InvalidOperationException(GetType().Name + " has not been resolved.");
+        
+        if (considerForgiven)
+        {
+            if (Forgiven && ForgiveTimestamp.HasValue)
+                return TimeSpan.Zero;
+
+            if (Removed && RemovedTimestamp.HasValue)
+                return TimeSpan.Zero;
+        }
+
+        return IsPermanent ? Timeout.InfiniteTimeSpan : (ResolvedTimestamp.Value.UtcDateTime.Add(Duration) - timestamp.UtcDateTime);
+    }
+
+    /// <summary>
     /// Checks if the punishment is still active.
     /// </summary>
     /// <param name="considerForgiven">Considers the values of <see cref="Forgiven"/> and <see cref="ModerationEntry.Removed"/>.</param>

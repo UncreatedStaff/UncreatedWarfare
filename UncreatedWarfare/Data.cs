@@ -112,8 +112,8 @@ public static class Data
     public static Dictionary<string, string> ColorsHex;
     public static Dictionary<string, Vector3> ExtraPoints;
     public static Dictionary<ulong, string> DefaultPlayerNames;
-    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames = UCWarfare.IsLoaded ? new Dictionary<ulong, PlayerNames>(Provider.maxPlayers) : null!;
-    public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = UCWarfare.IsLoaded ? new Dictionary<ulong, UCPlayerData>() : null!;
+    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames;
+    public static Dictionary<ulong, UCPlayerData> PlaytimeComponents;
     internal static WarfareSQL DatabaseManager;
     internal static WarfareSQL? RemoteSQL;
     internal static DatabaseInterface ModerationSql;
@@ -156,6 +156,7 @@ public static class Data
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
     internal static Action<InteractablePower>? RefreshIsConnectedToPower;
     internal static SteamPlayer NilSteamPlayer;
+
     [OperationTest(DisplayName = "Fast Kits Check")]
     [Conditional("DEBUG")]
     [UsedImplicitly]
@@ -271,6 +272,10 @@ public static class Data
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+
+        OriginalPlayerNames = new Dictionary<ulong, PlayerNames>(Provider.maxPlayers);
+        PlaytimeComponents = new Dictionary<ulong, UCPlayerData>(Provider.maxPlayers);
+
         Singletons.OnSingletonLoaded += OnSingletonLoaded;
         Singletons.OnSingletonUnloaded += OnSingletonUnloaded;
         Singletons.OnSingletonReloaded += OnSingletonReloaded;
