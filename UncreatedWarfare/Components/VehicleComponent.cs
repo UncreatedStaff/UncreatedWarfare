@@ -40,6 +40,7 @@ public class VehicleComponent : MonoBehaviour
     private Dictionary<ulong, DateTime> _timeRewardedTable;
     public Dictionary<ulong, KeyValuePair<ushort, DateTime>> DamageTable;
     public ulong PreviousOwner;
+    public float TimeRequested { get; set; }
     public Stack<ulong> OwnerHistory { get; } = new Stack<ulong>(2);
     public ulong Team => Vehicle.lockedGroup.m_SteamID.GetTeam();
     public Dictionary<ulong, Vector3> TransportTable { get; private set; }
@@ -96,6 +97,8 @@ public class VehicleComponent : MonoBehaviour
         {
             if (comp.OwnerHistory.Count > 0)
                 comp.PreviousOwner = comp.OwnerHistory.Peek();
+            else
+                comp.TimeRequested = Time.realtimeSinceStartup;
             comp.OwnerHistory.Push(steam64);
         }
     }

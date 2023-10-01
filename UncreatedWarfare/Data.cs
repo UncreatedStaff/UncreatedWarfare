@@ -577,7 +577,6 @@ public static class Data
                     await UCWarfare.ToUpdate(token);
                 }
             }
-            await OffenseManager.OnConnected(token).ConfigureAwait(false);
             tkn.ThrowIfCancellationRequested();
             if (ActionLog.Instance != null)
                 await ActionLog.Instance.OnConnected(token).ConfigureAwait(false);

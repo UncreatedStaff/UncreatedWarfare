@@ -10,6 +10,9 @@ using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Moderation.Punishments;
+using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -482,6 +485,7 @@ internal static class Localization
         // red if its a teamkill, otherwise white
         bool tk = (args.Flags & DeathFlags.Suicide) != DeathFlags.Suicide && args.IsTeamkill;
         Color color = UCWarfare.GetColor(tk ? "death_background_teamkill" : "death_background");
+        string? str = null;
         foreach (LanguageSet set in LanguageSet.All())
         {
             string msg = TranslateMessage(set.Language, set.CultureInfo, args);
@@ -489,6 +493,7 @@ internal static class Localization
             {
                 Log(tk, msg, e);
                 sentInConsole = true;
+                str = msg;
             }
             while (set.MoveNext())
             {
@@ -498,10 +503,12 @@ internal static class Localization
 
         if (!sentInConsole)
         {
-            Log(tk, TranslateMessage(Warfare.Localization.GetDefaultLanguage(), Data.AdminLocale, args), e);
+            str = TranslateMessage(Warfare.Localization.GetDefaultLanguage(), Data.AdminLocale, args);
+            Log(tk, str, e);
         }
 
         e.LocalizationArgs = args;
+        e.Message = str!;
         EventDispatcher.InvokeOnPlayerDied(e);
 
         if (e.WasEffectiveKill && e.Killer is { PendingCheaterDeathBan: false } &&
@@ -509,17 +516,35 @@ internal static class Localization
                 e.KillDistance, e.WasEffectiveKill, e.WasSuicide, e.WasTeamkill))
         {
             e.Killer.PendingCheaterDeathBan = true;
-            UCWarfare.I.StartCoroutine(BanInRandomTime(e.Killer.Steam64));
+            UCWarfare.I.StartCoroutine(BanInRandomTime(e.Killer.Steam64, e.Killer.SteamPlayer.joined));
         }
     }
 
-    private static IEnumerator<WaitForSecondsRealtime> BanInRandomTime(ulong steam64)
+    private static IEnumerator<WaitForSecondsRealtime> BanInRandomTime(ulong steam64, float joined)
     {
         DateTimeOffset timestamp = DateTimeOffset.UtcNow;
         L.Log("Auto ban by anticheat: " + steam64.ToString(Data.AdminLocale) + ".", ConsoleColor.Cyan);
         yield return new WaitForSecondsRealtime(UnityEngine.Random.Range(50f, 80f));
-        UCWarfare.RunTask(() => OffenseManager.BanPlayerAsync(steam64, 1ul, $"Autoban by anti-cheat. Appeal at discord.gg/{UCWarfare.Config.DiscordInviteCode}.", -1, timestamp, CancellationToken.None),
-            ctx: "Ban " + steam64 + " for suspicious kill.");
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        Ban ban = new Ban
+        {
+            Player = steam64,
+            Actors = new RelatedActor[]
+            {
+                new RelatedActor(RelatedActor.RolePrimaryAdmin, true, Actors.AntiCheat)
+            },
+            RelevantLogsBegin = now.Subtract(TimeSpan.FromSeconds(Time.realtimeSinceStartup - joined)),
+            RelevantLogsEnd = now,
+            StartedTimestamp = now,
+            ResolvedTimestamp = now,
+            Message = $"Autoban by anti-cheat. Appeal at discord.gg/{UCWarfare.Config.DiscordInviteCode}.",
+            Duration = Timeout.InfiniteTimeSpan,
+            PresetLevel = 1,
+            PresetType = PresetType.Cheating
+        };
+
+        UCWarfare.RunTask(Data.ModerationSql.AddOrUpdate, ban, CancellationToken.None, ctx: "Ban suspected cheater.");
     }
     private static void Log(bool tk, string msg, PlayerDied e)
     {

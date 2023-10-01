@@ -1,13 +1,10 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Steamworks;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Commands;
 public class IPWhitelistCommand : AsyncCommand
@@ -79,7 +76,7 @@ public class IPWhitelistCommand : AsyncCommand
                 throw ctx.SendCorrectUsage(SYNTAX);
 
             PlayerNames names = await F.GetPlayerOriginalNamesAsync(player, token).ConfigureAwait(false);
-            if (await OffenseManager.WhitelistIP(player, ctx.CallerID, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false) == StandardErrorCode.Success)
+            if (await Data.ModerationSql.WhitelistIP(player, ctx.CallerID, range, !remove, DateTimeOffset.UtcNow, token).ConfigureAwait(false) == StandardErrorCode.Success)
                 ctx.Reply(remove ? T.IPUnwhitelistSuccess : T.IPWhitelistSuccess, names, range);
             else
                 ctx.Reply(T.IPWhitelistNotFound, names, range);

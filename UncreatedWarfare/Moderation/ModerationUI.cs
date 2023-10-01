@@ -14,7 +14,6 @@ using Uncreated.Framework.UI.Presets;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Teams;
@@ -576,7 +575,7 @@ internal partial class ModerationUI : UnturnedUI
 
         SelectEntry(player, data.SelectedEntry);
 
-        EditInActionMenu(player, false);
+        LoadActionMenu(player, false);
 
         await RefreshModerationHistory(player, token).ConfigureAwait(false);
     }
@@ -631,7 +630,7 @@ internal partial class ModerationUI : UnturnedUI
             {
                 data.PendingType = ModerationEntryType.None;
                 data.PendingPreset = PresetType.None;
-                EditInActionMenu(player, true);
+                LoadActionMenu(player, true);
             }
         }
         else
@@ -836,37 +835,9 @@ internal partial class ModerationUI : UnturnedUI
         {
             if (Time.realtimeSinceStartup - data.LastViewedTime is <= 1.5f and > 0f)
             {
-                if (entry is not Punishment punishment || punishment.PresetType == PresetType.None)
+                if (!EditEntry(player, entry))
                 {
-                    data.PendingType = ModerationReflection.GetType(entry.GetType()) ?? ModerationEntryType.None;
-                    data.PendingPreset = PresetType.None;
-                    data.PrimaryEditingEntry = entry;
-                    data.SecondaryEditingEntry = null;
-                    data.SelectedPlayer = entry.Player;
-                    UpdateSelectedPlayer(player);
-                    EditInActionMenu(player, true);
-                }
-                else
-                {
-                    UniTask.Create(async () =>
-                    {
-                        Punishment[] punishments = await Data.ModerationSql.GetEntriesOfLevel<Punishment>(punishment.Player,
-                            punishment.PresetLevel, punishment.PresetType, token: player.DisconnectToken);
-
-                        await UniTask.SwitchToMainThread(player.DisconnectToken);
-
-                        // prevent spamming
-                        data.LastViewedTime = Time.realtimeSinceStartup + 5f;
-
-                        if (punishments.Length > 0)
-                            punishment = punishments[0];
-
-                        data.PendingType = ModerationEntryType.None;
-                        data.PendingPreset = punishment.PresetType;
-                        data.PrimaryEditingEntry = punishment;
-                        data.SecondaryEditingEntry = punishments.Length > 1 ? punishments[1] : null;
-                        EditInActionMenu(player, true);
-                    });
+                    EndEditInActionMenu(player);
                 }
                 return;
             }
@@ -1333,7 +1304,7 @@ internal partial class ModerationUI : UnturnedUI
 
         UCWarfare.RunTask(async token =>
         {
-            ulong[] steam64Ids = await Data.ModerationSql.GetSteam64IDs(usernamesAndPicturesToCache, token);
+            ulong[] steam64Ids = await Data.ModerationSql.GetActorSteam64IDs(usernamesAndPicturesToCache, token);
 
             Task usernames = Data.ModerationSql.CacheUsernames(steam64Ids, token);
 

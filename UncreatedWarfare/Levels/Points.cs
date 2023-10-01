@@ -19,6 +19,8 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Moderation;
+using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -1003,6 +1005,7 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 }
             }
 
+            string teamHexColor = TeamManager.GetTeamHexColor(e.Team);
             if (vehicleWasEnemy)
             {
                 Asset asset = Assets.find(e.Component.LastItem);
@@ -1016,12 +1019,11 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 }
 
                 int distance = Mathf.RoundToInt((e.Instigator.Position - e.Vehicle.transform.position).magnitude);
-
-                string clr = TeamManager.GetTeamHexColor(e.Team);
+                
                 if (reason.Length == 0)
-                    Chat.Broadcast(T.VehicleDestroyedUnknown, e.Instigator, e.Vehicle.asset, clr);
+                    Chat.Broadcast(T.VehicleDestroyedUnknown, e.Instigator, e.Vehicle.asset, teamHexColor);
                 else
-                    Chat.Broadcast(T.VehicleDestroyed, e.Instigator, e.Vehicle.asset, reason, distance, clr);
+                    Chat.Broadcast(T.VehicleDestroyed, e.Instigator, e.Vehicle.asset, reason, distance, teamHexColor);
 
                 ActionLog.Add(ActionLogType.OwnedVehicleDied, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
                                                                  $" - Destroyed by {e.Instigator.Steam64.ToString(Data.AdminLocale)}", e.OwnerId);
@@ -1093,13 +1095,50 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             else if (vehicleWasFriendly)
             {
                 Translation<VehicleType> message = e.Component.IsAircraft ? T.XPToastFriendlyAircraftDestroyed : T.XPToastFriendlyVehicleDestroyed;
-                Chat.Broadcast(T.VehicleTeamkilled, e.Instigator, e.Vehicle.asset, TeamManager.GetTeamHexColor(e.Team));
+                Translation<IPlayer, VehicleAsset, string> vehicleTeamkilled = T.VehicleTeamkilled;
+                Chat.Broadcast(vehicleTeamkilled, e.Instigator, e.Vehicle.asset, teamHexColor);
+                string val = T.VehicleTeamkilled.Translate(Localization.GetDefaultLanguage(), e.Instigator, e.Vehicle.asset, teamHexColor);
 
                 ActionLog.Add(ActionLogType.OwnedVehicleDied, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
                                                                  $" - Destroyed by {e.InstigatorId}", e.OwnerId);
                 if (e.Instigator is not null)
                     AwardCredits(e.Instigator, -Mathf.Clamp(e.VehicleData.CreditCost, 5, 1000), message, e.VehicleData.Type, true, @lock: false);
-                OffenseManager.LogVehicleTeamkill(e.InstigatorId, e.Vehicle.id, e.Vehicle.asset.vehicleName, DateTime.Now);
+
+                DateTimeOffset now = DateTimeOffset.UtcNow;
+                int ct = e.Vehicle.passengers.Count(x => x.player != null);
+                RelatedActor[] actors = new RelatedActor[ct + 1];
+                for (int i = e.Vehicle.passengers.Length - 1; i >= 0; --i)
+                {
+                    SteamPlayer steamPlayer = e.Vehicle.passengers[i].player;
+                    if (steamPlayer == null)
+                        continue;
+
+                    actors[--ct] = new RelatedActor(i == 0 ? "Driver" : ("Passenger #" + i.ToString(CultureInfo.InvariantCulture)),
+                        false, Actors.GetActor(steamPlayer.playerID.steamID.m_SteamID));
+                }
+
+                actors[actors.Length - 1] = new RelatedActor("Owner", false, Actors.GetActor(e.OwnerId));
+
+                VehicleTeamkill log = new VehicleTeamkill
+                {
+                    Player = e.InstigatorId,
+                    Actors = actors,
+                    RelevantLogsBegin = e.Component.TimeRequested <= 0 ? null : now.Subtract(TimeSpan.FromSeconds(Time.realtimeSinceStartup - e.Component.TimeRequested)),
+                    RelevantLogsEnd = now,
+                    StartedTimestamp = now,
+                    ResolvedTimestamp = now,
+                    Message = val,
+                    Origin = e.DamageOrigin,
+                    PendingReputation = e.Instigator == null ? -50 : 0,
+                    Reputation = -50,
+                    Vehicle = e.Vehicle.asset.GUID,
+                    VehicleName = e.Vehicle.asset.vehicleName
+                };
+
+                if (e.Instigator != null)
+                    e.Instigator.AddReputation(-50);
+
+                UCWarfare.RunTask(Data.ModerationSql.AddOrUpdate, log, CancellationToken.None, ctx: "Log vehicle teamkill.");
             }
             /*
             float missingQuota = vc.Quota - vc.RequiredQuota;

@@ -164,7 +164,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         try
         {
             IPAddress address = player.channel.owner.transportConnection.GetAddress();
-            UsingRemotePlay = OffenseManager.IsRemotePlay(address);
+            UsingRemotePlay = Data.ModerationSql.IsRemotePlay(address);
         }
         catch (Exception ex)
         {
