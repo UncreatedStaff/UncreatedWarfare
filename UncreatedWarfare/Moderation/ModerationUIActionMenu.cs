@@ -19,6 +19,7 @@ using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Punishments.Presets;
 using Uncreated.Warfare.Moderation.Records;
 using Uncreated.Warfare.Players;
+using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Uncreated.Warfare.Moderation;
@@ -52,7 +53,49 @@ internal partial class ModerationUI
         data.Actors.Clear();
         data.Evidence.Clear();
     }
-    private void EditInActionMenu(UCPlayer player, bool editingExisting)
+    public bool EditEntry(UCPlayer player, ModerationEntry entry)
+    {
+        if (entry.IsLegacy)
+            return false;
+
+        ModerationData data = GetOrAddModerationData(player);
+
+        if (entry is not Punishment punishment || punishment.PresetType == PresetType.None)
+        {
+            data.PendingType = ModerationReflection.GetType(entry.GetType()) ?? ModerationEntryType.None;
+            data.PendingPreset = PresetType.None;
+            data.PrimaryEditingEntry = entry;
+            data.SecondaryEditingEntry = null;
+            data.SelectedPlayer = entry.Player;
+            UpdateSelectedPlayer(player);
+            LoadActionMenu(player, true);
+        }
+        else
+        {
+            UCWarfare.RunTask(async () =>
+            {
+                Punishment[] punishments = await Data.ModerationSql.GetEntriesOfLevel<Punishment>(punishment.Player,
+                    punishment.PresetLevel, punishment.PresetType, token: player.DisconnectToken);
+
+                await UniTask.SwitchToMainThread(player.DisconnectToken);
+
+                // prevent spamming
+                data.LastViewedTime = Time.realtimeSinceStartup + 5f;
+
+                if (punishments.Length > 0)
+                    punishment = punishments[0];
+
+                data.PendingType = ModerationEntryType.None;
+                data.PendingPreset = punishment.PresetType;
+                data.PrimaryEditingEntry = punishment;
+                data.SecondaryEditingEntry = punishments.Length > 1 ? punishments[1] : null;
+                LoadActionMenu(player, true);
+            }, ctx: "Edit entry.");
+        }
+
+        return true;
+    }
+    private void LoadActionMenu(UCPlayer player, bool editingExisting)
     {
         ModerationData data = GetOrAddModerationData(player);
 
@@ -184,7 +227,7 @@ internal partial class ModerationUI
                 int v = Interlocked.Increment(ref data.ActionModeVersion);
                 if (data.PendingPreset == PresetType.None || !PunishmentPresets.TryGetPreset(data.PendingPreset, out PunishmentPreset[] presets))
                     return;
-                int nextLevel = await Data.ModerationSql.GetNextLevel(data.SelectedPlayer, data.PendingPreset, token).ConfigureAwait(false);
+                int nextLevel = await Data.ModerationSql.GetNextPresetLevel(data.SelectedPlayer, data.PendingPreset, token).ConfigureAwait(false);
                 await UCWarfare.ToUpdate(token);
                 if (data.ActionModeVersion != v)
                     return;
@@ -265,7 +308,7 @@ internal partial class ModerationUI
 
         ModerationEntryType type = data.PendingType;
         ITransportConnection c = player.Connection;
-        bool hasForgiveable = false;
+        bool hasForgiveable = false, hasRemoveable = false;
         bool hasMute, hasAssetBan, isNote, hasPrimaryDuration, hasSecondaryDuration;
         if (!editingExisting)
         {
@@ -301,6 +344,7 @@ internal partial class ModerationUI
             isNote = data.PrimaryEditingEntry is Note && data.SecondaryEditingEntry is Note;
             hasForgiveable = data.PrimaryEditingEntry is IForgiveableModerationEntry forgiveable && !forgiveable.IsApplied(true)
                           || data.SecondaryEditingEntry is IForgiveableModerationEntry forgiveable2 && !forgiveable2.IsApplied(true);
+            hasRemoveable = data.PrimaryEditingEntry is { Removed: true } || data.SecondaryEditingEntry is { Removed: true };
             hasPrimaryDuration = data.PrimaryEditingEntry is IDurationModerationEntry;
             hasSecondaryDuration = data.SecondaryEditingEntry is IDurationModerationEntry;
         }
@@ -426,12 +470,16 @@ internal partial class ModerationUI
         if (editingExisting)
         {
             ModerationActionControls[1].Text.SetText(c, "Save");
-            ModerationActionControls[2].Text.SetText(c, "Remove");
-            ct = 3;
+            ct = 2;
+            if (hasRemoveable)
+            {
+                ModerationActionControls[ct].Text.SetText(c, "Remove");
+                ++ct;
+            }
             if (hasForgiveable)
             {
-                ModerationActionControls[3].Text.SetText(c, "Forgive");
-                ct = 4;
+                ModerationActionControls[ct].Text.SetText(c, "Forgive");
+                ++ct;
             }
 
             if (ct > ModerationActionControls.Length)
@@ -572,7 +620,7 @@ internal partial class ModerationUI
                     return;
                 int i = 0;
                 int ct = Math.Min(lenActor, data.Actors.Count - startIndActor);
-                ulong[] steamIds = await Data.ModerationSql.GetSteam64IDs(data.Actors.Skip(startIndActor).Take(lenActor).Select(x => x.Actor).ToArray(), token).ConfigureAwait(false);
+                ulong[] steamIds = await Data.ModerationSql.GetActorSteam64IDs(data.Actors.Skip(startIndActor).Take(lenActor).Select(x => x.Actor).ToArray(), token).ConfigureAwait(false);
 
                 if (data.ActionVersion != v)
                     return;
@@ -778,6 +826,19 @@ internal partial class ModerationUI
         data.PrimaryEditingEntry.Evidence = data.Evidence.ToArray();
         if (data.SecondaryEditingEntry != null)
             data.SecondaryEditingEntry.Evidence = data.PrimaryEditingEntry.Evidence;
+
+        if (data.PrimaryEditingEntry.IsAppealable)
+        {
+            if (string.IsNullOrWhiteSpace(data.PrimaryEditingEntry.Message))
+                data.PrimaryEditingEntry.Message = "Appeal at discord.gg/" + UCWarfare.Config.DiscordInviteCode;
+            else if (data.PrimaryEditingEntry.Message!.IndexOf(".gg/" + UCWarfare.Config.DiscordInviteCode, StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("unappealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("un-appealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
+                     data.PrimaryEditingEntry.Message!.IndexOf("do not appeal", StringComparison.InvariantCultureIgnoreCase) == -1)
+            {
+                data.PrimaryEditingEntry.Message += ". Appeal at discord.gg/" + UCWarfare.Config.DiscordInviteCode;
+            }
+        }
 
         // add editor
         if (!Array.Exists(data.PrimaryEditingEntry.Actors, x => x.Actor.Id == player.Steam64))
@@ -1170,7 +1231,7 @@ internal partial class ModerationUI
             {
                 await UCWarfare.ToUpdate(token);
                 SelectEntry(player, data.PrimaryEditingEntry);
-                EditInActionMenu(player, true);
+                LoadActionMenu(player, true);
                 await RefreshModerationHistory(player, token);
             }
             
@@ -1327,7 +1388,7 @@ internal partial class ModerationUI
             LabeledStateButton? btn = GetModerationButton(type);
             btn?.Disable(ucPlayer.Connection);
 
-            EditInActionMenu(ucPlayer, false);
+            LoadActionMenu(ucPlayer, false);
         }
         else
         {
@@ -1375,7 +1436,7 @@ internal partial class ModerationUI
                 data.PendingType = ModerationEntryType.None;
             }
 
-            EditInActionMenu(ucPlayer, false);
+            LoadActionMenu(ucPlayer, false);
         }
         else
         {

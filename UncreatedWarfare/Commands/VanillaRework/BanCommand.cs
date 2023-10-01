@@ -41,8 +41,10 @@ public class BanCommand : AsyncCommand
             }
         };
     }
-    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
+    public override Task Execute(CommandInteraction ctx, CancellationToken token)
     {
+        throw ctx.SendNotImplemented();
+#if false
         ctx.AssertArgs(3, Syntax);
 
         if (!ctx.TryGet(0, out ulong targetId, out UCPlayer? target))
@@ -130,5 +132,6 @@ public class BanCommand : AsyncCommand
                 ctx.Reply(T.BanSuccessFeedback, name, time);
             }
         }
+#endif
     }
 }

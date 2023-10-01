@@ -21,6 +21,7 @@ public class PlayerDied : PlayerEvent
     public float KillDistance { get; internal set; }
     public string? KillerKitName { get; internal set; }
     public string? PlayerKitName { get; internal set; }
+    public string? Message { get; internal set; }
     public Deaths.DeathMessageArgs LocalizationArgs { get; internal set; }
     public UCPlayer? DriverAssist { get; internal set; }
     public InteractableVehicle? ActiveVehicle { get; internal set; }

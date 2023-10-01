@@ -239,6 +239,12 @@ internal static class T
     [TranslationData(SectionPlayers, "Gets sent to a player when their message gets blocked by the chat filter.", "Amount of alphanumeric characters in succession.")]
     public static readonly Translation<int> NameFilterKickMessage = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.", TranslationFlags.NoColorOptimization);
     
+    [TranslationData(SectionPlayers, "Gets sent to a player if they're banned when they join.")]
+    public static readonly Translation<string, int> RejectBanned = new Translation<string, int>("You are banned for {1}: \"{0}\".", TranslationFlags.NoColorOptimization, arg1Fmt: FormatTimeLongAbbreviated);
+    
+    [TranslationData(SectionPlayers, "Gets sent to a player if they're permanently banned when they join.")]
+    public static readonly Translation<string> RejectPermanentBanned = new Translation<string>("You are permanently banned: \"{0}\".", TranslationFlags.NoColorOptimization);
+    
     [TranslationData(SectionPlayers, "Gets sent to a player when their nick name gets blocked by the chat filter.", "Violating text.")]
     public static readonly Translation<string> NameProfanityNickNameKickMessage = new Translation<string>("Your nickname is in violation of our profanity filter: \"{0}\". Please change your name and rejoin.", TranslationFlags.NoColorOptimization);
     
@@ -3237,6 +3243,11 @@ internal static class T
     [FormatDisplay(typeof(int),      "Time (Long, seconds)")]
     [FormatDisplay(typeof(TimeSpan), "Time (Long)")]
     internal const string FormatTimeLong = "tlong";
+    [FormatDisplay(typeof(float),    "Time (Long Abbreviated, seconds)")]
+    [FormatDisplay(typeof(uint),     "Time (Long Abbreviated, seconds)")]
+    [FormatDisplay(typeof(int),      "Time (Long Abbreviated, seconds)")]
+    [FormatDisplay(typeof(TimeSpan), "Time (Long Abbreviated)")]
+    internal const string FormatTimeLongAbbreviated = "tlonga";
     [FormatDisplay(typeof(float),    "Time (Short mm:ss, seconds)")]
     [FormatDisplay(typeof(uint),     "Time (Short mm:ss, seconds)")]
     [FormatDisplay(typeof(int),      "Time (Short mm:ss, seconds)")]

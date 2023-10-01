@@ -33,6 +33,8 @@ public class WarnCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
+        throw ctx.SendNotImplemented();
+#if false
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
         ctx.AssertArgs(2, "warn_syntax");
@@ -66,5 +68,6 @@ public class WarnCommand : Command
             ToastMessage.QueueMessage(target, ToastMessage.Popup(T.WarnSuccessTitle.Translate(ctx.Caller), T.WarnSuccessDM.Translate(ctx.Caller, false, callerNames, reason!)));
             target.SendChat(T.WarnSuccessDM, callerNames, reason!);
         }
+#endif
     }
 }

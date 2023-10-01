@@ -24,16 +24,7 @@ public class VehicleTeamkill : ModerationEntry
 
     [JsonPropertyName("vehicle_name")]
     public string? VehicleName { get; set; }
-
-    [JsonPropertyName("item_guid")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public Guid? Item { get; set; }
-
-    [JsonPropertyName("item_name")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ItemName { get; set; }
     public override string GetDisplayName() => "Vehicle Teamkill";
-    public override Guid? GetIcon() => Item;
     protected override void ReadIntl(ByteReader reader, ushort version)
     {
         base.ReadIntl(reader, version);
@@ -41,8 +32,6 @@ public class VehicleTeamkill : ModerationEntry
         Origin = reader.ReadBool() ? (EDamageOrigin)reader.ReadUInt16() : null;
         Vehicle = reader.ReadNullableGuid();
         VehicleName = reader.ReadNullableString();
-        Item = reader.ReadNullableGuid();
-        ItemName = reader.ReadNullableString();
     }
 
     protected override void WriteIntl(ByteWriter writer)
@@ -58,8 +47,6 @@ public class VehicleTeamkill : ModerationEntry
         
         writer.WriteNullable(Vehicle);
         writer.WriteNullable(VehicleName);
-        writer.WriteNullable(Item);
-        writer.WriteNullable(ItemName);
     }
     public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {
@@ -88,10 +75,6 @@ public class VehicleTeamkill : ModerationEntry
                 throw new JsonException("Invalid string value for EDamageOrigin.");
             Origin = origin;
         }
-        else if (propertyName.Equals("item_guid", StringComparison.InvariantCultureIgnoreCase))
-            Item = reader.TokenType == JsonTokenType.Null ? new Guid?() : reader.GetGuid();
-        else if (propertyName.Equals("item_name", StringComparison.InvariantCultureIgnoreCase))
-            ItemName = reader.GetString();
         else if (propertyName.Equals("vehicle_guid", StringComparison.InvariantCultureIgnoreCase))
             Vehicle = reader.TokenType == JsonTokenType.Null ? new Guid?() : reader.GetGuid();
         else if (propertyName.Equals("vehicle_name", StringComparison.InvariantCultureIgnoreCase))
@@ -109,10 +92,6 @@ public class VehicleTeamkill : ModerationEntry
             writer.WriteString("vehicle_guid", Vehicle.Value);
         if (VehicleName != null)
             writer.WriteString("vehicle_name", VehicleName);
-        if (Item.HasValue)
-            writer.WriteString("item_guid", Item.Value.ToString());
-        if (ItemName != null)
-            writer.WriteString("item_name", ItemName);
     }
     internal override int EstimateParameterCount() => base.EstimateParameterCount() + 6;
     public override async Task AddExtraInfo(DatabaseInterface db, List<string> workingList, IFormatProvider formatter, CancellationToken token = default)
@@ -133,19 +112,6 @@ public class VehicleTeamkill : ModerationEntry
                 name = VehicleName ?? Vehicle.Value.ToString("N");
             workingList.Add($"Vehicle: {name}");
         }
-        if (Item.HasValue)
-        {
-            string name;
-            if (UCWarfare.IsLoaded && Assets.find(Item.Value) is ItemAsset item)
-            {
-                name = item.FriendlyName ?? item.name;
-                if (item.id > 0)
-                    name += " (" + item.id.ToString(formatter) + ")";
-            }
-            else
-                name = ItemName ?? Item.Value.ToString("N");
-            workingList.Add($"Item: {name}");
-        }
     }
 
     internal override bool AppendWriteCall(StringBuilder builder, List<object> args)
@@ -153,21 +119,17 @@ public class VehicleTeamkill : ModerationEntry
         bool hasEvidenceCalls = base.AppendWriteCall(builder, args);
 
         builder.Append($" INSERT INTO `{DatabaseInterface.TableVehicleTeamkills}` ({SqlTypes.ColumnList(
-            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset, DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName,
-            DatabaseInterface.ColumnVehicleTeamkillsAsset, DatabaseInterface.ColumnVehicleTeamkillsAssetName, DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin)}) VALUES ");
+            DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset,
+            DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName, DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin)}) VALUES ");
 
         F.AppendPropertyList(builder, args.Count, 6, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset}`," +
                        $"`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName}`," +
-                       $"`{DatabaseInterface.ColumnVehicleTeamkillsAsset}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsAsset}`," +
-                       $"`{DatabaseInterface.ColumnVehicleTeamkillsAssetName}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsAssetName}`," +
                        $"`{DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin}`;");
 
         args.Add(Vehicle.HasValue ? Vehicle.Value.ToString("N") : DBNull.Value);
         args.Add((object?)VehicleName.MaxLength(48) ?? DBNull.Value);
-        args.Add(Item.HasValue ? Item.Value.ToString("N") : DBNull.Value);
-        args.Add((object?)ItemName.MaxLength(48) ?? DBNull.Value);
         args.Add(Origin.HasValue ? Origin.Value.ToString() : DBNull.Value);
 
         return hasEvidenceCalls;

@@ -19,10 +19,12 @@ public class AssetBan : DurationPunishment
 {
     private static char[]? _split;
 
+    [JsonIgnore]
+    public override bool IsAppealable => true;
+
     [JsonPropertyName("vehicle_type_filter")]
     [JsonConverter(typeof(ArrayConverter<VehicleType, JsonStringEnumConverter>))]
     public VehicleType[] VehicleTypeFilter { get; set; } = Array.Empty<VehicleType>();
-
     internal void FillFromText(string? text)
     {
         ThreadUtil.assertIsGameThread();

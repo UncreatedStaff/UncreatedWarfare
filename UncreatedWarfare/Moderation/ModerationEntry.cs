@@ -20,6 +20,9 @@ public abstract class ModerationEntry : IModerationEntry
     private const ushort DataVersion = 0;
     public static readonly ModerationEntryType MaxEntry = ModerationEntryType.PlayerReportAccepted;
 
+    [JsonIgnore]
+    public virtual bool IsAppealable => false;
+
     /// <inheritdoc/>
     [JsonPropertyName("id")]
     public PrimaryKey Id { get; set; } = PrimaryKey.NotAssigned;
