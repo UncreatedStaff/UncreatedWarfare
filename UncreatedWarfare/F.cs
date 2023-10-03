@@ -1960,6 +1960,12 @@ public static class F
             return list;
         return new List<T>(enumerable);
     }
+    public static T[] ToArrayFast<T>(this IEnumerable<T> enumerable, bool copy = false)
+    {
+        if (!copy && enumerable is T[] list)
+            return list;
+        return enumerable.ToArray();
+    }
     /// <summary>
     /// Takes a list of primary key pairs and calls <paramref name="action"/> for each array of values per id.
     /// </summary>

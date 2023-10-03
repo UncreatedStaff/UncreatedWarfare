@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using Cysharp.Threading.Tasks;
+using HarmonyLib;
 using JetBrains.Annotations;
 using SDG.Unturned;
 using Steamworks;
@@ -7,9 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
@@ -18,6 +21,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Moderation;
 using Uncreated.Warfare.Moderation.Punishments;
 using Uncreated.Warfare.Moderation.Records;
+using Uncreated.Warfare.Players;
 
 namespace Uncreated.Warfare;
 
@@ -69,6 +73,158 @@ public static class OffenseManager
         EventDispatcher.PlayerJoined -= OnPlayerJoined;
         EventDispatcher.PlayerDied -= OnPlayerDied;
     }
+    public static HWID[] ConvertVanillaHWIDs(IEnumerable<byte[]> hwids)
+    {
+        byte[][] arr = hwids.ToArrayFast();
+        HWID[] outArray = new HWID[arr.Length];
+        for (int i = 0; i < arr.Length; i++)
+            outArray[i] = new HWID(arr[i]);
+        
+        return outArray;
+    }
+    public static void OnModerationEntryUpdated(ModerationEntry entry)
+    {
+        L.LogDebug(JsonSerializer.Serialize(entry, JsonEx.serializerSettings));
+
+        UCPlayer? player = UCPlayer.FromID(entry.Player);
+        if (player == null)
+            return;
+        if (entry.PendingReputation != 0d)
+        {
+            entry.PendingReputation = 0d;
+            player.AddReputation((int)Math.Round(entry.PendingReputation));
+            UCWarfare.RunTask(Data.ModerationSql.AddOrUpdate, entry, CancellationToken.None, ctx: "Apply reputation.");
+        }
+        if (entry is Ban ban && ban.IsApplied(true))
+        {
+            string msg;
+            if (ban.IsPermanent)
+                msg = T.RejectPermanentBanned.Translate(player, false, entry.Message ?? "No message.");
+            else
+                msg = T.RejectBanned.Translate(player, false, entry.Message ?? "No message.", (int)Math.Round(ban.GetTimeUntilExpiry(false).TotalSeconds, MidpointRounding.AwayFromZero));
+            Provider.kick(player.CSteamID, msg);
+        }
+        else if (entry is Kick)
+        {
+            Provider.kick(player.CSteamID, entry.Message ?? "No message.");
+        }
+        else if (entry is Mute mute && mute.IsApplied(true))
+        {
+            DateTime dt = mute.GetExpiryTimestamp(true).LocalDateTime;
+            if (player.TimeUnmuted <= dt)
+            {
+                player.MuteReason = mute.Message;
+                player.MuteType = mute.Type;
+                player.TimeUnmuted = dt;
+            }
+            else if (player.MuteType != mute.Type)
+                player.MuteType = MuteType.Both;
+        }
+    }
+    public static void OnNewModerationEntryAdded(ModerationEntry entry)
+    {
+        L.Log($"Moderation entry added: {entry.GetType().Name}, Player: {entry.Player}.", ConsoleColor.Cyan);
+
+        OnModerationEntryUpdated(entry);
+        UniTask.Create(async () =>
+        {
+            CancellationToken token = UCWarfare.UnloadCancel;
+            if (entry is not Ban and not Kick and not Warning and not Mute)
+                return;
+
+            OfflinePlayerName? adminActor = entry.TryGetPrimaryAdmin(out RelatedActor actor)
+                ? new OfflinePlayerName(actor.Actor.Id, await actor.Actor.GetDisplayName(Data.ModerationSql, token))
+                : null;
+            IPlayer player;
+
+            if (UCPlayer.FromID(entry.Player) is { } pl)
+                player = pl;
+            else
+                player = await Data.ModerationSql.GetUsernames(entry.Player, true, token).ConfigureAwait(false);
+            
+            await UniTask.SwitchToMainThread(token);
+
+            switch (entry)
+            {
+                case Ban ban:
+                    if (adminActor.HasValue)
+                    {
+                        if (ban.IsPermanent)
+                            Chat.Broadcast(T.BanPermanentSuccessBroadcast, player, adminActor);
+                        else
+                            Chat.Broadcast(T.BanSuccessBroadcast, player, adminActor, Util.ToTimeString((int)Math.Round(ban.Duration.TotalSeconds, MidpointRounding.AwayFromZero)));
+                    }
+                    else
+                    {
+                        if (ban.IsPermanent)
+                            Chat.Broadcast(T.BanPermanentSuccessBroadcastOperator, player);
+                        else
+                            Chat.Broadcast(T.BanSuccessBroadcastOperator, player, Util.ToTimeString((int)Math.Round(ban.Duration.TotalSeconds, MidpointRounding.AwayFromZero)));
+                    }
+                    break;
+                case Mute mute:
+                    if (adminActor.HasValue)
+                    {
+                        if (mute.IsPermanent)
+                            Chat.Broadcast(T.MutePermanentSuccessBroadcast, player, player, mute.Type, adminActor);
+                        else
+                            Chat.Broadcast(T.MuteSuccessBroadcast, player, player, Util.ToTimeString((int)Math.Round(mute.Duration.TotalSeconds, MidpointRounding.AwayFromZero)), mute.Type, adminActor);
+                    }
+                    else
+                    {
+                        if (mute.IsPermanent)
+                            Chat.Broadcast(T.MutePermanentSuccessBroadcastOperator, player, player, mute.Type);
+                        else
+                            Chat.Broadcast(T.MuteSuccessBroadcastOperator, player, player, Util.ToTimeString((int)Math.Round(mute.Duration.TotalSeconds, MidpointRounding.AwayFromZero)), mute.Type);
+                    }
+                    break;
+                case Kick:
+                    if (adminActor.HasValue)
+                        Chat.Broadcast(T.KickSuccessBroadcast, player, adminActor);
+                    else
+                        Chat.Broadcast(T.KickSuccessBroadcastOperator, player);
+                    
+                    break;
+                case Warning warn:
+                    if (adminActor.HasValue)
+                        Chat.Broadcast(T.WarnSuccessBroadcast, player, adminActor);
+                    else
+                        Chat.Broadcast(T.WarnSuccessBroadcastOperator, player);
+
+                    TryDisplayWarning(warn, true);
+                    break;
+            }
+        });
+    }
+    internal static bool TryDisplayWarning(Warning warning, bool save)
+    {
+        if (warning.HasBeenDisplayed)
+            return true;
+
+        if (UCPlayer.FromID(warning.Player) is not { } onlinePlayer)
+            return false;
+
+        warning.DisplayedTimestamp = DateTimeOffset.UtcNow;
+        if (save)
+            UCWarfare.RunTask(Data.ModerationSql.AddOrUpdate, warning, CancellationToken.None, ctx: "Apply warning.");
+
+        UniTask.Create(async () =>
+        {
+            OfflinePlayerName? adminActor = warning.TryGetPrimaryAdmin(out RelatedActor actor)
+                ? new OfflinePlayerName(actor.Actor.Id, await actor.Actor.GetDisplayName(Data.ModerationSql, CancellationToken.None))
+                : null;
+
+            if (!onlinePlayer.IsOnline)
+                return;
+
+            if (adminActor.HasValue)
+                ToastMessage.QueueMessage(onlinePlayer, ToastMessage.Popup(T.WarnSuccessTitle.Translate(onlinePlayer, false), T.WarnSuccessDM.Translate(onlinePlayer, false, adminActor, warning.Message ?? "No message.")));
+            else
+                ToastMessage.QueueMessage(onlinePlayer, ToastMessage.Popup(T.WarnSuccessTitle.Translate(onlinePlayer, false), T.WarnSuccessDMOperator.Translate(onlinePlayer, false, warning.Message ?? "No message.")));
+        });
+
+        return true;
+    }
     private static async Task OnPlayerPending(PlayerPending e, CancellationToken token = default)
     {
         if (e.PendingPlayer.playerID.GetHwids().Count() is not 3 and not 2)
@@ -76,6 +232,10 @@ public static class OffenseManager
 
         PlayerIPAddress[] ipAddresses = await Data.ModerationSql.GetIPAddresses(e.Steam64, true, token).ConfigureAwait(false);
         PlayerHWID[] hwids = await Data.ModerationSql.GetHWIDs(e.Steam64, token).ConfigureAwait(false);
+        e.AsyncData.HWIDs = new List<PlayerHWID>(hwids.Length + 3);
+        e.AsyncData.IPAddresses = new List<PlayerIPAddress>(ipAddresses.Length + 1);
+        e.AsyncData.HWIDs.AddRange(hwids);
+        e.AsyncData.IPAddresses.AddRange(ipAddresses);
 
         Ban[] bans = await Data.ModerationSql.GetActiveEntries<Ban>(e.Steam64, ipAddresses, hwids, false, false, token: token).ConfigureAwait(false);
         PlayerLanguagePreferences languageInfo = await Data.LanguageDataStore.GetLanguagePreferences(e.Steam64, token).ConfigureAwait(false);
@@ -204,33 +364,37 @@ public static class OffenseManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (joining == null) return;
-        string? reason = null;
-        int duration = -2;
-        DateTime timestamp = DateTime.MinValue;
         MuteType type = MuteType.None;
-        await Data.DatabaseManager.QueryAsync(
-            "SELECT `Reason`, `Duration`, `Timestamp`, `Type` FROM `muted` WHERE `Steam64` = @0 AND `Deactivated` = 0 AND " +
-            "(`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, UTC_TIMESTAMP())) * -1 < `Duration`) ORDER BY (TIME_TO_SEC(TIMEDIFF(`Timestamp`, UTC_TIMESTAMP())) * -1) - `Duration` LIMIT 1;",
-            new object[] { joining.Steam64 },
-            reader =>
+        Mute[] mutes = await Data.ModerationSql.GetActiveEntries<Mute>(joining.Steam64, joining.IPAddresses, joining.HWIDs, false, false, token: token).ConfigureAwait(false);
+        Mute? longest = null;
+        DateTimeOffset expiry = default;
+        for (int i = 0; i < mutes.Length; ++i)
+        {
+            Mute mute = mutes[i];
+            if (mute.Type is not MuteType.Voice and not MuteType.Text and not MuteType.Both)
+                continue;
+
+            if (longest == null)
             {
-                int dir = reader.GetInt32(1);
-                DateTime ts = reader.GetDateTime(2);
-                if (dir == -1 || dir > duration)
-                {
-                    duration = dir;
-                    timestamp = ts;
-                    reason = reader.GetString(0);
-                }
-                else if (reason is null)
-                    reason = reader.GetString(0);
-                type |= (MuteType)reader.GetByte(3);
-            }, token
-        );
-        if (type == MuteType.None) return;
-        DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : timestamp + TimeSpan.FromSeconds(duration);
-        joining.TimeUnmuted = unmutedTime;
-        joining.MuteReason = reason;
+                longest = mute;
+                expiry = longest.GetExpiryTimestamp(false);
+                type = mute.Type;
+                break;
+            }
+
+            DateTimeOffset newExpiry = mute.GetExpiryTimestamp(false);
+            if (newExpiry >= expiry)
+            {
+                longest = mute;
+                expiry = newExpiry;
+                type |= mute.Type;
+            }
+        }
+        if (longest == null)
+            return;
+
+        joining.TimeUnmuted = expiry.LocalDateTime;
+        joining.MuteReason = longest.Message;
         joining.MuteType = type;
     }
     public static bool IsValidSteam64Id(CSteamID id)

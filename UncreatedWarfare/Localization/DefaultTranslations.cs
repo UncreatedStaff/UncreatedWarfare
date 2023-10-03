@@ -241,7 +241,7 @@ internal static class T
     
     [TranslationData(SectionPlayers, "Gets sent to a player if they're banned when they join.")]
     public static readonly Translation<string, int> RejectBanned = new Translation<string, int>("You are banned for {1}: \"{0}\".", TranslationFlags.NoColorOptimization, arg1Fmt: FormatTimeLongAbbreviated);
-    
+
     [TranslationData(SectionPlayers, "Gets sent to a player if they're permanently banned when they join.")]
     public static readonly Translation<string> RejectPermanentBanned = new Translation<string>("You are permanently banned: \"{0}\".", TranslationFlags.NoColorOptimization);
     
@@ -1452,7 +1452,7 @@ internal static class T
     [TranslationData(SectionMute)]
     public static readonly Translation<string> MuteTextChatFeedbackPermanent  = new Translation<string>("<#ffff00>You're permanently muted in text chat because: <#9cffb3>{0}</color>.");
     [TranslationData(SectionMute)]
-    public static readonly Translation<DateTime, string> MuteTextChatFeedback = new Translation<DateTime, string>("<#ffff00>You're muted in text chat until <#cedcde>{0}</color> UTC because <#9cffb3>{1}</color>.", "r");
+    public static readonly Translation<DateTime, string> MuteTextChatFeedback = new Translation<DateTime, string>("<#ffff00>You're muted in text chat until <#cedcde>{0}</color> because <#9cffb3>{1}</color>.", "r");
     #endregion
 
     #region Unmute Command

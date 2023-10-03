@@ -9,6 +9,8 @@ using Uncreated.Encoding;
 
 namespace Uncreated.Warfare.Moderation;
 
+// tested
+
 [StructLayout(LayoutKind.Explicit, Size = 20)]
 [JsonConverter(typeof(HWIDJsonConverter))]
 public readonly struct HWID : IEquatable<HWID>
@@ -57,9 +59,12 @@ public readonly struct HWID : IEquatable<HWID>
         if (bytes.Length - index < Size)
             throw new ArgumentException("Array must have at least " + Size + " bytes.", nameof(bytes));
 
-        fixed (byte* ptr = &bytes[index])
+        if (BitConverter.IsLittleEndian)
         {
-            this = *(HWID*)ptr;
+            fixed (byte* ptr = &bytes[index])
+            {
+                this = *(HWID*)ptr;
+            }
         }
     }
     public static unsafe HWID GenerateRandomHWID()
@@ -242,6 +247,7 @@ public readonly struct HWID : IEquatable<HWID>
     {
         return _b07 == other._b07 && _b815 == other._b815 && _b1619 == other._b1619;
     }
+    public bool Equals(byte[] hwid) => hwid.Length == Size && Equals(new HWID(hwid));
 
     public override bool Equals(object? obj)
     {
