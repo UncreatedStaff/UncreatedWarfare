@@ -5,6 +5,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -809,11 +810,8 @@ internal partial class ModerationUI : UnturnedUI
 
                 data.PlayerCount = ct;
 
-                ulong[] ids = new ulong[ct];
-                for (int i = 0; i < ct; ++i)
-                    ids[i] = names[i].Steam64;
-
-                await Data.ModerationSql.CacheAvatars(ids, token);
+                
+                await Data.ModerationSql.CacheAvatars(names.Select(x => x.Steam64), token);
 #if DEBUG
                 ThreadUtil.assertIsGameThread();
 #endif

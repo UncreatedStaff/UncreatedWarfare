@@ -55,7 +55,7 @@ internal partial class ModerationUI
     }
     public bool EditEntry(UCPlayer player, ModerationEntry entry)
     {
-        if (entry.IsLegacy)
+        if (entry.IsLegacy && entry is not Punishment)
             return false;
 
         ModerationData data = GetOrAddModerationData(player);
@@ -89,6 +89,8 @@ internal partial class ModerationUI
                 data.PendingPreset = punishment.PresetType;
                 data.PrimaryEditingEntry = punishment;
                 data.SecondaryEditingEntry = punishments.Length > 1 ? punishments[1] : null;
+                data.SelectedPlayer = entry.Player;
+                UpdateSelectedPlayer(player);
                 LoadActionMenu(player, true);
             }, ctx: "Edit entry.");
         }
@@ -325,7 +327,7 @@ internal partial class ModerationUI
             }
             else
             {
-                PresetType presetType = data.PendingPresetValue.PresetType;
+                PresetType presetType = data.PendingPresetValue.Type;
                 if (presetType == PresetType.None)
                     goto hideAllElements;
 
@@ -761,6 +763,17 @@ internal partial class ModerationUI
                     data.SecondaryEditingEntry.StartedTimestamp = DateTimeOffset.UtcNow;
                 }
 
+                if (data.PrimaryEditingEntry is Punishment p)
+                {
+                    p.PresetType = data.PendingPresetValue.Type;
+                    p.PresetLevel = data.PendingPresetValue.Level;
+                }
+                if (data.SecondaryEditingEntry is Punishment p2)
+                {
+                    p2.PresetType = data.PendingPresetValue.Type;
+                    p2.PresetLevel = data.PendingPresetValue.Level;
+                }
+
                 if (data.PendingPresetValue.PrimaryDuration.HasValue && data.PrimaryEditingEntry is IDurationModerationEntry duration)
                     duration.Duration = data.PendingPresetValue.PrimaryDuration.Value;
 
@@ -830,14 +843,21 @@ internal partial class ModerationUI
         if (data.PrimaryEditingEntry.IsAppealable)
         {
             if (string.IsNullOrWhiteSpace(data.PrimaryEditingEntry.Message))
-                data.PrimaryEditingEntry.Message = "Appeal at discord.gg/" + UCWarfare.Config.DiscordInviteCode;
+                data.PrimaryEditingEntry.Message = "Appeal at 'discord.gg/" + UCWarfare.Config.DiscordInviteCode + "'.";
             else if (data.PrimaryEditingEntry.Message!.IndexOf(".gg/" + UCWarfare.Config.DiscordInviteCode, StringComparison.InvariantCultureIgnoreCase) == -1 &&
                      data.PrimaryEditingEntry.Message!.IndexOf("unappealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
                      data.PrimaryEditingEntry.Message!.IndexOf("un-appealable", StringComparison.InvariantCultureIgnoreCase) == -1 &&
                      data.PrimaryEditingEntry.Message!.IndexOf("do not appeal", StringComparison.InvariantCultureIgnoreCase) == -1)
             {
-                data.PrimaryEditingEntry.Message += ". Appeal at discord.gg/" + UCWarfare.Config.DiscordInviteCode;
+                if (data.PrimaryEditingEntry.Message[data.PrimaryEditingEntry.Message.Length - 1] != '.')
+                    data.PrimaryEditingEntry.Message += ".";
+                if (data.PrimaryEditingEntry.Message[data.PrimaryEditingEntry.Message.Length - 1] != ' ')
+                    data.PrimaryEditingEntry.Message += " ";
+                data.PrimaryEditingEntry.Message += "Appeal at 'discord.gg/" + UCWarfare.Config.DiscordInviteCode + "'.";
             }
+
+            if (data.SecondaryEditingEntry != null)
+                data.SecondaryEditingEntry.Message = data.PrimaryEditingEntry.Message;
         }
 
         // add editor
@@ -888,6 +908,26 @@ internal partial class ModerationUI
         }
         for (int i = 0; i < ModerationActionControls.Length; ++i)
             ModerationActionControls[i].Root.Hide(player);
+
+        if (data.PrimaryEditingEntry != null && data.PrimaryEditingEntry.PendingReputation != 0)
+        {
+            UCPlayer? onlinePlayer = UCPlayer.FromID(data.PrimaryEditingEntry.Player);
+            if (onlinePlayer != null)
+            {
+                onlinePlayer.AddReputation((int)Math.Round(data.PrimaryEditingEntry.PendingReputation));
+                data.PrimaryEditingEntry.PendingReputation = 0d;
+            }
+        }
+        if (data.SecondaryEditingEntry != null && data.SecondaryEditingEntry.PendingReputation != 0)
+        {
+            UCPlayer? onlinePlayer = UCPlayer.FromID(data.SecondaryEditingEntry.Player);
+            if (onlinePlayer != null)
+            {
+                onlinePlayer.AddReputation((int)Math.Round(data.SecondaryEditingEntry.PendingReputation));
+                data.SecondaryEditingEntry.PendingReputation = 0d;
+            }
+        }
+
         UCWarfare.RunTask(async token =>
         {
             ModerationEntry? select = null;
@@ -946,7 +986,10 @@ internal partial class ModerationUI
                 }
             }
 
+            token = player.DisconnectToken;
             await UCWarfare.ToUpdate(token);
+            if (!player.IsOnline)
+                return;
             EndEditInActionMenu(player);
             SelectEntry(player, select);
             await RefreshModerationHistory(player, token).ConfigureAwait(false);
@@ -1373,6 +1416,7 @@ internal partial class ModerationUI
                 Presets[(int)data.PendingPreset - 1].Enable(ucPlayer.Connection);
 
             data.PendingPreset = PresetType.None;
+            data.PendingPresetValue = null;
         }
 
         if (data.PendingType != ModerationEntryType.None && data.PendingType != type)
@@ -1387,7 +1431,8 @@ internal partial class ModerationUI
 
             LabeledStateButton? btn = GetModerationButton(type);
             btn?.Disable(ucPlayer.Connection);
-
+            data.PrimaryEditingEntry = null;
+            data.SecondaryEditingEntry = null;
             LoadActionMenu(ucPlayer, false);
         }
         else
@@ -1426,6 +1471,7 @@ internal partial class ModerationUI
         if (!isDeselecting)
         {
             data.PendingPreset = preset;
+            data.PendingPresetValue = null;
             Presets[index].Disable(ucPlayer.Connection);
 
             if (data.PendingType != ModerationEntryType.None)
@@ -1435,6 +1481,9 @@ internal partial class ModerationUI
 
                 data.PendingType = ModerationEntryType.None;
             }
+
+            data.PrimaryEditingEntry = null;
+            data.SecondaryEditingEntry = null;
 
             LoadActionMenu(ucPlayer, false);
         }

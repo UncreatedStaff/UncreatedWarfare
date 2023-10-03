@@ -123,7 +123,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private int _pendingReputation;
     internal VehicleSwapRequest PendingVehicleSwapRequest;
     internal int CacheLocationIndex = -1;
-    internal UCPlayer(CSteamID steamID, Player player, string characterName, string nickName, bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore, PendingAsyncData data)
+    internal UCPlayer(CSteamID steamID, Player player, string characterName, string nickName,
+        bool donator, CancellationTokenSource pendingSrc, PlayerSave save, UCSemaphore semaphore, PendingAsyncData data)
     {
         Steam64 = steamID.m_SteamID;
         PurchaseSync = semaphore;
@@ -147,6 +148,45 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         _disconnectTokenSrc = pendingSrc;
         KitMenuData = new KitMenuUIData { Player = this };
         KitMenuData.Init();
+
+        IPAddress? activeIp = player.channel.owner.getAddress();
+        if (activeIp != null)
+        {
+            PlayerIPAddress? addr = data.IPAddresses.FirstOrDefault(x => x.IPAddress != null && x.IPAddress.Equals(activeIp));
+            if (addr != null)
+            {
+                addr.LastLogin = DateTimeOffset.UtcNow;
+                ++addr.LoginCount;
+            }
+            else
+            {
+                DateTimeOffset now = DateTimeOffset.UtcNow;
+                data.IPAddresses.Add(new PlayerIPAddress(PrimaryKey.NotAssigned, Steam64, OffenseManager.Pack(activeIp), 1, now, now));
+            }
+        }
+
+        HWID[] hwids = OffenseManager.ConvertVanillaHWIDs(player.channel.owner.playerID.GetHwids());
+        if (hwids.Length > 0)
+        {
+            for (int i = 0; i < hwids.Length; i++)
+            {
+                HWID activeHwid = hwids[i];
+                PlayerHWID? hwid = data.HWIDs.FirstOrDefault(x => x.HWID.Equals(activeHwid));
+                if (hwid != null)
+                {
+                    hwid.LastLogin = DateTimeOffset.UtcNow;
+                    ++hwid.LoginCount;
+                }
+                else
+                {
+                    DateTimeOffset now = DateTimeOffset.UtcNow;
+                    data.HWIDs.Add(new PlayerHWID(PrimaryKey.NotAssigned, i, Steam64, activeHwid, 1, now, now));
+                }
+            }
+        }
+
+        IPAddresses = data.IPAddresses;
+        HWIDs = data.HWIDs;
         if (Data.UseFastKits)
         {
             try
@@ -248,7 +288,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         TeamManager.AdminID => TeamManager.AdminFaction,
         _ => null
     };
-
+    public IReadOnlyList<PlayerIPAddress> IPAddresses { get; }
+    public IReadOnlyList<PlayerHWID> HWIDs { get; }
     public Dictionary<Buff, float> ShovelSpeedMultipliers { get; } = new Dictionary<Buff, float>(6);
     public List<SpottedComponent> CurrentMarkers { get; }
     /// <summary><see langword="True"/> if rank order <see cref="OfficerStorage.OFFICER_RANK_ORDER"/> has been completed (Receiving officer pass from discord server).</summary>
@@ -1001,6 +1042,10 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                 _lastMuted = false;
             }
         }
+
+        int val = Interlocked.Exchange(ref _pendingReputation, 0);
+        if (val != 0)
+            Player.skills.askRep(val);
     }
     internal void OnUseVoice(bool isMuted)
     {
@@ -1100,6 +1145,38 @@ public interface IPlayer : ITranslationArgument
 {
     public ulong Steam64 { get; }
 }
+public readonly struct OfflinePlayerName : IPlayer
+{
+    public ulong Steam64 { get; }
+    public string Name { get; }
+    public OfflinePlayerName(ulong steam64, string name)
+    {
+        Steam64 = steam64;
+        Name = name;
+    }
+
+    public string Translate(LanguageInfo language, string? format, UCPlayer? target, CultureInfo? culture, ref TranslationFlags flags)
+    {
+        UCPlayer? pl = UCPlayer.FromID(Steam64);
+        if (format is null) goto end;
+
+        if (format.Equals(UCPlayer.FormatCharacterName, StringComparison.Ordinal) ||
+            format.Equals(UCPlayer.FormatNickName, StringComparison.Ordinal) ||
+            format.Equals(UCPlayer.FormatPlayerName, StringComparison.Ordinal))
+            return Name;
+        if (format.Equals(UCPlayer.FormatSteam64, StringComparison.Ordinal))
+            goto end;
+        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (UCWarfare.IsMainThread && PlayerSave.TryReadSaveFile(Steam64, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
+        if (format.Equals(UCPlayer.FormatColoredCharacterName, StringComparison.Ordinal) ||
+            format.Equals(UCPlayer.FormatColoredNickName, StringComparison.Ordinal) ||
+            format.Equals(UCPlayer.FormatColoredPlayerName, StringComparison.Ordinal))
+            return Localization.Colorize(hex, Name, flags);
+        if (format.Equals(UCPlayer.FormatColoredSteam64, StringComparison.Ordinal))
+            return Localization.Colorize(hex, Steam64.ToString(culture ?? Data.LocalLocale), flags);
+        end:
+        return Steam64.ToString(culture ?? Data.LocalLocale);
+    }
+}
 
 public struct OfflinePlayer : IPlayer
 {
@@ -1143,7 +1220,7 @@ public struct OfflinePlayer : IPlayer
             return names.PlayerName;
         if (format.Equals(UCPlayer.FormatSteam64, StringComparison.Ordinal))
             goto end;
-        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (PlayerSave.TryReadSaveFile(_s64, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
+        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (UCWarfare.IsMainThread && PlayerSave.TryReadSaveFile(_s64, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
         if (format.Equals(UCPlayer.FormatColoredCharacterName, StringComparison.Ordinal))
             return Localization.Colorize(hex, names.CharacterName, flags);
         if (format.Equals(UCPlayer.FormatColoredNickName, StringComparison.Ordinal))

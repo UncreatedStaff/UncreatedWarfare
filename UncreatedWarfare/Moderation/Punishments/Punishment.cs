@@ -368,9 +368,8 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
             if (Removed && RemovedTimestamp.HasValue)
                 return RemovedTimestamp.Value > DateTime.UtcNow;
         }
-
-        L.LogDebug($"{ResolvedTimestamp.Value} + {Duration}.");
-        return IsPermanent || DateTime.UtcNow > ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
+        
+        return IsPermanent || DateTime.UtcNow < ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
     }
 
     /// <summary>
@@ -392,7 +391,7 @@ public abstract class DurationPunishment : Punishment, IForgiveableModerationEnt
                 return RemovedTimestamp.Value > timestamp.UtcDateTime;
         }
 
-        return IsPermanent || timestamp.UtcDateTime > ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
+        return IsPermanent || timestamp.UtcDateTime < ResolvedTimestamp.Value.UtcDateTime.Add(Duration);
     }
     public override void ReadProperty(ref Utf8JsonReader reader, string propertyName, JsonSerializerOptions options)
     {

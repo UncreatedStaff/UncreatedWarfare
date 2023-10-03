@@ -15,6 +15,7 @@ namespace Uncreated.Warfare.Moderation;
 /// <summary>
 /// Base class for a moderation record for a player. All punishments and commendations derive from this.
 /// </summary>
+[JsonConverter(typeof(ModerationEntryConverter))]
 public abstract class ModerationEntry : IModerationEntry
 {
     private const ushort DataVersion = 0;

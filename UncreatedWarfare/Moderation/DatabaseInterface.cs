@@ -446,7 +446,7 @@ public abstract class DatabaseInterface
 
         if (types is { Length: > 0 })
         {
-            sb.Append($"AND `main`.`{ColumnEntriesType}` IN (");
+            sb.Append($" AND `main`.`{ColumnEntriesType}` IN (");
 
             for (int i = 0; i < types.Length; ++i)
             {
@@ -1039,7 +1039,7 @@ public abstract class DatabaseInterface
     {
         sb.Append(SqlTypes.ColumnListAliased("main", _columns));
         int flag = 0;
-        if (type.IsAssignableFrom(typeof(IDurationModerationEntry)) || typeof(IDurationModerationEntry).IsAssignableFrom(type))
+        if (type.IsAssignableFrom(typeof(IDurationModerationEntry)) || typeof(IDurationModerationEntry).IsAssignableFrom(type) || type.IsAssignableFrom(typeof(DurationPunishment)) || typeof(DurationPunishment).IsAssignableFrom(type))
         {
             flag |= 1;
             sb.Append("," + SqlTypes.ColumnListAliased("dur", ColumnDurationsDurationSeconds, ColumnDurationsForgiven, ColumnDurationsForgivenBy, ColumnDurationsForgivenTimestamp, ColumnDurationsForgivenReason));
