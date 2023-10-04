@@ -566,57 +566,61 @@ public abstract class DatabaseInterface
                 info.Evidence = arr;
         }, false);
 
-        if (baseOnly) return;
-
         List<PrimaryKeyPair<PrimaryKey>> links = new List<PrimaryKeyPair<PrimaryKey>>();
 
-        // RelatedEntries
-        query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnRelatedEntry)} FROM `{TableRelatedEntries}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-        await Sql.QueryAsync(query, null, reader =>
+        if (!baseOnly)
         {
-            links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
-        }, token).ConfigureAwait(false);
+            // RelatedEntries
+            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnRelatedEntry)} FROM `{TableRelatedEntries}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+            await Sql.QueryAsync(query, null, reader =>
+            {
+                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+            }, token).ConfigureAwait(false);
 
-        F.ApplyQueriedList(links, (key, arr) =>
-        {
-            IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
-            if (info != null)
-                info.RelatedEntryKeys = arr;
-        }, false);
+            F.ApplyQueriedList(links, (key, arr) =>
+            {
+                IModerationEntry? info = entries.FindIndexed((x, i) => x != null && (mask is null || mask[i]) && x.Id.Key == key);
+                if (info != null)
+                    info.RelatedEntryKeys = arr;
+            }, false);
+        }
         
         if (anyPunishments)
         {
-            links.Clear();
-
-            // Punishment.Appeals
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedAppealsAppeal)} FROM `{TableLinkedAppeals}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
+            if (!baseOnly)
             {
-                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
-            }, token).ConfigureAwait(false);
+                links.Clear();
 
-            F.ApplyQueriedList(links, (key, arr) =>
-            {
-                Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id.Key == key);
-                if (info != null)
-                    info.AppealKeys = arr;
-            }, false);
+                // Punishment.Appeals
+                query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedAppealsAppeal)} FROM `{TableLinkedAppeals}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+                await Sql.QueryAsync(query, null, reader =>
+                {
+                    links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+                }, token).ConfigureAwait(false);
 
-            links.Clear();
+                F.ApplyQueriedList(links, (key, arr) =>
+                {
+                    Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id.Key == key);
+                    if (info != null)
+                        info.AppealKeys = arr;
+                }, false);
 
-            // Punishment.Reports
-            query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedReportsReport)} FROM `{TableLinkedReports}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
-            await Sql.QueryAsync(query, null, reader =>
-            {
-                links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
-            }, token).ConfigureAwait(false);
+                links.Clear();
 
-            F.ApplyQueriedList(links, (key, arr) =>
-            {
-                Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id.Key == key);
-                if (info != null)
-                    info.ReportKeys = arr;
-            }, false);
+                // Punishment.Reports
+                query = $"SELECT {SqlTypes.ColumnList(ColumnExternalPrimaryKey, ColumnLinkedReportsReport)} FROM `{TableLinkedReports}` WHERE `{ColumnExternalPrimaryKey}` {inArg} ORDER BY `{ColumnExternalPrimaryKey}`;";
+                await Sql.QueryAsync(query, null, reader =>
+                {
+                    links.Add(new PrimaryKeyPair<PrimaryKey>(reader.GetInt32(0), reader.GetInt32(1)));
+                }, token).ConfigureAwait(false);
+
+                F.ApplyQueriedList(links, (key, arr) =>
+                {
+                    Punishment? info = (Punishment?)entries.FindIndexed((x, i) => x is Punishment && (mask is null || mask[i]) && x.Id.Key == key);
+                    if (info != null)
+                        info.ReportKeys = arr;
+                }, false);
+            }
 
             if (anyAssetBans)
             {
@@ -638,7 +642,7 @@ public abstract class DatabaseInterface
             }
         }
 
-        if (anyAppeals)
+        if (!baseOnly && anyAppeals)
         {
             links.Clear();
 
@@ -674,7 +678,7 @@ public abstract class DatabaseInterface
             }, false);
         }
 
-        if (anyChatAbuseReports)
+        if (!baseOnly && anyChatAbuseReports)
         {
             List<PrimaryKeyPair<AbusiveChatRecord>> chats = new List<PrimaryKeyPair<AbusiveChatRecord>>();
 
@@ -694,7 +698,7 @@ public abstract class DatabaseInterface
             }, false);
         }
 
-        if (anyCheatingReports)
+        if (!baseOnly && anyCheatingReports)
         {
             List<PrimaryKeyPair<ShotRecord>> shots = new List<PrimaryKeyPair<ShotRecord>>();
 
@@ -740,7 +744,7 @@ public abstract class DatabaseInterface
             }, false);
         }
 
-        if (anyGreifingReports)
+        if (!baseOnly && anyGreifingReports)
         {
             List<PrimaryKeyPair<StructureDamageRecord>> damages = new List<PrimaryKeyPair<StructureDamageRecord>>();
 

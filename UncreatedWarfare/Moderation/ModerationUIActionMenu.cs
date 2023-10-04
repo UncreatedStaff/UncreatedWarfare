@@ -344,9 +344,9 @@ internal partial class ModerationUI
             hasMute = data.PrimaryEditingEntry is Mute || data.SecondaryEditingEntry is Mute;
             hasAssetBan = data.PrimaryEditingEntry is AssetBan || data.SecondaryEditingEntry is AssetBan;
             isNote = data.PrimaryEditingEntry is Note && data.SecondaryEditingEntry is Note;
-            hasForgiveable = data.PrimaryEditingEntry is IForgiveableModerationEntry forgiveable && !forgiveable.IsApplied(true)
-                          || data.SecondaryEditingEntry is IForgiveableModerationEntry forgiveable2 && !forgiveable2.IsApplied(true);
-            hasRemoveable = data.PrimaryEditingEntry is { Removed: true } || data.SecondaryEditingEntry is { Removed: true };
+            hasRemoveable = data.PrimaryEditingEntry is { Removed: false } || data.SecondaryEditingEntry is { Removed: false };
+            hasForgiveable = hasRemoveable && (data.PrimaryEditingEntry is IForgiveableModerationEntry forgiveable && forgiveable.IsApplied(true)
+                          || data.SecondaryEditingEntry is IForgiveableModerationEntry forgiveable2 && forgiveable2.IsApplied(true));
             hasPrimaryDuration = data.PrimaryEditingEntry is IDurationModerationEntry;
             hasSecondaryDuration = data.SecondaryEditingEntry is IDurationModerationEntry;
         }
@@ -815,11 +815,14 @@ internal partial class ModerationUI
         if (assetBan != null)
         {
             if (assetBan.Id.IsValid)
-                ModerationActionMiniInputBox1.SetText(player, assetBan.GetCommaList(true));
-            else if (ModerationActionMiniInputBox1.TextBox.GetOrAddData(player.Player).Text is { Length: > 0 } text)
+                ModerationActionInputBox3.SetText(player, assetBan.GetCommaList(true));
+            else if (ModerationActionInputBox3.TextBox.GetOrAddData(player.Player).Text is { Length: > 0 } text)
+            {
+                L.LogDebug($"Filled from save of text: \"{text}\".");
                 assetBan.FillFromText(text);
+            }
             else
-                ModerationActionMiniInputBox1.SetText(player, string.Empty);
+                ModerationActionInputBox3.SetText(player, string.Empty);
         }
     }
     private void Save(ModerationData data, UCPlayer player)
@@ -1001,6 +1004,8 @@ internal partial class ModerationUI
                 {
                     entry.Id = PrimaryKey.NotAssigned;
                     current = entry;
+                    if (current is AssetBan b)
+                        L.LogDebug($"Entries: '{string.Join(", ", b.VehicleTypeFilter)}'.");
                     ActionLog.Add(ActionLogType.CreateModerationEntry, $"Entry Id {entry.Id}. {entry.GetType().Name}, \"{entry.Message ?? "No Message"}\".", player);
                 }
                 else
@@ -1070,6 +1075,8 @@ internal partial class ModerationUI
                                 Append(changes, "-filter", currentAssetBan.VehicleTypeFilter[i].ToString());
                         }
 
+                        L.LogDebug($"Current entries: '{string.Join(", ", currentAssetBan.VehicleTypeFilter)}'.");
+                        L.LogDebug($"Entry entries:   '{string.Join(", ", entryAssetBan.VehicleTypeFilter)}'.");
                         currentAssetBan.VehicleTypeFilter = entryAssetBan.VehicleTypeFilter;
                     }
 
