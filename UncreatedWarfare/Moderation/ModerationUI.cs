@@ -1269,9 +1269,7 @@ internal partial class ModerationUI : UnturnedUI
         }
 
         ModerationEntry[] entries;
-
-        L.LogDebug($"Conditions: \"{condition}\", OrderBy: \"{orderBy}\"");
-
+        
         bool showRecentActors = text is not { Length: > 0 } && !Util.IsValidSteam64Id(data.SelectedPlayer);
         if (showRecentActors || Util.IsValidSteam64Id(data.SelectedPlayer))
         {
