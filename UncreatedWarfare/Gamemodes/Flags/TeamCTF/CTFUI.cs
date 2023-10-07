@@ -367,10 +367,13 @@ public enum EFlagStatus
     [Translatable(Languages.ChineseSimplified, "保护")]
     [Translatable("SECURED", Description = "Shown when your team is holding the flag after it has been captured.")]
     SECURED,
+    [Translatable(Languages.ChineseSimplified, "中立")]
     [Translatable("NEUTRALIZED", Description = "Shown when the flag has not been captured by either team.")]
     NEUTRALIZED,
+    [Translatable(Languages.ChineseSimplified, "已失去")]
     [Translatable("LOST", Description = "Shown when your team lost the flag and you dont have enough people on the flag to clear.")]
     LOST,
+    [Translatable(Languages.ChineseSimplified, "对峙中")]
     [Translatable("CONTESTED", Description = "Shown when your team and the other team have the same amount of people on the flag.")]
     CONTESTED,
     [Translatable(Languages.ChineseSimplified, "不是目标点")]
@@ -386,6 +389,7 @@ public enum EFlagStatus
     [Translatable(Languages.ChineseSimplified, "在载具中")]
     [Translatable("IN VEHICLE", Description = "Shown when you're trying to capture a flag while in a vehicle.")]
     IN_VEHICLE,
+    [Translatable(Languages.ChineseSimplified, "已被锁定")]
     [Translatable("LOCKED", Description = "Shown in Invasion when a flag has already been captured by attackers and can't be recaptured.")]
     LOCKED
 }

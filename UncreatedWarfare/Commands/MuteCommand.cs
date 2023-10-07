@@ -87,10 +87,13 @@ public class MuteCommand : Command
 public enum MuteType : byte
 {
     None = 0,
+    [Translatable(Languages.ChineseSimplified, "语音交流")]
     [Translatable("Voice Chat")]
     Voice = 1,
+    [Translatable(Languages.ChineseSimplified, "文字交流")]
     [Translatable("Text Chat")]
     Text = 2,
+    [Translatable(Languages.ChineseSimplified, "语音和文字交流")]
     [Translatable("Voice and Text Chat")]
     Both = Voice | Text
 }

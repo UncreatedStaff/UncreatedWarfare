@@ -1853,12 +1853,16 @@ public enum ClothingType : byte
 public enum KitType : byte
 {
     [Translatable("Public", Description = "Free kits or kits bought with in-game credits.")]
+    [Translatable(Languages.ChineseSimplified, "公用")]
     Public,
     [Translatable("Elite", Description = "Pre-made kits bought with real money.")]
+    [Translatable(Languages.ChineseSimplified, "精英")]
     Elite,
     [Translatable("Special", Description = "Exclusive kits won through events or other means.")]
+    [Translatable(Languages.ChineseSimplified, "特别")]
     Special,
     [Translatable("Loadout", Description = "Custom kits bought with real money.")]
+    [Translatable(Languages.ChineseSimplified, "套装")]
     Loadout
 }
 
@@ -1896,6 +1900,7 @@ public enum RedirectType : byte
     [Translatable(Languages.ChineseSimplified, "建筑材料")]
     [Translatable("Building Supplies")]
     BuildSupply,
+    [Translatable(Languages.ChineseSimplified, "集合点")]
     [Translatable("Rally Point")]
     RallyPoint,
     [Translatable(Languages.ChineseSimplified, "FOB 电台")]
@@ -1913,10 +1918,13 @@ public enum RedirectType : byte
     [Translatable(Languages.ChineseSimplified, "FOB 地堡")]
     [Translatable("FOB Bunker")]
     Bunker,
+    [Translatable(Languages.ChineseSimplified, "载具停泊处")]
     [Translatable("Vehicle Bay")]
     VehicleBay,
+    [Translatable(Languages.ChineseSimplified, "工兵铲")]
     [Translatable("Entrenching Tool")]
     EntrenchingTool,
+    [Translatable(Languages.ChineseSimplified, "无人机")]
     [Translatable("UAV", Description = "Unmanned Aerial Vehicle")]
     UAV,
     [Translatable(Languages.ChineseSimplified, "建造维修站")]
@@ -1928,10 +1936,13 @@ public enum RedirectType : byte
     [Translatable(Languages.ChineseSimplified, "建造FOB地堡")]
     [Translatable("Built FOB Bunker")]
     BunkerBuilt,
+    [Translatable(Languages.ChineseSimplified, "隐藏地")]
     [Translatable("Insurgency Cache")]
     Cache,
+    [Translatable(Languages.ChineseSimplified, "电台受损")]
     [Translatable("Damaged Radio")]
     RadioDamaged,
+    [Translatable(Languages.ChineseSimplified, "激光指示器")]
     [Translatable("Laser Designator")]
     LaserDesignator,
     [Translatable("Generic Ammo", IsPrioritizedTranslation = false)]
@@ -1966,6 +1977,7 @@ public enum Class : byte
     [Translatable(Languages.Romanian, "Neinarmat")]
     [Translatable(Languages.PortugueseBrazil, "Desarmado")]
     [Translatable(Languages.Polish, "Nieuzbrojony")]
+    [Translatable(Languages.ChineseSimplified, "无武装")]
     Unarmed = 1,
     [Translatable("Squad Leader")]
     [Translatable(Languages.Russian, "Лидер отряда")]
@@ -1999,6 +2011,7 @@ public enum Class : byte
     [Translatable(Languages.PortugueseBrazil, "Fuzileiro Automobilístico")]
     [Translatable(Languages.Polish, "Strzelec Automatyczny")]
     [Translatable(Languages.EnglishUS, "Automatic Rifleman")]
+    [Translatable(Languages.ChineseSimplified, "自动步枪兵")]
     AutomaticRifleman = 6,
     [Translatable(Languages.Russian, "Гренадёр")]
     [Translatable(Languages.Spanish, "Granadero")]
@@ -2026,6 +2039,7 @@ public enum Class : byte
     [Translatable(Languages.Spanish, "Tirador Designado")]
     [Translatable(Languages.Romanian, "Lunetist-Usor")]
     [Translatable(Languages.Polish, "Zwiadowca")]
+    [Translatable(Languages.ChineseSimplified, "精确射手")]
     Marksman = 11,
     [Translatable(Languages.Russian, "Снайпер")]
     [Translatable(Languages.Spanish, "Francotirador")]
@@ -2040,6 +2054,7 @@ public enum Class : byte
     [Translatable(Languages.Romanian, "Puscas Anti-Personal")]
     [Translatable(Languages.PortugueseBrazil, "Antipessoal")]
     [Translatable(Languages.Polish, "Strzelec Przeciw-Piechotny")]
+    [Translatable(Languages.ChineseSimplified, "反人员步枪兵")]
     APRifleman = 13,
     [Translatable(Languages.Russian, "Инженер")]
     [Translatable(Languages.Spanish, "Ingeniero")]
@@ -2054,6 +2069,7 @@ public enum Class : byte
     [Translatable(Languages.Romanian, "Echipaj")]
     [Translatable(Languages.PortugueseBrazil, "Tripulante")]
     [Translatable(Languages.Polish, "Załogant")]
+    [Translatable(Languages.ChineseSimplified, "车组成员")]
     Crewman = 15,
     [Translatable(Languages.Russian, "Пилот")]
     [Translatable(Languages.Spanish, "Piloto")]

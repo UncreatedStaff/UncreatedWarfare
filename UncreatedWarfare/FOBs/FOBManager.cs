@@ -1583,12 +1583,18 @@ public class EmplacementData
 [Translatable("Buildable Type", Description = "Buildable types for FOB buildings.")]
 public enum BuildableType
 {
+    [Translatable(Languages.ChineseSimplified, "地堡")]
     Bunker,
+    [Translatable(Languages.ChineseSimplified, "弹药箱")]
     AmmoCrate,
+    [Translatable(Languages.ChineseSimplified, "维修站")]
     RepairStation,
+    [Translatable(Languages.ChineseSimplified, "防御")]
     [Translatable("Fortification", Description = "Barricade or Structure buildables that do not fall into another category.")]
     Fortification,
+    [Translatable(Languages.ChineseSimplified, "架设")]
     [Translatable("Emplacement", Description = "Vehicle buildables.")]
     Emplacement,
+    [Translatable(Languages.ChineseSimplified, "电台")]
     Radio
 }

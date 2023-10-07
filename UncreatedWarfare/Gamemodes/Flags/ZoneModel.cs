@@ -187,9 +187,13 @@ internal struct ZoneModel : IListItem
 [Translatable]
 public enum ZoneType : byte
 {
+    [Translatable(Languages.ChineseSimplified, "无效")]
     Invalid = 0,
+    [Translatable(Languages.ChineseSimplified, "圆圈")]
     Circle = 1,
+    [Translatable(Languages.ChineseSimplified, "长方形")]
     Rectangle = 2,
+    [Translatable(Languages.ChineseSimplified, "多边形")]
     Polygon = 4
 }
 [Translatable("Use Case", IsPrioritizedTranslation = false)]

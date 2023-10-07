@@ -447,12 +447,14 @@ public enum VehicleType
     [Translatable(Languages.Spanish, "APC")]
     [Translatable(Languages.Romanian, "TAB")]
     [Translatable(Languages.Polish, "APC")]
+    [Translatable(Languages.ChineseSimplified, "轮式步战车")]
     [Translatable("APC")]
     APC,
     [Translatable(Languages.Russian, "БМП")]
     [Translatable(Languages.Spanish, "IFV")]
     [Translatable(Languages.Romanian, "MLI")]
     [Translatable(Languages.Polish, "BWP")]
+    [Translatable(Languages.ChineseSimplified, "步战车")]
     [Translatable("IFV")]
     IFV,
     [Translatable(Languages.Russian, "ТАНК")]
@@ -500,6 +502,7 @@ public enum VehicleType
     [Translatable("Heavy Machine Gun")]
     HMG,
     [Translatable(Languages.Russian, "противотанковая ракета")]
+    [Translatable(Languages.ChineseSimplified, "反坦克导弹发射器")]
     [Translatable("ATGM")]
     ATGM,
     [Translatable(Languages.Russian, "Миномет")]

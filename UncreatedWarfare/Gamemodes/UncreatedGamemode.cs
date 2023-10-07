@@ -1470,12 +1470,18 @@ public enum State : byte
 [Translatable("Gamemode Type")]
 public enum GamemodeType : byte
 {
+    [Translatable(Languages.ChineseSimplified, "原版")]
     [Translatable("Vanilla")]
     Undefined,
+    [Translatable(Languages.ChineseSimplified, "推进并肃清")]
     [Translatable("Advance and Secure")]
     TeamCTF,
+    [Translatable(Languages.ChineseSimplified, "进攻")]
     Invasion,
+    [Translatable(Languages.ChineseSimplified, "叛乱")]
     Insurgency,
+    [Translatable(Languages.ChineseSimplified, "征服")]
     Conquest,
+    [Translatable(Languages.ChineseSimplified, "攻坚")]
     Hardpoint
 }
