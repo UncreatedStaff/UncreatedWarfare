@@ -213,7 +213,7 @@ public class KitMenuUI : UnturnedUI
         DropdownButtons[(int)Class.Sniper] = BtnDropdownSniper;
         DropdownButtons[(int)Class.SpecOps] = BtnDropdownSpecOps;
         DropdownButtons[(int)Class.Squadleader] = BtnDropdownSquadleader;
-        for (int i = 0; i < DropdownButtons.Length; ++i)
+        for (int i = 1; i < DropdownButtons.Length; ++i)
         {
             DefaultClassCache[i] = Localization.TranslateEnum((Class)i, null);
             ClassIconCache[i] = ((Class)i).GetIcon().ToString();
@@ -305,12 +305,14 @@ public class KitMenuUI : UnturnedUI
             else
                 SetCachedValuesToOther(c, player.Locale.LanguageInfo, player.Locale.CultureInfo);
             LogicSetTabs[0].SetVisibility(c, true);
-            SwitchToTab(player, 2);
+            SwitchToTab(player, 0);
         }
         else
         {
-            SwitchToTab(player, player.KitMenuData.Tab);
+            SwitchToTab(player, 0);
         }
+
+        player.KitMenuData.Tab = 0;
         player.KitMenuData.IsOpen = true;
         player.Player.disablePluginWidgetFlag(DisabledWidgets);
         player.Player.enablePluginWidgetFlag(EnabledWidgets);
@@ -436,6 +438,8 @@ public class KitMenuUI : UnturnedUI
     }
     private void OpenKit(UCPlayer player, Kit kit)
     {
+        if (DefaultLanguageCache == null)
+            CacheLanguages();
         L.LogDebug("Opening kit: " + kit.Id);
         FactionInfo? plFaction = TeamManager.GetFactionSafe(player.GetTeam());
         ITransportConnection c = player.Connection;
@@ -628,13 +632,32 @@ public class KitMenuUI : UnturnedUI
 
         if (TeamManager.IsInMain(player) && Data.Is<IKitRequests>())
         {
+            if (kit.IsRequestable(player.Faction))
+            {
+                if (kit.IsPublicKit && kit.CreditCost <= 0 || KitManager.HasAccessQuick(kit, player))
+                    LblActionsActionButton.SetText(c, DefaultLanguageCache![24]);
+                else
+                    LblActionsActionButton.SetText(c, DefaultLanguageCache![30]);
+            }
+            else
+                LblActionsActionButton.SetText(c, DefaultLanguageCache![30]);
             LogicActionButton.SetVisibility(c, true);
         }
         else
         {
             LogicActionButton.SetVisibility(c, false);
+            LblActionsActionButton.SetText(c, DefaultLanguageCache![25]);
         }
 
+        if (player.OnDuty())
+        {
+            BtnActionsStaff1.SetVisibility(c, true);
+            LblActionsStaff1Button.SetText(c, DefaultLanguageCache![26]);
+        }
+        else
+        {
+            BtnActionsStaff1.SetVisibility(c, false);
+        }
     }
     private string GetTypeString(UCPlayer player, KitType type)
     {
@@ -687,7 +710,7 @@ public class KitMenuUI : UnturnedUI
     {
         LanguageInfo lang = Localization.GetDefaultLanguage();
 
-        const int length = 30;
+        const int length = 31;
         if (DefaultLanguageCache is not { Length: length })
             DefaultLanguageCache = new string[length];
         for (int i = 0; i < DefaultClassCache.Length; ++i)
@@ -726,6 +749,7 @@ public class KitMenuUI : UnturnedUI
         DefaultLanguageCache[27] = T.KitMenuUIActionEditKitLabel.Translate(lang);
         DefaultLanguageCache[28] = T.KitMenuUIActionSetLoadoutItemsLabel.Translate(lang);
         DefaultLanguageCache[29] = T.KitMenuUINoFaction.Translate(lang);
+        DefaultLanguageCache[30] = T.KitMenuUIActionNoAccessLabel.Translate(lang);
     }
     private void OnClassButtonClicked(UnturnedButton button, Player player)
     {
@@ -842,6 +866,7 @@ public sealed class KitMenuUIData : IPlayerComponent
     public List<PrimaryKey>? FavoriteKits { get; set; }
     public bool[] Favorited { get; set; } = Array.Empty<bool>();
     private FactionInfo? _faction;
+    private UCPlayer? _viewLensPlayer;
     public void Init()
     {
 
@@ -857,7 +882,11 @@ public sealed class KitMenuUIData : IPlayerComponent
         manager.WriteWait();
         try
         {
-            _faction = Player.Faction;
+            _viewLensPlayer = Player;
+            UCPlayer.TryApplyViewLens(ref _viewLensPlayer);
+
+            _faction = _viewLensPlayer.Faction;
+
             Func<SqlItem<Kit>, bool> predicate = Tab switch
             {
                 0 => KitListBasePredicate,
@@ -866,6 +895,9 @@ public sealed class KitMenuUIData : IPlayerComponent
                 3 => KitListSpecialPredicate,
                 _ => x => x.Item != null,
             };
+#if DEBUG
+            using IDisposable disp = L.IndentLog(1);
+#endif
             L.LogDebug(manager.Items.Count + " searched... ");
             Kits = manager.Items.Where(predicate)
                 .OrderByDescending(x => FavoriteKits?.Contains(x.LastPrimaryKey))
@@ -887,7 +919,7 @@ public sealed class KitMenuUIData : IPlayerComponent
                 Favorited = new bool[Kits.Length];
             for (int i = 0; i < Kits.Length; ++i)
                 Favorited[i] = FavoriteKits != null && FavoriteKits.Contains(Kits[i].LastPrimaryKey);
-            using IDisposable disp = L.IndentLog(1);
+            _viewLensPlayer = null;
         }
         finally
         {
@@ -900,8 +932,9 @@ public sealed class KitMenuUIData : IPlayerComponent
     private bool KitListElitePredicate(SqlItem<Kit> x)
         => x.Item is { Type: KitType.Elite } kit && (Filter == Class.None || kit.Class == Filter) && kit.Class > Class.Unarmed && kit.IsRequestable(_faction);
     private bool KitListLoadoutPredicate(SqlItem<Kit> x)
-        => x.Item is { Type: KitType.Loadout } kit && (Filter == Class.None || kit.Class == Filter) && kit.Requestable &&
-           (Player.OnDuty() && kit.Creator == Player.Steam64 || KitManager.HasAccessQuick(x, Player));
+        => x.Item is { Type: KitType.Loadout } kit && (Filter == Class.None || kit.Class == Filter) && kit.Class > Class.Unarmed && kit.Requestable &&
+           (Player.OnDuty() && kit.Creator == Player.Steam64 || KitManager.HasAccessQuick(x, _viewLensPlayer!));
     private bool KitListSpecialPredicate(SqlItem<Kit> x)
-        => x.Item is { Type: KitType.Special } kit && (Filter == Class.None || kit.Class == Filter) && kit.IsRequestable(_faction) && (Player.OnDuty() || KitManager.HasAccessQuick(x, Player));
+        => x.Item is { Type: KitType.Special } kit && (Filter == Class.None || kit.Class == Filter) && kit.Class > Class.Unarmed && kit.IsRequestable(_faction)
+           && (Player.OnDuty() || KitManager.HasAccessQuick(x, _viewLensPlayer!));
 }

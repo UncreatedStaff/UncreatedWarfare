@@ -100,15 +100,15 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
     /// <summary>Elite kit or loadout.</summary>
     public bool IsPaid => Type is KitType.Elite or KitType.Loadout;
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist. Checks both active teams, use <see cref="IsRequestable(ulong)"/> to check for a certain team.</summary>
-    public bool Requestable => !Disabled && (Season >= UCWarfare.Season || Season < 1) &&
+    public bool Requestable => !Disabled && (Type is not KitType.Loadout || Season >= UCWarfare.Season || Season < 1) &&
                              IsCurrentMapAllowed() &&
                              (IsFactionAllowed(TeamManager.Team1Faction) || IsFactionAllowed(TeamManager.Team2Faction));
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
-    public bool IsRequestable(ulong team) => team is not 1ul and not 2ul ? Requestable : (!Disabled && (Season >= UCWarfare.Season || Season < 1) &&
+    public bool IsRequestable(ulong team) => team is not 1ul and not 2ul ? Requestable : (!Disabled && (Type is not KitType.Loadout || Season >= UCWarfare.Season || Season < 1) &&
                              IsCurrentMapAllowed() &&
                              IsFactionAllowed(TeamManager.GetFaction(team)));
     /// <summary>Checks disabled status, season, map blacklist, faction blacklist.</summary>
-    public bool IsRequestable(FactionInfo? faction) => faction is null ? Requestable : (!Disabled && (Season >= UCWarfare.Season || Season < 1) &&
+    public bool IsRequestable(FactionInfo? faction) => faction is null ? Requestable : (!Disabled && (Type is not KitType.Loadout || Season >= UCWarfare.Season || Season < 1) &&
                                                                                IsCurrentMapAllowed() &&
                                                                                IsFactionAllowed(faction));
     public Kit(string id, Class @class, Branch branch, KitType type, SquadLevel squadLevel, FactionInfo? faction)
@@ -209,11 +209,16 @@ public class Kit : IListItem, ITranslationArgument, IVersionableReadWrite, IClon
     }
     public bool IsFactionAllowed(FactionInfo? faction)
     {
+        if (Type == KitType.Public)
+            return faction != TeamManager.Team1Faction && faction != TeamManager.Team2Faction || faction == Faction;
+
         if (faction == TeamManager.Team1Faction && Faction == TeamManager.Team2Faction ||
             faction == TeamManager.Team2Faction && Faction == TeamManager.Team1Faction)
             return false;
+
         if (FactionFilter.NullOrEmpty() || faction is null || !faction.PrimaryKey.IsValid)
             return true;
+
         int pk = faction.PrimaryKey.Key;
         for (int i = 0; i < FactionFilter.Length; ++i)
             if (FactionFilter[i].Key == pk)

@@ -3061,6 +3061,8 @@ internal static class T
     public static readonly Translation KitMenuUIActionEditKitLabel = new Translation("<#0099ff>Edit Kit</color> (Coming Soon)", TranslationFlags.TMProUI);
     [TranslationData(SectionKitMenuUI, "Label actions button staff set loadout items kit.")]
     public static readonly Translation KitMenuUIActionSetLoadoutItemsLabel = new Translation("<#0099ff>Set Loadout Items", TranslationFlags.TMProUI);
+    [TranslationData(SectionKitMenuUI, "Shown when a player doesn't have access to a kit.")]
+    public static readonly Translation KitMenuUIActionNoAccessLabel = new Translation("No Access", TranslationFlags.TMProUI);
     [TranslationData(SectionKitMenuUI, "Shown when a kit's faction is not assigned.")]
     public static readonly Translation KitMenuUINoFaction = new Translation("Unaffiliated", TranslationFlags.TMProUI);
 
