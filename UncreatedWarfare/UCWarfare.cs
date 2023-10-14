@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -170,7 +171,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
         await TeamManager.ReloadFactions(token).ConfigureAwait(false);
         L.Log("Loading Moderation Data...", ConsoleColor.Magenta);
         Data.ModerationSql = new WarfareDatabaseInterface();
-        await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
+        // await Data.ModerationSql.VerifyTables(token).ConfigureAwait(false);
 
         Data.WarfareStripeService = new WarfareStripeService();
         Data.PurchasingDataStore = await PurchaseRecordsInterface.Create<WarfarePurchaseRecordsInterface>(false, token).ConfigureAwait(false);
@@ -687,8 +688,8 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
             L.LogError(ex);
         }
     }
-    public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
-    bool IThreadQueue.IsMainThread => Thread.CurrentThread.IsGameThread();
+    public static bool IsMainThread => Thread.CurrentThread == ThreadUtil.gameThread;
+    bool IThreadQueue.IsMainThread => Thread.CurrentThread == ThreadUtil.gameThread;
     void IThreadQueue.RunOnMainThread(System.Action action) => RunOnMainThread(action, false, default);
     void IThreadQueue.RunOnMainThread(ThreadResult action) => ThreadQueueEntries.Enqueue(action);
     void IThreadQueueWaitOverride.SpinWaitUntil(Func<bool> condition, int millisecondsTimeout, CancellationToken token) => SpinWaitUntil(condition, millisecondsTimeout, token);
@@ -699,7 +700,7 @@ public class UCWarfare : MonoBehaviour, IThreadQueueWaitOverride
     public static bool RunOnMainThread(System.Action action, bool skipFrame, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-        if (IsMainThread)
+        if (!skipFrame && IsMainThread)
         {
             action();
             return false;
@@ -1157,6 +1158,19 @@ public class UCWarfareNexus : IModuleNexus
 
     void IModuleNexus.initialize()
     {
+        AppDomain.CurrentDomain.AssemblyResolve += ResolveAssemblyCompiler;
+        try
+        {
+            Init2();
+        }
+        catch (Exception ex)
+        {
+            CommandWindow.LogError(ex);
+        }
+    }
+
+    private void Init2()
+    {
         CommandWindow.Log("Initializing UCWarfareNexus...");
         Active = true;
         try
@@ -1165,7 +1179,8 @@ public class UCWarfareNexus : IModuleNexus
         }
         catch (Exception ex)
         {
-            Logging.LogException(ex);
+            CommandWindow.LogError(ex);
+            return;
         }
 
         L.Log("Initializing UniTask...", ConsoleColor.Magenta);
@@ -1177,6 +1192,20 @@ public class UCWarfareNexus : IModuleNexus
         go.AddComponent<Maps.MapScheduler>();
         UnityEngine.Object.DontDestroyOnLoad(go);
         go.AddComponent<UCWarfare>();
+    }
+    private Assembly? ResolveAssemblyCompiler(object sender, ResolveEventArgs args)
+    {
+        const string runtime = "System.Runtime.CompilerServices.Unsafe";
+
+        if (args.Name.StartsWith(runtime, StringComparison.Ordinal))
+        {
+            CommandWindow.LogWarning($"Redirected {args.Name} -> {runtime}.dll");
+            return typeof(Unsafe).Assembly;
+        }
+
+        CommandWindow.LogError($"Unknown assembly: {args.Name}.");
+
+        return null;
     }
 
     private void Load()
@@ -1257,7 +1286,7 @@ public class UCWarfareNexus : IModuleNexus
             {
                 UnityEngine.Object.Destroy(UCWarfare.I.gameObject);
             }
-
+            
             UCWarfare.I = null!;
         }
         catch (Exception ex)
@@ -1278,6 +1307,7 @@ public class UCWarfareNexus : IModuleNexus
     }
     void IModuleNexus.shutdown()
     {
+        AppDomain.CurrentDomain.AssemblyResolve -= ResolveAssemblyCompiler;
         Level.onPostLevelLoaded -= OnLevelLoaded;
         if (!UCWarfare.IsLoaded) return;
         Unload(false).Wait(10000);

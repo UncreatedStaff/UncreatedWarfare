@@ -55,8 +55,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     [FormatDisplay(typeof(IPlayer), "Colored Steam64 ID")]
     public const string FormatColoredSteam64 = "c64";
 
-    private static readonly InstanceGetter<Dictionary<Buff, float>, int> VersionGetter =
-        Util.GenerateInstanceGetter<Dictionary<Buff, float>, int>("version", BindingFlags.NonPublic | BindingFlags.Instance);
     public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
     public static readonly UnturnedUI MutedUI = new UnturnedUI(Gamemode.Config.UIMuted, hasElements: false);
     public static readonly UnturnedUI LoadingUI = new UnturnedUI(Gamemode.Config.UILoading, hasElements: false);
@@ -112,7 +110,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     internal bool HasModerationUI = false;
     internal int MortarWarningCount = 0;
     private readonly CancellationTokenSource _disconnectTokenSrc;
-    private int _multVersion = -1;
+    private int _multCached;
     private bool _isTalking;
     private bool _isOnline;
     private bool _lastMuted;
@@ -250,6 +248,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     };
 
     public Dictionary<Buff, float> ShovelSpeedMultipliers { get; } = new Dictionary<Buff, float>(6);
+    public void UpdateShovelSpeedMultipliers() => Interlocked.Exchange(ref _multCached, 0);
     public List<SpottedComponent> CurrentMarkers { get; }
     /// <summary><see langword="True"/> if rank order <see cref="OfficerStorage.OFFICER_RANK_ORDER"/> has been completed (Receiving officer pass from discord server).</summary>
     public bool IsOfficer => RankData != null && RankData.Length > RankManager.Config.OfficerRankIndex && RankData[RankManager.Config.OfficerRankIndex].IsCompelete;
@@ -266,15 +265,17 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     {
         get
         {
-            int version = VersionGetter(ShovelSpeedMultipliers);
-            if (version == _multVersion)
+            if (_multCache != 0)
                 return _multCache;
+
+            
             float max = 0f;
             foreach (float fl in ShovelSpeedMultipliers.Values)
                 if (fl > max) max = fl;
             if (max <= 0f)
                 max = 1f;
-            _multVersion = version;
+
+            _multCache = 1;
             return _multCache = max;
         }
     }

@@ -59,6 +59,8 @@ public sealed class Motivated : Buff
             player.ShovelSpeedMultipliers.Add(this, value);
         else
             player.ShovelSpeedMultipliers[this] = value;
+
+        player.UpdateShovelSpeedMultipliers();
     }
     internal override void SquadLeaderPromoted()
     {

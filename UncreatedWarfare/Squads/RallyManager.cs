@@ -159,11 +159,16 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
         if (!IsActive)
             return;
         TimeSpan seconds = TimeSpan.FromSeconds(secondsLeft);
-        
-        foreach (UCPlayer? player in AwaitingPlayers)
+
+        for (int i = AwaitingPlayers.Count - 1; i >= 0; i--)
         {
-            if (!player.IsOnline)
-                break;
+            UCPlayer? player = AwaitingPlayers[i];
+            if (!player.IsOnline || player.Squad != Squad)
+            {
+                AwaitingPlayers.RemoveAt(i);
+                continue;
+            }
+
             SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUITimer.Translate(player, false, secondsLeft >= 0 ? seconds : TimeSpan.Zero, NearestLocation));
         }
     }
@@ -251,7 +256,8 @@ public class RallyPoint : MonoBehaviour, IManualOnDestroy
 
         foreach (UCPlayer player in AwaitingPlayers)
         {
-            TeleportPlayer(player);
+            if (player.IsOnline && player.Squad == Squad)
+                TeleportPlayer(player);
         }
 
         AwaitingPlayers.Clear();

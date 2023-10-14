@@ -79,7 +79,7 @@ public partial class KitManager : ListSqlSingleton<Kit>, IQuestCompletedHandlerA
 
         await Data.PurchasingDataStore.RefreshBundles(true, false, token).ConfigureAwait(false);
         await Data.PurchasingDataStore.RefreshKits(false, false, true, token).ConfigureAwait(false);
-        await Data.PurchasingDataStore.FetchStripeKitProducts(true, token).ConfigureAwait(false);
+        await Data.PurchasingDataStore.FetchStripeKitProducts(false, token).ConfigureAwait(false);
 
         if (dirty != null)
         {

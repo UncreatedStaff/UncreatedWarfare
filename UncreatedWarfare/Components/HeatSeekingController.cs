@@ -116,6 +116,8 @@ internal class HeatSeekingController : MonoBehaviour // attach to a turrent's 'A
 
     public UCPlayer? GetGunner(InteractableVehicle vehicle)
     {
+        if (vehicle.turrets == null)
+            return null;
         foreach (Passenger turret in vehicle.turrets)
         {
             if (turret.turretAim == transform && turret.player != null)

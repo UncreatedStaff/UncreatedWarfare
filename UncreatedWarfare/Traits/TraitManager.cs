@@ -79,6 +79,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
             pl.ShovelSpeedMultipliers.Clear();
+            pl.UpdateShovelSpeedMultipliers();
             for (int j = 0; j < pl.ActiveBuffs.Length; ++j)
                 pl.ActiveBuffs[j] = null;
             pl.ActiveTraits.Clear();

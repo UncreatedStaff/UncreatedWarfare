@@ -1765,7 +1765,7 @@ public static class F
         ThreadUtil.assertIsGameThread();
         if (player is not { IsOnline: true })
             return false;
-        QuestAsset current = player.Player.quests.GetTrackedQuest();
+        QuestAsset? current = player.Player.quests.GetTrackedQuest();
         if (current != null && quest != null)
         {
             if (current.GUID == quest.GUID && !player.Save.TrackQuests)

@@ -48,10 +48,10 @@ public static class DailyQuests
                 prefix: new HarmonyMethod(typeof(DailyQuests).GetMethod(nameof(OnRegisteredWorkshopID),
                     BindingFlags.Static | BindingFlags.NonPublic)));
         else L.LogWarning("Unable to patch Provider.onDedicatedUGCInstalled to register the quest mod!");
-        m = typeof(PlayerQuests).GetMethod(nameof(PlayerQuests.ReceiveAbandonQuest), BindingFlags.Instance | BindingFlags.Public);
+        m = typeof(PlayerQuests).GetMethod(nameof(PlayerQuests.ReceiveAbandonQuestRequest), BindingFlags.Instance | BindingFlags.Public);
         if (m is not null)
             Harmony.Patches.Patcher.Patch(m,
-                postfix: new HarmonyMethod(typeof(DailyQuests).GetMethod(nameof(OnAbandonedQuest),
+                prefix: new HarmonyMethod(typeof(DailyQuests).GetMethod(nameof(OnAbandonedRequestedQuest),
                     BindingFlags.Static | BindingFlags.NonPublic)));
         else L.LogWarning("Unable to patch PlayerQuests.ReceiveAbandonQuest to prevent abandoning daily missions!");
     }
@@ -100,11 +100,9 @@ public static class DailyQuests
     {
         Provider.registerServerUsingWorkshopFileId(DailyQuestsWorkshopID);
     }
-    private static void OnAbandonedQuest(PlayerQuests __instance, Guid assetGuid)
+    private static bool OnAbandonedRequestedQuest(Guid assetGuid)
     {
-        UCPlayer? player = UCPlayer.FromPlayer(__instance.player);
-        if (player != null)
-            QuestManager.TryAddQuest(player, assetGuid);
+        return false;
     }
     internal static void CheckTrackQuestsOption(UCPlayer player)
     {

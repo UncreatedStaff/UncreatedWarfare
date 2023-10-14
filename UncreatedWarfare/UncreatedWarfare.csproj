@@ -78,6 +78,9 @@
     </Reference>
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Diagnostics.DiagnosticSource">
+      <HintPath>..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\System.Diagnostics.DiagnosticSource.dll</HintPath>
+    </Reference>
     <Reference Include="System.Net.Http" />
     <Reference Include="Uncreated.UI">
       <HintPath>..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\Uncreated.UI.dll</HintPath>
@@ -120,7 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.2.2" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
     <PackageReference Include="MySqlConnector" Version="2.2.7" />
     <PackageReference Include="System.Text.Json" Version="7.0.0" />
   </ItemGroup>
