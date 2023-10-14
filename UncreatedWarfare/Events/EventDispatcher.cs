@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using SDG.Framework.Debug;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
@@ -365,7 +366,7 @@ public static class EventDispatcher
         GC.Collect(2, GCCollectionMode.Forced, false, false);
     }
 
-    private static PendingAsyncData? _pending;
+    private static List<PendingAsyncData> _pendingAsyncData = new InspectableList<PendingAsyncData>(4);
     private static void ProviderOnServerConnected(CSteamID steamID)
     {
         if (PlayerJoined == null) return;
@@ -376,7 +377,21 @@ public static class EventDispatcher
             Player pl = PlayerTool.getPlayer(steamID);
             if (pl is null)
                 goto error;
-            player = PlayerManager.InvokePlayerConnected(pl, _pending!, out newPlayer);
+            int index = _pendingAsyncData.FindIndex(x => x.Steam64 == steamID.m_SteamID);
+            if (index == -1)
+            {
+                Provider.kick(steamID, "Unable to find your async data.");
+                return;
+            }
+
+            PendingAsyncData data = _pendingAsyncData[index];
+
+            _pendingAsyncData.RemoveAt(index);
+            _pendingAsyncData.RemoveAll(x => !Provider.pending.Exists(y => y.playerID.steamID.m_SteamID == x.Steam64));
+
+            player = PlayerManager.InvokePlayerConnected(pl, data, out newPlayer);
+
+
             if (player is null)
                 goto error;
         }
@@ -385,10 +400,6 @@ public static class EventDispatcher
             L.LogError("Error in EventDispatcher.ProviderOnServerConnected loading player into OnlinePlayers:");
             L.LogError(ex);
             goto error;
-        }
-        finally
-        {
-            _pending = null;
         }
         PlayerJoined args = new PlayerJoined(player, newPlayer);
         foreach (EventDelegate<PlayerJoined> inv in PlayerJoined.GetInvocationList().Cast<EventDelegate<PlayerJoined>>())
@@ -902,6 +913,7 @@ public static class EventDispatcher
                 break;
             }
         }
+
         PlayerPending args = new PlayerPending(player, save, data, true, string.Empty);
         Task task = InvokePrePlayerConnectAsync(args, src == null ? CancellationToken.None : src.Token);
         if (task.IsCompleted)
@@ -936,8 +948,8 @@ public static class EventDispatcher
 
             if (args.CanContinue)
             {
+                _pendingAsyncData.Add(args.AsyncData);
                 EventPatches.ContinueSendingVerifyPacket(args.PendingPlayer);
-                _pending = args.AsyncData;
             }
             else
                 EventPatches.RemovePlayer(args.PendingPlayer, args.Rejection, args.RejectReason ?? "An unknown error occured.");
