@@ -245,7 +245,7 @@ public class RewardExpression
                         LogOpCode("ldfld " + field.Name);
                         il.Emit(OpCodes.Ldfld, field);
                         LogOpCode("call " + m2.Name);
-                        il.Emit(OpCodes.Call, m2);
+                        il.Emit(OpCodes.Callvirt, m2);
                         if (m2.ReturnType != typeof(double))
                         {
                             LogOpCode("conv.r8");
