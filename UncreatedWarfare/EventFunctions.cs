@@ -27,6 +27,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Flags.UI;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
@@ -810,9 +811,17 @@ public static class EventFunctions
         }
         BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
         if (drop == null) return;
-        if (Gamemode.Config.BarricadeFOBRadioDamaged.ValidReference(out Guid guid) && guid == drop.asset.GUID && instigatorSteamID != CSteamID.Nil)
+
+        if (Data.Gamemode is Insurgency { State: not State.Active } && Gamemode.Config.BarricadeInsurgencyCache.ValidReference(out Guid guid) && guid == drop.asset.GUID)
         {
             shouldAllow = false;
+            return;
+        }
+
+        if (Gamemode.Config.BarricadeFOBRadioDamaged.ValidReference(out guid) && guid == drop.asset.GUID && instigatorSteamID != CSteamID.Nil)
+        {
+            shouldAllow = false;
+            return;
         }
 
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
