@@ -179,8 +179,15 @@ public class ReportCommand : AsyncCommand
         await UCWarfare.ToUpdate();
         string typename = GetName(type);
         NotifyAdminsOfReport(targetNames, ctx.Caller.Name, report, typename);
-        ctx.Reply(T.ReportSuccessMessage1, targetNames, string.IsNullOrEmpty(message) ? "---" : message, typename);
-        ctx.Reply(T.ReportSuccessMessage2);
+        if (!ctx.LanguageInfo.IsDefault || ctx.IMGUI)
+        {
+            ctx.Reply(T.ReportSuccessMessage1, targetNames, string.IsNullOrEmpty(message) ? "---" : message, typename);
+            ctx.Reply(T.ReportSuccessMessage2);
+        }
+        else
+        {
+            ctx.Reply(T.ReportSuccessMessage, targetNames, string.IsNullOrEmpty(message) ? "---" : message, typename);
+        }
         L.Log($"{ctx.Caller.Name.PlayerName} ({ctx.CallerID}) reported {targetNames.PlayerName} ({target}) for \"{report.Message}\" as a {typename} report.", ConsoleColor.Cyan);
         byte[] jpgData =
             targetPl == null || (type != EReportType.CUSTOM && type < EReportType.SOLOING_VEHICLE)
@@ -198,8 +205,16 @@ public class ReportCommand : AsyncCommand
         if (targetPl is { IsOnline: true })
         {
             ToastMessage.QueueMessage(targetPl, ToastMessage.Popup(T.ReportNotifyViolatorToastTitle.Translate(targetPl), T.ReportNotifyViolatorToast.Translate(targetPl, typename), T.ButtonOK.Translate(targetPl)));
-            targetPl.SendChat(T.ReportNotifyViolatorMessage1, typename, message);
-            targetPl.SendChat(T.ReportNotifyViolatorMessage2);
+            // todo remove this check once translations are available
+            if (targetPl.Locale.IsDefaultLanguage && !targetPl.Save.IMGUI)
+            {
+                targetPl.SendChat(T.ReportNotifyViolatorMessage, typename, message);
+            }
+            else
+            {
+                targetPl.SendChat(T.ReportNotifyViolatorMessage1, typename, message);
+                targetPl.SendChat(T.ReportNotifyViolatorMessage2);
+            }
         }
 
         PlayerNames names = await F.GetPlayerOriginalNamesAsync(target, token).ConfigureAwait(false);
