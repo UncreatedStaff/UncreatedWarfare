@@ -14,6 +14,9 @@ public class DutyCommand : Command
 
     public DutyCommand() : base("duty", EAdminType.TRIAL_ADMIN | EAdminType.ADMIN)
     {
+        AddAlias("onduty");
+        AddAlias("offduty");
+        AddAlias("d");
         Structure = new CommandStructure
         {
             Description = "Switch between being on and off duty."
