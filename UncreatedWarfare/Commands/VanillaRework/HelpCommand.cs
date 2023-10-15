@@ -12,6 +12,8 @@ public sealed class HelpCommand : Command
 
     public HelpCommand() : base("help", EAdminType.MEMBER, 1)
     {
+        AddAlias("commands");
+        AddAlias("tutorial");
         Structure = new CommandStructure
         {
             Description = Help,
@@ -85,8 +87,15 @@ public sealed class HelpCommand : Command
             }
         }
 
-        ctx.Reply(T.HelpOutputDiscord);
-        ctx.Reply(T.HelpOutputDeploy);
-        ctx.Reply(T.HelpOutputRequest);
+        if (ctx.LanguageInfo.IsDefault && !ctx.IMGUI)
+        {
+            ctx.Reply(T.HelpOutputCombined);
+        }
+        else
+        {
+            ctx.Reply(T.HelpOutputDiscord);
+            ctx.Reply(T.HelpOutputDeploy);
+            ctx.Reply(T.HelpOutputRequest);
+        }
     }
 }
