@@ -22,6 +22,7 @@ using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Levels;
 using Uncreated.Warfare.Moderation;
@@ -1021,7 +1022,15 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     {
         if (UCWarfare.IsMainThread)
         {
-            Player.skills.askRep(amount);
+            Patches.LifePatches.IsSettingReputation = true;
+            try
+            {
+                Player.skills.askRep(amount);
+            }
+            finally
+            {
+                Patches.LifePatches.IsSettingReputation = false;
+            }
         }
         else
         {
@@ -1046,7 +1055,17 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
 
         int val = Interlocked.Exchange(ref _pendingReputation, 0);
         if (val != 0)
-            Player.skills.askRep(val);
+        {
+            Patches.LifePatches.IsSettingReputation = true;
+            try
+            {
+                Player.skills.askRep(val);
+            }
+            finally
+            {
+                Patches.LifePatches.IsSettingReputation = false;
+            }
+        }
     }
     internal void OnUseVoice(bool isMuted)
     {

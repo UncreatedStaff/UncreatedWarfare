@@ -757,16 +757,17 @@ public static class OffenseManager
             ResolvedTimestamp = now,
             Message = e.Message,
             Cause = e.Cause,
-            PendingReputation = e.Killer == null ? -25 : 0,
-            Reputation = -50,
+            Reputation = -40,
             Item = e.PrimaryAsset,
             ItemName = itemName,
             Limb = e.Limb,
             Distance = e.KillDistance
         };
 
-        if (e.Killer != null)
-            e.Killer.AddReputation(-25);
+        if (e.Killer is { IsOnline: true })
+            e.Killer.AddReputation(-40);
+        else
+            log.PendingReputation = -40;
 
         UCWarfare.RunTask(Data.ModerationSql.AddOrUpdate, log, CancellationToken.None, ctx: "Log teamkill.");
     }

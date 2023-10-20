@@ -713,11 +713,11 @@ internal partial class ModerationUI
             ModerationEntryType.Mute => -70,
             ModerationEntryType.Kick => -20,
             ModerationEntryType.Warning => -15,
-            ModerationEntryType.BugReportAccepted => 150,
-            ModerationEntryType.PlayerReportAccepted => 80,
-            ModerationEntryType.Commendation => 100,
-            ModerationEntryType.Teamkill => -15,
-            ModerationEntryType.VehicleTeamkill => -25,
+            ModerationEntryType.BugReportAccepted => 80,
+            ModerationEntryType.PlayerReportAccepted => 25,
+            ModerationEntryType.Commendation => 80,
+            ModerationEntryType.Teamkill => -40,
+            ModerationEntryType.VehicleTeamkill => -50,
             _ => 0
         };
     }

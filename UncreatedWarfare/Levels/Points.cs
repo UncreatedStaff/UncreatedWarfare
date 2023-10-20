@@ -580,6 +580,19 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                 for (int i = 0; i < player.ActiveBuffs.Length; ++i)
                     if (player.ActiveBuffs[i] is IXPBoostBuff buff)
                         buff.OnXPBoostUsed(amtXp, awardCredits);
+
+                // reputation changes
+                if (parameters.AwardReputation)
+                {
+                    float percentage = (parameters.OverrideReputationPercentage ?? (data?.ReputationReward == null ? 10f : data.ReputationReward.Percentage)) / 100f;
+                    int repAmt = parameters.OverrideReputationAmount ??
+                                 (data?.ReputationReward == null || data.ReputationReward.Amount == 0
+                                     ? Mathf.RoundToInt(amt * percentage)
+                                     : data.ReputationReward.Amount);
+
+                    if (repAmt != 0)
+                        player.AddReputation(repAmt);
+                }
             }
 
             if (remote != null && !remote.IsCompleted)
@@ -605,18 +618,22 @@ public sealed class Points : BaseSingletonComponent, IUIListener
         
         return new string(PointsConfig.ProgressBlockCharacter, progress);
     }
-    public static void TryAwardDriverAssist(PlayerDied args, XPReward reward, int amount = 0, float quota = 0)
+    public static void TryAwardDriverAssist(PlayerDied args, int amount, int rep)
     {
-        if (args.DriverAssist is null || !args.DriverAssist.IsOnline) return;
-        if (amount == 0 && PointsConfig.XPData.TryGetValue(reward, out PointsConfig.XPRewardData data))
-            amount = data.Amount;
+        if (args.DriverAssist is null)
+            return;
 
-        AwardXP(args.DriverAssist, reward, T.XPToastKillDriverAssist, amount);
+        AwardXP(new XPParameters(args.DriverAssist.Steam64, args.DeadTeam, amount)
+        {
+            Reward = XPReward.KillAssist,
+            Message = T.XPToastKillDriverAssist.Translate(args.DriverAssist.Locale.LanguageInfo, args.DriverAssist.Locale.CultureInfo),
+            OverrideReputationAmount = rep
+        });
         /*
         if (quota != 0 && args.ActiveVehicle != null && args.ActiveVehicle.TryGetComponent(out VehicleComponent comp))
             comp.Quota += quota;*/
     }
-    public static void TryAwardDriverAssist(Player gunner, XPReward reward, int amount = 0, float quota = 0)
+    public static void TryAwardDriverAssist(Player gunner, XPReward reward, int amount = 0, int rep = 0, float quota = 0)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -653,15 +670,45 @@ public sealed class Points : BaseSingletonComponent, IUIListener
     public static void OnPlayerDeath(PlayerDied e)
     {
         if (e.Killer is null || !e.Killer.IsOnline) return;
+
+        double deadWorth = e.WasSuicide ? 0d : (3.5d * Math.Pow(e.Player.Player.skills.reputation, 1d / 3d));
+        if (deadWorth is > 0d and < 10d)
+            deadWorth = 10d;
+        else if (deadWorth is < 0d and > -5d)
+            deadWorth = -5d;
+
         if (e.WasTeamkill)
         {
-            AwardXP(e.Killer, XPReward.Teamkill);
+            AwardXP(new XPParameters(e.Killer, 0, (int)Math.Round(Math.Min(-deadWorth, -5d)))
+            {
+                Multiplier = 1f,
+                Message = PointsConfig.GetDefaultTranslation(e.Killer.Locale.LanguageInfo, e.Killer.Locale.CultureInfo, XPReward.Teamkill),
+                OverrideReputationAmount = (int)Math.Round(-deadWorth / 5d, MidpointRounding.AwayFromZero),
+                Reward = XPReward.Teamkill
+            });
             return;
         }
+
         if (e.WasSuicide)
+        {
             AwardXP(e.Killer, XPReward.Suicide);
-        else
-            AwardXP(e.Killer, XPReward.EnemyKilled);
+            return;
+        }
+
+        int xpWorth = (int)Math.Round(Math.Max(deadWorth, 10d));
+
+        AwardXP(new XPParameters(e.Killer, 0, xpWorth)
+        {
+            Multiplier = 1f,
+            Message = PointsConfig.GetDefaultTranslation(e.Killer.Locale.LanguageInfo, e.Killer.Locale.CultureInfo, XPReward.EnemyKilled),
+            OverrideReputationAmount = (int)Math.Round(deadWorth * 0.2d, MidpointRounding.AwayFromZero),
+            Reward = XPReward.EnemyKilled
+        });
+
+        int assistHighXp = (int)Math.Round(xpWorth * 0.75d, MidpointRounding.AwayFromZero);
+        int assistLowXp = (int)Math.Round(xpWorth * 0.5d);
+        int assistHighRep = (int)Math.Round(deadWorth * 0.15d, MidpointRounding.AwayFromZero);
+        int assistLowRep = (int)Math.Round(deadWorth * 0.10d, MidpointRounding.AwayFromZero);
 
         if (e.Player.Player.TryGetPlayerData(out UCPlayerData component))
         {
@@ -671,18 +718,24 @@ public sealed class Points : BaseSingletonComponent, IUIListener
             UCPlayer? assister = UCPlayer.FromID(component.SecondLastAttacker.Key);
             if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.SecondLastAttacker.Value).TotalSeconds <= 30)
             {
-                AwardXP(assister, XPReward.KillAssist);
+                AwardXP(new XPParameters(assister, 0, assistLowXp)
+                {
+                    Multiplier = 1f,
+                    Message = PointsConfig.GetDefaultTranslation(assister.Locale.LanguageInfo, assister.Locale.CultureInfo, XPReward.KillAssist),
+                    OverrideReputationAmount = assistLowRep,
+                    Reward = XPReward.KillAssist
+                });
             }
 
-            if (e.Player.Player.TryGetComponent(out SpottedComponent spotted) &&
-                PointsConfig.XPData.TryGetValue(XPReward.EnemyKilled, out PointsConfig.XPRewardData data))
+            if (e.Player.Player.TryGetComponent(out SpottedComponent spotted))
             {
-                spotted.OnTargetKilled(Mathf.RoundToInt(data.Amount * 0.75f));
+                spotted.OnTargetKilled(assistHighXp, assistHighRep);
             }
 
             component.ResetAttackers();
         }
-        TryAwardDriverAssist(e, XPReward.EnemyKilled, quota: 1);
+
+        TryAwardDriverAssist(e, assistHighXp, assistHighRep);
     }
     private static void OnPlayerLeft(PlayerEvent e)
     {
@@ -1041,21 +1094,27 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     {
                         float responsibleness = entry.Value.Key / totalDamage;
                         int reward = Mathf.RoundToInt(responsibleness * fullXP);
+                        int repReward = (int)Math.Round(reward / 10d, MidpointRounding.AwayFromZero);
                         if (l > 1)
                             assists[--l] = new KeyValuePair<ulong, float>(entry.Key, responsibleness);
                         UCPlayer? attacker = UCPlayer.FromID(entry.Key);
                         if (attacker != null && attacker.GetTeam() != e.Team)
                         {
+                            ulong team = attacker.GetTeam();
                             if (entry.Key == e.InstigatorId)
                             {
-                                AwardXP(attacker, xpreward, reward);
+                                AwardXP(new XPParameters(attacker, team, reward)
+                                {
+                                    Reward = xpreward,
+                                    OverrideReputationAmount = repReward
+                                });
                                 UCPlayer? pl = e.LastDriver ?? e.Owner;
                                 if (pl is not null && pl.Steam64 != e.InstigatorId)
-                                    TryAwardDriverAssist(pl, xpreward, reward, e.VehicleData.TicketCost);
+                                    TryAwardDriverAssist(pl, xpreward, (int)Math.Round(reward * 0.75d, MidpointRounding.AwayFromZero), (int)Math.Round(repReward * 0.75d, MidpointRounding.AwayFromZero), e.VehicleData.TicketCost);
 
                                 if (e.Spotter != null)
                                 {
-                                    e.Spotter.OnTargetKilled(reward);
+                                    e.Spotter.OnTargetKilled((int)Math.Round(reward * 0.75d, MidpointRounding.AwayFromZero), (int)Math.Round(repReward * 0.75d, MidpointRounding.AwayFromZero));
                                     Destroy(e.Spotter);
                                 }
 
@@ -1071,7 +1130,15 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                                 }
                             }
                             else if (responsibleness > 0.1F)
-                                AwardXP(attacker, xpreward, T.XPToastKillVehicleAssist, reward);
+                            {
+                                AwardXP(new XPParameters(attacker, team, reward)
+                                {
+                                    Reward = xpreward,
+                                    Message = T.XPToastKillVehicleAssist.Translate(attacker.Locale.LanguageInfo, attacker.Locale.CultureInfo),
+                                    OverrideReputationAmount = repReward
+                                });
+                            }
+
                             if (responsibleness > resMax)
                             {
                                 resMax = responsibleness;
@@ -1129,14 +1196,15 @@ public sealed class Points : BaseSingletonComponent, IUIListener
                     ResolvedTimestamp = now,
                     Message = val,
                     Origin = e.DamageOrigin,
-                    PendingReputation = e.Instigator == null ? -50 : 0,
                     Reputation = -50,
                     Vehicle = e.Vehicle.asset.GUID,
                     VehicleName = e.Vehicle.asset.vehicleName
                 };
 
-                if (e.Instigator != null)
+                if (e.Instigator is { IsOnline: true })
                     e.Instigator.AddReputation(-50);
+                else
+                    log.PendingReputation = -50;
 
                 UCWarfare.RunTask(Data.ModerationSql.AddOrUpdate, log, CancellationToken.None, ctx: "Log vehicle teamkill.");
             }
@@ -1254,31 +1322,44 @@ public class PointsConfig : JSONConfigData
                     IgnoresGlobalMultiplier = true,
                     IgnoresXPBoosts = true,
                     CreditReward = null,
+                    ReputationReward = new CreditRewardData(0),
                     ExcludeFromLeaderboard = true
                 }
             },
             { XPReward.OnDuty,
                 new XPRewardData(5)
                 {
+                    IgnoresGlobalMultiplier = true,
+                    IgnoresXPBoosts = true,
                     ExcludeFromLeaderboard = true,
+                    CreditReward = new CreditRewardData(1),
+                    ReputationReward = new CreditRewardData(0)
                 }
             },
-            { XPReward.EnemyKilled, new XPRewardData(10, DefaultCreditPercentage) },
-            { XPReward.CacheDestroyed, new XPRewardData(800, DefaultCreditPercentage) },
+            { XPReward.EnemyKilled, new XPRewardData(10, DefaultCreditPercentage, 0f) }, // custom amount handling
+            { XPReward.CacheDestroyed, new XPRewardData(800, DefaultCreditPercentage, 5f) },
             { XPReward.FriendlyCacheDestroyed,
                 new XPRewardData(-8000)
                 {
                     CreditReward = new CreditRewardData(DefaultCreditPercentage)
                     {
                         IsPunishment = true
+                    },
+                    ReputationReward = new CreditRewardData(-200)
+                    {
+                        IsPunishment = true
                     }
                 }
             },
-            { XPReward.KillAssist, new XPRewardData(5, DefaultCreditPercentage) },
-            { XPReward.Teamkill,
+            { XPReward.KillAssist, new XPRewardData(5, DefaultCreditPercentage, 0f) }, // custom reputation handling
+            { XPReward.Teamkill, // custom reputation handling
                 new XPRewardData(-30)
                 {
                     CreditReward = new CreditRewardData(DefaultCreditPercentage)
+                    {
+                        IsPunishment = true
+                    },
+                    ReputationReward = new CreditRewardData(0f)
                     {
                         IsPunishment = true
                     }
@@ -1290,59 +1371,71 @@ public class PointsConfig : JSONConfigData
                     CreditReward = new CreditRewardData(DefaultCreditPercentage)
                     {
                         IsPunishment = true
+                    },
+                    ReputationReward = new CreditRewardData(-1)
+                    {
+                        IsPunishment = true
                     }
                 }
             },
-            { XPReward.Revive, new XPRewardData(30, DefaultCreditPercentage * 1.5f) },
-            { XPReward.RadioDestroyed, new XPRewardData(80, DefaultCreditPercentage * 1.5f) },
+            { XPReward.Revive, new XPRewardData(30, DefaultCreditPercentage * 1.5f, 10f) },
+            { XPReward.RadioDestroyed, new XPRewardData(80, DefaultCreditPercentage * 1.5f, 12.5f) },
             { XPReward.FriendlyRadioDestroyed,
                 new XPRewardData(-1000)
                 {
                     CreditReward = new CreditRewardData(DefaultCreditPercentage)
                     {
                         IsPunishment = true
+                    },
+                    ReputationReward = new CreditRewardData(-100)
+                    {
+                        IsPunishment = true
                     }
                 }
             },
-            { XPReward.BunkerDestroyed, new XPRewardData(60, DefaultCreditPercentage * 1.5f) },
+            { XPReward.BunkerDestroyed, new XPRewardData(60, DefaultCreditPercentage * 1.5f, 10f) },
             { XPReward.FriendlyBunkerDestroyed,
                 new XPRewardData(-800)
                 {
                     CreditReward = new CreditRewardData(DefaultCreditPercentage)
                     {
                         IsPunishment = true
+                    },
+                    ReputationReward = new CreditRewardData(-75)
+                    {
+                        IsPunishment = true
                     }
                 }
             },
-            { XPReward.BunkerDeployment, new XPRewardData(10, DefaultCreditPercentage) },
-            { XPReward.FlagCaptured, new XPRewardData(50, DefaultCreditPercentage) },
-            { XPReward.FlagNeutralized, new XPRewardData(80, DefaultCreditPercentage) },
-            { XPReward.AttackingFlag, new XPRewardData(8, DefaultCreditPercentage) },
-            { XPReward.DefendingFlag, new XPRewardData(6, DefaultCreditPercentage) },
-            { XPReward.TransportingPlayer, new XPRewardData(10, DefaultCreditPercentage) },
-            { XPReward.Shoveling, new XPRewardData(2, 50f) },
-            { XPReward.BunkerBuilt, new XPRewardData(100, DefaultCreditPercentage * 1.5f) },
-            { XPReward.Resupply, new XPRewardData(20, DefaultCreditPercentage) },
-            { XPReward.RepairVehicle, new XPRewardData(3, DefaultCreditPercentage) },
-            { XPReward.UnloadSupplies, new XPRewardData(10, DefaultCreditPercentage) },
-            { XPReward.FriendlyFortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
-            { XPReward.FortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
-            { XPReward.FriendlyBuildableDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
-            { XPReward.BuildableDestroyed, new XPRewardData(0, DefaultCreditPercentage) }, // dependant amount
-            { XPReward.VehicleHumvee, new XPRewardData(25, DefaultCreditPercentage) },
-            { XPReward.VehicleTransportGround, new XPRewardData(20, DefaultCreditPercentage) },
-            { XPReward.VehicleScoutCar, new XPRewardData(30, DefaultCreditPercentage) },
-            { XPReward.VehicleLogisticsGround, new XPRewardData(25, DefaultCreditPercentage) },
-            { XPReward.VehicleAPC, new XPRewardData(60, DefaultCreditPercentage) },
-            { XPReward.VehicleIFV, new XPRewardData(70, DefaultCreditPercentage) },
-            { XPReward.VehicleMBT, new XPRewardData(100, DefaultCreditPercentage) },
-            { XPReward.VehicleTransportAir, new XPRewardData(30, DefaultCreditPercentage) },
-            { XPReward.VehicleAttackHeli, new XPRewardData(150, DefaultCreditPercentage) },
-            { XPReward.VehicleJet, new XPRewardData(200, DefaultCreditPercentage) },
-            { XPReward.VehicleAA, new XPRewardData(20, DefaultCreditPercentage) },
-            { XPReward.VehicleHMG, new XPRewardData(20, DefaultCreditPercentage) },
-            { XPReward.VehicleATGM, new XPRewardData(20, DefaultCreditPercentage) },
-            { XPReward.VehicleMortar, new XPRewardData(20, DefaultCreditPercentage) }
+            { XPReward.BunkerDeployment, new XPRewardData(10, DefaultCreditPercentage, 10f) },
+            { XPReward.FlagCaptured, new XPRewardData(50, DefaultCreditPercentage, 4f) },
+            { XPReward.FlagNeutralized, new XPRewardData(80, DefaultCreditPercentage, 3.75f) },
+            { XPReward.AttackingFlag, new XPRewardData(8, DefaultCreditPercentage, 12.5f) },
+            { XPReward.DefendingFlag, new XPRewardData(6, DefaultCreditPercentage, 16.667f) },
+            { XPReward.TransportingPlayer, new XPRewardData(10, DefaultCreditPercentage, 10f) },
+            { XPReward.Shoveling, new XPRewardData(2, 50f, 0f) },
+            { XPReward.BunkerBuilt, new XPRewardData(100, DefaultCreditPercentage * 1.5f, 4f) },
+            { XPReward.Resupply, new XPRewardData(20, DefaultCreditPercentage, 10f) },
+            { XPReward.RepairVehicle, new XPRewardData(3, DefaultCreditPercentage, 33.333f) },
+            { XPReward.UnloadSupplies, new XPRewardData(10, DefaultCreditPercentage, 10f) },
+            { XPReward.FriendlyFortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage, 5f) }, // dependant amount
+            { XPReward.FortificationDestroyed, new XPRewardData(0, DefaultCreditPercentage, 5f) }, // dependant amount
+            { XPReward.FriendlyBuildableDestroyed, new XPRewardData(0, DefaultCreditPercentage, 5f) }, // dependant amount
+            { XPReward.BuildableDestroyed, new XPRewardData(0, DefaultCreditPercentage, 5f) }, // dependant amount
+            { XPReward.VehicleHumvee, new XPRewardData(25, DefaultCreditPercentage, 20f) },
+            { XPReward.VehicleTransportGround, new XPRewardData(20, DefaultCreditPercentage, 20f) },
+            { XPReward.VehicleScoutCar, new XPRewardData(30, DefaultCreditPercentage, 10f) },
+            { XPReward.VehicleLogisticsGround, new XPRewardData(25, DefaultCreditPercentage, 12.5f) },
+            { XPReward.VehicleAPC, new XPRewardData(60, DefaultCreditPercentage, 10f) },
+            { XPReward.VehicleIFV, new XPRewardData(70, DefaultCreditPercentage, 10f) },
+            { XPReward.VehicleMBT, new XPRewardData(100, DefaultCreditPercentage, 10f) },
+            { XPReward.VehicleTransportAir, new XPRewardData(30, DefaultCreditPercentage, 20f) },
+            { XPReward.VehicleAttackHeli, new XPRewardData(150, DefaultCreditPercentage, 10f) },
+            { XPReward.VehicleJet, new XPRewardData(200, DefaultCreditPercentage, 10f) },
+            { XPReward.VehicleAA, new XPRewardData(20, DefaultCreditPercentage, 15f) },
+            { XPReward.VehicleHMG, new XPRewardData(20, DefaultCreditPercentage, 15f) },
+            { XPReward.VehicleATGM, new XPRewardData(20, DefaultCreditPercentage, 15f) },
+            { XPReward.VehicleMortar, new XPRewardData(20, DefaultCreditPercentage, 15f) }
         };
 
         GlobalXPMultiplier = 1f;
@@ -1450,6 +1543,9 @@ public class PointsConfig : JSONConfigData
         [JsonPropertyName("credit_reward")]
         public CreditRewardData? CreditReward { get; set; }
 
+        [JsonPropertyName("reputation_reward")]
+        public CreditRewardData? ReputationReward { get; set; }
+
         [JsonPropertyName("exclude_from_leaderboard")]
         public bool ExcludeFromLeaderboard { get; set; }
 
@@ -1458,10 +1554,11 @@ public class PointsConfig : JSONConfigData
         {
             Amount = amount;
         }
-        public XPRewardData(int amount, float creditPercentage)
+        public XPRewardData(int amount, float creditPercentage, float reputationPercentage)
         {
             Amount = amount;
             CreditReward = new CreditRewardData(creditPercentage);
+            ReputationReward = new CreditRewardData(reputationPercentage);
         }
     }
 
@@ -1558,20 +1655,24 @@ public struct CreditsParameters
     public Task Award() => Points.AwardCreditsAsync(this);
     public Task Award(CancellationToken token) => Points.AwardCreditsAsync(this, token);
 }
-public struct XPParameters
+public class XPParameters
 {
     public readonly UCPlayer? Player;
     public readonly ulong Steam64;
     public readonly int Amount;
     public readonly ulong Team;
+
     public XPReward Reward;
     public string? Message;
     public bool AwardCredits;
+    public bool AwardReputation = true;
     public float Multiplier = 1f;
     public bool IgnoreXPBuff = false;
     public bool IgnoreConfigXPBoost = false;
-    public float? OverrideCreditPercentage = null;
     public bool AnnounceRankChange = true;
+    public float? OverrideCreditPercentage;
+    public float? OverrideReputationPercentage;
+    public int? OverrideReputationAmount;
     public static XPParameters WithTranslation(UCPlayer player, Translation translation, int amount, bool awardCredits = true) =>
         new XPParameters(player, player.GetTeam(), amount, translation.Translate(player), awardCredits);
     public static XPParameters WithTranslation<T0>(UCPlayer player, Translation<T0> translation, T0 arg0, int amount, bool awardCredits = true) =>

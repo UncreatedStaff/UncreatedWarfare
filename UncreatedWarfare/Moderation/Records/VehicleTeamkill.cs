@@ -122,7 +122,7 @@ public class VehicleTeamkill : ModerationEntry
             DatabaseInterface.ColumnExternalPrimaryKey, DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset,
             DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName, DatabaseInterface.ColumnVehicleTeamkillsDamageOrigin)}) VALUES ");
 
-        F.AppendPropertyList(builder, args.Count, 6, 0, 1);
+        F.AppendPropertyList(builder, args.Count, 3, 0, 1);
         builder.Append(" AS `t` " +
                        $"ON DUPLICATE KEY UPDATE `{DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAsset}`," +
                        $"`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName}` = `t`.`{DatabaseInterface.ColumnVehicleTeamkillsVehicleAssetName}`," +

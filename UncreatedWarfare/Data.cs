@@ -151,6 +151,7 @@ public static class Data
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
     internal static InstanceGetter<UseableGun, bool> GetUseableGunReloading;
+    internal static InstanceGetter<PlayerLife, CSteamID>? GetRecentKiller;
     internal static StaticGetter<uint> GetItemManagerInstanceCount;
     internal static Action<Vector3, Vector3, string, Transform?, List<ITransportConnection>>? ServerSpawnLegacyImpact;
     internal static Func<PooledTransportConnectionList>? PullFromTransportConnectionListPool;
@@ -378,6 +379,15 @@ public static class Data
         catch (Exception ex)
         {
             L.LogWarning("Couldn't get ServerSpawnLegacyImpact from DamageTool, explosives will not play the flesh sound. (" + ex.Message + ").");
+        }
+
+        try
+        {
+            GetRecentKiller = Util.GenerateInstanceGetter<PlayerLife, CSteamID>("recentKiller", BindingFlags.NonPublic | BindingFlags.Instance);
+        }
+        catch (Exception ex)
+        {
+            L.LogWarning("Couldn't get PlayerLife.recentKiller from PlayerLife, other reputation sources will be ignored. (" + ex.Message + ").");
         }
 
         PullFromTransportConnectionListPool = null;
