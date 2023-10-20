@@ -1165,7 +1165,7 @@ public class UCWarfareNexus : IModuleNexus
 
     void IModuleNexus.initialize()
     {
-        AppDomain.CurrentDomain.AssemblyResolve += ResolveAssemblyCompiler;
+        ModuleHook.PreVanillaAssemblyResolvePostRedirects += ResolveAssemblyCompiler;
         try
         {
             Init2();
@@ -1314,7 +1314,7 @@ public class UCWarfareNexus : IModuleNexus
     }
     void IModuleNexus.shutdown()
     {
-        AppDomain.CurrentDomain.AssemblyResolve -= ResolveAssemblyCompiler;
+        ModuleHook.PreVanillaAssemblyResolvePostRedirects -= ResolveAssemblyCompiler;
         Level.onPostLevelLoaded -= OnLevelLoaded;
         if (!UCWarfare.IsLoaded) return;
         Unload(false).Wait(10000);
