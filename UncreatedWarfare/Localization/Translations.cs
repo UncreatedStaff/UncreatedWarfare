@@ -282,32 +282,6 @@ public class Translation
         Array.Copy(old, index + 1, _data, index, old.Length - index - 1);
     }
     public void ClearTranslations() => _data = Array.Empty<TranslationValue>();
-    protected TranslationValue this[string language]
-    {
-        get
-        {
-            if (_data is not null)
-            {
-                for (int i = 0; i < _data.Length; ++i)
-                {
-                    if (_data[i].Language.LanguageCode.Equals(language, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return _data[i];
-                    }
-                }
-                for (int i = 0; i < _data.Length; ++i)
-                {
-                    LanguageInfo languageInfo = _data[i].Language;
-                    if (languageInfo.FallbackTranslationLanguageCode != null &&
-                        languageInfo.FallbackTranslationLanguageCode.Equals(language, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return _data[i];
-                    }
-                }
-            }
-            return _defaultData;
-        }
-    }
     protected TranslationValue this[LanguageInfo language]
     {
         get
@@ -344,6 +318,44 @@ public class Translation
             }
             return _defaultData;
         }
+    }
+    
+    public bool HasLanguage(LanguageInfo language, bool checkFallback = true)
+    {
+        if (language.IsDefault)
+            return true;
+
+        if (_data == null)
+            return false;
+
+        for (int i = 0; i < _data.Length; ++i)
+        {
+            if (_data[i].Language == language)
+                return true;
+        }
+
+        if (!checkFallback)
+            return false;
+
+        if (language.FallbackTranslationLanguageCode != null)
+        {
+            for (int i = 0; i < _data.Length; ++i)
+            {
+                LanguageInfo languageInfo = _data[i].Language;
+                if (languageInfo.LanguageCode.Equals(language.FallbackTranslationLanguageCode, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        for (int i = 0; i < _data.Length; ++i)
+        {
+            LanguageInfo languageInfo = _data[i].Language;
+            if (languageInfo.FallbackTranslationLanguageCode != null &&
+                languageInfo.FallbackTranslationLanguageCode.Equals(language.LanguageCode, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
     }
     public static string ToString(object value, LanguageInfo language, string? format, UCPlayer? target, TranslationFlags flags)
         => ToString(value, language, Localization.GetCultureInfo(language), format, target, flags);

@@ -87,7 +87,7 @@ public sealed class HelpCommand : Command
             }
         }
 
-        if (ctx.LanguageInfo.IsDefault && !ctx.IMGUI)
+        if (T.HelpOutputCombined.HasLanguage(ctx.LanguageInfo) && !ctx.IMGUI)
         {
             ctx.Reply(T.HelpOutputCombined);
         }

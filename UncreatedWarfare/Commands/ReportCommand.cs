@@ -179,7 +179,7 @@ public class ReportCommand : AsyncCommand
         await UCWarfare.ToUpdate();
         string typename = GetName(type);
         NotifyAdminsOfReport(targetNames, ctx.Caller.Name, report, typename);
-        if (!ctx.LanguageInfo.IsDefault || ctx.IMGUI)
+        if (!T.ReportSuccessMessage.HasLanguage(ctx.LanguageInfo) || ctx.IMGUI)
         {
             ctx.Reply(T.ReportSuccessMessage1, targetNames, string.IsNullOrEmpty(message) ? "---" : message, typename);
             ctx.Reply(T.ReportSuccessMessage2);
